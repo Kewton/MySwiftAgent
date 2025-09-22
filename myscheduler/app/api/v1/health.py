@@ -6,7 +6,7 @@ from ...schemas.job import HealthResponse
 router = APIRouter(tags=["health"])
 
 
-@router.get("/", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """ヘルスチェック"""
     return HealthResponse(
