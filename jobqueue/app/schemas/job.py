@@ -1,7 +1,7 @@
 """Job Pydantic schemas."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -13,9 +13,9 @@ class JobCreate(BaseModel):
 
     method: str = Field(..., description="HTTP method", pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
     url: HttpUrl = Field(..., description="Target URL")
-    headers: Optional[dict[str, str]] = Field(None, description="HTTP headers")
-    params: Optional[dict[str, Any]] = Field(None, description="Query parameters")
-    body: Optional[dict[str, Any]] = Field(None, description="Request body")
+    headers: dict[str, str] | None = Field(None, description="HTTP headers")
+    params: dict[str, Any] | None = Field(None, description="Query parameters")
+    body: dict[str, Any] | None = Field(None, description="Request body")
     timeout_sec: int = Field(default=30, ge=1, le=300, description="Timeout in seconds")
     priority: int = Field(default=5, ge=1, le=10, description="Priority (1=highest, 10=lowest)")
     max_attempts: int = Field(default=1, ge=1, le=10, description="Maximum retry attempts")
@@ -23,11 +23,11 @@ class JobCreate(BaseModel):
         default=BackoffStrategy.EXPONENTIAL, description="Backoff strategy for retries"
     )
     backoff_seconds: float = Field(default=5.0, ge=0.1, description="Base backoff time in seconds")
-    scheduled_at: Optional[datetime] = Field(None, description="Schedule execution time")
-    ttl_seconds: Optional[int] = Field(
+    scheduled_at: datetime | None = Field(None, description="Schedule execution time")
+    ttl_seconds: int | None = Field(
         default=604800, ge=0, description="Time to live in seconds (default: 7 days)"
     )
-    tags: Optional[list[str]] = Field(None, description="Job tags")
+    tags: list[str] | None = Field(None, description="Job tags")
 
 
 class JobResponse(BaseModel):
@@ -48,11 +48,11 @@ class JobDetail(BaseModel):
     method: str
     url: str
     timeout_sec: int
-    scheduled_at: Optional[datetime] = None
+    scheduled_at: datetime | None = None
     created_at: datetime
-    started_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
-    tags: Optional[list[str]] = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    tags: list[str] | None = None
 
     model_config = {"from_attributes": True}
 

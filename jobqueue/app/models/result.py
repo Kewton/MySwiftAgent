@@ -1,7 +1,7 @@
 """Job result database model."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -21,21 +21,21 @@ class JobResult(Base):
     )
 
     # HTTP response data
-    response_status: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    response_headers: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    response_headers: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    response_body: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    response_body: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Error information
-    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Execution metrics
-    duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime, onupdate=func.now(), nullable=True
     )
 

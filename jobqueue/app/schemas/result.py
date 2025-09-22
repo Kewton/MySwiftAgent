@@ -1,6 +1,6 @@
 """Job result Pydantic schemas."""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -12,10 +12,10 @@ class JobResultResponse(BaseModel):
 
     job_id: str = Field(..., description="Job identifier")
     status: JobStatus = Field(..., description="Job status")
-    response_status: Optional[int] = Field(None, description="HTTP response status code")
-    response_headers: Optional[dict[str, Any]] = Field(None, description="HTTP response headers")
-    response_body: Optional[dict[str, Any]] = Field(None, description="HTTP response body")
-    error: Optional[str] = Field(None, description="Error message if failed")
-    duration_ms: Optional[int] = Field(None, description="Execution duration in milliseconds")
+    response_status: int | None = Field(None, description="HTTP response status code")
+    response_headers: dict[str, Any] | None = Field(None, description="HTTP response headers")
+    response_body: dict[str, Any] | None = Field(None, description="HTTP response body")
+    error: str | None = Field(None, description="Error message if failed")
+    duration_ms: int | None = Field(None, description="Execution duration in milliseconds")
 
     model_config = {"from_attributes": True}

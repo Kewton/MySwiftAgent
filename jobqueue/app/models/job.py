@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -43,9 +43,9 @@ class Job(Base):
     # HTTP request parameters
     method: Mapped[str] = mapped_column(String(10))
     url: Mapped[str] = mapped_column(Text)
-    headers: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
-    params: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
-    body: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    headers: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    params: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    body: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     timeout_sec: Mapped[int] = mapped_column(Integer, default=30)
 
     # Retry configuration
@@ -55,12 +55,12 @@ class Job(Base):
     backoff_seconds: Mapped[float] = mapped_column(Float, default=5.0)
 
     # Scheduling and lifecycle
-    scheduled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    ttl_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    tags: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ttl_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    next_attempt_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
