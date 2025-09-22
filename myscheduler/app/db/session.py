@@ -1,5 +1,5 @@
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore  # type: ignore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 
 from ..core.config import settings
 from ..core.logging import get_logger
@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 class SchedulerManager:
     """スケジューラー管理クラス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.jobstore = SQLAlchemyJobStore(url=settings.database_url)
         self.scheduler = AsyncIOScheduler(
             jobstores={"default": self.jobstore},

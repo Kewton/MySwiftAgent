@@ -19,17 +19,26 @@ def execute_http_job(
 ) -> None:
     """ジョブとして実行されるHTTPリクエスト関数（同期）"""
 
-    async def _async_execute():
+    async def _async_execute() -> None:
         """非同期実行部分"""
         async with httpx.AsyncClient() as client:
             for attempt in range(max_retries + 1):
                 try:
-                    kwargs = {"timeout": timeout_sec, "headers": headers or {}}
-
                     if body and method.upper() in ["POST", "PUT", "PATCH"]:
-                        kwargs["json"] = body
-
-                    response = await client.request(method.upper(), url, **kwargs)
+                        response = await client.request(
+                            method.upper(),
+                            url,
+                            json=body,
+                            timeout=timeout_sec,
+                            headers=headers or {}
+                        )
+                    else:
+                        response = await client.request(
+                            method.upper(),
+                            url,
+                            timeout=timeout_sec,
+                            headers=headers or {}
+                        )
 
                     # 4xxエラーはリトライしない
                     if 400 <= response.status_code < 500:

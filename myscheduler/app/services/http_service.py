@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 class HTTPService:
     """HTTP実行サービス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = httpx.AsyncClient()
 
     async def close(self) -> None:
@@ -25,9 +25,9 @@ class HTTPService:
         method: str,
         headers: dict[str, str] | None = None,
         body: dict[str, Any] | None = None,
-        timeout_sec: float = None,
-        max_retries: int = None,
-        retry_backoff_sec: float = None,
+        timeout_sec: float | None = None,
+        max_retries: int | None = None,
+        retry_backoff_sec: float | None = None,
     ) -> None:
         """外部APIへのHTTPリクエストを実行"""
 
@@ -38,12 +38,21 @@ class HTTPService:
 
         for attempt in range(max_retries + 1):
             try:
-                kwargs = {"timeout": timeout_sec, "headers": headers or {}}
-
                 if body and method.upper() in ["POST", "PUT", "PATCH"]:
-                    kwargs["json"] = body
-
-                response = await self.client.request(method.upper(), url, **kwargs)
+                    response = await self.client.request(
+                        method.upper(),
+                        url,
+                        json=body,
+                        timeout=timeout_sec,
+                        headers=headers or {}
+                    )
+                else:
+                    response = await self.client.request(
+                        method.upper(),
+                        url,
+                        timeout=timeout_sec,
+                        headers=headers or {}
+                    )
 
                 # 4xxエラーはリトライしない
                 if 400 <= response.status_code < 500:

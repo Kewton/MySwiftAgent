@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from apscheduler.triggers.base import BaseTrigger
+from apscheduler.triggers.base import BaseTrigger  # type: ignore
 from pydantic import BaseModel
 
 

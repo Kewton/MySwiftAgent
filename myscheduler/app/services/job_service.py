@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
 
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.date import DateTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger  # type: ignore
+from apscheduler.triggers.date import DateTrigger  # type: ignore
+from apscheduler.triggers.interval import IntervalTrigger  # type: ignore
 
 from ..core.config import settings
 from ..core.logging import get_logger
@@ -17,11 +17,10 @@ logger = get_logger(__name__)
 class JobService:
     """ジョブサービス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.scheduler = scheduler_manager.get_scheduler()
 
-
-    def _create_trigger(self, job_request: JobCreateRequest):
+    def _create_trigger(self, job_request: JobCreateRequest) -> object:
         """スケジュール設定からAPSchedulerトリガーを作成"""
 
         if job_request.schedule_type == "cron":
