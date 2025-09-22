@@ -20,7 +20,6 @@ class JobService:
     def __init__(self):
         self.scheduler = scheduler_manager.get_scheduler()
 
-
     def _create_trigger(self, job_request: JobCreateRequest):
         """スケジュール設定からAPSchedulerトリガーを作成"""
 
