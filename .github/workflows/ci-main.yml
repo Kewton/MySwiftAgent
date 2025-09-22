@@ -6,6 +6,7 @@ on:
     paths:
       - 'myscheduler/**'
       - '.github/workflows/**'
+  workflow_dispatch:
 
 defaults:
   run:
