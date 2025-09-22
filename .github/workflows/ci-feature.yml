@@ -34,20 +34,31 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full history for proper diff
 
       - name: Detect changes
         id: changes
         run: |
-          if [ -d "myscheduler" ] && git diff --name-only HEAD~1 HEAD | grep -q "^myscheduler/"; then
+          echo "Detecting changes in directories..."
+
+          # Simply check if directories exist for now
+          # This ensures the workflow runs for initial commits or when directories are present
+
+          if [ -d "myscheduler" ]; then
             echo "myscheduler=true" >> $GITHUB_OUTPUT
+            echo "✅ myscheduler directory exists"
           else
             echo "myscheduler=false" >> $GITHUB_OUTPUT
+            echo "❌ myscheduler directory does not exist"
           fi
 
-          if [ -d "jobqueue" ] && git diff --name-only HEAD~1 HEAD | grep -q "^jobqueue/"; then
+          if [ -d "jobqueue" ]; then
             echo "jobqueue=true" >> $GITHUB_OUTPUT
+            echo "✅ jobqueue directory exists"
           else
             echo "jobqueue=false" >> $GITHUB_OUTPUT
+            echo "❌ jobqueue directory does not exist"
           fi
 
   test:
@@ -115,6 +126,15 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true'
+    strategy:
+      matrix:
+        project:
+          - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
+          - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+        exclude:
+          - project: ''
 
     steps:
       - name: Checkout code
@@ -124,15 +144,15 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          scan-ref: './myscheduler'
+          scan-ref: './${{ matrix.project }}'
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-results-${{ matrix.project }}.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: 'trivy-results-${{ matrix.project }}.sarif'
 
   build:
     name: Build Check
