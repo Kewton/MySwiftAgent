@@ -76,7 +76,7 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run integration tests
-        run: uv run pytest tests/integration/ -v
+        run: uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term
 
   build-check:
     name: Build Verification

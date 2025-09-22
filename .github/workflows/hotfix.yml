@@ -87,10 +87,10 @@ jobs:
       - name: Run critical tests only
         run: |
           echo "🚨 Running critical tests for hotfix"
-          uv run pytest tests/ -v -m "critical" --maxfail=5 || \
+          uv run pytest tests/ -v -m "critical" --maxfail=5 --cov=app --cov-report=xml --cov-report=term || \
           if [ $? -eq 5 ]; then
             echo "⚠️ No critical-marked tests found, running basic tests"
-            uv run pytest tests/ -v --maxfail=5 -x
+            uv run pytest tests/ -v --maxfail=5 -x --cov=app --cov-report=xml --cov-report=term
           else
             exit $?
           fi

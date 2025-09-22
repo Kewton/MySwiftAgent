@@ -66,10 +66,10 @@ jobs:
       - name: Run critical tests
         run: |
           echo "🧪 Running critical pre-deployment tests"
-          uv run pytest tests/integration/ -v -m "critical" || \
+          uv run pytest tests/integration/ -v -m "critical" --cov=app --cov-report=xml --cov-report=term || \
           if [ $? -eq 5 ]; then
             echo "⚠️ No critical-marked tests found, running all integration tests"
-            uv run pytest tests/integration/ -v
+            uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term
           else
             exit $?
           fi
@@ -77,7 +77,7 @@ jobs:
       - name: Health check test
         run: |
           echo "❤️ Running health check tests"
-          uv run pytest tests/integration/test_api.py::test_health_check -v
+          uv run pytest tests/integration/test_api.py::TestHealthAPI::test_health_check -v --cov=app --cov-report=xml --cov-report=term
 
   deploy-staging:
     name: Deploy to Staging Environment
