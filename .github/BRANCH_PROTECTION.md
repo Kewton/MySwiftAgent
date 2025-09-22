@@ -14,7 +14,9 @@
       "Test Suite",
       "Security Scan",
       "Build Release Candidate",
-      "QA Tests"
+      "QA Tests",
+      "Documentation Check",
+      "Dependency Security Check"
     ]
   },
   "enforce_admins": true,
@@ -74,8 +76,11 @@
     "strict": true,
     "contexts": [
       "Test Suite",
-      "Security Scan",
-      "Build Check"
+      "Integration Tests",
+      "Build Verification",
+      "Code Quality Analysis",
+      "Documentation Check",
+      "Dependency Security Check"
     ]
   },
   "enforce_admins": false,

@@ -1,19 +1,20 @@
-# CI/CDワークフロー概要
+# CI/CD品質保証ワークフロー概要
 
-このドキュメントは、MySwiftAgentプロジェクトのGitHub ActionsによるCI/CDパイプラインについて説明します。
+このドキュメントは、MySwiftAgentプロジェクトのGitHub Actionsによる品質重視のCI/CDパイプラインについて説明します。
+**現在はデプロイメント機能を無効化し、品質担保に重点を置いた構成となっています。**
 
 ## 🌿 ブランチ戦略に基づくワークフロー
 
 ### ワークフロー構成
 
-| ワークフロー | トリガー | 目的 |
-|-------------|----------|------|
-| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR | CI/テスト実行 |
-| `cd-develop.yml` | developブランチへのpush | 開発環境への継続的デプロイ |
-| `release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR | リリース準備・QA |
-| `deploy-staging.yml` | stagingブランチへのpush<br>手動実行 | ステージング環境デプロイ |
-| `deploy-production.yml` | mainブランチへのpush<br>手動実行 | 本番環境デプロイ |
-| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR | 緊急修正対応 |
+| ワークフロー | トリガー | 目的 | 状態 |
+|-------------|----------|------|------|
+| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR | 品質チェック・テスト実行 | 🟢 有効 |
+| `cd-develop.yml` | developブランチへのpush | 統合品質チェック | 🟢 有効（デプロイ無効） |
+| `release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR | リリース品質保証 | 🟢 有効（デプロイ無効） |
+| `deploy-staging.yml` | 手動実行のみ | ステージング環境デプロイ | 🟡 手動のみ |
+| `deploy-production.yml` | 手動実行のみ | 本番環境デプロイ | 🟡 手動のみ |
+| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR | 緊急修正品質チェック | 🟢 有効（デプロイ無効） |
 
 ## 🔄 デプロイメントフロー
 

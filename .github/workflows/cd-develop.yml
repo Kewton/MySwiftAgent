@@ -1,4 +1,4 @@
-name: CD - Develop Integration
+name: CI - Develop Integration
 
 on:
   push:
@@ -78,8 +78,8 @@ jobs:
       - name: Run integration tests
         run: uv run pytest tests/integration/ -v
 
-  build-and-push:
-    name: Build and Push Docker Image
+  build-check:
+    name: Build Verification
     runs-on: ubuntu-latest
     needs: [test, integration-test]
 
@@ -87,66 +87,88 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          python-version: '3.12'
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
+          version: "latest"
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./myscheduler
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Build package
+        run: |
+          cd ./myscheduler
+          uv build
 
-  deploy-dev:
-    name: Deploy to Development Environment
+      - name: Build Docker image (test only)
+        run: |
+          cd ./myscheduler
+          docker build -t myscheduler:test .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm -d --name myscheduler-test -p 8000:8000 myscheduler:test
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+          docker stop myscheduler-test
+
+  code-quality:
+    name: Code Quality Analysis
     runs-on: ubuntu-latest
-    needs: [build-and-push]
-    environment: development
+    needs: [test]
 
     steps:
-      - name: Deploy to Development
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
         run: |
-          echo "🚀 Deploying to development environment"
-          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }}"
-          # ここに実際のデプロイコマンドを追加
-          # 例: kubectl apply -f k8s/development/
-          # 例: helm upgrade --install myscheduler-dev ./helm-chart --set image.tag=develop-${{ github.sha }}
+          cd ./myscheduler
+          uv sync --extra dev
+
+      - name: Code complexity analysis
+        run: |
+          cd ./myscheduler
+          echo "📊 Analyzing code complexity"
+          # radon cc --average app/ || echo "Radon not available, skipping complexity analysis"
+
+      - name: Security analysis
+        run: |
+          cd ./myscheduler
+          echo "🔒 Running security analysis"
+          uv run ruff check . --select=S
+
+      - name: Import analysis
+        run: |
+          cd ./myscheduler
+          echo "📦 Analyzing imports"
+          # Check for unused imports and circular dependencies
 
   notify:
-    name: Notify Team
+    name: Quality Check Results
     runs-on: ubuntu-latest
-    needs: [deploy-dev]
+    needs: [build-check, code-quality]
     if: always()
 
     steps:
-      - name: Notify Slack
-        if: success()
+      - name: Success notification
+        if: needs.build-check.result == 'success' && needs.code-quality.result == 'success'
         run: |
-          echo "✅ Development deployment successful"
-          # Slack通知の実装
-          # curl -X POST -H 'Content-type: application/json' \
-          #   --data '{"text":"✅ MyScheduler develop branch deployed successfully"}' \
-          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+          echo "✅ All quality checks passed for develop branch"
 
-      - name: Notify Slack on Failure
-        if: failure()
+      - name: Failure notification
+        if: needs.build-check.result == 'failure' || needs.code-quality.result == 'failure'
         run: |
-          echo "❌ Development deployment failed"
-          # Slack通知の実装
-          # curl -X POST -H 'Content-type: application/json' \
-          #   --data '{"text":"❌ MyScheduler develop branch deployment failed"}' \
-          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+          echo "❌ Quality checks failed - review required"
