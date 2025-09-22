@@ -49,8 +49,8 @@ env/
 .gitignore
 
 # Documentation
-README.md
-*.md
+# README.md  # Keep README.md for build
+# *.md  # Allow specific markdown files for build
 
 # Docker
 Dockerfile*
