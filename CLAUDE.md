@@ -89,3 +89,122 @@ graph TD
 | `release/*`    | `release/*`                              | `staging`, `main`, `develop` |
 | `staging`      | `release/*` または `fix/*` → `release/*` | 同上                         |
 | `main`（本番） | `hotfix/*`（`main` から作成）            | `main`, `staging`, `develop` |
+
+---
+
+# 🔧 開発環境・品質担保
+
+## 🐍 Python開発環境
+
+### 環境構築ツール
+
+- **[uv](https://docs.astral.sh/uv/)** を標準の依存関係管理・仮想環境ツールとして採用
+- 従来の `pip` + `venv` / `poetry` / `pipenv` は使用しない
+
+### セットアップ手順
+
+```bash
+# 1. uvのインストール (初回のみ)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. プロジェクトの依存関係同期
+uv sync
+
+# 3. 開発サーバー起動
+uv run uvicorn app.main:app --reload
+
+# 4. テスト実行
+uv run pytest
+
+# 5. 静的解析・フォーマット
+uv run ruff check .
+uv run ruff format .
+uv run mypy .
+```
+
+### プロジェクト構成
+
+```
+pyproject.toml          # プロジェクト設定・依存関係
+.python-version         # Python版数指定
+uv.lock                 # ロックファイル (自動生成)
+app/                    # アプリケーションコード
+├── main.py            # FastAPIエントリーポイント
+├── core/              # コア機能 (設定、DB、ワーカー)
+├── models/            # データベースモデル
+├── schemas/           # Pydanticスキーマ
+└── api/               # APIエンドポイント
+tests/                  # テストコード
+├── unit/              # 単体テスト
+├── integration/       # 結合テスト
+└── conftest.py        # テスト設定
+```
+
+## 🛡️ 品質担保方針
+
+### 静的解析・コード品質
+
+| ツール | 用途 | 設定ファイル | 実行コマンド |
+|--------|------|-------------|--------------|
+| **Ruff** | Linting + Formatting | `pyproject.toml` | `uv run ruff check .` <br> `uv run ruff format .` |
+| **MyPy** | 型チェック | `pyproject.toml` | `uv run mypy .` |
+
+### テスト方針
+
+| テストレベル | 対象 | フレームワーク | カバレッジ目標 |
+|-------------|------|-------------|--------------|
+| **単体テスト** | 個別関数・クラス | pytest | 80%以上 |
+| **結合テスト** | API エンドポイント | pytest + httpx | 90%以上 |
+
+### 必須チェック項目
+
+**PRマージ前の必須確認事項：**
+
+```bash
+# 1. 全テストが通過すること
+uv run pytest --cov=app --cov-report=term-missing
+
+# 2. 静的解析エラーがないこと
+uv run ruff check .
+uv run mypy .
+
+# 3. コードフォーマットが適用済みであること
+uv run ruff format . --check
+
+# 4. アプリケーションが正常に起動すること
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### CI/CD との連携
+
+GitHub Actions で以下を自動実行：
+
+1. **品質チェック** - Linting, 型チェック, フォーマット確認
+2. **テスト実行** - 単体・結合テスト + カバレッジ測定
+3. **セキュリティ監査** - 脆弱性スキャン
+4. **ビルド検証** - アプリケーション起動確認
+
+### パフォーマンス・セキュリティ
+
+- **HTTP タイムアウト**: 適切な上限設定（デフォルト30秒）
+- **レスポンスサイズ制限**: デフォルト1MB、設定可能
+- **リクエスト検証**: Pydantic による厳密なスキーマ検証
+- **エラーハンドリング**: 機密情報の漏洩防止
+
+---
+
+# 🤖 AI開発支援・コード生成時の注意事項
+
+## Claude Code 利用時のルール
+
+1. **品質第一**: 生成されたコードも手動コードと同等の品質基準を適用
+2. **テスト必須**: AI生成コードには特に包括的なテストを作成
+3. **レビュー強化**: AI生成部分は人間による詳細レビューを実施
+4. **セキュリティ重視**: 外部API呼び出し、認証まわりは特に慎重に検証
+5. **ドキュメント更新**: 生成されたコードに対応する仕様書・READMEの更新
+
+## 推奨フロー
+
+```
+AI生成 → 静的解析 → テスト作成 → 手動レビュー → PR作成
+```
