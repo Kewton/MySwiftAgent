@@ -39,10 +39,10 @@ dev = [
 ]
 
 [project.scripts]
-myscheduler = "app:main"
+myscheduler = "app.main:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["app"]
 
 [tool.ruff]
 target-version = "py312"

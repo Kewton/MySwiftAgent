@@ -100,14 +100,10 @@ jobs:
           version: "latest"
 
       - name: Build package
-        run: |
-          cd ./myscheduler
-          uv build
+        run: uv build
 
       - name: Build Docker image
-        run: |
-          cd ./myscheduler
-          docker build -t myscheduler:main-test .
+        run: docker build -t myscheduler:main-test .
 
       - name: Test Docker image
         run: |
