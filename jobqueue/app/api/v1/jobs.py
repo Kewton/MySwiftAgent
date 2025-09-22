@@ -1,7 +1,6 @@
 """Job API endpoints."""
 
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, func, or_, select
@@ -118,8 +117,8 @@ async def cancel_job(
 
 @router.get("/jobs", response_model=JobList)
 async def list_jobs(
-    status: Optional[JobStatus] = Query(None, description="Filter by job status"),
-    tags: Optional[list[str]] = Query(None, description="Filter by tags"),
+    status: JobStatus | None = Query(None, description="Filter by job status"),
+    tags: list[str] | None = Query(None, description="Filter by tags"),
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(20, ge=1, le=100, description="Page size"),
     db: AsyncSession = Depends(get_db),

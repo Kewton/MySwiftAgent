@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from sqlalchemy import and_, or_, select
@@ -204,7 +204,7 @@ class WorkerManager:
 
         logger.info(f"Worker {worker_name} stopped")
 
-    async def _get_next_job(self, session: AsyncSession) -> Optional[Job]:
+    async def _get_next_job(self, session: AsyncSession) -> Job | None:
         """Get the next job to execute."""
         now = datetime.utcnow()
 
