@@ -23,7 +23,7 @@ RUN if [ -f uv.lock ]; then \
     fi
 
 # Copy application code
-COPY app.py ./
+COPY app/ ./app/
 
 # Set timezone
 ENV TZ=Asia/Tokyo
