@@ -20,7 +20,7 @@ on:
 
 defaults:
   run:
-    working-directory: myscheduler
+    working-directory: ./myscheduler
 
 env:
   REGISTRY: ghcr.io
@@ -82,7 +82,13 @@ jobs:
       - name: Run critical production tests
         run: |
           echo "🧪 Running critical production tests"
-          uv run pytest tests/ -v -m "production"
+          uv run pytest tests/ -v -m "production" || \
+          if [ $? -eq 5 ]; then
+            echo "⚠️ No production-marked tests found, running critical tests instead"
+            uv run pytest tests/ -v -m "critical"
+          else
+            exit $?
+          fi
 
       - name: Final security scan
         uses: aquasecurity/trivy-action@master

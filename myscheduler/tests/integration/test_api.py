@@ -7,6 +7,8 @@ from app.core.config import settings
 
 
 class TestHealthAPI:
+    @pytest.mark.production
+    @pytest.mark.critical
     def test_health_check(self, client: TestClient):
         """ヘルスチェックAPIのテスト"""
         response = client.get("/")
@@ -20,6 +22,7 @@ class TestHealthAPI:
 
 
 class TestJobsAPI:
+    @pytest.mark.production
     def test_create_cron_job(self, client: TestClient):
         """cronジョブ作成のテスト"""
         job_data = {
@@ -73,6 +76,8 @@ class TestJobsAPI:
         assert "job_id" in data
         assert data["status"] == "scheduled"
 
+    @pytest.mark.production
+    @pytest.mark.critical
     def test_list_jobs_empty(self, client: TestClient):
         """空のジョブリストのテスト"""
         response = client.get("/api/v1/jobs/")

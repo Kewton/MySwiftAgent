@@ -12,7 +12,7 @@ on:
 
 defaults:
   run:
-    working-directory: myscheduler
+    working-directory: ./myscheduler
 
 env:
   REGISTRY: ghcr.io
@@ -87,7 +87,13 @@ jobs:
       - name: Run critical tests only
         run: |
           echo "🚨 Running critical tests for hotfix"
-          uv run pytest tests/ -v -m "critical" --maxfail=5
+          uv run pytest tests/ -v -m "critical" --maxfail=5 || \
+          if [ $? -eq 5 ]; then
+            echo "⚠️ No critical-marked tests found, running basic tests"
+            uv run pytest tests/ -v --maxfail=5 -x
+          else
+            exit $?
+          fi
 
       - name: Run affected area tests
         run: |

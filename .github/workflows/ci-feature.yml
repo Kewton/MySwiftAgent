@@ -20,7 +20,7 @@ on:
 
 defaults:
   run:
-    working-directory: myscheduler
+    working-directory: ./myscheduler
 
 jobs:
   test:
