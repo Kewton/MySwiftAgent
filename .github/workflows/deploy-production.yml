@@ -1,11 +1,12 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'myscheduler/**'
-      - '.github/workflows/**'
+  # 本番デプロイは手動実行のみに制限
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'myscheduler/**'
+  #     - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       version:
@@ -106,10 +107,18 @@ jobs:
     if: always() && (needs.pre-deployment-tests.result == 'success' || needs.pre-deployment-tests.result == 'skipped')
     environment: production
 
+    defaults:
+      run:
+        working-directory: .
+
     steps:
       - name: Create production backup
         run: |
           echo "💾 Creating production backup"
+          echo "ℹ️ In actual deployment, this would:"
+          echo "  - Create database backup using kubectl/pg_dump"
+          echo "  - Backup configuration files"
+          echo "  - Store backup metadata"
           # データベースバックアップ
           # kubectl exec deployment/myscheduler-prod -- pg_dump -U user -h localhost myscheduler > backup-$(date +%Y%m%d-%H%M%S).sql
 
@@ -269,10 +278,17 @@ jobs:
     if: failure()
     environment: production
 
+    defaults:
+      run:
+        working-directory: .
+
     steps:
       - name: Emergency rollback
         run: |
           echo "🚨 Emergency rollback initiated"
+          echo "ℹ️ In actual deployment, this would:"
+          echo "  - Rollback to previous version using kubectl"
+          echo "  - Verify rollback status"
           # 前のバージョンに即座にロールバック
           # kubectl rollout undo deployment/myscheduler-prod
           # kubectl rollout status deployment/myscheduler-prod
