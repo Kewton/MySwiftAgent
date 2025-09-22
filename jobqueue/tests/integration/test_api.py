@@ -248,7 +248,7 @@ class TestJobAPI:
         assert data["size"] == 20
 
         # Verify job IDs are present
-        returned_job_ids = [job["job_id"] for job in data["jobs"]]
+        returned_job_ids = [job["id"] for job in data["jobs"]]
         for job_id in job_ids:
             assert job_id in returned_job_ids
 
@@ -307,7 +307,7 @@ class TestJobAPI:
 
         data = response.json()
         assert len(data["jobs"]) == 1
-        assert data["jobs"][0]["job_id"] == job_id2
+        assert data["jobs"][0]["id"] == job_id2
         assert data["jobs"][0]["status"] == "queued"
 
         # Filter by canceled status
@@ -316,5 +316,5 @@ class TestJobAPI:
 
         data = response.json()
         assert len(data["jobs"]) == 1
-        assert data["jobs"][0]["job_id"] == job_id1
+        assert data["jobs"][0]["id"] == job_id1
         assert data["jobs"][0]["status"] == "canceled"

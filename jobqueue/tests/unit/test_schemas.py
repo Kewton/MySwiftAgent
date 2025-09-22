@@ -119,7 +119,7 @@ class TestJobSchemas:
         """Test job detail schema."""
         now = datetime.utcnow()
         data = {
-            "job_id": "j_01HXYZ123",
+            "id": "j_01HXYZ123",
             "status": "running",
             "attempt": 1,
             "max_attempts": 3,
@@ -134,7 +134,7 @@ class TestJobSchemas:
 
         detail = JobDetail(**data)
 
-        assert detail.job_id == "j_01HXYZ123"
+        assert detail.id == "j_01HXYZ123"
         assert detail.status == JobStatus.RUNNING
         assert detail.attempt == 1
         assert detail.max_attempts == 3
