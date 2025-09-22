@@ -1,0 +1,204 @@
+name: Release Workflow
+
+on:
+  push:
+    branches:
+      - 'release/**'
+  pull_request:
+    branches: [staging, main]
+    types: [opened, synchronize, reopened]
+
+defaults:
+  run:
+    working-directory: myscheduler
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/myscheduler
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from branch
+        id: version
+        run: |
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          if [[ $BRANCH_NAME =~ ^release/v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION=${BASH_REMATCH[1]}
+            echo "version=v$VERSION" >> $GITHUB_OUTPUT
+            echo "valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "valid=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate version format
+        if: steps.version.outputs.valid != 'true'
+        run: |
+          echo "❌ Invalid release branch format. Expected: release/vX.Y.Z"
+          exit 1
+
+      - name: Check version in pyproject.toml
+        run: |
+          EXPECTED_VERSION="${{ steps.version.outputs.version }}"
+          PYPROJECT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          if [[ "v$PYPROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "❌ Version mismatch:"
+            echo "  Branch: $EXPECTED_VERSION"
+            echo "  pyproject.toml: v$PYPROJECT_VERSION"
+            exit 1
+          fi
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: [validate-release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run linting
+        run: uv run ruff check .
+
+      - name: Run type checking
+        run: uv run mypy app/
+
+      - name: Run unit tests
+        run: uv run pytest tests/unit/ -v
+
+      - name: Run integration tests
+        run: uv run pytest tests/integration/ -v
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: [validate-release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './myscheduler'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+  build-release:
+    name: Build Release Candidate
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          VERSION=${BRANCH_NAME#release/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push release candidate
+        uses: docker/build-push-action@v5
+        with:
+          context: ./myscheduler
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-rc
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:release-latest
+
+  qa-tests:
+    name: QA Tests
+    runs-on: ubuntu-latest
+    needs: [build-release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run QA smoke tests
+        run: |
+          echo "🧪 Running QA smoke tests"
+          # ここにQAテストのコマンドを追加
+          # 例: newman run postman-collection.json
+
+      - name: Performance tests
+        run: |
+          echo "⚡ Running performance tests"
+          # ここにパフォーマンステストのコマンドを追加
+          # 例: k6 run performance-tests.js
+
+  approval-gate:
+    name: Approval Gate
+    runs-on: ubuntu-latest
+    needs: [qa-tests]
+    if: github.event_name == 'pull_request'
+    environment: release-approval
+
+    steps:
+      - name: Wait for approval
+        run: |
+          echo "🚪 Waiting for release approval..."
+          echo "This job requires manual approval to proceed with release."
+
+  create-release-notes:
+    name: Create Release Notes
+    runs-on: ubuntu-latest
+    needs: [qa-tests]
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          CURRENT_VERSION=$(grep '^version = ' myscheduler/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --exclude="v$CURRENT_VERSION" 2>/dev/null || echo "")
+
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            echo "## Changes since $PREVIOUS_TAG" > release-notes.md
+            git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD >> release-notes.md
+          else
+            echo "## Initial Release" > release-notes.md
+          fi
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-notes
+          path: release-notes.md

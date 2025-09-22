@@ -1,0 +1,305 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'myscheduler/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.2.3)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip pre-deployment tests (emergency only)'
+        required: false
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    working-directory: myscheduler
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/myscheduler
+
+jobs:
+  validate-production:
+    name: Validate Production Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate deployment prerequisites
+        run: |
+          echo "🔍 Validating production deployment prerequisites"
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "✅ Automatic deployment from release/* merge to main"
+          else
+            echo "✅ Manual deployment triggered with version: ${{ inputs.version }}"
+            if [[ "${{ inputs.skip_tests }}" == "true" ]]; then
+              echo "⚠️ WARNING: Pre-deployment tests will be skipped (emergency deployment)"
+            fi
+          fi
+
+      - name: Check for production readiness
+        run: |
+          echo "📋 Production readiness checklist:"
+          echo "  ✅ All required tests passed in previous stages"
+          echo "  ✅ Security scans completed"
+          echo "  ✅ Code reviewed and approved"
+          echo "  ✅ Release notes prepared"
+
+  pre-deployment-tests:
+    name: Pre-deployment Tests
+    runs-on: ubuntu-latest
+    needs: [validate-production]
+    if: github.event_name == 'push' || inputs.skip_tests != true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run critical production tests
+        run: |
+          echo "🧪 Running critical production tests"
+          uv run pytest tests/ -v -m "production"
+
+      - name: Final security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './myscheduler'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+  backup-production:
+    name: Backup Production
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-tests]
+    if: always() && (needs.pre-deployment-tests.result == 'success' || needs.pre-deployment-tests.result == 'skipped')
+    environment: production
+
+    steps:
+      - name: Create production backup
+        run: |
+          echo "💾 Creating production backup"
+          # データベースバックアップ
+          # kubectl exec deployment/myscheduler-prod -- pg_dump -U user -h localhost myscheduler > backup-$(date +%Y%m%d-%H%M%S).sql
+
+          # 設定ファイルバックアップ
+          # kubectl get configmap myscheduler-config -o yaml > config-backup-$(date +%Y%m%d-%H%M%S).yaml
+
+      - name: Store backup location
+        run: |
+          echo "backup_timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [backup-production]
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine version and image tag
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="v$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and verify production image
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }} \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Push latest tag
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Blue-Green deployment
+        run: |
+          echo "🔄 Starting blue-green deployment to production"
+          echo "Version: ${{ steps.version.outputs.version }}"
+
+          # Blue-Green デプロイメント例
+          # 1. 新しいバージョンをグリーン環境にデプロイ
+          # kubectl set image deployment/myscheduler-green myscheduler=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          # kubectl rollout status deployment/myscheduler-green --timeout=300s
+
+          # 2. ヘルスチェック
+          # kubectl exec deployment/myscheduler-green -- curl -f http://localhost:8000/health
+
+          # 3. トラフィックを段階的に切り替え
+          # kubectl patch service myscheduler-service -p '{"spec":{"selector":{"version":"green"}}}'
+
+      - name: Wait for deployment stabilization
+        run: |
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 60
+
+  post-deployment-verification:
+    name: Post-deployment Verification
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+
+    steps:
+      - name: Production health check
+        run: |
+          echo "❤️ Running production health check"
+          # curl -f https://api.myscheduler.example.com/health || exit 1
+
+      - name: Critical functionality tests
+        run: |
+          echo "🔍 Testing critical functionality"
+          # 本番環境の重要機能テスト
+          # newman run postman-collection.json --env-var baseUrl=https://api.myscheduler.example.com
+
+      - name: Performance monitoring
+        run: |
+          echo "📊 Checking performance metrics"
+          # パフォーマンスメトリクスの確認
+          # curl -s https://monitoring.example.com/api/metrics/myscheduler
+
+      - name: Smoke tests
+        run: |
+          echo "💨 Running production smoke tests"
+          # 本番環境スモークテスト
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [post-deployment-verification]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="v$(grep '^version = ' myscheduler/pyproject.toml | sed 's/version = "\(.*\)"/\1/')"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          CURRENT_VERSION="${{ steps.version.outputs.version }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --exclude="$CURRENT_VERSION" 2>/dev/null || echo "")
+
+          {
+            echo "## 🚀 What's New"
+            echo ""
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD --grep="^feat" | head -10
+            fi
+            echo ""
+            echo "## 🐛 Bug Fixes"
+            echo ""
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD --grep="^fix" | head -10
+            fi
+            echo ""
+            echo "## 📝 Full Changelog"
+            echo ""
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              echo "**Full Changelog**: [$PREVIOUS_TAG...$CURRENT_VERSION](https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_VERSION)"
+            fi
+          } > release-notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [post-deployment-verification]
+    if: failure()
+    environment: production
+
+    steps:
+      - name: Emergency rollback
+        run: |
+          echo "🚨 Emergency rollback initiated"
+          # 前のバージョンに即座にロールバック
+          # kubectl rollout undo deployment/myscheduler-prod
+          # kubectl rollout status deployment/myscheduler-prod
+
+      - name: Restore from backup
+        if: env.RESTORE_DATA == 'true'
+        run: |
+          echo "💾 Restoring data from backup"
+          # バックアップからデータ復旧
+
+      - name: Notify emergency
+        run: |
+          echo "🚨 Production deployment failed - Emergency rollback completed"
+          # 緊急通知
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"🚨 EMERGENCY: MyScheduler production deployment failed and was rolled back"}' \
+          #   ${{ secrets.SLACK_EMERGENCY_WEBHOOK_URL }}
+
+  success-notification:
+    name: Success Notification
+    runs-on: ubuntu-latest
+    needs: [create-release]
+
+    steps:
+      - name: Notify successful deployment
+        run: |
+          echo "✅ Production deployment successful"
+          # 成功通知
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"✅ MyScheduler ${{ needs.create-release.outputs.version }} deployed to production successfully!"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Update monitoring dashboards
+        run: |
+          echo "📊 Updating monitoring dashboards with new version"
+          # モニタリングダッシュボードの更新

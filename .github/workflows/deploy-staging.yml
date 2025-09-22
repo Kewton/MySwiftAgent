@@ -1,0 +1,207 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - 'myscheduler/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.2.3-rc)'
+        required: true
+        type: string
+
+defaults:
+  run:
+    working-directory: myscheduler
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/myscheduler
+
+jobs:
+  validate-staging:
+    name: Validate Staging Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate deployment prerequisites
+        run: |
+          echo "🔍 Validating staging deployment prerequisites"
+          # 最新のrelease/*ブランチからマージされたかチェック
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "✅ Automatic deployment from release/* merge"
+          else
+            echo "✅ Manual deployment triggered with version: ${{ inputs.version }}"
+          fi
+
+  pre-deployment-tests:
+    name: Pre-deployment Tests
+    runs-on: ubuntu-latest
+    needs: [validate-staging]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run critical tests
+        run: |
+          echo "🧪 Running critical pre-deployment tests"
+          uv run pytest tests/integration/ -v -m "critical"
+
+      - name: Health check test
+        run: |
+          echo "❤️ Running health check tests"
+          uv run pytest tests/integration/test_api.py::test_health_check -v
+
+  deploy-staging:
+    name: Deploy to Staging Environment
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-tests]
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine image tag
+        id: image-tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ inputs.version }}-rc" >> $GITHUB_OUTPUT
+          else
+            echo "tag=staging-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and tag image for staging
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }} \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+
+      - name: Push staging image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+
+      - name: Deploy to staging infrastructure
+        run: |
+          echo "🚀 Deploying to staging environment"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging"
+
+          # ここに実際のデプロイコマンドを追加
+          # 例: Kubernetes deployment
+          # kubectl set image deployment/myscheduler-staging myscheduler=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+          # kubectl rollout status deployment/myscheduler-staging
+
+          # 例: Docker Compose
+          # docker-compose -f docker-compose.staging.yml pull
+          # docker-compose -f docker-compose.staging.yml up -d
+
+          # 例: AWS ECS
+          # aws ecs update-service --cluster staging --service myscheduler --force-new-deployment
+
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting for deployment to be ready..."
+          sleep 30
+
+  post-deployment-tests:
+    name: Post-deployment Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Health check
+        run: |
+          echo "❤️ Running health check against staging"
+          # ステージング環境のヘルスチェック
+          # curl -f https://staging.myscheduler.example.com/health || exit 1
+
+      - name: Smoke tests
+        run: |
+          echo "🧪 Running smoke tests against staging"
+          # ステージング環境に対するスモークテスト
+          # newman run postman-collection.json --env-var baseUrl=https://staging.myscheduler.example.com
+
+      - name: Integration tests
+        run: |
+          echo "🔗 Running integration tests against staging"
+          # ステージング環境に対する結合テスト
+
+  auto-update-notification:
+    name: Auto-update Notification
+    runs-on: ubuntu-latest
+    needs: [post-deployment-tests]
+
+    steps:
+      - name: Notify auto-update clients
+        run: |
+          echo "📢 Notifying auto-update clients"
+          # 自動アップデート対象クライアントへの通知
+          # curl -X POST https://update-server.example.com/notify \
+          #   -H "Content-Type: application/json" \
+          #   -d '{"version": "${{ steps.image-tag.outputs.tag }}", "environment": "staging"}'
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [post-deployment-tests]
+    if: failure()
+
+    steps:
+      - name: Rollback deployment
+        run: |
+          echo "🔄 Rolling back staging deployment"
+          # ロールバック処理
+          # kubectl rollout undo deployment/myscheduler-staging
+          # または前のバージョンに戻す処理
+
+      - name: Notify rollback
+        run: |
+          echo "🚨 Staging deployment rolled back due to failure"
+          # Slack通知
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"🚨 MyScheduler staging deployment failed and was rolled back"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  success-notification:
+    name: Success Notification
+    runs-on: ubuntu-latest
+    needs: [auto-update-notification]
+
+    steps:
+      - name: Notify successful deployment
+        run: |
+          echo "✅ Staging deployment successful"
+          # Slack通知
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"✅ MyScheduler staging deployment successful - Auto-update enabled"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}

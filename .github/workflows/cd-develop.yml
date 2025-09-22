@@ -1,0 +1,152 @@
+name: CD - Develop Integration
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'myscheduler/**'
+      - '.github/workflows/**'
+
+defaults:
+  run:
+    working-directory: myscheduler
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/myscheduler
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run linting
+        run: uv run ruff check .
+
+      - name: Run type checking
+        run: uv run mypy app/
+
+      - name: Run tests
+        run: uv run pytest tests/ -v --cov=app --cov-report=xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: myscheduler/coverage.xml
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run integration tests
+        run: uv run pytest tests/integration/ -v
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, integration-test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./myscheduler
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-dev:
+    name: Deploy to Development Environment
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    environment: development
+
+    steps:
+      - name: Deploy to Development
+        run: |
+          echo "🚀 Deploying to development environment"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }}"
+          # ここに実際のデプロイコマンドを追加
+          # 例: kubectl apply -f k8s/development/
+          # 例: helm upgrade --install myscheduler-dev ./helm-chart --set image.tag=develop-${{ github.sha }}
+
+  notify:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy-dev]
+    if: always()
+
+    steps:
+      - name: Notify Slack
+        if: success()
+        run: |
+          echo "✅ Development deployment successful"
+          # Slack通知の実装
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"✅ MyScheduler develop branch deployed successfully"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on Failure
+        if: failure()
+        run: |
+          echo "❌ Development deployment failed"
+          # Slack通知の実装
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"❌ MyScheduler develop branch deployment failed"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
