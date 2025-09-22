@@ -13,7 +13,6 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.database import init_db
 from app.core.worker import WorkerManager
-from app.schemas.health import HealthResponse
 
 logger = logging.getLogger(__name__)
 
