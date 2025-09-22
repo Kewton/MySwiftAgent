@@ -40,7 +40,7 @@ class JobResponse(BaseModel):
 class JobDetail(BaseModel):
     """Schema for detailed job information."""
 
-    job_id: str
+    id: str
     status: JobStatus
     attempt: int
     max_attempts: int

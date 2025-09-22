@@ -12,14 +12,20 @@ class TestHealthAPI:
         """Test root endpoint."""
         response = await client.get("/")
         assert response.status_code == 200
-        assert response.json() == {"message": "JobQueue API is running"}
+        data = response.json()
+        assert data["message"] == "JobQueue API is running"
+        assert data["status"] == "healthy"
+        assert data["version"] == "0.1.0"
 
     @pytest.mark.asyncio
     async def test_health_check(self, client: AsyncClient):
         """Test health check endpoint."""
         response = await client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy"}
+        data = response.json()
+        assert data["message"] == "JobQueue API is healthy"
+        assert data["status"] == "healthy"
+        assert data["version"] == "0.1.0"
 
 
 class TestJobAPI:
@@ -108,7 +114,7 @@ class TestJobAPI:
         assert response.status_code == 200
 
         data = response.json()
-        assert data["job_id"] == job_id
+        assert data["id"] == job_id
         assert data["status"] == "queued"
         assert data["attempt"] == 1
         assert data["max_attempts"] == 1

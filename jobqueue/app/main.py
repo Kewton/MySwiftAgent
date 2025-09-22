@@ -8,10 +8,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.database import init_db
 from app.core.worker import WorkerManager
+from app.schemas.health import HealthResponse
 
 logger = logging.getLogger(__name__)
 
@@ -59,22 +61,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include API router
+    # Include routers
+    app.include_router(health_router)  # Root and health endpoints
     app.include_router(api_router, prefix="/api/v1")
 
     return app
 
 
 app = create_app()
-
-
-@app.get("/")
-async def root() -> dict[str, str]:
-    """Root endpoint."""
-    return {"message": "JobQueue API is running"}
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    """Health check endpoint."""
-    return {"status": "healthy"}
