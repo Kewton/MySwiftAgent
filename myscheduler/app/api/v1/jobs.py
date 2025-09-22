@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ...schemas.job import (
     JobCreateRequest,
-    JobInfo,
     JobListResponse,
     JobResponse,
 )
