@@ -7,32 +7,200 @@ on:
   pull_request:
     branches: [staging, main]
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type for version bump'
+        required: true
+        type: choice
+        options: ['major', 'minor', 'patch', 'custom']
+        default: 'minor'
+      custom_version:
+        description: 'Custom version (only if release_type is custom)'
+        required: false
+        type: string
+      project:
+        description: 'Project to release'
+        required: true
+        type: choice
+        options: ['myscheduler', 'jobqueue']
+        default: 'myscheduler'
 
 defaults:
   run:
-    working-directory: ./myscheduler
+    working-directory: ./${{ inputs.project || 'myscheduler' }}
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/myscheduler
+  IMAGE_NAME: ${{ github.repository }}/${{ inputs.project || 'myscheduler' }}
 
 jobs:
+  create-release-branch:
+    name: Create Release Branch
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      release_branch: ${{ steps.branch.outputs.branch_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Calculate next version
+        id: version
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+
+          if [[ "$RELEASE_TYPE" == "custom" && -n "$CUSTOM_VERSION" ]]; then
+            NEW_VERSION="$CUSTOM_VERSION"
+          else
+            # 現在のバージョンを取得
+            CURRENT_VERSION=$(grep '^version = ' $PROJECT/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+            echo "Current version: $CURRENT_VERSION"
+
+            # セマンティックバージョニングでバージョンを算出
+            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+
+            case "$RELEASE_TYPE" in
+              "major")
+                major=$((major + 1))
+                minor=0
+                patch=0
+                ;;
+              "minor")
+                minor=$((minor + 1))
+                patch=0
+                ;;
+              "patch")
+                patch=$((patch + 1))
+                ;;
+            esac
+
+            NEW_VERSION="$major.$minor.$patch"
+          fi
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "🚀 Next version will be: $NEW_VERSION"
+
+      - name: Update pyproject.toml
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+
+          # pyproject.tomlのバージョンを更新
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" $PROJECT/pyproject.toml
+
+          echo "✅ Updated $PROJECT/pyproject.toml to version $NEW_VERSION"
+          cat $PROJECT/pyproject.toml | grep "^version = "
+
+      - name: Create release branch
+        id: branch
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          BRANCH_NAME="release/${PROJECT}/v${NEW_VERSION}"
+
+          # developから新しいリリースブランチを作成
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          git add $PROJECT/pyproject.toml
+          git commit -m "🔖 Bump version to $NEW_VERSION for $PROJECT release
+
+          Release type: ${{ github.event.inputs.release_type }}
+
+          🤖 Generated with [Claude Code](https://claude.ai/code)
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          git push origin "$BRANCH_NAME"
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "🌿 Created release branch: $BRANCH_NAME"
+
+      - name: Create pull request
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          BRANCH_NAME="${{ steps.branch.outputs.branch_name }}"
+
+          gh pr create \
+            --title "🚀 Release $PROJECT v$NEW_VERSION" \
+            --body "$(cat <<'EOF'
+          ## 📦 Release Summary
+
+          - **Project**: $PROJECT
+          - **Version**: v$NEW_VERSION
+          - **Release Type**: ${{ github.event.inputs.release_type }}
+
+          ## 🔄 Automated Changes
+
+          - ✅ Version bump in pyproject.toml
+          - 🌿 Release branch created: \`$BRANCH_NAME\`
+
+          ## 📋 Pre-merge Checklist
+
+          - [ ] All CI checks pass
+          - [ ] QA tests completed
+          - [ ] Security scans clear
+          - [ ] Release notes reviewed
+
+          ## 🎯 Next Steps
+
+          1. Review and approve this PR
+          2. Merge to staging for UAT
+          3. Final merge to main for production release
+
+          🤖 Generated with [Claude Code](https://claude.ai/code)
+          EOF
+          )" \
+            --base develop \
+            --head "$BRANCH_NAME"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   validate-release:
     name: Validate Release
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract version from branch
+      - name: Extract project and version from branch
         id: version
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          if [[ $BRANCH_NAME =~ ^release/v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            VERSION=${BASH_REMATCH[1]}
+          echo "Branch name: $BRANCH_NAME"
+
+          # 新しい形式: release/{project}/vX.Y.Z または 旧形式: release/vX.Y.Z
+          if [[ $BRANCH_NAME =~ ^release/([^/]+)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            PROJECT=${BASH_REMATCH[1]}
+            VERSION=${BASH_REMATCH[2]}
+            echo "project=$PROJECT" >> $GITHUB_OUTPUT
             echo "version=v$VERSION" >> $GITHUB_OUTPUT
             echo "valid=true" >> $GITHUB_OUTPUT
+            echo "✅ New format detected: $PROJECT v$VERSION"
+          elif [[ $BRANCH_NAME =~ ^release/v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            # 旧形式（myscheduler想定）
+            PROJECT="myscheduler"
+            VERSION=${BASH_REMATCH[1]}
+            echo "project=$PROJECT" >> $GITHUB_OUTPUT
+            echo "version=v$VERSION" >> $GITHUB_OUTPUT
+            echo "valid=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Legacy format detected: assuming myscheduler v$VERSION"
           else
             echo "valid=false" >> $GITHUB_OUTPUT
           fi
@@ -40,19 +208,29 @@ jobs:
       - name: Validate version format
         if: steps.version.outputs.valid != 'true'
         run: |
-          echo "❌ Invalid release branch format. Expected: release/vX.Y.Z"
+          echo "❌ Invalid release branch format."
+          echo "Expected formats:"
+          echo "  - release/{project}/vX.Y.Z (recommended)"
+          echo "  - release/vX.Y.Z (legacy, assumes myscheduler)"
           exit 1
 
       - name: Check version in pyproject.toml
         run: |
+          PROJECT="${{ steps.version.outputs.project }}"
           EXPECTED_VERSION="${{ steps.version.outputs.version }}"
-          PYPROJECT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+
+          PYPROJECT_VERSION=$(grep '^version = ' $PROJECT/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
           if [[ "v$PYPROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "❌ Version mismatch:"
+            echo "❌ Version mismatch in $PROJECT:"
             echo "  Branch: $EXPECTED_VERSION"
             echo "  pyproject.toml: v$PYPROJECT_VERSION"
+            echo ""
+            echo "💡 To fix this, run:"
+            echo "  sed -i 's/^version = \".*\"/version = \"${EXPECTED_VERSION#v}\"/' $PROJECT/pyproject.toml"
             exit 1
           fi
+
+          echo "✅ Version consistency verified for $PROJECT: $EXPECTED_VERSION"
 
   test:
     name: Test Suite
@@ -132,28 +310,64 @@ jobs:
         with:
           version: "latest"
 
+      - name: Determine project and version
+        id: project-info
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            PROJECT="${{ github.event.inputs.project }}"
+            VERSION="${{ needs.create-release-branch.outputs.new_version }}"
+          else
+            # Extract from release branch name
+            BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+            if [[ $BRANCH_NAME =~ ^release/([^/]+)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              PROJECT=${BASH_REMATCH[1]}
+              VERSION=${BASH_REMATCH[2]}
+            elif [[ $BRANCH_NAME =~ ^release/v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              PROJECT="myscheduler"
+              VERSION=${BASH_REMATCH[1]}
+            fi
+          fi
+
+          echo "project=$PROJECT" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🎯 Building $PROJECT version $VERSION"
+
       - name: Build package for release
         run: |
-          cd ./myscheduler
+          PROJECT="${{ steps.project-info.outputs.project }}"
           uv build
+        working-directory: ./${{ steps.project-info.outputs.project }}
 
       - name: Build Docker image (verification only)
         run: |
-          cd ./myscheduler
-          docker build -t myscheduler:${{ steps.version.outputs.version }}-test .
+          PROJECT="${{ steps.project-info.outputs.project }}"
+          VERSION="${{ steps.project-info.outputs.version }}"
+          docker build -t $PROJECT:v$VERSION-test .
+        working-directory: ./${{ steps.project-info.outputs.project }}
 
       - name: Test release candidate
         run: |
-          docker run --rm -d --name myscheduler-rc-test -p 8000:8000 myscheduler:${{ steps.version.outputs.version }}-test
+          PROJECT="${{ steps.project-info.outputs.project }}"
+          VERSION="${{ steps.project-info.outputs.version }}"
+
+          docker run --rm -d --name $PROJECT-rc-test -p 8000:8000 $PROJECT:v$VERSION-test
           sleep 10
+
+          # ヘルスチェック
+          echo "🔍 Testing health endpoint..."
           curl -f http://localhost:8000/health || exit 1
-          docker stop myscheduler-rc-test
+
+          # API基本機能テスト
+          echo "🔍 Testing API endpoints..."
+          curl -f http://localhost:8000/api/v1/ || curl -f http://localhost:8000/ || exit 1
+
+          docker stop $PROJECT-rc-test
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: release-artifacts-${{ steps.version.outputs.version }}
-          path: ./myscheduler/dist/
+          name: release-artifacts-${{ steps.project-info.outputs.project }}-${{ steps.project-info.outputs.version }}
+          path: ./${{ steps.project-info.outputs.project }}/dist/
 
   qa-tests:
     name: QA Tests
@@ -201,21 +415,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate release notes
+      - name: Determine project and generate release notes
         id: release-notes
         run: |
-          CURRENT_VERSION=$(grep '^version = ' myscheduler/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --exclude="v$CURRENT_VERSION" 2>/dev/null || echo "")
+          # Extract project and version from branch name
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          if [[ $BRANCH_NAME =~ ^release/([^/]+)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            PROJECT=${BASH_REMATCH[1]}
+            CURRENT_VERSION=${BASH_REMATCH[2]}
+          elif [[ $BRANCH_NAME =~ ^release/v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            PROJECT="myscheduler"
+            CURRENT_VERSION=${BASH_REMATCH[1]}
+          fi
+
+          echo "📝 Generating release notes for $PROJECT v$CURRENT_VERSION"
+
+          # 前回のタグを検索（プロジェクト固有）
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match="$PROJECT/v*" --exclude="$PROJECT/v$CURRENT_VERSION" 2>/dev/null || echo "")
 
           if [[ -n "$PREVIOUS_TAG" ]]; then
-            echo "## Changes since $PREVIOUS_TAG" > release-notes.md
-            git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD >> release-notes.md
+            echo "## 🔄 Changes since $PREVIOUS_TAG" > release-notes.md
+            echo "" >> release-notes.md
+
+            # プロジェクト関連のコミットのみ抽出
+            git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD --grep="$PROJECT" -- "$PROJECT/" >> release-notes.md
+
+            # 空の場合は全コミットを含める
+            if [[ ! -s release-notes.md || $(wc -l < release-notes.md) -le 2 ]]; then
+              echo "## 🔄 Changes since $PREVIOUS_TAG" > release-notes.md
+              echo "" >> release-notes.md
+              git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD >> release-notes.md
+            fi
           else
-            echo "## Initial Release" > release-notes.md
+            echo "## 🎉 Initial Release of $PROJECT" > release-notes.md
+            echo "" >> release-notes.md
+            echo "This is the first release of $PROJECT v$CURRENT_VERSION." >> release-notes.md
           fi
+
+          echo "" >> release-notes.md
+          echo "---" >> release-notes.md
+          echo "🤖 Generated with [Claude Code](https://claude.ai/code)" >> release-notes.md
+
+          echo "project=$PROJECT" >> $GITHUB_OUTPUT
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload release notes
         uses: actions/upload-artifact@v3
         with:
-          name: release-notes
+          name: release-notes-${{ steps.release-notes.outputs.project }}-v${{ steps.release-notes.outputs.version }}
           path: release-notes.md

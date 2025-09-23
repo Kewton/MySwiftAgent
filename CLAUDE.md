@@ -42,18 +42,29 @@
 
 当プロジェクトでは、**異なるブランチ間のマージは必ず Pull Request（PR） を通じて行うことを厳守とします。**
 
-#### ✅ 原則ルール
+#### ✅ 原則ルール（バージョン管理自動化対応）
 
-| 作業元ブランチ | マージ先ブランチ             | 備考                     |
-| -------------- | ---------------------------- | ------------------------ |
-| `feature/*`    | `develop`                    | 機能追加PR               |
-| `fix/*`        | `develop`                    | バグ修正PR               |
-| `vibe/*`       | `develop`                    | AI開発支援・実験的機能PR |
-| `develop`      | `release/*`                  | リリース準備PR           |
-| `release/*`    | `staging`                    | UAT用PR                  |
-| `release/*`    | `main`                       | 本番リリースPR           |
-| `release/*`    | `develop`                    | 差分の開発ブランチ反映PR |
-| `hotfix/*`     | `main`, `staging`, `develop` | 本番障害対応用PR         |
+| 作業元ブランチ | マージ先ブランチ             | 備考                                     | 自動化対応                                     |
+| -------------- | ---------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| `feature/*`    | `develop`                    | 機能追加PR                               | 🏷️ `feature` ラベル必須（minor bump判定）      |
+| `fix/*`        | `develop`                    | バグ修正PR                               | 🏷️ `fix` ラベル（patch bump判定）              |
+| `vibe/*`       | `develop`                    | AI開発支援・実験的機能PR                 | 🏷️ 適切なラベル付与必須                       |
+| `develop`      | `release/*`                  | リリース準備PR                           | 📝 手動バージョン確定・検証                    |
+| `release/*`    | `staging`                    | UAT用PR                                  | 🚀 自動デプロイトリガー                        |
+| `release/*`    | `main`                       | 本番リリースPR                           | 🔄 自動バージョンバンプ・タグ・Release作成     |
+| `release/*`    | `develop`                    | 差分の開発ブランチ反映PR                 | 🔄 バックポート自動化                          |
+| `hotfix/*`     | `main`, `staging`, `develop` | 本番障害対応用PR                         | ⚡ 緊急リリース自動化（patch bump + 即時展開） |
+
+#### 🏷️ PRラベル運用ルール
+
+**必須ラベル（セマンティックバージョニング）:**
+- `breaking` → Major バージョンアップ（例: 1.2.3 → 2.0.0）
+- `feature` → Minor バージョンアップ（例: 1.2.3 → 1.3.0）
+- `fix` → Patch バージョンアップ（例: 1.2.3 → 1.2.4）
+
+**補助ラベル:**
+- `refactor`, `docs`, `test`, `ci` → 基本的にpatch扱い
+- `dependencies` → セキュリティ更新時はpatch、機能追加時はminor
 
 #### ❌ 禁止事項
 
@@ -66,20 +77,31 @@ CI障害などによるやむを得ない直マージの必要が生じた場合
 
 ### 🔁 マージ戦略とフロー
 
-#### 標準マージフロー
+#### 標準マージフロー（自動バージョン管理対応）
 
 ```mermaid
 graph TD
-  F1[feature/login-ui] --> D1[develop]
-  F2[fix/bug-xyz] --> D1
-  D1 --> R1[release/v1.2.0]
-  R1 --> S1[staging]
-  S1 --> M1[main]
-  M1 --> T1[tag v1.2.0]
+  F1[feature/login-ui<br/>🏷️ feature label] --> D1[develop]
+  F2[fix/bug-xyz<br/>🏷️ fix label] --> D1
+  F3[refactor/cleanup<br/>🏷️ breaking label] --> D1
+  D1 --> R1[release/v1.2.0<br/>📝 手動バージョン確定]
+  R1 --> S1[staging<br/>🚀 自動デプロイ]
+  S1 --> M1[main<br/>🔄 自動バージョンバンプ]
+  M1 --> T1[🏷️ 自動タグ作成<br/>📦 GitHub Release生成]
   R1 --> D1
   H1[hotfix/crash-fix] --> M1
   H1 --> D1
   H1 --> S1
+
+  %% 自動化プロセス
+  M1 --> A1{PRラベル判定}
+  A1 --> A2[major: breaking]
+  A1 --> A3[minor: feature]
+  A1 --> A4[patch: fix/others]
+  A2 --> A5[pyproject.toml更新]
+  A3 --> A5
+  A4 --> A5
+  A5 --> T1
 ```
 
 #### バグ修正の方針
@@ -183,6 +205,16 @@ GitHub Actions で以下を自動実行：
 2. **テスト実行** - 単体・結合テスト + カバレッジ測定
 3. **セキュリティ監査** - 脆弱性スキャン
 4. **ビルド検証** - アプリケーション起動確認
+5. **🔄 バージョン管理自動化** - セマンティックリリース、タグ作成、GitHub Release
+
+#### 📋 自動化されるバージョン管理フロー
+
+| トリガー | 自動実行内容 | 対象ワークフロー |
+|---------|-------------|----------------|
+| **PR → `develop`** | ラベル検証、コンベンショナルコミットチェック | `conventional-commits.yml` |
+| **PR → `main` (merged)** | pyproject.toml バージョンバンプ、GitHub Release作成 | `auto-release.yml` |
+| **`release/*` push** | リリース候補検証、自動デプロイトリガー | `release.yml` |
+| **GitHub Release published** | 本番・ステージング自動デプロイ | `deploy-on-release.yml` |
 
 ### パフォーマンス・セキュリティ
 
@@ -202,9 +234,17 @@ GitHub Actions で以下を自動実行：
 3. **レビュー強化**: AI生成部分は人間による詳細レビューを実施
 4. **セキュリティ重視**: 外部API呼び出し、認証まわりは特に慎重に検証
 5. **ドキュメント更新**: 生成されたコードに対応する仕様書・READMEの更新
+6. **🏷️ PRラベル必須**: AI生成PR も適切なセマンティックバージョニングラベルを付与
 
-## 推奨フロー
+## 推奨フロー（自動化対応）
 
 ```
-AI生成 → 静的解析 → テスト作成 → 手動レビュー → PR作成
+AI生成 → 静的解析 → テスト作成 → 🏷️ PRラベル付与 → 手動レビュー → PR作成 → 🔄 自動バージョン管理
 ```
+
+### 🎯 AI開発時のバージョン管理指針
+
+- **`vibe/*` ブランチ**: 実験的機能開発時も本番品質を維持し、適切なラベル付与
+- **破壊的変更**: AIによるリファクタリングでAPI変更が生じる場合は `breaking` ラベル必須
+- **機能追加**: 新機能実装時は `feature` ラベルでminor版数アップ
+- **バグ修正**: AI による不具合修正は `fix` ラベルでpatch版数アップ
