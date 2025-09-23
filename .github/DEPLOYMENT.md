@@ -30,27 +30,27 @@ MySwiftAgentは複数のマイクロサービスを含むモノレポ構成で�
 
 ```mermaid
 graph TD
-  F1[feature/login-ui<br/>🏷️ feature label] --> D1[develop]
-  F2[fix/bug-xyz<br/>🏷️ fix label] --> D1
-  F3[refactor/cleanup<br/>🏷️ breaking label] --> D1
-  D1 --> R1[release/{project}/vX.Y.Z<br/>📝 手動バージョン確定]
-  R1 --> S1[staging<br/>🚀 自動デプロイ]
-  S1 --> M1[main<br/>🔄 自動バージョンバンプ]
-  M1 --> T1[🏷️ 自動タグ作成<br/>📦 GitHub Release生成]
+  F1["feature/login-ui<br/>🏷️ feature label"] --> D1[develop]
+  F2["fix/bug-xyz<br/>🏷️ fix label"] --> D1
+  F3["refactor/cleanup<br/>🏷️ breaking label"] --> D1
+  D1 --> R1["release/PROJECT/vX.Y.Z<br/>📝 手動バージョン確定"]
+  R1 --> S1["staging<br/>🚀 自動デプロイ"]
+  S1 --> M1["main<br/>🔄 自動バージョンバンプ"]
+  M1 --> T1["🏷️ 自動タグ作成<br/>📦 GitHub Release生成"]
   R1 --> D1
 
   %% 自動化プロセス
-  M1 --> A1{PRラベル判定}
-  A1 --> A2[major: breaking]
-  A1 --> A3[minor: feature]
-  A1 --> A4[patch: fix/others]
-  A2 --> A5[pyproject.toml更新]
+  M1 --> A1{"PRラベル判定"}
+  A1 --> A2["major: breaking"]
+  A1 --> A3["minor: feature"]
+  A1 --> A4["patch: fix/others"]
+  A2 --> A5["pyproject.toml更新"]
   A3 --> A5
   A4 --> A5
   A5 --> T1
 
   %% ホットフィックス
-  H1[hotfix/crash-fix] --> M1
+  H1["hotfix/crash-fix"] --> M1
   H1 --> D1
   H1 --> S1
 ```
