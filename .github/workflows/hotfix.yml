@@ -61,8 +61,20 @@ jobs:
           # Select primary project (first detected)
           PRIMARY_PROJECT=${PROJECTS[0]}
 
-          # Create JSON array for matrix strategy
-          PROJECTS_JSON=$(printf '%s\n' "${PROJECTS[@]}" | jq -R . | jq -s .)
+          # Create JSON array for matrix strategy (safe method)
+          if [[ ${#PROJECTS[@]} -eq 1 ]]; then
+            PROJECTS_JSON="[\"${PROJECTS[0]}\"]"
+          else
+            PROJECT_LIST=""
+            for i in "${!PROJECTS[@]}"; do
+              if [[ $i -eq 0 ]]; then
+                PROJECT_LIST="\"${PROJECTS[i]}\""
+              else
+                PROJECT_LIST="$PROJECT_LIST,\"${PROJECTS[i]}\""
+              fi
+            done
+            PROJECTS_JSON="[$PROJECT_LIST]"
+          fi
 
           echo "project=$PRIMARY_PROJECT" >> $GITHUB_OUTPUT
           echo "projects_json=$PROJECTS_JSON" >> $GITHUB_OUTPUT
@@ -70,6 +82,7 @@ jobs:
 
           echo "🎯 Primary project: $PRIMARY_PROJECT"
           echo "📦 All affected projects: ${PROJECTS[*]}"
+          echo "📄 JSON format: $PROJECTS_JSON"
 
   validate-hotfix:
     name: Validate Hotfix
