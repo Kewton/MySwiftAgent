@@ -390,7 +390,7 @@ jobs:
           docker stop $PROJECT-rc-test
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-artifacts-${{ steps.project-info.outputs.project }}-${{ steps.project-info.outputs.version }}
           path: ./${{ steps.project-info.outputs.project }}/dist/
@@ -489,7 +489,7 @@ jobs:
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload release notes
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-notes-${{ steps.release-notes.outputs.project }}-v${{ steps.release-notes.outputs.version }}
           path: release-notes.md
