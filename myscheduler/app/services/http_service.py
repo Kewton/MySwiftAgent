@@ -56,7 +56,9 @@ class HTTPService:
 
                 # 4xxエラーはリトライしない
                 if 400 <= response.status_code < 500:
-                    logger.error(f"Client error {response.status_code} for {method} {url}")
+                    logger.error(
+                        f"Client error {response.status_code} for {method} {url}"
+                    )
                     break
 
                 # 5xxエラーまたは200番台以外はリトライ対象

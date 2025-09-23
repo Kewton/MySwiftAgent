@@ -20,7 +20,7 @@ class JobService:
     def __init__(self) -> None:
         self.scheduler = scheduler_manager.get_scheduler()
 
-    def _create_trigger(self, job_request: JobCreateRequest) -> object:
+    def _create_trigger(self, job_request: JobCreateRequest):
         """スケジュール設定からAPSchedulerトリガーを作成"""
 
         if job_request.schedule_type == "cron":

@@ -117,9 +117,8 @@ class TestJobService:
 
     def test_create_trigger_invalid_type(self):
         """無効なトリガータイプのテスト"""
-        from pydantic import ValidationError
-
         # Pydanticバリデーションエラーをテスト
+        from pydantic import ValidationError
         with pytest.raises(ValidationError):
             JobCreateRequest(
                 schedule_type="invalid", target_url="https://example.com/test"

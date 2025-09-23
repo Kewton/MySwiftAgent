@@ -7,8 +7,6 @@ on:
   pull_request:
     branches: [main, staging, develop]
     types: [opened, synchronize, reopened]
-    head:
-      - 'hotfix/**'
 
 defaults:
   run:
@@ -22,6 +20,7 @@ jobs:
   validate-hotfix:
     name: Validate Hotfix
     runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'hotfix/') || startsWith(github.ref, 'refs/heads/hotfix/')
 
     steps:
       - name: Checkout code
