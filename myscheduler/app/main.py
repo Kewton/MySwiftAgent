@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
 
     # ルーターの登録
     app.include_router(health.router)
+    app.include_router(health.router, prefix="/health")
     app.include_router(jobs.router, prefix="/api/v1")
 
     return app

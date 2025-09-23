@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Development
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+ENV/
+env/
+# Ensure uv.lock is NOT ignored
+!uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+# README.md  # Keep README.md for build
+# *.md  # Allow specific markdown files for build
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# CI/CD
+.github/
+
+# Test data
+tests/
