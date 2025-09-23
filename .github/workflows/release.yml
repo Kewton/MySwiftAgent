@@ -212,6 +212,27 @@ jobs:
           echo "  - release/vX.Y.Z (legacy, assumes myscheduler)"
           exit 1
 
+      - name: Validate project directory
+        run: |
+          PROJECT="${{ steps.version.outputs.project }}"
+
+          # Check if project directory exists
+          if [[ ! -d "$PROJECT" ]]; then
+            echo "❌ Project directory '$PROJECT' does not exist"
+            echo "Available projects: $(find . -maxdepth 1 -name '*.toml' -exec dirname {} \; | sort | uniq | grep -v '^\.$' | tr '\n' ', ' || echo 'none')"
+            echo "Available directories: $(ls -d */ 2>/dev/null | tr -d '/' | tr '\n' ', ' || echo 'none')"
+            exit 1
+          fi
+
+          # Check if pyproject.toml exists
+          if [[ ! -f "$PROJECT/pyproject.toml" ]]; then
+            echo "❌ pyproject.toml not found in '$PROJECT/'"
+            echo "Required file: $PROJECT/pyproject.toml"
+            exit 1
+          fi
+
+          echo "✅ Project directory '$PROJECT' exists and contains pyproject.toml"
+
       - name: Check version in pyproject.toml
         run: |
           PROJECT="${{ steps.version.outputs.project }}"
@@ -234,6 +255,9 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     needs: [validate-release]
+    if: |
+      needs.validate-release.outputs.project == 'myscheduler' ||
+      needs.validate-release.outputs.project == 'jobqueue'
 
     steps:
       - name: Checkout code
@@ -273,6 +297,9 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: [validate-release]
+    if: |
+      needs.validate-release.outputs.project == 'myscheduler' ||
+      needs.validate-release.outputs.project == 'jobqueue'
 
     steps:
       - name: Checkout code
@@ -291,6 +318,9 @@ jobs:
     name: Build Release Candidate
     runs-on: ubuntu-latest
     needs: [test, security-scan, validate-release]
+    if: |
+      needs.validate-release.outputs.project == 'myscheduler' ||
+      needs.validate-release.outputs.project == 'jobqueue'
 
     steps:
       - name: Checkout code
@@ -369,6 +399,9 @@ jobs:
     name: QA Tests
     runs-on: ubuntu-latest
     needs: [build-release, validate-release]
+    if: |
+      needs.validate-release.outputs.project == 'myscheduler' ||
+      needs.validate-release.outputs.project == 'jobqueue'
 
     steps:
       - name: Checkout code
