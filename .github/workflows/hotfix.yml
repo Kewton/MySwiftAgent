@@ -258,14 +258,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set image name (lowercase)
+        id: image
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=${{ env.REGISTRY }}/$REPO_LOWER/${{ matrix.project }}" >> $GITHUB_OUTPUT
+          echo "🏷️ Image name: ${{ env.REGISTRY }}/$REPO_LOWER/${{ matrix.project }}"
+
       - name: Build and push hotfix image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.project }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ steps.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:hotfix-latest
+            ${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}
+            ${{ steps.image.outputs.name }}:hotfix-latest
 
   deploy-hotfix-staging:
     name: Deploy Hotfix to Staging
