@@ -248,3 +248,294 @@ AI生成 → 静的解析 → テスト作成 → 🏷️ PRラベル付与 → 
 - **破壊的変更**: AIによるリファクタリングでAPI変更が生じる場合は `breaking` ラベル必須
 - **機能追加**: 新機能実装時は `feature` ラベルでminor版数アップ
 - **バグ修正**: AI による不具合修正は `fix` ラベルでpatch版数アップ
+
+---
+
+# 📦 新プロジェクト追加時の手順
+
+MySwiftAgentはマルチプロジェクト対応のモノレポ構成を採用しており、新しいマイクロサービス・プロジェクトの追加は以下の手順で行います。
+
+## 📋 追加手順チェックリスト
+
+### 1. **プロジェクト基盤の作成**
+
+```bash
+# 新プロジェクトディレクトリ作成
+mkdir {project_name}
+cd {project_name}
+
+# 必須ファイルの作成
+touch pyproject.toml
+touch Dockerfile
+mkdir -p app tests/unit tests/integration
+```
+
+**必須ファイル構成:**
+```
+{project_name}/
+├── pyproject.toml          # プロジェクト設定・依存関係・バージョン
+├── Dockerfile              # コンテナイメージ定義
+├── app/                    # アプリケーションコード
+│   ├── main.py            # FastAPIエントリーポイント
+│   └── core/              # コア機能
+├── tests/                  # テストコード
+│   ├── unit/              # 単体テスト
+│   ├── integration/       # 結合テスト
+│   └── conftest.py        # テスト設定
+└── README.md              # プロジェクト固有ドキュメント
+```
+
+### 2. **pyproject.toml の設定**
+
+```toml
+[project]
+name = "{project_name}"
+version = "0.1.0"  # 初回リリース用バージョン
+description = "プロジェクトの説明"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    # その他の依存関係
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+```
+
+### 3. **CI/CD設定への追加**
+
+#### 3.1 release.yml ワークフローの更新
+
+**`/.github/workflows/release.yml`** の以下の箇所を更新：
+
+```yaml
+# workflow_dispatch inputs への追加
+project:
+  description: 'Project to release'
+  required: true
+  type: choice
+  options: ['myscheduler', 'jobqueue', '{project_name}']  # 新プロジェクト追加
+  default: 'myscheduler'
+
+# 各ジョブの条件に新プロジェクトを追加
+test:
+  if: |
+    needs.validate-release.outputs.project == 'myscheduler' ||
+    needs.validate-release.outputs.project == 'jobqueue' ||
+    needs.validate-release.outputs.project == '{project_name}'  # 新プロジェクト追加
+
+security-scan:
+  if: |
+    needs.validate-release.outputs.project == 'myscheduler' ||
+    needs.validate-release.outputs.project == 'jobqueue' ||
+    needs.validate-release.outputs.project == '{project_name}'  # 新プロジェクト追加
+
+# 他のジョブでも同様に条件を追加
+```
+
+#### 3.2 他のワークフローファイルの更新確認
+
+以下のワークフローが新プロジェクトに対応するか確認・更新：
+- `ci-feature.yml`
+- `cd-develop.yml`
+- `ci-main.yml`
+
+### 4. **Dockerfileの作成**
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies
+RUN uv sync --no-dev
+
+# Copy application code
+COPY app/ ./app/
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### 5. **基本APIエンドポイントの実装**
+
+**`app/main.py`**:
+```python
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="{project_name}",
+    version="0.1.0",
+    description="プロジェクトの説明"
+)
+
+@app.get("/health")
+async def health_check():
+    """ヘルスチェックエンドポイント（CI/CDで使用）"""
+    return {"status": "healthy", "service": "{project_name}"}
+
+@app.get("/")
+async def root():
+    """ルートエンドポイント"""
+    return {"message": "Welcome to {project_name}"}
+
+@app.get("/api/v1/")
+async def api_root():
+    """API v1 ルート"""
+    return {"version": "1.0", "service": "{project_name}"}
+```
+
+### 6. **テスト環境の設定**
+
+**`tests/conftest.py`**:
+```python
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+@pytest.fixture
+def client():
+    return TestClient(app)
+```
+
+**`tests/integration/test_api.py`**:
+```python
+def test_health_check(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "healthy", "service": "{project_name}"}
+
+def test_root_endpoint(client):
+    response = client.get("/")
+    assert response.status_code == 200
+```
+
+### 7. **初回リリースの実行**
+
+```bash
+# 1. 開発ブランチから作業開始
+git checkout develop
+git pull origin develop
+
+# 2. 新プロジェクト用feature/vibe ブランチ作成
+git checkout -b feature/{project_name}-initial-setup
+
+# 3. ファイル追加・コミット
+git add {project_name}/
+git commit -m "feat({project_name}): add initial project structure
+
+- Add pyproject.toml with basic dependencies
+- Add FastAPI application with health check
+- Add Docker configuration
+- Add test structure and basic tests
+- Add CI/CD integration
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 4. プッシュしてPR作成
+git push origin feature/{project_name}-initial-setup
+
+# 5. developブランチへのPR作成（featureラベル付与）
+gh pr create \
+  --title "🎉 Add new project: {project_name}" \
+  --body "初回プロジェクト追加..." \
+  --base develop \
+  --label feature
+```
+
+### 8. **初回リリースの実行**
+
+```bash
+# developマージ後、リリースワークフロー実行
+gh workflow run release.yml \
+  -f project={project_name} \
+  -f release_type=minor \
+  -f custom_version="0.1.0"
+
+# または手動でリリースブランチ作成
+git checkout develop
+git pull origin develop
+git checkout -b release/{project_name}/v0.1.0
+git push origin release/{project_name}/v0.1.0
+```
+
+## 📊 マルチプロジェクト対応状況
+
+### 現在のプロジェクト一覧
+
+| プロジェクト | 目的 | 技術スタック | リリース状況 |
+|-------------|------|-------------|-------------|
+| `myscheduler` | ジョブスケジューリング | FastAPI + APScheduler + SQLAlchemy | ✅ 本番運用中 |
+| `jobqueue` | ジョブキュー管理 | FastAPI + Redis/PostgreSQL | 🚀 初回リリース準備中 |
+
+### プロジェクト追加時のCI/CD更新箇所
+
+- **`.github/workflows/release.yml`**: workflow_dispatch inputsとジョブ条件
+- **`.github/workflows/ci-feature.yml`**: フィーチャーブランチ用品質チェック
+- **`.github/workflows/cd-develop.yml`**: 開発統合用テスト
+- **`.github/workflows/ci-main.yml`**: 本番品質チェック
+- **`.github/DEPLOYMENT.md`**: プロジェクト一覧表とリリース手順
+
+## 🔧 新プロジェクト追加後の品質チェック
+
+```bash
+# 新プロジェクトのローカル検証
+cd {project_name}
+
+# 1. 依存関係インストール
+uv sync --extra dev
+
+# 2. 品質チェック実行
+uv run ruff check .
+uv run ruff format . --check
+uv run mypy app/
+
+# 3. テスト実行
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
+
+# 4. アプリケーション起動テスト
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# 5. ヘルスチェック
+curl -f http://localhost:8000/health
+```
+
+## ⚠️ 注意事項
+
+1. **リリースブランチ命名**: 必ず `release/{project_name}/vX.Y.Z` 形式を使用
+2. **初回バージョン**: 新プロジェクトは `0.1.0` から開始することを推奨
+3. **CI/CD設定**: 各ワークフローファイルへの新プロジェクト追加を忘れずに実施
+4. **依存関係管理**: `uv`を使用し、`pyproject.toml`で一元管理
+5. **Docker対応**: リリースフローではDockerイメージビルド・テストが必須
+6. **API規約**: ヘルスチェック（`/health`）とルートエンドポイント（`/`、`/api/v1/`）は実装必須

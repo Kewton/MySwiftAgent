@@ -145,6 +145,55 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
    - **Custom version**: custom選択時のみ
 5. **実行** → 自動でリリースブランチ・PR作成
 
+### 新プロジェクト追加
+
+**新しいマイクロサービスを追加する場合の人間による作業：**
+
+#### 1. **プロジェクト構造の作成**
+```bash
+# 新プロジェクトディレクトリ作成
+mkdir {project_name}
+cd {project_name}
+
+# 基本ファイル作成
+touch pyproject.toml Dockerfile
+mkdir -p app tests/unit tests/integration
+```
+
+#### 2. **必須ファイルの実装**
+- **`pyproject.toml`**: 依存関係・バージョン・ツール設定
+- **`app/main.py`**: FastAPIアプリケーション + ヘルスチェック
+- **`Dockerfile`**: コンテナイメージ定義
+- **`tests/`**: 単体・結合テスト
+
+#### 3. **CI/CD設定の手動更新**
+```yaml
+# .github/workflows/release.yml を編集
+project:
+  options: ['myscheduler', 'jobqueue', '{project_name}']  # 追加
+
+# 各ジョブの条件に新プロジェクトを追加
+test:
+  if: |
+    needs.validate-release.outputs.project == 'myscheduler' ||
+    needs.validate-release.outputs.project == 'jobqueue' ||
+    needs.validate-release.outputs.project == '{project_name}'  # 追加
+```
+
+#### 4. **初回リリース作業**
+```bash
+# 1. feature ブランチで開発
+git checkout -b feature/{project_name}-initial-setup
+
+# 2. PR作成（🏷️ feature ラベル必須）
+gh pr create --title "🎉 Add new project: {project_name}" --base develop --label feature
+
+# 3. developマージ後、リリース実行
+gh workflow run release.yml -f project={project_name} -f release_type=minor -f custom_version="0.1.0"
+```
+
+**⚠️ 詳細手順は [CLAUDE.md - 新プロジェクト追加時の手順](./CLAUDE.md#📦-新プロジェクト追加時の手順) を参照**
+
 ### リリースフロー
 
 ```mermaid
