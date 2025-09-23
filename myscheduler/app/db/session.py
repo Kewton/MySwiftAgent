@@ -1,5 +1,5 @@
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore  # type: ignore
-from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from ..core.config import settings
 from ..core.logging import get_logger
