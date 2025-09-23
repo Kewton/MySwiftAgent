@@ -98,14 +98,10 @@ jobs:
           version: "latest"
 
       - name: Build package
-        run: |
-          cd ./myscheduler
-          uv build
+        run: uv build
 
       - name: Build Docker image (test only)
-        run: |
-          cd ./myscheduler
-          docker build -t myscheduler:test .
+        run: docker build -t myscheduler:test .
 
       - name: Test Docker image
         run: |
@@ -134,25 +130,20 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: |
-          cd ./myscheduler
-          uv sync --extra dev
+        run: uv sync --extra dev
 
       - name: Code complexity analysis
         run: |
-          cd ./myscheduler
           echo "📊 Analyzing code complexity"
           # radon cc --average app/ || echo "Radon not available, skipping complexity analysis"
 
       - name: Security analysis
         run: |
-          cd ./myscheduler
           echo "🔒 Running security analysis"
           uv run ruff check . --select=S
 
       - name: Import analysis
         run: |
-          cd ./myscheduler
           echo "📦 Analyzing imports"
           # Check for unused imports and circular dependencies
 
