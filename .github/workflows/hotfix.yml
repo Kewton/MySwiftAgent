@@ -375,25 +375,57 @@ jobs:
           git push origin main
 
       - name: Merge to staging (if exists)
+        continue-on-error: true
         run: |
           echo "🔄 Merging hotfix to staging"
           if git ls-remote --heads origin staging | grep -q staging; then
             git checkout staging
             git pull origin staging
-            git merge --no-ff main -m "Merge hotfix to staging: ${{ needs.validate-hotfix.outputs.hotfix_name }}"
-            git push origin staging
+            if git merge --no-ff main -m "Merge hotfix to staging: ${{ needs.validate-hotfix.outputs.hotfix_name }}"; then
+              git push origin staging
+              echo "✅ Successfully merged hotfix to staging"
+            else
+              echo "⚠️ Merge conflicts detected in staging branch"
+              echo "🔍 Conflict details:"
+              git status --porcelain | grep "^UU" || git status --short
+              echo ""
+              echo "📋 Manual resolution required:"
+              echo "1. git checkout staging"
+              echo "2. git merge main"
+              echo "3. Resolve conflicts and commit"
+              echo "4. git push origin staging"
+              echo ""
+              echo "🚀 Note: Hotfix deployment was successful despite merge conflict"
+              exit 1
+            fi
           else
             echo "⚠️ Staging branch does not exist, skipping"
           fi
 
       - name: Merge to develop (if exists)
+        continue-on-error: true
         run: |
           echo "🔄 Merging hotfix to develop"
           if git ls-remote --heads origin develop | grep -q develop; then
             git checkout develop
             git pull origin develop
-            git merge --no-ff main -m "Merge hotfix to develop: ${{ needs.validate-hotfix.outputs.hotfix_name }}"
-            git push origin develop
+            if git merge --no-ff main -m "Merge hotfix to develop: ${{ needs.validate-hotfix.outputs.hotfix_name }}"; then
+              git push origin develop
+              echo "✅ Successfully merged hotfix to develop"
+            else
+              echo "⚠️ Merge conflicts detected in develop branch"
+              echo "🔍 Conflict details:"
+              git status --porcelain | grep "^UU" || git status --short
+              echo ""
+              echo "📋 Manual resolution required:"
+              echo "1. git checkout develop"
+              echo "2. git merge main"
+              echo "3. Resolve conflicts and commit"
+              echo "4. git push origin develop"
+              echo ""
+              echo "🚀 Note: Hotfix deployment was successful despite merge conflict"
+              exit 1
+            fi
           else
             echo "⚠️ Develop branch does not exist, skipping"
           fi
