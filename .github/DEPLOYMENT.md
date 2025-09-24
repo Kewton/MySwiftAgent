@@ -11,6 +11,7 @@ MySwiftAgentは複数のマイクロサービスを含むモノレポ構成で�
 |-------------|------|-------------|-------------|
 | `myscheduler` | ジョブスケジューリング | FastAPI + APScheduler + SQLAlchemy | ✅ 本番運用中 |
 | `jobqueue` | ジョブキュー管理 | FastAPI + Redis/PostgreSQL | 🚀 初回リリース準備中 |
+| `docs` | プロジェクトドキュメント | Markdown + 静的サイトジェネレータ | 📝 軽量ワークフロー対応 |
 
 ## 🌿 ブランチ戦略に基づくワークフロー
 
@@ -18,11 +19,12 @@ MySwiftAgentは複数のマイクロサービスを含むモノレポ構成で�
 
 | ワークフロー | トリガー | 目的 | 状態 |
 |-------------|----------|------|------|
-| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR | 品質チェック・テスト実行 | 🟢 有効 |
-| `cd-develop.yml` | developブランチへのpush | 統合品質チェック | 🟢 有効 |
-| `release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証** | 🟢 有効 |
-| `ci-main.yml` | mainブランチへのpush | 本番品質チェック | 🟢 有効 |
-| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR | 緊急修正品質チェック | 🟢 有効 |
+| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR<br>**（docs/** を除外） | 品質チェック・テスト実行 | 🟢 有効 |
+| `cd-develop.yml` | developブランチへのpush<br>**（docs/** を除外） | 統合品質チェック | 🟢 有効 |
+| `release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>**docs専用バリデーション追加** | 🟢 有効 |
+| `ci-main.yml` | mainブランチへのpush<br>**（docs/** を除外） | 本番品質チェック | 🟢 有効 |
+| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR<br>**docs変更時は軽量実行** | 緊急修正品質チェック | 🟢 有効 |
+| `docs.yml` | docs/** の変更時<br>**全ブランチ対応** | **ドキュメント専用軽量処理**<br>Markdownlinting・構造検証・バージョン管理 | 🆕 **新規追加** |
 
 ## 🔄 マルチプロジェクト対応デプロイメントフロー
 
@@ -69,10 +71,14 @@ graph TD
 ```bash
 # GitHub Actions UIから実行
 # 入力パラメータ：
-# - project: myscheduler / jobqueue
+# - project: myscheduler / jobqueue / docs
 # - release_type: major / minor / patch / custom
 # - custom_version: カスタムバージョン（optonal）
 ```
+
+**📝 docsプロジェクトの特殊処理:**
+- pyproject.tomlが存在しない場合、自動で軽量版を生成
+- Docker処理は実行せず、軽量なMarkdownlinting・構造検証のみ実行
 
 #### 2. **手動ブランチ作成** によるリリース
 
@@ -119,15 +125,19 @@ inputs:
 
 #### 3. **実行内容**（プロジェクト別）
 1. **Validate Release**: バージョン形式・プロジェクト存在確認
-2. **Test Suite**: プロジェクト別テスト実行
+2. **Test Suite**: アプリケーションプロジェクト用テスト実行（myscheduler/jobqueue）
    ```bash
    working-directory: ./${{ needs.validate-release.outputs.project }}
    ```
-3. **Security Scan**: プロジェクト別脆弱性スキャン
-4. **Build Release**: プロジェクト別イメージビルド・テスト
-5. **QA Tests**: QA・パフォーマンステスト
-6. **Approval Gate**: 手動承認（PR時）
-7. **Create Release Notes**: プロジェクト別リリースノート生成
+3. **Documentation Validation**: docsプロジェクト専用軽量バリデーション
+   - Markdownファイルのlinting
+   - ドキュメント構造検証
+   - バージョン情報付与
+4. **Security Scan**: アプリケーションプロジェクト用脆弱性スキャン
+5. **Build Release**: アプリケーションプロジェクト用イメージビルド・テスト
+6. **QA Tests**: QA・パフォーマンステスト
+7. **Approval Gate**: 手動承認（PR時）
+8. **Create Release Notes**: プロジェクト別リリースノート生成
 
 ### CI - Main Branch Quality Check (`ci-main.yml`)
 
@@ -150,9 +160,10 @@ inputs:
 **トリガー**:
 - `feature/*`, `fix/*`, `refactor/*`, `test/*`, `vibe/*` ブランチへのpush
 - `develop` ブランチへのPull Request
+- **📝 docs/** パスは除外（専用ワークフローで処理）
 
 **実行内容**:
-1. **Test Suite**: myscheduler限定テスト（リント、型チェック、テスト実行）
+1. **Test Suite**: アプリケーションプロジェクト限定テスト（リント、型チェック、テスト実行）
 2. **Security Scan**: Trivyによる脆弱性スキャン
 3. **Build Check**: パッケージビルド、Dockerイメージビルド・テスト
 
@@ -160,12 +171,35 @@ inputs:
 
 **トリガー**:
 - `develop` ブランチへのpush
+- **📝 docs/** パスは除外（専用ワークフローで処理）
 
 **実行内容**:
 1. **Test Suite**: myscheduler統合テスト
 2. **Integration Tests**: 結合テスト
 3. **Build and Push**: Dockerイメージビルド（現在コメントアウト）
 4. **Notify**: 成功・失敗通知
+
+### 📝 Documentation Workflow (`docs.yml`) - 🆕 新規追加
+
+**トリガー**:
+- `docs/**` パスの変更時
+- 対応ブランチ: main, develop, hotfix/*, release/*, feature/*, fix/*
+
+**実行内容**:
+1. **Validate Documentation**:
+   - Markdownファイルのlinting（markdownlint-cli）
+   - ドキュメント構造検証
+   - リンクチェック（将来対応）
+2. **Build Documentation Site**:
+   - 静的サイト生成
+   - バージョン情報の自動付与（リリースブランチ時）
+   - GitHub Pages対応（将来）
+3. **Notification**: ドキュメント更新通知
+
+**特徴:**
+- **軽量処理**: Docker、Python依存関係、セキュリティスキャンなし
+- **高速実行**: ドキュメント変更専用の最適化された処理
+- **バージョン対応**: `release/docs/vX.Y.Z` ブランチでバージョン管理
 
 ## 🔒 セキュリティ・品質ゲート
 

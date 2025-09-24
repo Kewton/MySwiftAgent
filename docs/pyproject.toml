@@ -1,24 +1,11 @@
 [project]
 name = "docs"
 version = "0.1.0"
-description = "Documentation service for MySwiftAgent"
+description = "Documentation for MySwiftAgent"
 authors = [
-    {name = "MySwiftAgent Team", email = "team@myswiftagent.com"},
+    {name = "MySwiftAgent Team", email = "noreply@example.com"},
 ]
-dependencies = [
-    "fastapi>=0.100.0",
-    "uvicorn>=0.23.0",
-    "pydantic>=2.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
-    "httpx>=0.24.0",
-]
+# No dependencies needed for documentation-only project
 
 [tool.ruff]
 target-version = "py312"
@@ -29,14 +16,7 @@ python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["app"]
+# Documentation project doesn't need test configuration or app packages
 
 [build-system]
 requires = ["hatchling"]
