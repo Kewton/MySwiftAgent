@@ -110,18 +110,7 @@ jobs:
             echo "Creating GitHub Release for $TAG_NAME..."
             gh release create "$TAG_NAME" \
               --title "🚀 $project v$VERSION" \
-              --notes "## 📦 Release Summary
-
-- **Project**: $project
-- **Version**: v$VERSION
-- **Tag**: $TAG_NAME
-
-## 🎉 Automated Release
-
-This release was automatically created when changes were detected in the $project project.
-
----
-🤖 Generated with [Claude Code](https://claude.ai/code)" \
+              --notes "Release $project v$VERSION - Automated release generated with Claude Code" \
               --latest=$(if [[ "$project" == "myscheduler" ]]; then echo "true"; else echo "false"; fi)
 
             echo "✅ Successfully created GitHub Release: $TAG_NAME"
