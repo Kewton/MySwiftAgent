@@ -1,0 +1,209 @@
+name: "Automatic Release and Tagging"
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  detect-changes:
+    name: Detect Project Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed_projects: ${{ steps.changes.outputs.projects }}
+      has_changes: ${{ steps.changes.outputs.has_changes }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect changed projects
+        id: changes
+        run: |
+          # Get the merge commit message to extract PR information
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
+          echo "Commit message: $COMMIT_MESSAGE"
+
+          # Initialize variables
+          CHANGED_PROJECTS=""
+          HAS_CHANGES="false"
+
+          # Check for changes in each project directory since the last merge
+          for project in myscheduler jobqueue docs; do
+            if [[ -d "$project" ]]; then
+              # Check if there are changes in the project directory
+              CHANGES=$(git diff HEAD~1 HEAD --name-only | grep "^$project/" || true)
+              if [[ -n "$CHANGES" ]]; then
+                echo "📦 Changes detected in $project:"
+                echo "$CHANGES"
+
+                if [[ -z "$CHANGED_PROJECTS" ]]; then
+                  CHANGED_PROJECTS="$project"
+                else
+                  CHANGED_PROJECTS="$CHANGED_PROJECTS,$project"
+                fi
+                HAS_CHANGES="true"
+              fi
+            fi
+          done
+
+          echo "projects=$CHANGED_PROJECTS" >> $GITHUB_OUTPUT
+          echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+
+          if [[ "$HAS_CHANGES" == "true" ]]; then
+            echo "✅ Changed projects: $CHANGED_PROJECTS"
+          else
+            echo "ℹ️ No project changes detected in this merge"
+          fi
+
+  create-releases:
+    name: Create Releases and Tags
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Process changed projects
+        run: |
+          IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
+
+          for project in "${PROJECTS[@]}"; do
+            echo "🚀 Processing project: $project"
+
+            # Skip if project directory doesn't exist
+            if [[ ! -d "$project" ]]; then
+              echo "⚠️ Project directory $project does not exist, skipping"
+              continue
+            fi
+
+            # Skip if pyproject.toml doesn't exist
+            if [[ ! -f "$project/pyproject.toml" ]]; then
+              echo "⚠️ pyproject.toml not found in $project, skipping"
+              continue
+            fi
+
+            # Extract version from pyproject.toml
+            VERSION=$(grep '^version = ' $project/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+            if [[ -z "$VERSION" ]]; then
+              echo "❌ Could not extract version from $project/pyproject.toml"
+              continue
+            fi
+
+            TAG_NAME="$project/v$VERSION"
+            echo "📋 Creating tag: $TAG_NAME"
+
+            # Check if tag already exists
+            if git tag -l | grep -q "^$TAG_NAME$"; then
+              echo "⚠️ Tag $TAG_NAME already exists, skipping"
+              continue
+            fi
+
+            # Create and push tag
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+            git tag -a "$TAG_NAME" -m "Release $project v$VERSION
+
+            🚀 Automated release for $project
+            📦 Version: v$VERSION
+            🤖 Generated with [Claude Code](https://claude.ai/code)
+
+            Co-Authored-By: Claude <noreply@anthropic.com>"
+
+            git push origin "$TAG_NAME"
+            echo "✅ Successfully created and pushed tag: $TAG_NAME"
+
+            # Store project info for release creation
+            echo "PROJECT_$project=$project" >> $GITHUB_ENV
+            echo "VERSION_$project=$VERSION" >> $GITHUB_ENV
+            echo "TAG_$project=$TAG_NAME" >> $GITHUB_ENV
+          done
+
+      - name: Create GitHub Releases
+        run: |
+          IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
+
+          for project in "${PROJECTS[@]}"; do
+            # Skip if we don't have environment variables for this project
+            PROJECT_VAR="PROJECT_$project"
+            VERSION_VAR="VERSION_$project"
+            TAG_VAR="TAG_$project"
+
+            if [[ -z "${!PROJECT_VAR}" || -z "${!VERSION_VAR}" || -z "${!TAG_VAR}" ]]; then
+              echo "⚠️ Missing environment variables for $project, skipping release creation"
+              continue
+            fi
+
+            PROJECT_NAME="${!PROJECT_VAR}"
+            VERSION="${!VERSION_VAR}"
+            TAG_NAME="${!TAG_VAR}"
+
+            echo "📦 Creating GitHub Release for $PROJECT_NAME v$VERSION"
+
+            # Generate release notes
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match="$project/v*" --exclude="$TAG_NAME" 2>/dev/null || echo "")
+
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              RELEASE_NOTES="## 🔄 Changes since $PREVIOUS_TAG
+
+$(git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD -- "$project/" | head -20)
+
+$(if [[ $(git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..HEAD -- "$project/" | wc -l) -gt 20 ]]; then echo "... and more changes"; fi)"
+            else
+              RELEASE_NOTES="## 🎉 Initial Release
+
+This is the first release of $PROJECT_NAME v$VERSION."
+            fi
+
+            # Create GitHub Release
+            gh release create "$TAG_NAME" \
+              --title "🚀 $PROJECT_NAME v$VERSION" \
+              --notes "$(cat <<EOF
+## 📦 Release Summary
+
+- **Project**: $PROJECT_NAME
+- **Version**: v$VERSION
+- **Tag**: \`$TAG_NAME\`
+
+$RELEASE_NOTES
+
+---
+🤖 Generated with [Claude Code](https://claude.ai/code)
+EOF
+)" \
+              --latest=$(if [[ "$project" == "myscheduler" ]]; then echo "true"; else echo "false"; fi)
+
+            echo "✅ Successfully created GitHub Release: $TAG_NAME"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "🎉 Automatic Release and Tagging completed successfully!"
+          echo ""
+          echo "📋 Summary:"
+          IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
+          for project in "${PROJECTS[@]}"; do
+            VERSION_VAR="VERSION_$project"
+            TAG_VAR="TAG_$project"
+            if [[ -n "${!VERSION_VAR}" && -n "${!TAG_VAR}" ]]; then
+              echo "  ✅ $project: ${!TAG_VAR}"
+            fi
+          done
