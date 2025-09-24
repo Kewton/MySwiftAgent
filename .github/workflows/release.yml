@@ -6,7 +6,7 @@ name: "Release Quality Assurance"
     branches:
       - 'release/**'
   pull_request:
-    branches: [staging, main]
+    branches: [staging]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
@@ -247,7 +247,9 @@ jobs:
   validate-release:
     name: Validate Release
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch'
+    if: |
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/heads/release/')
     outputs:
       project: ${{ steps.version.outputs.project }}
       version: ${{ steps.version.outputs.version }}
