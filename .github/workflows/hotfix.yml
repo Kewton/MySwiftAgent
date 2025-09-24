@@ -439,17 +439,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate release tag
+        id: tag
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          TAG_NAME="hotfix-${{ needs.validate-hotfix.outputs.hotfix_name }}-${TIMESTAMP}"
+          echo "name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "🏷️ Release tag: $TAG_NAME"
+          echo "📅 Timestamp: $TIMESTAMP"
+
       - name: Create hotfix release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: hotfix-${{ needs.validate-hotfix.outputs.hotfix_name }}-$(date +%Y%m%d-%H%M%S)
+          tag_name: ${{ steps.tag.outputs.name }}
           name: Hotfix Release - ${{ needs.validate-hotfix.outputs.hotfix_name }}
           body: |
             ## 🚨 Emergency Hotfix Release
 
             **Hotfix**: ${{ needs.validate-hotfix.outputs.hotfix_name }}
             **Affected Projects**: ${{ needs.detect-project.outputs.projects_json }}
-            **Deployed**: $(date -u)
+            **Deployed**: ${{ steps.tag.outputs.timestamp }}
 
             This is an emergency hotfix release that has been deployed directly to production.
 
