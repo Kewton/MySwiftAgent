@@ -6,10 +6,13 @@ on:
       - 'main'
       - 'develop'
       - 'hotfix/**'
+      - 'release/**'
+      - 'feature/**'
+      - 'fix/**'
     paths:
       - 'docs/**'
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, staging]
     paths:
       - 'docs/**'
 
@@ -55,7 +58,10 @@ jobs:
     name: Build Documentation Site
     runs-on: ubuntu-latest
     needs: [validate-docs]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: |
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/develop' ||
+      startsWith(github.ref, 'refs/heads/release/')
 
     steps:
       - name: Checkout code
@@ -66,24 +72,60 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Detect branch and version
+        id: version
+        run: |
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+          # Extract version from release branch if applicable
+          if [[ $BRANCH_NAME =~ ^release/docs/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION=${BASH_REMATCH[1]}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "📦 Release version detected: $VERSION"
+          else
+            echo "version=latest" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "📝 Development documentation"
+          fi
+
       - name: Generate documentation site
         run: |
           echo "🏗️ Generating documentation site"
+          VERSION="${{ steps.version.outputs.version }}"
+          IS_RELEASE="${{ steps.version.outputs.is_release }}"
+
           mkdir -p docs-build
 
           # Copy documentation files
           cp -r docs/* docs-build/ || echo "⚠️ No files to copy"
 
-          # Generate index if needed
+          # Generate index with version info
           if [[ ! -f docs-build/index.html && ! -f docs-build/index.md ]]; then
             echo "<h1>MySwiftAgent Documentation</h1>" > docs-build/index.html
-            echo "<p>Documentation site for MySwiftAgent project</p>" >> docs-build/index.html
+            if [[ "$IS_RELEASE" == "true" ]]; then
+              echo "<p>Documentation for MySwiftAgent v$VERSION</p>" >> docs-build/index.html
+            else
+              echo "<p>Development documentation for MySwiftAgent</p>" >> docs-build/index.html
+            fi
             echo "<ul>" >> docs-build/index.html
             find docs-build -name "*.md" -type f | sed 's|docs-build/||' | while read file; do
               echo "<li><a href=\"$file\">$file</a></li>" >> docs-build/index.html
             done
             echo "</ul>" >> docs-build/index.html
           fi
+
+      - name: Version documentation files
+        if: steps.version.outputs.is_release == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "🏷️ Adding version information to documentation"
+
+          # Add version header to markdown files
+          find docs-build -name "*.md" -type f | while read file; do
+            sed -i "1i<!-- Version: v$VERSION -->" "$file"
+          done
 
       - name: Deploy to GitHub Pages (if configured)
         run: |

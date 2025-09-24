@@ -6,6 +6,8 @@ on:
     paths:
       - 'myscheduler/**'
       - '.github/workflows/**'
+      # docs changes are handled by separate docs workflow
+      - '!docs/**'
   workflow_dispatch:
 
 defaults:
