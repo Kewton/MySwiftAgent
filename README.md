@@ -16,6 +16,7 @@
 MySwiftAgent/
 ├── myscheduler/     # スケジューリングシステム
 ├── jobqueue/        # FastAPI ベースジョブキューシステム
+├── docs/            # プロジェクトドキュメント（軽量ワークフロー対応）
 ├── .github/         # GitHub Actions ワークフロー
 └── CLAUDE.md        # 開発ガイドライン（詳細）
 ```
@@ -37,6 +38,10 @@ uv run uvicorn app.main:app --reload
 cd ../jobqueue
 uv sync
 uv run uvicorn app.main:app --reload --port 8001
+
+# 4. docs の確認
+cd ../docs
+ls -la  # ドキュメントファイルを確認
 ```
 
 ### 動作確認
@@ -47,6 +52,9 @@ curl http://localhost:8000/health
 
 # jobqueue ヘルスチェック
 curl http://localhost:8001/health
+
+# docsディレクトリ確認
+ls docs/  # ドキュメントファイル一覧
 ```
 
 ---
@@ -141,9 +149,14 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 3. **"Run workflow"** ボタンクリック
 4. **パラメータ設定**：
    - **Release type**: `minor` (推奨), `major`, `patch`, `custom`
-   - **Project**: `myscheduler` or `jobqueue`
+   - **Project**: `myscheduler`, `jobqueue`, or `docs`
    - **Custom version**: custom選択時のみ
 5. **実行** → 自動でリリースブランチ・PR作成
+
+**📝 docsプロジェクトの特徴:**
+- 軽量ワークフローで高速処理
+- Dockerビルドなし、Markdownlinting・構造検証のみ
+- バージョン管理対応（`release/docs/vX.Y.Z`）
 
 ### 新プロジェクト追加
 
@@ -170,15 +183,17 @@ mkdir -p app tests/unit tests/integration
 ```yaml
 # .github/workflows/release.yml を編集
 project:
-  options: ['myscheduler', 'jobqueue', '{project_name}']  # 追加
+  options: ['myscheduler', 'jobqueue', 'docs', '{project_name}']  # 追加
 
-# 各ジョブの条件に新プロジェクトを追加
+# 各ジョブの条件に新プロジェクトを追加（docsは専用処理）
 test:
   if: |
     needs.validate-release.outputs.project == 'myscheduler' ||
     needs.validate-release.outputs.project == 'jobqueue' ||
     needs.validate-release.outputs.project == '{project_name}'  # 追加
 ```
+
+**⚠️ docsプロジェクトは専用の軽量処理が既に実装されています**
 
 #### 4. **初回リリース作業**
 ```bash
