@@ -1,7 +1,7 @@
 name: Release Quality Assurance
 
-# Multi-project release workflow with automated version management
-on:
+"on":
+  # Multi-project release workflow with automated version management
   push:
     branches:
       - 'release/**'
