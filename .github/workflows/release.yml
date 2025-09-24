@@ -97,19 +97,17 @@ jobs:
             # For docs project, check if pyproject.toml exists, if not create a minimal one
             if [[ ! -f "$PROJECT/pyproject.toml" ]]; then
               echo "📝 Creating pyproject.toml for docs project"
-              cat > $PROJECT/pyproject.toml << EOF
-[project]
-name = "docs"
-version = "$NEW_VERSION"
-description = "Documentation for MySwiftAgent"
-authors = [
-    {name = "MySwiftAgent Team", email = "noreply@example.com"},
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-EOF
+              echo '[project]' > $PROJECT/pyproject.toml
+              echo 'name = "docs"' >> $PROJECT/pyproject.toml
+              echo "version = \"$NEW_VERSION\"" >> $PROJECT/pyproject.toml
+              echo 'description = "Documentation for MySwiftAgent"' >> $PROJECT/pyproject.toml
+              echo 'authors = [' >> $PROJECT/pyproject.toml
+              echo '    {name = "MySwiftAgent Team", email = "noreply@example.com"},' >> $PROJECT/pyproject.toml
+              echo ']' >> $PROJECT/pyproject.toml
+              echo '' >> $PROJECT/pyproject.toml
+              echo '[build-system]' >> $PROJECT/pyproject.toml
+              echo 'requires = ["hatchling"]' >> $PROJECT/pyproject.toml
+              echo 'build-backend = "hatchling.build"' >> $PROJECT/pyproject.toml
             else
               # Update existing version
               sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" $PROJECT/pyproject.toml
