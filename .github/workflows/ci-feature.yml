@@ -8,6 +8,8 @@ on:
       - 'myscheduler/**'
       - 'jobqueue/**'
       - '.github/workflows/**'
+      # docs changes are handled by separate docs workflow
+      - '!docs/**'
   push:
     branches:
       - 'feature/**'
@@ -19,6 +21,8 @@ on:
       - 'myscheduler/**'
       - 'jobqueue/**'
       - '.github/workflows/**'
+      # docs changes are handled by separate docs workflow
+      - '!docs/**'
 
 # defaults:
 #   run:

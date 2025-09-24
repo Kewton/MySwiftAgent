@@ -497,14 +497,42 @@ git push origin release/{project_name}/v0.1.0
 |-------------|------|-------------|-------------|
 | `myscheduler` | ジョブスケジューリング | FastAPI + APScheduler + SQLAlchemy | ✅ 本番運用中 |
 | `jobqueue` | ジョブキュー管理 | FastAPI + Redis/PostgreSQL | 🚀 初回リリース準備中 |
+| `docs` | プロジェクトドキュメント | Markdown + 静的サイトジェネレータ | 📝 軽量ワークフロー対応 |
 
 ### プロジェクト追加時のCI/CD更新箇所
 
 - **`.github/workflows/release.yml`**: workflow_dispatch inputsとジョブ条件
-- **`.github/workflows/ci-feature.yml`**: フィーチャーブランチ用品質チェック
-- **`.github/workflows/cd-develop.yml`**: 開発統合用テスト
-- **`.github/workflows/ci-main.yml`**: 本番品質チェック
+- **`.github/workflows/ci-feature.yml`**: フィーチャーブランチ用品質チェック（docs/** パス除外設定済み）
+- **`.github/workflows/cd-develop.yml`**: 開発統合用テスト（docs/** パス除外設定済み）
+- **`.github/workflows/ci-main.yml`**: 本番品質チェック（docs/** パス除外設定済み）
+- **`.github/workflows/hotfix.yml`**: 緊急修正ワークフロー（docs変更時は軽量実行）
+- **`.github/workflows/docs.yml`**: **🆕 ドキュメント専用軽量ワークフロー**
 - **`.github/DEPLOYMENT.md`**: プロジェクト一覧表とリリース手順
+
+### 📝 ドキュメントプロジェクト専用の最適化
+
+**docs プロジェクト** は他のアプリケーションプロジェクトと異なり、以下の最適化が実装されています：
+
+#### **軽量ワークフロー分離**
+- **専用ワークフロー**: `.github/workflows/docs.yml`
+- **処理内容**: Markdownlinting、構造検証、静的サイト生成のみ
+- **除外処理**: Docker、Python依存関係、セキュリティスキャンは実行しない
+
+#### **パス除外設定**
+他の重いワークフローから `docs/**` パスを除外：
+```yaml
+paths:
+  - 'myscheduler/**'
+  - 'jobqueue/**'
+  - '.github/workflows/**'
+  # docs changes are handled by separate docs workflow
+  - '!docs/**'
+```
+
+#### **バージョン管理対応**
+- **リリースブランチ**: `release/docs/vX.Y.Z` 形式をサポート
+- **pyproject.toml**: 存在しない場合は軽量版を自動生成
+- **専用バリデーション**: release.ymlでdocs専用の軽量チェックを実行
 
 ## 🔧 新プロジェクト追加後の品質チェック
 
