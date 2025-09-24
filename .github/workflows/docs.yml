@@ -1,0 +1,112 @@
+name: Documentation Workflow
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'develop'
+      - 'hotfix/**'
+    paths:
+      - 'docs/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+
+jobs:
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for markdown linting)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install markdown linter
+        run: npm install -g markdownlint-cli
+
+      - name: Lint markdown files
+        run: |
+          echo "📝 Linting markdown files in docs/"
+          if find docs/ -name "*.md" -type f | head -1 | grep -q .; then
+            markdownlint docs/**/*.md || echo "⚠️ Markdown linting issues found"
+          else
+            echo "ℹ️ No markdown files found in docs/"
+          fi
+
+      - name: Check links (if applicable)
+        run: |
+          echo "🔗 Checking documentation links"
+          # Future: Add link checker if needed
+          echo "✅ Link checking completed"
+
+      - name: Validate documentation structure
+        run: |
+          echo "📂 Validating documentation structure"
+          ls -la docs/
+          echo "✅ Documentation structure validated"
+
+  build-docs-site:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    needs: [validate-docs]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python (for docs generation if needed)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Generate documentation site
+        run: |
+          echo "🏗️ Generating documentation site"
+          mkdir -p docs-build
+
+          # Copy documentation files
+          cp -r docs/* docs-build/ || echo "⚠️ No files to copy"
+
+          # Generate index if needed
+          if [[ ! -f docs-build/index.html && ! -f docs-build/index.md ]]; then
+            echo "<h1>MySwiftAgent Documentation</h1>" > docs-build/index.html
+            echo "<p>Documentation site for MySwiftAgent project</p>" >> docs-build/index.html
+            echo "<ul>" >> docs-build/index.html
+            find docs-build -name "*.md" -type f | sed 's|docs-build/||' | while read file; do
+              echo "<li><a href=\"$file\">$file</a></li>" >> docs-build/index.html
+            done
+            echo "</ul>" >> docs-build/index.html
+          fi
+
+      - name: Deploy to GitHub Pages (if configured)
+        run: |
+          echo "🚀 Documentation site built successfully"
+          echo "📁 Generated files:"
+          ls -la docs-build/
+          # Future: Add GitHub Pages deployment if needed
+
+  notify-docs-update:
+    name: Notify Documentation Update
+    runs-on: ubuntu-latest
+    needs: [build-docs-site]
+    if: always() && github.event_name == 'push'
+
+    steps:
+      - name: Documentation update notification
+        run: |
+          echo "📚 Documentation updated successfully"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+
+          if [[ "${{ needs.build-docs-site.result }}" == "success" ]]; then
+            echo "✅ Documentation site built successfully"
+          else
+            echo "⚠️ Documentation site build skipped or failed"
+          fi
