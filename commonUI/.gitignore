@@ -1,0 +1,83 @@
+# ===================================================================
+# CommonUI - Streamlit Application Specific Ignores
+# ===================================================================
+# This file covers CommonUI specific files not covered by root .gitignore
+
+# ===================================================================
+# Streamlit Specific
+# ===================================================================
+
+# Streamlit secrets (sensitive configuration)
+.streamlit/secrets.toml
+
+# Streamlit cache
+.streamlit/cache/
+
+# Keep configuration template
+!.streamlit/config.toml
+
+# ===================================================================
+# CommonUI Development
+# ===================================================================
+
+# Local environment files
+.env
+.env.local
+.env.development
+.env.test
+
+# Keep example environment
+!.env.example
+
+# ===================================================================
+# UI Testing & Screenshots
+# ===================================================================
+
+# Streamlit testing artifacts
+streamlit_test_screenshots/
+test_outputs/
+ui_tests/screenshots/
+
+# Playwright tests (if added)
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ===================================================================
+# CommonUI Runtime
+# ===================================================================
+
+# User uploaded files (if file upload is implemented)
+uploads/
+user_files/
+
+# Session state persistence (if implemented)
+session_data/
+user_sessions/
+
+# Temporary UI files
+temp_charts/
+temp_exports/
+
+# ===================================================================
+# Development Utilities
+# ===================================================================
+
+# Hot reload markers
+.streamlit_rerun
+.hot_reload
+
+# UI component cache
+component_cache/
+
+# ===================================================================
+# Monitoring & Analytics
+# ===================================================================
+
+# Usage analytics (if implemented)
+usage_stats/
+analytics_data/
+
+# Performance monitoring
+performance_logs/
+metrics_data/

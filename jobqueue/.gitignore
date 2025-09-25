@@ -158,51 +158,71 @@ cython_debug/
 #  project, it is recommended to ignore generated files, caches, and output directories.
 .idea/
 
-# UV specific
-uv.lock
+# ===================================================================
+# JobQueue - Service Specific Ignores
+# ===================================================================
+# This file covers JobQueue specific files not covered by root .gitignore
 
-# FastAPI / uvicorn
-*.pid
+# ===================================================================
+# JobQueue Data & Runtime
+# ===================================================================
 
-# SQLite databases
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Application specific
+# Job queue data storage
 data/
-logs/
-tmp/
-temp/
+job_data/
+queue_storage/
 
-# IDE
-.vscode/
-*.swp
-*.swo
-*~
+# Job execution artifacts
+job_outputs/
+execution_results/
+job_logs/
 
-# OS specific
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Background task state
+task_state/
+worker_state/
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
+# ===================================================================
+# API & Service Specific
+# ===================================================================
 
-# Application logs
-*.log*
+# FastAPI / Uvicorn specific
+*.pid
+uvicorn.pid
 
-# Coverage reports
-.coverage*
-coverage.*
-htmlcov/
-.tox/
-.pytest_cache/
+# API documentation cache
+docs_cache/
+
+# Request/response logs
+api_logs/
+request_logs/
+
+# ===================================================================
+# Job Processing
+# ===================================================================
+
+# Temporary job files
+job_temp/
+processing_temp/
+
+# Failed job data
+failed_jobs/
+retry_queue/
+
+# Job attachments/uploads
+uploads/
+attachments/
+
+# ===================================================================
+# Performance & Monitoring
+# ===================================================================
+
+# Performance metrics
+metrics/
+monitoring/
+
+# Profiling data
+profiling/
+*.prof
+
+# Load testing results
+load_test_results/
