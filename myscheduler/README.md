@@ -1,5 +1,6 @@
 # 概要
 外部の REST API を柔軟にスケジュール実行します。
+自動タグ生成機能のテストを実行中です。
 FastAPI でジョブ管理用のRESTエンドポイントを公開し、APScheduler で cron / interval / date の各トリガを扱い、SQLite にジョブを永続化します。タイムゾーンは Asia/Tokyo を使用します。
 
 ---
