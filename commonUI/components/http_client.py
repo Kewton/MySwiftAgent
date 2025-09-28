@@ -20,9 +20,15 @@ class HTTPClient:
         """Initialize HTTP client with API configuration."""
         self.api_config = api_config
         self.service_name = service_name
+        
+        # Prepare headers
+        headers = {}
+        if api_config.token and api_config.token.strip():
+            headers["Authorization"] = f"Bearer {api_config.token}"
+        
         self.client = httpx.Client(
             base_url=api_config.base_url,
-            headers={"Authorization": f"Bearer {api_config.token}"},
+            headers=headers,
             timeout=30.0,
         )
 
@@ -57,7 +63,8 @@ class HTTPClient:
                     status_code=response.status_code,
                     response_data=error_data,
                 )
-        except httpx.JSONDecodeError:
+        except (ValueError, KeyError) as e:
+            # Handle JSON decode errors (ValueError covers json.JSONDecodeError in older Python versions)
             if response.status_code == 200:
                 return {"message": "Success", "data": response.text}
             raise APIError(

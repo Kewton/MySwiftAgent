@@ -77,7 +77,9 @@ class Config:
         """Check if service is properly configured."""
         try:
             api_config = self.get_api_config(service)
-            return bool(api_config.base_url and api_config.token)
+            # For development, only require base_url
+            # Token can be empty for services that don't require authentication
+            return bool(api_config.base_url)
         except ValueError:
             return False
 

@@ -344,7 +344,7 @@ def create_scheduled_job(job_data: Dict[str, Any]) -> None:
         with HTTPClient(api_config, "MyScheduler") as client:
             NotificationManager.operation_started("Creating scheduled job")
 
-            response = client.post("/api/v1/scheduler/jobs", job_data)
+            response = client.post("/api/v1/jobs/", job_data)
 
             job_id = response.get("job_id", job_data["job_id"])
             NotificationManager.operation_completed("Scheduled job creation")
@@ -487,7 +487,7 @@ def render_scheduler_job_detail() -> None:
     try:
         api_config = config.get_api_config("MyScheduler")
         with HTTPClient(api_config, "MyScheduler") as client:
-            job_detail = client.get(f"/api/v1/scheduler/jobs/{job_id}")
+            job_detail = client.get(f"/api/v1/jobs/{job_id}")
 
             # Job metrics
             col1, col2, col3, col4 = st.columns(4)
@@ -611,11 +611,11 @@ def control_scheduled_job(job_id: str, action: str) -> None:
             NotificationManager.operation_started(f"Scheduled job {action}")
 
             if action == "remove":
-                client.delete(f"/api/v1/scheduler/jobs/{job_id}")
+                client.delete(f"/api/v1/jobs/{job_id}")
                 # Clear selected job if removed
                 st.session_state.scheduler_selected_job = None
             else:
-                client.post(f"/api/v1/scheduler/jobs/{job_id}/{action}")
+                client.post(f"/api/v1/jobs/{job_id}/{action}")
 
             NotificationManager.operation_completed(f"Scheduled job {action}")
             NotificationManager.success(f"Scheduled job {action} executed successfully!")
@@ -634,7 +634,7 @@ def load_scheduled_jobs() -> None:
     try:
         api_config = config.get_api_config("MyScheduler")
         with HTTPClient(api_config, "MyScheduler") as client:
-            response = client.get("/api/v1/scheduler/jobs")
+            response = client.get("/api/v1/jobs/")
             st.session_state.scheduler_jobs = response.get("jobs", [])
 
     except Exception as e:

@@ -656,10 +656,11 @@ main() {
                     sleep 3
                 fi
 
-                cd "$COMMONUI_DIR"
                 print_service "🎨" "CommonUI" "Starting Streamlit application..."
+                cd "$COMMONUI_DIR"
                 nohup bash -c "uv run streamlit run Home.py --server.port $COMMONUI_PORT --server.headless true" > "$COMMONUI_LOG" 2>&1 &
                 echo $! > "$COMMONUI_PID"
+                cd "$PROJECT_ROOT"
 
                 # Wait for CommonUI (different check)
                 sleep 5
