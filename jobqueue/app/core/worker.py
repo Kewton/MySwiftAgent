@@ -35,7 +35,6 @@ class JobExecutor:
         await self.session.commit()
 
         start_time = datetime.utcnow()
-        result = None
         error_message = None
 
         try:
@@ -62,20 +61,15 @@ class JobExecutor:
                     else:
                         response_body = {"truncated": True, "size": len(content_bytes)}
 
-                # Create or update result
-                result = await self.session.scalar(
-                    select(JobResult).where(JobResult.job_id == job.id)
+                # Store result using unified method
+                await self._store_job_result(
+                    job.id,
+                    start_time,
+                    response_status=response.status_code,
+                    response_headers=dict(response.headers),
+                    response_body=response_body,
+                    error=None if response.is_success else f"HTTP {response.status_code}: {response.text}"
                 )
-
-                if not result:
-                    result = JobResult(job_id=job.id)
-                    self.session.add(result)
-
-                result.response_status = response.status_code
-                result.response_headers = dict(response.headers)
-                result.response_body = response_body
-                result.error = None
-                result.duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
                 # Update job status
                 if response.is_success:
@@ -87,23 +81,18 @@ class JobExecutor:
                     job.status = JobStatus.FAILED
                     job.finished_at = datetime.utcnow()
                     error_message = f"HTTP {response.status_code}: {response.text}"
-                    result.error = error_message
                     logger.warning(f"Job {job.id} failed with HTTP {response.status_code}")
 
         except Exception as e:
             error_message = str(e)
             logger.error(f"Job {job.id} failed with exception: {error_message}")
 
-            # Get or create result with error
-            result = await self.session.scalar(
-                select(JobResult).where(JobResult.job_id == job.id)
+            # Store error result using unified method
+            await self._store_job_result(
+                job.id,
+                start_time,
+                error=error_message
             )
-            if not result:
-                result = JobResult(job_id=job.id)
-                self.session.add(result)
-
-            result.error = error_message
-            result.duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
             # Determine if we should retry
             if job.attempt < job.max_attempts:
@@ -113,6 +102,62 @@ class JobExecutor:
                 job.finished_at = datetime.utcnow()
 
         await self.session.commit()
+
+    async def _store_job_result(
+        self,
+        job_id: str,
+        start_time: datetime,
+        response_status: int | None = None,
+        response_headers: dict[str, Any] | None = None,
+        response_body: dict[str, Any] | None = None,
+        error: str | None = None
+    ) -> None:
+        """Store or update job result safely using upsert pattern."""
+        duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        
+        # Try to get existing result first
+        result = await self.session.scalar(
+            select(JobResult).where(JobResult.job_id == job_id)
+        )
+        
+        if result:
+            # Update existing result
+            result.response_status = response_status
+            result.response_headers = response_headers
+            result.response_body = response_body
+            result.error = error
+            result.duration_ms = duration_ms
+            result.updated_at = datetime.utcnow()
+        else:
+            # Create new result
+            try:
+                result = JobResult(
+                    job_id=job_id,
+                    response_status=response_status,
+                    response_headers=response_headers,
+                    response_body=response_body,
+                    error=error,
+                    duration_ms=duration_ms
+                )
+                self.session.add(result)
+                await self.session.flush()  # Flush to catch constraint violations
+            except Exception as e:
+                # Handle race condition: another process created the result
+                if "UNIQUE constraint failed" in str(e):
+                    await self.session.rollback()
+                    # Retry with update approach
+                    result = await self.session.scalar(
+                        select(JobResult).where(JobResult.job_id == job_id)
+                    )
+                    if result:
+                        result.response_status = response_status
+                        result.response_headers = response_headers
+                        result.response_body = response_body
+                        result.error = error
+                        result.duration_ms = duration_ms
+                        result.updated_at = datetime.utcnow()
+                else:
+                    raise  # Re-raise if not a constraint violation
 
     async def _schedule_retry(self, job: Job) -> None:
         """Schedule a job retry."""
