@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 
+from ...repositories.execution_repository import execution_repository
 from ...schemas.job import (
     JobCreateRequest,
     JobDetail,
     JobListResponse,
     JobResponse,
 )
-from ...repositories.execution_repository import execution_repository
 from ...services.job_service import JobService
 from ..deps import get_job_service
 

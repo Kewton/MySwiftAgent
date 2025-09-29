@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -7,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 
-class JobExecutionORM(Base):
+class JobExecutionORM(Base):  # type: ignore
     """ジョブ実行履歴テーブル"""
 
     __tablename__ = "job_executions"
@@ -23,7 +22,7 @@ class JobExecutionORM(Base):
     http_status_code = Column(Integer, nullable=True)
     response_size = Column(Integer, nullable=True)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換"""
         return {
             "execution_id": self.execution_id,

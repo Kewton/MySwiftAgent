@@ -64,7 +64,7 @@ class JobService:
         try:
             # ジョブIDの生成
             job_id = job_request.job_id or str(uuid.uuid4())
-            
+
             # ジョブ名の設定（指定されていない場合はジョブIDを使用）
             job_name = job_request.name or job_id
 
@@ -230,7 +230,7 @@ class JobService:
                         if hasattr(job.trigger.fields, field):
                             field_obj = getattr(job.trigger.fields, field)
                             cron_fields[field] = str(field_obj)
-                    trigger_info["cron"] = cron_fields
+                    trigger_info["cron"] = cron_fields  # type: ignore
             elif "interval" in trigger_type:
                 trigger_info["type"] = "interval"
                 if hasattr(job.trigger, 'interval'):

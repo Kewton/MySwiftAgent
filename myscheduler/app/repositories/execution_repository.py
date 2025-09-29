@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
@@ -43,11 +42,11 @@ class ExecutionRepository:
     def update_execution(
         self,
         execution_id: str,
-        status: Optional[str] = None,
-        result: Optional[Dict] = None,
-        error_message: Optional[str] = None,
-        http_status_code: Optional[int] = None,
-        response_size: Optional[int] = None,
+        status: str | None = None,
+        result: dict | None = None,
+        error_message: str | None = None,
+        http_status_code: int | None = None,
+        response_size: int | None = None,
     ) -> bool:
         """実行履歴を更新"""
         with self.SessionLocal() as db:
@@ -59,26 +58,26 @@ class ExecutionRepository:
                 return False
 
             if status:
-                execution.status = status
+                execution.status = status  # type: ignore
             if status in ["completed", "failed"]:
-                execution.completed_at = datetime.now()
+                execution.completed_at = datetime.now()  # type: ignore
                 if execution.started_at:
                     delta = execution.completed_at - execution.started_at
-                    execution.execution_time_ms = int(delta.total_seconds() * 1000)
+                    execution.execution_time_ms = int(delta.total_seconds() * 1000)  # type: ignore
 
             if result is not None:
-                execution.result = result
+                execution.result = result  # type: ignore
             if error_message is not None:
-                execution.error_message = error_message
+                execution.error_message = error_message  # type: ignore
             if http_status_code is not None:
-                execution.http_status_code = http_status_code
+                execution.http_status_code = http_status_code  # type: ignore
             if response_size is not None:
-                execution.response_size = response_size
+                execution.response_size = response_size  # type: ignore
 
             db.commit()
             return True
 
-    def get_executions_by_job_id(self, job_id: str, limit: int = 50) -> List[Dict]:
+    def get_executions_by_job_id(self, job_id: str, limit: int = 50) -> list[dict]:
         """ジョブIDで実行履歴を取得"""
         with self.SessionLocal() as db:
             executions = (
@@ -91,7 +90,7 @@ class ExecutionRepository:
 
             return [execution.to_dict() for execution in executions]
 
-    def get_recent_executions(self, limit: int = 100) -> List[Dict]:
+    def get_recent_executions(self, limit: int = 100) -> list[dict]:
         """最近の実行履歴を取得"""
         with self.SessionLocal() as db:
             executions = (
