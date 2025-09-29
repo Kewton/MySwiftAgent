@@ -185,53 +185,83 @@ cython_debug/
 
 ## Local
 
-# uv
-.python-version
+# ===================================================================
+# MyScheduler - Service Specific Ignores
+# ===================================================================
+# This file covers MyScheduler specific files not covered by root .gitignore
 
-# Project specific
-jobs.db
-jobs.db-journal
-*.db
-*.db-journal
+# ===================================================================
+# MyScheduler Data & Runtime
+# ===================================================================
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
+# Scheduler databases
+jobs.db*
+scheduler.db*
+schedules.db*
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Job execution history
+execution_history/
+job_history/
 
-# ruff
-.ruff_cache/
+# Scheduler state
+scheduler_state/
+cron_state/
 
-# pytest
-.pytest_cache/
+# ===================================================================
+# Scheduling Specific
+# ===================================================================
 
-# Coverage reports
-.coverage
-coverage.xml
-htmlcov/
+# Cron job outputs
+cron_outputs/
+scheduled_job_logs/
 
-# Local environment variables
-.env.local
-.env.development
-.env.test
-.env.production
+# Job execution artifacts
+job_artifacts/
+execution_outputs/
 
-# IDE
-.idea/
-*.swp
-*.swo
-*~
+# Scheduler configuration backups
+config_backups/
+schedule_backups/
 
-# Local development
-*.pid
-*.sock
+# ===================================================================
+# API & Service Specific
+# ===================================================================
+
+# APScheduler specific
+apscheduler.log
+scheduler.pid
+
+# API request logs
+api_requests/
+scheduler_api_logs/
+
+# ===================================================================
+# Development & Testing
+# ===================================================================
+
+# Test scheduler databases
+test_jobs.db*
+test_scheduler.db*
+
+# Scheduler testing artifacts
+test_schedules/
+test_executions/
+
+# Development scheduler state
+dev_scheduler_state/
+
+# ===================================================================
+# Monitoring & Performance
+# ===================================================================
+
+# Schedule execution metrics
+execution_metrics/
+performance_data/
+
+# Health check logs
+health_checks/
+monitoring_data/
+
+# Schedule analysis data
+schedule_analysis/
+timing_data/

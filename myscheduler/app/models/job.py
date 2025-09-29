@@ -29,3 +29,18 @@ class JobState(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class JobExecution(BaseModel):
+    """ジョブ実行履歴モデル"""
+
+    execution_id: str
+    job_id: str
+    started_at: datetime
+    completed_at: datetime | None = None
+    status: str  # "running", "completed", "failed"
+    result: dict[str, Any] | None = None
+    error_message: str | None = None
+    execution_time_ms: int | None = None
+    http_status_code: int | None = None
+    response_size: int | None = None
