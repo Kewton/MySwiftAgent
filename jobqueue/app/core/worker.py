@@ -114,12 +114,12 @@ class JobExecutor:
     ) -> None:
         """Store or update job result safely using upsert pattern."""
         duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         # Try to get existing result first
         result = await self.session.scalar(
             select(JobResult).where(JobResult.job_id == job_id)
         )
-        
+
         if result:
             # Update existing result
             result.response_status = response_status
