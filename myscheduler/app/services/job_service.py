@@ -210,9 +210,9 @@ class JobService:
                     status = "paused"
                 elif job.next_run_time is None:
                     status = "completed"
-            except Exception:
+            except Exception as e:
                 # APSchedulerの仕様によって属性が異なる場合があるためエラーハンドリング
-                pass
+                logger.debug(f"APScheduler attribute access failed: {e}")
 
             # 次回実行時刻の取得
             next_run_time = None
