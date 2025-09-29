@@ -47,6 +47,9 @@ class JobDetail(BaseModel):
     priority: int
     method: str
     url: str
+    headers: dict[str, Any] | None = None
+    params: dict[str, Any] | None = None
+    body: dict[str, Any] | None = None
     timeout_sec: int
     scheduled_at: datetime | None = None
     created_at: datetime

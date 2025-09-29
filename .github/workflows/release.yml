@@ -24,7 +24,7 @@ name: "Release Quality Assurance"
         description: 'Project to release'
         required: true
         type: choice
-        options: ['myscheduler', 'jobqueue', 'docs']
+        options: ['myscheduler', 'jobqueue', 'docs', 'commonUI']
         default: 'myscheduler'
 
 env:
@@ -351,7 +351,8 @@ jobs:
     needs: [validate-release]
     if: |
       needs.validate-release.outputs.project == 'myscheduler' ||
-      needs.validate-release.outputs.project == 'jobqueue'
+      needs.validate-release.outputs.project == 'jobqueue' ||
+      needs.validate-release.outputs.project == 'commonUI'
 
     steps:
       - name: Checkout code
@@ -428,7 +429,8 @@ jobs:
     needs: [validate-release]
     if: |
       needs.validate-release.outputs.project == 'myscheduler' ||
-      needs.validate-release.outputs.project == 'jobqueue'
+      needs.validate-release.outputs.project == 'jobqueue' ||
+      needs.validate-release.outputs.project == 'commonUI'
 
     steps:
       - name: Checkout code
@@ -450,6 +452,7 @@ jobs:
     if: |
       needs.validate-release.outputs.project == 'myscheduler' ||
       needs.validate-release.outputs.project == 'jobqueue' ||
+      needs.validate-release.outputs.project == 'commonUI' ||
       needs.validate-release.outputs.project == 'docs'
 
     steps:
@@ -532,6 +535,7 @@ jobs:
     if: |
       needs.validate-release.outputs.project == 'myscheduler' ||
       needs.validate-release.outputs.project == 'jobqueue' ||
+      needs.validate-release.outputs.project == 'commonUI' ||
       needs.validate-release.outputs.project == 'docs'
 
     steps:

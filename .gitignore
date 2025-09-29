@@ -1,0 +1,521 @@
+# ===================================================================
+# MySwiftAgent - Comprehensive Git Ignore Configuration
+# ===================================================================
+# This file covers all services: JobQueue, MyScheduler, CommonUI
+# and project-wide development files
+
+# ===================================================================
+# Python - Core Language Files
+# ===================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#Pipfile.lock
+
+# poetry
+#poetry.lock
+
+# pdm
+#pdm.lock
+.pdm.toml
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ===================================================================
+# Package Managers & Virtual Environments
+# ===================================================================
+
+# UV package manager (primary for this project)
+uv.lock
+.venv/
+venv/
+
+# Other Python virtual environments
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Conda
+.conda/
+
+# ===================================================================
+# Development Tools & Code Quality
+# ===================================================================
+
+# Ruff (linter/formatter)
+.ruff_cache/
+
+# Black (code formatter)
+.black/
+
+# isort
+.isort.cfg
+
+# Pylint
+.pylint.d/
+
+# Bandit (security linter)
+.bandit
+
+# ===================================================================
+# IDEs & Editors
+# ===================================================================
+
+# PyCharm / IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+*.vsix
+
+# Vim/Neovim
+*.swp
+*.swo
+*.swn
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Atom
+.atom/
+
+# ===================================================================
+# Operating System Files
+# ===================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+.nfs*
+
+# ===================================================================
+# Environment & Configuration Files
+# ===================================================================
+
+# Environment variables (keep templates)
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env.test
+
+# Keep example files
+!.env.example
+!.env.template
+!.env.sample
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Keep Streamlit config template
+!.streamlit/config.toml
+
+# ===================================================================
+# Database Files
+# ===================================================================
+
+# SQLite databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# PostgreSQL
+*.pgsql
+
+# MySQL
+*.sql
+
+# ===================================================================
+# Log Files & Runtime Data
+# ===================================================================
+
+# Application logs
+*.log
+*.log.*
+logs/
+log/
+
+# Process IDs
+*.pid
+.pids/
+
+# Runtime data
+pids/
+*.seed
+*.pid.lock
+
+# ===================================================================
+# Temporary & Cache Files
+# ===================================================================
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.save
+temp/
+tmp/
+
+# Cache directories
+.cache/
+cache/
+.npm/
+.yarn/
+
+# ===================================================================
+# Build & Distribution
+# ===================================================================
+
+# Build outputs
+build/
+dist/
+out/
+
+# Docker
+.dockerignore
+
+# ===================================================================
+# Testing & Coverage
+# ===================================================================
+
+# Test outputs
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.pytest_cache/
+.hypothesis/
+
+# Test databases
+test.db
+test.sqlite
+test*.db
+
+# ===================================================================
+# MySwiftAgent Specific
+# ===================================================================
+
+# Service runtime data
+myscheduler/jobs.db*
+jobqueue/data/
+commonUI/.streamlit/secrets.toml
+
+# Development scripts output
+scripts/logs/
+scripts/temp/
+
+# Development tokens
+dev_tokens.txt
+
+# Service monitoring
+monitoring.log
+health-check.log
+
+# Auto-generated documentation
+docs/api/
+docs/build/
+
+# ===================================================================
+# Security & Sensitive Files
+# ===================================================================
+
+# API keys and secrets (patterns)
+*secret*
+*private*
+*key*
+*token*
+*credential*
+*password*
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# SSH keys
+id_rsa
+id_ecdsa
+id_ed25519
+*.pub
+
+# ===================================================================
+# Version Control & Git
+# ===================================================================
+
+# Git
+.git/
+*.patch
+*.diff
+
+# Keep important Git files
+!.gitignore
+!.gitattributes
+!.github/
+
+# ===================================================================
+# Package Files
+# ===================================================================
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Compiled files
+*.com
+*.exe
+*.out
+*.app
+
+# ===================================================================
+# Ignore Exceptions (Force Include)
+# ===================================================================
+
+# Force include important configuration files
+!pyproject.toml
+!Dockerfile
+!docker-compose*.yml
+!.dockerignore
+!Makefile
+!README*
+!CHANGELOG*
+!LICENSE*
+!CONTRIBUTING*
+!.github/
+!scripts/*.sh
+!.streamlit/config.toml
+
+# Force include example/template files
+!*example*
+!*template*
+!*sample*
+
+# ===================================================================
+# Project Structure Specific Ignores
+# ===================================================================
+
+# Ignore service-specific build artifacts at root level
+/jobqueue/dist/
+/jobqueue/.venv/
+/myscheduler/dist/
+/myscheduler/.venv/
+/commonUI/.venv/
+
+# Ignore logs at root level (created by scripts)
+/logs/
+/.pids/
+
+# ===================================================================
+# Development Dependencies
+# ===================================================================
+
+# Node.js (if any frontend tools are added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Ruby (if any Ruby tools are added)
+*.gem
+.bundle/
+vendor/bundle/
+
+# Go (if any Go tools are added)
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+
+# Rust (if any Rust tools are added)
+target/
+Cargo.lock
