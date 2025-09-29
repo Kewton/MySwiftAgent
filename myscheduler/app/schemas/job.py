@@ -30,6 +30,7 @@ class JobCreateRequest(BaseModel):
     """ジョブ作成リクエスト"""
 
     job_id: str | None = None
+    name: str | None = None  # ジョブ名
     schedule_type: str = Field(..., pattern=r"^(cron|interval|date)$")
     target_url: str
     method: str = Field(default="GET", pattern=r"^(GET|POST|PUT|PATCH|DELETE)$")
@@ -58,8 +59,35 @@ class JobInfo(BaseModel):
     """ジョブ情報"""
 
     job_id: str
+    id: str  # CommonUI互換性のため追加
+    name: str | None = None
     next_run_time: str | None
     trigger: str
+    status: str | None = None
+    target_url: str | None = None
+    method: str | None = None
+    execution_count: int = 0
+
+
+class JobDetail(BaseModel):
+    """ジョブ詳細情報"""
+
+    job_id: str
+    name: str | None = None
+    func: str | None = None
+    status: str
+    trigger: str
+    next_run_time: str | None
+    execution_count: int = 0
+    trigger_info: dict[str, Any] | None = None
+    target_url: str | None = None
+    method: str | None = None
+    headers: dict[str, str] | None = None
+    body: dict[str, Any] | None = None
+    timeout_sec: float | None = None
+    max_retries: int | None = None
+    retry_backoff_sec: float | None = None
+    executions: list[dict[str, Any]] | None = None  # 実行履歴
 
 
 class JobListResponse(BaseModel):
