@@ -43,7 +43,7 @@ class HTTPClient:
     def _handle_response(self, response: Response) -> Dict[str, Any]:
         """Handle HTTP response and raise appropriate exceptions."""
         try:
-            if response.status_code == 200:
+            if response.status_code in [200, 201]:  # Accept both 200 OK and 201 Created
                 return response.json()
             elif response.status_code == 401:
                 raise AuthenticationError(self.service_name)
@@ -65,7 +65,7 @@ class HTTPClient:
                 )
         except (ValueError, KeyError) as e:
             # Handle JSON decode errors (ValueError covers json.JSONDecodeError in older Python versions)
-            if response.status_code == 200:
+            if response.status_code in [200, 201]:  # Also update this condition
                 return {"message": "Success", "data": response.text}
             raise APIError(
                 f"Invalid JSON response: {response.text[:100]}",

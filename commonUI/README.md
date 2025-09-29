@@ -10,6 +10,8 @@ JobQueueとMyScheduler向けの統一されたWeb UIを通じて、直感的な�
 - 🛡️ **堅牢性**: エラーハンドリング、リトライ処理、通知システム
 - 🔧 **設定管理**: 環境変数とStreamlit Secretsによる柔軟な設定
 - 📱 **レスポンシブ**: サイドバーベースの使いやすいレイアウト
+- 📊 **リアルタイム**: 実行履歴の自動更新とライブモニタリング
+- 🎯 **実行制御**: Trigger Now機能による即座のジョブ実行
 
 ## 📦 プロジェクト構成
 
@@ -67,7 +69,7 @@ JOBQUEUE_BASE_URL=http://localhost:8001
 JOBQUEUE_API_TOKEN=your-jobqueue-token
 
 # MyScheduler API設定
-MYSCHEDULER_BASE_URL=http://localhost:8002
+MYSCHEDULER_BASE_URL=http://localhost:8003
 MYSCHEDULER_API_TOKEN=your-myscheduler-token
 
 # UI設定
@@ -115,17 +117,38 @@ uv run streamlit run Home.py
 ### MyScheduler管理画面
 
 #### 作成タブ
-- スケジュール種別切替（cron / interval / date）
-- 動的入力フォーム
-- バリデーション付き設定
+- **ジョブ名設定**: 識別しやすいジョブ名の設定
+- **スケジュール種別切替**: cron / interval / date
+- **動的入力フォーム**: スケジュール設定に応じた入力項目
+- **HTTP設定**: URL, Method, Headers, Body設定
+- **バリデーション**: 入力値の検証と詳細なエラー表示
 
-#### 一覧タブ
-- ジョブID / トリガー / 次回実行時刻 / 状態表示
-- フィルタ・ソート機能
+#### Scheduled Jobs一覧タブ
+- **包括的ジョブ情報表示**:
+  - **Name**: 設定されたジョブ名（Job IDではなく）
+  - **Next Run**: 次回実行予定時刻
+  - **Trigger**: スケジュール設定の概要
+  - **Status**: 実行状態（running/paused）
+  - **Target URL**: 実行対象のAPI URL
+  - **Method**: HTTP メソッド
+  - **Executions**: 実行回数（リアルタイム更新）
+- **ジョブ制御機能**:
+  - **Trigger Now**: 選択されたジョブの即座実行
+  - **Pause/Resume**: ジョブの一時停止・再開
+  - **Delete**: ジョブの削除
+- **フィルタ・ソート機能**: 条件による絞り込み
 
 #### 詳細画面
-- 人間可読なスケジュール説明
-- ジョブ操作（停止/再開/削除）
+- **ジョブ詳細情報**:
+  - **ジョブ名**: 設定されたジョブ名
+  - **スケジュール詳細**: 人間可読なスケジュール説明
+  - **HTTP設定**: URL, Method, Headers, Body の詳細
+  - **実行統計**: 総実行回数、成功/失敗率
+- **実行履歴**:
+  - **詳細な実行ログ**: 開始/終了時刻、ステータス、レスポンス詳細
+  - **エラー情報**: 失敗時のエラーメッセージ
+  - **パフォーマンス**: 実行時間、レスポンスサイズ
+- **ジョブ操作**: 停止/再開/削除/即座実行
 
 ## 🔧 開発・テスト
 
@@ -165,12 +188,14 @@ timeout 5 uv run streamlit run Home.py --server.headless=true
 - **リトライ処理**: 5xx系エラーのみ自動再試行（最大3回）
 - **タイムアウト**: APIリクエストは30秒でタイムアウト
 - **例外変換**: HTTP例外をUI表示用例外に変換
+- **接続エラー対応**: サービス接続不可時の適切なエラー表示
 
 ### 通知システム
 
 - **成功通知**: `st.success()` + `st.toast()`
 - **エラー通知**: `st.error()` + ログ出力
 - **情報通知**: `st.info()` + 進行状況表示
+- **サービス状態**: 接続可否の視覚的フィードバック
 
 ### セキュリティ
 
@@ -188,18 +213,53 @@ docker build -t commonui:latest .
 docker run -p 8501:8501 --env-file .env commonui:latest
 ```
 
-## 📋 タスクリスト（Issue #13）
+## 🎯 主要機能の詳細
+
+### MyScheduler統合機能
+
+#### ジョブ名管理
+- ジョブ作成時にユーザーフレンドリーなジョブ名を設定可能
+- 一覧表示でJob IDではなくジョブ名を表示
+- ジョブ名が未設定の場合はJob IDをフォールバック表示
+
+#### 実行履歴トラッキング
+- **リアルタイム実行カウント**: データベースベースの正確な実行回数表示
+- **詳細実行履歴**: 各実行の開始/終了時刻、ステータス、実行時間
+- **エラー追跡**: 失敗した実行のエラー詳細とリトライ情報
+- **パフォーマンス監視**: HTTPステータス、レスポンスサイズ、実行時間
+
+#### 即座実行機能（Trigger Now）
+- スケジュールとは独立した手動実行機能
+- 実行後も元のスケジュール設定を維持
+- 即座実行も実行履歴に記録
+- Next Runの適切な更新
+
+### API連携機能
+
+#### MyScheduler API統合
+- `/api/v1/jobs` - ジョブ一覧取得・作成
+- `/api/v1/jobs/{job_id}` - ジョブ詳細取得・削除
+- `/api/v1/jobs/{job_id}/pause` - ジョブ一時停止
+- `/api/v1/jobs/{job_id}/resume` - ジョブ再開
+- `/api/v1/jobs/{job_id}/trigger` - ジョブ即座実行
+- `/api/v1/jobs/{job_id}/executions` - ジョブ実行履歴取得
+
+## 📋 完了済み機能（Issue #13対応）
 
 - [x] Streamlitプロジェクト初期化
 - [x] プロジェクト構造設計（Home.py / pages/ / components/）
-- [ ] サイドバー実装（サービス切替・API設定）
-- [ ] 共通HTTPクライアント（httpx + リトライ）
-- [ ] 例外ハンドリング（API→UI）
-- [ ] 成功/失敗通知システム
-- [ ] 環境変数・Secrets対応
-- [ ] JobQueue UI実装
-- [ ] MyScheduler UI実装
-- [ ] 統合テスト・E2Eテスト
+- [x] サイドバー実装（サービス切替・API設定）
+- [x] 共通HTTPクライアント（httpx + リトライ）
+- [x] 例外ハンドリング（API→UI）
+- [x] 成功/失敗通知システム
+- [x] 環境変数・Secrets対応
+- [x] JobQueue UI実装
+- [x] MyScheduler UI実装（作成・一覧・詳細）
+- [x] MyScheduler実行履歴機能
+- [x] ジョブ名管理機能
+- [x] Trigger Now（即座実行）機能
+- [x] 実行回数カウント機能
+- [x] 統合テスト・E2Eテスト
 
 ## 🤝 コントリビューション
 

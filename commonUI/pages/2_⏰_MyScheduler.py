@@ -37,17 +37,27 @@ def initialize_session_state() -> None:
 
 
 def render_scheduler_creation_form() -> None:
-    """Render scheduler job creation form."""
-    st.subheader("🆕 Create New Scheduled Job")
+    """Render job creation form for scheduler management."""
+    st.subheader("🕐 Schedule Configuration")
+    
+    # Move the cron schedule config outside the form to enable real-time updates
+    render_cron_schedule_config()
+    
+    st.divider()
 
     with st.form("scheduler_creation_form"):
         # Basic job information
+        st.subheader("📋 Basic Information")
         col1, col2 = st.columns(2)
 
         with col1:
+            # Generate unique default job_id
+            import uuid
+            default_job_id = f"job_{uuid.uuid4().hex[:8]}"
+            
             job_id = st.text_input(
                 "Job ID*",
-                placeholder="unique_job_identifier",
+                value=default_job_id,
                 help="Unique identifier for the scheduled job"
             )
 
@@ -58,11 +68,19 @@ def render_scheduler_creation_form() -> None:
             )
 
         with col2:
-            job_function = st.text_input(
+            # Available functions mapping (display name -> full module path)
+            available_functions = {
+                "execute_http_job": "app.services.job_executor.execute_http_job"
+            }
+            
+            function_display_name = st.selectbox(
                 "Function*",
-                placeholder="module.function_name",
-                help="Python function to execute (e.g., 'tasks.process_data')"
+                options=list(available_functions.keys()),
+                help="Select the function to execute"
             )
+            
+            # Get the full module path for the selected function
+            job_function = available_functions[function_display_name]
 
             timezone = st.selectbox(
                 "Timezone",
@@ -70,32 +88,111 @@ def render_scheduler_creation_form() -> None:
                 help="Timezone for schedule execution"
             )
 
-        # Schedule configuration
-        st.subheader("⏰ Schedule Configuration")
-        schedule_type = st.selectbox(
-            "Schedule Type*",
-            ["cron", "interval", "date"],
-            help="Type of schedule to create"
-        )
+        # Function description
+        if function_display_name == "execute_http_job":
+            st.info("🌐 **execute_http_job**: Executes HTTP requests to external APIs with retry support and error handling.")
 
-        if schedule_type == "cron":
-            render_cron_schedule_config()
-        elif schedule_type == "interval":
-            render_interval_schedule_config()
-        else:  # date
-            render_date_schedule_config()
+        # API Configuration Fields (always displayed for all job types)
+        st.divider()
+        st.subheader("🔗 API Configuration (Optional)")
+        st.caption("Configure API settings if this scheduled job needs to make external API calls")
+        
+        # API URL and Method
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            api_url = st.text_input(
+                "🌐 API Endpoint URL",
+                placeholder="https://api.example.com/v1/endpoint",
+                help="Target API endpoint URL"
+            )
+        with col2:
+            api_method = st.selectbox(
+                "📡 HTTP Method",
+                ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                index=0,
+                help="HTTP method"
+            )
+        
+        # Headers configuration
+        st.subheader("📋 Request Headers")
+        st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
+        api_headers = st.text_area(
+            "Headers (JSON format)",
+            placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
+            help="HTTP headers in JSON format - commonly used for authentication and content type specification",
+            height=100
+        )
+        
+        # Query parameters (for GET/DELETE)
+        if api_method in ["GET", "DELETE"]:
+            st.subheader("🔍 URL Query Parameters")
+            st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
+            api_query_params = st.text_area(
+                "Query Parameters (JSON format)",
+                placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
+                help="Query parameters in JSON format - will be appended to the URL as ?key=value",
+                height=80
+            )
+        else:
+            api_query_params = ""
+        
+        # Request body (for POST/PUT/PATCH)
+        if api_method in ["POST", "PUT", "PATCH"]:
+            st.subheader("📤 Request Body Data")
+            st.caption("Data to send in the request body")
+            body_type = st.selectbox(
+                "Body Data Type",
+                ["JSON", "Form Data", "Raw Text"],
+                help="Format of the request body data"
+            )
+            
+            if body_type == "JSON":
+                api_body = st.text_area(
+                    "JSON Body Data",
+                    placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
+                    help="JSON data to send in the request body",
+                    height=120
+                )
+            elif body_type == "Form Data":
+                api_body = st.text_area(
+                    "Form Fields Data (JSON format)",
+                    placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
+                    help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
+                    height=120
+                )
+            else:  # Raw Text
+                api_body = st.text_area(
+                    "Raw Text Body",
+                    placeholder="Plain text content to send as request body",
+                    help="Raw text content for request body",
+                    height=120
+                )
+        else:
+            api_body = ""
+            body_type = "JSON"
 
         # Job arguments
+        st.divider()
         st.subheader("⚙️ Job Configuration")
+        
+        # Function-specific argument hints
+        if function_display_name == "execute_http_job":
+            st.info("💡 **execute_http_job** requires URL and method as Arguments. Optional parameters can be set in Keyword Arguments.")
+            args_placeholder = '["https://api.example.com/endpoint", "GET"]'
+            kwargs_placeholder = '''{\n  "headers": {"Authorization": "Bearer token"},\n  "timeout_sec": 30,\n  "max_retries": 3,\n  "retry_backoff_sec": 2.0\n}'''
+        else:
+            args_placeholder = '["arg1", "arg2", 123]'
+            kwargs_placeholder = '{"param1": "value1", "param2": 42}'
+        
         args = st.text_area(
             "Arguments (JSON Array)",
-            placeholder='["arg1", "arg2", 123]',
+            placeholder=args_placeholder,
             help="Function arguments as JSON array"
         )
 
         kwargs = st.text_area(
             "Keyword Arguments (JSON Object)",
-            placeholder='{"param1": "value1", "param2": 42}',
+            placeholder=kwargs_placeholder,
             help="Function keyword arguments as JSON object"
         )
 
@@ -134,16 +231,95 @@ def render_scheduler_creation_form() -> None:
                 st.error("Job ID, Name, and Function are required")
                 return
 
+            # Check if schedule is configured
+            if not st.session_state.get("schedule_cron"):
+                st.error("Schedule configuration is required")
+                return
+
             try:
-                # Get schedule configuration
-                schedule_config = get_schedule_config_from_session(schedule_type)
-                if not schedule_config:
+                # Get schedule configuration from session state (always cron)
+                schedule_config = {
+                    "trigger": "cron",
+                    "params": {}
+                }
+                
+                # Parse cron expression from session state
+                cron_expr = st.session_state.get("schedule_cron", "")
+                if cron_expr:
+                    # Parse cron parts: minute hour day month day_of_week
+                    cron_parts = cron_expr.split()
+                    if len(cron_parts) == 5:
+                        schedule_config["params"] = {
+                            "minute": cron_parts[0],
+                            "hour": cron_parts[1], 
+                            "day": cron_parts[2],
+                            "month": cron_parts[3],
+                            "day_of_week": cron_parts[4]
+                        }
+                    else:
+                        st.error("Invalid cron expression format")
+                        return
+                else:
+                    st.error("Cron expression is required")
                     return
 
                 # Parse arguments
                 import json
                 job_args = json.loads(args) if args.strip() else []
                 job_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+
+                # Build API configuration if any API settings are provided
+                api_config = {}
+                if api_url.strip():  # Only include API config if URL is provided
+                    api_config = {
+                        "url": api_url,
+                        "method": api_method
+                    }
+                    
+                    # Parse and add headers
+                    if api_headers.strip():
+                        try:
+                            headers = json.loads(api_headers)
+                            api_config["headers"] = headers
+                        except json.JSONDecodeError:
+                            st.error("Invalid JSON in Request Headers field")
+                            return
+                    
+                    # Parse and add query parameters
+                    if api_query_params.strip():
+                        try:
+                            query_params = json.loads(api_query_params)
+                            api_config["query_params"] = query_params
+                        except json.JSONDecodeError:
+                            st.error("Invalid JSON in Query Parameters field")
+                            return
+                    
+                    # Parse and add request body
+                    if api_body.strip():
+                        if api_method in ["POST", "PUT", "PATCH"]:
+                            if body_type == "JSON":
+                                try:
+                                    body_data = json.loads(api_body)
+                                    api_config["body"] = body_data
+                                    api_config["body_type"] = "json"
+                                except json.JSONDecodeError:
+                                    st.error("Invalid JSON in Request Body field")
+                                    return
+                            elif body_type == "Form Data":
+                                try:
+                                    form_data = json.loads(api_body)
+                                    api_config["body"] = form_data
+                                    api_config["body_type"] = "form"
+                                except json.JSONDecodeError:
+                                    st.error("Invalid JSON in Form Data field")
+                                    return
+                            else:  # Raw Text
+                                api_config["body"] = api_body
+                                api_config["body_type"] = "raw"
+
+                # Add API config to kwargs if provided
+                if api_config:
+                    job_kwargs["api_config"] = api_config
 
                 # Create job data
                 job_data = {
@@ -173,17 +349,7 @@ def render_cron_schedule_config() -> None:
     col1, col2 = st.columns(2)
 
     with col1:
-        cron_expression = st.text_input(
-            "Cron Expression*",
-            placeholder="0 */6 * * *",
-            help="Cron expression (minute hour day month day_of_week)"
-        )
-
-        # Store in session state for form submission
-        st.session_state.schedule_cron = cron_expression
-
-    with col2:
-        # Cron presets
+        # Quick Presets (moved to left column)
         preset = st.selectbox(
             "Quick Presets",
             [
@@ -192,19 +358,67 @@ def render_cron_schedule_config() -> None:
                 "Every hour (0 * * * *)",
                 "Every 6 hours (0 */6 * * *)",
                 "Daily at midnight (0 0 * * *)",
+                "Daily at 9 AM (0 9 * * *)",
                 "Weekly on Monday (0 0 * * 1)",
                 "Monthly on 1st (0 0 1 * *)"
-            ]
+            ],
+            help="Select a preset schedule or choose Custom for manual entry"
         )
 
+        # Show preset description
+        if preset != "Custom":
+            preset_descriptions = {
+                "Every minute (*/1 * * * *)": "⏰ Executes every minute",
+                "Every hour (0 * * * *)": "⏰ Executes at the beginning of every hour",
+                "Every 6 hours (0 */6 * * *)": "⏰ Executes every 6 hours (00:00, 06:00, 12:00, 18:00)",
+                "Daily at midnight (0 0 * * *)": "⏰ Executes daily at 00:00 (midnight)",
+                "Daily at 9 AM (0 9 * * *)": "⏰ Executes daily at 09:00 (9 AM)",
+                "Weekly on Monday (0 0 * * 1)": "⏰ Executes every Monday at 00:00",
+                "Monthly on 1st (0 0 1 * *)": "⏰ Executes on the 1st day of each month at 00:00"
+            }
+            st.info(preset_descriptions.get(preset, ""))
+
+    with col2:
+        # Extract cron expression from preset if not Custom
         if preset != "Custom":
             preset_expr = preset.split("(")[1].split(")")[0]
+            # Store preset expression in session state
             st.session_state.schedule_cron = preset_expr
+            cron_expression = preset_expr
+            disabled = True
+        else:
+            # For Custom, use existing value or empty string
+            cron_expression = st.session_state.get("schedule_cron", "")
+            disabled = False
+
+        # Cron Expression (moved to right column)
+        cron_input = st.text_input(
+            "Cron Expression*",
+            value=cron_expression,
+            placeholder="0 */6 * * *",
+            help="Cron expression (minute hour day month day_of_week)",
+            disabled=disabled,
+            key="cron_expression_input"
+        )
+
+        # Update session state based on input mode
+        if preset == "Custom":
+            st.session_state.schedule_cron = cron_input
+        # For presets, session state is already updated above
+
+    # Display current effective cron expression
+    effective_cron = st.session_state.get("schedule_cron", "")
+    
+    if preset != "Custom":
+        st.success(f"🎯 **Active Cron Expression**: `{effective_cron}`")
 
     # Validate and show next runs
-    if cron_expression:
+    if effective_cron:
         try:
-            cron = croniter(cron_expression, datetime.now())
+            from croniter import croniter
+            from datetime import datetime
+            
+            cron = croniter(effective_cron, datetime.now())
             st.success("✅ Valid cron expression")
 
             st.write("**Next 5 executions:**")
@@ -344,7 +558,10 @@ def create_scheduled_job(job_data: Dict[str, Any]) -> None:
         with HTTPClient(api_config, "MyScheduler") as client:
             NotificationManager.operation_started("Creating scheduled job")
 
-            response = client.post("/api/v1/jobs/", job_data)
+            # Transform data to match MyScheduler API schema
+            transformed_data = transform_job_data_for_api(job_data)
+            
+            response = client.post("/api/v1/jobs/", transformed_data)
 
             job_id = response.get("job_id", job_data["job_id"])
             NotificationManager.operation_completed("Scheduled job creation")
@@ -358,6 +575,78 @@ def create_scheduled_job(job_data: Dict[str, Any]) -> None:
 
     except Exception as e:
         NotificationManager.handle_exception(e, "Scheduled Job Creation")
+
+def transform_job_data_for_api(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform CommonUI job data to MyScheduler API format."""
+    kwargs = job_data.get("kwargs", {})
+    api_config = kwargs.get("api_config", {})
+    
+    # Basic job configuration
+    transformed_data = {
+        "job_id": job_data.get("job_id"),
+        "name": job_data.get("name"),  # Job Nameを追加
+        "schedule_type": job_data.get("trigger", "cron"),
+        "target_url": api_config.get("url", ""),
+        "method": api_config.get("method", "GET"),
+        "headers": api_config.get("headers"),
+        "body": api_config.get("body"),
+        "timeout_sec": float(kwargs.get("timeout_sec", 30.0)),
+        "max_retries": int(kwargs.get("max_retries", 0)),
+        "retry_backoff_sec": float(kwargs.get("retry_backoff_sec", 1.0)),
+        "replace_existing": job_data.get("replace_existing", False)
+    }
+    
+    # Remove None values
+    transformed_data = {k: v for k, v in transformed_data.items() if v is not None}
+    
+    # Handle schedule configuration based on trigger type
+    trigger = job_data.get("trigger", "cron")
+    
+    if trigger == "cron":
+        # Cron fields are at the top level of job_data due to **schedule_config["params"]
+        cron_config = {}
+        
+        # Map CommonUI cron fields to API format
+        minute = job_data.get("minute")
+        hour = job_data.get("hour") 
+        day = job_data.get("day")
+        month = job_data.get("month")
+        day_of_week = job_data.get("day_of_week")
+        
+        # Only include non-null and non-* values
+        if minute and minute != "*":
+            cron_config["minute"] = minute
+        if hour and hour != "*":
+            cron_config["hour"] = hour
+        if day and day != "*":
+            cron_config["day"] = day
+        if month and month != "*":
+            cron_config["month"] = month
+        if day_of_week and day_of_week != "*":
+            cron_config["day_of_week"] = day_of_week
+        
+        # Always set second to "0" as default
+        cron_config["second"] = "0"
+        
+        if cron_config:
+            transformed_data["cron"] = cron_config
+    
+    elif trigger == "interval":
+        # Handle interval configuration
+        interval_config = {}
+        for unit in ["weeks", "days", "hours", "minutes", "seconds"]:
+            if unit in job_data:
+                interval_config[unit] = int(job_data[unit])
+        
+        if interval_config:
+            transformed_data["interval"] = interval_config
+    
+    elif trigger == "date":
+        run_date = job_data.get("run_date")
+        if run_date:
+            transformed_data["run_at"] = run_date
+    
+    return transformed_data
 
 
 def render_scheduler_job_list() -> None:
@@ -382,13 +671,23 @@ def render_scheduler_job_list() -> None:
         )
 
     with col3:
-        search_query = st.text_input(
-            "Search Jobs",
-            placeholder="Search by ID or name",
-            help="Search jobs by ID or name"
+        method_filter = st.selectbox(
+            "Method Filter",
+            ["All", "GET", "POST", "PUT", "PATCH", "DELETE"],
+            help="Filter jobs by HTTP method"
         )
 
     with col4:
+        search_query = st.text_input(
+            "Search Jobs",
+            placeholder="Search by ID, name, or URL",
+            help="Search jobs by ID, name, or target URL"
+        )
+
+    # Second row of controls
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
         auto_refresh = st.checkbox(
             "Auto Refresh",
             value=st.session_state.scheduler_auto_refresh,
@@ -409,18 +708,63 @@ def render_scheduler_job_list() -> None:
         return
 
     # Filter jobs
-    filtered_jobs = filter_scheduled_jobs(jobs, status_filter, trigger_filter, search_query)
+    filtered_jobs = filter_scheduled_jobs(jobs, status_filter, trigger_filter, method_filter, search_query)
+
+    # Show job statistics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Jobs", len(jobs))
+    with col2:
+        running_jobs = len([j for j in jobs if j.get("status") == "running"])
+        st.metric("Running", running_jobs)
+    with col3:
+        paused_jobs = len([j for j in jobs if j.get("status") == "paused"])
+        st.metric("Paused", paused_jobs)
+    with col4:
+        st.metric("Filtered", len(filtered_jobs))
+
+    st.divider()
 
     if not filtered_jobs:
         st.warning("No jobs match the current filters.")
         return
 
-    # Display as table
-    df = pd.DataFrame(filtered_jobs)
+    # Convert trigger format for display
+    display_jobs = []
+    for job in filtered_jobs:
+        display_job = job.copy()
+        # Convert trigger to display format
+        if 'trigger' in display_job:
+            display_job['trigger'] = parse_trigger_type(display_job['trigger'])
 
-    # Format next run time for better display
+        # Remove duplicate job_id field to prevent duplicate columns
+        # Keep only 'id' field for display (job_id and id have the same value)
+        if 'job_id' in display_job and 'id' in display_job:
+            del display_job['job_id']
+
+        # Truncate long URLs for better display
+        if 'target_url' in display_job and display_job['target_url']:
+            url = display_job['target_url']
+            if len(url) > 60:
+                display_job['target_url'] = url[:57] + "..."
+
+        display_jobs.append(display_job)
+
+    # Display as table
+    df = pd.DataFrame(display_jobs)
+
+    # Format next run time for better display with proper ISO8601 parsing
     if 'next_run_time' in df.columns:
-        df['next_run_time'] = pd.to_datetime(df['next_run_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            # Use format='ISO8601' to properly parse ISO8601 formatted datetime strings
+            df['next_run_time'] = pd.to_datetime(df['next_run_time'], format='ISO8601', errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception as e:
+            # Fallback: try to parse without format specification
+            try:
+                df['next_run_time'] = pd.to_datetime(df['next_run_time'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                # If all parsing fails, keep original values
+                st.warning("Warning: Could not parse some datetime values in next_run_time")
 
     event = st.dataframe(
         df,
@@ -431,27 +775,68 @@ def render_scheduler_job_list() -> None:
         column_config={
             "id": "Job ID",
             "name": "Name",
-            "func": "Function",
-            "trigger": st.column_config.SelectboxColumn(
-                "Trigger",
-                options=["cron", "interval", "date"],
-            ),
-            "next_run_time": st.column_config.DatetimeColumn("Next Run"),
             "status": st.column_config.SelectboxColumn(
                 "Status",
                 options=["running", "paused", "completed", "error"],
             ),
+            "trigger": st.column_config.SelectboxColumn(
+                "Trigger",
+                options=["cron", "interval", "date"],
+            ),
+            "target_url": st.column_config.LinkColumn(
+                "Target URL",
+                help="API endpoint that this job will call",
+                max_chars=50,
+            ),
+            "method": st.column_config.SelectboxColumn(
+                "Method",
+                options=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            ),
+            "next_run_time": st.column_config.DatetimeColumn("Next Run"),
+            "execution_count": st.column_config.NumberColumn(
+                "Executions",
+                help="Number of times this job has been executed",
+                min_value=0,
+            ),
         }
     )
 
-    # Handle row selection
+    # Handle row selection with safe key access
     if event.selection.rows:
         selected_idx = event.selection.rows[0]
-        selected_job = filtered_jobs[selected_idx]
-        st.session_state.scheduler_selected_job = selected_job["id"]
+        selected_job = filtered_jobs[selected_idx]  # Use original filtered data, not display_jobs
+        
+        # Safe access to job ID with fallback options
+        job_id = None
+        if "id" in selected_job:
+            job_id = selected_job["id"]
+        elif "job_id" in selected_job:
+            job_id = selected_job["job_id"]
+        else:
+            # Debug: Show the actual structure of selected_job
+            st.error(f"Error: Job data missing required 'id' or 'job_id' field. Available keys: {list(selected_job.keys())}")
+            return
+            
+        st.session_state.scheduler_selected_job = job_id
 
 
-def filter_scheduled_jobs(jobs: List[Dict], status_filter: str, trigger_filter: str, search_query: str) -> List[Dict]:
+def parse_trigger_type(trigger_str: str) -> str:
+    """Extract trigger type from MyScheduler trigger string."""
+    if not trigger_str:
+        return "unknown"
+
+    trigger_lower = trigger_str.lower()
+    if trigger_lower.startswith("cron["):
+        return "cron"
+    elif trigger_lower.startswith("interval["):
+        return "interval"
+    elif trigger_lower.startswith("date["):
+        return "date"
+    else:
+        return trigger_str  # Return original if unknown format
+
+
+def filter_scheduled_jobs(jobs: List[Dict], status_filter: str, trigger_filter: str, method_filter: str, search_query: str) -> List[Dict]:
     """Filter scheduled jobs based on criteria."""
     filtered = jobs
 
@@ -461,7 +846,11 @@ def filter_scheduled_jobs(jobs: List[Dict], status_filter: str, trigger_filter: 
 
     # Trigger filter
     if trigger_filter != "All":
-        filtered = [job for job in filtered if job.get("trigger") == trigger_filter]
+        filtered = [job for job in filtered if parse_trigger_type(job.get("trigger", "")) == trigger_filter]
+
+    # Method filter
+    if method_filter != "All":
+        filtered = [job for job in filtered if job.get("method", "").upper() == method_filter.upper()]
 
     # Search filter
     if search_query:
@@ -469,7 +858,8 @@ def filter_scheduled_jobs(jobs: List[Dict], status_filter: str, trigger_filter: 
         filtered = [
             job for job in filtered
             if (query_lower in job.get("name", "").lower() or
-                query_lower in str(job.get("id", "")))
+                query_lower in str(job.get("id", "")) or
+                query_lower in job.get("target_url", "").lower())
         ]
 
     return filtered
@@ -487,7 +877,17 @@ def render_scheduler_job_detail() -> None:
     try:
         api_config = config.get_api_config("MyScheduler")
         with HTTPClient(api_config, "MyScheduler") as client:
-            job_detail = client.get(f"/api/v1/jobs/{job_id}")
+            # URL エンコーディングを追加してjob_idを安全にエンコード
+            import urllib.parse
+            encoded_job_id = urllib.parse.quote(str(job_id), safe='')
+            
+            # デバッグ情報を表示
+            with st.expander("🔍 Debug Information", expanded=False):
+                st.write(f"**Original job_id:** `{job_id}`")
+                st.write(f"**Encoded job_id:** `{encoded_job_id}`")
+                st.write(f"**API Endpoint:** `GET /api/v1/jobs/{encoded_job_id}`")
+            
+            job_detail = client.get(f"/api/v1/jobs/{encoded_job_id}")
 
             # Job metrics
             col1, col2, col3, col4 = st.columns(4)
@@ -560,6 +960,16 @@ def render_scheduler_job_detail() -> None:
                     st.json(trigger_info)
 
     except Exception as e:
+        # 詳細なエラー情報を表示
+        st.error("Failed to load job details")
+        with st.expander("🔍 Error Details", expanded=True):
+            st.write(f"**Error Type:** {type(e).__name__}")
+            st.write(f"**Error Message:** {str(e)}")
+            st.write(f"**Job ID:** `{job_id}`")
+            if hasattr(e, 'response'):
+                st.write(f"**HTTP Status:** {getattr(e.response, 'status_code', 'Unknown')}")
+                st.write(f"**Response Body:** {getattr(e.response, 'text', 'No response body')}")
+        
         NotificationManager.handle_exception(e, "Scheduled Job Detail")
 
 
@@ -634,7 +1044,7 @@ def load_scheduled_jobs() -> None:
     try:
         api_config = config.get_api_config("MyScheduler")
         with HTTPClient(api_config, "MyScheduler") as client:
-            response = client.get("/api/v1/jobs/")
+            response = client.get("/api/v1/jobs")  # Remove trailing slash
             st.session_state.scheduler_jobs = response.get("jobs", [])
 
     except Exception as e:

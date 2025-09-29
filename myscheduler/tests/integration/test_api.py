@@ -110,6 +110,7 @@ class TestJobsAPI:
 
         job_info = data["jobs"][0]
         assert job_info["job_id"] == job_id
+        assert job_info["id"] == job_id  # CommonUI互換性のために追加されたフィールド
         assert "next_run_time" in job_info
         assert "trigger" in job_info
 
@@ -162,6 +163,47 @@ class TestJobsAPI:
         data = resume_response.json()
         assert data["job_id"] == job_id
         assert data["status"] == "resumed"
+
+    def test_get_job_detail(self, client: TestClient):
+        """ジョブ詳細取得のテスト"""
+        # まずジョブを作成
+        job_data = {
+            "schedule_type": "cron",
+            "cron": {"hour": "9", "minute": "0"},
+            "target_url": "https://api.example.com/webhook",
+            "method": "POST",
+            "headers": {"Content-Type": "application/json"},
+            "body": {"message": "test"},
+            "timeout_sec": 60,
+            "max_retries": 2,
+            "retry_backoff_sec": 2.0,
+        }
+
+        create_response = client.post("/api/v1/jobs/", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # ジョブ詳細を取得
+        detail_response = client.get(f"/api/v1/jobs/{job_id}")
+        assert detail_response.status_code == 200
+
+        detail_data = detail_response.json()
+        assert detail_data["job_id"] == job_id
+        assert detail_data["status"] in ["running", "paused", "completed"]
+        assert detail_data["trigger"] is not None
+        assert detail_data["target_url"] == "https://api.example.com/webhook"
+        assert detail_data["method"] == "POST"
+        assert detail_data["headers"]["Content-Type"] == "application/json"
+        assert detail_data["body"]["message"] == "test"
+        assert detail_data["timeout_sec"] == 60
+        assert detail_data["max_retries"] == 2
+        assert detail_data["retry_backoff_sec"] == 2.0
+        assert "trigger_info" in detail_data
+        assert "next_run_time" in detail_data
+
+    def test_get_nonexistent_job(self, client: TestClient):
+        """存在しないジョブの詳細取得テスト"""
+        response = client.get("/api/v1/jobs/nonexistent-id")
+        assert response.status_code == 404
 
     def test_invalid_schedule_type(self, client: TestClient):
         """無効なスケジュールタイプのテスト"""

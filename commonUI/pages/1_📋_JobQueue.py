@@ -40,6 +40,8 @@ def render_job_creation_form() -> None:
     st.subheader("🆕 Create New Job")
 
     with st.form("job_creation_form"):
+        # Basic job information
+        st.subheader("📋 Basic Information")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -51,7 +53,7 @@ def render_job_creation_form() -> None:
 
             job_type = st.selectbox(
                 "Job Type*",
-                ["data_processing", "batch_analysis", "file_conversion", "api_sync", "custom"],
+                ["api_sync", "data_processing", "batch_analysis", "file_conversion", "custom"],
                 help="Select the type of job to execute"
             )
 
@@ -79,12 +81,97 @@ def render_job_creation_form() -> None:
                 help="Job execution timeout"
             )
 
+        # API Configuration Fields (always displayed for all job types)
+        st.divider()
+        st.subheader("🔗 API Configuration (Optional)")
+        st.caption("Configure API settings if this job needs to make external API calls")
+        
+        # API URL and Method
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            api_url = st.text_input(
+                "🌐 API Endpoint URL",
+                placeholder="https://api.example.com/v1/endpoint",
+                help="Target API endpoint URL"
+            )
+        with col2:
+            api_method = st.selectbox(
+                "📡 HTTP Method",
+                ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                index=0,
+                help="HTTP method"
+            )
+        
+        # Headers configuration
+        st.subheader("📋 Request Headers")
+        st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
+        api_headers = st.text_area(
+            "Headers (JSON format)",
+            placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
+            help="HTTP headers in JSON format - commonly used for authentication and content type specification",
+            height=100
+        )
+        
+        # Query parameters (for GET/DELETE)
+        if api_method in ["GET", "DELETE"]:
+            st.subheader("🔍 URL Query Parameters")
+            st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
+            api_query_params = st.text_area(
+                "Query Parameters (JSON format)",
+                placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
+                help="Query parameters in JSON format - will be appended to the URL as ?key=value",
+                height=80
+            )
+        else:
+            api_query_params = ""
+        
+        # Request body (for POST/PUT/PATCH)
+        if api_method in ["POST", "PUT", "PATCH"]:
+            st.subheader("📤 Request Body Data")
+            st.caption("Data to send in the request body")
+            body_type = st.selectbox(
+                "Body Data Type",
+                ["JSON", "Form Data", "Raw Text"],
+                help="Format of the request body data"
+            )
+            
+            if body_type == "JSON":
+                api_body = st.text_area(
+                    "JSON Body Data",
+                    placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
+                    help="JSON data to send in the request body",
+                    height=120
+                )
+            elif body_type == "Form Data":
+                api_body = st.text_area(
+                    "Form Fields Data (JSON format)",
+                    placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
+                    help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
+                    height=120
+                )
+            else:  # Raw Text
+                api_body = st.text_area(
+                    "Raw Text Body",
+                    placeholder="Plain text content to send as request body",
+                    help="Raw text content for request body",
+                    height=120
+                )
+        else:
+            api_body = ""
+            body_type = "JSON"
+
         # Job parameters
-        st.subheader("Job Parameters")
+        st.divider()
+        st.subheader("⚙️ Job Parameters")
+        
+        # Job type specific parameter hints
+        parameter_placeholder = get_parameter_placeholder(job_type)
+        
         parameters = st.text_area(
             "Parameters (JSON)",
-            placeholder='{"key": "value", "input_file": "/path/to/file"}',
-            help="Job parameters in JSON format"
+            placeholder=parameter_placeholder,
+            help="Job-specific parameters in JSON format",
+            height=120
         )
 
         # Tags
@@ -106,12 +193,65 @@ def render_job_creation_form() -> None:
                 return
 
             try:
-                # Parse parameters
+                # Parse job parameters
                 import json
                 job_params = json.loads(parameters) if parameters.strip() else {}
 
                 # Parse tags
                 job_tags = [tag.strip() for tag in tags.split(",") if tag.strip()] if tags else []
+
+                # Build API configuration if any API settings are provided
+                api_config = {}
+                if api_url.strip():  # Only include API config if URL is provided
+                    api_config = {
+                        "url": api_url,
+                        "method": api_method
+                    }
+                    
+                    # Parse and add headers
+                    if api_headers.strip():
+                        try:
+                            headers = json.loads(api_headers)
+                            api_config["headers"] = headers
+                        except json.JSONDecodeError:
+                            st.error("Invalid JSON in Request Headers field")
+                            return
+                    
+                    # Parse and add query parameters
+                    if api_query_params.strip():
+                        try:
+                            query_params = json.loads(api_query_params)
+                            api_config["query_params"] = query_params
+                        except json.JSONDecodeError:
+                            st.error("Invalid JSON in Query Parameters field")
+                            return
+                    
+                    # Parse and add request body
+                    if api_body.strip():
+                        if api_method in ["POST", "PUT", "PATCH"]:
+                            if body_type == "JSON":
+                                try:
+                                    body_data = json.loads(api_body)
+                                    api_config["body"] = body_data
+                                    api_config["body_type"] = "json"
+                                except json.JSONDecodeError:
+                                    st.error("Invalid JSON in Request Body field")
+                                    return
+                            elif body_type == "Form Data":
+                                try:
+                                    form_data = json.loads(api_body)
+                                    api_config["body"] = form_data
+                                    api_config["body_type"] = "form"
+                                except json.JSONDecodeError:
+                                    st.error("Invalid JSON in Form Data field")
+                                    return
+                            else:  # Raw Text
+                                api_config["body"] = api_body
+                                api_config["body_type"] = "raw"
+
+                # Integrate API config into job parameters if provided
+                if api_config:
+                    job_params["api_config"] = api_config
 
                 # Create job data
                 job_data = {
@@ -126,10 +266,51 @@ def render_job_creation_form() -> None:
 
                 create_job(job_data)
 
-            except json.JSONDecodeError:
-                st.error("Invalid JSON in parameters field")
+            except json.JSONDecodeError as e:
+                st.error(f"Invalid JSON format: {str(e)}")
             except Exception as e:
                 NotificationManager.handle_exception(e, "Job Creation")
+
+
+def get_parameter_placeholder(job_type: str) -> str:
+    """Get parameter placeholder text based on job type."""
+    placeholders = {
+        "api_sync": '''{
+  "sync_direction": "bidirectional",
+  "source_filters": {
+    "updated_since": "2024-01-01T00:00:00Z"
+  },
+  "batch_size": 100,
+  "mapping_rules": {
+    "source_field": "target_field"
+  }
+}''',
+        "data_processing": '''{
+  "input_file": "/data/input.csv",
+  "output_file": "/data/processed/output.csv",
+  "operations": ["clean", "normalize", "validate"],
+  "encoding": "utf-8"
+}''',
+        "batch_analysis": '''{
+  "data_source": "/data/analytics/dataset.csv",
+  "analysis_type": "trend_analysis",
+  "output_format": "report",
+  "date_range": "last_30_days"
+}''',
+        "file_conversion": '''{
+  "input_directory": "/uploads/original/",
+  "output_directory": "/uploads/converted/",
+  "source_format": "pdf",
+  "target_format": "docx",
+  "quality": "high"
+}''',
+        "custom": '''{
+  "script_path": "/scripts/custom_job.py",
+  "environment": "production",
+  "custom_param": "value"
+}'''
+    }
+    return placeholders.get(job_type, '{\n  "key": "value"\n}')
 
 
 def create_job(job_data: Dict[str, Any]) -> None:
@@ -139,7 +320,31 @@ def create_job(job_data: Dict[str, Any]) -> None:
         with HTTPClient(api_config, "JobQueue") as client:
             NotificationManager.operation_started("Creating job")
 
-            response = client.post("/api/v1/jobs", job_data)
+            # For api_sync jobs, transform data structure to match JobQueue API schema
+            if job_data.get("type") == "api_sync":
+                parameters = job_data.get("parameters", {})
+                api_config_data = parameters.get("api_config", {})
+                
+                if api_config_data:
+                    # Transform to JobQueue API format
+                    transformed_data = {
+                        "method": api_config_data.get("method", "GET"),
+                        "url": api_config_data.get("url", ""),
+                        "headers": api_config_data.get("headers"),
+                        "params": api_config_data.get("query_params"),  # Rename query_params to params
+                        "body": api_config_data.get("body")
+                    }
+                    
+                    # Remove None values
+                    transformed_data = {k: v for k, v in transformed_data.items() if v is not None}
+                    
+                    response = client.post("/api/v1/jobs", transformed_data)
+                else:
+                    # No API config provided, use original structure
+                    response = client.post("/api/v1/jobs", job_data)
+            else:
+                # For non-api_sync jobs, use original structure
+                response = client.post("/api/v1/jobs", job_data)
 
             job_id = response.get("job_id")
             NotificationManager.operation_completed("Job creation")
@@ -159,8 +364,8 @@ def render_job_list() -> None:
     """Render job list with filtering and search."""
     st.subheader("📋 Job List")
 
-    # Filters
-    col1, col2, col3, col4 = st.columns(4)
+    # Filters - Updated to 5 columns to include Job Type filter
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         status_filter = st.selectbox(
@@ -177,13 +382,20 @@ def render_job_list() -> None:
         )
 
     with col3:
+        job_type_filter = st.selectbox(
+            "Job Type Filter",
+            ["All", "api_sync", "data_processing", "batch_analysis", "file_conversion", "custom"],
+            help="Filter jobs by job type"
+        )
+
+    with col4:
         search_query = st.text_input(
             "Search Jobs",
             placeholder="Search by name or ID",
             help="Search jobs by name or job ID"
         )
 
-    with col4:
+    with col5:
         auto_refresh = st.checkbox(
             "Auto Refresh",
             value=st.session_state.jobqueue_auto_refresh,
@@ -203,8 +415,8 @@ def render_job_list() -> None:
         st.info("No jobs found. Create your first job using the form above.")
         return
 
-    # Filter jobs
-    filtered_jobs = filter_jobs(jobs, status_filter, priority_filter, search_query)
+    # Filter jobs - Updated to include job type filter
+    filtered_jobs = filter_jobs(jobs, status_filter, priority_filter, job_type_filter, search_query)
 
     if not filtered_jobs:
         st.warning("No jobs match the current filters.")
@@ -221,8 +433,12 @@ def render_job_list() -> None:
         on_select="rerun",
         selection_mode="single-row",
         column_config={
-            "job_id": "Job ID",
+            "id": "Job ID",  # Changed from "job_id" to "id"
             "name": "Name",
+            "type": st.column_config.SelectboxColumn(
+                "Type",
+                options=["api_sync", "data_processing", "batch_analysis", "file_conversion", "custom"],
+            ),
             "status": st.column_config.SelectboxColumn(
                 "Status",
                 options=["pending", "running", "completed", "failed", "cancelled"],
@@ -240,10 +456,10 @@ def render_job_list() -> None:
     if event.selection.rows:
         selected_idx = event.selection.rows[0]
         selected_job = filtered_jobs[selected_idx]
-        st.session_state.jobqueue_selected_job = selected_job["job_id"]
+        st.session_state.jobqueue_selected_job = selected_job["id"]  # Changed from "job_id" to "id"
 
 
-def filter_jobs(jobs: List[Dict], status_filter: str, priority_filter: str, search_query: str) -> List[Dict]:
+def filter_jobs(jobs: List[Dict], status_filter: str, priority_filter: str, job_type_filter: str, search_query: str) -> List[Dict]:
     """Filter jobs based on criteria."""
     filtered = jobs
 
@@ -255,13 +471,17 @@ def filter_jobs(jobs: List[Dict], status_filter: str, priority_filter: str, sear
     if priority_filter != "All":
         filtered = [job for job in filtered if job.get("priority") == priority_filter]
 
+    # Job type filter
+    if job_type_filter != "All":
+        filtered = [job for job in filtered if job.get("type") == job_type_filter]
+
     # Search filter
     if search_query:
         query_lower = search_query.lower()
         filtered = [
             job for job in filtered
             if (query_lower in job.get("name", "").lower() or
-                query_lower in str(job.get("job_id", "")))
+                query_lower in str(job.get("id", "")))  # Changed from "job_id" to "id"
         ]
 
     return filtered
@@ -320,36 +540,93 @@ def render_job_detail() -> None:
                 if current_status == "failed" and st.button("🔄 Retry", use_container_width=True):
                     control_job(job_id, "retry")
 
-            # Job details tabs
-            tab1, tab2, tab3, tab4 = st.tabs(["📋 Definition", "📊 Results", "📝 Logs", "⚙️ Parameters"])
+            # Job details tabs - Removed Logs tab
+            tab1, tab2, tab3 = st.tabs(["📋 Definition", "📊 Results", "⚙️ Parameters"])
 
             with tab1:
                 st.json(job_detail, expanded=False)
 
             with tab2:
-                results = job_detail.get("results", {})
-                if results:
-                    st.json(results)
-                else:
-                    st.info("No results available yet.")
+                # Fetch job results from separate endpoint
+                try:
+                    job_result = client.get(f"/api/v1/jobs/{job_id}/result")
+                    
+                    # Check if result has actual data
+                    if (job_result.get("response_status") is not None or 
+                        job_result.get("response_body") is not None or 
+                        job_result.get("error") is not None):
+                        
+                        st.subheader("🌐 HTTP Response")
+                        
+                        # Show response status and duration
+                        result_col1, result_col2 = st.columns(2)
+                        with result_col1:
+                            st.metric("Response Status", job_result.get("response_status", "N/A"))
+                        with result_col2:
+                            duration_ms = job_result.get("duration_ms")
+                            duration_display = f"{duration_ms}ms" if duration_ms is not None else "N/A"
+                            st.metric("Duration", duration_display)
+                        
+                        # Show error if exists
+                        if job_result.get("error"):
+                            st.error(f"**Error:** {job_result.get('error')}")
+                        
+                        # Show response headers
+                        response_headers = job_result.get("response_headers")
+                        if response_headers:
+                            st.subheader("📋 Response Headers")
+                            st.json(response_headers)
+                        
+                        # Show response body
+                        response_body = job_result.get("response_body")
+                        if response_body:
+                            st.subheader("📄 Response Body")
+                            st.json(response_body)
+                    else:
+                        st.info("No results available yet.")
+                        
+                except Exception as result_error:
+                    st.warning(f"Could not fetch results: {str(result_error)}")
 
             with tab3:
-                logs = job_detail.get("logs", [])
-                if logs:
-                    for log_entry in logs:
-                        timestamp = log_entry.get("timestamp", "")
-                        level = log_entry.get("level", "INFO")
-                        message = log_entry.get("message", "")
-                        st.text(f"[{timestamp}] {level}: {message}")
-                else:
-                    st.info("No logs available.")
-
-            with tab4:
-                parameters = job_detail.get("parameters", {})
-                if parameters:
-                    st.json(parameters)
-                else:
-                    st.info("No parameters specified.")
+                # Display HTTP request parameters
+                st.subheader("🌐 HTTP Request Configuration")
+                
+                # Basic request info
+                req_col1, req_col2 = st.columns(2)
+                with req_col1:
+                    st.text_input("Method", value=job_detail.get("method", ""), disabled=True)
+                    st.text_input("Timeout (sec)", value=str(job_detail.get("timeout_sec", "")), disabled=True)
+                with req_col2:
+                    st.text_area("URL", value=job_detail.get("url", ""), disabled=True, height=100)
+                
+                # Request Headers
+                headers = job_detail.get("headers")
+                if headers:
+                    st.subheader("📋 Request Headers")
+                    st.json(headers)
+                
+                # Query Parameters
+                params = job_detail.get("params")
+                if params:
+                    st.subheader("🔗 Query Parameters")
+                    st.json(params)
+                
+                # Request Body
+                body = job_detail.get("body")
+                if body:
+                    st.subheader("📄 Request Body")
+                    st.json(body)
+                
+                # Tags
+                tags = job_detail.get("tags")
+                if tags:
+                    st.subheader("🏷️ Tags")
+                    st.write(", ".join(tags))
+                
+                # Show message if no parameters
+                if not any([headers, params, body, tags]):
+                    st.info("No additional parameters specified for this job.")
 
     except Exception as e:
         NotificationManager.handle_exception(e, "Job Detail")

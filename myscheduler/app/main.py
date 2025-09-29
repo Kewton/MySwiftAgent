@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         debug=settings.debug,
         lifespan=lifespan,
+        redirect_slashes=False,  # 末尾スラッシュの自動リダイレクトを無効化
     )
 
     # ルーターの登録

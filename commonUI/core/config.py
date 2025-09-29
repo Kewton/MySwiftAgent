@@ -42,7 +42,7 @@ class Config:
         )
 
         self.myscheduler = APIConfig(
-            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8002"),
+            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8003"),
             token=self._get_setting("MYSCHEDULER_API_TOKEN", "")
         )
 
