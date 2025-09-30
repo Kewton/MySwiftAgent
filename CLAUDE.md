@@ -112,6 +112,47 @@ graph TD
 | `staging`      | `release/*` または `fix/*` → `release/*` | 同上                         |
 | `main`（本番） | `hotfix/*`（`main` から作成）            | `main`, `staging`, `develop` |
 
+### 🚀 マルチプロジェクトリリース対応
+
+複数のプロジェクトを同時にリリースする場合の手順：
+
+#### 方法1: Workflow Dispatchによる一括リリース
+
+```bash
+# GitHub Actions UIから実行、または以下のコマンド
+gh workflow run release.yml \
+  -f projects="myscheduler,jobqueue,commonUI" \
+  -f release_type=minor
+```
+
+**命名規則:**
+- **単一プロジェクト**: `release/{project}/vX.Y.Z` (例: `release/myscheduler/v1.3.0`)
+- **マルチプロジェクト**: `release/multi/vYYYY.MM.DD` (例: `release/multi/v2025.09.30`)
+
+#### 方法2: 統合featureブランチによる同時更新
+
+```bash
+# 1. 統合featureブランチ作成
+git checkout develop
+git checkout -b feature/cross-project-update
+
+# 2. 複数プロジェクトを同時に修正
+vim myscheduler/app/api/common.py
+vim jobqueue/app/api/common.py
+
+# 3. まとめてコミット・PR作成
+git add myscheduler/ jobqueue/
+git commit -m "feat: update cross-project API interface"
+gh pr create --base develop --label feature
+```
+
+#### 自動リリース検出（auto-release.yml）
+
+mainブランチへのマージ時、変更されたすべてのプロジェクトを自動検出：
+
+- **単一プロジェクト変更**: 個別タグ作成 (例: `myscheduler/v1.3.0`)
+- **複数プロジェクト変更**: マルチプロジェクトタグ作成 (例: `multi/v2025.09.30`) + 個別プロジェクトタグ
+
 ---
 
 # 🔧 開発環境・品質担保

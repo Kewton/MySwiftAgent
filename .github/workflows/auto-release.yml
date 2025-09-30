@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changed_projects: ${{ steps.changes.outputs.projects }}
+      changed_projects_json: ${{ steps.changes.outputs.projects_json }}
       has_changes: ${{ steps.changes.outputs.has_changes }}
+      is_multi_project: ${{ steps.changes.outputs.is_multi_project }}
 
     steps:
       - name: Checkout code
@@ -30,6 +32,7 @@ jobs:
 
           CHANGED_PROJECTS=""
           HAS_CHANGES="false"
+          PROJECT_COUNT=0
 
           for project in myscheduler jobqueue docs commonUI; do
             if [[ -d "$project" ]]; then
@@ -43,15 +46,41 @@ jobs:
                   CHANGED_PROJECTS="$CHANGED_PROJECTS,$project"
                 fi
                 HAS_CHANGES="true"
+                PROJECT_COUNT=$((PROJECT_COUNT + 1))
               fi
             fi
           done
 
+          # Convert to JSON array
+          if [[ -n "$CHANGED_PROJECTS" ]]; then
+            IFS=',' read -ra PROJECT_ARRAY <<< "$CHANGED_PROJECTS"
+            PROJECTS_JSON="["
+            for i in "${!PROJECT_ARRAY[@]}"; do
+              if [[ $i -gt 0 ]]; then
+                PROJECTS_JSON+=","
+              fi
+              PROJECTS_JSON+="\"${PROJECT_ARRAY[$i]}\""
+            done
+            PROJECTS_JSON+="]"
+          else
+            PROJECTS_JSON="[]"
+          fi
+
+          # Determine if multi-project release
+          if [[ $PROJECT_COUNT -gt 1 ]]; then
+            IS_MULTI_PROJECT="true"
+          else
+            IS_MULTI_PROJECT="false"
+          fi
+
           echo "projects=$CHANGED_PROJECTS" >> $GITHUB_OUTPUT
+          echo "projects_json=$PROJECTS_JSON" >> $GITHUB_OUTPUT
           echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+          echo "is_multi_project=$IS_MULTI_PROJECT" >> $GITHUB_OUTPUT
 
           if [[ "$HAS_CHANGES" == "true" ]]; then
-            echo "✅ Changed projects: $CHANGED_PROJECTS"
+            echo "✅ Changed projects: $CHANGED_PROJECTS (count: $PROJECT_COUNT)"
+            echo "📋 Multi-project release: $IS_MULTI_PROJECT"
           else
             echo "ℹ️ No project changes detected in this merge"
           fi
@@ -118,8 +147,52 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create multi-project release (if applicable)
+        if: needs.detect-changes.outputs.is_multi_project == 'true'
+        run: |
+          RELEASE_DATE=$(date +%Y.%m.%d)
+          TAG_NAME="multi/v$RELEASE_DATE"
+
+          if git tag -l | grep -q "^$TAG_NAME$"; then
+            echo "⚠️ Multi-project tag $TAG_NAME already exists, skipping"
+          else
+            echo "📋 Creating multi-project release tag: $TAG_NAME"
+
+            # Build release notes from all changed projects
+            RELEASE_NOTES="# Multi-Project Release v$RELEASE_DATE"$'\n\n'
+            RELEASE_NOTES+="This release includes updates to multiple projects:"$'\n\n'
+
+            IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
+            for project in "${PROJECTS[@]}"; do
+              if [[ -f "$project/pyproject.toml" ]]; then
+                VERSION=$(grep '^version = ' $project/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+                RELEASE_NOTES+="- **$project**: v$VERSION"$'\n'
+              fi
+            done
+
+            RELEASE_NOTES+=$'\n'"---"$'\n'
+            RELEASE_NOTES+="🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+            git tag -a "$TAG_NAME" -m "Multi-project release v$RELEASE_DATE"
+            git push origin "$TAG_NAME"
+            echo "✅ Successfully created and pushed multi-project tag: $TAG_NAME"
+
+            echo "$RELEASE_NOTES" > multi-release-notes.md
+
+            gh release create "$TAG_NAME" \
+              --title "🚀 Multi-Project Release v$RELEASE_DATE" \
+              --notes-file multi-release-notes.md \
+              --latest=false
+
+            echo "✅ Successfully created multi-project GitHub Release: $TAG_NAME"
+          fi
+
       - name: Summary
         run: |
           echo "🎉 Automatic Release and Tagging completed successfully!"
           echo ""
           echo "📋 Processed projects: ${{ needs.detect-changes.outputs.changed_projects }}"
+          echo "🔄 Multi-project release: ${{ needs.detect-changes.outputs.is_multi_project }}"
