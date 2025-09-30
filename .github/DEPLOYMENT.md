@@ -19,12 +19,43 @@ MySwiftAgentは複数のマイクロサービスを含むモノレポ構成で�
 
 | ワークフロー | トリガー | 目的 | 状態 |
 |-------------|----------|------|------|
-| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR<br>**（docs/** を除外） | 品質チェック・テスト実行 | 🟢 有効 |
-| `cd-develop.yml` | developブランチへのpush<br>**（docs/** を除外） | 統合品質チェック | 🟢 有効 |
-| `multi-release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>**docs専用バリデーション追加** | 🟢 有効 |
-| `ci-main.yml` | mainブランチへのpush<br>**（docs/** を除外） | 本番品質チェック | 🟢 有効 |
-| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR<br>**docs変更時は軽量実行** | 緊急修正品質チェック | 🟢 有効 |
-| `docs.yml` | docs/** の変更時<br>**全ブランチ対応** | **ドキュメント専用軽量処理**<br>Markdownlinting・構造検証・バージョン管理 | 🆕 **新規追加** |
+| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのPR<br>→ developブランチ<br>**（docs/** を除外） | フィーチャーブランチの品質チェック・テスト実行<br>マルチプロジェクト対応（matrix戦略） | 🟢 有効 |
+| `cd-develop.yml` | developブランチへのpush<br>**（docs/** を除外） | 開発統合環境への自動デプロイ・統合テスト<br>myschedulerプロジェクト対応 | 🟢 有効 |
+| `ci-main.yml` | mainブランチへのpush<br>**（docs/** を除外） | 本番品質チェック・セキュリティ検証<br>myschedulerプロジェクト対応 | 🟢 有効 |
+| `multi-release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>バージョン管理・QA・承認ゲート・docs専用バリデーション | 🟢 有効 |
+| `auto-release.yml` | mainブランチへのpush<br>workflow_dispatch | **自動タグ作成・GitHub Release生成**<br>変更プロジェクト自動検出（myscheduler, jobqueue, docs, commonUI） | 🟢 有効 |
+| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR<br>**docs変更時は軽量実行** | 緊急修正の品質チェック・バージョン管理<br>マルチプロジェクト・緊急承認環境対応 | 🟢 有効 |
+| `docs.yml` | docs/** の変更時<br>**全ブランチ対応**<br>(main, develop, hotfix/*, release/*, feature/*, fix/*) | **ドキュメント専用軽量処理**<br>Markdownlinting・構造検証・バージョン管理<br>Docker/Python処理を除外 | 🟢 有効 |
+| `deploy-production.yml` | workflow_dispatch（手動実行のみ） | 本番環境への手動デプロイ<br>myschedulerプロジェクト対応<br>バージョン指定・テストスキップ可能 | 🟡 手動 |
+| `deploy-staging.yml` | workflow_dispatch（手動実行のみ） | ステージング環境への手動デプロイ<br>myschedulerプロジェクト対応<br>バージョン指定可能 | 🟡 手動 |
+
+### ワークフロー依存関係
+
+```mermaid
+graph TD
+  F[feature/* branches] -->|PR| CF[ci-feature.yml]
+  CF -->|merge| D[develop branch]
+  D -->|push| CD[cd-develop.yml]
+
+  D -->|create branch| R[release/* branches]
+  R -->|push| MR[multi-release.yml]
+  MR -->|PR approved| S[staging branch]
+  MR -->|PR approved| M[main branch]
+
+  M -->|push| CM[ci-main.yml]
+  M -->|push| AR[auto-release.yml]
+  AR -->|create| T[Tags & GitHub Release]
+
+  H[hotfix/* branches] -->|push| HF[hotfix.yml]
+  HF -->|PR| M
+  HF -->|PR| S
+  HF -->|PR| D
+
+  DOC[docs/** changes] -->|push| DW[docs.yml]
+
+  M -->|manual| DP[deploy-production.yml]
+  S -->|manual| DS[deploy-staging.yml]
+```
 
 ## 🔄 マルチプロジェクト対応デプロイメントフロー
 
@@ -61,47 +92,20 @@ graph TD
 
 | 形式 | 例 | 対象プロジェクト | 備考 |
 |------|---|-----------------|------|
-| `release/{project}/vX.Y.Z` | `release/myscheduler/v1.2.0`<br/>`release/jobqueue/v0.1.0` | 指定プロジェクト | **単一プロジェクト** |
-| `release/multi/vYYYY.MM.DD` | `release/multi/v2025.09.30` | 複数プロジェクト同時 | **マルチプロジェクト** |
+| `release/{project}/vX.Y.Z` | `release/myscheduler/v1.2.0`<br/>`release/jobqueue/v0.1.0` | 指定プロジェクト | **推奨形式** |
 | `release/vX.Y.Z` | `release/v1.2.0` | myscheduler | レガシー形式（後方互換） |
 
 ### プロジェクト別リリースフロー
 
-#### 1. **Workflow Dispatch** によるリリース
-
-##### 単一プロジェクトリリース
+#### 1. **Workflow Dispatch** による標準リリース
 
 ```bash
-# GitHub Actions UIから実行、または以下のコマンド
-gh workflow run multi-release.yml \
-  -f projects="myscheduler" \
-  -f release_type=minor
-
+# GitHub Actions UIから実行
 # 入力パラメータ：
-# - projects: リリースするプロジェクト（単一）
+# - project: myscheduler / jobqueue / docs
 # - release_type: major / minor / patch / custom
-# - custom_version: カスタムバージョン（optional）
+# - custom_version: カスタムバージョン（optonal）
 ```
-
-##### マルチプロジェクトリリース（🆕 新機能）
-
-```bash
-# 複数プロジェクトを同時にリリース
-gh workflow run multi-release.yml \
-  -f projects="myscheduler,jobqueue,commonUI" \
-  -f release_type=minor
-
-# または日付ベースのバージョン
-gh workflow run multi-release.yml \
-  -f projects="myscheduler,jobqueue" \
-  -f release_type=custom \
-  -f custom_version="2025.09.30"
-```
-
-**自動生成されるもの:**
-- リリースブランチ: `release/multi/v2025.09.30`
-- 各プロジェクトの pyproject.toml バージョン更新
-- 統合PRの作成（staging向け）
 
 **📝 docsプロジェクトの特殊処理:**
 - pyproject.tomlが存在しない場合、自動で軽量版を生成
@@ -109,15 +113,13 @@ gh workflow run multi-release.yml \
 
 #### 2. **手動ブランチ作成** によるリリース
 
-##### 単一プロジェクト
-
 ```bash
 # 1. developから新しいリリースブランチを作成
 git checkout develop
 git pull origin develop
 git checkout -b release/jobqueue/v0.1.0
 
-# 2. バージョン更新
+# 2. バージョン更新（必要に応じて）
 sed -i 's/^version = ".*"/version = "0.1.0"/' jobqueue/pyproject.toml
 
 # 3. プッシュしてワークフロー開始
@@ -125,36 +127,8 @@ git add jobqueue/pyproject.toml
 git commit -m "🔖 Bump version to 0.1.0 for jobqueue release"
 git push origin release/jobqueue/v0.1.0
 
-# 4. PR作成
-gh pr create --title "🚀 Release jobqueue v0.1.0" --base staging
-```
-
-##### マルチプロジェクト（🆕 新機能）
-
-```bash
-# 1. developから統合リリースブランチを作成
-git checkout develop
-git pull origin develop
-git checkout -b release/multi/v2025.09.30
-
-# 2. 各プロジェクトのバージョン更新
-sed -i 's/^version = ".*"/version = "1.3.0"/' myscheduler/pyproject.toml
-sed -i 's/^version = ".*"/version = "0.2.0"/' jobqueue/pyproject.toml
-sed -i 's/^version = ".*"/version = "0.1.5"/' commonUI/pyproject.toml
-
-# 3. まとめてコミット
-git add myscheduler/pyproject.toml jobqueue/pyproject.toml commonUI/pyproject.toml
-git commit -m "🔖 Multi-project release v2025.09.30
-
-- myscheduler: v1.3.0
-- jobqueue: v0.2.0
-- commonUI: v0.1.5"
-
-# 4. プッシュしてPR作成
-git push origin release/multi/v2025.09.30
-gh pr create \
-  --title "🚀 Multi-Project Release v2025.09.30" \
-  --base staging
+# 4. 自動的にPR作成される（手動でも可能）
+gh pr create --title "🚀 Release jobqueue v0.1.0" --base develop
 ```
 
 ## 📋 各ワークフローの詳細
@@ -162,7 +136,7 @@ gh pr create \
 ### Release Workflow (`multi-release.yml`) - マルチプロジェクト対応 🆕
 
 **トリガー**:
-- `release/*` ブランチへのpush（単一プロジェクト・マルチプロジェクト両対応）
+- `release/*` ブランチへのpush
 - `staging`, `main` ブランチへのPR
 - `workflow_dispatch`（手動実行）
 
@@ -171,27 +145,28 @@ gh pr create \
 #### 1. **自動リリースブランチ作成** (`workflow_dispatch`時)
 ```yaml
 inputs:
-  projects: "myscheduler,jobqueue"  # カンマ区切りで複数指定可能
+  project: [myscheduler, jobqueue]
   release_type: [major, minor, patch, custom]
   custom_version: "カスタムバージョン"
 ```
 
 #### 2. **プロジェクト自動判別**
-- **単一プロジェクト**: `release/jobqueue/v0.1.0` → プロジェクト: `jobqueue`, バージョン: `v0.1.0`
-- **マルチプロジェクト**: `release/multi/v2025.09.30` → 変更されたプロジェクトを自動検出
+- ブランチ名から対象プロジェクトを自動抽出
+- `release/jobqueue/v0.1.0` → プロジェクト: `jobqueue`, バージョン: `v0.1.0`
 
-#### 3. **実行内容**（マトリックス戦略による並列実行）
-1. **Validate Release**: バージョン形式・プロジェクト存在確認（全プロジェクト）
-2. **Test Suite**: マトリックス戦略で各プロジェクトを並列テスト
-   ```yaml
-   strategy:
-     matrix:
-       project: ${{ fromJson(needs.validate-release.outputs.projects_json) }}
+#### 3. **実行内容**（プロジェクト別）
+1. **Validate Release**: バージョン形式・プロジェクト存在確認
+2. **Test Suite**: アプリケーションプロジェクト用テスト実行（myscheduler/jobqueue）
+   ```bash
+   working-directory: ./${{ needs.validate-release.outputs.project }}
    ```
 3. **Documentation Validation**: docsプロジェクト専用軽量バリデーション
-4. **Security Scan**: 各プロジェクトの並列脆弱性スキャン
-5. **Build Release**: 各プロジェクトのイメージビルド・テスト（並列実行）
-6. **QA Tests**: 統合QA・パフォーマンステスト
+   - Markdownファイルのlinting
+   - ドキュメント構造検証
+   - バージョン情報付与
+4. **Security Scan**: アプリケーションプロジェクト用脆弱性スキャン
+5. **Build Release**: アプリケーションプロジェクト用イメージビルド・テスト
+6. **QA Tests**: QA・パフォーマンステスト
 7. **Approval Gate**: 手動承認（PR時）
 8. **Create Release Notes**: プロジェクト別リリースノート生成
 
@@ -294,21 +269,14 @@ inputs:
 - `refactor`, `docs`, `test`, `ci` → 基本的にpatch扱い
 - `dependencies` → セキュリティ更新時はpatch、機能追加時はminor
 
-### 自動化されるバージョン管理フロー（マルチプロジェクト対応 🆕）
+### 自動化されるバージョン管理フロー
 
 | トリガー | 自動実行内容 | 対象ワークフロー |
 |---------|-------------|----------------|
 | **PR → `develop`** | ラベル検証、コンベンショナルコミットチェック | `conventional-commits.yml` |
-| **PR → `main` (merged)** | **変更プロジェクト自動検出**、個別タグ作成、マルチプロジェクトタグ作成 | `auto-release.yml` 🆕 |
-| **`release/*` push** | リリース候補検証、**マトリックス戦略による並列テスト** | `multi-release.yml` 🆕 |
+| **PR → `main` (merged)** | pyproject.toml バージョンバンプ、GitHub Release作成 | `auto-release.yml` |
+| **`release/*` push** | リリース候補検証、自動デプロイトリガー | `multi-release.yml` |
 | **GitHub Release published** | 本番・ステージング自動デプロイ | `deploy-on-release.yml` |
-
-**🆕 マルチプロジェクトリリースの動作:**
-- **単一プロジェクト変更時**: 個別タグのみ作成 (例: `myscheduler/v1.3.0`)
-- **複数プロジェクト変更時**:
-  - 各プロジェクトの個別タグ作成 (例: `myscheduler/v1.3.0`, `jobqueue/v0.2.0`)
-  - マルチプロジェクト統合タグ作成 (例: `multi/v2025.09.30`)
-  - 統合リリースノート自動生成
 
 ## 🚀 デプロイメント戦略
 
@@ -324,28 +292,16 @@ inputs:
 - **ステージング**: 初回リリース検証中
 - **開発環境**: 開発中
 
-### 環境別タグ戦略（マルチプロジェクト対応 🆕）
+### 環境別タグ戦略
 
 ```bash
-# 単一プロジェクトタグ形式
+# プロジェクト別タグ形式
 {project}/v{version}
 
 # 例:
 myscheduler/v1.2.0
 jobqueue/v0.1.0
-commonUI/v0.1.5
-
-# マルチプロジェクトタグ形式（🆕 新機能）
-multi/v{YYYY.MM.DD}
-
-# 例:
-multi/v2025.09.30
 ```
-
-**マルチプロジェクトタグに含まれる情報:**
-- 統合リリースノート（全プロジェクトのバージョン情報）
-- 各プロジェクトの個別タグへのリンク
-- 変更されたプロジェクトの一覧
 
 ## 📊 アーティファクト管理
 
