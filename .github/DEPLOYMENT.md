@@ -21,7 +21,7 @@ MySwiftAgentは複数のマイクロサービスを含むモノレポ構成で�
 |-------------|----------|------|------|
 | `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR<br>**（docs/** を除外） | 品質チェック・テスト実行 | 🟢 有効 |
 | `cd-develop.yml` | developブランチへのpush<br>**（docs/** を除外） | 統合品質チェック | 🟢 有効 |
-| `release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>**docs専用バリデーション追加** | 🟢 有効 |
+| `multi-release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>**docs専用バリデーション追加** | 🟢 有効 |
 | `ci-main.yml` | mainブランチへのpush<br>**（docs/** を除外） | 本番品質チェック | 🟢 有効 |
 | `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR<br>**docs変更時は軽量実行** | 緊急修正品質チェック | 🟢 有効 |
 | `docs.yml` | docs/** の変更時<br>**全ブランチ対応** | **ドキュメント専用軽量処理**<br>Markdownlinting・構造検証・バージョン管理 | 🆕 **新規追加** |
@@ -73,7 +73,7 @@ graph TD
 
 ```bash
 # GitHub Actions UIから実行、または以下のコマンド
-gh workflow run release.yml \
+gh workflow run multi-release.yml \
   -f projects="myscheduler" \
   -f release_type=minor
 
@@ -87,12 +87,12 @@ gh workflow run release.yml \
 
 ```bash
 # 複数プロジェクトを同時にリリース
-gh workflow run release.yml \
+gh workflow run multi-release.yml \
   -f projects="myscheduler,jobqueue,commonUI" \
   -f release_type=minor
 
 # または日付ベースのバージョン
-gh workflow run release.yml \
+gh workflow run multi-release.yml \
   -f projects="myscheduler,jobqueue" \
   -f release_type=custom \
   -f custom_version="2025.09.30"
@@ -159,7 +159,7 @@ gh pr create \
 
 ## 📋 各ワークフローの詳細
 
-### Release Workflow (`release.yml`) - マルチプロジェクト対応 🆕
+### Release Workflow (`multi-release.yml`) - マルチプロジェクト対応 🆕
 
 **トリガー**:
 - `release/*` ブランチへのpush（単一プロジェクト・マルチプロジェクト両対応）
@@ -300,7 +300,7 @@ inputs:
 |---------|-------------|----------------|
 | **PR → `develop`** | ラベル検証、コンベンショナルコミットチェック | `conventional-commits.yml` |
 | **PR → `main` (merged)** | **変更プロジェクト自動検出**、個別タグ作成、マルチプロジェクトタグ作成 | `auto-release.yml` 🆕 |
-| **`release/*` push** | リリース候補検証、**マトリックス戦略による並列テスト** | `release.yml` 🆕 |
+| **`release/*` push** | リリース候補検証、**マトリックス戦略による並列テスト** | `multi-release.yml` 🆕 |
 | **GitHub Release published** | 本番・ステージング自動デプロイ | `deploy-on-release.yml` |
 
 **🆕 マルチプロジェクトリリースの動作:**
@@ -399,8 +399,8 @@ multi/v2025.09.30
 
 ```bash
 # マルチプロジェクト リリース作成
-gh workflow run release.yml \
-  -f project=jobqueue \
+gh workflow run multi-release.yml \
+  -f projects=jobqueue \
   -f release_type=minor \
   -f custom_version=""
 
