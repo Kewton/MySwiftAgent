@@ -19,12 +19,43 @@ MySwiftAgentは複数のマイクロサービスを含むモノレポ構成で�
 
 | ワークフロー | トリガー | 目的 | 状態 |
 |-------------|----------|------|------|
-| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのpush<br>developブランチへのPR<br>**（docs/** を除外） | 品質チェック・テスト実行 | 🟢 有効 |
-| `cd-develop.yml` | developブランチへのpush<br>**（docs/** を除外） | 統合品質チェック | 🟢 有効 |
-| `multi-release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>**docs専用バリデーション追加** | 🟢 有効 |
-| `ci-main.yml` | mainブランチへのpush<br>**（docs/** を除外） | 本番品質チェック | 🟢 有効 |
-| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR<br>**docs変更時は軽量実行** | 緊急修正品質チェック | 🟢 有効 |
-| `docs.yml` | docs/** の変更時<br>**全ブランチ対応** | **ドキュメント専用軽量処理**<br>Markdownlinting・構造検証・バージョン管理 | 🆕 **新規追加** |
+| `ci-feature.yml` | feature/*, fix/*, refactor/*, test/*, vibe/* ブランチへのPR<br>→ developブランチ<br>**（docs/** を除外） | フィーチャーブランチの品質チェック・テスト実行<br>マルチプロジェクト対応（matrix戦略） | 🟢 有効 |
+| `cd-develop.yml` | developブランチへのpush<br>**（docs/** を除外） | 開発統合環境への自動デプロイ・統合テスト<br>myschedulerプロジェクト対応 | 🟢 有効 |
+| `ci-main.yml` | mainブランチへのpush<br>**（docs/** を除外） | 本番品質チェック・セキュリティ検証<br>myschedulerプロジェクト対応 | 🟢 有効 |
+| `multi-release.yml` | release/* ブランチへのpush<br>staging/mainブランチへのPR<br>workflow_dispatch | **マルチプロジェクト対応リリース品質保証**<br>バージョン管理・QA・承認ゲート・docs専用バリデーション | 🟢 有効 |
+| `auto-release.yml` | mainブランチへのpush<br>workflow_dispatch | **自動タグ作成・GitHub Release生成**<br>変更プロジェクト自動検出（myscheduler, jobqueue, docs, commonUI） | 🟢 有効 |
+| `hotfix.yml` | hotfix/* ブランチへのpush<br>main/staging/developブランチへのPR<br>**docs変更時は軽量実行** | 緊急修正の品質チェック・バージョン管理<br>マルチプロジェクト・緊急承認環境対応 | 🟢 有効 |
+| `docs.yml` | docs/** の変更時<br>**全ブランチ対応**<br>(main, develop, hotfix/*, release/*, feature/*, fix/*) | **ドキュメント専用軽量処理**<br>Markdownlinting・構造検証・バージョン管理<br>Docker/Python処理を除外 | 🟢 有効 |
+| `deploy-production.yml` | workflow_dispatch（手動実行のみ） | 本番環境への手動デプロイ<br>myschedulerプロジェクト対応<br>バージョン指定・テストスキップ可能 | 🟡 手動 |
+| `deploy-staging.yml` | workflow_dispatch（手動実行のみ） | ステージング環境への手動デプロイ<br>myschedulerプロジェクト対応<br>バージョン指定可能 | 🟡 手動 |
+
+### ワークフロー依存関係
+
+```mermaid
+graph TD
+  F[feature/* branches] -->|PR| CF[ci-feature.yml]
+  CF -->|merge| D[develop branch]
+  D -->|push| CD[cd-develop.yml]
+
+  D -->|create branch| R[release/* branches]
+  R -->|push| MR[multi-release.yml]
+  MR -->|PR approved| S[staging branch]
+  MR -->|PR approved| M[main branch]
+
+  M -->|push| CM[ci-main.yml]
+  M -->|push| AR[auto-release.yml]
+  AR -->|create| T[Tags & GitHub Release]
+
+  H[hotfix/* branches] -->|push| HF[hotfix.yml]
+  HF -->|PR| M
+  HF -->|PR| S
+  HF -->|PR| D
+
+  DOC[docs/** changes] -->|push| DW[docs.yml]
+
+  M -->|manual| DP[deploy-production.yml]
+  S -->|manual| DS[deploy-staging.yml]
+```
 
 ## 🔄 マルチプロジェクト対応デプロイメントフロー
 
