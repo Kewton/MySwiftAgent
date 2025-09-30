@@ -1,6 +1,6 @@
 name: "🚀 Release Quality Assurance"
 
-'on':
+on:
   # Multi-project release workflow with automated version management and manual trigger support
   push:
     branches:
