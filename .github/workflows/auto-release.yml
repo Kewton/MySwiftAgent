@@ -1,8 +1,12 @@
-name: "Automatic Release and Tagging"
+name: "🏷️ Automatic Release and Tagging"
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 env:

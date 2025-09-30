@@ -1,13 +1,19 @@
-name: "Release Quality Assurance"
+name: "🚀 Release Quality Assurance"
 
 'on':
   # Multi-project release workflow with automated version management
   push:
     branches:
       - 'release/**'
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
-    branches: [staging]
+    branches: [staging, main]
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
     inputs:
       release_type:
