@@ -213,7 +213,7 @@ GitHub Actions で以下を自動実行：
 |---------|-------------|----------------|
 | **PR → `develop`** | ラベル検証、コンベンショナルコミットチェック | `conventional-commits.yml` |
 | **PR → `main` (merged)** | pyproject.toml バージョンバンプ、GitHub Release作成 | `auto-release.yml` |
-| **`release/*` push** | リリース候補検証、自動デプロイトリガー | `release.yml` |
+| **`release/*` push** | リリース候補検証、自動デプロイトリガー | `multi-release.yml` |
 | **GitHub Release published** | 本番・ステージング自動デプロイ | `deploy-on-release.yml` |
 
 ### パフォーマンス・セキュリティ
@@ -321,9 +321,9 @@ warn_unused_configs = true
 
 ### 3. **CI/CD設定への追加**
 
-#### 3.1 release.yml ワークフローの更新
+#### 3.1 multi-release.yml ワークフローの更新
 
-**`/.github/workflows/release.yml`** の以下の箇所を更新：
+**`/.github/workflows/multi-release.yml`** の以下の箇所を更新：
 
 ```yaml
 # workflow_dispatch inputs への追加
@@ -477,8 +477,8 @@ gh pr create \
 
 ```bash
 # developマージ後、リリースワークフロー実行
-gh workflow run release.yml \
-  -f project={project_name} \
+gh workflow run multi-release.yml \
+  -f projects={project_name} \
   -f release_type=minor \
   -f custom_version="0.1.0"
 
@@ -501,7 +501,7 @@ git push origin release/{project_name}/v0.1.0
 
 ### プロジェクト追加時のCI/CD更新箇所
 
-- **`.github/workflows/release.yml`**: workflow_dispatch inputsとジョブ条件
+- **`.github/workflows/multi-release.yml`**: workflow_dispatch inputsとジョブ条件
 - **`.github/workflows/ci-feature.yml`**: フィーチャーブランチ用品質チェック（docs/** パス除外設定済み）
 - **`.github/workflows/cd-develop.yml`**: 開発統合用テスト（docs/** パス除外設定済み）
 - **`.github/workflows/ci-main.yml`**: 本番品質チェック（docs/** パス除外設定済み）
@@ -532,7 +532,7 @@ paths:
 #### **バージョン管理対応**
 - **リリースブランチ**: `release/docs/vX.Y.Z` 形式をサポート
 - **pyproject.toml**: 存在しない場合は軽量版を自動生成
-- **専用バリデーション**: release.ymlでdocs専用の軽量チェックを実行
+- **専用バリデーション**: multi-release.ymlでdocs専用の軽量チェックを実行
 
 ## 🔧 新プロジェクト追加後の品質チェック
 
