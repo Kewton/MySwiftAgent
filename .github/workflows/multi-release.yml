@@ -460,67 +460,74 @@ jobs:
       matrix:
         project: ${{ fromJson(needs.validate-release.outputs.projects_json) }}
       fail-fast: false
-    if: |
-      matrix.project == 'myscheduler' ||
-      matrix.project == 'jobqueue' ||
-      matrix.project == 'commonUI'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        if: matrix.project != 'docs'
 
       - name: Set up Python
         uses: actions/setup-python@v4
+        if: matrix.project != 'docs'
         with:
           python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+        if: matrix.project != 'docs'
         with:
           version: "latest"
 
       - name: Install dependencies
+        if: matrix.project != 'docs'
         working-directory: ./${{ matrix.project }}
         run: uv sync --extra dev
 
       - name: Run linting
+        if: matrix.project != 'docs'
         working-directory: ./${{ matrix.project }}
         run: uv run ruff check .
 
       - name: Run type checking
+        if: matrix.project != 'docs'
         working-directory: ./${{ matrix.project }}
         run: uv run mypy app/
 
       - name: Run unit tests
+        if: matrix.project != 'docs'
         working-directory: ./${{ matrix.project }}
         run: uv run pytest tests/unit/ -v
 
       - name: Run integration tests
+        if: matrix.project != 'docs'
         working-directory: ./${{ matrix.project }}
         run: uv run pytest tests/integration/ -v
 
   docs-validation:
-    name: Documentation Validation
+    name: Documentation Validation (${{ matrix.project }})
     runs-on: ubuntu-latest
     needs: [validate-release]
     strategy:
       matrix:
         project: ${{ fromJson(needs.validate-release.outputs.projects_json) }}
-    if: matrix.project == 'docs'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        if: matrix.project == 'docs'
 
       - name: Setup Node.js for markdown linting
         uses: actions/setup-node@v4
+        if: matrix.project == 'docs'
         with:
           node-version: '18'
 
       - name: Install markdown linter
+        if: matrix.project == 'docs'
         run: npm install -g markdownlint-cli
 
       - name: Validate documentation structure
+        if: matrix.project == 'docs'
         working-directory: ./docs
         run: |
           echo "📂 Validating documentation structure"
@@ -528,6 +535,7 @@ jobs:
           echo "✅ Documentation structure validated"
 
       - name: Lint markdown files
+        if: matrix.project == 'docs'
         working-directory: ./docs
         run: |
           echo "📝 Linting markdown files"
@@ -545,17 +553,15 @@ jobs:
       matrix:
         project: ${{ fromJson(needs.validate-release.outputs.projects_json) }}
       fail-fast: false
-    if: |
-      matrix.project == 'myscheduler' ||
-      matrix.project == 'jobqueue' ||
-      matrix.project == 'commonUI'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        if: matrix.project != 'docs'
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        if: matrix.project != 'docs'
         with:
           scan-type: 'fs'
           scan-ref: './${{ matrix.project }}'
