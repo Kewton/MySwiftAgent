@@ -154,10 +154,17 @@ jobs:
             if [[ "$RELEASE_TYPE" == "custom" && -n "$CUSTOM_VERSION" ]]; then
               NEW_VERSION="$CUSTOM_VERSION"
             else
+              # Detect project language and extract version
               if [[ "$PROJECT" == "docs" && ! -f "$PROJECT/pyproject.toml" ]]; then
                 CURRENT_VERSION="0.1.0"
-              else
+              elif [[ -f "$PROJECT/pyproject.toml" ]]; then
+                # Python project
                 CURRENT_VERSION=$(grep '^version = ' $PROJECT/pyproject.toml | sed 's/version = "\(.*\)"/\1/' || echo "0.1.0")
+              elif [[ -f "$PROJECT/package.json" ]]; then
+                # TypeScript/Node.js project
+                CURRENT_VERSION=$(jq -r '.version // "0.1.0"' $PROJECT/package.json)
+              else
+                CURRENT_VERSION="0.1.0"
               fi
 
               IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
@@ -181,7 +188,7 @@ jobs:
           echo "version_map=$VERSION_MAP" >> $GITHUB_OUTPUT
           echo "🚀 Version map: $VERSION_MAP"
 
-      - name: Update pyproject.toml for all projects
+      - name: Update version files for all projects
         run: |
           PROJECTS_JSON='${{ steps.parse.outputs.projects_json }}'
           VERSION_MAP='${{ steps.version.outputs.version_map }}'
@@ -189,12 +196,14 @@ jobs:
           # Parse projects from JSON
           PROJECTS=($(echo "$PROJECTS_JSON" | jq -r '.[]'))
 
-          echo "📝 Updating pyproject.toml for ${#PROJECTS[@]} project(s)"
+          echo "📝 Updating version files for ${#PROJECTS[@]} project(s)"
 
           for PROJECT in "${PROJECTS[@]}"; do
             NEW_VERSION=$(echo "$VERSION_MAP" | jq -r ".[\"$PROJECT\"]")
 
+            # Detect project language and update version file
             if [[ "$PROJECT" == "docs" ]]; then
+              # Docs project special handling
               if [[ ! -f "$PROJECT/pyproject.toml" ]]; then
                 echo "📝 Creating pyproject.toml for docs project"
                 echo '[project]' > $PROJECT/pyproject.toml
@@ -211,12 +220,25 @@ jobs:
               else
                 sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" $PROJECT/pyproject.toml
               fi
-            else
-              sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" $PROJECT/pyproject.toml
-            fi
+              echo "✅ Updated $PROJECT/pyproject.toml to version $NEW_VERSION"
+              cat $PROJECT/pyproject.toml | grep "^version = "
 
-            echo "✅ Updated $PROJECT/pyproject.toml to version $NEW_VERSION"
-            cat $PROJECT/pyproject.toml | grep "^version = "
+            elif [[ -f "$PROJECT/pyproject.toml" ]]; then
+              # Python project
+              sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" $PROJECT/pyproject.toml
+              echo "✅ Updated $PROJECT/pyproject.toml to version $NEW_VERSION"
+              cat $PROJECT/pyproject.toml | grep "^version = "
+
+            elif [[ -f "$PROJECT/package.json" ]]; then
+              # TypeScript/Node.js project
+              jq ".version = \"$NEW_VERSION\"" $PROJECT/package.json > $PROJECT/package.json.tmp
+              mv $PROJECT/package.json.tmp $PROJECT/package.json
+              echo "✅ Updated $PROJECT/package.json to version $NEW_VERSION"
+              cat $PROJECT/package.json | jq -r '.version'
+
+            else
+              echo "⚠️ No version file found for $PROJECT (expected pyproject.toml or package.json)"
+            fi
           done
 
       - name: Create release branch
@@ -257,9 +279,14 @@ jobs:
 
           git checkout -b "$BRANCH_NAME"
 
-          # Add all modified pyproject.toml files
+          # Add all modified version files (pyproject.toml or package.json)
           for PROJECT in "${PROJECTS[@]}"; do
-            git add $PROJECT/pyproject.toml
+            if [[ -f "$PROJECT/pyproject.toml" ]]; then
+              git add $PROJECT/pyproject.toml
+            fi
+            if [[ -f "$PROJECT/package.json" ]]; then
+              git add $PROJECT/package.json
+            fi
           done
 
           # Build commit message with version details
@@ -316,7 +343,7 @@ jobs:
           echo "" >> /tmp/pr-body.md
           echo "## 🔄 Automated Changes" >> /tmp/pr-body.md
           echo "" >> /tmp/pr-body.md
-          echo "- ✅ Version bump in pyproject.toml for all projects" >> /tmp/pr-body.md
+          echo "- ✅ Version bump in pyproject.toml/package.json for all projects" >> /tmp/pr-body.md
           echo "- 🌿 Release branch created: \`$BRANCH_NAME\`" >> /tmp/pr-body.md
           echo "" >> /tmp/pr-body.md
           echo "## 📋 Pre-merge Checklist" >> /tmp/pr-body.md
@@ -365,8 +392,9 @@ jobs:
 
             # Detect changed projects from git diff
             CHANGED_PROJECTS=""
-            for project in myscheduler jobqueue docs commonUI; do
-              if [[ -f "$project/pyproject.toml" ]] && git diff HEAD~1 HEAD --name-only | grep -q "^$project/"; then
+            for project in myscheduler jobqueue docs commonUI graphAiServer; do
+              # Check if project has version file (pyproject.toml or package.json)
+              if ([[ -f "$project/pyproject.toml" ]] || [[ -f "$project/package.json" ]]) && git diff HEAD~1 HEAD --name-only | grep -q "^$project/"; then
                 if [[ -z "$CHANGED_PROJECTS" ]]; then
                   CHANGED_PROJECTS="$project"
                 else
@@ -442,9 +470,9 @@ jobs:
                 echo "ℹ️ pyproject.toml will be created for docs project"
               fi
             else
-              # Check if pyproject.toml exists for non-docs projects
-              if [[ ! -f "$PROJECT/pyproject.toml" ]]; then
-                echo "❌ pyproject.toml not found in '$PROJECT/'"
+              # Check if version file exists (pyproject.toml or package.json)
+              if [[ ! -f "$PROJECT/pyproject.toml" ]] && [[ ! -f "$PROJECT/package.json" ]]; then
+                echo "❌ No version file found in '$PROJECT/' (expected pyproject.toml or package.json)"
                 exit 1
               fi
             fi
@@ -466,42 +494,92 @@ jobs:
         uses: actions/checkout@v4
         if: matrix.project != 'docs'
 
+      - name: Detect project language
+        id: detect-lang
+        if: matrix.project != 'docs'
+        run: |
+          if [[ -f "${{ matrix.project }}/pyproject.toml" ]]; then
+            echo "language=python" >> $GITHUB_OUTPUT
+            echo "🐍 Detected Python project"
+          elif [[ -f "${{ matrix.project }}/package.json" ]]; then
+            echo "language=typescript" >> $GITHUB_OUTPUT
+            echo "📘 Detected TypeScript/Node.js project"
+          else
+            echo "language=unknown" >> $GITHUB_OUTPUT
+            echo "⚠️ Unknown project type"
+          fi
+
+      # Python project setup
       - name: Set up Python
         uses: actions/setup-python@v4
-        if: matrix.project != 'docs'
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         with:
           python-version: '3.12'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
-        if: matrix.project != 'docs'
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         with:
           version: "latest"
 
-      - name: Install dependencies
-        if: matrix.project != 'docs'
+      - name: Install Python dependencies
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         working-directory: ./${{ matrix.project }}
         run: uv sync --extra dev
 
-      - name: Run linting
-        if: matrix.project != 'docs'
+      - name: Run Python linting
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         working-directory: ./${{ matrix.project }}
         run: uv run ruff check .
 
-      - name: Run type checking
-        if: matrix.project != 'docs'
+      - name: Run Python type checking
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         working-directory: ./${{ matrix.project }}
         run: uv run mypy app/
 
-      - name: Run unit tests
-        if: matrix.project != 'docs'
+      - name: Run Python unit tests
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         working-directory: ./${{ matrix.project }}
         run: uv run pytest tests/unit/ -v
 
-      - name: Run integration tests
-        if: matrix.project != 'docs'
+      - name: Run Python integration tests
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         working-directory: ./${{ matrix.project }}
         run: uv run pytest tests/integration/ -v
+
+      # TypeScript/Node.js project setup
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'typescript'
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+
+      - name: Install Node.js dependencies
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm ci
+
+      - name: Run TypeScript linting
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm run lint
+
+      - name: Run TypeScript type checking
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm run type-check || npx tsc --noEmit
+
+      - name: Run TypeScript tests
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm test
+
+      - name: Run TypeScript build
+        if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm run build
 
   docs-validation:
     name: Documentation Validation (${{ matrix.project }})
@@ -589,32 +667,75 @@ jobs:
           VERSION=${BRANCH_NAME#release/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
+      - name: Detect project language
+        id: detect-lang
+        run: |
+          if [[ -f "${{ matrix.project }}/pyproject.toml" ]]; then
+            echo "language=python" >> $GITHUB_OUTPUT
+            echo "🐍 Detected Python project"
+          elif [[ -f "${{ matrix.project }}/package.json" ]]; then
+            echo "language=typescript" >> $GITHUB_OUTPUT
+            echo "📘 Detected TypeScript/Node.js project"
+          else
+            echo "language=unknown" >> $GITHUB_OUTPUT
+            echo "⚠️ Unknown project type"
+          fi
 
       - name: Get project version
         id: project-info
         run: |
           PROJECT="${{ matrix.project }}"
-          VERSION=$(grep '^version = ' $PROJECT/pyproject.toml | sed 's/version = "\(.*\)"/\1/' || echo "0.0.0")
+
+          if [[ -f "$PROJECT/pyproject.toml" ]]; then
+            VERSION=$(grep '^version = ' $PROJECT/pyproject.toml | sed 's/version = "\(.*\)"/\1/' || echo "0.0.0")
+          elif [[ -f "$PROJECT/package.json" ]]; then
+            VERSION=$(jq -r '.version // "0.0.0"' $PROJECT/package.json)
+          else
+            VERSION="0.0.0"
+          fi
 
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "🎯 Building $PROJECT version $VERSION"
 
-      - name: Build package for release
-        run: |
-          PROJECT="${{ matrix.project }}"
-          uv build
-        working-directory: ./${{ matrix.project }}
+      # Python build steps
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        if: steps.detect-lang.outputs.language == 'python'
+        with:
+          python-version: '3.12'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        if: steps.detect-lang.outputs.language == 'python'
+        with:
+          version: "latest"
+
+      - name: Build Python package
+        if: steps.detect-lang.outputs.language == 'python'
+        working-directory: ./${{ matrix.project }}
+        run: uv build
+
+      # TypeScript build steps
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        if: steps.detect-lang.outputs.language == 'typescript'
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+
+      - name: Install Node.js dependencies
+        if: steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm ci
+
+      - name: Build TypeScript package
+        if: steps.detect-lang.outputs.language == 'typescript'
+        working-directory: ./${{ matrix.project }}
+        run: npm run build
+
+      # Docker build (common for both)
       - name: Build Docker image (verification only)
         run: |
           PROJECT="${{ matrix.project }}"
