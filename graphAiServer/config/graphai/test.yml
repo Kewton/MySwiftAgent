@@ -1,0 +1,19 @@
+version: 0.5
+nodes:
+  source: {}
+  llm:
+    agent: openAIAgent
+    params:
+      model: gpt-5-mini-2025-08-07
+    inputs:
+      prompt: :source
+  output:
+    agent: copyAgent
+    params:
+      namedKey: text
+    console:
+      before: output start
+      after: true
+    inputs:
+      text: :llm.text
+    isResult: true
