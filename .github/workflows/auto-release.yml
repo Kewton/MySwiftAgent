@@ -193,6 +193,8 @@ jobs:
 
             echo "✅ Successfully created multi-project GitHub Release: $TAG_NAME"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         run: |
