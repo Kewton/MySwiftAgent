@@ -1,7 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from pydantic import BaseModel
 
 from core.config import settings
@@ -109,20 +110,13 @@ def googleSearchAgent(_input: str) -> str:
         )
     """
     logger.info("Google Searchを実行します")
-    # APIキーの取得と設定（環境変数から取得する）
-    genai.configure(api_key=settings.GOOGLE_API_KEY)
-
-    # Google Search (Grounding)機能を使用するモデル
+    # 新しい google-genai SDK を使用
     # 参考: https://ai.google.dev/gemini-api/docs/google-search?hl=ja
-    # NOTE: Google Search groundingは一部モデルでサポートされています
-    # Gemini 2.5では grounding_metadata が空になる問題があるため、
-    # テキスト内のURLを参照情報として利用します
-    model = genai.GenerativeModel("models/gemini-2.5-flash")
+    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
 
     # Google Search toolの設定
-    google_search_tool = genai.protos.Tool(
-        google_search=genai.protos.Tool.GoogleSearch()
-    )
+    grounding_tool = types.Tool(google_search=types.GoogleSearch())
+    config = types.GenerateContentConfig(tools=[grounding_tool])
 
     _content = f"""
     # 命令指示書
@@ -140,34 +134,19 @@ def googleSearchAgent(_input: str) -> str:
 
     try:
         # Google Search機能を有効化してgenerate_contentを呼び出す
-        response = model.generate_content(
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
             contents=_content,
-            tools=[google_search_tool],
+            config=config,
         )
 
-        # レスポンス構造のデバッグ (MCPサーバーなのでprintを使用)
-        print(f"[DEBUG] Response type: {type(response)}")
-        print(f"[DEBUG] Has text attr: {hasattr(response, 'text')}")
-        print(f"[DEBUG] Has _result attr: {hasattr(response, '_result')}")
+        # テキストを取得
+        text = response.text
+        print(f"[DEBUG] Search result text: {text}")
 
-        # grounding_metadata構造の詳細確認
-        if hasattr(response, "_result") and response._result.candidates:
-            candidate = response._result.candidates[0]
-            print(f"[DEBUG] Has grounding_metadata: {hasattr(candidate, 'grounding_metadata')}")
-            if hasattr(candidate, "grounding_metadata"):
-                gm = candidate.grounding_metadata
-                print(f"[DEBUG] grounding_metadata type: {type(gm)}")
-                print(f"[DEBUG] grounding_metadata dir: {[x for x in dir(gm) if not x.startswith('_')]}")
-                print(f"[DEBUG] grounding_metadata: {gm}")
-
-        if hasattr(response, "text"):
-            text = response.text
-            print(f"[DEBUG] Search result text: {text}")
-        elif hasattr(response, "_result") and response._result.candidates:
-            text = response._result.candidates[0].content.parts[0].text
-            print(f"[DEBUG] Search result text (from _result): {text}")
-        else:
-            print("[ERROR] Unable to extract text from response")
+        # candidatesが存在しない場合はエラー
+        if not response.candidates:
+            print("[ERROR] No candidates in response")
             return GoogleSearchResult(
                 text="検索結果の取得に失敗しました"
             ).model_dump_json()
@@ -180,25 +159,23 @@ def googleSearchAgent(_input: str) -> str:
             text=f"検索に失敗しました: {str(e)}"
         ).model_dump_json()
 
-    # grounding_metadataを抽出
+    # grounding_metadataを抽出（新しいSDKの形式）
     grounding_metadata = None
-    if (
-        hasattr(response, "_result")
-        and response._result.candidates
-        and hasattr(response._result.candidates[0], "grounding_metadata")
-    ):
-        gm = response._result.candidates[0].grounding_metadata
+    candidate = response.candidates[0]
+
+    if hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
+        gm = candidate.grounding_metadata
 
         # webSearchQueriesを取得
-        web_search_queries = None
-        if hasattr(gm, "web_search_queries"):
-            web_search_queries = list(gm.web_search_queries)
+        web_search_queries = (
+            list(gm.web_search_queries) if gm.web_search_queries else None
+        )
 
         # groundingChunksを取得
         grounding_chunks = []
-        if hasattr(gm, "grounding_chunks"):
+        if gm.grounding_chunks:
             for chunk in gm.grounding_chunks:
-                if hasattr(chunk, "web"):
+                if hasattr(chunk, "web") and chunk.web:
                     grounding_chunks.append(
                         GroundingChunk(
                             uri=chunk.web.uri if hasattr(chunk.web, "uri") else "",
@@ -210,23 +187,21 @@ def googleSearchAgent(_input: str) -> str:
 
         # groundingSupportsを取得
         grounding_supports = []
-        if hasattr(gm, "grounding_supports"):
+        if gm.grounding_supports:
             for support in gm.grounding_supports:
-                if hasattr(support, "segment"):
+                if hasattr(support, "segment") and support.segment:
                     segment = support.segment
                     grounding_supports.append(
                         GroundingSupport(
-                            segment_text=(
-                                segment.text if hasattr(segment, "text") else ""
-                            ),
+                            segment_text=segment.text if hasattr(segment, "text") else "",
                             segment_start_index=(
                                 segment.start_index
-                                if hasattr(segment, "start_index")
+                                if hasattr(segment, "start_index") and segment.start_index is not None
                                 else 0
                             ),
                             segment_end_index=(
                                 segment.end_index
-                                if hasattr(segment, "end_index")
+                                if hasattr(segment, "end_index") and segment.end_index is not None
                                 else 0
                             ),
                             grounding_chunk_indices=(
