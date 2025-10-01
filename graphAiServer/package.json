@@ -1,6 +1,6 @@
 {
   "name": "graph-ai-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Graph AI Server for MySwiftAgent",
   "main": "dist/index.js",
@@ -12,7 +12,11 @@
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit"
   },
-  "keywords": ["ai", "graph", "agent"],
+  "keywords": [
+    "ai",
+    "graph",
+    "agent"
+  ],
   "author": "MySwiftAgent Team",
   "license": "MIT",
   "dependencies": {
