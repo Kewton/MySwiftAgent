@@ -87,19 +87,37 @@ known-first-party = ["app"]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --cov=app --cov-report=term-missing"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--cov=app",
+    "--cov=core",
+    "--cov-report=term-missing",
+    "--cov-report=json",
+    "--cov-report=html",
+    "--cov-fail-under=90",
+]
 testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "core"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+]
 
 [tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

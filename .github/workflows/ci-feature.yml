@@ -7,6 +7,7 @@ on:
     paths:
       - 'myscheduler/**'
       - 'jobqueue/**'
+      - 'expertAgent/**'
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'myscheduler/**'
       - 'jobqueue/**'
+      - 'expertAgent/**'
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
@@ -35,6 +37,7 @@ jobs:
     outputs:
       myscheduler: ${{ steps.changes.outputs.myscheduler }}
       jobqueue: ${{ steps.changes.outputs.jobqueue }}
+      expertAgent: ${{ steps.changes.outputs.expertAgent }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,6 +53,7 @@ jobs:
           if [[ "${{ github.ref }}" == *"feature/jobqueue"* ]]; then
             echo "🎯 Feature/jobqueue branch detected - testing jobqueue only"
             echo "myscheduler=false" >> $GITHUB_OUTPUT
+            echo "expertAgent=false" >> $GITHUB_OUTPUT
             if [ -d "jobqueue" ]; then
               echo "jobqueue=true" >> $GITHUB_OUTPUT
               echo "✅ jobqueue directory exists"
@@ -58,7 +62,7 @@ jobs:
               echo "❌ jobqueue directory does not exist"
             fi
           else
-            # For other branches, check both directories
+            # For other branches, check all directories
             if [ -d "myscheduler" ]; then
               echo "myscheduler=true" >> $GITHUB_OUTPUT
               echo "✅ myscheduler directory exists"
@@ -74,19 +78,28 @@ jobs:
               echo "jobqueue=false" >> $GITHUB_OUTPUT
               echo "❌ jobqueue directory does not exist"
             fi
+
+            if [ -d "expertAgent" ]; then
+              echo "expertAgent=true" >> $GITHUB_OUTPUT
+              echo "✅ expertAgent directory exists"
+            else
+              echo "expertAgent=false" >> $GITHUB_OUTPUT
+              echo "❌ expertAgent directory does not exist"
+            fi
           fi
 
   test:
     name: Test Suite
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true'
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true'
     strategy:
       matrix:
         python-version: ['3.12']
         project:
           - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
           - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
         exclude:
           - project: ''
 
@@ -142,12 +155,13 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true'
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true'
     strategy:
       matrix:
         project:
           - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
           - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
         exclude:
           - project: ''
 
@@ -174,12 +188,13 @@ jobs:
     name: Build Check
     runs-on: ubuntu-latest
     needs: [test, detect-changes]
-    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true'
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true'
     strategy:
       matrix:
         project:
           - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
           - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
         exclude:
           - project: ''
 
@@ -229,12 +244,13 @@ jobs:
     name: Documentation Check
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true'
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true'
     strategy:
       matrix:
         project:
           - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
           - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
         exclude:
           - project: ''
 
@@ -270,12 +286,13 @@ jobs:
     name: Dependency Security Check
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true'
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true'
     strategy:
       matrix:
         project:
           - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
           - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
         exclude:
           - project: ''
 
