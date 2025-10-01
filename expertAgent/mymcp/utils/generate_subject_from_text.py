@@ -1,8 +1,7 @@
 from core.config import settings
+
 # import google.generativeai as genai
 from mymcp.utils.execllm import execLlmApi
-from core.config import settings
-
 
 # def getmodel():
 #     # --- 1. APIクライアントの準備 ---
@@ -71,7 +70,7 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
 
         _messages = [
             {"role": "system", "content": "あなたは世界一のポッドキャスターです"},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt},
         ]
 
         # 前後に不要な引用符などが付いていたら削除
@@ -79,8 +78,10 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
         generated_subject = execLlmApi(settings.OLLAMA_DEF_SMALL_MODEL, _messages)
 
         # 必要に応じてさらに後処理 (例: 長すぎる場合の切り詰め)
-        if len(generated_subject) > max_length * 1.5: # 多少のオーバーは許容
-            print(f"Warning: Generated subject is longer than expected ({len(generated_subject)} chars). Truncating.")
+        if len(generated_subject) > max_length * 1.5:  # 多少のオーバーは許容
+            print(
+                f"Warning: Generated subject is longer than expected ({len(generated_subject)} chars). Truncating."
+            )
             # 単純に切り詰めるか、再度生成を試みるかなどの戦略が必要
             generated_subject = generated_subject[:max_length] + "..."
 
@@ -106,5 +107,3 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
         #     print(f"Error details unavailable or failed to access: {inner_e}")
 
         return f"エラー: 件名生成中にエラーが発生しました: {e}"
-
-

@@ -37,7 +37,7 @@ def generate_melmaga_script(input_info: str, model_name: str = "gpt-4o-mini"):
 
     _messages = [
         {"role": "system", "content": "あなたは優れた編集者兼ライターです"},
-        {"role": "user", "content": _input}
+        {"role": "user", "content": _input},
     ]
 
     return execLlmApi(model_name, _messages)

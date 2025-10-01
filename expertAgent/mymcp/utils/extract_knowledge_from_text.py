@@ -1,8 +1,10 @@
-from mymcp.utils.execllm import execLlmApi
 from core.config import settings
+from mymcp.utils.execllm import execLlmApi
 
 
-def extract_knowledge_from_text(_text: str, _model: str = settings.EXTRACT_KNOWLEDGE_MODEL):
+def extract_knowledge_from_text(
+    _text: str, _model: str = settings.EXTRACT_KNOWLEDGE_MODEL
+):
     _query = f"""
     # 命令指示書
     入力情報と制約条件に従って最高の成果物を日本語で生成してください。
@@ -18,16 +20,14 @@ def extract_knowledge_from_text(_text: str, _model: str = settings.EXTRACT_KNOWL
     ---
     # 入力情報
     {_text}
-    
+
     ---
 
     /no_think
     """
 
     _messages = []
-    _messages.append(
-        {"role": "user", "content": _query}
-    )
+    _messages.append({"role": "user", "content": _query})
 
     result = execLlmApi(_model, _messages)
 

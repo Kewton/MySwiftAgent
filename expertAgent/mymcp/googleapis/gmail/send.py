@@ -1,9 +1,11 @@
-from mymcp.googleapis.googleapi_services import get_googleapis_service
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from googleapiclient.errors import HttpError
-from google.auth.exceptions import RefreshError
 import base64
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from google.auth.exceptions import RefreshError
+from googleapiclient.errors import HttpError
+
+from mymcp.googleapis.googleapi_services import get_googleapis_service
 
 SERVICE_NAME = "gmail"
 
@@ -24,20 +26,22 @@ def send_email(to_email: str, subject: str, body: str) -> str:
         return "エラー: 送信先のメールアドレスが指定されていません。"
 
     try:
-        print(f"[{SERVICE_NAME}] INFO: Sending email to '{to_email}' with subject '{subject}'")
+        print(
+            f"[{SERVICE_NAME}] INFO: Sending email to '{to_email}' with subject '{subject}'"
+        )
         service = get_googleapis_service(SERVICE_NAME)
         if not service:
             return f"エラー: {SERVICE_NAME} API サービスを取得できませんでした。認証を確認してください。"
 
         # MIMEメッセージを作成
         message = MIMEMultipart()
-        message['To'] = to_email
+        message["To"] = to_email
         # From は Gmail API が自動的に認証ユーザーのアドレスを設定するので "me" で良い
-        message['From'] = "me"
-        message['Subject'] = subject
+        message["From"] = "me"
+        message["Subject"] = subject
 
         # 本文中の \n を改行に変換 (念のため)
-        body_processed = body.replace('\\n', '\n')
+        body_processed = body.replace("\\n", "\n")
 
         # メール本文を設定 (プレーンテキスト、UTF-8)
         msg_body = MIMEText(body_processed, "plain", "utf-8")
@@ -48,10 +52,14 @@ def send_email(to_email: str, subject: str, body: str) -> str:
         message_body = {"raw": raw_msg}
 
         # メールを送信 (send API呼び出し)
-        sent_message = service.users().messages().send(userId="me", body=message_body).execute()
+        sent_message = (
+            service.users().messages().send(userId="me", body=message_body).execute()
+        )
 
-        print(f"[{SERVICE_NAME}] INFO: Email sent successfully. Message ID: {sent_message.get('id')}")
-        return f"メールを {to_email} に正常に送信しました。件名: '{subject}'" # 成功メッセージ
+        print(
+            f"[{SERVICE_NAME}] INFO: Email sent successfully. Message ID: {sent_message.get('id')}"
+        )
+        return f"メールを {to_email} に正常に送信しました。件名: '{subject}'"  # 成功メッセージ
 
     except RefreshError as e:
         error_msg = f"エラー: Gmail API の認証トークンのリフレッシュに失敗しました。再認証が必要かもしれません。詳細: {e}"
@@ -59,8 +67,12 @@ def send_email(to_email: str, subject: str, body: str) -> str:
         return error_msg  # エラーメッセージ
     except HttpError as e:
         # HttpErrorから詳細な情報を取得
-        error_details = f"ステータスコード: {e.resp.status}, 内容: {e.content.decode('utf-8')}"
-        error_msg = f"エラー: Gmail API リクエストでエラーが発生しました。{error_details}"
+        error_details = (
+            f"ステータスコード: {e.resp.status}, 内容: {e.content.decode('utf-8')}"
+        )
+        error_msg = (
+            f"エラー: Gmail API リクエストでエラーが発生しました。{error_details}"
+        )
         print(f"[{SERVICE_NAME}] ERROR: {error_msg}")
         return error_msg  # エラーメッセージ
     except Exception as e:
@@ -77,11 +89,11 @@ def send_email_old(to_email, subject, body):
 
         # MIMEメッセージを作成
         message = MIMEMultipart()
-        message['To'] = to_email
-        message['From'] = "me"
-        message['Subject'] = subject
-        
-        body_processed = body.replace('\\n', '\n')
+        message["To"] = to_email
+        message["From"] = "me"
+        message["Subject"] = subject
+
+        body_processed = body.replace("\\n", "\n")
 
         # メール本文を設定
         msg_body = MIMEText(body_processed, "plain", "utf-8")

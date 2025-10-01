@@ -1,18 +1,24 @@
 from fastapi import APIRouter, HTTPException
+
+from app.schemas.utilitySchemas import (
+    SearchUtilityRequest,
+    SearchUtilityResponse,
+    UtilityRequest,
+    UtilityResponse,
+)
+from core.config import settings
+from mymcp.googleapis.gmail.send import send_email
+from mymcp.tool.google_search_by_serper import (
+    get_overview_by_google_serper,
+    google_search_by_serper_list,
+)
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
-from mymcp.tool.google_search_by_serper import google_search_by_serper_list, get_overview_by_google_serper
-from mymcp.googleapis.gmail.send import send_email
-from core.config import settings
-from app.schemas.utilitySchemas import UtilityRequest, UtilityResponse, SearchUtilityRequest, SearchUtilityResponse
-
 
 router = APIRouter()
 
 
-@router.post("/utility/tts_and_upload_drive",
-             summary="",
-             description="")
+@router.post("/utility/tts_and_upload_drive", summary="", description="")
 async def tts_and_upload_drive_api(request: UtilityRequest):
     """
     テキストの台本をインプットに音声合成を行い音声ファイル(.mp3)を生成しGoogle Driveにアップロードします。
@@ -34,9 +40,9 @@ async def tts_and_upload_drive_api(request: UtilityRequest):
         result = tts_and_upload_drive(request.user_input, title)
 
         body = f"""
-        
+
         音声合成とGoogle Driveへのアップロードが完了しました。
-        
+
         # アップロード結果:
         {result}
         ---
@@ -51,13 +57,13 @@ async def tts_and_upload_drive_api(request: UtilityRequest):
         return UtilityResponse(result=result)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred in the utility.")
+        raise HTTPException(
+            status_code=500, detail="An internal server error occurred in the utility."
+        )
 
 
 # search_tool
-@router.post("/utility/google_search",
-             summary="",
-             description="")
+@router.post("/utility/google_search", summary="", description="")
 async def google_search_by_serper_api(request: SearchUtilityRequest):
     print(f"request: {request}")
     try:
@@ -68,13 +74,13 @@ async def google_search_by_serper_api(request: SearchUtilityRequest):
         return SearchUtilityResponse(result=result)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred in the utility.")
-    
+        raise HTTPException(
+            status_code=500, detail="An internal server error occurred in the utility."
+        )
+
 
 # search_tool
-@router.post("/utility/google_search_overview",
-             summary="",
-             description="")
+@router.post("/utility/google_search_overview", summary="", description="")
 async def get_overview_by_google_serper_api(request: SearchUtilityRequest):
     print(f"request: {request}")
     try:
@@ -85,4 +91,6 @@ async def get_overview_by_google_serper_api(request: SearchUtilityRequest):
         return SearchUtilityResponse(result=result)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred in the utility.")
+        raise HTTPException(
+            status_code=500, detail="An internal server error occurred in the utility."
+        )

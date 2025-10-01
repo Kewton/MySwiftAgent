@@ -1,6 +1,5 @@
 import html2text
-from bs4 import BeautifulSoup, NavigableString
-import re
+from bs4 import BeautifulSoup
 
 
 def convert_html_to_markdown(html_content):
@@ -22,10 +21,10 @@ def convert_html_to_markdown(html_content):
 
 def html_to_markdown(html_content):
     # BeautifulSoupでHTMLをパース
-    soup = BeautifulSoup(html_content, 'html.parser')
+    soup = BeautifulSoup(html_content, "html.parser")
 
     # 不要な要素を削除（例: スクリプト、スタイル、ナビゲーションなど）
-    for element in soup(['script', 'style', 'header', 'footer', 'nav', 'aside']):
+    for element in soup(["script", "style", "header", "footer", "nav", "aside"]):
         element.decompose()
 
     # html2textを設定してコードブロックに対応

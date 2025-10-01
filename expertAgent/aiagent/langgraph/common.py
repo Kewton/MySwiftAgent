@@ -1,14 +1,8 @@
-from contextlib import asynccontextmanager
 import operator
+import re
+from contextlib import asynccontextmanager
 from typing import Annotated, Sequence, TypedDict
 
-from aiagent.langgraph.util import (
-    isChatGPT_o,
-    isChatGptAPI,
-    isClaude,
-    isGemini,
-)
-from core.config import settings
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import BaseMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -17,7 +11,13 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
-import re
+from aiagent.langgraph.util import (
+    isChatGPT_o,
+    isChatGptAPI,
+    isClaude,
+    isGemini,
+)
+from core.config import settings
 
 
 def remove_think_tags(text: str) -> str:
@@ -47,7 +47,7 @@ async def make_graph(
 ):
     if _model is None:
         _model = settings.GRAPH_AGENT_MODEL
-        
+
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         model = ChatOpenAI(model=_model)
     elif isGemini(_model):
@@ -90,7 +90,7 @@ async def make_utility_graph(
     _mcpmodule: str = "mymcp.stdioall",
     _graphname: str = "Tool Agent",
     _model: str = settings.GRAPH_AGENT_MODEL,
-    _max_iterations: int | None = None,          # ★ 追加
+    _max_iterations: int | None = None,  # ★ 追加
 ):
     # モデル選択は現状維持
     if _model is None:
@@ -127,10 +127,7 @@ async def make_utility_graph(
         # LangGraph では「1 思考 + 1 ツール実行」を 2 ステップと数えるので、
         # 推奨式  recursion_limit = 2 * max_iterations + 1
         recursion_limit = 2 * _max_iterations + 1
-        graph = graph.with_config(
-            recursion_limit=recursion_limit, max_concurrency=2
-        )
+        graph = graph.with_config(recursion_limit=recursion_limit, max_concurrency=2)
 
     graph.name = _graphname
     yield graph
-

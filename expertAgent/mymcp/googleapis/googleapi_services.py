@@ -1,16 +1,18 @@
 import os
+
+from google.auth.exceptions import RefreshError  # RefreshErrorをインポート
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from google.auth.exceptions import RefreshError # RefreshErrorをインポート
+
 from core.config import settings
 
 SCOPES = [
-    'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/gmail.send',
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/spreadsheets'
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets",
 ]
 
 # 環境変数からパスを取得（Noneの場合は空文字列などにしても良いが、ここではNoneのまま扱う）
@@ -49,7 +51,7 @@ def get_googleapis_service(_serviceName):
                 creds.refresh(Request())
                 print("トークンのリフレッシュに成功しました。")
                 # リフレッシュ成功後、トークンファイルを更新
-                with open(TOKEN_PATH, 'w') as token_file:
+                with open(TOKEN_PATH, "w") as token_file:
                     token_file.write(creds.to_json())
                 print(f"更新されたトークンを保存しました: {TOKEN_PATH}")
             except RefreshError as e:
@@ -61,22 +63,28 @@ def get_googleapis_service(_serviceName):
                     print(f"古いトークンファイルを削除しました: {TOKEN_PATH}")
                 except OSError as rm_e:
                     print(f"古いトークンファイルの削除に失敗しました: {rm_e}")
-                creds = None # credsをNoneにして再認証フローへ
+                creds = None  # credsをNoneにして再認証フローへ
             except Exception as e:
                 print(f"トークンのリフレッシュ中に予期せぬエラーが発生しました: {e}")
-                creds = None # credsをNoneにして再認証フローへ
+                creds = None  # credsをNoneにして再認証フローへ
 
         # creds が None (最初から存在しない、読み込み失敗、リフレッシュ失敗) の場合 -> 新規認証フロー
         if not creds:  # この条件チェックを追加
-            print("新しい認証情報を取得します...")# クレデンシャルファイルの存在チェック
+            print(
+                "新しい認証情報を取得します..."
+            )  # クレデンシャルファイルの存在チェック
             if not os.path.exists(CREDENTIALS_PATH):
-                print(f"エラー: クレデンシャルファイルが見つかりません: {CREDENTIALS_PATH}")
+                print(
+                    f"エラー: クレデンシャルファイルが見つかりません: {CREDENTIALS_PATH}"
+                )
                 return None
             try:
-                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    CREDENTIALS_PATH, SCOPES
+                )
                 # run_local_serverはブラウザを開き、ユーザーの操作を待ちます
                 creds = flow.run_local_server(
-                    port=0, # 利用可能なポートを自動選択
+                    port=0,  # 利用可能なポートを自動選択
                     authorization_prompt_message="ブラウザを開いて認証してください: {url}",
                     success_message="認証が完了しました。このウィンドウは閉じて構いません。",
                     open_browser=True,  # 自動でブラウザを開く
@@ -89,7 +97,7 @@ def get_googleapis_service(_serviceName):
                 )
                 print("新しい認証情報の取得に成功しました。")
                 # 新しいトークンを保存
-                with open(TOKEN_PATH, 'w') as token_file:
+                with open(TOKEN_PATH, "w") as token_file:
                     token_file.write(creds.to_json())
                 print(f"新しいトークンを保存しました: {TOKEN_PATH}")
             except Exception as e:
@@ -105,12 +113,12 @@ def get_googleapis_service(_serviceName):
     try:
         print(f"'{_serviceName}' サービスをビルドします...")
         if _serviceName == "gmail":
-            service = build('gmail', 'v1', credentials=creds)
+            service = build("gmail", "v1", credentials=creds)
         elif _serviceName == "drive":
-            service = build('drive', 'v3', credentials=creds)
+            service = build("drive", "v3", credentials=creds)
         elif _serviceName == "sheets":
             # Sheets API v4 を使用
-            service = build('sheets', 'v4', credentials=creds)
+            service = build("sheets", "v4", credentials=creds)
         else:
             print(f"エラー: 不明なサービス名です: {_serviceName}")
             return None

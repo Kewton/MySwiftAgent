@@ -1,27 +1,32 @@
 import json
 import re
-from aiagent.langgraph.util import isChatGptAPI, isGemini, isChatGPT_o, isClaude
-from langchain_openai import ChatOpenAI
-from langchain_ollama import ChatOllama
+
 from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.output_parsers import JsonOutputParser
-from core.config import settings
-from aiagent.langgraph.common import remove_think_tags
 from langchain_core.messages import AIMessage
-from aiagent.langgraph.common import make_utility_graph
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
+
+from aiagent.langgraph.common import make_utility_graph, remove_think_tags
+from aiagent.langgraph.util import isChatGPT_o, isChatGptAPI, isClaude, isGemini
+from core.config import settings
 
 
 async def jsonOutputagent(query: str, _modelname: str = "gpt-4o-mini") -> dict:
-    async with make_utility_graph("mymcp.stdio_explorer", "exploreragent", _modelname, 2) as graph:
+    async with make_utility_graph(
+        "mymcp.stdio_explorer", "exploreragent", _modelname, 2
+    ) as graph:
         print(f"mymcp.stdio_explorer start query:{query}")
         result = await graph.ainvoke({"messages": query})
         aiMessage = ""
-        for message in result.get('messages', []):
+        for message in result.get("messages", []):
             if isinstance(message, AIMessage):
                 aiMessage = message.content
                 aiMessage = remove_think_tags(aiMessage)
-                char_count = len(aiMessage.replace(" ", "").replace("\n", "").replace("\t", ""))
+                char_count = len(
+                    aiMessage.replace(" ", "").replace("\n", "").replace("\t", "")
+                )
                 if char_count > 0:
                     print(f"before parse_json: {aiMessage}")
                     aiMessage = toParseJson(aiMessage)
@@ -32,7 +37,7 @@ async def jsonOutputagent(query: str, _modelname: str = "gpt-4o-mini") -> dict:
 async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
     if _model is None:
         _model = "gpt-4o-mini"
-        
+
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         llm_openai = ChatOpenAI(model=_model, temperature=0.3)
     elif isGemini(_model):

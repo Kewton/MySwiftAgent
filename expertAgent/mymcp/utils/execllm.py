@@ -1,9 +1,11 @@
-from core.config import settings
-from openai import OpenAI
-import google.generativeai as genai
-from mymcp.utils.chatollama import chatOllama
-from app.schemas.standardAiAgent import ChatMessage
 from typing import List
+
+import google.generativeai as genai
+from openai import OpenAI
+
+from app.schemas.standardAiAgent import ChatMessage
+from core.config import settings
+from mymcp.utils.chatollama import chatOllama
 
 chatgptapi_client = OpenAI(
     api_key=settings.OPENAI_API_KEY,
@@ -58,25 +60,19 @@ def buildInpurtMessages(_messages, encoded_file):
             if len(encoded_file) > 0:
                 print("append image")
                 _content = []
-                _content.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": encoded_file
-                    }
-                })
-                _content.append({
-                    "type": "text",
-                    "text": _rec["content"]
-                })
-
-                _inpurt_messages.append(
+                _content.append(
                     {
-                        "role": _rec["role"],
-                        "content": _content
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": encoded_file,
+                        },
                     }
                 )
+                _content.append({"type": "text", "text": _rec["content"]})
+
+                _inpurt_messages.append({"role": _rec["role"], "content": _content})
             else:
                 _inpurt_messages.append(_rec)
 
@@ -97,10 +93,10 @@ def buildInpurtMessagesForGemini(_messages: List[ChatMessage]):
             system_instruction = content
         elif role == "user":
             # 正しい形式: 'parts' キーの中に {'text': ...} のリストを入れる
-            contents_for_api.append({'role': 'user', 'parts': [{'text': content}]})
+            contents_for_api.append({"role": "user", "parts": [{"text": content}]})
         elif role == "assistant" or role == "model":
             # 正しい形式: 'parts' キーの中に {'text': ...} のリストを入れる
-            contents_for_api.append({'role': 'model', 'parts': [{'text': content}]})
+            contents_for_api.append({"role": "model", "parts": [{"text": content}]})
 
     return contents_for_api, system_instruction
 
@@ -108,8 +104,7 @@ def buildInpurtMessagesForGemini(_messages: List[ChatMessage]):
 def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
     if isChatGptAPI(_selected_model) or isChatGPT_o(_selected_model):
         response = chatgptapi_client.chat.completions.create(
-            model=_selected_model,
-            messages=_messages
+            model=_selected_model, messages=_messages
         )
         return response.choices[0].message.content
 

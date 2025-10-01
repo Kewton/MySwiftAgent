@@ -1,9 +1,10 @@
-from mymcp.utils.html2markdown import getMarkdown
-from mymcp.tool.generate_melmaga_script import generate_melmaga_script
-from mymcp.googleapis.gmail.send import send_email
 import ast
-from mymcp.utils.generate_subject_from_text import generate_subject_from_text
+
 from core.config import settings
+from mymcp.googleapis.gmail.send import send_email
+from mymcp.tool.generate_melmaga_script import generate_melmaga_script
+from mymcp.utils.generate_subject_from_text import generate_subject_from_text
+from mymcp.utils.html2markdown import getMarkdown
 
 
 def safe_string_to_list(input_str: str) -> list | None:
@@ -24,7 +25,9 @@ def safe_string_to_list(input_str: str) -> list | None:
         if isinstance(evaluated_value, list):
             return evaluated_value
         else:
-            print(f"Warning: Input string evaluated to {type(evaluated_value).__name__}, not a list.")
+            print(
+                f"Warning: Input string evaluated to {type(evaluated_value).__name__}, not a list."
+            )
             return None
     except (ValueError, SyntaxError, TypeError) as e:
         # 文字列が有効なPythonリテラルでない場合のエラー処理
@@ -80,7 +83,7 @@ def generate_melmaga_and_send_email_from_urls(urls: list | str):
         body = generate_melmaga_script(input_info)
         subject = generate_subject_from_text(body)
         return send_email(settings.MAIL_TO, subject, body)
-    
+
     except ValueError as e:
         print(f"ValueError: {e}")
         return f"ValueError: {e}"

@@ -1,18 +1,22 @@
-from typing import Any
-import httpx
 from typing import Dict
+
+from mcp.server.fastmcp import FastMCP
+
+from core.config import settings
 from mymcp.googleapis.gmail.readonly import get_emails_by_keyword
 from mymcp.googleapis.gmail.send import send_email
-from mymcp.utils.generate_subject_from_text import generate_subject_from_text
-from mymcp.specializedtool.generate_melmaga_script import generate_melmaga_and_send_email_from_urls
+from mymcp.specializedtool.generate_melmaga_script import (
+    generate_melmaga_and_send_email_from_urls,
+)
 from mymcp.tool.generate_melmaga_script import generate_melmaga_script
-from mymcp.tool.generate_podcast_script import generate_podcast_script, generate_podcast_mp3_and_upload
+from mymcp.tool.generate_podcast_script import (
+    generate_podcast_mp3_and_upload,
+    generate_podcast_script,
+)
 from mymcp.tool.google_search_by_gemini import googleSearchAgent
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
+from mymcp.utils.generate_subject_from_text import generate_subject_from_text
 from mymcp.utils.html2markdown import getMarkdown
-from mcp.server.fastmcp import FastMCP
-from core.config import settings
-
 
 PODCAST_SCRIPT_DEFAULT_MODEL = settings.PODCAST_SCRIPT_DEFAULT_MODEL
 mcp = FastMCP("myMcp")
@@ -79,7 +83,9 @@ async def generate_melmaga_script_tool(input_info: str) -> str:
 
 
 @mcp.tool()
-async def generate_podcast_script_tool(topic_details: str, model_name: str = PODCAST_SCRIPT_DEFAULT_MODEL) -> str:
+async def generate_podcast_script_tool(
+    topic_details: str, model_name: str = PODCAST_SCRIPT_DEFAULT_MODEL
+) -> str:
     """与えられたトピック詳細情報からポッドキャストの台本を生成します。
 
     Args:
@@ -93,7 +99,11 @@ async def generate_podcast_script_tool(topic_details: str, model_name: str = POD
 
 
 @mcp.tool()
-async def generate_podcast_mp3_and_upload_tool(topic_details: str, model_name: str = PODCAST_SCRIPT_DEFAULT_MODEL, subject_max_length: int = 25) -> str:
+async def generate_podcast_mp3_and_upload_tool(
+    topic_details: str,
+    model_name: str = PODCAST_SCRIPT_DEFAULT_MODEL,
+    subject_max_length: int = 25,
+) -> str:
     """与えられたトピック詳細情報からポッドキャストの台本を生成し、
     その内容から件名を生成、テキストをMP3音声に変換してGoogle Driveにアップロードします。
 
@@ -105,7 +115,9 @@ async def generate_podcast_mp3_and_upload_tool(topic_details: str, model_name: s
     Returns:
         str: Google Driveへのアップロード結果を示すメッセージまたはファイルURL。
     """
-    return generate_podcast_mp3_and_upload(topic_details, model_name, subject_max_length)
+    return generate_podcast_mp3_and_upload(
+        topic_details, model_name, subject_max_length
+    )
 
 
 @mcp.tool()
@@ -160,4 +172,4 @@ async def getMarkdown_tool(input_url: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport='stdio')
+    mcp.run(transport="stdio")

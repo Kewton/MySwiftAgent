@@ -1,11 +1,17 @@
-import requests
-from core.config import settings
-from app.schemas.standardAiAgent import ChatMessage
 from datetime import datetime
 from typing import List
 
+import requests
 
-def chatOllama(_messages: List[ChatMessage], _model: str = settings.OLLAMA_DEF_SMALL_MODEL, _stream: bool = False) -> str:
+from app.schemas.standardAiAgent import ChatMessage
+from core.config import settings
+
+
+def chatOllama(
+    _messages: List[ChatMessage],
+    _model: str = settings.OLLAMA_DEF_SMALL_MODEL,
+    _stream: bool = False,
+) -> str:
     """
     Ollama APIを使用してチャットを行う関数
     Args:
@@ -20,7 +26,7 @@ def chatOllama(_messages: List[ChatMessage], _model: str = settings.OLLAMA_DEF_S
 
     if "gemma3" in _model:
         _num_ctx = 128000
-    elif  "qwen3" in _model:
+    elif "qwen3" in _model:
         _num_ctx = 32768
     else:
         _num_ctx = 4096
@@ -30,9 +36,7 @@ def chatOllama(_messages: List[ChatMessage], _model: str = settings.OLLAMA_DEF_S
         "model": _model,
         "messages": _messages,
         "stream": _stream,  # Trueにするとストリームレスポンスになる
-        "options": {
-            "num_ctx": _num_ctx
-        }
+        "options": {"num_ctx": _num_ctx},
     }
 
     # リクエスト送信
@@ -58,9 +62,7 @@ def chatMlx(_messages: List[ChatMessage]) -> str:
     HEADERS = {"Content-Type": "application/json"}
 
     # リクエストボディ
-    payload = {
-        "messages": _messages
-    }
+    payload = {"messages": _messages}
 
     # リクエスト送信
     response = requests.post(url, json=payload, headers=HEADERS)
@@ -71,15 +73,15 @@ def chatMlx(_messages: List[ChatMessage]) -> str:
     else:
         print("Error:", response.status_code, response.text)
         return "Error occurred"
-    
+
 
 def extract_knowledge_from_text(_question, _text, _model: str = "gemma3:27b-it-qat"):
     _query = f"""
-        
+
         # 命令指示書
         あなたは優れたリサーチャーでコンテンツを作成するために収集した情報を整理しています。
         前提条件と制約条件に従いユーザーの興味と収集した情報を元に下記手順で最高の成果物を生成してください。
-        
+
         1. ユーザーの興味を整理するための質問を出力すること
         2. 1で出力した質問に対する回答を収集した情報から抽出し、成果物フォーマットの「FAQ」に列挙すること。回答不可の場合は「回答不可」とすること。
         3. 収集した情報から最大3つの事実を抽出し、成果物フォーマットの「事実」に列挙すること。可能な限り5W2Hを明らかにし定量的に表現すること。
@@ -117,10 +119,8 @@ def extract_knowledge_from_text(_question, _text, _model: str = "gemma3:27b-it-q
     """
 
     _messages = []
-    _messages.append(
-        {"role": "user", "content": _query}
-    )
-    
+    _messages.append({"role": "user", "content": _query})
+
     # result = chatMlx(_messages)
     if _model == "mlx-community":
         print("chatMlx")
@@ -128,7 +128,7 @@ def extract_knowledge_from_text(_question, _text, _model: str = "gemma3:27b-it-q
     else:
         print("chatOllama")
         result = chatOllama(_messages, _model)
-    
+
     print("============================")
     print("extract_knowledge_from_text:")
     print("============================")

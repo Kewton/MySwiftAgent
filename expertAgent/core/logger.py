@@ -1,12 +1,10 @@
+import inspect
 import logging
 import logging.config
 import os
-import logging
-import logging.config
 import time
-import inspect
-from core.config import settings
 
+from core.config import settings
 
 # ログセットアップが実行されたかを保持するフラグ
 logging_setup_done = False
@@ -31,47 +29,47 @@ def setup_logging():
 
     # ログ設定の定義
     log_config = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            '_formatter': {
-                'format': '[%(process)d-%(thread)d]-%(asctime)s-%(levelname)s-%(message)s'
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "_formatter": {
+                "format": "[%(process)d-%(thread)d]-%(asctime)s-%(levelname)s-%(message)s"
             },
         },
-        'handlers': {
-            'rotatinghandler': {
-                'class': 'logging.handlers.RotatingFileHandler',
-                'level': log_level,
-                'formatter': '_formatter',
-                'filename': os.path.join(log_dir, 'app.log'),
-                'mode': 'a',
-                'maxBytes': 1024 * 1024,
-                'backupCount': 5,
-                'encoding': 'utf-8',
+        "handlers": {
+            "rotatinghandler": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "level": log_level,
+                "formatter": "_formatter",
+                "filename": os.path.join(log_dir, "app.log"),
+                "mode": "a",
+                "maxBytes": 1024 * 1024,
+                "backupCount": 5,
+                "encoding": "utf-8",
             },
-            'timedrotatinghandler': {
-                'class': 'logging.handlers.TimedRotatingFileHandler',
-                'level': 'ERROR',
-                'formatter': '_formatter',
-                'filename': os.path.join(log_dir, 'rotation.log'),
-                'when': 'S',  # 秒ごとのローテーション
-                'interval': 1,  # ローテーション間隔
-                'backupCount': 5,
-                'encoding': 'utf-8',
-            }
+            "timedrotatinghandler": {
+                "class": "logging.handlers.TimedRotatingFileHandler",
+                "level": "ERROR",
+                "formatter": "_formatter",
+                "filename": os.path.join(log_dir, "rotation.log"),
+                "when": "S",  # 秒ごとのローテーション
+                "interval": 1,  # ローテーション間隔
+                "backupCount": 5,
+                "encoding": "utf-8",
+            },
         },
-        'loggers': {
-            '': {  # root logger
-                'level': log_level,
-                'handlers': ['rotatinghandler', 'timedrotatinghandler'],
+        "loggers": {
+            "": {  # root logger
+                "level": log_level,
+                "handlers": ["rotatinghandler", "timedrotatinghandler"],
             },
-        }
+        },
     }
-    
+
     # ログ設定を適用
     logging.config.dictConfig(log_config)
     logging.info("Logging is set up.")
-    
+
     # 実行フラグをTrueに設定
     logging_setup_done = True
 
@@ -93,7 +91,17 @@ def declogger(func):
     lineno = calframe[1][2]
     code_context = calframe[1][4]
     funcname = code_context[len(code_context) - 1]
-    defaultmessage = "[" + modulename + "." + filename + ":" + str(lineno) + "][" + funcname.strip() + "]:"
+    defaultmessage = (
+        "["
+        + modulename
+        + "."
+        + filename
+        + ":"
+        + str(lineno)
+        + "]["
+        + funcname.strip()
+        + "]:"
+    )
 
     def wrapper(*args, **kwargs):
         sw = StopWatch()
@@ -104,6 +112,7 @@ def declogger(func):
         syorijikan = f"  *** 処理時間：{sw.sw_stop()} ***"
         _logger.debug(defaultmessage + "---- end ----:" + syorijikan)
         return kekka
+
     wrapper.__name__ = func.__name__
     return wrapper
 
@@ -114,7 +123,18 @@ def edtmessage(message):
     filename = fn[len(fn) - 1]
     modulename = fn[len(fn) - 2]
     lineno = calframe[1][2]
-    return "[" + modulename + "." + filename + ":" + str(lineno) + "][" + calframe[1][3] + "]:" + str(message)
+    return (
+        "["
+        + modulename
+        + "."
+        + filename
+        + ":"
+        + str(lineno)
+        + "]["
+        + calframe[1][3]
+        + "]:"
+        + str(message)
+    )
 
 
 def writedebuglog(message):

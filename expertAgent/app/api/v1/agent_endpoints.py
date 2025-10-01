@@ -1,12 +1,18 @@
-from fastapi import APIRouter, HTTPException
-from aiagent.langgraph.sampleagent.graphagent import ainvoke_graphagent
-from aiagent.langgraph.utilityaiagents.jsonOutput_agent import jsonOutputagent
-from aiagent.langgraph.utilityaiagents.explorer_agent import exploreragent
-from aiagent.langgraph.utilityaiagents.action_agent import actionagent
-from app.schemas.standardAiAgent import ExpertAiAgentRequest, ExpertAiAgentResponse, ExpertAiAgentResponseJson
-from mymcp.utils.chatollama import chatOllama
-from datetime import datetime
 import re
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException
+
+from aiagent.langgraph.sampleagent.graphagent import ainvoke_graphagent
+from aiagent.langgraph.utilityaiagents.action_agent import actionagent
+from aiagent.langgraph.utilityaiagents.explorer_agent import exploreragent
+from aiagent.langgraph.utilityaiagents.jsonOutput_agent import jsonOutputagent
+from app.schemas.standardAiAgent import (
+    ExpertAiAgentRequest,
+    ExpertAiAgentResponse,
+    ExpertAiAgentResponseJson,
+)
+from mymcp.utils.chatollama import chatOllama
 
 
 def remove_think_tags(text: str) -> str:
@@ -30,25 +36,21 @@ def remove_think_tags(text: str) -> str:
 router = APIRouter()
 
 
-@router.get("/",
-            summary="Hello World",
-            description="Hello Worldです。疎通確認に使用してください。")
+@router.get(
+    "/",
+    summary="Hello World",
+    description="Hello Worldです。疎通確認に使用してください。",
+)
 def home_hello_world():
     return {"message": "Hello World"}
 
 
-@router.post("/mylllm",
-            summary="",
-            description="")
+@router.post("/mylllm", summary="", description="")
 def exec_myllm(request: ExpertAiAgentRequest):
     _messages = []
     if request.system_imput is not None:
-        _messages.append(
-            {"role": "system", "content": request.system_imput}
-        )
-    _messages.append(
-        {"role": "user", "content": request.user_input}
-    )
+        _messages.append({"role": "system", "content": request.system_imput})
+    _messages.append({"role": "user", "content": request.user_input})
 
     print(f"request.user_input:{_messages}")
 
@@ -56,7 +58,7 @@ def exec_myllm(request: ExpertAiAgentRequest):
     _response = {
         "result": "ok",
         "text": remove_think_tags(result),
-        "type": "exec_myllm"
+        "type": "exec_myllm",
     }
 
     print(f"result:{_response}")
@@ -64,9 +66,11 @@ def exec_myllm(request: ExpertAiAgentRequest):
     return ExpertAiAgentResponse(**_response)
 
 
-@router.post("/aiagent/sample",
-             summary="LangGraphのAIエージェントを実行します",
-             description="LangGraphのAIエージェントを実行します")
+@router.post(
+    "/aiagent/sample",
+    summary="LangGraphのAIエージェントを実行します",
+    description="LangGraphのAIエージェントを実行します",
+)
 async def aiagent_graph(request: ExpertAiAgentRequest):
     try:
         _input = f"""
@@ -78,20 +82,20 @@ async def aiagent_graph(request: ExpertAiAgentRequest):
         """
         print(f"request.user_input:{_input}")
         chat_history, aiMessage = await ainvoke_graphagent(_input)
-        _response = {
-            "result": aiMessage,
-            "type": "sample",
-            "chathistory": chat_history
-        }
+        _response = {"result": aiMessage, "type": "sample", "chathistory": chat_history}
         return ExpertAiAgentResponse(**_response)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred in the agent.")
+        raise HTTPException(
+            status_code=500, detail="An internal server error occurred in the agent."
+        )
 
 
-@router.post("/aiagent/utility/{agent_name}",
-             summary="LangGraphのAIエージェントを実行します",
-             description="LangGraphのAIエージェントを実行します")
+@router.post(
+    "/aiagent/utility/{agent_name}",
+    summary="LangGraphのAIエージェントを実行します",
+    description="LangGraphのAIエージェントを実行します",
+)
 async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
     try:
         _input = f"""
@@ -105,28 +109,21 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
         if "jsonoutput" in agent_name:
             print(f"request.user_input:{_input}")
             parsed_json = await jsonOutputagent(_input, request.model_name)
-            _response = {
-                "result": parsed_json,
-                "type": "jsonOutput"
-            }
+            _response = {"result": parsed_json, "type": "jsonOutput"}
             return ExpertAiAgentResponseJson(**_response)
         elif "explorer" in agent_name:
             print(f"request.user_input:{_input}")
             result = await exploreragent(_input, request.model_name)
-            _response = {
-                "result": remove_think_tags(result),
-                "type": "explorer"
-            }
+            _response = {"result": remove_think_tags(result), "type": "explorer"}
             return ExpertAiAgentResponse(**_response)
         elif "action" in agent_name:
             print(f"request.user_input:{_input}")
             result = await actionagent(_input, request.model_name)
-            _response = {
-                "result": remove_think_tags(result),
-                "type": "action"
-            }
+            _response = {"result": remove_think_tags(result), "type": "action"}
             return ExpertAiAgentResponse(**_response)
         return {"message": "No matching agent found."}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred in the agent.")
+        raise HTTPException(
+            status_code=500, detail="An internal server error occurred in the agent."
+        )

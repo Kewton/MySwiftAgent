@@ -1,8 +1,10 @@
-from openai import OpenAI
-from core.config import settings
 import os
 import tempfile
+
+from openai import OpenAI
 from pydub import AudioSegment
+
+from core.config import settings
 from core.logger import getlogger
 
 logger = getlogger()
@@ -34,42 +36,54 @@ def tts(speech_file_path: str, _input: str):
     if len(_input) <= chunk_size:
         # 1000文字以下の場合はそのまま処理
         try:
-            with client.audio.speech.with_streaming_response.create(
-                model="gpt-4o-mini-tts", # 最新の推奨モデルを確認してください
-                voice="coral",
-                input=_input,
-                instructions="Speak in a cheerful and positive tone.", # 必要に応じて指示を追加
-            ) as response:
+            with (
+                client.audio.speech.with_streaming_response.create(
+                    model="gpt-4o-mini-tts",  # 最新の推奨モデルを確認してください
+                    voice="coral",
+                    input=_input,
+                    instructions="Speak in a cheerful and positive tone.",  # 必要に応じて指示を追加
+                ) as response
+            ):
                 response.stream_to_file(speech_file_path)
             print(f"音声ファイルが '{speech_file_path}' に保存されました。")
         except Exception as e:
             print(f"TTS処理中にエラーが発生しました: {e}")
             if os.path.exists(speech_file_path):
-                os.remove(speech_file_path) # エラー時は中途半端なファイルを削除
+                os.remove(speech_file_path)  # エラー時は中途半端なファイルを削除
     else:
-        logger.info(f"テキストが {len(_input)} 文字で、{chunk_size} 文字を超えています。分割して処理します。")
+        logger.info(
+            f"テキストが {len(_input)} 文字で、{chunk_size} 文字を超えています。分割して処理します。"
+        )
         # 1000文字を超える場合は分割して処理
-        text_chunks = [_input[i:i + chunk_size] for i in range(0, len(_input), chunk_size)]
+        text_chunks = [
+            _input[i : i + chunk_size] for i in range(0, len(_input), chunk_size)
+        ]
         temp_audio_files = []
-        temp_dir = tempfile.mkdtemp() # 一時ディレクトリを作成
+        temp_dir = tempfile.mkdtemp()  # 一時ディレクトリを作成
 
         try:
             print(f"テキストを {len(text_chunks)} 個のチャンクに分割して処理します...")
             for i, chunk in enumerate(text_chunks):
                 temp_speech_file_path = os.path.join(temp_dir, f"temp_audio_{i}.mp3")
-                print(f"チャンク {i+1}/{len(text_chunks)} を処理中: '{chunk[:30]}...'")
+                print(
+                    f"チャンク {i + 1}/{len(text_chunks)} を処理中: '{chunk[:30]}...'"
+                )
                 try:
-                    with client.audio.speech.with_streaming_response.create(
-                        model="gpt-4o-mini-tts", # 最新の推奨モデルを確認してください
-                        voice="coral",
-                        input=chunk,
-                        instructions="Speak in a cheerful and positive tone.", # 必要に応じて指示を追加
-                    ) as response:
+                    with (
+                        client.audio.speech.with_streaming_response.create(
+                            model="gpt-4o-mini-tts",  # 最新の推奨モデルを確認してください
+                            voice="coral",
+                            input=chunk,
+                            instructions="Speak in a cheerful and positive tone.",  # 必要に応じて指示を追加
+                        ) as response
+                    ):
                         response.stream_to_file(temp_speech_file_path)
                     temp_audio_files.append(temp_speech_file_path)
                 except Exception as e:
-                    print(f"チャンク {i+1} のTTS処理中にエラーが発生しました: {e}")
-                    logger.error(f"チャンク {i+1} のTTS処理中にエラーが発生しました: {e}")
+                    print(f"チャンク {i + 1} のTTS処理中にエラーが発生しました: {e}")
+                    logger.error(
+                        f"チャンク {i + 1} のTTS処理中にエラーが発生しました: {e}"
+                    )
                     # エラーが発生したチャンクはスキップするか、全体を中止するか選択
                     # ここではエラーが発生しても処理を続け、生成できたファイルのみ結合します
                     continue
@@ -87,13 +101,17 @@ def tts(speech_file_path: str, _input: str):
                     segment = AudioSegment.from_mp3(temp_file)
                     combined_audio += segment
                 except Exception as e:
-                    logger.error(f"ファイル '{temp_file}' の読み込みまたは結合中にエラー: {e}")
+                    logger.error(
+                        f"ファイル '{temp_file}' の読み込みまたは結合中にエラー: {e}"
+                    )
                     print(f"ファイル '{temp_file}' の読み込みまたは結合中にエラー: {e}")
                     continue
 
             if len(combined_audio) > 0:
                 combined_audio.export(speech_file_path, format="mp3")
-                print(f"結合された音声ファイルが '{speech_file_path}' に保存されました。")
+                print(
+                    f"結合された音声ファイルが '{speech_file_path}' に保存されました。"
+                )
             else:
                 print("結合する音声がありませんでした。")
                 if os.path.exists(speech_file_path):
@@ -107,7 +125,9 @@ def tts(speech_file_path: str, _input: str):
                     try:
                         os.remove(temp_file)
                     except Exception as e:
-                        logger.error(f"一時ファイル '{temp_file}' の削除中にエラー: {e}")
+                        logger.error(
+                            f"一時ファイル '{temp_file}' の削除中にエラー: {e}"
+                        )
                         print(f"一時ファイル '{temp_file}' の削除中にエラー: {e}")
             # 一時ディレクトリを削除
             if os.path.exists(temp_dir):

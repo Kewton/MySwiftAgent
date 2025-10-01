@@ -1,4 +1,5 @@
 """Main FastAPI application entry point."""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,6 +16,7 @@ async def lifespan(app: FastAPI):
     setup_logging()
     yield
     # Shutdown: cleanup if needed
+
 
 app = FastAPI(
     title="Expert Agent Service",

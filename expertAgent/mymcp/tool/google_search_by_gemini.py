@@ -1,13 +1,13 @@
-import os
-from typing import List
-import google.generativeai as genai
-from bs4 import BeautifulSoup
-from pydantic import BaseModel, Field
-from mymcp.utils.html2markdown import getMarkdown
-from core.config import settings
-from mymcp.utils.extract_knowledge_from_text import extract_knowledge_from_text
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List
+
+import google.generativeai as genai
+from pydantic import BaseModel
+
+from core.config import settings
 from core.logger import getlogger
+from mymcp.utils.extract_knowledge_from_text import extract_knowledge_from_text
+from mymcp.utils.html2markdown import getMarkdown
 
 logger = getlogger()
 
@@ -31,7 +31,9 @@ def process_uri_task(uri: str) -> str:
         return knowledge
     except Exception as e:
         print(f"Error processing URI {uri}: {e}")
-        return f"Error processing {uri}" # エラー時にも何らかの値を返すか、Noneを返すなど
+        return (
+            f"Error processing {uri}"  # エラー時にも何らかの値を返すか、Noneを返すなど
+        )
 
 
 def main_multithreaded(uris: List[str], max_workers: int) -> List[str]:
@@ -53,11 +55,10 @@ def main_multithreaded(uris: List[str], max_workers: int) -> List[str]:
         for future in as_completed(future_to_uri):
             uri = future_to_uri[future]
             try:
-                result = future.result()  # タスクの結果を取得 (例外が発生した場合はここで再送出される)
-                results.append({
-                    "uri": uri,
-                    "result": result
-                })
+                result = (
+                    future.result()
+                )  # タスクの結果を取得 (例外が発生した場合はここで再送出される)
+                results.append({"uri": uri, "result": result})
             except Exception as exc:
                 # エラー結果をリストに追加することも可能
                 results.append(f"Failed: {uri} due to {exc}")
@@ -92,7 +93,7 @@ def googleSearchAgent(_input: str) -> str:
     # Google Search (Grounding)機能を使用するモデル
     # 参考: https://ai.google.dev/gemini-api/docs/google-search?hl=ja
     # Gemini 2.0では generate_content_config で google_search を指定
-    model = genai.GenerativeModel('models/gemini-2.0-flash-exp')
+    model = genai.GenerativeModel("models/gemini-2.0-flash-exp")
 
     _content = f"""
     # 命令指示書
@@ -118,21 +119,25 @@ def googleSearchAgent(_input: str) -> str:
         print(f"[DEBUG] Has text attr: {hasattr(response, 'text')}")
         print(f"[DEBUG] Has _result attr: {hasattr(response, '_result')}")
 
-        if hasattr(response, 'text'):
+        if hasattr(response, "text"):
             text = response.text
             print(f"[DEBUG] Search result text: {text}")
-        elif hasattr(response, '_result') and response._result.candidates:
+        elif hasattr(response, "_result") and response._result.candidates:
             text = response._result.candidates[0].content.parts[0].text
             print(f"[DEBUG] Search result text (from _result): {text}")
         else:
             print("[ERROR] Unable to extract text from response")
-            return GoogleSearchResult(text="検索結果の取得に失敗しました").model_dump_json()
+            return GoogleSearchResult(
+                text="検索結果の取得に失敗しました"
+            ).model_dump_json()
     except Exception as e:
         print(f"[ERROR] Google Search failed: {str(e)}")
         import traceback
-        traceback.print_exc()
-        return GoogleSearchResult(text=f"検索に失敗しました: {str(e)}").model_dump_json()
 
+        traceback.print_exc()
+        return GoogleSearchResult(
+            text=f"検索に失敗しました: {str(e)}"
+        ).model_dump_json()
 
     # # BeautifulSoupを用いてレンダリングされたHTMLからリンクを抽出
     # soup = BeautifulSoup(
@@ -146,7 +151,7 @@ def googleSearchAgent(_input: str) -> str:
     markdowns = []
     for chunk in response._result.candidates[0].grounding_metadata.grounding_chunks:
         # chunk.web.uriが存在することを確認して追加
-        if hasattr(chunk.web, 'uri'):
+        if hasattr(chunk.web, "uri"):
             uris.append(chunk.web.uri)
 
     print(len(uris))

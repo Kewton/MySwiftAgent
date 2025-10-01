@@ -1,15 +1,17 @@
+import concurrent.futures
 import http.client
 import json
-from mymcp.utils.html2markdown import getMarkdown
-from mymcp.utils.chatollama import (
-    extract_knowledge_from_text
-)  # この関数のシグネチャが変わることを想定
-import concurrent.futures
-from typing import List, Union, Tuple  # Tupleを追加
+from typing import List, Tuple, Union  # Tupleを追加
+
 from pydantic import BaseModel, Field
+
 # from mymcp.utils.html2markdown import getMarkdown # 重複インポートなのでコメントアウト
 from core.config import settings
 from core.logger import getlogger
+from mymcp.utils.chatollama import (
+    extract_knowledge_from_text,
+)  # この関数のシグネチャが変わることを想定
+from mymcp.utils.html2markdown import getMarkdown
 
 logger = getlogger()
 
@@ -37,16 +39,12 @@ async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
     _serperresults_with_queries: List[Tuple[str, dict]] = []
     for _query in queries:
         conn = http.client.HTTPSConnection("google.serper.dev")
-        payload = json.dumps({
-            "q": _query,
-            "location": "Japan",
-            "gl": "jp",
-            "hl": "ja",
-            "num": num
-        })
+        payload = json.dumps(
+            {"q": _query, "location": "Japan", "gl": "jp", "hl": "ja", "num": num}
+        )
         headers = {
-            'X-API-KEY': settings.SERPER_API_KEY,
-            'Content-Type': 'application/json'
+            "X-API-KEY": settings.SERPER_API_KEY,
+            "Content-Type": "application/json",
         }
         try:
             conn.request("POST", "/search", payload, headers)
@@ -54,22 +52,22 @@ async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
             data = res.read()
             jsondata = json.loads(data.decode("utf-8"))
             # organicキーが存在しない場合も考慮
-            for organic_result in jsondata.get('organic', []):
+            for organic_result in jsondata.get("organic", []):
                 _serperresults_with_queries.append((_query, organic_result))
         except Exception as e:
-            logger.error(f"Serper APIリクエスト中にエラーが発生しました (query: {_query}): {e}")
+            logger.error(
+                f"Serper APIリクエスト中にエラーが発生しました (query: {_query}): {e}"
+            )
         finally:
             conn.close()
 
     results = []
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=num * 2
-    ) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num * 2) as executor:
         futures = [
             executor.submit(
                 get_entry_summary,
                 organic_item_with_query[1],
-                organic_item_with_query[0]
+                organic_item_with_query[0],
             )
             for organic_item_with_query in _serperresults_with_queries
         ]
@@ -87,8 +85,7 @@ async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
     return result_model.model_dump_json()
 
 
-async def get_overview_by_google_serper(
-        queries: List[str], num: int = 3) -> str:
+async def get_overview_by_google_serper(queries: List[str], num: int = 3) -> str:
     """Google Searchを用いて情報を取得し、結果を返す。
 
     Serper APIを使用してGoogle Searchを実行し、
@@ -107,16 +104,12 @@ async def get_overview_by_google_serper(
     _serperresults = []
     for _query in queries:
         conn = http.client.HTTPSConnection("google.serper.dev")
-        payload = json.dumps({
-            "q": _query,
-            "location": "Japan",
-            "gl": "jp",
-            "hl": "ja",
-            "num": num
-        })
+        payload = json.dumps(
+            {"q": _query, "location": "Japan", "gl": "jp", "hl": "ja", "num": num}
+        )
         headers = {
-            'X-API-KEY': settings.SERPER_API_KEY,
-            'Content-Type': 'application/json'
+            "X-API-KEY": settings.SERPER_API_KEY,
+            "Content-Type": "application/json",
         }
         try:
             conn.request("POST", "/search", payload, headers)
@@ -124,14 +117,21 @@ async def get_overview_by_google_serper(
             data = res.read()
             jsondata = json.loads(data.decode("utf-8"))
             for key in [
-                "searchParameters", "images", "relatedSearches", "credits",
-                "answerBox", "knowledgeGraph", "peopleAlsoAsk",
-                "relatedSearches"
+                "searchParameters",
+                "images",
+                "relatedSearches",
+                "credits",
+                "answerBox",
+                "knowledgeGraph",
+                "peopleAlsoAsk",
+                "relatedSearches",
             ]:
                 jsondata.pop(key, None)
             _serperresults.append(jsondata)
         except Exception as e:
-            logger.error(f"Serper APIリクエスト中にエラーが発生しました (query: {_query}): {e}")
+            logger.error(
+                f"Serper APIリクエスト中にエラーが発生しました (query: {_query}): {e}"
+            )
         finally:
             conn.close()
 
@@ -158,15 +158,13 @@ def get_entry_summary(_organic: dict, _original_query: str):
         return {
             "title": "Invalid data",
             "link": "",
-            "knowledge": "Invalid data provided to get_entry_summary"
+            "knowledge": "Invalid data provided to get_entry_summary",
         }
 
-    title = _organic.get('title', 'タイトルなし')
-    link = _organic.get('link', '')
+    title = _organic.get("title", "タイトルなし")
+    link = _organic.get("link", "")
 
-    logger.info(
-        f"get_entry_summary start: '{title}' (Query: '{_original_query}')"
-    )
+    logger.info(f"get_entry_summary start: '{title}' (Query: '{_original_query}')")
 
     md_content = getMarkdown(link, False)
     kl = "情報なし"
@@ -179,23 +177,22 @@ def get_entry_summary(_organic: dict, _original_query: str):
             markdown_extraction_successful = bool(result_text)
         else:
             logger.warning(
-                "getMarkdown failed for link %s: State was %s" % (
-                    link, md_content.get('state'))
+                "getMarkdown failed for link %s: State was %s"
+                % (link, md_content.get("state"))
             )
     elif isinstance(md_content, str):
         result_text = md_content
         markdown_extraction_successful = bool(result_text)
     else:
         logger.warning(
-            "getMarkdown returned unexpected type for link %s: %s" % (
-                link, type(md_content))
+            "getMarkdown returned unexpected type for link %s: %s"
+            % (link, type(md_content))
         )
 
     if result_text.startswith("JavaScript"):
         logger.warning(
             "'%s' (%s) content starts with 'JavaScript'. "
-            "Skipping knowledge extraction."
-            % (title, link)
+            "Skipping knowledge extraction." % (title, link)
         )
     elif markdown_extraction_successful:
         window_size = 2000
@@ -210,19 +207,16 @@ def get_entry_summary(_organic: dict, _original_query: str):
             start += window_size - overlap
         knowledges = []
 
-        print(f"Extracting knowledge from {len(snippets)} snippets for query: {_original_query}")
+        print(
+            f"Extracting knowledge from {len(snippets)} snippets for query: {_original_query}"
+        )
         print(f"Snippets: {snippets}")
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=4
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             _model_name = "mlx-community"
             futures_extraction = [
                 executor.submit(
-                    extract_knowledge_from_text,
-                    _original_query,
-                    snippet,
-                    _model_name
+                    extract_knowledge_from_text, _original_query, snippet, _model_name
                 )
                 for snippet in snippets
             ]
@@ -234,9 +228,7 @@ def get_entry_summary(_organic: dict, _original_query: str):
                     if k:
                         knowledges.append(str(k))
                 except Exception as e:
-                    snippet_preview = (
-                        snippets[i][:50] if i < len(snippets) else ''
-                    )
+                    snippet_preview = snippets[i][:50] if i < len(snippets) else ""
                     logger.error(
                         "extract_knowledge_from_textの実行中にエラーが発生しました "
                         "(Query: %s, Snippet: %s...): %s"
@@ -253,5 +245,5 @@ def get_entry_summary(_organic: dict, _original_query: str):
         "title": title,
         "link": link,
         "knowledge": kl,
-        "original_query": _original_query
+        "original_query": _original_query,
     }
