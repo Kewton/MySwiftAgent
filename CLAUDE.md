@@ -112,6 +112,47 @@ graph TD
 | `staging`      | `release/*` または `fix/*` → `release/*` | 同上                         |
 | `main`（本番） | `hotfix/*`（`main` から作成）            | `main`, `staging`, `develop` |
 
+### 🚀 マルチプロジェクトリリース対応
+
+複数のプロジェクトを同時にリリースする場合の手順：
+
+#### 方法1: Workflow Dispatchによる一括リリース
+
+```bash
+# GitHub Actions UIから実行、または以下のコマンド
+gh workflow run multi-release.yml \
+  -f projects="myscheduler,jobqueue,commonUI" \
+  -f release_type=minor
+```
+
+**命名規則:**
+- **単一プロジェクト**: `release/{project}/vX.Y.Z` (例: `release/myscheduler/v1.3.0`)
+- **マルチプロジェクト**: `release/multi/vYYYY.MM.DD` (例: `release/multi/v2025.09.30`)
+
+#### 方法2: 統合featureブランチによる同時更新
+
+```bash
+# 1. 統合featureブランチ作成
+git checkout develop
+git checkout -b feature/cross-project-update
+
+# 2. 複数プロジェクトを同時に修正
+vim myscheduler/app/api/common.py
+vim jobqueue/app/api/common.py
+
+# 3. まとめてコミット・PR作成
+git add myscheduler/ jobqueue/
+git commit -m "feat: update cross-project API interface"
+gh pr create --base develop --label feature
+```
+
+#### 自動リリース検出（auto-release.yml）
+
+mainブランチへのマージ時、変更されたすべてのプロジェクトを自動検出：
+
+- **単一プロジェクト変更**: 個別タグ作成 (例: `myscheduler/v1.3.0`)
+- **複数プロジェクト変更**: マルチプロジェクトタグ作成 (例: `multi/v2025.09.30`) + 個別プロジェクトタグ
+
 ---
 
 # 🔧 開発環境・品質担保
@@ -255,9 +296,13 @@ AI生成 → 静的解析 → テスト作成 → 🏷️ PRラベル付与 → 
 
 MySwiftAgentはマルチプロジェクト対応のモノレポ構成を採用しており、新しいマイクロサービス・プロジェクトの追加は以下の手順で行います。
 
+**対応言語**: Python、TypeScript/Node.js
+
 ## 📋 追加手順チェックリスト
 
 ### 1. **プロジェクト基盤の作成**
+
+#### Python プロジェクトの場合
 
 ```bash
 # 新プロジェクトディレクトリ作成
@@ -285,7 +330,40 @@ mkdir -p app tests/unit tests/integration
 └── README.md              # プロジェクト固有ドキュメント
 ```
 
-### 2. **pyproject.toml の設定**
+#### TypeScript プロジェクトの場合
+
+```bash
+# 新プロジェクトディレクトリ作成
+mkdir {project_name}
+cd {project_name}
+
+# 必須ファイルの作成
+npm init -y
+touch tsconfig.json
+touch Dockerfile
+mkdir -p src tests
+```
+
+**必須ファイル構成:**
+```
+{project_name}/
+├── package.json           # プロジェクト設定・依存関係・バージョン
+├── package-lock.json      # 依存関係ロックファイル
+├── tsconfig.json          # TypeScript設定
+├── Dockerfile             # コンテナイメージ定義
+├── src/                   # ソースコード
+│   ├── index.ts          # アプリケーションエントリーポイント
+│   └── app.ts            # Express/Fastifyアプリケーション
+├── tests/                 # テストコード
+│   ├── unit/             # 単体テスト
+│   └── integration/      # 結合テスト
+├── dist/                  # ビルド出力（.gitignore対象）
+└── README.md             # プロジェクト固有ドキュメント
+```
+
+### 2. **バージョン管理ファイルの設定**
+
+#### Python: pyproject.toml の設定
 
 ```toml
 [project]
@@ -319,36 +397,99 @@ warn_return_any = true
 warn_unused_configs = true
 ```
 
+#### TypeScript: package.json の設定
+
+```json
+{
+  "name": "{project_name}",
+  "version": "0.1.0",
+  "description": "プロジェクトの説明",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+**tsconfig.json の設定:**
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
+```
+
 ### 3. **CI/CD設定への追加**
 
 #### 3.1 multi-release.yml ワークフローの更新
 
-**`/.github/workflows/multi-release.yml`** の以下の箇所を更新：
+**🎉 自動言語検出対応**
+
+`multi-release.yml` は **Python と TypeScript の両方に自動対応** しています。以下の検出ロジックで動作します：
+
+- **Python プロジェクト**: `pyproject.toml` の存在で検出
+- **TypeScript プロジェクト**: `package.json` の存在で検出
+
+**変更が必要な箇所:**
+
+プロジェクト検出リストに新プロジェクトを追加（行395付近）:
 
 ```yaml
-# workflow_dispatch inputs への追加
-project:
-  description: 'Project to release'
-  required: true
-  type: choice
-  options: ['myscheduler', 'jobqueue', '{project_name}']  # 新プロジェクト追加
-  default: 'myscheduler'
-
-# 各ジョブの条件に新プロジェクトを追加
-test:
-  if: |
-    needs.validate-release.outputs.project == 'myscheduler' ||
-    needs.validate-release.outputs.project == 'jobqueue' ||
-    needs.validate-release.outputs.project == '{project_name}'  # 新プロジェクト追加
-
-security-scan:
-  if: |
-    needs.validate-release.outputs.project == 'myscheduler' ||
-    needs.validate-release.outputs.project == 'jobqueue' ||
-    needs.validate-release.outputs.project == '{project_name}'  # 新プロジェクト追加
-
-# 他のジョブでも同様に条件を追加
+# Multi-project format: release/multi/vYYYY.MM.DD or vX.Y.Z
+if [[ $BRANCH_NAME =~ ^release/multi/v(.+)$ ]]; then
+  # Detect changed projects from git diff
+  CHANGED_PROJECTS=""
+  for project in myscheduler jobqueue docs commonUI {project_name}; do  # ← 新プロジェクト追加
+    # Check if project has version file (pyproject.toml or package.json)
+    if ([[ -f "$project/pyproject.toml" ]] || [[ -f "$project/package.json" ]]) && git diff HEAD~1 HEAD --name-only | grep -q "^$project/"; then
 ```
+
+**バージョン管理ファイル対応:**
+- **Python**: `pyproject.toml` の `version = "X.Y.Z"` 行を自動更新
+- **TypeScript**: `package.json` の `"version": "X.Y.Z"` フィールドを jq で自動更新
+
+**テスト・ビルドコマンド自動切替:**
+| 言語 | Linting | Type Check | Tests | Build |
+|------|---------|-----------|-------|-------|
+| **Python** | `uv run ruff check .` | `uv run mypy app/` | `uv run pytest` | `uv build` |
+| **TypeScript** | `npm run lint` | `npm run type-check` または `npx tsc --noEmit` | `npm test` | `npm run build` |
 
 #### 3.2 他のワークフローファイルの更新確認
 
@@ -358,6 +499,8 @@ security-scan:
 - `ci-main.yml`
 
 ### 4. **Dockerfileの作成**
+
+#### Python プロジェクト用 Dockerfile
 
 ```dockerfile
 FROM python:3.12-slim
@@ -385,7 +528,51 @@ EXPOSE 8000
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
+#### TypeScript プロジェクト用 Dockerfile（Multi-stage build）
+
+```dockerfile
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependency files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY src/ ./src/
+
+# Build TypeScript
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy only production dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+CMD ["node", "dist/index.js"]
+```
+
 ### 5. **基本APIエンドポイントの実装**
+
+#### Python (FastAPI) 実装例
 
 **`app/main.py`**:
 ```python
@@ -413,7 +600,48 @@ async def api_root():
     return {"version": "1.0", "service": "{project_name}"}
 ```
 
+#### TypeScript (Express) 実装例
+
+**`src/app.ts`**:
+```typescript
+import express, { Request, Response } from 'express';
+
+const app = express();
+
+app.use(express.json());
+
+// Health check endpoint (required for CI/CD)
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'healthy', service: '{project_name}' });
+});
+
+// Root endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.json({ message: 'Welcome to {project_name}' });
+});
+
+// API v1 root
+app.get('/api/v1/', (req: Request, res: Response) => {
+  res.json({ version: '1.0', service: '{project_name}' });
+});
+
+export default app;
+```
+
+**`src/index.ts`**:
+```typescript
+import app from './app';
+
+const PORT = process.env.PORT || 8000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+});
+```
+
 ### 6. **テスト環境の設定**
+
+#### Python テストの設定
 
 **`tests/conftest.py`**:
 ```python
@@ -438,7 +666,57 @@ def test_root_endpoint(client):
     assert response.status_code == 200
 ```
 
+#### TypeScript テストの設定
+
+**`tests/integration/app.test.ts`**:
+```typescript
+import request from 'supertest';
+import app from '../../src/app';
+
+describe('API Endpoints', () => {
+  describe('GET /health', () => {
+    it('should return health status', async () => {
+      const response = await request(app).get('/health');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        status: 'healthy',
+        service: '{project_name}'
+      });
+    });
+  });
+
+  describe('GET /', () => {
+    it('should return welcome message', async () => {
+      const response = await request(app).get('/');
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBeDefined();
+    });
+  });
+});
+```
+
+**jest.config.js**:
+```javascript
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/tests'],
+  testMatch: ['**/*.test.ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts'
+  ]
+};
+```
+
+**必須追加パッケージ:**
+```bash
+npm install --save-dev supertest @types/supertest jest ts-jest
+```
+
 ### 7. **初回リリースの実行**
+
+#### Python プロジェクトの場合
 
 ```bash
 # 1. 開発ブランチから作業開始
@@ -450,7 +728,7 @@ git checkout -b feature/{project_name}-initial-setup
 
 # 3. ファイル追加・コミット
 git add {project_name}/
-git commit -m "feat({project_name}): add initial project structure
+git commit -m "feat({project_name}): add initial Python project structure
 
 - Add pyproject.toml with basic dependencies
 - Add FastAPI application with health check
@@ -467,13 +745,49 @@ git push origin feature/{project_name}-initial-setup
 
 # 5. developブランチへのPR作成（featureラベル付与）
 gh pr create \
-  --title "🎉 Add new project: {project_name}" \
-  --body "初回プロジェクト追加..." \
+  --title "🎉 Add new Python project: {project_name}" \
+  --body "初回Pythonプロジェクト追加..." \
   --base develop \
   --label feature
 ```
 
-### 8. **初回リリースの実行**
+#### TypeScript プロジェクトの場合
+
+```bash
+# 1. 開発ブランチから作業開始
+git checkout develop
+git pull origin develop
+
+# 2. 新プロジェクト用feature/vibe ブランチ作成
+git checkout -b feature/{project_name}-initial-setup
+
+# 3. ファイル追加・コミット
+git add {project_name}/
+git commit -m "feat({project_name}): add initial TypeScript project structure
+
+- Add package.json with basic dependencies
+- Add Express application with health check
+- Add TypeScript configuration
+- Add Docker configuration (multi-stage build)
+- Add test structure with Jest and Supertest
+- Add CI/CD integration
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 4. プッシュしてPR作成
+git push origin feature/{project_name}-initial-setup
+
+# 5. developブランチへのPR作成（featureラベル付与）
+gh pr create \
+  --title "🎉 Add new TypeScript project: {project_name}" \
+  --body "初回TypeScriptプロジェクト追加..." \
+  --base develop \
+  --label feature
+```
+
+### 8. **リリースワークフローの実行**
 
 ```bash
 # developマージ後、リリースワークフロー実行
@@ -536,6 +850,8 @@ paths:
 
 ## 🔧 新プロジェクト追加後の品質チェック
 
+### Python プロジェクトの品質チェック
+
 ```bash
 # 新プロジェクトのローカル検証
 cd {project_name}
@@ -559,11 +875,45 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 curl -f http://localhost:8000/health
 ```
 
+### TypeScript プロジェクトの品質チェック
+
+```bash
+# 新プロジェクトのローカル検証
+cd {project_name}
+
+# 1. 依存関係インストール
+npm ci
+
+# 2. 品質チェック実行
+npm run lint
+npm run type-check
+
+# 3. テスト実行
+npm test
+
+# 4. ビルド検証
+npm run build
+
+# 5. アプリケーション起動テスト
+npm start &
+sleep 5
+
+# 6. ヘルスチェック
+curl -f http://localhost:8000/health
+
+# 7. プロセス停止
+pkill -f "node dist/index.js"
+```
+
 ## ⚠️ 注意事項
 
 1. **リリースブランチ命名**: 必ず `release/{project_name}/vX.Y.Z` 形式を使用
 2. **初回バージョン**: 新プロジェクトは `0.1.0` から開始することを推奨
-3. **CI/CD設定**: 各ワークフローファイルへの新プロジェクト追加を忘れずに実施
-4. **依存関係管理**: `uv`を使用し、`pyproject.toml`で一元管理
+3. **CI/CD設定**: validate-releaseジョブのプロジェクトリスト（行395付近）への新プロジェクト追加が必須
+4. **依存関係管理**:
+   - **Python**: `uv`を使用し、`pyproject.toml`で一元管理
+   - **TypeScript**: `npm`を使用し、`package.json`で一元管理
 5. **Docker対応**: リリースフローではDockerイメージビルド・テストが必須
-6. **API規約**: ヘルスチェック（`/health`）とルートエンドポイント（`/`、`/api/v1/`）は実装必須
+6. **API規約**: ヘルスチェック（`/health`）とルートエンドポイント（`/`、`/api/v1/`）は実装必須（両言語共通）
+7. **必須npmスクリプト（TypeScript）**: `build`, `test`, `lint`, `type-check` は package.json に定義必須
+8. **バージョンファイル**: Python は `pyproject.toml`、TypeScript は `package.json` にバージョン記載必須
