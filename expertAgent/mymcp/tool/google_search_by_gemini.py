@@ -12,11 +12,33 @@ from mymcp.utils.html2markdown import getMarkdown
 logger = getlogger()
 
 
+class GroundingChunk(BaseModel):
+    """Grounding情報の各チャンク（ウェブソース）"""
+
+    uri: str
+    title: str | None = None
+
+
+class GroundingSupport(BaseModel):
+    """回答セグメントとソースチャンクの対応関係"""
+
+    segment_text: str
+    segment_start_index: int
+    segment_end_index: int
+    grounding_chunk_indices: List[int]
+
+
+class GroundingMetadata(BaseModel):
+    """Google Searchのgrounding metadata"""
+
+    web_search_queries: List[str] | None = None
+    grounding_chunks: List[GroundingChunk] | None = None
+    grounding_supports: List[GroundingSupport] | None = None
+
+
 class GoogleSearchResult(BaseModel):
     text: str
-    # result: List[dict] = Field(..., description="Gemini APIから返されたテキストと参照されたURIから取得したHTMLをマークダウンファイル化したもの")
-    # search_entry_point: List[str] = Field(..., description="検索結果ページへのリンクのリスト")
-    # uris: List[str] = Field(..., description="参照されたURIのリスト")
+    grounding_metadata: GroundingMetadata | None = None
 
 
 # 各URIに対する処理をまとめた関数
@@ -92,8 +114,15 @@ def googleSearchAgent(_input: str) -> str:
 
     # Google Search (Grounding)機能を使用するモデル
     # 参考: https://ai.google.dev/gemini-api/docs/google-search?hl=ja
-    # Gemini 2.0では generate_content_config で google_search を指定
-    model = genai.GenerativeModel("models/gemini-2.0-flash-exp")
+    # NOTE: Google Search groundingは一部モデルでサポートされています
+    # Gemini 2.5では grounding_metadata が空になる問題があるため、
+    # テキスト内のURLを参照情報として利用します
+    model = genai.GenerativeModel("models/gemini-2.5-flash")
+
+    # Google Search toolの設定
+    google_search_tool = genai.protos.Tool(
+        google_search=genai.protos.Tool.GoogleSearch()
+    )
 
     _content = f"""
     # 命令指示書
@@ -110,14 +139,26 @@ def googleSearchAgent(_input: str) -> str:
     """
 
     try:
-        # Google Search機能はモデル側の機能なのでtoolsパラメータは使用しない
-        # 単純にgenerate_contentを呼び出す
-        response = model.generate_content(contents=_content)
+        # Google Search機能を有効化してgenerate_contentを呼び出す
+        response = model.generate_content(
+            contents=_content,
+            tools=[google_search_tool],
+        )
 
         # レスポンス構造のデバッグ (MCPサーバーなのでprintを使用)
         print(f"[DEBUG] Response type: {type(response)}")
         print(f"[DEBUG] Has text attr: {hasattr(response, 'text')}")
         print(f"[DEBUG] Has _result attr: {hasattr(response, '_result')}")
+
+        # grounding_metadata構造の詳細確認
+        if hasattr(response, "_result") and response._result.candidates:
+            candidate = response._result.candidates[0]
+            print(f"[DEBUG] Has grounding_metadata: {hasattr(candidate, 'grounding_metadata')}")
+            if hasattr(candidate, "grounding_metadata"):
+                gm = candidate.grounding_metadata
+                print(f"[DEBUG] grounding_metadata type: {type(gm)}")
+                print(f"[DEBUG] grounding_metadata dir: {[x for x in dir(gm) if not x.startswith('_')]}")
+                print(f"[DEBUG] grounding_metadata: {gm}")
 
         if hasattr(response, "text"):
             text = response.text
@@ -139,44 +180,78 @@ def googleSearchAgent(_input: str) -> str:
             text=f"検索に失敗しました: {str(e)}"
         ).model_dump_json()
 
-    # # BeautifulSoupを用いてレンダリングされたHTMLからリンクを抽出
-    # soup = BeautifulSoup(
-    #     response._result.candidates[0].grounding_metadata.search_entry_point.rendered_content,
-    #     'html.parser'
-    # )
-    # links = []
-    # links = [a['href'] for a in soup.find_all('a') if a.has_attr('href')]
+    # grounding_metadataを抽出
+    grounding_metadata = None
+    if (
+        hasattr(response, "_result")
+        and response._result.candidates
+        and hasattr(response._result.candidates[0], "grounding_metadata")
+    ):
+        gm = response._result.candidates[0].grounding_metadata
 
-    uris = []
-    markdowns = []
-    for chunk in response._result.candidates[0].grounding_metadata.grounding_chunks:
-        # chunk.web.uriが存在することを確認して追加
-        if hasattr(chunk.web, "uri"):
-            uris.append(chunk.web.uri)
+        # webSearchQueriesを取得
+        web_search_queries = None
+        if hasattr(gm, "web_search_queries"):
+            web_search_queries = list(gm.web_search_queries)
 
-    print(len(uris))
-    markdowns.append({"GoogleApiResponse": text})
-    # for uri in uris:
-    #     _k = extract_knowledge_from_text(getMarkdown(uri, False))
-    #     markdowns.append(_k)
-    # max_concurrent_threads = 4
-    # processed_markdowns = main_multithreaded(uris, max_concurrent_threads)
-    # for result_item in processed_markdowns:
-    #     markdowns.append(result_item)
+        # groundingChunksを取得
+        grounding_chunks = []
+        if hasattr(gm, "grounding_chunks"):
+            for chunk in gm.grounding_chunks:
+                if hasattr(chunk, "web"):
+                    grounding_chunks.append(
+                        GroundingChunk(
+                            uri=chunk.web.uri if hasattr(chunk.web, "uri") else "",
+                            title=(
+                                chunk.web.title if hasattr(chunk.web, "title") else None
+                            ),
+                        )
+                    )
 
-    # logger.info("Google Searchの結果を取得しました。")
-    logger.info(f"Google Searchのテキスト: {text}")
-    # logger.info(f"Google Searchの結果: {markdowns}")
-    # logger.info(f"Google Searchのリンク: {links}")
-    # logger.info(f"Google SearchのURI: {uris}")
+        # groundingSupportsを取得
+        grounding_supports = []
+        if hasattr(gm, "grounding_supports"):
+            for support in gm.grounding_supports:
+                if hasattr(support, "segment"):
+                    segment = support.segment
+                    grounding_supports.append(
+                        GroundingSupport(
+                            segment_text=(
+                                segment.text if hasattr(segment, "text") else ""
+                            ),
+                            segment_start_index=(
+                                segment.start_index
+                                if hasattr(segment, "start_index")
+                                else 0
+                            ),
+                            segment_end_index=(
+                                segment.end_index
+                                if hasattr(segment, "end_index")
+                                else 0
+                            ),
+                            grounding_chunk_indices=(
+                                list(support.grounding_chunk_indices)
+                                if hasattr(support, "grounding_chunk_indices")
+                                else []
+                            ),
+                        )
+                    )
+
+        grounding_metadata = GroundingMetadata(
+            web_search_queries=web_search_queries,
+            grounding_chunks=grounding_chunks if grounding_chunks else None,
+            grounding_supports=grounding_supports if grounding_supports else None,
+        )
+
+        logger.info(f"Google Searchのテキスト: {text}")
+        logger.info(
+            f"Grounding chunks: {len(grounding_chunks) if grounding_chunks else 0}"
+        )
+        logger.info(
+            f"Web search queries: {web_search_queries if web_search_queries else 'N/A'}"
+        )
+
     # pydanticモデルで結果を生成
-    result_model = GoogleSearchResult(
-        text=text
-        # result=markdowns,
-        # search_entry_point=links,
-        # uris=uris
-    )
-
-    # print(result_model.model_dump_json())
+    result_model = GoogleSearchResult(text=text, grounding_metadata=grounding_metadata)
 
     return result_model.model_dump_json()
