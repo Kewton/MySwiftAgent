@@ -2,7 +2,14 @@
 
 import time
 
-from core.logger import StopWatch, declogger, edtmessage, writedebuglog, writeerrorlog, writeinfolog
+from core.logger import (
+    StopWatch,
+    declogger,
+    edtmessage,
+    writedebuglog,
+    writeerrorlog,
+    writeinfolog,
+)
 
 
 class TestLoggerUtilities:

@@ -1,9 +1,6 @@
 """Tests for core.logger module."""
 
 import logging
-import os
-import tempfile
-from pathlib import Path
 
 from core.logger import getlogger, setup_logging
 
