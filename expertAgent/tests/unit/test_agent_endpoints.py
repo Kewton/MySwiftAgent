@@ -72,7 +72,7 @@ class TestExecMyllm:
 
         result = exec_myllm(request)
 
-        assert result.result == "ok"
+        assert result.result == "Test response"
         assert result.text == "Test response"
         assert result.type == "exec_myllm"
         mock_chat.assert_called_once()
@@ -85,7 +85,7 @@ class TestExecMyllm:
 
         result = exec_myllm(request)
 
-        assert result.result == "ok"
+        assert result.result == "Test response"
         assert result.text == "Test response"
         mock_chat.assert_called_once()
 
@@ -97,6 +97,7 @@ class TestExecMyllm:
 
         result = exec_myllm(request)
 
+        assert result.result == "Response  text"
         assert result.text == "Response  text"
 
 

@@ -8,6 +8,7 @@ from aiagent.langgraph.utilityaiagents.action_agent import actionagent
 from aiagent.langgraph.utilityaiagents.explorer_agent import exploreragent
 from aiagent.langgraph.utilityaiagents.jsonOutput_agent import jsonOutputagent
 from app.schemas.standardAiAgent import (
+    ChatMessage,
     ExpertAiAgentRequest,
     ExpertAiAgentResponse,
     ExpertAiAgentResponseJson,
@@ -47,23 +48,24 @@ def home_hello_world():
 
 @router.post("/mylllm", summary="", description="")
 def exec_myllm(request: ExpertAiAgentRequest):
-    _messages = []
+    _messages: list[ChatMessage] = []
     if request.system_imput is not None:
-        _messages.append({"role": "system", "content": request.system_imput})
-    _messages.append({"role": "user", "content": request.user_input})
+        _messages.append(ChatMessage(role="system", content=request.system_imput))
+    _messages.append(ChatMessage(role="user", content=request.user_input))
 
     print(f"request.user_input:{_messages}")
 
-    result = chatOllama(_messages, request.model_name)
-    _response = {
-        "result": "ok",
-        "text": remove_think_tags(result),
-        "type": "exec_myllm",
-    }
+    model_name = request.model_name if request.model_name is not None else "gpt-4o-mini"
+    result = chatOllama(_messages, model_name)
+    cleaned_result = remove_think_tags(result)
 
-    print(f"result:{_response}")
+    print(f"result: {cleaned_result}")
 
-    return ExpertAiAgentResponse(**_response)
+    return ExpertAiAgentResponse(
+        result=cleaned_result,
+        text=cleaned_result,
+        type="exec_myllm"
+    )
 
 
 @router.post(
@@ -106,21 +108,20 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
         {request.user_input}
         """
 
+        model_name = request.model_name if request.model_name is not None else "gpt-4o-mini"
+
         if "jsonoutput" in agent_name:
             print(f"request.user_input:{_input}")
-            parsed_json = await jsonOutputagent(_input, request.model_name)
-            _response = {"result": parsed_json, "type": "jsonOutput"}
-            return ExpertAiAgentResponseJson(**_response)
+            parsed_json = await jsonOutputagent(_input, model_name)
+            return ExpertAiAgentResponseJson(result=parsed_json, type="jsonOutput")
         elif "explorer" in agent_name:
             print(f"request.user_input:{_input}")
-            result = await exploreragent(_input, request.model_name)
-            _response = {"result": remove_think_tags(result), "type": "explorer"}
-            return ExpertAiAgentResponse(**_response)
+            result = await exploreragent(_input, model_name)
+            return ExpertAiAgentResponse(result=remove_think_tags(result), type="explorer")
         elif "action" in agent_name:
             print(f"request.user_input:{_input}")
-            result = await actionagent(_input, request.model_name)
-            _response = {"result": remove_think_tags(result), "type": "action"}
-            return ExpertAiAgentResponse(**_response)
+            result = await actionagent(_input, model_name)
+            return ExpertAiAgentResponse(result=remove_think_tags(result), type="action")
         return {"message": "No matching agent found."}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
