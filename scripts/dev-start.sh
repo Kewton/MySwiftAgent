@@ -22,11 +22,15 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Service ports
 JOBQUEUE_PORT=8001
 MYSCHEDULER_PORT=8002
+EXPERTAGENT_PORT=8003
+GRAPHAISERVER_PORT=8004
 COMMONUI_PORT=8501
 
 # Service directories
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
 MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
+EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
+GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
 COMMONUI_DIR="$PROJECT_ROOT/commonUI"
 
 # Log and PID directories
@@ -36,12 +40,16 @@ PID_DIR="$PROJECT_ROOT/.pids"
 # Log files
 JOBQUEUE_LOG="$LOG_DIR/jobqueue.log"
 MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
+EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
+GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 COMMONUI_LOG="$LOG_DIR/commonui.log"
 SETUP_LOG="$LOG_DIR/setup.log"
 
 # PID files
 JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
 MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
+EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
+GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
 
 # API tokens for development
@@ -57,9 +65,11 @@ show_banner() {
 ║   🚀 MySwiftAgent Development Environment                                      ║
 ║   ═══════════════════════════════════════                                    ║
 ║                                                                               ║
-║   📋 JobQueue    - Job queue management API                                   ║
-║   ⏰ MyScheduler - Job scheduling service                                     ║
-║   🎨 CommonUI    - Web interface                                              ║
+║   📋 JobQueue      - Job queue management API                                 ║
+║   ⏰ MyScheduler   - Job scheduling service                                   ║
+║   🤖 ExpertAgent   - AI agent service                                         ║
+║   🔄 GraphAiServer - Graph AI workflow service                                ║
+║   🎨 CommonUI      - Web interface                                            ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -395,19 +405,26 @@ show_service_urls() {
     echo ""
     print_step "Service Access URLs:"
     echo ""
-    echo -e "${CYAN}┌─────────────────────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}│                     Service URLs                           │${NC}"
-    echo -e "${CYAN}├─────────────────────────────────────────────────────────────┤${NC}"
-    echo -e "${CYAN}│${NC} 📋 JobQueue API:    ${WHITE}http://localhost:$JOBQUEUE_PORT${NC}${CYAN}                     │${NC}"
-    echo -e "${CYAN}│${NC}    ↳ Health:        ${WHITE}http://localhost:$JOBQUEUE_PORT/health${NC}${CYAN}             │${NC}"
-    echo -e "${CYAN}│${NC}    ↳ Docs:          ${WHITE}http://localhost:$JOBQUEUE_PORT/docs${NC}${CYAN}               │${NC}"
-    echo -e "${CYAN}│${NC}                                                             ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC} ⏰ MyScheduler API: ${WHITE}http://localhost:$MYSCHEDULER_PORT${NC}${CYAN}                     │${NC}"
-    echo -e "${CYAN}│${NC}    ↳ Health:        ${WHITE}http://localhost:$MYSCHEDULER_PORT/health${NC}${CYAN}             │${NC}"
-    echo -e "${CYAN}│${NC}    ↳ Docs:          ${WHITE}http://localhost:$MYSCHEDULER_PORT/docs${NC}${CYAN}               │${NC}"
-    echo -e "${CYAN}│${NC}                                                             ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC} 🎨 CommonUI:        ${WHITE}http://localhost:$COMMONUI_PORT${NC}${CYAN}                      │${NC}"
-    echo -e "${CYAN}└─────────────────────────────────────────────────────────────┘${NC}"
+    echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}│                        Service URLs                                │${NC}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│${NC} 📋 JobQueue API:      ${WHITE}http://localhost:$JOBQUEUE_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$JOBQUEUE_PORT/health${NC}${CYAN}                  │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$JOBQUEUE_PORT/docs${NC}${CYAN}                    │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ⏰ MyScheduler API:   ${WHITE}http://localhost:$MYSCHEDULER_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$MYSCHEDULER_PORT/health${NC}${CYAN}                  │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$MYSCHEDULER_PORT/docs${NC}${CYAN}                    │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 🤖 ExpertAgent API:   ${WHITE}http://localhost:$EXPERTAGENT_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$EXPERTAGENT_PORT/health${NC}${CYAN}                  │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$EXPERTAGENT_PORT/aiagent-api/docs${NC}${CYAN}        │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 🔄 GraphAiServer API: ${WHITE}http://localhost:$GRAPHAISERVER_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$GRAPHAISERVER_PORT/health${NC}${CYAN}                  │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 🎨 CommonUI:          ${WHITE}http://localhost:$COMMONUI_PORT${NC}${CYAN}                           │${NC}"
+    echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
 }
 
@@ -427,6 +444,14 @@ show_logs() {
         tail -n 20 "$MYSCHEDULER_LOG" 2>/dev/null || echo "No logs available"
         echo ""
 
+        echo -e "${YELLOW}=== ExpertAgent Logs ===${NC}"
+        tail -n 20 "$EXPERTAGENT_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
+        echo -e "${YELLOW}=== GraphAiServer Logs ===${NC}"
+        tail -n 20 "$GRAPHAISERVER_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
         echo -e "${YELLOW}=== CommonUI Logs ===${NC}"
         tail -n 20 "$COMMONUI_LOG" 2>/dev/null || echo "No logs available"
         echo ""
@@ -442,6 +467,14 @@ show_logs() {
                 print_info "Following MyScheduler logs (Ctrl+C to stop):"
                 tail -f "$MYSCHEDULER_LOG"
                 ;;
+            expertagent)
+                print_info "Following ExpertAgent logs (Ctrl+C to stop):"
+                tail -f "$EXPERTAGENT_LOG"
+                ;;
+            graphaiserver)
+                print_info "Following GraphAiServer logs (Ctrl+C to stop):"
+                tail -f "$GRAPHAISERVER_LOG"
+                ;;
             commonui)
                 print_info "Following CommonUI logs (Ctrl+C to stop):"
                 tail -f "$COMMONUI_LOG"
@@ -452,7 +485,7 @@ show_logs() {
                 ;;
             *)
                 print_error "Unknown service: $service"
-                echo "Available services: jobqueue, myscheduler, commonui, setup"
+                echo "Available services: jobqueue, myscheduler, expertagent, graphaiserver, commonui, setup"
                 return 1
                 ;;
         esac
@@ -646,6 +679,20 @@ main() {
                     "uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
             fi
 
+            # Start ExpertAgent
+            if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
+                install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
+                start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
+                    "uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT" || exit 1
+            fi
+
+            # Start GraphAiServer
+            if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
+                install_service_deps "GraphAiServer" "$GRAPHAISERVER_DIR" || exit 1
+                start_service "GraphAiServer" "$GRAPHAISERVER_DIR" $GRAPHAISERVER_PORT "$GRAPHAISERVER_PID" "$GRAPHAISERVER_LOG" \
+                    "PORT=$GRAPHAISERVER_PORT npm start" || exit 1
+            fi
+
             # Start CommonUI
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 install_service_deps "CommonUI" "$COMMONUI_DIR" || exit 1
@@ -685,6 +732,12 @@ main() {
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 stop_service "CommonUI" "$COMMONUI_PID"
             fi
+            if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
+                stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
+                stop_service "ExpertAgent" "$EXPERTAGENT_PID"
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 stop_service "MyScheduler" "$MYSCHEDULER_PID"
             fi
@@ -709,6 +762,12 @@ main() {
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 check_service_status "MyScheduler" "$MYSCHEDULER_PID" $MYSCHEDULER_PORT
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
+                check_service_status "ExpertAgent" "$EXPERTAGENT_PID" $EXPERTAGENT_PORT
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
+                check_service_status "GraphAiServer" "$GRAPHAISERVER_PID" $GRAPHAISERVER_PORT
             fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 check_service_status "CommonUI" "$COMMONUI_PID" $COMMONUI_PORT

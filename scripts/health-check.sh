@@ -22,19 +22,26 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Service ports
 JOBQUEUE_PORT=8001
 MYSCHEDULER_PORT=8002
+EXPERTAGENT_PORT=8003
+GRAPHAISERVER_PORT=8004
 COMMONUI_PORT=8501
 
 # PID files
 PID_DIR="$PROJECT_ROOT/.pids"
 JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
 MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
+EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
+GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
 
 # Health check endpoints
 JOBQUEUE_HEALTH="http://localhost:$JOBQUEUE_PORT/health"
 MYSCHEDULER_HEALTH="http://localhost:$MYSCHEDULER_PORT/health"
+EXPERTAGENT_HEALTH="http://localhost:$EXPERTAGENT_PORT/health"
+GRAPHAISERVER_HEALTH="http://localhost:$GRAPHAISERVER_PORT/health"
 JOBQUEUE_DOCS="http://localhost:$JOBQUEUE_PORT/docs"
 MYSCHEDULER_DOCS="http://localhost:$MYSCHEDULER_PORT/docs"
+EXPERTAGENT_DOCS="http://localhost:$EXPERTAGENT_PORT/aiagent-api/docs"
 COMMONUI_URL="http://localhost:$COMMONUI_PORT"
 
 print_header() {
@@ -220,6 +227,98 @@ check_myscheduler() {
     return 0
 }
 
+check_expertagent() {
+    print_service_header "ExpertAgent API" "🤖"
+
+    # Process check
+    if check_process "$EXPERTAGENT_PID"; then
+        local pid=$(cat "$EXPERTAGENT_PID")
+        print_status "healthy" "Process running (PID: $pid)"
+    else
+        print_status "error" "Process not running"
+        print_service_footer
+        return 1
+    fi
+
+    # Port check
+    if check_port $EXPERTAGENT_PORT; then
+        print_status "healthy" "Port $EXPERTAGENT_PORT is listening"
+    else
+        print_status "error" "Port $EXPERTAGENT_PORT is not listening"
+        print_service_footer
+        return 1
+    fi
+
+    # Health endpoint check
+    if check_http_endpoint "$EXPERTAGENT_HEALTH"; then
+        local response_time=$(get_response_time "$EXPERTAGENT_HEALTH")
+        local health_info=$(get_service_info "$EXPERTAGENT_HEALTH")
+        print_status "healthy" "Health endpoint responding (${response_time}s)"
+
+        # Parse health info if available
+        if command -v jq >/dev/null 2>&1 && echo "$health_info" | jq empty >/dev/null 2>&1; then
+            local service_status=$(echo "$health_info" | jq -r '.status // "unknown"')
+            local service_name=$(echo "$health_info" | jq -r '.service // "unknown"')
+            print_status "info" "Service status: $service_status"
+        fi
+    else
+        local status_code=$(get_http_status "$EXPERTAGENT_HEALTH")
+        print_status "error" "Health endpoint not responding (HTTP $status_code)"
+    fi
+
+    # Documentation check
+    if check_http_endpoint "$EXPERTAGENT_DOCS"; then
+        print_status "info" "Documentation available at $EXPERTAGENT_DOCS"
+    else
+        print_status "warning" "Documentation not accessible"
+    fi
+
+    print_service_footer
+    return 0
+}
+
+check_graphaiserver() {
+    print_service_header "GraphAiServer API" "🔄"
+
+    # Process check
+    if check_process "$GRAPHAISERVER_PID"; then
+        local pid=$(cat "$GRAPHAISERVER_PID")
+        print_status "healthy" "Process running (PID: $pid)"
+    else
+        print_status "error" "Process not running"
+        print_service_footer
+        return 1
+    fi
+
+    # Port check
+    if check_port $GRAPHAISERVER_PORT; then
+        print_status "healthy" "Port $GRAPHAISERVER_PORT is listening"
+    else
+        print_status "error" "Port $GRAPHAISERVER_PORT is not listening"
+        print_service_footer
+        return 1
+    fi
+
+    # Health endpoint check
+    if check_http_endpoint "$GRAPHAISERVER_HEALTH"; then
+        local response_time=$(get_response_time "$GRAPHAISERVER_HEALTH")
+        local health_info=$(get_service_info "$GRAPHAISERVER_HEALTH")
+        print_status "healthy" "Health endpoint responding (${response_time}s)"
+
+        # Parse health info if available
+        if command -v jq >/dev/null 2>&1 && echo "$health_info" | jq empty >/dev/null 2>&1; then
+            local service_status=$(echo "$health_info" | jq -r '.status // "unknown"')
+            print_status "info" "Service status: $service_status"
+        fi
+    else
+        local status_code=$(get_http_status "$GRAPHAISERVER_HEALTH")
+        print_status "error" "Health endpoint not responding (HTTP $status_code)"
+    fi
+
+    print_service_footer
+    return 0
+}
+
 check_commonui() {
     print_service_header "CommonUI (Streamlit)" "🎨"
 
@@ -342,15 +441,22 @@ show_system_info() {
 show_service_urls() {
     echo -e "${CYAN}🔗 Service URLs${NC}"
     echo -e "${CYAN}──────────────────${NC}"
-    echo "  📋 JobQueue:    http://localhost:$JOBQUEUE_PORT"
-    echo "     • Health:    http://localhost:$JOBQUEUE_PORT/health"
-    echo "     • Docs:      http://localhost:$JOBQUEUE_PORT/docs"
+    echo "  📋 JobQueue:      http://localhost:$JOBQUEUE_PORT"
+    echo "     • Health:      http://localhost:$JOBQUEUE_PORT/health"
+    echo "     • Docs:        http://localhost:$JOBQUEUE_PORT/docs"
     echo ""
-    echo "  ⏰ MyScheduler: http://localhost:$MYSCHEDULER_PORT"
-    echo "     • Health:    http://localhost:$MYSCHEDULER_PORT/health"
-    echo "     • Docs:      http://localhost:$MYSCHEDULER_PORT/docs"
+    echo "  ⏰ MyScheduler:   http://localhost:$MYSCHEDULER_PORT"
+    echo "     • Health:      http://localhost:$MYSCHEDULER_PORT/health"
+    echo "     • Docs:        http://localhost:$MYSCHEDULER_PORT/docs"
     echo ""
-    echo "  🎨 CommonUI:    http://localhost:$COMMONUI_PORT"
+    echo "  🤖 ExpertAgent:   http://localhost:$EXPERTAGENT_PORT"
+    echo "     • Health:      http://localhost:$EXPERTAGENT_PORT/health"
+    echo "     • Docs:        http://localhost:$EXPERTAGENT_PORT/aiagent-api/docs"
+    echo ""
+    echo "  🔄 GraphAiServer: http://localhost:$GRAPHAISERVER_PORT"
+    echo "     • Health:      http://localhost:$GRAPHAISERVER_PORT/health"
+    echo ""
+    echo "  🎨 CommonUI:      http://localhost:$COMMONUI_PORT"
     echo ""
 }
 
@@ -369,6 +475,8 @@ monitor_services() {
 
         check_jobqueue || ((failures++))
         check_myscheduler || ((failures++))
+        check_expertagent || ((failures++))
+        check_graphaiserver || ((failures++))
         check_commonui || ((failures++))
 
         if [[ $failures -eq 0 ]]; then
@@ -462,6 +570,8 @@ main() {
             local failures=0
             check_jobqueue || ((failures++))
             check_myscheduler || ((failures++))
+            check_expertagent || ((failures++))
+            check_graphaiserver || ((failures++))
             check_commonui || ((failures++))
 
             run_integration_tests || true  # Don't fail on integration tests
