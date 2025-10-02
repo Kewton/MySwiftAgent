@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Development override configuration
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 
@@ -82,7 +80,9 @@ services:
       target: development
     volumes:
       # Mount source code for hot-reload
-      - ./commonUI/app:/app/app:ro
+      - ./commonUI/Home.py:/app/Home.py:ro
+      - ./commonUI/core:/app/core:ro
+      - ./commonUI/components:/app/components:ro
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
@@ -92,7 +92,7 @@ services:
       - GRAPHAISERVER_API_URL=http://graphaiserver:8000
       - LOG_LEVEL=DEBUG
       - DEBUG=true
-    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uv", "run", "streamlit", "run", "Home.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.fileWatcherType=poll"]
 
 volumes:
   jobqueue_data_dev:
