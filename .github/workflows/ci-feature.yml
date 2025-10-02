@@ -218,11 +218,14 @@ jobs:
 
       - name: Build Docker image
         working-directory: ./${{ matrix.project }}
-        run: docker build -t ${{ matrix.project }}:test .
+        run: |
+          PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ${PROJECT_LOWER}:test .
 
       - name: Test Docker image
         run: |
-          docker run --rm -d --name ${{ matrix.project }}-test -p 8000:8000 ${{ matrix.project }}:test
+          PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
+          docker run --rm -d --name ${PROJECT_LOWER}-test -p 8000:8000 ${PROJECT_LOWER}:test
           sleep 10
 
           # ヘルスチェック
@@ -238,7 +241,8 @@ jobs:
           RESPONSE_TIME=$(curl -o /dev/null -s -w "%{time_total}" http://localhost:8000/health)
           echo "Health endpoint response time: ${RESPONSE_TIME}s"
 
-          docker stop ${{ matrix.project }}-test
+          PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
+          docker stop ${PROJECT_LOWER}-test
 
   documentation-check:
     name: Documentation Check
