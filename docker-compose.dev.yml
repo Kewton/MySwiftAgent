@@ -83,6 +83,7 @@ services:
       - ./commonUI/Home.py:/app/Home.py:ro
       - ./commonUI/core:/app/core:ro
       - ./commonUI/components:/app/components:ro
+      - ./commonUI/pages:/app/pages:ro
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo

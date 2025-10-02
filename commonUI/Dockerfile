@@ -20,6 +20,7 @@ RUN uv sync --no-dev
 COPY Home.py ./
 COPY core/ ./core/
 COPY components/ ./components/
+COPY pages/ ./pages/
 
 # Health check endpoint - Streamlit health endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
