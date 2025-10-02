@@ -132,6 +132,16 @@ check_dependencies() {
         print_info "uv found: $(uv --version)"
     fi
 
+    # Check npm for Node-based services
+    if [[ -f "$GRAPHAISERVER_DIR/package.json" ]]; then
+        if ! command -v npm &> /dev/null; then
+            print_error "npm not found (required for GraphAiServer)"
+            ((missing_deps++))
+        else
+            print_info "npm found: $(npm --version)"
+        fi
+    fi
+
     # Check curl
     if ! command -v curl &> /dev/null; then
         print_error "curl not found (needed for health checks)"
@@ -139,7 +149,7 @@ check_dependencies() {
     fi
 
     # Check project directories
-    local projects=("jobqueue" "myscheduler" "commonUI")
+    local projects=("jobqueue" "myscheduler" "commonUI" "graphAiServer")
     for project in "${projects[@]}"; do
         if [[ ! -d "$PROJECT_ROOT/$project" ]]; then
             print_error "Project directory not found: $project"
@@ -195,26 +205,68 @@ install_service_deps() {
 
     print_service "📦" "$service" "Installing dependencies..."
 
-    if [[ ! -f "$dir/pyproject.toml" ]]; then
-        print_error "$service: pyproject.toml not found"
+    if [[ ! -d "$dir" ]]; then
+        print_error "$service: Directory not found ($dir)"
         return 1
     fi
 
-    cd "$dir"
+    cd "$dir" || {
+        print_error "$service: Cannot change to directory $dir"
+        return 1
+    }
 
-    # Check if uv sync has been run recently
-    if [[ -f "uv.lock" && -f ".venv/pyvenv.cfg" ]]; then
-        print_info "$service: Dependencies already installed, checking for updates..."
-        uv sync --extra dev >> "$SETUP_LOG" 2>&1 || {
-            print_error "$service: Failed to sync dependencies"
+    if [[ -f "pyproject.toml" ]]; then
+        # Python project handled via uv
+        if [[ -f "uv.lock" && -f ".venv/pyvenv.cfg" ]]; then
+            print_info "$service: Dependencies already installed, checking for updates..."
+            uv sync --extra dev >> "$SETUP_LOG" 2>&1 || {
+                print_error "$service: Failed to sync dependencies"
+                cd "$PROJECT_ROOT"
+                return 1
+            }
+        else
+            print_info "$service: Installing dependencies..."
+            uv sync --extra dev >> "$SETUP_LOG" 2>&1 || {
+                print_error "$service: Failed to install dependencies"
+                cd "$PROJECT_ROOT"
+                return 1
+            }
+        fi
+    elif [[ -f "package.json" ]]; then
+        # Node.js project handled via npm
+        if ! command -v npm &> /dev/null; then
+            print_error "$service: npm not found"
+            cd "$PROJECT_ROOT"
             return 1
-        }
+        fi
+
+        if [[ -d "node_modules" ]]; then
+            print_info "$service: Node dependencies already installed, checking for updates..."
+            npm install >> "$SETUP_LOG" 2>&1 || {
+                print_error "$service: Failed to install Node dependencies"
+                cd "$PROJECT_ROOT"
+                return 1
+            }
+        else
+            print_info "$service: Installing Node dependencies..."
+            if [[ -f "package-lock.json" ]]; then
+                npm ci >> "$SETUP_LOG" 2>&1 || {
+                    print_error "$service: Failed to run npm ci"
+                    cd "$PROJECT_ROOT"
+                    return 1
+                }
+            else
+                npm install >> "$SETUP_LOG" 2>&1 || {
+                    print_error "$service: Failed to run npm install"
+                    cd "$PROJECT_ROOT"
+                    return 1
+                }
+            fi
+        fi
     else
-        print_info "$service: Installing dependencies..."
-        uv sync --extra dev >> "$SETUP_LOG" 2>&1 || {
-            print_error "$service: Failed to install dependencies"
-            return 1
-        }
+        print_error "$service: No supported dependency manifest found (pyproject.toml or package.json)"
+        cd "$PROJECT_ROOT"
+        return 1
     fi
 
     print_success "$service: Dependencies ready"
