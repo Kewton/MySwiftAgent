@@ -38,7 +38,7 @@ jobs:
           HAS_CHANGES="false"
           PROJECT_COUNT=0
 
-          for project in myscheduler jobqueue docs commonUI; do
+          for project in myscheduler jobqueue docs commonUI expertAgent; do
             if [[ -d "$project" ]]; then
               CHANGES=$(git diff HEAD~1 HEAD --name-only | grep "^$project/" || true)
               if [[ -n "$CHANGES" ]]; then
