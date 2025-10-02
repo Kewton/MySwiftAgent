@@ -59,7 +59,7 @@ async def tts_and_upload_drive_api(request: UtilityRequest):
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the utility."
-        )
+        ) from e
 
 
 # search_tool
@@ -76,7 +76,7 @@ async def google_search_by_serper_api(request: SearchUtilityRequest):
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the utility."
-        )
+        ) from e
 
 
 # search_tool
@@ -93,4 +93,4 @@ async def get_overview_by_google_serper_api(request: SearchUtilityRequest):
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the utility."
-        )
+        ) from e

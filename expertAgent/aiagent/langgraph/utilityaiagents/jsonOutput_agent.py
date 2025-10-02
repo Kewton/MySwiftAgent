@@ -69,16 +69,16 @@ async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
             json_content = match.group(1)
             try:
                 parsed_json = json.loads(json_content)
-            except json.JSONDecodeError as e:
-                print(f"JSONDecodeError after regex extraction: {e}")
+            except json.JSONDecodeError as json_err:
+                print(f"JSONDecodeError after regex extraction: {json_err}")
                 raise
-            except KeyError as e:
-                print(f"KeyError: {e}. 'outline' key not found.")
+            except KeyError as key_err:
+                print(f"KeyError: {key_err}. 'outline' key not found.")
                 raise
         else:
             print("Could not extract JSON block using regex.")
             # JSONブロックが見つからない場合のエラーハンドリング
-            raise ValueError("Failed to extract JSON block from LLM response.")
+            raise ValueError("Failed to extract JSON block from LLM response.") from e
 
     return parsed_json
 
@@ -95,14 +95,14 @@ def toParseJson(outline_json):
             json_content = match.group(1)
             try:
                 parsed_json = json.loads(json_content)
-            except json.JSONDecodeError as e:
-                print(f"JSONDecodeError after regex extraction: {e}")
+            except json.JSONDecodeError as json_err:
+                print(f"JSONDecodeError after regex extraction: {json_err}")
                 raise
-            except KeyError as e:
-                print(f"KeyError: {e}. 'outline' key not found.")
+            except KeyError as key_err:
+                print(f"KeyError: {key_err}. 'outline' key not found.")
                 raise
         else:
             print("Could not extract JSON block using regex.")
             # JSONブロックが見つからない場合のエラーハンドリング
-            raise ValueError("Failed to extract JSON block from LLM response.")
+            raise ValueError("Failed to extract JSON block from LLM response.") from e
     return parsed_json

@@ -88,7 +88,7 @@ async def aiagent_graph(request: ExpertAiAgentRequest):
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the agent."
-        )
+        ) from e
 
 
 @router.post(
@@ -126,4 +126,4 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the agent."
-        )
+        ) from e
