@@ -7,7 +7,7 @@ packages = ["app"]
 
 [project]
 name = "expertAgent"
-version = "0.1.0"
+version = "0.1.2"
 description = "Expert Agent Service for MySwiftAgent"
 readme = "README.md"
 requires-python = ">=3.12"
