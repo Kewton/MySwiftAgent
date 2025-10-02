@@ -232,9 +232,19 @@ jobs:
           echo "🔍 Testing health endpoint..."
           curl -f http://localhost:8000/health || exit 1
 
-          # API基本機能テスト
+          # API基本機能テスト（プロジェクトごとにカスタマイズ）
           echo "🔍 Testing API endpoints..."
-          curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+          if [[ "${{ matrix.project }}" == "expertAgent" ]]; then
+            # expertAgent specific endpoints
+            curl -f http://localhost:8000/ || exit 1
+            curl -f http://localhost:8000/aiagent-api/v1/ || exit 1
+          elif [[ "${{ matrix.project }}" == "myscheduler" ]]; then
+            # myscheduler specific endpoints
+            curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+          elif [[ "${{ matrix.project }}" == "jobqueue" ]]; then
+            # jobqueue specific endpoints
+            curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+          fi
 
           # レスポンス時間テスト
           echo "🔍 Testing response time..."
