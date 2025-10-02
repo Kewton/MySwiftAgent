@@ -88,7 +88,7 @@ def execute_http_job(
 
                     result["status_code"] = response.status_code
                     result["response_size"] = len(response.content) if response.content else 0
-                    
+
                     # レスポンスボディを保存
                     try:
                         result["response_body"] = response.json()
