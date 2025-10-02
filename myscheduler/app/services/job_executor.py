@@ -61,6 +61,7 @@ def execute_http_job(
             "success": False,
             "status_code": None,
             "response_size": None,
+            "response_body": None,
             "error_message": None,
             "attempts": 0,
         }
@@ -87,6 +88,13 @@ def execute_http_job(
 
                     result["status_code"] = response.status_code
                     result["response_size"] = len(response.content) if response.content else 0
+                    
+                    # レスポンスボディを保存
+                    try:
+                        result["response_body"] = response.json()
+                    except Exception:
+                        # JSONでない場合はテキストとして保存
+                        result["response_body"] = response.text
 
                     # 4xxエラーはリトライしない
                     if 400 <= response.status_code < 500:

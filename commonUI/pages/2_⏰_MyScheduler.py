@@ -175,6 +175,35 @@ def render_scheduler_creation_form() -> None:
         st.divider()
         st.subheader("⚙️ Job Configuration")
         
+        # Timeout and retry configuration
+        col1, col2 = st.columns(2)
+        with col1:
+            timeout = st.number_input(
+                "Timeout (seconds)",
+                min_value=10,
+                max_value=3600,
+                value=300,
+                help="HTTP request timeout in seconds"
+            )
+        
+        with col2:
+            max_retries = st.number_input(
+                "Max Retries",
+                min_value=0,
+                max_value=10,
+                value=3,
+                help="Maximum number of retry attempts on failure"
+            )
+        
+        retry_backoff = st.number_input(
+            "Retry Backoff (seconds)",
+            min_value=0.1,
+            max_value=60.0,
+            value=2.0,
+            step=0.1,
+            help="Delay between retry attempts (exponential backoff)"
+        )
+        
         # Function-specific argument hints
         if function_display_name == "execute_http_job":
             st.info("💡 **execute_http_job** requires URL and method as Arguments. Optional parameters can be set in Keyword Arguments.")
@@ -267,6 +296,11 @@ def render_scheduler_creation_form() -> None:
                 import json
                 job_args = json.loads(args) if args.strip() else []
                 job_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+
+                # Add timeout and retry settings to kwargs
+                job_kwargs["timeout_sec"] = float(timeout)
+                job_kwargs["max_retries"] = int(max_retries)
+                job_kwargs["retry_backoff_sec"] = float(retry_backoff)
 
                 # Build API configuration if any API settings are provided
                 api_config = {}
@@ -596,8 +630,11 @@ def transform_job_data_for_api(job_data: Dict[str, Any]) -> Dict[str, Any]:
         "replace_existing": job_data.get("replace_existing", False)
     }
     
-    # Remove None values
-    transformed_data = {k: v for k, v in transformed_data.items() if v is not None}
+    # Remove None values except for 'body' which should be preserved even if None
+    transformed_data = {
+        k: v for k, v in transformed_data.items() 
+        if v is not None or k == "body"
+    }
     
     # Handle schedule configuration based on trigger type
     trigger = job_data.get("trigger", "cron")

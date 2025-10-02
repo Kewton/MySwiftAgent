@@ -332,7 +332,8 @@ def create_job(job_data: Dict[str, Any]) -> None:
                         "url": api_config_data.get("url", ""),
                         "headers": api_config_data.get("headers"),
                         "params": api_config_data.get("query_params"),  # Rename query_params to params
-                        "body": api_config_data.get("body")
+                        "body": api_config_data.get("body"),
+                        "timeout_sec": job_data.get("timeout", 30)  # Include timeout from job_data
                     }
                     
                     # Remove None values
