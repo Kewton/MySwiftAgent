@@ -37,6 +37,8 @@ MySwiftAgentは5つのマイクロサービスで構成されています：
 | **GraphAiServer** | 8004 | グラフAIワークフローサービス | TypeScript/Node.js |
 | **CommonUI** | 8501 | Webインターフェース | Python/Streamlit |
 
+> ℹ️ ローカル開発スクリプト（`./scripts/dev-start.sh`）も同じポートを使用します。`./scripts/quick-start.sh` を併用する場合は、デフォルトで **8101〜8104** と **8601** の代替ポートを利用するため Docker Compose と競合しません。必要に応じて `JOBQUEUE_PORT=8111 ./scripts/quick-start.sh` のように環境変数でポートを上書きできます。
+
 ### サービス間の依存関係
 
 ```mermaid
@@ -339,8 +341,8 @@ Error: bind: address already in use
 
 **解決方法**:
 ```bash
-# 使用中のポートを確認（必要に応じて他ポートも追加）
-lsof -i :8001 -i :8002 -i :8003 -i :8004 -i :8501
+# 使用中のポートを確認（Docker既定ポート + Quick Start 代替ポート）
+lsof -i :8001 -i :8002 -i :8003 -i :8004 -i :8501 -i :8101 -i :8102 -i :8103 -i :8104 -i :8601
 
 # ローカル開発スクリプトを利用している場合は停止
 ./scripts/dev-start.sh stop  # または ./scripts/quick-start.sh stop
