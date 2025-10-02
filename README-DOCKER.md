@@ -339,9 +339,11 @@ Error: bind: address already in use
 
 **解決方法**:
 ```bash
-# 使用中のポートを確認
-lsof -i :8001
-lsof -i :8002
+# 使用中のポートを確認（必要に応じて他ポートも追加）
+lsof -i :8001 -i :8002 -i :8003 -i :8004 -i :8501
+
+# ローカル開発スクリプトを利用している場合は停止
+./scripts/dev-start.sh stop  # または ./scripts/quick-start.sh stop
 
 # 競合しているプロセスを停止してから再起動
 docker compose down
