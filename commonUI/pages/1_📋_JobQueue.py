@@ -5,6 +5,15 @@ Streamlit page for managing job queue operations including job creation,
 monitoring, and execution control.
 """
 
+from pathlib import Path
+
+# IMPORTANT: Load .env BEFORE importing config
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
