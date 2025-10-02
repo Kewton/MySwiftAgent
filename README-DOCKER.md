@@ -48,11 +48,64 @@ graph TD
     C --> B
 ```
 
+## イメージのバージョン管理
+
+MySwiftAgentでは、各サービスのDockerイメージにバージョンタグを自動的に付与します。バージョンは各サービスの `pyproject.toml` (Python) または `package.json` (TypeScript) から読み取られます。
+
+### イメージのビルド
+
+専用のビルドスクリプトを使用してバージョンタグ付きイメージをビルドできます：
+
+```bash
+# 全サービスをビルド
+./scripts/build-images.sh
+
+# 特定のサービスのみビルド
+./scripts/build-images.sh --service jobqueue
+
+# レジストリにプッシュ
+./scripts/build-images.sh --push --registry ghcr.io/your-org
+
+# ヘルプを表示
+./scripts/build-images.sh --help
+```
+
+**生成されるイメージタグ**:
+- `myswiftagent-jobqueue:0.1.0` (バージョン固定)
+- `myswiftagent-jobqueue:latest` (最新版)
+
+### バージョンの確認
+
+```bash
+# イメージのバージョンを確認
+docker images | grep myswiftagent
+
+# 実行中のコンテナのイメージ情報を確認
+docker compose ps --format json | jq -r '.[] | "\(.Service): \(.Image)"'
+```
+
+### 特定バージョンの使用
+
+`.env`ファイルで使用するバージョンを指定できます：
+
+```bash
+# .env
+JOBQUEUE_VERSION=0.1.0
+MYSCHEDULER_VERSION=0.2.0
+EXPERTAGENT_VERSION=0.1.2
+```
+
+または、環境変数で直接指定：
+
+```bash
+JOBQUEUE_VERSION=0.1.1 docker compose up -d jobqueue
+```
+
 ## 基本的な使い方
 
 ### 1. 環境変数の設定
 
-`.env.example`をコピーして`.env`ファイルを作成し、必要なAPIキーを設定します：
+`.env.example`をコピーして`.env`ファイルを作成し、必要なAPIキーとバージョンを設定します：
 
 ```bash
 cp .env.example .env

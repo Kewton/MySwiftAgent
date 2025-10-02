@@ -1,9 +1,13 @@
 services:
   # JobQueue Service - Job queue management API
   jobqueue:
+    image: myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}
     build:
       context: ./jobqueue
       dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}"
+        - "myswiftagent-jobqueue:latest"
     container_name: myswiftagent-jobqueue
     ports:
       - "8001:8000"
@@ -25,9 +29,13 @@ services:
 
   # MyScheduler Service - Job scheduling service
   myscheduler:
+    image: myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}
     build:
       context: ./myscheduler
       dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}"
+        - "myswiftagent-myscheduler:latest"
     container_name: myswiftagent-myscheduler
     ports:
       - "8002:8000"
@@ -50,9 +58,13 @@ services:
 
   # ExpertAgent Service - AI agent service
   expertagent:
+    image: myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}
     build:
       context: ./expertAgent
       dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}"
+        - "myswiftagent-expertagent:latest"
     container_name: myswiftagent-expertagent
     ports:
       - "8003:8000"
@@ -75,9 +87,13 @@ services:
 
   # GraphAiServer Service - Graph AI workflow service
   graphaiserver:
+    image: myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}
     build:
       context: ./graphAiServer
       dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}"
+        - "myswiftagent-graphaiserver:latest"
     container_name: myswiftagent-graphaiserver
     ports:
       - "8004:8000"
@@ -100,9 +116,13 @@ services:
 
   # CommonUI Service - Web interface (Streamlit)
   commonui:
+    image: myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}
     build:
       context: ./commonUI
       dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}"
+        - "myswiftagent-commonui:latest"
     container_name: myswiftagent-commonui
     ports:
       - "8501:8501"
