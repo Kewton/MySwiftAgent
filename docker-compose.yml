@@ -16,7 +16,7 @@ services:
       - JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db
       - TZ=Asia/Tokyo
     volumes:
-      - jobqueue_data:/app/data
+      - ./docker-compose-data/jobqueue:/app/data
     networks:
       - myswiftagent
     healthcheck:
@@ -43,6 +43,9 @@ services:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
       - JOBQUEUE_API_URL=http://jobqueue:8000
+      - DATABASE_URL=sqlite:///./data/jobs.db
+    volumes:
+      - ./docker-compose-data/myscheduler:/app/data
     depends_on:
       jobqueue:
         condition: service_healthy
@@ -75,6 +78,8 @@ services:
       # - OPENAI_API_KEY=${OPENAI_API_KEY}
       # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       # - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./docker-compose-data/expertagent/token:/app/token
     networks:
       - myswiftagent
     healthcheck:
@@ -104,6 +109,8 @@ services:
       # Add your API keys here or use .env file
       # - OPENAI_API_KEY=${OPENAI_API_KEY}
       # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./docker-compose-data/graphaiserver/config:/app/config
     networks:
       - myswiftagent
     healthcheck:
@@ -156,7 +163,3 @@ networks:
   myswiftagent:
     driver: bridge
     name: myswiftagent-network
-
-volumes:
-  jobqueue_data:
-    name: myswiftagent-jobqueue-data

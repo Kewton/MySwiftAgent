@@ -31,7 +31,7 @@ check-all: lint type-check test ## Run all checks (lint, type-check, test)
 clean: ## Clean cache files
 	find . -type d -name "__pycache__" -delete
 	find . -type f -name "*.pyc" -delete
-	rm -f jobs.db
+	rm -f data/jobs.db
 
 example: ## Run usage example
 	uv run python example_usage.py

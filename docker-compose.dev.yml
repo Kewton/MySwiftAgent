@@ -27,10 +27,12 @@ services:
     volumes:
       # Mount source code for hot-reload
       - ./myscheduler/app:/app/app:ro
+      - myscheduler_data_dev:/app/data
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
       - JOBQUEUE_API_URL=http://jobqueue:8000
+      - DATABASE_URL=sqlite:///./data/jobs.db
       - LOG_LEVEL=DEBUG
       - DEBUG=true
     command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
@@ -98,3 +100,5 @@ services:
 volumes:
   jobqueue_data_dev:
     name: myswiftagent-jobqueue-data-dev
+  myscheduler_data_dev:
+    name: myswiftagent-myscheduler-data-dev

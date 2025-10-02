@@ -374,6 +374,7 @@ test*.db
 
 # Service runtime data
 myscheduler/jobs.db*
+myscheduler/data/
 jobqueue/data/
 commonUI/.streamlit/secrets.toml
 
@@ -524,3 +525,8 @@ Cargo.lock
 # workspace files   
 # ===================================================================
 workspace/*
+
+# ===================================================================
+# Docker Compose
+# ===================================================================
+docker-compose-data/

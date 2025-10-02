@@ -226,6 +226,7 @@ PYTHONPATH=/app
 ```yaml
 JOBQUEUE_API_URL=http://jobqueue:8000
 PYTHONPATH=/app
+DATABASE_URL=sqlite:///./data/jobs.db
 ```
 
 #### CommonUI
@@ -308,23 +309,33 @@ docker volume ls | grep myswiftagent
 
 # ボリュームの詳細情報
 docker volume inspect myswiftagent-jobqueue-data
+docker volume inspect myswiftagent-myscheduler-data
 ```
 
 ### データのバックアップ
 
 ```bash
 # JobQueueのデータベースをバックアップ
-docker compose exec jobqueue tar czf /tmp/backup.tar.gz -C /app/data .
-docker compose cp jobqueue:/tmp/backup.tar.gz ./backup-$(date +%Y%m%d).tar.gz
+docker compose exec jobqueue tar czf /tmp/jobqueue-backup.tar.gz -C /app/data .
+docker compose cp jobqueue:/tmp/jobqueue-backup.tar.gz ./jobqueue-backup-$(date +%Y%m%d).tar.gz
+
+# MySchedulerのデータベースをバックアップ
+docker compose exec myscheduler tar czf /tmp/myscheduler-backup.tar.gz -C /app/data .
+docker compose cp myscheduler:/tmp/myscheduler-backup.tar.gz ./myscheduler-backup-$(date +%Y%m%d).tar.gz
 ```
 
 ### データのリストア
 
 ```bash
-# バックアップを展開
-docker compose cp ./backup-20250101.tar.gz jobqueue:/tmp/backup.tar.gz
-docker compose exec jobqueue tar xzf /tmp/backup.tar.gz -C /app/data
+# JobQueueのバックアップを展開
+docker compose cp ./jobqueue-backup-20250101.tar.gz jobqueue:/tmp/jobqueue-backup.tar.gz
+docker compose exec jobqueue tar xzf /tmp/jobqueue-backup.tar.gz -C /app/data
 docker compose restart jobqueue
+
+# MySchedulerのバックアップを展開
+docker compose cp ./myscheduler-backup-20250101.tar.gz myscheduler:/tmp/myscheduler-backup.tar.gz
+docker compose exec myscheduler tar xzf /tmp/myscheduler-backup.tar.gz -C /app/data
+docker compose restart myscheduler
 ```
 
 ## トラブルシューティング
