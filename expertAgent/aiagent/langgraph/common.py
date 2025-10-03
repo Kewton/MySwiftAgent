@@ -64,8 +64,8 @@ async def make_graph(
     mcp_client = MultiServerMCPClient(
         {
             "my-mcp-tool": {
-                "command": "python",
-                "args": ["-m", _mcpmodule],
+                "command": "uv",
+                "args": ["run", "python", "-m", _mcpmodule],
                 "transport": "stdio",
             }
         }
@@ -109,8 +109,8 @@ async def make_utility_graph(
     mcp_client = MultiServerMCPClient(
         {
             "my-mcp-tool": {
-                "command": "python",
-                "args": ["-m", _mcpmodule],
+                "command": "uv",
+                "args": ["run", "python", "-m", _mcpmodule],
                 "transport": "stdio",
             }
         }

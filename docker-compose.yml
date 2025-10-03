@@ -75,9 +75,11 @@ services:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
       # Add your API keys here or use .env file
-      # - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SERPER_API_KEY=${SERPER_API_KEY}
+      - GRAPH_AGENT_MODEL=${GRAPH_AGENT_MODEL:-gemini-2.5-flash}
     volumes:
       - ./docker-compose-data/expertagent/token:/app/token
     networks:
@@ -106,9 +108,10 @@ services:
       - NODE_ENV=production
       - PORT=8000
       - TZ=Asia/Tokyo
+      - MODEL_BASE_PATH=/app/config/graphai/
       # Add your API keys here or use .env file
-      # - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - ./docker-compose-data/graphaiserver/config:/app/config
     networks:
