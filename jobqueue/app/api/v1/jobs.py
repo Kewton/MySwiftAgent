@@ -115,6 +115,35 @@ async def cancel_job(
     return JobResponse(job_id=job.id, status=job.status)
 
 
+@router.post("/jobs/{job_id}/retry", response_model=JobResponse)
+async def retry_job(
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> JobResponse:
+    """Retry a failed job."""
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status != JobStatus.FAILED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only failed jobs can be retried. Current status: {job.status}",
+        )
+
+    # Reset job status for retry
+    job.status = JobStatus.QUEUED
+    job.attempt = 0
+    job.started_at = None
+    job.finished_at = None
+    job.next_attempt_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(job)
+
+    return JobResponse(job_id=job.id, status=job.status)
+
+
 @router.get("/jobs", response_model=JobList)
 async def list_jobs(
     status: JobStatus | None = Query(None, description="Filter by job status"),

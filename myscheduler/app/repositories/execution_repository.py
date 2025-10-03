@@ -15,6 +15,8 @@ class ExecutionRepository:
     """実行履歴リポジトリ"""
 
     def __init__(self):
+        from ..db.session import _ensure_sqlite_directory
+        _ensure_sqlite_directory(settings.database_url)
         self.engine = create_engine(settings.database_url)
         Base.metadata.create_all(self.engine)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)

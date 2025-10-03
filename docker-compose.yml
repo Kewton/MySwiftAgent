@@ -1,0 +1,168 @@
+services:
+  # JobQueue Service - Job queue management API
+  jobqueue:
+    image: myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}
+    build:
+      context: ./jobqueue
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}"
+        - "myswiftagent-jobqueue:latest"
+    container_name: myswiftagent-jobqueue
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHONPATH=/app
+      - JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./docker-compose-data/jobqueue:/app/data
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # MyScheduler Service - Job scheduling service
+  myscheduler:
+    image: myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}
+    build:
+      context: ./myscheduler
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}"
+        - "myswiftagent-myscheduler:latest"
+    container_name: myswiftagent-myscheduler
+    ports:
+      - "8002:8000"
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      - JOBQUEUE_API_URL=http://jobqueue:8000
+      - DATABASE_URL=sqlite:///./data/jobs.db
+    volumes:
+      - ./docker-compose-data/myscheduler:/app/data
+    depends_on:
+      jobqueue:
+        condition: service_healthy
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ExpertAgent Service - AI agent service
+  expertagent:
+    image: myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}
+    build:
+      context: ./expertAgent
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}"
+        - "myswiftagent-expertagent:latest"
+    container_name: myswiftagent-expertagent
+    ports:
+      - "8003:8000"
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      # Add your API keys here or use .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SERPER_API_KEY=${SERPER_API_KEY}
+      - GRAPH_AGENT_MODEL=${GRAPH_AGENT_MODEL:-gemini-2.5-flash}
+    volumes:
+      - ./docker-compose-data/expertagent/token:/app/token
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # GraphAiServer Service - Graph AI workflow service
+  graphaiserver:
+    image: myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}
+    build:
+      context: ./graphAiServer
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}"
+        - "myswiftagent-graphaiserver:latest"
+    container_name: myswiftagent-graphaiserver
+    ports:
+      - "8004:8000"
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - TZ=Asia/Tokyo
+      - MODEL_BASE_PATH=/app/config/graphai/
+      # Add your API keys here or use .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./docker-compose-data/graphaiserver/config:/app/config
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # CommonUI Service - Web interface (Streamlit)
+  commonui:
+    image: myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}
+    build:
+      context: ./commonUI
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}"
+        - "myswiftagent-commonui:latest"
+    container_name: myswiftagent-commonui
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      - JOBQUEUE_API_URL=http://jobqueue:8000
+      - MYSCHEDULER_API_URL=http://myscheduler:8000
+      - EXPERTAGENT_API_URL=http://expertagent:8000
+      - GRAPHAISERVER_API_URL=http://graphaiserver:8000
+    depends_on:
+      jobqueue:
+        condition: service_healthy
+      myscheduler:
+        condition: service_healthy
+      expertagent:
+        condition: service_healthy
+      graphaiserver:
+        condition: service_healthy
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  myswiftagent:
+    driver: bridge
+    name: myswiftagent-network

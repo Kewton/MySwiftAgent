@@ -150,7 +150,7 @@ Executes a custom GraphAI workflow with user input.
 **Example:**
 ```bash
 # Basic example
-curl -X POST http://localhost:8000/api/v1/myagent \
+curl -X POST http://localhost:8104/api/v1/myagent \
   -H "Content-Type: application/json" \
   -d '{
     "user_input": "GraphAIについて教えて",

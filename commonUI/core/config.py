@@ -37,12 +37,12 @@ class Config:
         """Load configuration from environment and Streamlit secrets."""
         # Try Streamlit secrets first, then environment variables
         self.jobqueue = APIConfig(
-            base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8001"),
+            base_url=self._get_setting("JOBQUEUE_API_URL", "http://localhost:8001"),
             token=self._get_setting("JOBQUEUE_API_TOKEN", "")
         )
 
         self.myscheduler = APIConfig(
-            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8003"),
+            base_url=self._get_setting("MYSCHEDULER_API_URL", "http://localhost:8002"),
             token=self._get_setting("MYSCHEDULER_API_TOKEN", "")
         )
 

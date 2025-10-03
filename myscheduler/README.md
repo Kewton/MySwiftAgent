@@ -75,7 +75,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
 TZ=Asia/Tokyo
 
 # データベースURL（デフォルト: SQLite）
-DATABASE_URL=sqlite:///./jobs.db
+DATABASE_URL=sqlite:///./data/jobs.db
 
 # ログレベル（デフォルト: INFO）
 LOG_LEVEL=INFO
@@ -303,7 +303,7 @@ curl http://localhost:8003/health
 
 ### スケジューラ設定
 - **タイムゾーン**: `AsyncIOScheduler(timezone=Asia/Tokyo)` でタイムゾーン固定
-- **永続化**: `SQLAlchemyJobStore(url="sqlite:///jobs.db")`
+- **永続化**: `SQLAlchemyJobStore(url="sqlite:///./data/jobs.db")`
 - **同時実行抑制**: `max_instances=1`
 - **ミスファイア**: `misfire_grace_time` で許容秒数を設定
 - **コアレッシング**: `coalesce=True` で積み残しを1回に圧縮
@@ -446,7 +446,7 @@ MySchedulerは[CommonUI](../commonUI/README.md)と統合されており、Web UI
 - **解決**: コンテナ環境変数 `TZ=Asia/Tokyo` を確認
 
 #### ジョブが復元されない
-- **原因**: SQLiteファイル（jobs.db）のパス・権限問題
+- **原因**: SQLiteファイル（data/jobs.db）のパス・権限問題
 - **解決**: データベースファイルの権限・マウント状況を確認
 
 #### 外部APIが失敗し続ける
