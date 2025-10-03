@@ -198,6 +198,7 @@ cython_debug/
 jobs.db*
 scheduler.db*
 schedules.db*
+data/
 
 # Job execution history
 execution_history/

@@ -5,6 +5,15 @@ Streamlit page for managing scheduled jobs including cron, interval,
 and date-based scheduling with comprehensive monitoring.
 """
 
+from pathlib import Path
+
+# IMPORTANT: Load .env BEFORE importing config
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -39,10 +48,105 @@ def initialize_session_state() -> None:
 def render_scheduler_creation_form() -> None:
     """Render job creation form for scheduler management."""
     st.subheader("🕐 Schedule Configuration")
-    
+
     # Move the cron schedule config outside the form to enable real-time updates
     render_cron_schedule_config()
-    
+
+    st.divider()
+
+    # Move HTTP method selection outside the form to enable real-time conditional rendering
+    st.subheader("🔗 API Configuration (Optional)")
+    st.caption("Configure API settings if this scheduled job needs to make external API calls")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        api_url = st.text_input(
+            "🌐 API Endpoint URL",
+            key="api_url_outside",
+            placeholder="https://api.example.com/v1/endpoint",
+            help="Target API endpoint URL"
+        )
+    with col2:
+        api_method = st.selectbox(
+            "📡 HTTP Method",
+            ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            key="api_method_outside",
+            index=1,  # Default to POST
+            help="HTTP method"
+        )
+
+    # Store in session state for form access
+    st.session_state["current_api_method"] = api_method
+    st.session_state["current_api_url"] = api_url
+
+    # Headers configuration (outside form for consistency)
+    st.subheader("📋 Request Headers")
+    st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
+    api_headers = st.text_area(
+        "Headers (JSON format)",
+        key="api_headers_outside",
+        placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
+        help="HTTP headers in JSON format - commonly used for authentication and content type specification",
+        height=100
+    )
+    st.session_state["current_api_headers"] = api_headers
+
+    # Query parameters (for GET/DELETE) - conditional rendering works outside form
+    if api_method in ["GET", "DELETE"]:
+        st.subheader("🔍 URL Query Parameters")
+        st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
+        api_query_params = st.text_area(
+            "Query Parameters (JSON format)",
+            key="api_query_params_outside",
+            placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
+            help="Query parameters in JSON format - will be appended to the URL as ?key=value",
+            height=80
+        )
+        st.session_state["current_api_query_params"] = api_query_params
+    else:
+        st.session_state["current_api_query_params"] = ""
+
+    # Request body (for POST/PUT/PATCH) - conditional rendering works outside form
+    if api_method in ["POST", "PUT", "PATCH"]:
+        st.subheader("📤 Request Body Data")
+        st.caption("Data to send in the request body")
+        body_type = st.selectbox(
+            "Body Data Type",
+            ["JSON", "Form Data", "Raw Text"],
+            key="body_type_outside",
+            help="Format of the request body data"
+        )
+
+        if body_type == "JSON":
+            api_body = st.text_area(
+                "JSON Body Data",
+                key="api_body_outside",
+                placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
+                help="JSON data to send in the request body",
+                height=120
+            )
+        elif body_type == "Form Data":
+            api_body = st.text_area(
+                "Form Fields Data (JSON format)",
+                key="api_body_outside",
+                placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
+                help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
+                height=120
+            )
+        else:  # Raw Text
+            api_body = st.text_area(
+                "Raw Text Body",
+                key="api_body_outside",
+                placeholder="Plain text content to send as request body",
+                help="Raw text content for request body",
+                height=120
+            )
+        st.session_state["current_api_body"] = api_body
+        st.session_state["current_body_type"] = body_type
+    else:
+        st.session_state["current_api_body"] = ""
+        st.session_state["current_body_type"] = "JSON"
+
     st.divider()
 
     with st.form("scheduler_creation_form"):
@@ -54,7 +158,7 @@ def render_scheduler_creation_form() -> None:
             # Generate unique default job_id
             import uuid
             default_job_id = f"job_{uuid.uuid4().hex[:8]}"
-            
+
             job_id = st.text_input(
                 "Job ID*",
                 value=default_job_id,
@@ -72,13 +176,13 @@ def render_scheduler_creation_form() -> None:
             available_functions = {
                 "execute_http_job": "app.services.job_executor.execute_http_job"
             }
-            
+
             function_display_name = st.selectbox(
                 "Function*",
                 options=list(available_functions.keys()),
                 help="Select the function to execute"
             )
-            
+
             # Get the full module path for the selected function
             job_function = available_functions[function_display_name]
 
@@ -92,88 +196,46 @@ def render_scheduler_creation_form() -> None:
         if function_display_name == "execute_http_job":
             st.info("🌐 **execute_http_job**: Executes HTTP requests to external APIs with retry support and error handling.")
 
-        # API Configuration Fields (always displayed for all job types)
-        st.divider()
-        st.subheader("🔗 API Configuration (Optional)")
-        st.caption("Configure API settings if this scheduled job needs to make external API calls")
-        
-        # API URL and Method
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            api_url = st.text_input(
-                "🌐 API Endpoint URL",
-                placeholder="https://api.example.com/v1/endpoint",
-                help="Target API endpoint URL"
-            )
-        with col2:
-            api_method = st.selectbox(
-                "📡 HTTP Method",
-                ["GET", "POST", "PUT", "PATCH", "DELETE"],
-                index=0,
-                help="HTTP method"
-            )
-        
-        # Headers configuration
-        st.subheader("📋 Request Headers")
-        st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
-        api_headers = st.text_area(
-            "Headers (JSON format)",
-            placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
-            help="HTTP headers in JSON format - commonly used for authentication and content type specification",
-            height=100
-        )
-        
-        # Query parameters (for GET/DELETE)
-        if api_method in ["GET", "DELETE"]:
-            st.subheader("🔍 URL Query Parameters")
-            st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
-            api_query_params = st.text_area(
-                "Query Parameters (JSON format)",
-                placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
-                help="Query parameters in JSON format - will be appended to the URL as ?key=value",
-                height=80
-            )
-        else:
-            api_query_params = ""
-        
-        # Request body (for POST/PUT/PATCH)
-        if api_method in ["POST", "PUT", "PATCH"]:
-            st.subheader("📤 Request Body Data")
-            st.caption("Data to send in the request body")
-            body_type = st.selectbox(
-                "Body Data Type",
-                ["JSON", "Form Data", "Raw Text"],
-                help="Format of the request body data"
-            )
-            
-            if body_type == "JSON":
-                api_body = st.text_area(
-                    "JSON Body Data",
-                    placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
-                    help="JSON data to send in the request body",
-                    height=120
-                )
-            elif body_type == "Form Data":
-                api_body = st.text_area(
-                    "Form Fields Data (JSON format)",
-                    placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
-                    help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
-                    height=120
-                )
-            else:  # Raw Text
-                api_body = st.text_area(
-                    "Raw Text Body",
-                    placeholder="Plain text content to send as request body",
-                    help="Raw text content for request body",
-                    height=120
-                )
-        else:
-            api_body = ""
-            body_type = "JSON"
+        # Get API configuration from session state (set outside form)
+        api_method = st.session_state.get("current_api_method", "POST")
+        api_url = st.session_state.get("current_api_url", "")
+        api_headers = st.session_state.get("current_api_headers", "")
+        api_query_params = st.session_state.get("current_api_query_params", "")
+        api_body = st.session_state.get("current_api_body", "")
+        body_type = st.session_state.get("current_body_type", "JSON")
 
         # Job arguments
         st.divider()
         st.subheader("⚙️ Job Configuration")
+        
+        # Timeout and retry configuration
+        col1, col2 = st.columns(2)
+        with col1:
+            timeout = st.number_input(
+                "Timeout (seconds)",
+                min_value=10,
+                max_value=3600,
+                value=300,
+                help="HTTP request timeout in seconds"
+            )
+        
+        with col2:
+            max_retries = st.number_input(
+                "Max Retries",
+                min_value=0,
+                max_value=10,
+                value=3,
+                help="Maximum number of retry attempts on failure"
+            )
+        
+        retry_backoff = st.number_input(
+            "Retry Backoff (seconds)",
+            min_value=0.1,
+            max_value=60.0,
+            value=2.0,
+            step=0.1,
+            help="Delay between retry attempts (exponential backoff)"
+        )
         
         # Function-specific argument hints
         if function_display_name == "execute_http_job":
@@ -267,6 +329,11 @@ def render_scheduler_creation_form() -> None:
                 import json
                 job_args = json.loads(args) if args.strip() else []
                 job_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+
+                # Add timeout and retry settings to kwargs
+                job_kwargs["timeout_sec"] = float(timeout)
+                job_kwargs["max_retries"] = int(max_retries)
+                job_kwargs["retry_backoff_sec"] = float(retry_backoff)
 
                 # Build API configuration if any API settings are provided
                 api_config = {}
@@ -596,8 +663,11 @@ def transform_job_data_for_api(job_data: Dict[str, Any]) -> Dict[str, Any]:
         "replace_existing": job_data.get("replace_existing", False)
     }
     
-    # Remove None values
-    transformed_data = {k: v for k, v in transformed_data.items() if v is not None}
+    # Remove None values except for 'body' which should be preserved even if None
+    transformed_data = {
+        k: v for k, v in transformed_data.items() 
+        if v is not None or k == "body"
+    }
     
     # Handle schedule configuration based on trigger type
     trigger = job_data.get("trigger", "cron")

@@ -12,6 +12,7 @@ RUN npm ci
 
 # Copy source code
 COPY src/ ./src/
+COPY config/ ./config/
 
 # Build TypeScript
 RUN npm run build
@@ -27,6 +28,7 @@ RUN npm ci --only=production
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/config ./config
 
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
