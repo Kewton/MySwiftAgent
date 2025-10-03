@@ -5,6 +5,15 @@ Streamlit page for managing job queue operations including job creation,
 monitoring, and execution control.
 """
 
+from pathlib import Path
+
+# IMPORTANT: Load .env BEFORE importing config
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -38,6 +47,101 @@ def initialize_session_state() -> None:
 def render_job_creation_form() -> None:
     """Render job creation form."""
     st.subheader("🆕 Create New Job")
+
+    # Move API configuration outside the form to enable real-time conditional rendering
+    st.subheader("🔗 API Configuration (Optional)")
+    st.caption("Configure API settings if this job needs to make external API calls")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        api_url = st.text_input(
+            "🌐 API Endpoint URL",
+            key="jobqueue_api_url_outside",
+            placeholder="https://api.example.com/v1/endpoint",
+            help="Target API endpoint URL"
+        )
+    with col2:
+        api_method = st.selectbox(
+            "📡 HTTP Method",
+            ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            key="jobqueue_api_method_outside",
+            index=1,  # Default to POST
+            help="HTTP method"
+        )
+
+    # Store in session state for form access
+    st.session_state["jobqueue_current_api_method"] = api_method
+    st.session_state["jobqueue_current_api_url"] = api_url
+
+    # Headers configuration (outside form for consistency)
+    st.subheader("📋 Request Headers")
+    st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
+    api_headers = st.text_area(
+        "Headers (JSON format)",
+        key="jobqueue_api_headers_outside",
+        placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
+        help="HTTP headers in JSON format - commonly used for authentication and content type specification",
+        height=100
+    )
+    st.session_state["jobqueue_current_api_headers"] = api_headers
+
+    # Query parameters (for GET/DELETE) - conditional rendering works outside form
+    if api_method in ["GET", "DELETE"]:
+        st.subheader("🔍 URL Query Parameters")
+        st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
+        api_query_params = st.text_area(
+            "Query Parameters (JSON format)",
+            key="jobqueue_api_query_params_outside",
+            placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
+            help="Query parameters in JSON format - will be appended to the URL as ?key=value",
+            height=80
+        )
+        st.session_state["jobqueue_current_api_query_params"] = api_query_params
+    else:
+        st.session_state["jobqueue_current_api_query_params"] = ""
+
+    # Request body (for POST/PUT/PATCH) - conditional rendering works outside form
+    if api_method in ["POST", "PUT", "PATCH"]:
+        st.subheader("📤 Request Body Data")
+        st.caption("Data to send in the request body")
+        body_type = st.selectbox(
+            "Body Data Type",
+            ["JSON", "Form Data", "Raw Text"],
+            key="jobqueue_body_type_outside",
+            help="Format of the request body data"
+        )
+
+        if body_type == "JSON":
+            api_body = st.text_area(
+                "JSON Body Data",
+                key="jobqueue_api_body_outside",
+                placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
+                help="JSON data to send in the request body",
+                height=120
+            )
+        elif body_type == "Form Data":
+            api_body = st.text_area(
+                "Form Fields Data (JSON format)",
+                key="jobqueue_api_body_outside",
+                placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
+                help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
+                height=120
+            )
+        else:  # Raw Text
+            api_body = st.text_area(
+                "Raw Text Body",
+                key="jobqueue_api_body_outside",
+                placeholder="Plain text content to send as request body",
+                help="Raw text content for request body",
+                height=120
+            )
+        st.session_state["jobqueue_current_api_body"] = api_body
+        st.session_state["jobqueue_current_body_type"] = body_type
+    else:
+        st.session_state["jobqueue_current_api_body"] = ""
+        st.session_state["jobqueue_current_body_type"] = "JSON"
+
+    st.divider()
 
     with st.form("job_creation_form"):
         # Basic job information
@@ -81,92 +185,21 @@ def render_job_creation_form() -> None:
                 help="Job execution timeout"
             )
 
-        # API Configuration Fields (always displayed for all job types)
-        st.divider()
-        st.subheader("🔗 API Configuration (Optional)")
-        st.caption("Configure API settings if this job needs to make external API calls")
-        
-        # API URL and Method
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            api_url = st.text_input(
-                "🌐 API Endpoint URL",
-                placeholder="https://api.example.com/v1/endpoint",
-                help="Target API endpoint URL"
-            )
-        with col2:
-            api_method = st.selectbox(
-                "📡 HTTP Method",
-                ["GET", "POST", "PUT", "PATCH", "DELETE"],
-                index=0,
-                help="HTTP method"
-            )
-        
-        # Headers configuration
-        st.subheader("📋 Request Headers")
-        st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
-        api_headers = st.text_area(
-            "Headers (JSON format)",
-            placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
-            help="HTTP headers in JSON format - commonly used for authentication and content type specification",
-            height=100
-        )
-        
-        # Query parameters (for GET/DELETE)
-        if api_method in ["GET", "DELETE"]:
-            st.subheader("🔍 URL Query Parameters")
-            st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
-            api_query_params = st.text_area(
-                "Query Parameters (JSON format)",
-                placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
-                help="Query parameters in JSON format - will be appended to the URL as ?key=value",
-                height=80
-            )
-        else:
-            api_query_params = ""
-        
-        # Request body (for POST/PUT/PATCH)
-        if api_method in ["POST", "PUT", "PATCH"]:
-            st.subheader("📤 Request Body Data")
-            st.caption("Data to send in the request body")
-            body_type = st.selectbox(
-                "Body Data Type",
-                ["JSON", "Form Data", "Raw Text"],
-                help="Format of the request body data"
-            )
-            
-            if body_type == "JSON":
-                api_body = st.text_area(
-                    "JSON Body Data",
-                    placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
-                    help="JSON data to send in the request body",
-                    height=120
-                )
-            elif body_type == "Form Data":
-                api_body = st.text_area(
-                    "Form Fields Data (JSON format)",
-                    placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
-                    help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
-                    height=120
-                )
-            else:  # Raw Text
-                api_body = st.text_area(
-                    "Raw Text Body",
-                    placeholder="Plain text content to send as request body",
-                    help="Raw text content for request body",
-                    height=120
-                )
-        else:
-            api_body = ""
-            body_type = "JSON"
+        # Get API configuration from session state (set outside form)
+        api_method = st.session_state.get("jobqueue_current_api_method", "POST")
+        api_url = st.session_state.get("jobqueue_current_api_url", "")
+        api_headers = st.session_state.get("jobqueue_current_api_headers", "")
+        api_query_params = st.session_state.get("jobqueue_current_api_query_params", "")
+        api_body = st.session_state.get("jobqueue_current_api_body", "")
+        body_type = st.session_state.get("jobqueue_current_body_type", "JSON")
 
         # Job parameters
         st.divider()
         st.subheader("⚙️ Job Parameters")
-        
+
         # Job type specific parameter hints
         parameter_placeholder = get_parameter_placeholder(job_type)
-        
+
         parameters = st.text_area(
             "Parameters (JSON)",
             placeholder=parameter_placeholder,
@@ -207,7 +240,7 @@ def render_job_creation_form() -> None:
                         "url": api_url,
                         "method": api_method
                     }
-                    
+
                     # Parse and add headers
                     if api_headers.strip():
                         try:
@@ -216,7 +249,7 @@ def render_job_creation_form() -> None:
                         except json.JSONDecodeError:
                             st.error("Invalid JSON in Request Headers field")
                             return
-                    
+
                     # Parse and add query parameters
                     if api_query_params.strip():
                         try:
@@ -225,7 +258,7 @@ def render_job_creation_form() -> None:
                         except json.JSONDecodeError:
                             st.error("Invalid JSON in Query Parameters field")
                             return
-                    
+
                     # Parse and add request body
                     if api_body.strip():
                         if api_method in ["POST", "PUT", "PATCH"]:
@@ -332,7 +365,8 @@ def create_job(job_data: Dict[str, Any]) -> None:
                         "url": api_config_data.get("url", ""),
                         "headers": api_config_data.get("headers"),
                         "params": api_config_data.get("query_params"),  # Rename query_params to params
-                        "body": api_config_data.get("body")
+                        "body": api_config_data.get("body"),
+                        "timeout_sec": job_data.get("timeout", 30)  # Include timeout from job_data
                     }
                     
                     # Remove None values

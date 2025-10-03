@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy.engine import make_url
 
 from ..core.config import settings
 from ..core.logging import get_logger
@@ -7,10 +10,34 @@ from ..core.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _ensure_sqlite_directory(database_url: str) -> None:
+    """Ensure the directory for a SQLite database exists."""
+
+    try:
+        url = make_url(database_url)
+    except Exception:  # pragma: no cover - misconfiguration guard
+        logger.warning("Failed to parse database URL '%s'", database_url)
+        return
+
+    if not url.drivername.startswith("sqlite"):
+        return
+
+    database = url.database
+    if not database:
+        return
+
+    path = Path(database)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
 class SchedulerManager:
     """スケジューラー管理クラス"""
 
     def __init__(self) -> None:
+        _ensure_sqlite_directory(settings.database_url)
         self.jobstore = SQLAlchemyJobStore(url=settings.database_url)
         self.scheduler = AsyncIOScheduler(
             jobstores={"default": self.jobstore},

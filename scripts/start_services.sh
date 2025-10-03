@@ -16,10 +16,10 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Default ports
-JOBQUEUE_PORT=8001
-MYSCHEDULER_PORT=8002
-COMMONUI_PORT=8501
+# Default ports (can be overridden via environment variables)
+JOBQUEUE_PORT="${JOBQUEUE_PORT:-8001}"
+MYSCHEDULER_PORT="${MYSCHEDULER_PORT:-8002}"
+COMMONUI_PORT="${COMMONUI_PORT:-8501}"
 
 # Log files
 LOG_DIR="$PROJECT_ROOT/logs"

@@ -21,6 +21,8 @@ JobQueue、MyScheduler、CommonUIの3つのサービスを統合的に管理す�
 ./scripts/quick-start.sh
 ```
 
+> ℹ️ `quick-start.sh` では Docker Compose と並行稼働できるように、デフォルトで `8101-8104` / `8601` の代替ポートを使用します。必要に応じて `JOBQUEUE_PORT=8111 ./scripts/quick-start.sh` のように環境変数で上書きできます。
+
 ### 開発用包括管理
 ```bash
 # 全サービス起動（依存関係自動解決）
@@ -67,9 +69,18 @@ JobQueue、MyScheduler、CommonUIの3つのサービスを統合的に管理す�
 ## 📊 サービス構成
 
 ### ポート構成
-- **🎨 CommonUI (Streamlit)**: `http://localhost:8501`
-- **📋 JobQueue API**: `http://localhost:8001`
-- **⏰ MyScheduler API**: `http://localhost:8002`
+- **🚢 Docker Compose / `dev-start.sh` 標準**
+    - 🎨 CommonUI (Streamlit): `http://localhost:8501`
+    - 📋 JobQueue API: `http://localhost:8001`
+    - ⏰ MyScheduler API: `http://localhost:8002`
+    - 🤖 ExpertAgent API: `http://localhost:8003`
+    - 🔄 GraphAiServer API: `http://localhost:8004`
+- **🖥️ `quick-start.sh`（Docker と併用可能な代替ポート）**
+    - 🎨 CommonUI (Streamlit): `http://localhost:8601`
+    - 📋 JobQueue API: `http://localhost:8101`
+    - ⏰ MyScheduler API: `http://localhost:8102`
+    - 🤖 ExpertAgent API: `http://localhost:8103`
+    - 🔄 GraphAiServer API: `http://localhost:8104`
 
 ### サービス依存関係
 ```
@@ -120,8 +131,8 @@ cat logs/dev_tokens.txt
 
 **1. ポートが既に使用中**
 ```bash
-# ポート使用状況確認
-lsof -i :8501 -i :8001 -i :8002
+# ポート使用状況確認（標準・代替ポート両方をチェック）
+lsof -i :8501 -i :8601 -i :8001 -i :8002 -i :8003 -i :8004 -i :8101 -i :8102 -i :8103 -i :8104
 
 # 強制終了後に再起動
 ./scripts/dev-start.sh stop

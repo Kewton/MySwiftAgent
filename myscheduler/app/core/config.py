@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # データベース
-    database_url: str = "sqlite:///jobs.db"
+    database_url: str = "sqlite:///./data/jobs.db"
 
     # スケジューラー
     timezone: str = "Asia/Tokyo"

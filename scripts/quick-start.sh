@@ -28,6 +28,16 @@ fi
 # Make sure it's executable
 chmod +x "$SCRIPT_DIR/dev-start.sh"
 
+# Allocate local ports that avoid docker-compose collisions (override with env vars if needed)
+: "${JOBQUEUE_PORT:=8101}"
+: "${MYSCHEDULER_PORT:=8102}"
+: "${EXPERTAGENT_PORT:=8103}"
+: "${GRAPHAISERVER_PORT:=8104}"
+: "${COMMONUI_PORT:=8601}"
+export JOBQUEUE_PORT MYSCHEDULER_PORT EXPERTAGENT_PORT GRAPHAISERVER_PORT COMMONUI_PORT
+
+echo -e "${BLUE}Using local ports${NC}: JobQueue=${JOBQUEUE_PORT}, MyScheduler=${MYSCHEDULER_PORT}, ExpertAgent=${EXPERTAGENT_PORT}, GraphAiServer=${GRAPHAISERVER_PORT}, CommonUI=${COMMONUI_PORT}"
+
 echo -e "${YELLOW}⚡ Starting all services...${NC}"
 echo ""
 
@@ -38,7 +48,7 @@ echo ""
 echo -e "${GREEN}🎉 Quick start complete!${NC}"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
-echo "• Open your browser to http://localhost:8501 for the web interface"
+echo "• Open your browser to http://localhost:${COMMONUI_PORT} for the web interface"
 echo "• Use './scripts/dev-start.sh status' to check service health"
 echo "• Use './scripts/dev-start.sh logs' to view logs"
 echo "• Use './scripts/dev-start.sh stop' to stop all services"

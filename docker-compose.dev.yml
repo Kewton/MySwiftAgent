@@ -1,0 +1,104 @@
+# Development override configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  jobqueue:
+    build:
+      context: ./jobqueue
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for hot-reload
+      - ./jobqueue/app:/app/app:ro
+      - jobqueue_data_dev:/app/data
+    environment:
+      - PYTHONPATH=/app
+      - JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db
+      - TZ=Asia/Tokyo
+      - LOG_LEVEL=DEBUG
+      - DEBUG=true
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  myscheduler:
+    build:
+      context: ./myscheduler
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for hot-reload
+      - ./myscheduler/app:/app/app:ro
+      - myscheduler_data_dev:/app/data
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      - JOBQUEUE_API_URL=http://jobqueue:8000
+      - DATABASE_URL=sqlite:///./data/jobs.db
+      - LOG_LEVEL=DEBUG
+      - DEBUG=true
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  expertagent:
+    build:
+      context: ./expertAgent
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for hot-reload
+      - ./expertAgent/app:/app/app:ro
+      - ./expertAgent/aiagent:/app/aiagent:ro
+      - ./expertAgent/mymcp:/app/mymcp:ro
+      - ./expertAgent/core:/app/core:ro
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      - LOG_LEVEL=DEBUG
+      - DEBUG=true
+    env_file:
+      - .env
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  graphaiserver:
+    build:
+      context: ./graphAiServer
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for hot-reload
+      - ./graphAiServer/src:/app/src:ro
+      - ./graphAiServer/dist:/app/dist
+    environment:
+      - NODE_ENV=development
+      - PORT=8000
+      - TZ=Asia/Tokyo
+      - DEBUG=true
+    env_file:
+      - .env
+    command: ["npm", "run", "dev"]
+
+  commonui:
+    build:
+      context: ./commonUI
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for hot-reload
+      - ./commonUI/Home.py:/app/Home.py:ro
+      - ./commonUI/core:/app/core:ro
+      - ./commonUI/components:/app/components:ro
+      - ./commonUI/pages:/app/pages:ro
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      - JOBQUEUE_API_URL=http://jobqueue:8000
+      - MYSCHEDULER_API_URL=http://myscheduler:8000
+      - EXPERTAGENT_API_URL=http://expertagent:8000
+      - GRAPHAISERVER_API_URL=http://graphaiserver:8000
+      - LOG_LEVEL=DEBUG
+      - DEBUG=true
+    command: ["uv", "run", "streamlit", "run", "Home.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.fileWatcherType=poll"]
+
+volumes:
+  jobqueue_data_dev:
+    name: myswiftagent-jobqueue-data-dev
+  myscheduler_data_dev:
+    name: myswiftagent-myscheduler-data-dev

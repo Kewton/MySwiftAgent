@@ -23,6 +23,9 @@ COPY aiagent/ ./aiagent/
 COPY mymcp/ ./mymcp/
 COPY core/ ./core/
 
+# Create token directory
+RUN mkdir -p /app/token
+
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
