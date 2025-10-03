@@ -26,15 +26,14 @@ class JobExecutor:
         self.settings = settings
 
     async def execute_job(self, job: Job) -> None:
-        """Execute a single job."""
-        logger.info(f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}")
-        logger.info(f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}")
+        """Execute a single job.
 
-        # Update job status to running
-        job.status = JobStatus.RUNNING
-        job.started_at = datetime.utcnow()
-        await self.session.commit()
-        logger.info(f"[EXECUTE_JOB] Job {job.id} status updated to RUNNING at {job.started_at}")
+        Note: Job status is already set to RUNNING by _get_next_job,
+        so we don't need to update it again here.
+        """
+        logger.info(f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}")
+        logger.info(f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}, status={job.status}")
+        logger.info(f"[EXECUTE_JOB] Job {job.id} started at {job.started_at}")
 
         start_time = datetime.utcnow()
         error_message = None
@@ -266,12 +265,16 @@ class WorkerManager:
         logger.info(f"Worker {worker_name} stopped")
 
     async def _get_next_job(self, session: AsyncSession) -> Job | None:
-        """Get the next job to execute."""
+        """Get the next job to execute with optimistic locking.
+
+        This method ensures that only one worker can claim a job, even with
+        multiple concurrent workers, by using an atomic UPDATE operation.
+        """
         now = datetime.utcnow()
 
-        # Find queued jobs that are ready to run
-        job = await session.scalar(
-            select(Job)
+        # Find candidate job ID (not the full job object)
+        candidate_id = await session.scalar(
+            select(Job.id)
             .where(
                 and_(
                     Job.status == JobStatus.QUEUED,
@@ -285,4 +288,34 @@ class WorkerManager:
             .limit(1)
         )
 
-        return job
+        if not candidate_id:
+            return None
+
+        # Try to atomically claim this job by updating its status
+        # This will only succeed for one worker if multiple workers try simultaneously
+        from sqlalchemy import update
+
+        result = await session.execute(
+            update(Job)
+            .where(
+                and_(
+                    Job.id == candidate_id,
+                    Job.status == JobStatus.QUEUED  # Only if still queued (not claimed by another worker)
+                )
+            )
+            .values(status=JobStatus.RUNNING, started_at=now)
+            .returning(Job)
+        )
+
+        job = result.scalar_one_or_none()
+
+        if job:
+            # Successfully claimed the job
+            await session.commit()
+            logger.debug(f"[WORKER] Successfully claimed job {job.id}")
+            return job
+        else:
+            # Another worker claimed it first, rollback and try again
+            await session.rollback()
+            logger.debug(f"[WORKER] Job {candidate_id} was claimed by another worker")
+            return None

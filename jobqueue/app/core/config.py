@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./data/jobqueue.db"
 
     # Worker
-    concurrency: int = 1  # Changed from 4 to 1 to prevent duplicate executions
+    concurrency: int = 4  # Number of concurrent workers (safe with optimistic locking)
     poll_interval: float = 0.3
 
     # HTTP
