@@ -61,12 +61,21 @@ async def make_graph(
             base_url=settings.OLLAMA_URL,
         )
 
+    import os
+    mcp_env = {
+        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY", settings.GOOGLE_API_KEY),
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", settings.OPENAI_API_KEY),
+        "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY),
+        "SERPER_API_KEY": os.getenv("SERPER_API_KEY", settings.SERPER_API_KEY),
+    }
+
     mcp_client = MultiServerMCPClient(
         {
             "my-mcp-tool": {
                 "command": "uv",
                 "args": ["run", "python", "-m", _mcpmodule],
                 "transport": "stdio",
+                "env": mcp_env,
             }
         }
     )
@@ -105,13 +114,22 @@ async def make_utility_graph(
     else:
         model = ChatOllama(model=_model, base_url=settings.OLLAMA_URL)
 
-    # MCP クライアント
+    # MCP クライアント with environment variables
+    import os
+    mcp_env = {
+        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY", settings.GOOGLE_API_KEY),
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", settings.OPENAI_API_KEY),
+        "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY),
+        "SERPER_API_KEY": os.getenv("SERPER_API_KEY", settings.SERPER_API_KEY),
+    }
+
     mcp_client = MultiServerMCPClient(
         {
             "my-mcp-tool": {
                 "command": "uv",
                 "args": ["run", "python", "-m", _mcpmodule],
                 "transport": "stdio",
+                "env": mcp_env,
             }
         }
     )
