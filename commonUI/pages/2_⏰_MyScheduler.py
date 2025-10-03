@@ -717,41 +717,6 @@ def get_schedule_config_from_session(schedule_type: str) -> Optional[Dict]:
 
 def create_scheduled_job(job_data: Dict[str, Any]) -> None:
     """Create a new scheduled job via API."""
-    import time as time_module
-    from datetime import datetime
-
-    # Debounce check: prevent duplicate creation within 3 seconds
-    job_id = job_data.get("job_id")
-    job_name = job_data.get("name", "Unknown")
-    debounce_key = f"last_job_creation_{job_id}"
-    current_time = time_module.time()
-
-    # Debug log
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    log_msg = f"[{timestamp}] create_scheduled_job called: job_id={job_id}, name={job_name}"
-
-    # Initialize call counter
-    if "job_creation_calls" not in st.session_state:
-        st.session_state.job_creation_calls = []
-
-    st.session_state.job_creation_calls.append(log_msg)
-
-    # Show debug info
-    with st.expander("🔍 Debug: Job Creation Calls", expanded=True):
-        st.write(f"**Total calls in this session: {len(st.session_state.job_creation_calls)}**")
-        for log in st.session_state.job_creation_calls[-10:]:  # Show last 10 calls
-            st.text(log)
-
-    if debounce_key in st.session_state:
-        last_time = st.session_state[debounce_key]
-        time_diff = current_time - last_time
-        if time_diff < 3.0:
-            st.error(f"⚠️ DUPLICATE DETECTED! Job creation blocked. Time since last call: {time_diff:.3f}s")
-            return
-
-    # Record this creation time
-    st.session_state[debounce_key] = current_time
-
     try:
         api_config = config.get_api_config("MyScheduler")
         with HTTPClient(api_config, "MyScheduler") as client:
@@ -1219,20 +1184,6 @@ def generate_schedule_description(job_detail: Dict) -> str:
 
 def control_scheduled_job(job_id: str, action: str) -> None:
     """Control scheduled job (resume, pause, trigger, remove)."""
-    # Debounce check: prevent duplicate operations within 2 seconds
-    debounce_key = f"last_control_{job_id}_{action}"
-    import time as time_module
-    current_time = time_module.time()
-    
-    if debounce_key in st.session_state:
-        last_time = st.session_state[debounce_key]
-        if current_time - last_time < 2.0:
-            st.warning(f"⚠️ Please wait before {action}ing the same job again.")
-            return
-    
-    # Record this operation time
-    st.session_state[debounce_key] = current_time
-    
     try:
         api_config = config.get_api_config("MyScheduler")
         with HTTPClient(api_config, "MyScheduler") as client:

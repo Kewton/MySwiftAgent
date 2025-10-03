@@ -445,43 +445,6 @@ def get_parameter_placeholder(job_type: str) -> str:
 
 def create_job(job_data: Dict[str, Any]) -> None:
     """Create a new job via API."""
-    import time as time_module
-    from datetime import datetime
-
-    # Debounce check: prevent duplicate creation within 3 seconds
-    job_name = job_data.get("name", "Unknown")
-    # Generate a unique key based on job data
-    import hashlib
-    job_hash = hashlib.md5(str(job_data).encode()).hexdigest()[:8]
-    debounce_key = f"last_job_creation_{job_hash}"
-    current_time = time_module.time()
-
-    # Debug log
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    log_msg = f"[{timestamp}] create_job called: name={job_name}, hash={job_hash}"
-
-    # Initialize call counter
-    if "jobqueue_creation_calls" not in st.session_state:
-        st.session_state.jobqueue_creation_calls = []
-
-    st.session_state.jobqueue_creation_calls.append(log_msg)
-
-    # Show debug info
-    with st.expander("🔍 Debug: Job Creation Calls (JobQueue)", expanded=True):
-        st.write(f"**Total calls in this session: {len(st.session_state.jobqueue_creation_calls)}**")
-        for log in st.session_state.jobqueue_creation_calls[-10:]:  # Show last 10 calls
-            st.text(log)
-
-    if debounce_key in st.session_state:
-        last_time = st.session_state[debounce_key]
-        time_diff = current_time - last_time
-        if time_diff < 3.0:
-            st.error(f"⚠️ DUPLICATE DETECTED! Job creation blocked. Time since last call: {time_diff:.3f}s")
-            return
-
-    # Record this creation time
-    st.session_state[debounce_key] = current_time
-
     try:
         api_config = config.get_api_config("JobQueue")
         with HTTPClient(api_config, "JobQueue") as client:
