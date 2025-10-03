@@ -27,19 +27,30 @@ class JobExecutor:
 
     async def execute_job(self, job: Job) -> None:
         """Execute a single job."""
-        logger.info(f"Starting job execution: {job.id}")
+        logger.info(f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}")
+        logger.info(f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}")
 
         # Update job status to running
         job.status = JobStatus.RUNNING
         job.started_at = datetime.utcnow()
         await self.session.commit()
+        logger.info(f"[EXECUTE_JOB] Job {job.id} status updated to RUNNING at {job.started_at}")
 
         start_time = datetime.utcnow()
         error_message = None
 
         try:
+            # Log request details
+            logger.info(f"[EXECUTE_JOB] Preparing HTTP request for job {job.id}")
+            logger.info(f"[EXECUTE_JOB] Request: {job.method} {job.url}")
+            logger.info(f"[EXECUTE_JOB] Headers: {job.headers}")
+            logger.info(f"[EXECUTE_JOB] Params: {job.params}")
+            logger.info(f"[EXECUTE_JOB] Body: {job.body}")
+            logger.info(f"[EXECUTE_JOB] Timeout: {job.timeout_sec}s")
+
             # Execute HTTP request
             async with httpx.AsyncClient() as client:
+                logger.info(f"[EXECUTE_JOB] Sending HTTP request for job {job.id}...")
                 response = await client.request(
                     method=job.method,
                     url=job.url,
@@ -48,6 +59,7 @@ class JobExecutor:
                     json=job.body if job.body else None,
                     timeout=job.timeout_sec,
                 )
+                logger.info(f"[EXECUTE_JOB] HTTP request completed for job {job.id}: status={response.status_code}")
 
                 # Limit response body size
                 response_body = None
@@ -225,19 +237,23 @@ class WorkerManager:
 
     async def _worker_loop(self, worker_name: str) -> None:
         """Main worker loop."""
-        logger.info(f"Starting worker: {worker_name}")
+        logger.info(f"[WORKER] Starting worker: {worker_name}")
 
         while self.running:
             try:
                 async with AsyncSessionLocal() as session:
                     # Get next available job
+                    logger.debug(f"[WORKER] {worker_name} polling for next job...")
                     job = await self._get_next_job(session)
 
                     if job:
+                        logger.info(f"[WORKER] {worker_name} picked up job: {job.id} (name={job.name})")
                         executor = JobExecutor(session, self.settings)
                         await executor.execute_job(job)
+                        logger.info(f"[WORKER] {worker_name} finished executing job: {job.id}")
                     else:
                         # No jobs available, wait before polling again
+                        logger.debug(f"[WORKER] {worker_name} found no jobs, sleeping for {self.settings.poll_interval}s")
                         await asyncio.sleep(self.settings.poll_interval)
 
             except asyncio.CancelledError:

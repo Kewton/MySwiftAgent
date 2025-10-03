@@ -48,12 +48,55 @@ def render_job_creation_form() -> None:
     """Render job creation form."""
     st.subheader("🆕 Create New Job")
 
+    # Template management
+    from components.template_manager import TemplateManager
+    template_mgr = TemplateManager("jobqueue")
+
+    # Collect current form data for template saving
+    current_template_data = {
+        "api_url": st.session_state.get("jobqueue_api_url_outside", ""),
+        "api_method": st.session_state.get("jobqueue_current_api_method", "POST"),
+        "api_headers": st.session_state.get("jobqueue_api_headers_outside", ""),
+        "api_query_params": st.session_state.get("jobqueue_api_query_params_outside", ""),
+        "api_body": st.session_state.get("jobqueue_api_body_outside", ""),
+        "body_type": st.session_state.get("jobqueue_body_type_outside", "JSON"),
+    }
+
+    # Render template selector and get loaded template
+    loaded_template = template_mgr.render_template_selector(current_template_data)
+
+    # Apply loaded template to session state (only once when template changes)
+    if loaded_template:
+        # Use a flag to track if we've already applied this template
+        template_key = f"jobqueue_loaded_template_{hash(str(loaded_template))}"
+
+        if template_key not in st.session_state or not st.session_state.get(template_key, False):
+            st.session_state["jobqueue_api_url_outside"] = loaded_template.get("api_url", "")
+            st.session_state["jobqueue_current_api_method"] = loaded_template.get("api_method", "POST")
+            st.session_state["jobqueue_api_headers_outside"] = loaded_template.get("api_headers", "")
+            st.session_state["jobqueue_api_query_params_outside"] = loaded_template.get("api_query_params", "")
+            st.session_state["jobqueue_api_body_outside"] = loaded_template.get("api_body", "")
+            st.session_state["jobqueue_body_type_outside"] = loaded_template.get("body_type", "JSON")
+            st.session_state["jobqueue_current_body_type"] = loaded_template.get("body_type", "JSON")
+            st.session_state[template_key] = True
+
+            # Clear other template flags
+            keys_to_clear = [k for k in st.session_state.keys() if k.startswith("jobqueue_loaded_template_") and k != template_key]
+            for k in keys_to_clear:
+                del st.session_state[k]
+
+    st.divider()
+
     # Move API configuration outside the form to enable real-time conditional rendering
     st.subheader("🔗 API Configuration (Optional)")
     st.caption("Configure API settings if this job needs to make external API calls")
 
     col1, col2 = st.columns([3, 1])
     with col1:
+        # Initialize session state if not exists
+        if "jobqueue_api_url_outside" not in st.session_state:
+            st.session_state["jobqueue_api_url_outside"] = ""
+
         api_url = st.text_input(
             "🌐 API Endpoint URL",
             key="jobqueue_api_url_outside",
@@ -61,11 +104,16 @@ def render_job_creation_form() -> None:
             help="Target API endpoint URL"
         )
     with col2:
+        # Get method index
+        methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        current_method = st.session_state.get("jobqueue_current_api_method", "POST")
+        method_index = methods.index(current_method) if current_method in methods else 1
+
         api_method = st.selectbox(
             "📡 HTTP Method",
-            ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            methods,
             key="jobqueue_api_method_outside",
-            index=1,  # Default to POST
+            index=method_index,
             help="HTTP method"
         )
 
@@ -76,6 +124,11 @@ def render_job_creation_form() -> None:
     # Headers configuration (outside form for consistency)
     st.subheader("📋 Request Headers")
     st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
+
+    # Initialize session state if not exists
+    if "jobqueue_api_headers_outside" not in st.session_state:
+        st.session_state["jobqueue_api_headers_outside"] = ""
+
     api_headers = st.text_area(
         "Headers (JSON format)",
         key="jobqueue_api_headers_outside",
@@ -89,6 +142,11 @@ def render_job_creation_form() -> None:
     if api_method in ["GET", "DELETE"]:
         st.subheader("🔍 URL Query Parameters")
         st.caption("Parameters that will be added to the URL (e.g., ?page=1&limit=100)")
+
+        # Initialize session state if not exists
+        if "jobqueue_api_query_params_outside" not in st.session_state:
+            st.session_state["jobqueue_api_query_params_outside"] = ""
+
         api_query_params = st.text_area(
             "Query Parameters (JSON format)",
             key="jobqueue_api_query_params_outside",
@@ -104,12 +162,23 @@ def render_job_creation_form() -> None:
     if api_method in ["POST", "PUT", "PATCH"]:
         st.subheader("📤 Request Body Data")
         st.caption("Data to send in the request body")
+
+        # Get body type index
+        body_types = ["JSON", "Form Data", "Raw Text"]
+        current_body_type = st.session_state.get("jobqueue_body_type_outside", "JSON")
+        body_type_index = body_types.index(current_body_type) if current_body_type in body_types else 0
+
         body_type = st.selectbox(
             "Body Data Type",
-            ["JSON", "Form Data", "Raw Text"],
+            body_types,
             key="jobqueue_body_type_outside",
+            index=body_type_index,
             help="Format of the request body data"
         )
+
+        # Initialize session state if not exists
+        if "jobqueue_api_body_outside" not in st.session_state:
+            st.session_state["jobqueue_api_body_outside"] = ""
 
         if body_type == "JSON":
             api_body = st.text_area(
@@ -246,8 +315,8 @@ def render_job_creation_form() -> None:
                         try:
                             headers = json.loads(api_headers)
                             api_config["headers"] = headers
-                        except json.JSONDecodeError:
-                            st.error("Invalid JSON in Request Headers field")
+                        except json.JSONDecodeError as e:
+                            st.error(f"Invalid JSON in Request Headers field: {str(e)}")
                             return
 
                     # Parse and add query parameters
@@ -255,8 +324,8 @@ def render_job_creation_form() -> None:
                         try:
                             query_params = json.loads(api_query_params)
                             api_config["query_params"] = query_params
-                        except json.JSONDecodeError:
-                            st.error("Invalid JSON in Query Parameters field")
+                        except json.JSONDecodeError as e:
+                            st.error(f"Invalid JSON in Query Parameters field: {str(e)}")
                             return
 
                     # Parse and add request body
@@ -264,22 +333,50 @@ def render_job_creation_form() -> None:
                         if api_method in ["POST", "PUT", "PATCH"]:
                             if body_type == "JSON":
                                 try:
+                                    # First try to parse as-is
                                     body_data = json.loads(api_body)
                                     api_config["body"] = body_data
                                     api_config["body_type"] = "json"
-                                except json.JSONDecodeError:
-                                    st.error("Invalid JSON in Request Body field")
-                                    return
+                                except json.JSONDecodeError as e:
+                                    # If parsing fails due to control characters, try to fix by escaping control chars
+                                    if "Invalid control character" in str(e):
+                                        try:
+                                            import re
+                                            # Replace control characters (newlines, tabs, etc.) in string values
+                                            # This regex finds strings and replaces control chars within them
+                                            def escape_control_chars(match):
+                                                text = match.group(0)
+                                                # Escape newlines, tabs, carriage returns
+                                                text = text.replace('\n', '\\n')
+                                                text = text.replace('\r', '\\r')
+                                                text = text.replace('\t', '\\t')
+                                                return text
+
+                                            # Find all string values (between quotes) and escape control chars
+                                            fixed_json = re.sub(r'"[^"]*"', escape_control_chars, api_body)
+                                            body_data = json.loads(fixed_json)
+                                            api_config["body"] = body_data
+                                            api_config["body_type"] = "json"
+                                            st.info("💡 自動的に制御文字をエスケープしました。")
+                                        except Exception as escape_err:
+                                            st.error(f"❌ Invalid JSON in Request Body field: {str(e)}")
+                                            st.info("💡 Tip: JSON文字列値内で改行を使う場合は `\\n` を使用してください。または、Body Data Type を 'Raw Text' に変更してください。")
+                                            return
+                                    else:
+                                        st.error(f"❌ Invalid JSON in Request Body field: {str(e)}")
+                                        st.info("💡 Tip: JSON文字列値内で改行を使う場合は `\\n` を使用してください。または、Body Data Type を 'Raw Text' に変更してください。")
+                                        return
                             elif body_type == "Form Data":
                                 try:
                                     form_data = json.loads(api_body)
                                     api_config["body"] = form_data
                                     api_config["body_type"] = "form"
-                                except json.JSONDecodeError:
-                                    st.error("Invalid JSON in Form Data field")
+                                except json.JSONDecodeError as e:
+                                    st.error(f"Invalid JSON in Form Data field: {str(e)}")
                                     return
                             else:  # Raw Text
-                                api_config["body"] = api_body
+                                # Wrap raw text in a dict for API compatibility
+                                api_config["body"] = {"text": api_body}
                                 api_config["body_type"] = "raw"
 
                 # Integrate API config into job parameters if provided
@@ -348,6 +445,43 @@ def get_parameter_placeholder(job_type: str) -> str:
 
 def create_job(job_data: Dict[str, Any]) -> None:
     """Create a new job via API."""
+    import time as time_module
+    from datetime import datetime
+
+    # Debounce check: prevent duplicate creation within 3 seconds
+    job_name = job_data.get("name", "Unknown")
+    # Generate a unique key based on job data
+    import hashlib
+    job_hash = hashlib.md5(str(job_data).encode()).hexdigest()[:8]
+    debounce_key = f"last_job_creation_{job_hash}"
+    current_time = time_module.time()
+
+    # Debug log
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    log_msg = f"[{timestamp}] create_job called: name={job_name}, hash={job_hash}"
+
+    # Initialize call counter
+    if "jobqueue_creation_calls" not in st.session_state:
+        st.session_state.jobqueue_creation_calls = []
+
+    st.session_state.jobqueue_creation_calls.append(log_msg)
+
+    # Show debug info
+    with st.expander("🔍 Debug: Job Creation Calls (JobQueue)", expanded=True):
+        st.write(f"**Total calls in this session: {len(st.session_state.jobqueue_creation_calls)}**")
+        for log in st.session_state.jobqueue_creation_calls[-10:]:  # Show last 10 calls
+            st.text(log)
+
+    if debounce_key in st.session_state:
+        last_time = st.session_state[debounce_key]
+        time_diff = current_time - last_time
+        if time_diff < 3.0:
+            st.error(f"⚠️ DUPLICATE DETECTED! Job creation blocked. Time since last call: {time_diff:.3f}s")
+            return
+
+    # Record this creation time
+    st.session_state[debounce_key] = current_time
+
     try:
         api_config = config.get_api_config("JobQueue")
         with HTTPClient(api_config, "JobQueue") as client:
@@ -373,13 +507,19 @@ def create_job(job_data: Dict[str, Any]) -> None:
                     # Remove None values
                     transformed_data = {k: v for k, v in transformed_data.items() if v is not None}
                     
+                    st.info(f"🚀 Sending POST request to JobQueue API...")
                     response = client.post("/api/v1/jobs", transformed_data)
+                    st.success(f"✅ API responded successfully")
                 else:
                     # No API config provided, use original structure
+                    st.info(f"🚀 Sending POST request to JobQueue API...")
                     response = client.post("/api/v1/jobs", job_data)
+                    st.success(f"✅ API responded successfully")
             else:
                 # For non-api_sync jobs, use original structure
+                st.info(f"🚀 Sending POST request to JobQueue API...")
                 response = client.post("/api/v1/jobs", job_data)
+                st.success(f"✅ API responded successfully")
 
             job_id = response.get("job_id")
             NotificationManager.operation_completed("Job creation")
