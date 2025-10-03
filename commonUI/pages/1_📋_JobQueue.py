@@ -361,6 +361,7 @@ def create_job(job_data: Dict[str, Any]) -> None:
                 if api_config_data:
                     # Transform to JobQueue API format
                     transformed_data = {
+                        "name": job_data.get("name"),  # Include job name
                         "method": api_config_data.get("method", "GET"),
                         "url": api_config_data.get("url", ""),
                         "headers": api_config_data.get("headers"),

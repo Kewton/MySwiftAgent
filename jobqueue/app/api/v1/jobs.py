@@ -28,6 +28,7 @@ async def create_job(
     # Create job instance
     job = Job(
         id=job_id,
+        name=job_data.name,
         method=job_data.method,
         url=str(job_data.url),
         headers=job_data.headers,
