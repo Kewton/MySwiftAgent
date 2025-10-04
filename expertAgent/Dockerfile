@@ -22,12 +22,14 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Playwright browsers and dependencies
-RUN npx -y playwright@latest install --with-deps chromium
+# Install Playwright globally and its browsers with dependencies
+RUN npm install -g playwright && \
+    npx -y playwright install --with-deps chromium
 
 # Set environment variables for Playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
+ENV NODE_PATH=/usr/local/lib/node_modules
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
