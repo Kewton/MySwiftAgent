@@ -102,6 +102,12 @@ services:
       - ./docker-compose-data/expertagent/logs:/app/logs
     # Playwright browser support: Chromium needs sufficient shared memory
     shm_size: 2gb
+    # Security options for Chromium browser (disable seccomp for sandbox)
+    security_opt:
+      - seccomp=unconfined
+    # Add SYS_ADMIN capability for Chromium sandboxing
+    cap_add:
+      - SYS_ADMIN
     networks:
       - myswiftagent
     healthcheck:
