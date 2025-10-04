@@ -7,6 +7,7 @@ from aiagent.langgraph.sampleagent.graphagent import ainvoke_graphagent
 from aiagent.langgraph.utilityaiagents.action_agent import actionagent
 from aiagent.langgraph.utilityaiagents.explorer_agent import exploreragent
 from aiagent.langgraph.utilityaiagents.jsonOutput_agent import jsonOutputagent
+from aiagent.langgraph.utilityaiagents.playwright_agent import playwrightagent
 from app.schemas.standardAiAgent import (
     ChatMessage,
     ExpertAiAgentRequest,
@@ -122,6 +123,10 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
             print(f"request.user_input:{_input}")
             result = await actionagent(_input, model_name)
             return ExpertAiAgentResponse(result=remove_think_tags(result), type="action")
+        elif "playwright" in agent_name:
+            print(f"request.user_input:{_input}")
+            result = await playwrightagent(_input, model_name)
+            return ExpertAiAgentResponse(result=remove_think_tags(result), type="playwright")
         return {"message": "No matching agent found."}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")

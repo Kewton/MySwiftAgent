@@ -92,12 +92,32 @@ uv run pytest --cov=app --cov-report=term-missing
 uv run pytest tests/integration/test_api.py -v
 ```
 
-### exec
-```
+### API Examples
+
+#### Sample Agent
+```bash
 curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/sample" \
     -H "Content-Type: application/json" \
     -d '{
       "user_input": "葛飾区の人口をメールして"
+    }'
+```
+
+#### Playwright Agent (Web Automation)
+```bash
+# Webページのスクレイピング
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/playwright" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "https://example.com のページ内容を取得してください"
+    }'
+
+# モデル指定でファイルダウンロード
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/playwright" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "https://example.com/document.pdf をダウンロードしてください",
+      "model_name": "gemini-2.5-flash"
     }'
 ```
 
