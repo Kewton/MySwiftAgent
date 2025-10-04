@@ -55,6 +55,9 @@ user_files/
 session_data/
 user_sessions/
 
+# Template storage (user-specific templates)
+docker-compose-data/templates/
+
 # Temporary UI files
 temp_charts/
 temp_exports/

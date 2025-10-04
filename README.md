@@ -14,47 +14,65 @@
 
 ```
 MySwiftAgent/
-├── myscheduler/     # スケジューリングシステム
-├── jobqueue/        # FastAPI ベースジョブキューシステム
+├── myscheduler/     # スケジューリングシステム (Python/FastAPI)
+├── jobqueue/        # ジョブキューシステム (Python/FastAPI)
+├── expertAgent/     # AIエージェント (Python/LangGraph/MCP)
+├── graphAiServer/   # GraphAI ワークフローサーバー (TypeScript/Express)
+├── commonUI/        # Web UI (Python/Streamlit)
 ├── docs/            # プロジェクトドキュメント（軽量ワークフロー対応）
+├── scripts/         # 開発支援スクリプト
 ├── .github/         # GitHub Actions ワークフロー
 └── CLAUDE.md        # 開発ガイドライン（詳細）
 ```
 
 ## 🚀 クイックスタート
 
-### 環境構築
+### 方法1: Docker Compose（推奨）
 
 ```bash
-# 1. uvのインストール (初回のみ)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# 1. 環境変数設定
+cp .env.example .env
+# .envファイルを編集してAPIキー等を設定
 
-# 2. myscheduler のセットアップ
-cd myscheduler
-uv sync
-uv run uvicorn app.main:app --reload
+# 2. サービス起動
+docker compose up -d
 
-# 3. jobqueue のセットアップ
-cd ../jobqueue
-uv sync
-uv run uvicorn app.main:app --reload --port 8001
-
-# 4. docs の確認
-cd ../docs
-ls -la  # ドキュメントファイルを確認
+# 3. 動作確認
+curl http://localhost:8102/health  # MyScheduler
+curl http://localhost:8101/health  # JobQueue
+curl http://localhost:8103/health  # ExpertAgent
+curl http://localhost:8104/health  # GraphAiServer
+# CommonUI: http://localhost:8501
 ```
 
-### 動作確認
+### 方法2: 開発用スクリプト
 
 ```bash
-# myscheduler ヘルスチェック
-curl http://localhost:8000/health
+# 1. 環境変数設定
+cp .env.example .env
+# .envファイルを編集してAPIキー等を設定
 
-# jobqueue ヘルスチェック
-curl http://localhost:8001/health
+# 2. 開発環境起動（全サービス）
+./scripts/quick-start.sh
 
-# docsディレクトリ確認
-ls docs/  # ドキュメントファイル一覧
+# 3. 動作確認
+curl http://localhost:8102/health  # MyScheduler
+curl http://localhost:8101/health  # JobQueue
+curl http://localhost:8103/health  # ExpertAgent
+curl http://localhost:8104/health  # GraphAiServer
+# CommonUI: http://localhost:8501
+```
+
+### 方法3: 個別サービス起動（開発用）
+
+```bash
+# uvのインストール (初回のみ)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 個別サービスのセットアップ例
+cd myscheduler
+uv sync
+uv run uvicorn app.main:app --reload --port 8102
 ```
 
 ---
@@ -149,7 +167,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 3. **"Run workflow"** ボタンクリック
 4. **パラメータ設定**：
    - **Release type**: `minor` (推奨), `major`, `patch`, `custom`
-   - **Project**: `myscheduler`, `jobqueue`, or `docs`
+   - **Project**: `myscheduler`, `jobqueue`, `expertAgent`, `graphAiServer`, `commonUI`, or `docs`
    - **Custom version**: custom選択時のみ
 5. **実行** → 自動でリリースブランチ・PR作成
 
@@ -174,26 +192,43 @@ mkdir -p app tests/unit tests/integration
 ```
 
 #### 2. **必須ファイルの実装**
+
+**Python プロジェクトの場合:**
 - **`pyproject.toml`**: 依存関係・バージョン・ツール設定
 - **`app/main.py`**: FastAPIアプリケーション + ヘルスチェック
 - **`Dockerfile`**: コンテナイメージ定義
 - **`tests/`**: 単体・結合テスト
 
+**TypeScript プロジェクトの場合:**
+- **`package.json`**: 依存関係・バージョン・スクリプト設定
+- **`tsconfig.json`**: TypeScript設定
+- **`src/index.ts`**: アプリケーションエントリーポイント
+- **`Dockerfile`**: Multi-stage buildコンテナイメージ定義
+- **`tests/`**: 単体・結合テスト
+
 #### 3. **CI/CD設定の手動更新**
 ```yaml
-# .github/workflows/release.yml を編集
+# .github/workflows/multi-release.yml を編集
 project:
-  options: ['myscheduler', 'jobqueue', 'docs', '{project_name}']  # 追加
+  options: ['myscheduler', 'jobqueue', 'expertAgent', 'graphAiServer', 'commonUI', 'docs', '{project_name}']  # 追加
+
+# プロジェクト検出リスト（行395付近）
+for project in myscheduler jobqueue expertAgent graphAiServer commonUI docs {project_name}; do
 
 # 各ジョブの条件に新プロジェクトを追加（docsは専用処理）
 test:
   if: |
     needs.validate-release.outputs.project == 'myscheduler' ||
     needs.validate-release.outputs.project == 'jobqueue' ||
+    needs.validate-release.outputs.project == 'expertAgent' ||
+    needs.validate-release.outputs.project == 'graphAiServer' ||
+    needs.validate-release.outputs.project == 'commonUI' ||
     needs.validate-release.outputs.project == '{project_name}'  # 追加
 ```
 
-**⚠️ docsプロジェクトは専用の軽量処理が既に実装されています**
+**⚠️ 注意事項:**
+- docsプロジェクトは専用の軽量処理が既に実装されています
+- TypeScriptプロジェクトは自動検出されます（package.json の存在で判定）
 
 #### 4. **初回リリース作業**
 ```bash

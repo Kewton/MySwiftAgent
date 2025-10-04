@@ -35,6 +35,7 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[JobStatus] = mapped_column(String(20), default=JobStatus.QUEUED)
     attempt: Mapped[int] = mapped_column(Integer, default=1)
     max_attempts: Mapped[int] = mapped_column(Integer, default=1)
