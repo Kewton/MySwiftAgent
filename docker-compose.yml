@@ -74,14 +74,32 @@ services:
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
-      # Add your API keys here or use .env file
+      # API Keys
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - SERPER_API_KEY=${SERPER_API_KEY}
+      # Google APIs
+      - GOOGLE_APIS_TOKEN_PATH=/app/token/token.json
+      - GOOGLE_APIS_CREDENTIALS_PATH=/app/token/credentials.json
+      # Mail Configuration
+      - MAIL_TO=${MAIL_TO}
+      # Model Configuration
       - GRAPH_AGENT_MODEL=${GRAPH_AGENT_MODEL:-gemini-2.5-flash}
+      - PODCAST_SCRIPT_DEFAULT_MODEL=${PODCAST_SCRIPT_DEFAULT_MODEL:-gpt-4o-mini}
+      - EXTRACT_KNOWLEDGE_MODEL=${EXTRACT_KNOWLEDGE_MODEL:-gemma3:27b-it-q8_0}
+      # Ollama Configuration
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - OLLAMA_DEF_SMALL_MODEL=${OLLAMA_DEF_SMALL_MODEL:-gemma3:27b-it-q8_0}
+      # Other Services
+      - SPREADSHEET_ID=${SPREADSHEET_ID}
+      - MLX_LLM_SERVER_URL=${MLX_LLM_SERVER_URL:-http://host.docker.internal:8080}
+      # Logging
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./docker-compose-data/expertagent/token:/app/token
+      - ./docker-compose-data/expertagent/logs:/app/logs
     networks:
       - myswiftagent
     healthcheck:
@@ -143,6 +161,8 @@ services:
       - MYSCHEDULER_API_URL=http://myscheduler:8000
       - EXPERTAGENT_API_URL=http://expertagent:8000
       - GRAPHAISERVER_API_URL=http://graphaiserver:8000
+    volumes:
+      - ./docker-compose-data/commonUI:/app/data
     depends_on:
       jobqueue:
         condition: service_healthy

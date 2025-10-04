@@ -5,6 +5,7 @@ for JobQueue and MyScheduler pages.
 """
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -13,12 +14,24 @@ from typing import Any
 class TemplateStorage:
     """Template storage service."""
 
-    def __init__(self, storage_dir: str = "docker-compose-data/templates") -> None:
+    def __init__(self, storage_dir: str | None = None) -> None:
         """Initialize template storage.
 
         Args:
-            storage_dir: Directory to store template files
+            storage_dir: Directory to store template files.
+                        If None, automatically determines based on environment:
+                        - Docker: /app/data/templates (mapped to docker-compose-data/commonUI)
+                        - Script: ./data/templates (local development)
         """
+        if storage_dir is None:
+            # Auto-detect environment
+            if os.getenv("JOBQUEUE_API_URL") and "jobqueue:8000" in os.getenv("JOBQUEUE_API_URL", ""):
+                # Running in docker-compose (internal service URLs)
+                storage_dir = "/app/data/templates"
+            else:
+                # Running via script (local development)
+                storage_dir = "data/templates"
+
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
