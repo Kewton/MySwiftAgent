@@ -67,6 +67,16 @@ async def make_graph(
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", settings.OPENAI_API_KEY),
         "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY),
         "SERPER_API_KEY": os.getenv("SERPER_API_KEY", settings.SERPER_API_KEY),
+        # ExpertAgent specific settings
+        "MAIL_TO": os.getenv("MAIL_TO", settings.MAIL_TO),
+        "PODCAST_SCRIPT_DEFAULT_MODEL": os.getenv("PODCAST_SCRIPT_DEFAULT_MODEL", settings.PODCAST_SCRIPT_DEFAULT_MODEL),
+        "SPREADSHEET_ID": os.getenv("SPREADSHEET_ID", settings.SPREADSHEET_ID),
+        "OLLAMA_URL": os.getenv("OLLAMA_URL", settings.OLLAMA_URL),
+        "OLLAMA_DEF_SMALL_MODEL": os.getenv("OLLAMA_DEF_SMALL_MODEL", settings.OLLAMA_DEF_SMALL_MODEL),
+        "EXTRACT_KNOWLEDGE_MODEL": os.getenv("EXTRACT_KNOWLEDGE_MODEL", settings.EXTRACT_KNOWLEDGE_MODEL),
+        "MLX_LLM_SERVER_URL": os.getenv("MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL),
+        "GOOGLE_APIS_TOKEN_PATH": os.getenv("GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH),
+        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv("GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH),
     }
 
     mcp_client = MultiServerMCPClient(
@@ -121,6 +131,16 @@ async def make_utility_graph(
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", settings.OPENAI_API_KEY),
         "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY),
         "SERPER_API_KEY": os.getenv("SERPER_API_KEY", settings.SERPER_API_KEY),
+        # ExpertAgent specific settings
+        "MAIL_TO": os.getenv("MAIL_TO", settings.MAIL_TO),
+        "PODCAST_SCRIPT_DEFAULT_MODEL": os.getenv("PODCAST_SCRIPT_DEFAULT_MODEL", settings.PODCAST_SCRIPT_DEFAULT_MODEL),
+        "SPREADSHEET_ID": os.getenv("SPREADSHEET_ID", settings.SPREADSHEET_ID),
+        "OLLAMA_URL": os.getenv("OLLAMA_URL", settings.OLLAMA_URL),
+        "OLLAMA_DEF_SMALL_MODEL": os.getenv("OLLAMA_DEF_SMALL_MODEL", settings.OLLAMA_DEF_SMALL_MODEL),
+        "EXTRACT_KNOWLEDGE_MODEL": os.getenv("EXTRACT_KNOWLEDGE_MODEL", settings.EXTRACT_KNOWLEDGE_MODEL),
+        "MLX_LLM_SERVER_URL": os.getenv("MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL),
+        "GOOGLE_APIS_TOKEN_PATH": os.getenv("GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH),
+        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv("GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH),
     }
 
     mcp_client = MultiServerMCPClient(

@@ -26,20 +26,35 @@ class JobExecutor:
         self.settings = settings
 
     async def execute_job(self, job: Job) -> None:
-        """Execute a single job."""
-        logger.info(f"Starting job execution: {job.id}")
+        """Execute a single job.
 
-        # Update job status to running
-        job.status = JobStatus.RUNNING
-        job.started_at = datetime.utcnow()
-        await self.session.commit()
+        Note: Job status is already set to RUNNING by _get_next_job,
+        so we don't need to update it again here.
+        """
+        logger.info(f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}")
+        logger.info(f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}, status={job.status}")
+
+        # Ensure started_at is set (defensive programming for tests/manual execution)
+        if job.started_at is None:
+            job.started_at = datetime.utcnow()
+
+        logger.info(f"[EXECUTE_JOB] Job {job.id} started at {job.started_at}")
 
         start_time = datetime.utcnow()
         error_message = None
 
         try:
+            # Log request details
+            logger.info(f"[EXECUTE_JOB] Preparing HTTP request for job {job.id}")
+            logger.info(f"[EXECUTE_JOB] Request: {job.method} {job.url}")
+            logger.info(f"[EXECUTE_JOB] Headers: {job.headers}")
+            logger.info(f"[EXECUTE_JOB] Params: {job.params}")
+            logger.info(f"[EXECUTE_JOB] Body: {job.body}")
+            logger.info(f"[EXECUTE_JOB] Timeout: {job.timeout_sec}s")
+
             # Execute HTTP request
             async with httpx.AsyncClient() as client:
+                logger.info(f"[EXECUTE_JOB] Sending HTTP request for job {job.id}...")
                 response = await client.request(
                     method=job.method,
                     url=job.url,
@@ -48,6 +63,7 @@ class JobExecutor:
                     json=job.body if job.body else None,
                     timeout=job.timeout_sec,
                 )
+                logger.info(f"[EXECUTE_JOB] HTTP request completed for job {job.id}: status={response.status_code}")
 
                 # Limit response body size
                 response_body = None
@@ -225,19 +241,23 @@ class WorkerManager:
 
     async def _worker_loop(self, worker_name: str) -> None:
         """Main worker loop."""
-        logger.info(f"Starting worker: {worker_name}")
+        logger.info(f"[WORKER] Starting worker: {worker_name}")
 
         while self.running:
             try:
                 async with AsyncSessionLocal() as session:
                     # Get next available job
+                    logger.debug(f"[WORKER] {worker_name} polling for next job...")
                     job = await self._get_next_job(session)
 
                     if job:
+                        logger.info(f"[WORKER] {worker_name} picked up job: {job.id} (name={job.name})")
                         executor = JobExecutor(session, self.settings)
                         await executor.execute_job(job)
+                        logger.info(f"[WORKER] {worker_name} finished executing job: {job.id}")
                     else:
                         # No jobs available, wait before polling again
+                        logger.debug(f"[WORKER] {worker_name} found no jobs, sleeping for {self.settings.poll_interval}s")
                         await asyncio.sleep(self.settings.poll_interval)
 
             except asyncio.CancelledError:
@@ -250,12 +270,16 @@ class WorkerManager:
         logger.info(f"Worker {worker_name} stopped")
 
     async def _get_next_job(self, session: AsyncSession) -> Job | None:
-        """Get the next job to execute."""
+        """Get the next job to execute with optimistic locking.
+
+        This method ensures that only one worker can claim a job, even with
+        multiple concurrent workers, by using an atomic UPDATE operation.
+        """
         now = datetime.utcnow()
 
-        # Find queued jobs that are ready to run
-        job = await session.scalar(
-            select(Job)
+        # Find candidate job ID (not the full job object)
+        candidate_id = await session.scalar(
+            select(Job.id)
             .where(
                 and_(
                     Job.status == JobStatus.QUEUED,
@@ -269,4 +293,34 @@ class WorkerManager:
             .limit(1)
         )
 
-        return job
+        if not candidate_id:
+            return None
+
+        # Try to atomically claim this job by updating its status
+        # This will only succeed for one worker if multiple workers try simultaneously
+        from sqlalchemy import update
+
+        result = await session.execute(
+            update(Job)
+            .where(
+                and_(
+                    Job.id == candidate_id,
+                    Job.status == JobStatus.QUEUED  # Only if still queued (not claimed by another worker)
+                )
+            )
+            .values(status=JobStatus.RUNNING, started_at=now)
+            .returning(Job)
+        )
+
+        job = result.scalar_one_or_none()
+
+        if job:
+            # Successfully claimed the job
+            await session.commit()
+            logger.debug(f"[WORKER] Successfully claimed job {job.id}")
+            return job
+        else:
+            # Another worker claimed it first, rollback and try again
+            await session.rollback()
+            logger.debug(f"[WORKER] Job {candidate_id} was claimed by another worker")
+            return None

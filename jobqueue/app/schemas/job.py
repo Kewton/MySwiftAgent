@@ -11,6 +11,7 @@ from app.models.job import BackoffStrategy, JobStatus
 class JobCreate(BaseModel):
     """Schema for creating a new job."""
 
+    name: str | None = Field(None, description="Job name", max_length=255)
     method: str = Field(..., description="HTTP method", pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
     url: HttpUrl = Field(..., description="Target URL")
     headers: dict[str, str] | None = Field(None, description="HTTP headers")
@@ -41,6 +42,7 @@ class JobDetail(BaseModel):
     """Schema for detailed job information."""
 
     id: str
+    name: str | None = None
     status: JobStatus
     attempt: int
     max_attempts: int

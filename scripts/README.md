@@ -69,14 +69,14 @@ JobQueue、MyScheduler、CommonUIの3つのサービスを統合的に管理す�
 ## 📊 サービス構成
 
 ### ポート構成
-- **🚢 Docker Compose / `dev-start.sh` 標準**
+- **🚢 Docker Compose 標準ポート**
     - 🎨 CommonUI (Streamlit): `http://localhost:8501`
-    - 📋 JobQueue API: `http://localhost:8001`
-    - ⏰ MyScheduler API: `http://localhost:8002`
+    - 📋 JobQueue API: `http://localhost:8101`
+    - ⏰ MyScheduler API: `http://localhost:8102`
     - 🤖 ExpertAgent API: `http://localhost:8003`
     - 🔄 GraphAiServer API: `http://localhost:8004`
-- **🖥️ `quick-start.sh`（Docker と併用可能な代替ポート）**
-    - 🎨 CommonUI (Streamlit): `http://localhost:8601`
+- **🖥️ `quick-start.sh` / `dev-start.sh` 開発用ポート**
+    - 🎨 CommonUI (Streamlit): `http://localhost:8501`
     - 📋 JobQueue API: `http://localhost:8101`
     - ⏰ MyScheduler API: `http://localhost:8102`
     - 🤖 ExpertAgent API: `http://localhost:8103`
@@ -86,7 +86,12 @@ JobQueue、MyScheduler、CommonUIの3つのサービスを統合的に管理す�
 ```
 CommonUI (Frontend)
     ├── JobQueue API (Backend)
-    └── MyScheduler API (Backend)
+    ├── MyScheduler API (Backend)
+    ├── ExpertAgent API (AI Agent)
+    └── GraphAiServer API (Workflow Engine)
+
+JobQueue
+    └── ExpertAgent API (Job execution target)
 ```
 
 ## ⚙️ 高度な機能
@@ -157,19 +162,29 @@ lsof -i :8501 -i :8601 -i :8001 -i :8002 -i :8003 -i :8004 -i :8101 -i :8102 -i 
 
 ### ログファイル場所
 ```
-logs/
+/tmp/  (quick-start.sh / dev-start.sh)
 ├── jobqueue.log      # JobQueue API ログ
 ├── myscheduler.log   # MyScheduler API ログ
+├── expertagent.log   # ExpertAgent API ログ
+├── graphaiserver.log # GraphAiServer API ログ
 ├── commonui.log      # CommonUI ログ
-├── setup.log         # セットアップログ
-└── dev_tokens.txt    # 開発用トークン
+└── setup.log         # セットアップログ
+
+docker-compose-data/  (docker-compose)
+├── jobqueue/         # JobQueue データ・ログ
+├── myscheduler/      # MyScheduler データ・ログ
+├── expertagent/logs/ # ExpertAgent ログ
+├── graphaiserver/    # GraphAiServer データ・ログ
+└── commonUI/         # CommonUI データ
 ```
 
 ### PIDファイル場所
 ```
-.pids/
+.pids/  (quick-start.sh / dev-start.sh)
 ├── jobqueue.pid      # JobQueue プロセスID
 ├── myscheduler.pid   # MyScheduler プロセスID
+├── expertagent.pid   # ExpertAgent プロセスID
+├── graphaiserver.pid # GraphAiServer プロセスID
 └── commonui.pid      # CommonUI プロセスID
 ```
 
@@ -217,6 +232,8 @@ open http://localhost:8501
 
 - [JobQueue プロジェクト](../jobqueue/README.md)
 - [MyScheduler プロジェクト](../myscheduler/README.md)
+- [ExpertAgent プロジェクト](../expertAgent/README.md)
+- [GraphAiServer プロジェクト](../graphAiServer/README.md)
 - [CommonUI プロジェクト](../commonUI/README.md)
 - [プロジェクト全体ドキュメント](../README.md)
 
