@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,16 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.database import init_db
 from app.core.worker import WorkerManager
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("/tmp/jobqueue.log", mode="a"),
+    ],
+)
 
 logger = logging.getLogger(__name__)
 
