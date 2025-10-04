@@ -197,11 +197,12 @@ async def make_playwright_graph(
         model = ChatOllama(model=_model, base_url=settings.OLLAMA_URL)
 
     # Playwright MCP client setup with headless mode and no-sandbox for Docker
+    # Explicitly specify chromium browser for ARM64 compatibility
     mcp_client = MultiServerMCPClient(
         {
             "playwright": {
                 "command": "npx",
-                "args": ["-y", "@playwright/mcp@latest", "--headless", "--no-sandbox"],
+                "args": ["-y", "@playwright/mcp@latest", "--headless", "--no-sandbox", "--browser", "chromium"],
                 "transport": "stdio",
             }
         }
