@@ -246,6 +246,7 @@ result = await playwrightagent(
 - Chromium browser pre-installed in Docker
 - Integrated with LangGraph ReAct agent pattern
 - Configurable max iterations (default: 5)
+- **Docker requirement**: Needs `shm_size: 2gb` for browser operation (configured in docker-compose.yml)
 
 **Development Setup:**
 
