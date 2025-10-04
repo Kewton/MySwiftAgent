@@ -92,10 +92,10 @@ uv run pytest tests/integration/test_api.py -v
 
 ### exec
 ```
-curl -X POST "http://127.0.0.1:8000/aiagent-api/v1/aiagent/sample" \
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/sample" \
     -H "Content-Type: application/json" \
     -d '{
-      "user_input": "葛飾区の人口を教えて"
+      "user_input": "葛飾区の人口をメールして"
     }'
 ```
 
