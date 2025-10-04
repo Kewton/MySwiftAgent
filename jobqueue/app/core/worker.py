@@ -33,6 +33,11 @@ class JobExecutor:
         """
         logger.info(f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}")
         logger.info(f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}, status={job.status}")
+
+        # Ensure started_at is set (defensive programming for tests/manual execution)
+        if job.started_at is None:
+            job.started_at = datetime.utcnow()
+
         logger.info(f"[EXECUTE_JOB] Job {job.id} started at {job.started_at}")
 
         start_time = datetime.utcnow()
