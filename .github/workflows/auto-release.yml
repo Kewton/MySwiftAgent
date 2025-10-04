@@ -104,6 +104,29 @@ jobs:
 
       - name: Process changed projects
         run: |
+          # Get current date in YYYY.MM.DD format
+          RELEASE_DATE=$(date +%Y.%m.%d)
+
+          # Function to get next sequential number for the current date
+          get_next_sequence() {
+            local date_pattern="$1"
+            # Fetch all tags from remote
+            git fetch --tags
+            # Find all tags matching the date pattern and extract sequence numbers
+            local max_seq=$(git tag -l "${date_pattern}.*/*" | \
+              sed -n "s|^${date_pattern}\.\([0-9]\{2\}\)/.*|\1|p" | \
+              sort -n | tail -1)
+
+            if [[ -z "$max_seq" ]]; then
+              echo "01"
+            else
+              printf "%02d" $((10#$max_seq + 1))
+            fi
+          }
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
 
           for project in "${PROJECTS[@]}"; do
@@ -125,7 +148,12 @@ jobs:
               continue
             fi
 
-            TAG_NAME="$project/v$VERSION"
+            # Get fresh sequence number for this tag
+            SEQ_NUM=$(get_next_sequence "$RELEASE_DATE")
+            echo "📋 Using sequence number: $SEQ_NUM for $project on $RELEASE_DATE"
+
+            # New tag format: yyyy.mm.dd.NN/project-vX.Y.Z
+            TAG_NAME="${RELEASE_DATE}.${SEQ_NUM}/${project}-v${VERSION}"
             echo "📋 Creating tag: $TAG_NAME"
 
             if git tag -l | grep -q "^$TAG_NAME$"; then
@@ -133,16 +161,13 @@ jobs:
               continue
             fi
 
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-            git tag -a "$TAG_NAME" -m "Release $project v$VERSION - Automated release"
+            git tag -a "$TAG_NAME" -m "Release $project v$VERSION - Automated release (${RELEASE_DATE}.${SEQ_NUM})"
             git push origin "$TAG_NAME"
             echo "✅ Successfully created and pushed tag: $TAG_NAME"
 
             echo "Creating GitHub Release for $TAG_NAME..."
             gh release create "$TAG_NAME" \
-              --title "🚀 $project v$VERSION" \
+              --title "🚀 $project v$VERSION (${RELEASE_DATE}.${SEQ_NUM})" \
               --notes "Release $project v$VERSION - Automated release generated with Claude Code" \
               --latest=$(if [[ "$project" == "myscheduler" ]]; then echo "true"; else echo "false"; fi)
 
@@ -154,8 +179,32 @@ jobs:
       - name: Create multi-project release (if applicable)
         if: needs.detect-changes.outputs.is_multi_project == 'true'
         run: |
+          # Get current date in YYYY.MM.DD format
           RELEASE_DATE=$(date +%Y.%m.%d)
-          TAG_NAME="multi/v$RELEASE_DATE"
+
+          # Function to get next sequential number for the current date
+          get_next_sequence() {
+            local date_pattern="$1"
+            # Fetch all tags from remote
+            git fetch --tags
+            # Find all tags matching the date pattern and extract sequence numbers
+            local max_seq=$(git tag -l "${date_pattern}.*/*" | \
+              sed -n "s|^${date_pattern}\.\([0-9]\{2\}\)/.*|\1|p" | \
+              sort -n | tail -1)
+
+            if [[ -z "$max_seq" ]]; then
+              echo "01"
+            else
+              printf "%02d" $((10#$max_seq + 1))
+            fi
+          }
+
+          # Get the next sequence number for today
+          SEQ_NUM=$(get_next_sequence "$RELEASE_DATE")
+          echo "📋 Using sequence number: $SEQ_NUM for multi-project release on $RELEASE_DATE"
+
+          # New tag format: yyyy.mm.dd.NN/multi-vYYYY.MM.DD
+          TAG_NAME="${RELEASE_DATE}.${SEQ_NUM}/multi-v${RELEASE_DATE}"
 
           if git tag -l | grep -q "^$TAG_NAME$"; then
             echo "⚠️ Multi-project tag $TAG_NAME already exists, skipping"
@@ -163,7 +212,7 @@ jobs:
             echo "📋 Creating multi-project release tag: $TAG_NAME"
 
             # Build release notes from all changed projects
-            RELEASE_NOTES="# Multi-Project Release v$RELEASE_DATE"$'\n\n'
+            RELEASE_NOTES="# Multi-Project Release ${RELEASE_DATE}.${SEQ_NUM}"$'\n\n'
             RELEASE_NOTES+="This release includes updates to multiple projects:"$'\n\n'
 
             IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
@@ -180,14 +229,14 @@ jobs:
             git config --global user.name "github-actions[bot]"
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-            git tag -a "$TAG_NAME" -m "Multi-project release v$RELEASE_DATE"
+            git tag -a "$TAG_NAME" -m "Multi-project release ${RELEASE_DATE}.${SEQ_NUM}"
             git push origin "$TAG_NAME"
             echo "✅ Successfully created and pushed multi-project tag: $TAG_NAME"
 
             echo "$RELEASE_NOTES" > multi-release-notes.md
 
             gh release create "$TAG_NAME" \
-              --title "🚀 Multi-Project Release v$RELEASE_DATE" \
+              --title "🚀 Multi-Project Release ${RELEASE_DATE}.${SEQ_NUM}" \
               --notes-file multi-release-notes.md \
               --latest=false
 
