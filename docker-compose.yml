@@ -97,6 +97,8 @@ services:
       # Logging
       - LOG_DIR=/app/logs
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Node.js module path for Playwright
+      - NODE_PATH=/usr/lib/node_modules
     volumes:
       - ./docker-compose-data/expertagent/token:/app/token
       - ./docker-compose-data/expertagent/logs:/app/logs
