@@ -21,7 +21,7 @@ Environment: Linux ARM64 with Chromium headless browser pre-installed.""")
     human_msg = HumanMessage(content=query)
 
     async with make_playwright_graph(
-        "playwrightagent", _modelname, 5
+        "playwrightagent", _modelname, 15
     ) as graph:
         result = await graph.ainvoke({"messages": [system_msg, human_msg]})
         aiMessage = ""
