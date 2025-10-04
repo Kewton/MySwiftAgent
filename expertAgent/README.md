@@ -5,8 +5,9 @@
 ## Features
 
 - ⚡ Fast and lightweight FastAPI server
-- 🧠 LangGraph-based AI agents (sample, utility, explorer, action)
+- 🧠 LangGraph-based AI agents (sample, utility, explorer, action, playwright)
 - 🔧 MCP (Model Context Protocol) servers and tools
+- 🎭 **Playwright MCP integration** for web automation and scraping
 - 🌐 Multiple AI provider support (OpenAI, Google Gemini, Anthropic, Ollama)
 - 🔒 CORS-enabled for cross-origin requests
 - 🧪 Comprehensive testing with pytest
@@ -34,7 +35,8 @@ expertAgent/
 │       └── utilityaiagents/       # Utility agents
 │           ├── explorer_agent.py
 │           ├── jsonOutput_agent.py
-│           └── action_agent.py
+│           ├── action_agent.py
+│           └── playwright_agent.py  # 🆕 Playwright web automation
 ├── mymcp/                 # MCP servers and tools
 │   ├── stdioall.py               # MCP server
 │   ├── stdio_explorer.py         # Explorer MCP
@@ -191,6 +193,57 @@ expertAgent/
 └── README.md             # This file
 ```
 
+### Playwright MCP Integration
+
+🎭 **Playwright Agent** provides browser automation capabilities using Microsoft's Playwright MCP server.
+
+**Capabilities:**
+- 📄 Web page scraping and content extraction
+- 📥 File downloads from web pages
+- 🌐 Browser automation with Chromium
+- 🔍 DOM navigation and interaction
+
+**Usage Example:**
+
+```python
+from aiagent.langgraph.utilityaiagents.playwright_agent import playwrightagent
+
+# Web scraping example
+result = await playwrightagent(
+    "https://example.com のページ内容を取得してください",
+    "gemini-2.5-flash"
+)
+
+# File download example
+result = await playwrightagent(
+    "https://example.com/document.pdf をダウンロードしてください",
+    "gpt-4o-mini"
+)
+```
+
+**Technical Details:**
+- Uses `@playwright/mcp@latest` via npx
+- Chromium browser pre-installed in Docker
+- Integrated with LangGraph ReAct agent pattern
+- Configurable max iterations (default: 5)
+
+**Development Setup:**
+
+For local development with `dev-start.sh`, ensure Node.js and Playwright are installed:
+
+```bash
+# Install Node.js (v20+)
+# macOS
+brew install node
+
+# Ubuntu/Debian
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Playwright browsers
+npx playwright install chromium
+```
+
 ### Environment Variables
 
 Create a `.env` file in the project root:
@@ -216,7 +269,7 @@ See [CLAUDE.md](../CLAUDE.md) for detailed workflow information.
 
 ## Version
 
-Current version: 0.1.0
+Current version: 0.2.0 (includes Playwright MCP integration)
 
 ## License
 
