@@ -26,6 +26,9 @@ RUN apt-get update && apt-get install -y \
 RUN npm install -g playwright && \
     npx -y playwright install --with-deps chromium
 
+# Install Wikipedia MCP (Python-based)
+RUN pip install --no-cache-dir wikipedia-mcp
+
 # Set environment variables for Playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0

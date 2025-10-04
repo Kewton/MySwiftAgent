@@ -8,6 +8,7 @@ from aiagent.langgraph.utilityaiagents.action_agent import actionagent
 from aiagent.langgraph.utilityaiagents.explorer_agent import exploreragent
 from aiagent.langgraph.utilityaiagents.jsonOutput_agent import jsonOutputagent
 from aiagent.langgraph.utilityaiagents.playwright_agent import playwrightagent
+from aiagent.langgraph.utilityaiagents.wikipedia_agent import wikipediaagent
 from app.schemas.standardAiAgent import (
     ChatMessage,
     ExpertAiAgentRequest,
@@ -127,6 +128,12 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
             print(f"request.user_input:{_input}")
             result = await playwrightagent(_input, model_name)
             return ExpertAiAgentResponse(result=remove_think_tags(result), type="playwright")
+        elif "wikipedia" in agent_name:
+            print(f"request.user_input:{_input}")
+            # Extract language parameter if provided, default to Japanese
+            language = request.language if hasattr(request, 'language') and request.language else "ja"
+            result = await wikipediaagent(_input, model_name, language)
+            return ExpertAiAgentResponse(result=remove_think_tags(result), type="wikipedia")
         return {"message": "No matching agent found."}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")

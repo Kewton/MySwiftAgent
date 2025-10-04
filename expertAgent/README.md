@@ -5,9 +5,10 @@
 ## Features
 
 - ⚡ Fast and lightweight FastAPI server
-- 🧠 LangGraph-based AI agents (sample, utility, explorer, action, playwright)
+- 🧠 LangGraph-based AI agents (sample, utility, explorer, action, playwright, wikipedia)
 - 🔧 MCP (Model Context Protocol) servers and tools
 - 🎭 **Playwright MCP integration** for web automation and scraping
+- 📚 **Wikipedia MCP integration** for knowledge retrieval and research
 - 🌐 Multiple AI provider support (OpenAI, Google Gemini, Anthropic, Ollama)
 - 🔒 CORS-enabled for cross-origin requests
 - 🧪 Comprehensive testing with pytest
@@ -36,7 +37,8 @@ expertAgent/
 │           ├── explorer_agent.py
 │           ├── jsonOutput_agent.py
 │           ├── action_agent.py
-│           └── playwright_agent.py  # 🆕 Playwright web automation
+│           ├── playwright_agent.py  # 🆕 Playwright web automation
+│           └── wikipedia_agent.py   # 🆕 Wikipedia knowledge retrieval
 ├── mymcp/                 # MCP servers and tools
 │   ├── stdioall.py               # MCP server
 │   ├── stdio_explorer.py         # Explorer MCP
@@ -265,6 +267,76 @@ sudo apt-get install -y nodejs
 npx playwright install chromium
 ```
 
+### Wikipedia MCP Integration
+
+📚 **Wikipedia Agent** provides knowledge retrieval and research capabilities using Wikipedia MCP server.
+
+**Capabilities:**
+- 🔍 Search Wikipedia articles
+- 📖 Retrieve full article content
+- 📝 Get article summaries
+- 📑 Extract specific sections
+- 🔗 Discover article links and related topics
+- 🌍 Multi-language support (140+ languages)
+
+**Usage Example:**
+
+```python
+from aiagent.langgraph.utilityaiagents.wikipedia_agent import wikipediaagent
+
+# Japanese Wikipedia search
+result = await wikipediaagent(
+    "日本の歴史について教えてください",
+    "gemini-2.5-flash",
+    "ja"
+)
+
+# English Wikipedia search
+result = await wikipediaagent(
+    "Tell me about artificial intelligence",
+    "gpt-4o-mini",
+    "en"
+)
+```
+
+**API Example:**
+
+```bash
+# Japanese Wikipedia (default)
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/wikipedia" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "量子コンピュータについて詳しく教えてください"
+    }'
+
+# English Wikipedia
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/wikipedia" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "Explain quantum computing in detail",
+      "language": "en"
+    }'
+```
+
+**Technical Details:**
+- Uses Wikipedia MCP Python package
+- Supports 140+ languages and country codes
+- Integrated with LangGraph ReAct agent pattern
+- Configurable max iterations (default: 15)
+- Language parameter: ISO 639-1 codes (ja, en, fr, de, etc.)
+
+**Development Setup:**
+
+Wikipedia MCP is Python-based and installed via pip in Docker:
+
+```bash
+# Already installed in Docker via Dockerfile
+pip install wikipedia-mcp
+
+# Test Wikipedia MCP locally
+wikipedia-mcp --language ja
+```
+
 ### Environment Variables
 
 Create a `.env` file in the project root:
@@ -290,7 +362,7 @@ See [CLAUDE.md](../CLAUDE.md) for detailed workflow information.
 
 ## Version
 
-Current version: 0.2.0 (includes Playwright MCP integration)
+Current version: 0.2.0 (includes Playwright MCP and Wikipedia MCP integration)
 
 ## License
 

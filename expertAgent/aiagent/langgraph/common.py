@@ -221,3 +221,56 @@ async def make_playwright_graph(
 
     graph.name = _graphname
     yield graph
+
+
+@asynccontextmanager
+async def make_wikipedia_graph(
+    _graphname: str = "Wikipedia Agent",
+    _model: str = settings.GRAPH_AGENT_MODEL,
+    _max_iterations: int | None = None,
+    _language: str = "ja",
+):
+    """Wikipedia MCP専用のグラフを作成します。
+
+    Args:
+        _graphname: グラフ名
+        _model: 使用するモデル名
+        _max_iterations: 最大試行回数
+        _language: Wikipedia言語コード（デフォルト: ja）
+    """
+    if _model is None:
+        _model = settings.GRAPH_AGENT_MODEL
+
+    if isChatGptAPI(_model) or isChatGPT_o(_model):
+        model = ChatOpenAI(model=_model)
+    elif isGemini(_model):
+        model = ChatGoogleGenerativeAI(model=_model)
+    elif isClaude(_model):
+        model = ChatAnthropic(model=_model)
+    else:
+        model = ChatOllama(model=_model, base_url=settings.OLLAMA_URL)
+
+    # Wikipedia MCP client setup with language support
+    mcp_client = MultiServerMCPClient(
+        {
+            "wikipedia": {
+                "command": "wikipedia-mcp",
+                "args": ["--language", _language],
+                "transport": "stdio",
+            }
+        }
+    )
+
+    mcp_tools = await mcp_client.get_tools()
+    print(f"Available Wikipedia tools: {[tool.name for tool in mcp_tools]}")
+
+    # ReAct エージェントを生成
+    graph = create_react_agent(model, mcp_tools)
+
+    # 最大試行回数を recursion_limit に反映
+    if _max_iterations is not None:
+        recursion_limit = 2 * _max_iterations + 1
+        graph = graph.with_config(recursion_limit=recursion_limit, max_concurrency=2)
+
+    graph.name = _graphname
+    yield graph
