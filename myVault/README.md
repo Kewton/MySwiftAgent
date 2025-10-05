@@ -147,6 +147,191 @@ X-Token: <shared-token>
 
 ---
 
+## 🧪 Quick Start & Testing
+
+### Step 1: Generate Master Key
+
+```bash
+# Generate a cryptographically secure 32-byte key
+python -c "import secrets, base64; print('base64:' + base64.b64encode(secrets.token_bytes(32)).decode())"
+```
+
+Copy the output (e.g., `base64:jFi1bkzTyKQ5BLtw2dBDo1RItDXlKo8A5z2JbC6TExE=`) for the next step.
+
+### Step 2: Configure Environment
+
+```bash
+# Copy the example config
+cp .env.example .env
+
+# Edit .env with your master key and service credentials
+# MSA_MASTER_KEY=base64:YOUR_GENERATED_KEY_HERE
+# ALLOWED_SERVICES=testService,anotherService
+# TOKEN_testService=test-secret-token-123
+# ALLOW_testService=project:test/,common/
+```
+
+### Step 3: Install Dependencies
+
+```bash
+# Sync project dependencies
+uv sync
+```
+
+### Step 4: Start the Service
+
+```bash
+# Run development server
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The service will be available at `http://localhost:8000`
+
+---
+
+## 📡 API Usage Examples
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+# Response: {"status":"healthy","service":"myVault"}
+```
+
+### Test Connectivity (with authentication)
+
+```bash
+curl -X POST http://localhost:8000/api/secrets/test \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+# Response: {"status":"ok","message":"Authentication successful for service 'testService'"}
+```
+
+### Create a Project
+
+```bash
+curl -X POST http://localhost:8000/api/projects \
+  -H "Content-Type: application/json" \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123" \
+  -d '{
+    "name": "newsbot",
+    "description": "News aggregation bot secrets"
+  }'
+# Response: {"id":1,"name":"newsbot","description":"News aggregation bot secrets","created_at":"...","created_by":"testService"}
+```
+
+### Create a Secret
+
+```bash
+curl -X POST http://localhost:8000/api/secrets \
+  -H "Content-Type: application/json" \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123" \
+  -d '{
+    "project": "test",
+    "path": "prod/api-key",
+    "value": "super-secret-api-key-12345"
+  }'
+# Response: {"id":1,"project":"test","path":"prod/api-key","value":"super-secret-api-key-12345","version":1,"updated_at":"...","updated_by":"testService"}
+```
+
+### Retrieve a Secret
+
+```bash
+curl http://localhost:8000/api/secrets/test/prod/api-key \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+# Response: {"id":1,"project":"test","path":"prod/api-key","value":"super-secret-api-key-12345","version":1,"updated_at":"...","updated_by":"testService"}
+```
+
+### List Secrets (values redacted)
+
+```bash
+curl http://localhost:8000/api/secrets \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+# Response: [{"id":1,"project":"test","path":"prod/api-key","version":1,"updated_at":"...","updated_by":"testService"}]
+```
+
+### Update a Secret (rotation)
+
+```bash
+curl -X PATCH http://localhost:8000/api/secrets/test/prod/api-key \
+  -H "Content-Type: application/json" \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123" \
+  -d '{
+    "value": "new-rotated-api-key-67890"
+  }'
+# Response: {"id":1,"project":"test","path":"prod/api-key","value":"new-rotated-api-key-67890","version":2,"updated_at":"...","updated_by":"testService"}
+```
+
+### Delete a Secret
+
+```bash
+curl -X DELETE http://localhost:8000/api/secrets/test/prod/api-key \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+# Response: HTTP 204 No Content
+```
+
+---
+
+## 🔬 Verification Workflow
+
+Complete end-to-end test to verify all functionality:
+
+```bash
+# 1. Start the service
+uv run uvicorn app.main:app --reload &
+sleep 2
+
+# 2. Health check
+curl http://localhost:8000/health
+
+# 3. Test authentication
+curl -X POST http://localhost:8000/api/secrets/test \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+
+# 4. Create a project
+curl -X POST http://localhost:8000/api/projects \
+  -H "Content-Type: application/json" \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123" \
+  -d '{"name": "demo", "description": "Demo project"}'
+
+# 5. Create a secret
+curl -X POST http://localhost:8000/api/secrets \
+  -H "Content-Type: application/json" \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123" \
+  -d '{"project": "test", "path": "demo/password", "value": "mySecretPass123"}'
+
+# 6. Retrieve the secret
+curl http://localhost:8000/api/secrets/test/demo/password \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+
+# 7. Update the secret
+curl -X PATCH http://localhost:8000/api/secrets/test/demo/password \
+  -H "Content-Type: application/json" \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123" \
+  -d '{"value": "newSecretPass456"}'
+
+# 8. Delete the secret
+curl -X DELETE http://localhost:8000/api/secrets/test/demo/password \
+  -H "X-Service: testService" \
+  -H "X-Token: test-secret-token-123"
+
+# 9. Stop the service
+pkill -f "uvicorn app.main:app"
+```
+
+---
+
 ## 🤝 Collaboration
 
 - Track issues and proposals in the main MySwiftAgent repository.
