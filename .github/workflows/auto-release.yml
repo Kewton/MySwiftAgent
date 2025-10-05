@@ -104,7 +104,30 @@ jobs:
 
       - name: Process changed projects
         run: |
+          # Function to get next sequence number for a given date pattern
+          get_next_sequence() {
+            local date_pattern="$1"
+            git fetch --tags
+            local max_seq=$(git tag -l "${date_pattern}.*/*/*" | \
+              sed -n "s|^${date_pattern}\.\([0-9]\{2\}\)/.*|\1|p" | \
+              sort -n | tail -1)
+
+            if [[ -z "$max_seq" ]]; then
+              echo "01"
+            else
+              printf "%02d" $((10#$max_seq + 1))
+            fi
+          }
+
           IFS=',' read -ra PROJECTS <<< "${{ needs.detect-changes.outputs.changed_projects }}"
+
+          # Get current date
+          RELEASE_DATE=$(date +%Y.%m.%d)
+          echo "📅 Release date: $RELEASE_DATE"
+
+          # Get next sequence number for today
+          SEQ_NUM=$(get_next_sequence "$RELEASE_DATE")
+          echo "🔢 Sequence number: $SEQ_NUM"
 
           for project in "${PROJECTS[@]}"; do
             echo "🚀 Processing project: $project"
@@ -125,7 +148,8 @@ jobs:
               continue
             fi
 
-            TAG_NAME="$project/v$VERSION"
+            # New tag format: yyyy.mm.dd.NN/project/vX.Y.Z
+            TAG_NAME="${RELEASE_DATE}.${SEQ_NUM}/${project}/v${VERSION}"
             echo "📋 Creating tag: $TAG_NAME"
 
             if git tag -l | grep -q "^$TAG_NAME$"; then
