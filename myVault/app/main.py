@@ -1,12 +1,18 @@
 """myVault - Secure personal data vault and secret management service."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import projects, secrets
 from app.core.database import init_db
+
+# Load .env file from project root
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 @asynccontextmanager
