@@ -23,25 +23,18 @@ os.environ["TOKEN_other-service"] = "other-token-456"
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.database import Base, get_db
+from app.core.database import Base, get_db, engine
 from app.main import app
-
-# Test database URL
-TEST_DATABASE_URL = "sqlite:///:memory:"
+from app.models.project import Project  # noqa: F401
+from app.models.secret import Secret  # noqa: F401
 
 
 @pytest.fixture
 def db_session():
     """Create a fresh database session for each test."""
-    # Create test engine
-    engine = create_engine(
-        TEST_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-
-    # Create tables
+    # Use app's engine and create tables
     Base.metadata.create_all(bind=engine)
 
     # Create session
