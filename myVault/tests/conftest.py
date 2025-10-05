@@ -21,11 +21,13 @@ os.environ["MSA_MASTER_KEY"] = "base64:jFi1bkzTyKQ5BLtw2dBDo1RItDXlKo8A5z2JbC6TE
 os.environ["TOKEN_test-service"] = "test-token-123"
 os.environ["TOKEN_other-service"] = "other-token-456"
 
+# ruff: noqa: E402
+# Imports must come after environment variable setup and config copy
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
-from app.core.database import Base, get_db, engine
+from app.core.database import Base, engine, get_db
 from app.main import app
 from app.models.project import Project  # noqa: F401
 from app.models.secret import Secret  # noqa: F401
