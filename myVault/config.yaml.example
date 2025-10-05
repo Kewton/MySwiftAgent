@@ -30,37 +30,85 @@ security:
   # Session timeout (minutes)
   session_timeout_minutes: 30
 
-# Service definitions and access policies
+# RBAC Policies
+# Define reusable access control policies with fine-grained permissions
+# Format:
+#   - name: Unique policy/role name
+#     description: Human-readable description
+#     permissions: List of permission rules
+#       - effect: "allow" (or "deny" - not implemented yet)
+#         actions: ["read", "write", "delete", "list"]
+#         resources: ["secret:{project}:{path}" with wildcards]
+policies:
+  # Example: Full editor role
+  - name: my-project-editor
+    description: "Full read/write access to myproject production secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "list"]
+        resources: ["secret:myproject*:prod/*"]
+
+  # Example: Read-only worker role
+  - name: my-project-worker-reader
+    description: "Read-only access to worker and database secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:myproject:prod/worker/*", "secret:myproject:prod/database/*"]
+
+  # Example: Scheduler role
+  - name: my-project-scheduler-reader
+    description: "Read-only access to scheduler secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:myproject:prod/scheduler/*"]
+
+  # Example: Common secrets - read-only
+  - name: common-reader
+    description: "Read-only access to common secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "list"]
+        resources: ["secret:common:*"]
+
+  # Example: Common secrets - full access
+  - name: common-editor
+    description: "Full read/write/delete access to common secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "delete", "list"]
+        resources: ["secret:common:*"]
+
+# Service definitions
 # Each service needs a corresponding TOKEN_<service-name> in .env
+# Services are assigned roles (policies) which grant specific permissions
 services:
   - name: my-api-service
-    description: "API service with full access to production secrets"
+    description: "API service with full access to production and common secrets"
     enabled: true
-    access_rules:
-      # Format: "project:path/prefix"
-      # Wildcards supported: "project*:path/"
-      - "myproject*:prod/"
-      - "common:"
+    roles:
+      - my-project-editor
+      - common-editor
 
   - name: my-worker-service
-    description: "Worker service with limited access"
+    description: "Worker service with read-only access to data processing secrets"
     enabled: true
-    access_rules:
-      - "myproject:prod/worker/"
-      - "myproject:prod/database/"
+    roles:
+      - my-project-worker-reader
 
   - name: my-scheduler-service
-    description: "Scheduler service with scheduling secrets only"
+    description: "Scheduler service with read-only access to scheduling secrets"
     enabled: true
-    access_rules:
-      - "myproject:prod/scheduler/"
-      - "common:"
+    roles:
+      - my-project-scheduler-reader
+      - common-reader
 
 # Example: Disable a service
 #  - name: deprecated-service
 #    description: "Old service - disabled"
 #    enabled: false
-#    access_rules: []
+#    roles: []
 
 # Audit configuration
 audit:

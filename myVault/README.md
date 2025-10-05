@@ -81,21 +81,35 @@ application:
   version: "0.1.0"
   port: 8000
 
-# Service definitions and access policies
+# RBAC Policies - Define reusable access control roles
+policies:
+  - name: my-project-editor
+    description: "Full read/write access to myproject production"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "list"]
+        resources: ["secret:myproject*:prod/*"]
+
+  - name: my-project-worker-reader
+    description: "Read-only access to worker secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:myproject:prod/worker/*"]
+
+# Service definitions - Assign roles to services
 services:
   - name: my-api-service
     description: "API service with full access"
     enabled: true
-    access_rules:
-      - "myproject*:prod/"
-      - "common:"
+    roles:
+      - my-project-editor
 
   - name: my-worker-service
-    description: "Worker service with limited access"
+    description: "Worker service with read-only access"
     enabled: true
-    access_rules:
-      - "myproject:prod/worker/"
-      - "myproject:prod/database/"
+    roles:
+      - my-project-worker-reader
 
 # Audit configuration
 audit:
@@ -118,9 +132,22 @@ TOKEN_my-worker-service=another-secure-token
 ### Key Design Notes
 
 - **Service identity** is asserted through `X-Service` and `X-Token` headers
-- **Access rules** (e.g., `project*:prod/`) are defined in `config.yaml` and scope which secrets a caller may access
+- **RBAC (Role-Based Access Control)**:
+  - Policies define permissions with **actions** (read/write/delete/list), **resources** (secret paths), and **effect** (allow/deny)
+  - Services are assigned **roles** (policies) that grant specific permissions
+  - Supports wildcard patterns for flexible resource matching (e.g., `secret:myproject*:prod/*`)
+  - Enforces **principle of least privilege** with action-level control
 - **Tokens and master key** are loaded from environment variables (`.env` file or container secrets)
 - **Separation of concerns**: Configuration policies are version-controlled, secrets are not
+
+### RBAC Actions
+
+| Action | Description | Example Use Case |
+|--------|-------------|------------------|
+| `read` | Retrieve secret values | Workers reading database credentials |
+| `write` | Create or update secrets | API services managing configurations |
+| `delete` | Remove secrets | Admin services cleaning up old secrets |
+| `list` | Enumerate secrets (values redacted) | Discovery and inventory operations |
 
 ### Generating Secure Credentials
 

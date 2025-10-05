@@ -1,14 +1,25 @@
 """Pytest configuration and fixtures."""
 
 import os
+import shutil
+from pathlib import Path
+
+# Copy test config to expected location BEFORE importing app modules
+test_config_src = Path(__file__).parent.parent / "config.test.yaml"
+test_config_dst = Path(__file__).parent.parent / "config.yaml"
+test_config_backup = Path(__file__).parent.parent / "config.yaml.backup"
+
+# Backup existing config if it exists
+if test_config_dst.exists() and not test_config_backup.exists():
+    shutil.copy(test_config_dst, test_config_backup)
+
+# Copy test config
+shutil.copy(test_config_src, test_config_dst)
 
 # Set test environment variables BEFORE importing app modules
 os.environ["MSA_MASTER_KEY"] = "base64:jFi1bkzTyKQ5BLtw2dBDo1RItDXlKo8A5z2JbC6TExE="
-os.environ["ALLOWED_SERVICES"] = "test-service,other-service"
 os.environ["TOKEN_test-service"] = "test-token-123"
 os.environ["TOKEN_other-service"] = "other-token-456"
-os.environ["ALLOW_test-service"] = "test:,common:"
-os.environ["ALLOW_other-service"] = "other:"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -66,3 +77,14 @@ def client(db_session):
 def auth_headers() -> dict[str, str]:
     """Get authentication headers for test service."""
     return {"X-Service": "test-service", "X-Token": "test-token-123"}
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Restore original config after all tests complete."""
+    test_config_dst = Path(__file__).parent.parent / "config.yaml"
+    test_config_backup = Path(__file__).parent.parent / "config.yaml.backup"
+
+    # Restore backup if it exists
+    if test_config_backup.exists():
+        shutil.copy(test_config_backup, test_config_dst)
+        test_config_backup.unlink()  # Remove backup
