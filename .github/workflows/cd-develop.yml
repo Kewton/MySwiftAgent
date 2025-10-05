@@ -5,31 +5,89 @@ on:
     branches: [develop]
     paths:
       - 'myscheduler/**'
+      - 'jobqueue/**'
+      - 'expertAgent/**'
+      - 'commonUI/**'
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
 
-defaults:
-  run:
-    working-directory: ./myscheduler
-
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/myscheduler
 
 jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      myscheduler: ${{ steps.changes.outputs.myscheduler }}
+      jobqueue: ${{ steps.changes.outputs.jobqueue }}
+      expertAgent: ${{ steps.changes.outputs.expertAgent }}
+      commonUI: ${{ steps.changes.outputs.commonUI }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Get current and previous commit
+
+      - name: Detect changes
+        id: changes
+        run: |
+          echo "Detecting changes in directories..."
+
+          # Check if files changed in each project directory
+          if git diff --name-only HEAD~1 HEAD | grep -q "^myscheduler/"; then
+            echo "myscheduler=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in myscheduler"
+          else
+            echo "myscheduler=false" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --name-only HEAD~1 HEAD | grep -q "^jobqueue/"; then
+            echo "jobqueue=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in jobqueue"
+          else
+            echo "jobqueue=false" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --name-only HEAD~1 HEAD | grep -q "^expertAgent/"; then
+            echo "expertAgent=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in expertAgent"
+          else
+            echo "expertAgent=false" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --name-only HEAD~1 HEAD | grep -q "^commonUI/"; then
+            echo "commonUI=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in commonUI"
+          else
+            echo "commonUI=false" >> $GITHUB_OUTPUT
+          fi
+
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true' || needs.detect-changes.outputs.commonUI == 'true'
+    strategy:
+      matrix:
+        python-version: ['3.12']
+        project:
+          - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
+          - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
+          - ${{ needs.detect-changes.outputs.commonUI == 'true' && 'commonUI' || '' }}
+        exclude:
+          - project: ''
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -37,28 +95,42 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
+        working-directory: ./${{ matrix.project }}
         run: uv sync --extra dev
 
       - name: Run linting
+        working-directory: ./${{ matrix.project }}
         run: uv run ruff check .
 
       - name: Run type checking
+        working-directory: ./${{ matrix.project }}
         run: uv run mypy app/
 
-      - name: Run tests
-        run: uv run pytest tests/ -v --cov=app --cov-report=xml
+      - name: Run tests with coverage
+        working-directory: ./${{ matrix.project }}
+        run: uv run pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
         with:
-          name: test-results
-          path: myscheduler/coverage.xml
+          file: ./${{ matrix.project }}/coverage.xml
+          directory: ./${{ matrix.project }}
+          fail_ci_if_error: false
 
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, detect-changes]
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true' || needs.detect-changes.outputs.commonUI == 'true'
+    strategy:
+      matrix:
+        project:
+          - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
+          - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
+          - ${{ needs.detect-changes.outputs.commonUI == 'true' && 'commonUI' || '' }}
+        exclude:
+          - project: ''
 
     steps:
       - name: Checkout code
@@ -75,15 +147,27 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
+        working-directory: ./${{ matrix.project }}
         run: uv sync --extra dev
 
       - name: Run integration tests
+        working-directory: ./${{ matrix.project }}
         run: uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term
 
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
-    needs: [test, integration-test]
+    needs: [test, integration-test, detect-changes]
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true' || needs.detect-changes.outputs.commonUI == 'true'
+    strategy:
+      matrix:
+        project:
+          - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
+          - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
+          - ${{ needs.detect-changes.outputs.commonUI == 'true' && 'commonUI' || '' }}
+        exclude:
+          - project: ''
 
     steps:
       - name: Checkout code
@@ -100,22 +184,54 @@ jobs:
           version: "latest"
 
       - name: Build package
+        working-directory: ./${{ matrix.project }}
         run: uv build
 
-      - name: Build Docker image (test only)
-        run: docker build -t myscheduler:test .
+      - name: Build Docker image
+        working-directory: ./${{ matrix.project }}
+        run: |
+          PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ${PROJECT_LOWER}:test .
 
       - name: Test Docker image
         run: |
-          docker run --rm -d --name myscheduler-test -p 8000:8000 myscheduler:test
+          PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
+          docker run --rm -d --name ${PROJECT_LOWER}-test -p 8000:8000 ${PROJECT_LOWER}:test
           sleep 10
+
+          # ヘルスチェック
+          echo "🔍 Testing health endpoint..."
           curl -f http://localhost:8000/health || exit 1
-          docker stop myscheduler-test
+
+          # API基本機能テスト（プロジェクトごとにカスタマイズ）
+          echo "🔍 Testing API endpoints..."
+          if [[ "${{ matrix.project }}" == "expertAgent" ]]; then
+            curl -f http://localhost:8000/ || exit 1
+            curl -f http://localhost:8000/aiagent-api/v1/ || exit 1
+          elif [[ "${{ matrix.project }}" == "myscheduler" ]]; then
+            curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+          elif [[ "${{ matrix.project }}" == "jobqueue" ]]; then
+            curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+          elif [[ "${{ matrix.project }}" == "commonUI" ]]; then
+            curl -f http://localhost:8000/ || exit 1
+          fi
+
+          docker stop ${PROJECT_LOWER}-test
 
   code-quality:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, detect-changes]
+    if: needs.detect-changes.outputs.myscheduler == 'true' || needs.detect-changes.outputs.jobqueue == 'true' || needs.detect-changes.outputs.expertAgent == 'true' || needs.detect-changes.outputs.commonUI == 'true'
+    strategy:
+      matrix:
+        project:
+          - ${{ needs.detect-changes.outputs.myscheduler == 'true' && 'myscheduler' || '' }}
+          - ${{ needs.detect-changes.outputs.jobqueue == 'true' && 'jobqueue' || '' }}
+          - ${{ needs.detect-changes.outputs.expertAgent == 'true' && 'expertAgent' || '' }}
+          - ${{ needs.detect-changes.outputs.commonUI == 'true' && 'commonUI' || '' }}
+        exclude:
+          - project: ''
 
     steps:
       - name: Checkout code
@@ -132,31 +248,30 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
+        working-directory: ./${{ matrix.project }}
         run: uv sync --extra dev
 
       - name: Code complexity analysis
+        working-directory: ./${{ matrix.project }}
         run: |
-          echo "📊 Analyzing code complexity"
-          # radon cc --average app/ || echo "Radon not available, skipping complexity analysis"
+          echo "📊 Analyzing code complexity for ${{ matrix.project }}"
 
       - name: Security analysis
+        working-directory: ./${{ matrix.project }}
         run: |
-          echo "🔒 Running security analysis"
+          echo "🔒 Running security analysis for ${{ matrix.project }}"
           uv run ruff check . --select=S --ignore=S104
 
       - name: Import analysis
+        working-directory: ./${{ matrix.project }}
         run: |
-          echo "📦 Analyzing imports"
-          # Check for unused imports and circular dependencies
+          echo "📦 Analyzing imports for ${{ matrix.project }}"
 
   notify:
     name: Quality Check Results
     runs-on: ubuntu-latest
     needs: [build-check, code-quality]
     if: always()
-    defaults:
-      run:
-        working-directory: .
 
     steps:
       - name: Success notification
