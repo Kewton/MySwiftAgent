@@ -1,0 +1,65 @@
+# MyVault Configuration File
+# This file contains non-sensitive configuration and policies.
+# Sensitive data (tokens, master key) are loaded from environment variables.
+
+# Application configuration
+application:
+  title: "myVault"
+  version: "0.1.0"
+  description: "Secure personal data vault and secret management service"
+  host: "0.0.0.0"
+  port: 8000
+
+# Database configuration
+database:
+  # Can be overridden by DATABASE_URL environment variable
+  url: "sqlite:///./myvault.db"
+
+# Security configuration
+security:
+  # Master key MUST be set via MSA_MASTER_KEY environment variable
+  # Token rotation policy (days)
+  token_rotation_days: 90
+  # Session timeout (minutes)
+  session_timeout_minutes: 30
+
+# Service definitions and access policies
+# Tokens are loaded from environment variables: TOKEN_<service-name>
+services:
+  - name: newsbot-api
+    description: "NewsBot API service - full access to newsbot production and common secrets"
+    enabled: true
+    access_rules:
+      - "newsbot*:prod/"
+      - "common:"
+
+  - name: newsbot-worker
+    description: "NewsBot worker - data processing secrets only"
+    enabled: true
+    access_rules:
+      - "newsbot:prod/worker/"
+      - "newsbot:prod/database/"
+
+  - name: newsbot-scheduler
+    description: "NewsBot scheduler - scheduling-related secrets only"
+    enabled: true
+    access_rules:
+      - "newsbot:prod/scheduler/"
+      - "common:"
+
+# Audit configuration
+audit:
+  enabled: true
+  log_access: true
+  log_modifications: true
+  retention_days: 90
+
+# CORS configuration
+cors:
+  allow_origins:
+    - "*"  # Configure appropriately for production
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"

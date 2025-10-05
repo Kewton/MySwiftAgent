@@ -1,0 +1,82 @@
+# MyVault Configuration File Example
+#
+# Copy this file to config.yaml and customize for your environment.
+# This file contains non-sensitive configuration and policies.
+# Sensitive data (tokens, master key) should be in .env file.
+
+# Application configuration
+application:
+  title: "myVault"
+  version: "0.1.0"
+  description: "Secure personal data vault and secret management service"
+  host: "0.0.0.0"
+  port: 8000
+
+# Database configuration
+database:
+  # SQLite (default for development)
+  url: "sqlite:///./myvault.db"
+
+  # PostgreSQL (recommended for production)
+  # url: "postgresql://user:password@localhost:5432/myvault"
+
+  # Note: Can be overridden by DATABASE_URL environment variable
+
+# Security configuration
+security:
+  # Master key MUST be set via MSA_MASTER_KEY environment variable
+  # Token rotation policy (days)
+  token_rotation_days: 90
+  # Session timeout (minutes)
+  session_timeout_minutes: 30
+
+# Service definitions and access policies
+# Each service needs a corresponding TOKEN_<service-name> in .env
+services:
+  - name: my-api-service
+    description: "API service with full access to production secrets"
+    enabled: true
+    access_rules:
+      # Format: "project:path/prefix"
+      # Wildcards supported: "project*:path/"
+      - "myproject*:prod/"
+      - "common:"
+
+  - name: my-worker-service
+    description: "Worker service with limited access"
+    enabled: true
+    access_rules:
+      - "myproject:prod/worker/"
+      - "myproject:prod/database/"
+
+  - name: my-scheduler-service
+    description: "Scheduler service with scheduling secrets only"
+    enabled: true
+    access_rules:
+      - "myproject:prod/scheduler/"
+      - "common:"
+
+# Example: Disable a service
+#  - name: deprecated-service
+#    description: "Old service - disabled"
+#    enabled: false
+#    access_rules: []
+
+# Audit configuration
+audit:
+  enabled: true
+  log_access: true
+  log_modifications: true
+  retention_days: 90
+
+# CORS configuration
+cors:
+  allow_origins:
+    - "*"  # ⚠️  Configure appropriately for production
+    # - "https://yourdomain.com"
+    # - "https://app.yourdomain.com"
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"

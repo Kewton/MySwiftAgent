@@ -63,43 +63,78 @@ uv sync
 
 ---
 
-## 🧩 Configuration (.env)
+## 🧩 Configuration
 
-myVault relies on environment variables to express who can talk to the service and what each caller may access.
+myVault uses a **structured configuration approach** that separates sensitive credentials from non-sensitive policies:
 
-```env
-##############################################
-# MyVault configuration (example)
-##############################################
+- **`config.yaml`**: Non-sensitive configuration (service definitions, access policies, audit settings)
+- **`.env`**: Sensitive credentials only (master key, service tokens)
 
-# Comma-separated list of client services allowed to connect
-ALLOWED_SERVICES=myscheduler,jobqueue,graphAiServer,commonUI
+### Configuration Structure
 
-# Shared tokens (sent via X-Service / X-Token headers)
-TOKEN_myscheduler=msched-xxxx
-TOKEN_jobqueue=jq-xxxx
-TOKEN_graphAiServer=gas-xxxx
-TOKEN_commonUI=ui-xxxx
+**config.yaml** (committed to repository):
 
-# Allowed secret prefixes per service (supports wildcards)
-ALLOW_myscheduler=project:newsbot/prod/,common/prod/
-ALLOW_jobqueue=project:newsbot/prod/
-ALLOW_graphAiServer=project:rag/dev/
-ALLOW_commonUI=project:*/prod/,common/*/
+```yaml
+# Application configuration
+application:
+  title: "myVault"
+  version: "0.1.0"
+  port: 8000
 
-# Master key for AES-256-GCM (Base64-encoded 32 bytes)
-MSA_MASTER_KEY=base64:jFi1bkzTyKQ5BLtw2dBDo1RItDXlKo8A5z2JbC6TExE=
+# Service definitions and access policies
+services:
+  - name: my-api-service
+    description: "API service with full access"
+    enabled: true
+    access_rules:
+      - "myproject*:prod/"
+      - "common:"
+
+  - name: my-worker-service
+    description: "Worker service with limited access"
+    enabled: true
+    access_rules:
+      - "myproject:prod/worker/"
+      - "myproject:prod/database/"
+
+# Audit configuration
+audit:
+  enabled: true
+  log_access: true
+  retention_days: 90
 ```
 
-Key design notes:
+**.env** (NOT committed, contains secrets):
 
-- Service identity is asserted through the pair of headers `X-Service` and `X-Token`.
-- Prefix rules (e.g. `project:*/prod/`) scope which secrets a caller may access.
-- The master key should be generated with a cryptographically secure RNG. Example:
+```env
+# Master encryption key (Base64-encoded 32 bytes)
+MSA_MASTER_KEY=base64:jFi1bkzTyKQ5BLtw2dBDo1RItDXlKo8A5z2JbC6TExE=
 
-  ```bash
-  python -c "import secrets, base64; print('base64:' + base64.b64encode(secrets.token_bytes(32)).decode())"
-  ```
+# Service authentication tokens
+TOKEN_my-api-service=secure-token-here
+TOKEN_my-worker-service=another-secure-token
+```
+
+### Key Design Notes
+
+- **Service identity** is asserted through `X-Service` and `X-Token` headers
+- **Access rules** (e.g., `project*:prod/`) are defined in `config.yaml` and scope which secrets a caller may access
+- **Tokens and master key** are loaded from environment variables (`.env` file or container secrets)
+- **Separation of concerns**: Configuration policies are version-controlled, secrets are not
+
+### Generating Secure Credentials
+
+Generate a master key:
+
+```bash
+python -c "import secrets, base64; print('base64:' + base64.b64encode(secrets.token_bytes(32)).decode())"
+```
+
+Generate service tokens:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 ---
 
@@ -161,15 +196,18 @@ Copy the output (e.g., `base64:jFi1bkzTyKQ5BLtw2dBDo1RItDXlKo8A5z2JbC6TExE=`) fo
 ### Step 2: Configure Environment
 
 ```bash
-# Copy the example config
+# Copy example configuration files
+cp config.yaml.example config.yaml
 cp .env.example .env
 
-# Edit .env with your master key and service credentials
+# Edit config.yaml to define your services and access policies
+# Edit .env with your master key and service tokens
 # MSA_MASTER_KEY=base64:YOUR_GENERATED_KEY_HERE
-# ALLOWED_SERVICES=testService,anotherService
-# TOKEN_testService=test-secret-token-123
-# ALLOW_testService=project:test/,common/
+# TOKEN_my-api-service=YOUR_SECURE_TOKEN_HERE
 ```
+
+**config.yaml** contains non-sensitive configuration (service definitions, access policies).
+**.env** contains only sensitive credentials (master key, service tokens).
 
 ### Step 3: Install Dependencies
 
