@@ -1,0 +1,1 @@
+"""myVault application package."""
