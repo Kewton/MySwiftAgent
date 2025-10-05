@@ -58,9 +58,86 @@ class AuthService:
 
         return x_service
 
+    def check_rbac_permission(
+        self, service: str, action: str, resource: str
+    ) -> bool:
+        """
+        Check if service has permission to perform action on resource using RBAC.
+
+        Args:
+            service: Service name
+            action: Action to perform (read, write, delete, list)
+            resource: Resource identifier (format: secret:project:path)
+
+        Returns:
+            True if permission is granted, False otherwise
+
+        Example:
+            check_rbac_permission("newsbot-api", "read", "secret:newsbot:prod/api-key")
+            check_rbac_permission("newsbot-worker", "write", "secret:common:shared-config")
+        """
+        # Get roles assigned to the service
+        roles = settings.get_service_roles(service)
+        if not roles:
+            return False
+
+        # Get all policies
+        policies = settings.get_policies()
+        if not policies:
+            return False
+
+        # Build a policy lookup by name
+        policy_map = {p.get("name"): p for p in policies if isinstance(p, dict)}
+
+        # Check each role's permissions
+        for role_name in roles:
+            policy = policy_map.get(role_name)
+            if not policy:
+                continue
+
+            permissions = policy.get("permissions", [])
+            for perm in permissions:
+                if not isinstance(perm, dict):
+                    continue
+
+                # Check effect (only "allow" supported for now)
+                effect = perm.get("effect", "").lower()
+                if effect != "allow":
+                    continue
+
+                # Check if action is allowed
+                allowed_actions = perm.get("actions", [])
+                if action not in allowed_actions:
+                    continue
+
+                # Check if resource matches
+                allowed_resources = perm.get("resources", [])
+                for resource_pattern in allowed_resources:
+                    if self._match_resource(resource_pattern, resource):
+                        return True
+
+        return False
+
+    def _match_resource(self, pattern: str, resource: str) -> bool:
+        """
+        Match resource against pattern with wildcard support.
+
+        Args:
+            pattern: Resource pattern (e.g., "secret:newsbot*:prod/*")
+            resource: Actual resource (e.g., "secret:newsbot_test:prod/api-key")
+
+        Returns:
+            True if resource matches pattern
+        """
+        # Use fnmatch for wildcard matching
+        return fnmatch.fnmatch(resource, pattern)
+
     def check_prefix_access(self, service: str, secret_path: str) -> bool:
         """
         Check if service has access to the given secret path based on prefix rules.
+
+        DEPRECATED: Use check_rbac_permission() instead.
+        This method is kept for backward compatibility.
 
         Args:
             service: Service name

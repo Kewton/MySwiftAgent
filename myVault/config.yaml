@@ -23,29 +23,72 @@ security:
   # Session timeout (minutes)
   session_timeout_minutes: 30
 
-# Service definitions and access policies
+# RBAC Policies
+# Define reusable access control policies with fine-grained permissions
+policies:
+  # NewsBot production editor - read and write access
+  - name: newsbot-prod-editor
+    description: "Full read/write access to NewsBot production secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "list"]
+        resources: ["secret:newsbot*:prod/*"]
+
+  # NewsBot worker - read-only access to worker and database secrets
+  - name: newsbot-worker-reader
+    description: "Read-only access to worker and database secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:newsbot:prod/worker/*", "secret:newsbot:prod/database/*"]
+
+  # NewsBot scheduler - read-only access to scheduler secrets
+  - name: newsbot-scheduler-reader
+    description: "Read-only access to scheduler secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:newsbot:prod/scheduler/*"]
+
+  # Common secrets - read-only access
+  - name: common-reader
+    description: "Read-only access to common secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "list"]
+        resources: ["secret:common:*"]
+
+  # Common secrets - full access
+  - name: common-editor
+    description: "Full read/write access to common secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "delete", "list"]
+        resources: ["secret:common:*"]
+
+# Service definitions
 # Tokens are loaded from environment variables: TOKEN_<service-name>
+# Services are assigned roles which grant specific permissions
 services:
   - name: newsbot-api
     description: "NewsBot API service - full access to newsbot production and common secrets"
     enabled: true
-    access_rules:
-      - "newsbot*:prod/"
-      - "common:"
+    roles:
+      - newsbot-prod-editor
+      - common-editor
 
   - name: newsbot-worker
-    description: "NewsBot worker - data processing secrets only"
+    description: "NewsBot worker - read-only access to data processing secrets"
     enabled: true
-    access_rules:
-      - "newsbot:prod/worker/"
-      - "newsbot:prod/database/"
+    roles:
+      - newsbot-worker-reader
 
   - name: newsbot-scheduler
-    description: "NewsBot scheduler - scheduling-related secrets only"
+    description: "NewsBot scheduler - read-only access to scheduling secrets"
     enabled: true
-    access_rules:
-      - "newsbot:prod/scheduler/"
-      - "common:"
+    roles:
+      - newsbot-scheduler-reader
+      - common-reader
 
 # Audit configuration
 audit:

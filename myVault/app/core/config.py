@@ -112,12 +112,28 @@ class Settings(BaseSettings):
         return os.getenv(token_key)
 
     def get_service_prefixes(self, service: str) -> list[str]:
-        """Get allowed access rule prefixes for a specific service from config.yaml."""
+        """Get allowed access rule prefixes for a specific service from config.yaml.
+
+        DEPRECATED: Use get_service_roles() with RBAC policies instead.
+        This method is kept for backward compatibility.
+        """
         services = self._yaml_config.get("services", [])
         for svc in services:
             if isinstance(svc, dict) and svc.get("name") == service:
                 return svc.get("access_rules", [])
         return []
+
+    def get_service_roles(self, service: str) -> list[str]:
+        """Get list of role names assigned to a specific service."""
+        services = self._yaml_config.get("services", [])
+        for svc in services:
+            if isinstance(svc, dict) and svc.get("name") == service:
+                return svc.get("roles", [])
+        return []
+
+    def get_policies(self) -> list[dict[str, Any]]:
+        """Get all RBAC policies from config.yaml."""
+        return self._yaml_config.get("policies", [])
 
     def get_master_key_bytes(self) -> bytes:
         """Get decoded master key bytes."""
