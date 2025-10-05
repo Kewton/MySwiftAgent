@@ -40,7 +40,7 @@ def chatOllama(
     }
 
     # リクエスト送信
-    response = requests.post(url, json=payload)
+    response = requests.post(url, json=payload, timeout=60)
 
     # 結果出力
     if response.ok:
@@ -65,7 +65,7 @@ def chatMlx(_messages: List[ChatMessage]) -> str:
     payload = {"messages": _messages}
 
     # リクエスト送信
-    response = requests.post(url, json=payload, headers=HEADERS)
+    response = requests.post(url, json=payload, headers=HEADERS, timeout=60)
 
     # 結果出力
     if response.ok:

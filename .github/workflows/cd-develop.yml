@@ -152,7 +152,11 @@ jobs:
 
       - name: Run integration tests
         working-directory: ./${{ matrix.project }}
-        run: uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term
+        run: |
+          echo "🧪 Running integration tests for ${{ matrix.project }}"
+          # Integration tests focus on API endpoints and integration flows
+          # Lower coverage threshold (50%) as detailed unit tests cover internal logic
+          uv run pytest tests/integration/ -v --cov=app --cov=core --cov-report=xml --cov-report=term --cov-fail-under=50
 
   build-check:
     name: Build Verification

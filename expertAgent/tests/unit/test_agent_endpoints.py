@@ -179,6 +179,35 @@ class TestMyaiagents:
         assert result.type == "action"
 
     @pytest.mark.asyncio
+    @patch("app.api.v1.agent_endpoints.playwrightagent")
+    async def test_myaiagents_playwright(self, mock_agent):
+        """Test myaiagents with playwright agent."""
+        mock_agent.return_value = "Playwright response <think>internal</think>"
+        request = ExpertAiAgentRequest(user_input="Test query")
+
+        result = await myaiagents(request, "playwright")
+
+        assert result.result == "Playwright response "
+        assert result.type == "playwright"
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.agent_endpoints.wikipediaagent")
+    async def test_myaiagents_wikipedia(self, mock_agent):
+        """Test myaiagents with wikipedia agent."""
+        mock_agent.return_value = "Wikipedia response"
+        request = ExpertAiAgentRequest(user_input="Test query")
+
+        result = await myaiagents(request, "wikipedia")
+
+        assert result.result == "Wikipedia response"
+        assert result.type == "wikipedia"
+        mock_agent.assert_called_once()
+        # Should use default "ja" language since request doesn't have language field
+        call_args = mock_agent.call_args[0]
+        assert len(call_args) == 3
+        assert call_args[2] == "ja"
+
+    @pytest.mark.asyncio
     async def test_myaiagents_unknown_agent(self):
         """Test myaiagents with unknown agent name."""
         request = ExpertAiAgentRequest(user_input="Test query")
