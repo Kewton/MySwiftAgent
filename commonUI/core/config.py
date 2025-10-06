@@ -69,7 +69,7 @@ class Config:
 
         self.expertagent = ExpertAgentConfig(
             base_url=self._get_setting(
-                "EXPERTAGENT_BASE_URL", "http://localhost:8105/aiagent-api",
+                "EXPERTAGENT_BASE_URL", "http://localhost:8103/aiagent-api",
             ),
             admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
         )
