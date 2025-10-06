@@ -12,12 +12,19 @@ class ProjectCreate(BaseModel):
     description: str | None = Field(None, max_length=500, description="Project description")
 
 
+class ProjectUpdate(BaseModel):
+    """Schema for updating a project."""
+
+    description: str | None = Field(None, max_length=500, description="Project description")
+
+
 class ProjectResponse(BaseModel):
     """Schema for project response."""
 
     id: int
     name: str
     description: str | None
+    is_default: bool
     created_at: datetime
     created_by: str
 

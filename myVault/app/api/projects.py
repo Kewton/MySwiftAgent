@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_current_service
 from app.core.database import get_db
 from app.models.project import Project
-from app.schemas.project import ProjectCreate, ProjectResponse
+from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -62,5 +62,86 @@ async def get_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project '{project_name}' not found",
         )
+
+    return project
+
+
+@router.patch("/{project_name}", response_model=ProjectResponse)
+async def update_project(
+    project_name: str,
+    project_update: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_service: str = Depends(get_current_service),
+) -> Project:
+    """Update project description."""
+    project = db.query(Project).filter(Project.name == project_name).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_name}' not found",
+        )
+
+    # Update description
+    if project_update.description is not None:
+        project.description = project_update.description
+
+    db.commit()
+    db.refresh(project)
+
+    return project
+
+
+@router.delete("/{project_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_project(
+    project_name: str,
+    db: Session = Depends(get_db),
+    current_service: str = Depends(get_current_service),
+) -> None:
+    """Delete a project."""
+    project = db.query(Project).filter(Project.name == project_name).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_name}' not found",
+        )
+
+    # Check if project has any secrets
+    if project.secrets:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete project '{project_name}' with existing secrets. Delete all secrets first.",
+        )
+
+    db.delete(project)
+    db.commit()
+
+
+@router.put("/{project_name}/set-default", response_model=ProjectResponse)
+async def set_default_project(
+    project_name: str,
+    db: Session = Depends(get_db),
+    current_service: str = Depends(get_current_service),
+) -> Project:
+    """Set a project as the default project.
+
+    Only one project can be set as default at a time.
+    Setting a new default will automatically unset the previous default.
+    """
+    # Find the target project
+    project = db.query(Project).filter(Project.name == project_name).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_name}' not found",
+        )
+
+    # Unset all other defaults
+    db.query(Project).filter(Project.id != project.id).update({"is_default": False})
+
+    # Set this project as default
+    project.is_default = True
+
+    db.commit()
+    db.refresh(project)
 
     return project

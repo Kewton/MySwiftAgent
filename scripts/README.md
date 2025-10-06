@@ -12,6 +12,7 @@ JobQueue、MyScheduler、CommonUIの3つのサービスを統合的に管理す�
 | `dev-start.sh` | **🔧 開発環境管理** | 包括的なサービス管理 |
 | `health-check.sh` | **🔍 ヘルスチェック** | サービス監視・診断 |
 | `start_services.sh` | **⚙️ 基本管理** | シンプルなサービス制御 |
+| `restart-myvault.sh` | **🔐 MyVault再起動** | MyVault設定リロード |
 
 ## 🚀 クイックスタート
 
@@ -75,12 +76,14 @@ JobQueue、MyScheduler、CommonUIの3つのサービスを統合的に管理す�
     - ⏰ MyScheduler API: `http://localhost:8102`
     - 🤖 ExpertAgent API: `http://localhost:8003`
     - 🔄 GraphAiServer API: `http://localhost:8004`
+    - 🔐 MyVault API: `http://localhost:8000`
 - **🖥️ `quick-start.sh` / `dev-start.sh` 開発用ポート**
     - 🎨 CommonUI (Streamlit): `http://localhost:8501`
     - 📋 JobQueue API: `http://localhost:8101`
     - ⏰ MyScheduler API: `http://localhost:8102`
     - 🤖 ExpertAgent API: `http://localhost:8103`
     - 🔄 GraphAiServer API: `http://localhost:8104`
+    - 🔐 MyVault API: `http://localhost:8000`
 
 ### サービス依存関係
 ```
@@ -88,10 +91,14 @@ CommonUI (Frontend)
     ├── JobQueue API (Backend)
     ├── MyScheduler API (Backend)
     ├── ExpertAgent API (AI Agent)
-    └── GraphAiServer API (Workflow Engine)
+    ├── GraphAiServer API (Workflow Engine)
+    └── MyVault API (Secret Management)
 
 JobQueue
     └── ExpertAgent API (Job execution target)
+
+MyVault (Secret Management)
+    └── 独立サービス（他サービスから呼び出される）
 ```
 
 ## ⚙️ 高度な機能
@@ -228,6 +235,29 @@ open http://localhost:8501
 ./scripts/health-check.sh monitor --interval 30 > monitoring.log 2>&1 &
 ```
 
+### MyVault管理
+```bash
+# MyVault再起動（設定変更時など）
+./scripts/restart-myvault.sh
+
+# MyVault起動
+./scripts/restart-myvault.sh start
+
+# MyVault停止
+./scripts/restart-myvault.sh stop
+
+# MyVaultステータス確認
+./scripts/restart-myvault.sh status
+
+# MyVaultログ確認
+./scripts/restart-myvault.sh logs
+
+# MyVaultログ監視
+./scripts/restart-myvault.sh logs -f
+```
+
+> 💡 `restart-myvault.sh` は、config.yaml や .env の変更後に MyVault サービスを再起動して設定をリロードする際に使用します。
+
 ## 🔗 関連リンク
 
 - [JobQueue プロジェクト](../jobqueue/README.md)
@@ -235,6 +265,7 @@ open http://localhost:8501
 - [ExpertAgent プロジェクト](../expertAgent/README.md)
 - [GraphAiServer プロジェクト](../graphAiServer/README.md)
 - [CommonUI プロジェクト](../commonUI/README.md)
+- [MyVault プロジェクト](../myVault/README.md)
 - [プロジェクト全体ドキュメント](../README.md)
 
 ---
