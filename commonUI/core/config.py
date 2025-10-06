@@ -14,11 +14,19 @@ class APIConfig(BaseModel):
     token: str = Field(..., description="API authentication token")
 
 
+class MyVaultConfig(BaseModel):
+    """MyVault API configuration with custom authentication."""
+
+    base_url: str = Field(..., description="Base URL for MyVault API")
+    service_name: str = Field(..., description="Service name for authentication")
+    service_token: str = Field(..., description="Service token for authentication")
+
+
 class UIConfig(BaseModel):
     """UI configuration settings."""
 
     polling_interval: int = Field(default=5, description="Polling interval in seconds")
-    default_service: Literal["JobQueue", "MyScheduler"] = Field(
+    default_service: Literal["JobQueue", "MyScheduler", "MyVault"] = Field(
         default="JobQueue", description="Default service to display"
     )
     operation_mode: Literal["full", "readonly"] = Field(
@@ -37,13 +45,19 @@ class Config:
         """Load configuration from environment and Streamlit secrets."""
         # Try Streamlit secrets first, then environment variables
         self.jobqueue = APIConfig(
-            base_url=self._get_setting("JOBQUEUE_API_URL", "http://localhost:8001"),
+            base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8001"),
             token=self._get_setting("JOBQUEUE_API_TOKEN", "")
         )
 
         self.myscheduler = APIConfig(
-            base_url=self._get_setting("MYSCHEDULER_API_URL", "http://localhost:8002"),
+            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8002"),
             token=self._get_setting("MYSCHEDULER_API_TOKEN", "")
+        )
+
+        self.myvault = MyVaultConfig(
+            base_url=self._get_setting("MYVAULT_BASE_URL", "http://localhost:8000"),
+            service_name=self._get_setting("MYVAULT_SERVICE_NAME", "commonui-service"),
+            service_token=self._get_setting("MYVAULT_SERVICE_TOKEN", "")
         )
 
         self.ui = UIConfig(
@@ -64,12 +78,14 @@ class Config:
         # Fall back to environment variables
         return os.getenv(key, default)
 
-    def get_api_config(self, service: str) -> APIConfig:
+    def get_api_config(self, service: str) -> APIConfig | MyVaultConfig:
         """Get API configuration for specified service."""
         if service.lower() == "jobqueue":
             return self.jobqueue
         elif service.lower() == "myscheduler":
             return self.myscheduler
+        elif service.lower() == "myvault":
+            return self.myvault
         else:
             raise ValueError(f"Unknown service: {service}")
 

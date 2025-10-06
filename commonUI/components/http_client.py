@@ -7,7 +7,7 @@ import httpx
 import streamlit as st
 from httpx import Response
 
-from core.config import APIConfig
+from core.config import APIConfig, MyVaultConfig
 from core.exceptions import APIError, AuthenticationError, RateLimitError, ServiceUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -16,16 +16,23 @@ logger = logging.getLogger(__name__)
 class HTTPClient:
     """HTTP client with automatic retries and error handling."""
 
-    def __init__(self, api_config: APIConfig, service_name: str) -> None:
+    def __init__(self, api_config: APIConfig | MyVaultConfig, service_name: str) -> None:
         """Initialize HTTP client with API configuration."""
         self.api_config = api_config
         self.service_name = service_name
-        
-        # Prepare headers
+
+        # Prepare headers based on service type
         headers = {}
-        if api_config.token and api_config.token.strip():
-            headers["Authorization"] = f"Bearer {api_config.token}"
-        
+        if isinstance(api_config, MyVaultConfig):
+            # MyVault uses custom header authentication
+            if api_config.service_name and api_config.service_token:
+                headers["X-Service"] = api_config.service_name
+                headers["X-Token"] = api_config.service_token
+        elif isinstance(api_config, APIConfig):
+            # Standard Bearer token authentication
+            if api_config.token and api_config.token.strip():
+                headers["Authorization"] = f"Bearer {api_config.token}"
+
         self.client = httpx.Client(
             base_url=api_config.base_url,
             headers=headers,
@@ -45,6 +52,8 @@ class HTTPClient:
         try:
             if response.status_code in [200, 201]:  # Accept both 200 OK and 201 Created
                 return response.json()
+            elif response.status_code == 204:  # No Content (e.g., successful DELETE)
+                return {"message": "Success"}
             elif response.status_code == 401:
                 raise AuthenticationError(self.service_name)
             elif response.status_code == 429:
@@ -105,6 +114,10 @@ class HTTPClient:
     def put(self, endpoint: str, json_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Make PUT request."""
         return self._request_with_retry("PUT", endpoint, json=json_data)
+
+    def patch(self, endpoint: str, json_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Make PATCH request."""
+        return self._request_with_retry("PATCH", endpoint, json=json_data)
 
     def delete(self, endpoint: str) -> Dict[str, Any]:
         """Make DELETE request."""

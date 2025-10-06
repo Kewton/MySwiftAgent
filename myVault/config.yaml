@@ -66,6 +66,14 @@ policies:
         actions: ["read", "write", "delete", "list"]
         resources: ["secret:common:*"]
 
+  # CommonUI Admin - full access to all projects and secrets
+  - name: commonui-admin
+    description: "Full administrative access for CommonUI management interface"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "delete", "list"]
+        resources: ["secret:*:*"]
+
 # Service definitions
 # Tokens are loaded from environment variables: TOKEN_<service-name>
 # Services are assigned roles which grant specific permissions
@@ -89,6 +97,12 @@ services:
     roles:
       - newsbot-scheduler-reader
       - common-reader
+
+  - name: commonui-service
+    description: "CommonUI management interface - full administrative access"
+    enabled: true
+    roles:
+      - commonui-admin
 
 # Audit configuration
 audit:
