@@ -85,11 +85,16 @@ async def aiagent_graph(request: ExpertAiAgentRequest):
         {request.user_input}
         """
         print(f"request.user_input:{_input}")
-        chat_history, aiMessage = await ainvoke_graphagent(_input)
+        chat_history, aiMessage = await ainvoke_graphagent(
+            _input, project=request.project
+        )
         _response = {"result": aiMessage, "type": "sample", "chathistory": chat_history}
         return ExpertAiAgentResponse(**_response)
     except Exception as e:
+        import traceback
         print(f"An unexpected error occurred: {e}")
+        print("Full traceback:")
+        traceback.print_exc()
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the agent."
         ) from e
@@ -114,15 +119,19 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
 
         if "jsonoutput" in agent_name:
             print(f"request.user_input:{_input}")
-            parsed_json = await jsonOutputagent(_input, model_name)
+            parsed_json = await jsonOutputagent(
+                _input, model_name, project=request.project
+            )
             return ExpertAiAgentResponseJson(result=parsed_json, type="jsonOutput")
         elif "explorer" in agent_name:
             print(f"request.user_input:{_input}")
-            result = await exploreragent(_input, model_name)
-            return ExpertAiAgentResponse(result=remove_think_tags(result), type="explorer")
+            result = await exploreragent(_input, model_name, project=request.project)
+            return ExpertAiAgentResponse(
+                result=remove_think_tags(result), type="explorer"
+            )
         elif "action" in agent_name:
             print(f"request.user_input:{_input}")
-            result = await actionagent(_input, model_name)
+            result = await actionagent(_input, model_name, project=request.project)
             return ExpertAiAgentResponse(result=remove_think_tags(result), type="action")
         elif "playwright" in agent_name:
             print(f"request.user_input:{_input}")

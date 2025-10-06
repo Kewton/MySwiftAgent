@@ -22,15 +22,22 @@ class MyVaultConfig(BaseModel):
     service_token: str = Field(..., description="Service token for authentication")
 
 
+class ExpertAgentConfig(BaseModel):
+    """ExpertAgent API configuration with admin token."""
+
+    base_url: str = Field(..., description="Base URL for ExpertAgent API")
+    admin_token: str = Field(..., description="Admin token for cache management")
+
+
 class UIConfig(BaseModel):
     """UI configuration settings."""
 
     polling_interval: int = Field(default=5, description="Polling interval in seconds")
     default_service: Literal["JobQueue", "MyScheduler", "MyVault"] = Field(
-        default="JobQueue", description="Default service to display"
+        default="JobQueue", description="Default service to display",
     )
     operation_mode: Literal["full", "readonly"] = Field(
-        default="full", description="Operation mode"
+        default="full", description="Operation mode",
     )
 
 
@@ -46,31 +53,38 @@ class Config:
         # Try Streamlit secrets first, then environment variables
         self.jobqueue = APIConfig(
             base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8001"),
-            token=self._get_setting("JOBQUEUE_API_TOKEN", "")
+            token=self._get_setting("JOBQUEUE_API_TOKEN", ""),
         )
 
         self.myscheduler = APIConfig(
             base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8002"),
-            token=self._get_setting("MYSCHEDULER_API_TOKEN", "")
+            token=self._get_setting("MYSCHEDULER_API_TOKEN", ""),
         )
 
         self.myvault = MyVaultConfig(
             base_url=self._get_setting("MYVAULT_BASE_URL", "http://localhost:8000"),
             service_name=self._get_setting("MYVAULT_SERVICE_NAME", "commonui-service"),
-            service_token=self._get_setting("MYVAULT_SERVICE_TOKEN", "")
+            service_token=self._get_setting("MYVAULT_SERVICE_TOKEN", ""),
+        )
+
+        self.expertagent = ExpertAgentConfig(
+            base_url=self._get_setting(
+                "EXPERTAGENT_BASE_URL", "http://localhost:8105/aiagent-api",
+            ),
+            admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
         )
 
         self.ui = UIConfig(
             polling_interval=int(self._get_setting("POLLING_INTERVAL", "5")),
             default_service=self._get_setting("DEFAULT_SERVICE", "JobQueue"),
-            operation_mode=self._get_setting("OPERATION_MODE", "full")
+            operation_mode=self._get_setting("OPERATION_MODE", "full"),
         )
 
     def _get_setting(self, key: str, default: str = "") -> str:
         """Get setting from Streamlit secrets or environment variables."""
         # Try Streamlit secrets first
         try:
-            if hasattr(st, 'secrets') and key in st.secrets:
+            if hasattr(st, "secrets") and key in st.secrets:
                 return st.secrets[key]
         except Exception:
             pass
@@ -78,16 +92,19 @@ class Config:
         # Fall back to environment variables
         return os.getenv(key, default)
 
-    def get_api_config(self, service: str) -> APIConfig | MyVaultConfig:
+    def get_api_config(
+        self, service: str,
+    ) -> APIConfig | MyVaultConfig | ExpertAgentConfig:
         """Get API configuration for specified service."""
         if service.lower() == "jobqueue":
             return self.jobqueue
-        elif service.lower() == "myscheduler":
+        if service.lower() == "myscheduler":
             return self.myscheduler
-        elif service.lower() == "myvault":
+        if service.lower() == "myvault":
             return self.myvault
-        else:
-            raise ValueError(f"Unknown service: {service}")
+        if service.lower() == "expertagent":
+            return self.expertagent
+        raise ValueError(f"Unknown service: {service}")
 
     def is_service_configured(self, service: str) -> bool:
         """Check if service is properly configured."""

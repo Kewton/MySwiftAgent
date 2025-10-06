@@ -5,7 +5,6 @@ from typing import Annotated, Sequence, TypedDict
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import BaseMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
@@ -18,6 +17,7 @@ from aiagent.langgraph.util import (
     isGemini,
 )
 from core.config import settings
+from core.secrets import secrets_manager
 
 
 def remove_think_tags(text: str) -> str:
@@ -44,6 +44,7 @@ async def make_graph(
     _mcpmodule: str = "mymcp.stdioall",
     _graphname: str = "Tool Agent",
     _model: str = settings.GRAPH_AGENT_MODEL,
+    project: str | None = None,
 ):
     if _model is None:
         _model = settings.GRAPH_AGENT_MODEL
@@ -51,8 +52,11 @@ async def make_graph(
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         model = ChatOpenAI(model=_model)
     elif isGemini(_model):
-        # gemini-2.5-flash-preview-04-17
-        model = ChatGoogleGenerativeAI(model=_model)
+        # Lazy import to avoid loading Google credentials at module import time
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        # Get API key from secrets_manager for Gemini
+        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
+        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:
@@ -61,23 +65,87 @@ async def make_graph(
             base_url=settings.OLLAMA_URL,
         )
 
+    # Get secrets from SecretsManager (MyVault priority)
+    try:
+        google_api_key = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
+        print(f"[DEBUG make_graph] Retrieved GOOGLE_API_KEY: {google_api_key[:10]}..." if google_api_key else "[DEBUG make_graph] GOOGLE_API_KEY is empty")
+    except ValueError:
+        google_api_key = ""
+        print("[DEBUG make_graph] Failed to retrieve GOOGLE_API_KEY - using empty string")
+
+    try:
+        openai_api_key = secrets_manager.get_secret("OPENAI_API_KEY", project=project)
+    except ValueError:
+        openai_api_key = ""
+
+    try:
+        anthropic_api_key = secrets_manager.get_secret(
+            "ANTHROPIC_API_KEY", project=project
+        )
+    except ValueError:
+        anthropic_api_key = ""
+
+    try:
+        serper_api_key = secrets_manager.get_secret("SERPER_API_KEY", project=project)
+    except ValueError:
+        serper_api_key = ""
+
+    try:
+        mail_to = secrets_manager.get_secret("MAIL_TO", project=project)
+    except ValueError:
+        mail_to = ""
+
+    try:
+        podcast_model = secrets_manager.get_secret(
+            "PODCAST_SCRIPT_DEFAULT_MODEL", project=project
+        )
+    except ValueError:
+        podcast_model = ""
+
+    try:
+        spreadsheet_id = secrets_manager.get_secret("SPREADSHEET_ID", project=project)
+    except ValueError:
+        spreadsheet_id = ""
+
+    try:
+        ollama_url = secrets_manager.get_secret("OLLAMA_URL", project=project)
+    except ValueError:
+        ollama_url = settings.OLLAMA_URL
+
+    try:
+        ollama_model = secrets_manager.get_secret(
+            "OLLAMA_DEF_SMALL_MODEL", project=project
+        )
+    except ValueError:
+        ollama_model = ""
+
     import os
     mcp_env = {
-        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY", settings.GOOGLE_API_KEY),
-        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", settings.OPENAI_API_KEY),
-        "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY),
-        "SERPER_API_KEY": os.getenv("SERPER_API_KEY", settings.SERPER_API_KEY),
+        "GOOGLE_API_KEY": google_api_key,
+        "OPENAI_API_KEY": openai_api_key,
+        "ANTHROPIC_API_KEY": anthropic_api_key,
+        "SERPER_API_KEY": serper_api_key,
         # ExpertAgent specific settings
-        "MAIL_TO": os.getenv("MAIL_TO", settings.MAIL_TO),
-        "PODCAST_SCRIPT_DEFAULT_MODEL": os.getenv("PODCAST_SCRIPT_DEFAULT_MODEL", settings.PODCAST_SCRIPT_DEFAULT_MODEL),
-        "SPREADSHEET_ID": os.getenv("SPREADSHEET_ID", settings.SPREADSHEET_ID),
-        "OLLAMA_URL": os.getenv("OLLAMA_URL", settings.OLLAMA_URL),
-        "OLLAMA_DEF_SMALL_MODEL": os.getenv("OLLAMA_DEF_SMALL_MODEL", settings.OLLAMA_DEF_SMALL_MODEL),
-        "EXTRACT_KNOWLEDGE_MODEL": os.getenv("EXTRACT_KNOWLEDGE_MODEL", settings.EXTRACT_KNOWLEDGE_MODEL),
-        "MLX_LLM_SERVER_URL": os.getenv("MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL),
-        "GOOGLE_APIS_TOKEN_PATH": os.getenv("GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH),
-        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv("GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH),
+        "MAIL_TO": mail_to,
+        "PODCAST_SCRIPT_DEFAULT_MODEL": podcast_model,
+        "SPREADSHEET_ID": spreadsheet_id,
+        "OLLAMA_URL": ollama_url,
+        "OLLAMA_DEF_SMALL_MODEL": ollama_model,
+        "EXTRACT_KNOWLEDGE_MODEL": os.getenv(
+            "EXTRACT_KNOWLEDGE_MODEL", settings.EXTRACT_KNOWLEDGE_MODEL
+        ),
+        "MLX_LLM_SERVER_URL": os.getenv(
+            "MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL
+        ),
+        "GOOGLE_APIS_TOKEN_PATH": os.getenv(
+            "GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH
+        ),
+        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv(
+            "GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH
+        ),
     }
+
+    print(f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..." if mcp_env['GOOGLE_API_KEY'] else "[DEBUG] mcp_env GOOGLE_API_KEY is empty")
 
     mcp_client = MultiServerMCPClient(
         {
@@ -110,6 +178,7 @@ async def make_utility_graph(
     _graphname: str = "Tool Agent",
     _model: str = settings.GRAPH_AGENT_MODEL,
     _max_iterations: int | None = None,  # ★ 追加
+    project: str | None = None,
 ):
     # モデル選択は現状維持
     if _model is None:
@@ -118,30 +187,95 @@ async def make_utility_graph(
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         model = ChatOpenAI(model=_model)
     elif isGemini(_model):
-        model = ChatGoogleGenerativeAI(model=_model)
+        # Lazy import to avoid loading Google credentials at module import time
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        # Get API key from secrets_manager for Gemini
+        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
+        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:
         model = ChatOllama(model=_model, base_url=settings.OLLAMA_URL)
 
-    # MCP クライアント with environment variables
+    # Get secrets from SecretsManager (MyVault priority)
+    try:
+        google_api_key = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
+    except ValueError:
+        google_api_key = ""
+
+    try:
+        openai_api_key = secrets_manager.get_secret("OPENAI_API_KEY", project=project)
+    except ValueError:
+        openai_api_key = ""
+
+    try:
+        anthropic_api_key = secrets_manager.get_secret(
+            "ANTHROPIC_API_KEY", project=project
+        )
+    except ValueError:
+        anthropic_api_key = ""
+
+    try:
+        serper_api_key = secrets_manager.get_secret("SERPER_API_KEY", project=project)
+    except ValueError:
+        serper_api_key = ""
+
+    try:
+        mail_to = secrets_manager.get_secret("MAIL_TO", project=project)
+    except ValueError:
+        mail_to = ""
+
+    try:
+        podcast_model = secrets_manager.get_secret(
+            "PODCAST_SCRIPT_DEFAULT_MODEL", project=project
+        )
+    except ValueError:
+        podcast_model = ""
+
+    try:
+        spreadsheet_id = secrets_manager.get_secret("SPREADSHEET_ID", project=project)
+    except ValueError:
+        spreadsheet_id = ""
+
+    try:
+        ollama_url = secrets_manager.get_secret("OLLAMA_URL", project=project)
+    except ValueError:
+        ollama_url = settings.OLLAMA_URL
+
+    try:
+        ollama_model = secrets_manager.get_secret(
+            "OLLAMA_DEF_SMALL_MODEL", project=project
+        )
+    except ValueError:
+        ollama_model = ""
+
     import os
     mcp_env = {
-        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY", settings.GOOGLE_API_KEY),
-        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", settings.OPENAI_API_KEY),
-        "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY),
-        "SERPER_API_KEY": os.getenv("SERPER_API_KEY", settings.SERPER_API_KEY),
+        "GOOGLE_API_KEY": google_api_key,
+        "OPENAI_API_KEY": openai_api_key,
+        "ANTHROPIC_API_KEY": anthropic_api_key,
+        "SERPER_API_KEY": serper_api_key,
         # ExpertAgent specific settings
-        "MAIL_TO": os.getenv("MAIL_TO", settings.MAIL_TO),
-        "PODCAST_SCRIPT_DEFAULT_MODEL": os.getenv("PODCAST_SCRIPT_DEFAULT_MODEL", settings.PODCAST_SCRIPT_DEFAULT_MODEL),
-        "SPREADSHEET_ID": os.getenv("SPREADSHEET_ID", settings.SPREADSHEET_ID),
-        "OLLAMA_URL": os.getenv("OLLAMA_URL", settings.OLLAMA_URL),
-        "OLLAMA_DEF_SMALL_MODEL": os.getenv("OLLAMA_DEF_SMALL_MODEL", settings.OLLAMA_DEF_SMALL_MODEL),
-        "EXTRACT_KNOWLEDGE_MODEL": os.getenv("EXTRACT_KNOWLEDGE_MODEL", settings.EXTRACT_KNOWLEDGE_MODEL),
-        "MLX_LLM_SERVER_URL": os.getenv("MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL),
-        "GOOGLE_APIS_TOKEN_PATH": os.getenv("GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH),
-        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv("GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH),
+        "MAIL_TO": mail_to,
+        "PODCAST_SCRIPT_DEFAULT_MODEL": podcast_model,
+        "SPREADSHEET_ID": spreadsheet_id,
+        "OLLAMA_URL": ollama_url,
+        "OLLAMA_DEF_SMALL_MODEL": ollama_model,
+        "EXTRACT_KNOWLEDGE_MODEL": os.getenv(
+            "EXTRACT_KNOWLEDGE_MODEL", settings.EXTRACT_KNOWLEDGE_MODEL
+        ),
+        "MLX_LLM_SERVER_URL": os.getenv(
+            "MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL
+        ),
+        "GOOGLE_APIS_TOKEN_PATH": os.getenv(
+            "GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH
+        ),
+        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv(
+            "GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH
+        ),
     }
+
+    print(f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..." if mcp_env['GOOGLE_API_KEY'] else "[DEBUG] mcp_env GOOGLE_API_KEY is empty")
 
     mcp_client = MultiServerMCPClient(
         {
@@ -190,7 +324,11 @@ async def make_playwright_graph(
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         model = ChatOpenAI(model=_model)
     elif isGemini(_model):
-        model = ChatGoogleGenerativeAI(model=_model)
+        # Lazy import to avoid loading Google credentials at module import time
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        # Get API key from secrets_manager for Gemini
+        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
+        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:
@@ -244,7 +382,11 @@ async def make_wikipedia_graph(
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         model = ChatOpenAI(model=_model)
     elif isGemini(_model):
-        model = ChatGoogleGenerativeAI(model=_model)
+        # Lazy import to avoid loading Google credentials at module import time
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        # Get API key from secrets_manager for Gemini
+        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
+        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:

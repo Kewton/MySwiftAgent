@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import agent_endpoints, utility_endpoints
+from app.api.v1 import admin_endpoints, agent_endpoints, utility_endpoints
 from core.logger import setup_logging
 
 
@@ -42,6 +42,7 @@ app.add_middleware(
 # Include routers
 app.include_router(agent_endpoints.router, prefix="/v1")
 app.include_router(utility_endpoints.router, prefix="/v1")
+app.include_router(admin_endpoints.router, prefix="/v1")
 
 
 @app.get("/health")

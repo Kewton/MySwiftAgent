@@ -13,8 +13,7 @@ env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
     load_dotenv(env_path)
 
-import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -29,7 +28,7 @@ from core.config import config
 st.set_page_config(
     page_title="MyVault - CommonUI",
     page_icon="🔐",
-    layout="wide"
+    layout="wide",
 )
 
 
@@ -49,16 +48,16 @@ def initialize_session_state() -> None:
         st.session_state.myvault_editing_secret = None
 
 
-def load_secret_definitions() -> Dict[str, Any]:
+def load_secret_definitions() -> dict[str, Any]:
     """Load secret definitions from YAML file."""
     try:
         yaml_path = Path(__file__).parent.parent / "data" / "myvault_secrets.yaml"
         if yaml_path.exists():
-            with open(yaml_path, "r") as f:
+            with open(yaml_path) as f:
                 return yaml.safe_load(f)
         return {"secrets": []}
     except Exception as e:
-        st.error(f"Failed to load secret definitions: {str(e)}")
+        st.error(f"Failed to load secret definitions: {e!s}")
         return {"secrets": []}
 
 
@@ -74,14 +73,14 @@ def show_create_project_dialog():
     project_name = st.text_input(
         "Project Name*",
         placeholder="e.g., newsbot, myscheduler, jobqueue",
-        help="Unique project identifier"
+        help="Unique project identifier",
     )
 
     description = st.text_area(
         "Description",
         placeholder="Describe what this project is for",
         help="Optional project description",
-        height=100
+        height=100,
     )
 
     if st.button("🚀 Create Project", type="primary", use_container_width=True):
@@ -92,7 +91,7 @@ def show_create_project_dialog():
         try:
             create_project({
                 "name": project_name,
-                "description": description or ""
+                "description": description or "",
             })
             st.success(f"Project '{project_name}' created successfully!")
             st.rerun()
@@ -101,7 +100,7 @@ def show_create_project_dialog():
 
 
 @st.dialog("✏️ Edit Project", width="large")
-def show_edit_project_dialog(project: Dict[str, Any]):
+def show_edit_project_dialog(project: dict[str, Any]):
     """Show project editing dialog."""
     st.write(f"Edit project: **{project['name']}**")
 
@@ -109,7 +108,7 @@ def show_edit_project_dialog(project: Dict[str, Any]):
         "Project Name",
         value=project["name"],
         disabled=True,
-        help="Project name cannot be changed"
+        help="Project name cannot be changed",
     )
 
     description = st.text_area(
@@ -117,7 +116,7 @@ def show_edit_project_dialog(project: Dict[str, Any]):
         value=project.get("description", ""),
         placeholder="Describe what this project is for",
         help="Project description",
-        height=100
+        height=100,
     )
 
     col1, col2 = st.columns(2)
@@ -152,7 +151,7 @@ def show_create_secret_dialog(project: str):
     selected_option = st.selectbox(
         "Secret*",
         secret_options,
-        help="Select a secret name or choose 'Custom' to enter your own"
+        help="Select a secret name or choose 'Custom' to enter your own",
     )
 
     # Handle custom vs predefined secret selection
@@ -162,7 +161,7 @@ def show_create_secret_dialog(project: str):
         secret_name = st.text_input(
             "Custom Secret Name*",
             placeholder="e.g., my-custom-api-key",
-            help="Enter a unique secret name for this project"
+            help="Enter a unique secret name for this project",
         )
     else:
         # Show description for selected secret
@@ -175,7 +174,7 @@ def show_create_secret_dialog(project: str):
         "Secret Value*",
         placeholder="Enter the secret value",
         help="The actual secret value (will be encrypted)",
-        height=100
+        height=100,
     )
     st.caption("⚠️ シークレット値は送信後に暗号化されます。")
 
@@ -199,7 +198,7 @@ def show_create_secret_dialog(project: str):
 
 
 @st.dialog("✏️ Edit Secret", width="large")
-def show_edit_secret_dialog(secret: Dict[str, Any]):
+def show_edit_secret_dialog(secret: dict[str, Any]):
     """Show secret editing dialog."""
     # Load secret definitions to show description
     secret_defs = st.session_state.myvault_secret_definitions
@@ -212,14 +211,14 @@ def show_edit_secret_dialog(secret: Dict[str, Any]):
         "Project",
         value=secret["project"],
         disabled=True,
-        help="Project name cannot be changed"
+        help="Project name cannot be changed",
     )
 
     st.text_input(
         "Secret",
         value=secret["path"],
         disabled=True,
-        help="Secret name cannot be changed"
+        help="Secret name cannot be changed",
     )
 
     # Show description if available
@@ -233,15 +232,15 @@ def show_edit_secret_dialog(secret: Dict[str, Any]):
 
     if show_current:
         try:
-            secret_detail = get_secret(secret['project'], secret['path'])
+            secret_detail = get_secret(secret["project"], secret["path"])
             st.text_area(
                 "Current Value",
-                value=secret_detail.get('value', 'N/A'),
+                value=secret_detail.get("value", "N/A"),
                 disabled=True,
-                height=80
+                height=80,
             )
         except Exception as e:
-            st.error(f"Failed to retrieve current value: {str(e)}")
+            st.error(f"Failed to retrieve current value: {e!s}")
 
     st.divider()
 
@@ -249,7 +248,7 @@ def show_edit_secret_dialog(secret: Dict[str, Any]):
         "New Secret Value*",
         placeholder="Enter the new secret value",
         help="The new secret value (will be encrypted)",
-        height=100
+        height=100,
     )
     st.caption("⚠️ 新しい値を入力してください。空欄の場合は更新されません。")
 
@@ -316,7 +315,7 @@ def render_projects_section():
             "is_default": st.column_config.CheckboxColumn("⭐ Default", width="small"),
             "created_at": st.column_config.DatetimeColumn("Created At", width="medium"),
             "created_by": st.column_config.TextColumn("Created By", width="medium"),
-        }
+        },
     )
 
     # Handle row selection
@@ -410,7 +409,7 @@ def render_secrets_section():
             "version": st.column_config.NumberColumn("Version", width="small"),
             "updated_at": st.column_config.DatetimeColumn("Updated At", width="medium"),
             "updated_by": st.column_config.TextColumn("Updated By", width="medium"),
-        }
+        },
     )
 
     # Handle row selection
@@ -432,7 +431,7 @@ def render_secrets_section():
         with col3:
             if st.button("🗑️ Delete", key="delete_secret", type="secondary", use_container_width=True):
                 try:
-                    delete_secret(selected_secret['project'], selected_secret['path'])
+                    delete_secret(selected_secret["project"], selected_secret["path"])
                     st.rerun()
                 except Exception as e:
                     NotificationManager.handle_exception(e, "Secret Deletion")
@@ -442,13 +441,13 @@ def render_secrets_section():
 # API functions
 # ============================================================================
 
-def create_project(project_data: Dict[str, Any]) -> None:
+def create_project(project_data: dict[str, Any]) -> None:
     """Create a new project via API."""
     api_config = config.get_api_config("MyVault")
     with HTTPClient(api_config, "MyVault") as client:
         response = client.post("/api/projects", project_data)
         load_projects()
-        st.session_state.myvault_selected_project = project_data['name']
+        st.session_state.myvault_selected_project = project_data["name"]
 
 
 def update_project(project_name: str, description: str) -> None:
@@ -488,6 +487,34 @@ def load_projects() -> None:
         st.session_state.myvault_projects = []
 
 
+def reload_expertagent_cache(project: str | None = None) -> None:
+    """Reload expertAgent cache for a project.
+
+    Args:
+        project: Project name to reload cache for. If None, reloads all caches.
+    """
+    try:
+        # Check if ExpertAgent is configured
+        if not config.is_service_configured("expertagent"):
+            return  # ExpertAgent not configured, skip reload
+
+        api_config = config.get_api_config("expertagent")
+
+        # Check if admin token is configured
+        if not api_config.admin_token:
+            return  # No admin token, skip reload
+
+        # Call reload endpoint
+        with HTTPClient(api_config, "ExpertAgent") as client:
+            reload_data = {"project": project}
+            client.post("/v1/admin/reload-secrets", reload_data)
+
+    except Exception as e:
+        # Log warning but don't fail the operation
+        # Use st.toast for non-intrusive notification
+        st.toast(f"⚠️ Cache reload failed: {e!s}", icon="⚠️")
+
+
 def create_secret(project: str, path: str, value: str) -> None:
     """Create a new secret via API."""
     api_config = config.get_api_config("MyVault")
@@ -495,10 +522,11 @@ def create_secret(project: str, path: str, value: str) -> None:
         secret_data = {
             "project": project,
             "path": path,
-            "value": value
+            "value": value,
         }
         response = client.post("/api/secrets", secret_data)
         load_secrets(project)
+        reload_expertagent_cache(project)
 
 
 def update_secret(project: str, path: str, value: str) -> None:
@@ -508,9 +536,10 @@ def update_secret(project: str, path: str, value: str) -> None:
         secret_data = {"value": value}
         response = client.patch(f"/api/secrets/{project}/{path}", secret_data)
         load_secrets(project)
+        reload_expertagent_cache(project)
 
 
-def get_secret(project: str, path: str) -> Dict[str, Any]:
+def get_secret(project: str, path: str) -> dict[str, Any]:
     """Get secret details via API."""
     api_config = config.get_api_config("MyVault")
     with HTTPClient(api_config, "MyVault") as client:
@@ -523,9 +552,10 @@ def delete_secret(project: str, path: str) -> None:
     with HTTPClient(api_config, "MyVault") as client:
         client.delete(f"/api/secrets/{project}/{path}")
         load_secrets(project)
+        reload_expertagent_cache(project)
 
 
-def load_secrets(project: Optional[str] = None) -> None:
+def load_secrets(project: str | None = None) -> None:
     """Load secrets from API."""
     try:
         api_config = config.get_api_config("MyVault")
@@ -573,7 +603,7 @@ def main() -> None:
         if st.session_state.myvault_projects and not st.session_state.myvault_selected_project:
             default_project = next(
                 (p for p in st.session_state.myvault_projects if p.get("is_default", False)),
-                None
+                None,
             )
             if default_project:
                 st.session_state.myvault_selected_project = default_project["name"]

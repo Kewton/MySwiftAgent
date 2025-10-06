@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class UtilityRequest(BaseModel):
     user_input: str
+    project: str | None = None  # MyVault project name for secrets
 
 
 class UtilityResponse(BaseModel):
@@ -15,6 +16,7 @@ class UtilityResponse(BaseModel):
 class SearchUtilityRequest(BaseModel):
     queries: List[str]
     num: int | None = None
+    project: str | None = None  # MyVault project name for secrets
 
 
 class SearchUtilityResponse(BaseModel):

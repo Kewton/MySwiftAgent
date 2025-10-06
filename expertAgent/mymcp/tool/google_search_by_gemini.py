@@ -5,7 +5,8 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from core.config import settings
+import os
+
 from core.logger import getlogger
 from mymcp.utils.extract_knowledge_from_text import extract_knowledge_from_text
 from mymcp.utils.html2markdown import getMarkdown
@@ -112,7 +113,12 @@ def googleSearchAgent(_input: str) -> str:
     logger.info("Google Searchを実行します")
     # 新しい google-genai SDK を使用
     # 参考: https://ai.google.dev/gemini-api/docs/google-search?hl=ja
-    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+    # MCP process uses environment variables passed from parent process
+    api_key = os.getenv("GOOGLE_API_KEY", "")
+    print(f"[DEBUG MCP subprocess] GOOGLE_API_KEY from os.getenv: {api_key[:10]}..." if api_key else "[DEBUG MCP subprocess] GOOGLE_API_KEY is empty or not set")
+    if not api_key:
+        raise ValueError("GOOGLE_API_KEY environment variable is not set")
+    client = genai.Client(api_key=api_key)
 
     # Google Search toolの設定
     grounding_tool = types.Tool(google_search=types.GoogleSearch())

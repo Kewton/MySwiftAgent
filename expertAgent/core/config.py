@@ -35,6 +35,27 @@ class Settings(BaseSettings):
         default="http://localhost:8080", env="MLX_LLM_SERVER_URL"
     )
 
+    # MyVault Configuration
+    MYVAULT_ENABLED: bool = Field(default=False, env="MYVAULT_ENABLED")
+    MYVAULT_BASE_URL: str = Field(
+        default="http://localhost:8000", env="MYVAULT_BASE_URL"
+    )
+    MYVAULT_SERVICE_NAME: str = Field(
+        default="expertagent-service", env="MYVAULT_SERVICE_NAME"
+    )
+    MYVAULT_SERVICE_TOKEN: str = Field(default="", env="MYVAULT_SERVICE_TOKEN")
+    MYVAULT_DEFAULT_PROJECT: str = Field(
+        default="", env="MYVAULT_DEFAULT_PROJECT"
+    )  # Optional override for default project
+    SECRETS_CACHE_TTL: int = Field(
+        default=300, env="SECRETS_CACHE_TTL"
+    )  # 5 minutes cache TTL
+
+    # Admin Configuration
+    ADMIN_TOKEN: str = Field(
+        default="", env="ADMIN_TOKEN"
+    )  # For reload secrets endpoint
+
 
 # インスタンス生成
 settings = Settings()

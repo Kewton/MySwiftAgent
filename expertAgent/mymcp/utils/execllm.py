@@ -4,16 +4,30 @@ import google.generativeai as genai
 from openai import OpenAI
 
 from app.schemas.standardAiAgent import ChatMessage
-from core.config import settings
+from core.secrets import secrets_manager
 from mymcp.utils.chatollama import chatOllama
 
-chatgptapi_client = OpenAI(
-    api_key=settings.OPENAI_API_KEY,
-)
+# Lazy initialization - clients are created when first used
+_chatgpt_client = None
+_genai_configured = False
 
-genai.configure(
-    api_key=settings.GOOGLE_API_KEY,
-)
+
+def get_chatgpt_client() -> OpenAI:
+    """Get or create OpenAI client with API key from SecretsManager."""
+    global _chatgpt_client
+    if _chatgpt_client is None:
+        api_key = secrets_manager.get_secret("OPENAI_API_KEY")
+        _chatgpt_client = OpenAI(api_key=api_key)
+    return _chatgpt_client
+
+
+def configure_genai() -> None:
+    """Configure Google Generative AI with API key from SecretsManager."""
+    global _genai_configured
+    if not _genai_configured:
+        api_key = secrets_manager.get_secret("GOOGLE_API_KEY")
+        genai.configure(api_key=api_key)
+        _genai_configured = True
 
 
 def isChatGptAPI(_selected_model):
@@ -103,12 +117,14 @@ def buildInpurtMessagesForGemini(_messages: List[ChatMessage]):
 
 def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
     if isChatGptAPI(_selected_model) or isChatGPT_o(_selected_model):
-        response = chatgptapi_client.chat.completions.create(
+        client = get_chatgpt_client()
+        response = client.chat.completions.create(
             model=_selected_model, messages=_messages
         )
         return response.choices[0].message.content
 
     elif isGemini(_selected_model):
+        configure_genai()
         _inpurt_messages, _systemrole = buildInpurtMessagesForGemini(_messages)
         # モデル名を有効なものにすること！ (例: "gemini-1.5-flash-latest")
         model = genai.GenerativeModel(

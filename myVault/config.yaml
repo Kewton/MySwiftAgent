@@ -74,6 +74,14 @@ policies:
         actions: ["read", "write", "delete", "list"]
         resources: ["secret:*:*"]
 
+  # ExpertAgent - read-only access to all projects
+  - name: expertagent-reader
+    description: "Read-only access to secrets for expertAgent service"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "list"]
+        resources: ["secret:*:*"]
+
 # Service definitions
 # Tokens are loaded from environment variables: TOKEN_<service-name>
 # Services are assigned roles which grant specific permissions
@@ -103,6 +111,12 @@ services:
     enabled: true
     roles:
       - commonui-admin
+
+  - name: expertagent-service
+    description: "ExpertAgent AI service - read-only access to secrets"
+    enabled: true
+    roles:
+      - expertagent-reader
 
 # Audit configuration
 audit:
