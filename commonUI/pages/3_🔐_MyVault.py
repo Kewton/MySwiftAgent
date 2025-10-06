@@ -75,7 +75,7 @@ def render_projects_list() -> None:
     """Render list of projects."""
     col1, col2 = st.columns([1, 4])
     with col1:
-        if st.button("🔄 Refresh Projects", use_container_width=True):
+        if st.button("🔄 Refresh Projects", width="stretch"):
             load_projects()
 
     projects = st.session_state.myvault_projects
@@ -89,7 +89,7 @@ def render_projects_list() -> None:
     # Display as interactive table
     event = st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         on_select="rerun",
         selection_mode="single-row",
@@ -112,7 +112,7 @@ def render_projects_list() -> None:
         st.divider()
         col1, col2, col3 = st.columns([2, 1, 1])
         with col3:
-            if st.button("🗑️ Delete Project", type="secondary", use_container_width=True):
+            if st.button("🗑️ Delete Project", type="secondary", width="stretch"):
                 delete_project(selected_project["name"])
 
 
@@ -133,7 +133,7 @@ def render_project_form() -> None:
             help="Optional project description"
         )
 
-        submitted = st.form_submit_button("🚀 Create Project", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("🚀 Create Project", type="primary", width="stretch")
 
         if submitted:
             if not project_name:
@@ -231,7 +231,7 @@ def render_secrets_list(project: str) -> None:
     """Render list of secrets for a project."""
     col1, col2 = st.columns([1, 4])
     with col1:
-        if st.button("🔄 Refresh Secrets", use_container_width=True):
+        if st.button("🔄 Refresh Secrets", width="stretch"):
             load_secrets(project)
 
     # Filter secrets for selected project
@@ -248,7 +248,7 @@ def render_secrets_list(project: str) -> None:
     # Display as table
     event = st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         on_select="rerun",
         selection_mode="single-row",
@@ -282,7 +282,7 @@ def render_secrets_list(project: str) -> None:
         # Actions
         col1, col2, col3 = st.columns([2, 1, 1])
         with col3:
-            if st.button("🗑️ Delete Secret", type="secondary", use_container_width=True):
+            if st.button("🗑️ Delete Secret", type="secondary", width="stretch"):
                 delete_secret(selected_secret['project'], selected_secret['path'])
 
 
@@ -347,9 +347,9 @@ def render_secret_form(project: str) -> None:
 
         col1, col2 = st.columns(2)
         with col1:
-            create_button = st.form_submit_button("🆕 Create Secret", type="primary", use_container_width=True)
+            create_button = st.form_submit_button("🆕 Create Secret", type="primary", width="stretch")
         with col2:
-            update_button = st.form_submit_button("🔄 Update Secret", type="secondary", use_container_width=True)
+            update_button = st.form_submit_button("🔄 Update Secret", type="secondary", width="stretch")
 
         if create_button or update_button:
             if not secret_path or not secret_value:
