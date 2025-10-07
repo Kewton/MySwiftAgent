@@ -369,17 +369,33 @@ def render_secrets_section():
 
     st.divider()
 
-    col1, col2, col3 = st.columns([6, 1, 1])
+    col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
 
     with col1:
         st.subheader(f"🔐 Secrets for: {selected_project}")
 
     with col2:
+        if st.button("🔄 Reload Cache", key="reload_cache", use_container_width=True, help="Reload secrets cache in all services (graphAiServer, expertAgent)"):
+            with st.spinner("Reloading cache..."):
+                results = reload_all_services_cache(selected_project)
+                success_count = sum(1 for v in results.values() if v)
+                total_count = len(results)
+
+                if success_count == total_count:
+                    st.success(f"✅ Successfully reloaded cache for all services ({', '.join(results.keys())})")
+                elif success_count > 0:
+                    success_services = [k for k, v in results.items() if v]
+                    failed_services = [k for k, v in results.items() if not v]
+                    st.warning(f"⚠️ Partially reloaded: ✅ {', '.join(success_services)} | ❌ {', '.join(failed_services)}")
+                else:
+                    st.error("❌ Failed to reload cache for all services")
+
+    with col3:
         if st.button("🔄 Refresh", key="refresh_secrets", use_container_width=True):
             load_secrets(selected_project)
             st.rerun()
 
-    with col3:
+    with col4:
         if st.button("➕ New", key="new_secret", type="primary", use_container_width=True):
             show_create_secret_dialog(selected_project)
 
@@ -512,7 +528,63 @@ def reload_expertagent_cache(project: str | None = None) -> None:
     except Exception as e:
         # Log warning but don't fail the operation
         # Use st.toast for non-intrusive notification
-        st.toast(f"⚠️ Cache reload failed: {e!s}", icon="⚠️")
+        st.toast(f"⚠️ ExpertAgent cache reload failed: {e!s}", icon="⚠️")
+
+
+def reload_graphaiserver_cache(project: str | None = None) -> None:
+    """Reload graphAiServer cache for a project.
+
+    Args:
+        project: Project name to reload cache for. If None, reloads all caches.
+    """
+    try:
+        # Check if GraphAiServer is configured
+        if not config.is_service_configured("graphaiserver"):
+            return  # GraphAiServer not configured, skip reload
+
+        api_config = config.get_api_config("graphaiserver")
+
+        # Check if admin token is configured
+        if not api_config.admin_token:
+            return  # No admin token, skip reload
+
+        # Call reload endpoint
+        with HTTPClient(api_config, "GraphAiServer") as client:
+            reload_data = {"project": project} if project else {}
+            client.post("/v1/admin/reload-secrets", reload_data)
+
+    except Exception as e:
+        # Log warning but don't fail the operation
+        # Use st.toast for non-intrusive notification
+        st.toast(f"⚠️ GraphAiServer cache reload failed: {e!s}", icon="⚠️")
+
+
+def reload_all_services_cache(project: str | None = None) -> dict[str, bool]:
+    """Reload secrets cache for all configured services.
+
+    Args:
+        project: Project name to reload cache for. If None, reloads all caches.
+
+    Returns:
+        Dictionary with service names as keys and success status as values.
+    """
+    results = {}
+
+    # Reload ExpertAgent cache
+    try:
+        reload_expertagent_cache(project)
+        results["expertAgent"] = True
+    except Exception:
+        results["expertAgent"] = False
+
+    # Reload GraphAiServer cache
+    try:
+        reload_graphaiserver_cache(project)
+        results["graphAiServer"] = True
+    except Exception:
+        results["graphAiServer"] = False
+
+    return results
 
 
 def create_secret(project: str, path: str, value: str) -> None:
@@ -526,7 +598,7 @@ def create_secret(project: str, path: str, value: str) -> None:
         }
         response = client.post("/api/secrets", secret_data)
         load_secrets(project)
-        reload_expertagent_cache(project)
+        reload_all_services_cache(project)
 
 
 def update_secret(project: str, path: str, value: str) -> None:
@@ -536,7 +608,7 @@ def update_secret(project: str, path: str, value: str) -> None:
         secret_data = {"value": value}
         response = client.patch(f"/api/secrets/{project}/{path}", secret_data)
         load_secrets(project)
-        reload_expertagent_cache(project)
+        reload_all_services_cache(project)
 
 
 def get_secret(project: str, path: str) -> dict[str, Any]:
@@ -552,7 +624,7 @@ def delete_secret(project: str, path: str) -> None:
     with HTTPClient(api_config, "MyVault") as client:
         client.delete(f"/api/secrets/{project}/{path}")
         load_secrets(project)
-        reload_expertagent_cache(project)
+        reload_all_services_cache(project)
 
 
 def load_secrets(project: str | None = None) -> None:

@@ -118,6 +118,12 @@ services:
     roles:
       - expertagent-reader
 
+  - name: graphaiserver-service
+    description: "GraphAI Server - read-only access to secrets for AI agent workflows"
+    enabled: true
+    roles:
+      - expertagent-reader
+
 # Audit configuration
 audit:
   enabled: true

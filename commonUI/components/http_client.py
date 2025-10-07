@@ -7,7 +7,7 @@ import httpx
 import streamlit as st
 from httpx import Response
 
-from core.config import APIConfig, ExpertAgentConfig, MyVaultConfig
+from core.config import APIConfig, ExpertAgentConfig, GraphAiServerConfig, MyVaultConfig
 from core.exceptions import (
     APIError,
     AuthenticationError,
@@ -21,7 +21,11 @@ logger = logging.getLogger(__name__)
 class HTTPClient:
     """HTTP client with automatic retries and error handling."""
 
-    def __init__(self, api_config: APIConfig | MyVaultConfig | ExpertAgentConfig, service_name: str) -> None:
+    def __init__(
+        self,
+        api_config: APIConfig | MyVaultConfig | ExpertAgentConfig | GraphAiServerConfig,
+        service_name: str,
+    ) -> None:
         """Initialize HTTP client with API configuration."""
         self.api_config = api_config
         self.service_name = service_name
@@ -35,6 +39,10 @@ class HTTPClient:
                 headers["X-Token"] = api_config.service_token
         elif isinstance(api_config, ExpertAgentConfig):
             # ExpertAgent uses admin token in X-Admin-Token header
+            if api_config.admin_token and api_config.admin_token.strip():
+                headers["X-Admin-Token"] = api_config.admin_token
+        elif isinstance(api_config, GraphAiServerConfig):
+            # GraphAiServer uses admin token in X-Admin-Token header
             if api_config.admin_token and api_config.admin_token.strip():
                 headers["X-Admin-Token"] = api_config.admin_token
         elif isinstance(api_config, APIConfig):

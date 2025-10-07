@@ -29,6 +29,13 @@ class ExpertAgentConfig(BaseModel):
     admin_token: str = Field(..., description="Admin token for cache management")
 
 
+class GraphAiServerConfig(BaseModel):
+    """GraphAiServer API configuration with admin token."""
+
+    base_url: str = Field(..., description="Base URL for GraphAiServer API")
+    admin_token: str = Field(..., description="Admin token for cache management")
+
+
 class UIConfig(BaseModel):
     """UI configuration settings."""
 
@@ -74,6 +81,13 @@ class Config:
             admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
         )
 
+        self.graphaiserver = GraphAiServerConfig(
+            base_url=self._get_setting(
+                "GRAPHAISERVER_BASE_URL", "http://localhost:8104/api",
+            ),
+            admin_token=self._get_setting("GRAPHAISERVER_ADMIN_TOKEN", ""),
+        )
+
         self.ui = UIConfig(
             polling_interval=int(self._get_setting("POLLING_INTERVAL", "5")),
             default_service=self._get_setting("DEFAULT_SERVICE", "JobQueue"),
@@ -94,7 +108,7 @@ class Config:
 
     def get_api_config(
         self, service: str,
-    ) -> APIConfig | MyVaultConfig | ExpertAgentConfig:
+    ) -> APIConfig | MyVaultConfig | ExpertAgentConfig | GraphAiServerConfig:
         """Get API configuration for specified service."""
         if service.lower() == "jobqueue":
             return self.jobqueue
@@ -104,6 +118,8 @@ class Config:
             return self.myvault
         if service.lower() == "expertagent":
             return self.expertagent
+        if service.lower() == "graphaiserver":
+            return self.graphaiserver
         raise ValueError(f"Unknown service: {service}")
 
     def is_service_configured(self, service: str) -> bool:
