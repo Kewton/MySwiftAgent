@@ -18,12 +18,33 @@ MySwiftAgent/
 ├── jobqueue/        # ジョブキューシステム (Python/FastAPI)
 ├── expertAgent/     # AIエージェント (Python/LangGraph/MCP)
 ├── graphAiServer/   # GraphAI ワークフローサーバー (TypeScript/Express)
+├── myvault/         # 🔐 シークレット管理システム (Python/FastAPI)
 ├── commonUI/        # Web UI (Python/Streamlit)
 ├── docs/            # プロジェクトドキュメント（軽量ワークフロー対応）
 ├── scripts/         # 開発支援スクリプト
 ├── .github/         # GitHub Actions ワークフロー
 └── CLAUDE.md        # 開発ガイドライン（詳細）
 ```
+
+## 🔐 MyVault統合
+
+**MyVault** は、APIキーやトークンなどのシークレット情報を一元管理するセキュアなシークレット管理システムです。
+
+### 主な機能
+
+- **🔒 優先度ベースのシークレット取得**: MyVault → 環境変数 → エラー
+- **⚡ TTLベースキャッシング**: デフォルト300秒のキャッシュでパフォーマンス向上
+- **🔄 手動キャッシュリロード**: Admin APIによる即時キャッシュ更新
+- **📁 プロジェクト単位のシークレット管理**: マルチプロジェクト対応
+- **🛡️ 包括的エラーハンドリング**: 安全なフォールバック機構
+
+### 統合サービス
+
+- **expertAgent**: Python/FastAPI - LangGraphベースAIエージェント
+- **graphAiServer**: TypeScript/Node.js - GraphAIワークフローサーバー
+- **commonUI**: Python/Streamlit - シークレット管理UI
+
+詳細は各プロジェクトのREADMEを参照してください。
 
 ## 🚀 クイックスタート
 
@@ -42,6 +63,7 @@ curl http://localhost:8102/health  # MyScheduler
 curl http://localhost:8101/health  # JobQueue
 curl http://localhost:8103/health  # ExpertAgent
 curl http://localhost:8104/health  # GraphAiServer
+curl http://localhost:8105/health  # MyVault
 # CommonUI: http://localhost:8501
 ```
 
@@ -60,6 +82,7 @@ curl http://localhost:8102/health  # MyScheduler
 curl http://localhost:8101/health  # JobQueue
 curl http://localhost:8103/health  # ExpertAgent
 curl http://localhost:8104/health  # GraphAiServer
+curl http://localhost:8105/health  # MyVault
 # CommonUI: http://localhost:8501
 ```
 

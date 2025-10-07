@@ -9,9 +9,10 @@
 - 🔧 MCP (Model Context Protocol) servers and tools
 - 🎭 **Playwright MCP integration** for web automation and scraping
 - 📚 **Wikipedia MCP integration** for knowledge retrieval and research
+- 🔐 **MyVault integration** for centralized secret management with cache
 - 🌐 Multiple AI provider support (OpenAI, Google Gemini, Anthropic, Ollama)
 - 🔒 CORS-enabled for cross-origin requests
-- 🧪 Comprehensive testing with pytest
+- 🧪 Comprehensive testing with pytest (30 MyVault tests included)
 - 🐳 Docker-ready with uv package manager
 - 📊 Health check endpoint for monitoring
 - 🎯 Type-safe with Pydantic models
@@ -46,8 +47,10 @@ expertAgent/
 │   ├── specializedtool/          # Specialized tools
 │   └── googleapis/               # Google API tools
 ├── core/                  # Core configuration
-│   ├── config.py
-│   └── logger.py
+│   ├── config.py          # Settings and configuration
+│   ├── logger.py          # Logging setup
+│   ├── secrets.py         # 🔐 SecretsManager with MyVault integration
+│   └── myvault_client.py  # 🔐 MyVault HTTP client
 ├── tests/                 # Test files
 ├── Dockerfile
 ├── pyproject.toml
@@ -347,8 +350,85 @@ HOST=0.0.0.0
 PORT=8000
 LOG_LEVEL=info
 
-# Add your environment variables here
+# MyVault Configuration (recommended for secret management)
+MYVAULT_ENABLED=true
+MYVAULT_BASE_URL=http://localhost:8105
+MYVAULT_SERVICE_NAME=expertAgent
+MYVAULT_SERVICE_TOKEN=your-service-token
+MYVAULT_DEFAULT_PROJECT=your-project-name
+SECRETS_CACHE_TTL=300  # Cache TTL in seconds (default: 300)
+
+# API Keys (fallback if MyVault is unavailable)
+OPENAI_API_KEY=your-openai-key
+ANTHROPIC_API_KEY=your-anthropic-key
+GOOGLE_API_KEY=your-google-key
 ```
+
+### MyVault Integration
+
+🔐 **SecretsManager** provides centralized secret management with MyVault priority and environment variable fallback.
+
+**Features:**
+- 🔒 Priority-based secret retrieval: MyVault → Environment Variables → Error
+- ⚡ TTL-based caching (default 300s) for performance
+- 🔄 Manual cache reload via admin API
+- 📁 Project-level secret grouping
+- 🛡️ Comprehensive error handling
+
+**Usage Example:**
+
+```python
+from core.secrets import secrets_manager
+
+# Get secret (tries MyVault first, falls back to env var)
+api_key = secrets_manager.get_secret("OPENAI_API_KEY")
+
+# Get secret from specific project
+api_key = secrets_manager.get_secret("OPENAI_API_KEY", project="my-project")
+
+# Get all secrets for a project
+secrets = secrets_manager.get_secrets_for_project("my-project")
+
+# Clear cache (manual reload)
+secrets_manager.clear_cache()  # Clear all cache
+secrets_manager.clear_cache("my-project")  # Clear specific project
+```
+
+**Admin API for Cache Reload:**
+
+```bash
+# Reload secrets cache (requires X-Admin-Token header)
+curl -X POST "http://localhost:8103/aiagent-api/v1/admin/reload-secrets" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{"project": null}'
+
+# Reload specific project cache
+curl -X POST "http://localhost:8103/aiagent-api/v1/admin/reload-secrets" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{"project": "my-project"}'
+```
+
+**Secret Retrieval Priority:**
+
+1. **MyVault** (if `MYVAULT_ENABLED=true`)
+   - Checks cache first (if within TTL)
+   - Fetches from MyVault API if cache miss
+   - Uses specified project or default project
+2. **Environment Variable** (fallback)
+   - Falls back to `.env` or system environment
+3. **Error** (if not found anywhere)
+   - Raises `ValueError` with descriptive message
+
+**Test Coverage:**
+
+The MyVault integration includes comprehensive tests:
+- `tests/unit/test_myvault_client.py` - 11 tests for MyVault HTTP client
+- `tests/unit/test_secrets_manager.py` - 11 tests for SecretsManager logic
+- `tests/unit/test_admin_endpoints.py` - 8 tests for admin API endpoints
+
+Run tests: `uv run pytest tests/unit/test_myvault_client.py tests/unit/test_secrets_manager.py tests/unit/test_admin_endpoints.py -v`
 
 ## CI/CD Integration
 
