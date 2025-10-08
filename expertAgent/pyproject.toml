@@ -51,6 +51,8 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "pandas>=2.0.0",
     "pydub>=0.25.0",
+    # Security and encryption
+    "cryptography>=41.0.0",
 ]
 
 [project.optional-dependencies]

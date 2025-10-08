@@ -151,6 +151,57 @@ class MyVaultClient:
             logger.error(f"Unexpected error getting secret: {e}")
             raise MyVaultError(f"Unexpected error: {e}") from e
 
+    def update_secret(self, project: str, path: str, value: str) -> None:
+        """Update or create a secret in MyVault.
+
+        Args:
+            project: Project name
+            path: Secret path/name (e.g., "GOOGLE_TOKEN_JSON")
+            value: Secret value
+
+        Raises:
+            MyVaultError: If API request fails
+        """
+        try:
+            # Try to update existing secret first
+            try:
+                response = self.client.patch(
+                    f"/api/secrets/{project}/{path}",
+                    json={"value": value}
+                )
+                response.raise_for_status()
+                logger.info(f"Updated secret '{path}' in project '{project}'")
+                return
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    # Secret doesn't exist, create it
+                    response = self.client.post(
+                        "/api/secrets",
+                        json={
+                            "project": project,
+                            "path": path,
+                            "value": value
+                        }
+                    )
+                    response.raise_for_status()
+                    logger.info(f"Created secret '{path}' in project '{project}'")
+                    return
+                else:
+                    raise
+
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            logger.error(
+                f"Failed to update secret '{path}' in project '{project}': "
+                f"HTTP {status_code}"
+            )
+            raise MyVaultError(
+                f"Failed to update secret '{path}': {e}"
+            ) from e
+        except Exception as e:
+            logger.error(f"Unexpected error updating secret: {e}")
+            raise MyVaultError(f"Unexpected error: {e}") from e
+
     def health_check(self) -> bool:
         """Check if MyVault service is healthy.
 

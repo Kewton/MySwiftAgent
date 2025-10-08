@@ -16,6 +16,7 @@ if env_path.exists():
 
 import streamlit as st
 
+from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
@@ -194,6 +195,32 @@ def render_footer() -> None:
 def main() -> None:
     """Main application entry point."""
     try:
+        # Handle OAuth2 callback if present (Google redirects to home page)
+        query_params = st.query_params
+        if "code" in query_params and "state" in query_params:
+            st.info("🔄 Processing Google OAuth2 callback...")
+            try:
+                api_config = config.get_api_config("expertagent")
+                with HTTPClient(api_config, "ExpertAgent") as client:
+                    callback_data = {
+                        "state": query_params["state"],
+                        "code": query_params["code"],
+                        "project": None  # expertAgent will use stored value
+                    }
+                    response = client.post("/v1/google-auth/oauth2-callback", callback_data)
+                    project = response.get("project", "default_project")
+
+                st.success(f"✅ Google authentication successful for project: {project}")
+                st.info("✅ Token saved to MyVault")
+                st.info("📍 Navigate to 🔐 MyVault → Google認証 tab to verify")
+
+                # Clear query params
+                st.query_params.clear()
+                st.balloons()
+            except Exception as e:
+                st.error(f"❌ OAuth2 callback failed: {e}")
+                st.query_params.clear()
+
         # Render sidebar
         selected_service, ui_settings = SidebarManager.render_complete_sidebar()
 

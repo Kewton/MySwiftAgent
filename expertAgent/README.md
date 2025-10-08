@@ -430,6 +430,144 @@ The MyVault integration includes comprehensive tests:
 
 Run tests: `uv run pytest tests/unit/test_myvault_client.py tests/unit/test_secrets_manager.py tests/unit/test_admin_endpoints.py -v`
 
+### Google Authentication Management
+
+🔑 **Google Credentials Manager** provides project-based Google OAuth 2.0 credentials management with encrypted local caching.
+
+**Features:**
+- 🔒 Project-level credential isolation
+- 🔐 Fernet symmetric encryption for local credentials cache
+- 📁 Integrated with MyVault for centralized storage
+- 🔄 Automatic token refresh with OAuth 2.0 flow
+- 🌐 Support for Gmail, Drive, and Sheets APIs
+- 🛡️ Secure file permissions (0o600)
+- 🔑 Global encryption key management
+- 🗑️ Automatic temp file cleanup
+
+**Architecture:**
+
+1. **Storage Layer:**
+   - MyVault: Source of truth for credentials (GOOGLE_CREDENTIALS_JSON, GOOGLE_TOKEN_JSON)
+   - Local Cache: `.google_credentials/{project}/` with encrypted files (*.enc)
+   - Global Encryption Key: Stored in MyVault as `GOOGLE_CREDS_ENCRYPTION_KEY`
+
+2. **Authentication Flow:**
+   - Credentials synced from MyVault → Encrypted locally
+   - Decrypted to temp files when needed
+   - Google OAuth 2.0 flow (browser-based for first-time auth)
+   - Token auto-refresh with refresh_token
+   - Refreshed tokens saved locally (manual MyVault update recommended)
+
+**Usage Example:**
+
+```python
+from mymcp.googleapis.googleapi_services import get_googleapis_service
+
+# Get Gmail service for specific project
+gmail_service = get_googleapis_service("gmail", project="my-project")
+
+# Get Drive service for default project
+drive_service = get_googleapis_service("drive")
+
+# Get Sheets service
+sheets_service = get_googleapis_service("sheets", project="another-project")
+```
+
+**API Endpoints:**
+
+```bash
+# Check token status for a project
+curl -X GET "http://localhost:8000/v1/google-auth/token-status?project=my-project" \
+    -H "X-Admin-Token: your-admin-token"
+
+# Sync credentials from MyVault to local cache
+curl -X POST "http://localhost:8000/v1/google-auth/sync-from-myvault" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{"project": "my-project"}'
+
+# List all projects with cached credentials
+curl -X GET "http://localhost:8000/v1/google-auth/list-projects" \
+    -H "X-Admin-Token: your-admin-token"
+```
+
+**commonUI Integration:**
+
+The `commonUI` provides a web interface for Google credential management:
+
+1. Navigate to **MyVault → Google認証** tab
+2. Select a project
+3. Paste `credentials.json` content from Google Cloud Console
+4. Click "Save to MyVault" → Credentials stored in MyVault
+5. Click "Sync to ExpertAgent" → Credentials encrypted and cached locally
+6. First API call will trigger browser-based OAuth flow
+
+**Security Features:**
+
+- **Encryption:** Fernet (AES-128-CBC) for local credential files
+- **File Permissions:** 0o600 (owner read/write only)
+- **Temp Files:** Auto-cleanup on process exit with `atexit`
+- **Token Storage:** Encrypted at rest in `.google_credentials/{project}/token.json.enc`
+- **No Hardcoded Keys:** Encryption key stored in MyVault
+
+**Google API Scopes:**
+
+Default scopes configured in `core/google_creds.py`:
+- `https://www.googleapis.com/auth/gmail.readonly` - Read Gmail messages
+- `https://www.googleapis.com/auth/gmail.send` - Send emails
+- `https://www.googleapis.com/auth/drive` - Full Drive access
+- `https://www.googleapis.com/auth/spreadsheets` - Sheets access
+
+**Environment Variables:**
+
+```env
+# MyVault Configuration (required)
+MYVAULT_ENABLED=true
+MYVAULT_BASE_URL=http://localhost:8105
+MYVAULT_SERVICE_NAME=expertAgent
+MYVAULT_SERVICE_TOKEN=your-service-token
+MYVAULT_DEFAULT_PROJECT=your-project-name
+
+# Admin Token (required for Google Auth API)
+ADMIN_TOKEN=your-admin-token
+```
+
+**Setup Guide:**
+
+1. **Generate Encryption Key:**
+   ```python
+   from cryptography.fernet import Fernet
+   key = Fernet.generate_key()
+   print(key.decode())  # Add this to MyVault as GOOGLE_CREDS_ENCRYPTION_KEY
+   ```
+
+2. **Get Google Credentials:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Create OAuth 2.0 Client ID (**Web application** - not Desktop app)
+   - Configure OAuth consent screen if not already done
+   - **重要**: 以下の設定が必要です（[公式ガイド](https://developers.google.com/workspace/guides/create-credentials?hl=ja#desktop-app)参照）
+     - **承認済みの JavaScript 生成元**: `http://localhost:8501`
+     - **承認済みのリダイレクト URI**: `http://localhost:8501`
+   - Download `credentials.json` (Webアプリケーションのクライアントシークレット)
+
+3. **Add to MyVault via commonUI:**
+   - Open commonUI → MyVault → Google認証 tab
+   - Select your project
+   - Paste `credentials.json` content
+   - Click "Save to MyVault" then "Sync to ExpertAgent"
+
+4. **First-time Authentication:**
+   - When ExpertAgent first uses Google API, browser will open
+   - Grant permissions to your Google account
+   - Token will be saved and auto-refreshed
+
+**Troubleshooting:**
+
+- **Token expired:** Run sync-from-myvault API to refresh local cache
+- **Encryption key missing:** Add `GOOGLE_CREDS_ENCRYPTION_KEY` to MyVault (global, not project-specific)
+- **Credentials not found:** Check MyVault has `GOOGLE_CREDENTIALS_JSON` for the project
+- **Permission denied:** Check `.google_credentials/` directory has correct permissions (0o700)
+
 ## CI/CD Integration
 
 This project is integrated with MySwiftAgent's multi-release workflow:

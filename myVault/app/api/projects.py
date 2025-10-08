@@ -1,12 +1,19 @@
 """Project management API endpoints."""
 
+import logging
+
+from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_service
+from app.core.crypto import crypto_service
 from app.core.database import get_db
 from app.models.project import Project
+from app.models.secret import Secret
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -27,7 +34,7 @@ async def create_project(
     db: Session = Depends(get_db),
     current_service: str = Depends(get_current_service),
 ) -> Project:
-    """Register a new project scope."""
+    """Register a new project scope and auto-generate Google encryption key."""
     # Check if project already exists
     existing = db.query(Project).filter(Project.name == project.name).first()
     if existing:
@@ -45,6 +52,32 @@ async def create_project(
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
+
+    # Auto-generate Google credentials encryption key
+    try:
+        fernet_key = Fernet.generate_key().decode()
+        encrypted_value, iv, tag = crypto_service.encrypt(fernet_key)
+
+        encryption_key_secret = Secret(
+            project=project.name,
+            path="GOOGLE_CREDS_ENCRYPTION_KEY",
+            encrypted_value=encrypted_value,
+            encryption_iv=iv,
+            encryption_tag=tag,
+            version=1,
+            updated_by="system",
+        )
+        db.add(encryption_key_secret)
+        db.commit()
+
+        logger.info(
+            f"✓ Auto-generated GOOGLE_CREDS_ENCRYPTION_KEY for project: {project.name}"
+        )
+    except Exception as e:
+        logger.error(
+            f"⚠ Failed to auto-generate encryption key for project {project.name}: {e}"
+        )
+        # Non-fatal: project is still created
 
     return db_project
 

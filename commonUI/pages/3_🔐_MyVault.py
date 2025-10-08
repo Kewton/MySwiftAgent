@@ -399,9 +399,13 @@ def render_secrets_section():
         if st.button("➕ New", key="new_secret", type="primary", use_container_width=True):
             show_create_secret_dialog(selected_project)
 
-    # Filter secrets for selected project
+    # Filter secrets for selected project (exclude system-managed secrets)
     all_secrets = st.session_state.myvault_secrets
-    project_secrets = [s for s in all_secrets if s.get("project") == selected_project]
+    project_secrets = [
+        s for s in all_secrets
+        if s.get("project") == selected_project
+        and s.get("path") != "GOOGLE_CREDS_ENCRYPTION_KEY"  # System-managed secret, hidden from UI
+    ]
 
     if not project_secrets:
         st.info(f"No secrets found for '{selected_project}'. Click '➕ New' to create a secret.")
@@ -641,8 +645,389 @@ def load_secrets(project: str | None = None) -> None:
 
 
 # ============================================================================
+# Google Authentication API functions
+# ============================================================================
+
+def get_google_token_status(project: str) -> dict[str, Any]:
+    """Get Google token status from ExpertAgent."""
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        params = {"project": project}
+        return client.get("/v1/google-auth/token-status", params=params)
+
+
+def save_google_credentials_to_myvault(project: str, credentials_json: str) -> None:
+    """Save Google credentials to MyVault."""
+    api_config = config.get_api_config("MyVault")
+    with HTTPClient(api_config, "MyVault") as client:
+        secret_data = {
+            "project": project,
+            "path": "GOOGLE_CREDENTIALS_JSON",
+            "value": credentials_json,
+        }
+        # Check if secret exists
+        try:
+            existing = client.get(f"/api/secrets/{project}/GOOGLE_CREDENTIALS_JSON")
+            # Update existing secret
+            client.patch(f"/api/secrets/{project}/GOOGLE_CREDENTIALS_JSON", {"value": credentials_json})
+        except Exception:
+            # Create new secret
+            client.post("/api/secrets", secret_data)
+
+
+def sync_google_credentials_to_expertagent(project: str) -> None:
+    """Sync Google credentials from MyVault to ExpertAgent."""
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        sync_data = {"project": project}
+        client.post("/v1/google-auth/sync-from-myvault", sync_data)
+
+
+def list_google_cached_projects() -> list[str]:
+    """List projects with cached Google credentials in ExpertAgent."""
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        response = client.get("/v1/google-auth/list-projects")
+        return response.get("projects", []) if isinstance(response, dict) else []
+
+
+def start_google_oauth2_flow(project: str, redirect_uri: str | None = None) -> dict[str, Any]:
+    """Start OAuth2 flow for Google authentication."""
+    # Get redirect_uri dynamically from Streamlit config if not provided
+    if redirect_uri is None:
+        try:
+            import streamlit as st_config
+            port = st_config.config.get_option("server.port")
+            redirect_uri = f"http://localhost:{port}"
+        except Exception as e:
+            # Fallback to default port
+            st.sidebar.warning(f"⚠️ Could not detect port: {e}, using fallback 8501")
+            redirect_uri = "http://localhost:8501"
+
+    # Debug: Show detected redirect_uri
+    st.sidebar.info(f"🔍 Using redirect_uri: {redirect_uri}")
+
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        request_data = {
+            "project": project,
+            "redirect_uri": redirect_uri
+        }
+        return client.post("/v1/google-auth/oauth2-start", request_data)
+
+
+def complete_google_oauth2_flow(state: str, code: str, project: str | None = None) -> dict[str, Any]:
+    """Complete OAuth2 flow with authorization code.
+
+    Args:
+        state: OAuth2 state parameter
+        code: Authorization code from Google
+        project: Optional project name (if None, uses stored value from state)
+
+    Returns:
+        Response dict with success status, message, and project name
+    """
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        callback_data = {
+            "state": state,
+            "code": code,
+            "project": project
+        }
+        return client.post("/v1/google-auth/oauth2-callback", callback_data)
+
+
+def get_google_token_data(project: str) -> dict[str, Any]:
+    """Get token.json data from ExpertAgent."""
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        params = {"project": project}
+        return client.get("/v1/google-auth/token-data", params=params)
+
+
+def save_google_token(project: str, token_json: str, save_to_myvault: bool = False) -> None:
+    """Save token.json to ExpertAgent and optionally to MyVault."""
+    api_config = config.get_api_config("expertagent")
+    with HTTPClient(api_config, "ExpertAgent") as client:
+        token_data = {
+            "project": project,
+            "token_json": token_json,
+            "save_to_myvault": save_to_myvault
+        }
+        client.post("/v1/google-auth/save-token", token_data)
+
+
+# ============================================================================
+# OAuth2 Callback Handler (must be called outside tabs)
+# ============================================================================
+
+def handle_oauth2_callback():
+    """Handle OAuth2 callback - must be called outside tabs to work correctly."""
+    query_params = st.query_params
+
+    # Debug: Always show query params check
+    st.sidebar.write(f"🔍 Callback check: query_params = {dict(query_params)}")
+
+    # Debug: Show query params
+    if query_params:
+        st.sidebar.write(f"DEBUG: Query params detected: {dict(query_params)}")
+
+    if "code" in query_params and "state" in query_params:
+        code = query_params["code"]
+        state = query_params["state"]
+
+        # State validation and project retrieval are performed on expertAgent side
+        st.info("🔄 Completing OAuth2 authentication...")
+        try:
+            # Pass None for project - expertAgent will use the stored value
+            response = complete_google_oauth2_flow(state, code, project=None)
+            # Get project name from response
+            callback_project = response.get("project", "default_project")
+
+            st.success(f"✅ Token refreshed successfully for project: {callback_project}")
+            st.info("✅ Token encrypted and cached locally in ExpertAgent")
+            st.info("✅ Token automatically saved to MyVault")
+
+            # Clear query params and session state
+            if "oauth2_state" in st.session_state:
+                del st.session_state.oauth2_state
+            st.query_params.clear()
+
+            # Restore selected project
+            st.session_state.myvault_selected_project = callback_project
+            st.rerun()
+
+        except Exception as e:
+            NotificationManager.handle_exception(e, "OAuth2 Callback")
+            st.query_params.clear()
+            st.rerun()
+
+
+# ============================================================================
 # Main function
 # ============================================================================
+
+def render_google_auth_section():
+    """Render Google authentication management section."""
+    selected_project = st.session_state.myvault_selected_project
+
+    if not selected_project:
+        st.info("👆 Select a project in the 'Projects' tab to manage Google authentication.")
+        return
+
+    st.subheader(f"🔑 Google Authentication for: {selected_project}")
+    st.caption("Manage Google OAuth 2.0 credentials and tokens for this project")
+
+    # Check if ExpertAgent is configured
+    if not config.is_service_configured("expertagent"):
+        st.warning("⚠️ ExpertAgent is not configured. Google authentication requires ExpertAgent.")
+        st.info("""
+        **Required Environment Variables:**
+        - `EXPERTAGENT_BASE_URL`: ExpertAgent API base URL
+        - `EXPERTAGENT_ADMIN_TOKEN`: Admin token for authentication
+        """)
+        return
+
+    # Get token status from ExpertAgent
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        st.markdown("### 📊 Current Status")
+
+    with col2:
+        if st.button("🔄 Refresh Status", key="refresh_google_status", use_container_width=True):
+            st.rerun()
+
+    try:
+        token_status = get_google_token_status(selected_project)
+
+        # Display status
+        status_cols = st.columns(3)
+
+        with status_cols[0]:
+            if token_status.get("exists"):
+                st.success("✅ Credentials exist")
+            else:
+                st.error("❌ Credentials not found")
+
+        with status_cols[1]:
+            if token_status.get("is_valid"):
+                st.success("✅ Token is valid")
+            elif token_status.get("exists"):
+                st.warning("⚠️ Token expired or invalid")
+            else:
+                st.info("ℹ️ No token")
+
+        with status_cols[2]:
+            st.info(f"📁 Project: {token_status.get('project', 'N/A')}")
+
+        if token_status.get("error_message"):
+            st.caption(f"Details: {token_status['error_message']}")
+
+    except Exception as e:
+        st.error(f"Failed to get status: {e!s}")
+        token_status = {"exists": False, "is_valid": False}
+
+    st.divider()
+
+    # Credentials setup help section
+    st.markdown("### 📝 Credentials Setup")
+
+    with st.expander("ℹ️ How to get Google Credentials (credentials.json)", expanded=False):
+        st.markdown("""
+        **Google OAuth 2.0 Credentials の取得方法:**
+
+        1. **Google Cloud Console にアクセス**
+           - [Google Cloud Console - APIs & Services - Credentials](https://console.cloud.google.com/apis/credentials)
+
+        2. **OAuth 2.0 Client ID を作成**
+           - 「+ CREATE CREDENTIALS」→「OAuth client ID」を選択
+           - Application type: **Web application** を選択
+           - Name: 任意の名前（例: MySwiftAgent）
+
+        3. **Authorized redirect URIs の設定（重要）**
+           - **Authorized JavaScript origins**: `http://localhost:8601`
+           - **Authorized redirect URIs**: `http://localhost:8601`
+
+        4. **credentials.json をダウンロード**
+           - 作成したクライアントIDの右側の「⬇ Download JSON」をクリック
+           - ダウンロードしたJSONファイルの内容をコピー
+
+        5. **MyVault に保存**
+           - このページの「🔐 Secrets」タブに移動
+           - 「🆕 Add Secret」をクリック
+           - **Path**: `GOOGLE_CREDENTIALS_JSON`
+           - **Value**: コピーしたJSONの内容を貼り付け
+           - 「💾 Save」をクリック
+
+        6. **ExpertAgent に同期**
+           - 下記の「🔄 Sync to ExpertAgent」ボタンをクリック
+
+        **参考リンク:**
+        - [公式ガイド - Create credentials](https://developers.google.com/workspace/guides/create-credentials?hl=ja#desktop-app)
+        """)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("🔄 Sync to ExpertAgent", key="sync_google_creds", type="primary", use_container_width=True):
+            try:
+                sync_google_credentials_to_expertagent(selected_project)
+                st.success(f"✅ Credentials synced to ExpertAgent for project: {selected_project}")
+                st.info("Credentials are now encrypted and cached locally in ExpertAgent")
+                st.rerun()
+
+            except Exception as e:
+                NotificationManager.handle_exception(e, "Sync Google Credentials")
+
+    with col2:
+        if st.button("📋 List Cached Projects", key="list_google_projects", use_container_width=True):
+            try:
+                projects = list_google_cached_projects()
+                if projects:
+                    st.success(f"Cached projects in ExpertAgent: {', '.join(projects)}")
+                else:
+                    st.info("No projects cached in ExpertAgent yet")
+
+            except Exception as e:
+                NotificationManager.handle_exception(e, "List Google Projects")
+
+    st.divider()
+
+    # Token management section
+    st.markdown("### 🎫 Token Management")
+    st.caption("View and manage your Google OAuth 2.0 token (token.json)")
+
+    # Get token data
+    with st.expander("📄 View/Edit Token Data", expanded=False):
+        try:
+            token_data_response = get_google_token_data(selected_project)
+
+            if token_data_response.get("exists"):
+                token_json_content = token_data_response.get("token_json", "")
+
+                st.info("✅ Token exists for this project")
+
+                # Display token data
+                token_json_edit = st.text_area(
+                    "token.json content",
+                    value=token_json_content,
+                    height=300,
+                    help="View or edit your Google OAuth 2.0 token"
+                )
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    if st.button("💾 Save Locally", key="save_token_local", use_container_width=True):
+                        try:
+                            # Validate JSON
+                            import json
+                            json.loads(token_json_edit)
+
+                            # Save locally only
+                            save_google_token(selected_project, token_json_edit, save_to_myvault=False)
+                            st.success(f"✅ Token saved locally for project: {selected_project}")
+                            st.info("Token is encrypted and cached in ExpertAgent")
+
+                        except json.JSONDecodeError as e:
+                            st.error(f"Invalid JSON format: {e!s}")
+                        except Exception as e:
+                            NotificationManager.handle_exception(e, "Save Token Locally")
+
+                with col2:
+                    if st.button("💾 Save to MyVault", key="save_token_myvault", type="primary", use_container_width=True):
+                        try:
+                            # Validate JSON
+                            import json
+                            json.loads(token_json_edit)
+
+                            # Save to both local and MyVault
+                            save_google_token(selected_project, token_json_edit, save_to_myvault=True)
+                            st.success(f"✅ Token saved to MyVault for project: {selected_project}")
+                            st.info("Token is now persisted in MyVault and encrypted locally")
+
+                        except json.JSONDecodeError as e:
+                            st.error(f"Invalid JSON format: {e!s}")
+                        except Exception as e:
+                            NotificationManager.handle_exception(e, "Save Token to MyVault")
+
+            else:
+                error_msg = token_data_response.get("error_message", "Unknown error")
+                st.warning(f"⚠️ {error_msg}")
+                st.info("Token will be created automatically when you complete OAuth2 flow")
+
+        except Exception as e:
+            st.error(f"Failed to get token data: {e!s}")
+
+    st.divider()
+
+    # Token refresh section
+    st.markdown("### 🔄 Token Refresh")
+    st.caption("Refresh your Google OAuth 2.0 token periodically to maintain access")
+
+    if st.button("🔄 Refresh Token", key="refresh_google_token", type="secondary", use_container_width=True):
+        try:
+            # Start OAuth2 flow (project info is stored in expertAgent's state)
+            # redirect_uri will be auto-detected from Streamlit config
+            response = start_google_oauth2_flow(selected_project)
+            auth_url = response.get("auth_url")
+            state = response.get("state")
+
+            if auth_url and state:
+                # Store state in session (may be lost after redirect, but kept for reference)
+                st.session_state.oauth2_state = state
+
+                st.info("🌐 Opening Google authentication in new window...")
+                st.markdown(f"[🔗 Click here to authenticate with Google]({auth_url})")
+                st.caption("After authentication, you will be redirected back to this page")
+            else:
+                st.error("Failed to start OAuth2 flow")
+
+        except Exception as e:
+            NotificationManager.handle_exception(e, "Start OAuth2 Flow")
+
+
 
 def main() -> None:
     """Main MyVault page function."""
@@ -685,9 +1070,21 @@ def main() -> None:
         if not st.session_state.myvault_secrets:
             load_secrets(st.session_state.myvault_selected_project)
 
-    # Render main content
-    render_projects_section()
-    render_secrets_section()
+    # Handle OAuth2 callback BEFORE creating tabs
+    # This ensures callback is processed regardless of which tab is active
+    handle_oauth2_callback()
+
+    # Create tabs for different sections
+    tab1, tab2, tab3 = st.tabs(["📁 Projects", "🔐 Secrets", "🔑 Google認証"])
+
+    with tab1:
+        render_projects_section()
+
+    with tab2:
+        render_secrets_section()
+
+    with tab3:
+        render_google_auth_section()
 
 
 if __name__ == "__main__":

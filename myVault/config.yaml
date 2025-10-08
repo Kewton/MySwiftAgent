@@ -82,6 +82,14 @@ policies:
         actions: ["read", "list"]
         resources: ["secret:*:*"]
 
+  # ExpertAgent Google Auth - write access for managing Google OAuth tokens
+  - name: expertagent-google-editor
+    description: "Write access to Google-related secrets for expertAgent OAuth flow"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "list"]
+        resources: ["secret:*:GOOGLE_*"]
+
 # Service definitions
 # Tokens are loaded from environment variables: TOKEN_<service-name>
 # Services are assigned roles which grant specific permissions
@@ -113,10 +121,11 @@ services:
       - commonui-admin
 
   - name: expertagent-service
-    description: "ExpertAgent AI service - read-only access to secrets"
+    description: "ExpertAgent AI service - read-only access to secrets + Google OAuth management"
     enabled: true
     roles:
       - expertagent-reader
+      - expertagent-google-editor
 
   - name: graphaiserver-service
     description: "GraphAI Server - read-only access to secrets for AI agent workflows"

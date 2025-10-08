@@ -55,3 +55,8 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Google Credentials (encrypted)
+.google_credentials/*.enc
+.google_credentials/**/*.enc
+!.google_credentials/.gitkeep
