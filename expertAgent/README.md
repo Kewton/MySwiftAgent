@@ -24,8 +24,9 @@ expertAgent/
 ├── app/                    # FastAPI application
 │   ├── main.py            # FastAPI entry point
 │   ├── api/v1/            # API endpoints
-│   │   ├── agent_endpoints.py     # AI agent endpoints
-│   │   └── utility_endpoints.py  # Utility endpoints
+│   │   ├── agent_endpoints.py       # AI agent endpoints
+│   │   ├── utility_endpoints.py     # Utility endpoints
+│   │   └── google_auth_endpoints.py # 🔐 Google OAuth2 endpoints
 │   ├── schemas/           # Pydantic schemas
 │   ├── core/              # Core functionality
 │   └── models/            # Database models
@@ -46,11 +47,13 @@ expertAgent/
 │   ├── tool/                     # General tools
 │   ├── specializedtool/          # Specialized tools
 │   └── googleapis/               # Google API tools
+│       └── googleapi_services.py # 🔐 Google API service builder
 ├── core/                  # Core configuration
 │   ├── config.py          # Settings and configuration
 │   ├── logger.py          # Logging setup
 │   ├── secrets.py         # 🔐 SecretsManager with MyVault integration
-│   └── myvault_client.py  # 🔐 MyVault HTTP client
+│   ├── myvault_client.py  # 🔐 MyVault HTTP client
+│   └── google_creds.py    # 🔐 Google OAuth2 credentials manager
 ├── tests/                 # Test files
 ├── Dockerfile
 ├── pyproject.toml
@@ -489,18 +492,67 @@ curl -X POST "http://localhost:8000/v1/google-auth/sync-from-myvault" \
 # List all projects with cached credentials
 curl -X GET "http://localhost:8000/v1/google-auth/list-projects" \
     -H "X-Admin-Token: your-admin-token"
+
+# Start OAuth2 flow (for Web Application)
+curl -X POST "http://localhost:8000/v1/google-auth/oauth2-start" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "project": "my-project",
+      "redirect_uri": "http://localhost:8501"
+    }'
+
+# Complete OAuth2 flow with authorization code
+curl -X POST "http://localhost:8000/v1/google-auth/oauth2-callback" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "state": "state-from-oauth2-start",
+      "code": "authorization-code-from-google",
+      "project": "my-project"
+    }'
+
+# Get token data for backup or viewing
+curl -X GET "http://localhost:8000/v1/google-auth/token-data?project=my-project" \
+    -H "X-Admin-Token: your-admin-token"
+
+# Save token manually (with optional MyVault sync)
+curl -X POST "http://localhost:8000/v1/google-auth/save-token" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "project": "my-project",
+      "token_json": "{\"token\": \"...\", \"refresh_token\": \"...\"}",
+      "save_to_myvault": true
+    }'
 ```
 
 **commonUI Integration:**
 
-The `commonUI` provides a web interface for Google credential management:
+The `commonUI` provides a web interface for Google credential management with OAuth2 Web Application flow:
 
 1. Navigate to **MyVault → Google認証** tab
-2. Select a project
-3. Paste `credentials.json` content from Google Cloud Console
+2. Select a project from the dropdown
+3. Paste `credentials.json` content from Google Cloud Console (Web Application type)
 4. Click "Save to MyVault" → Credentials stored in MyVault
-5. Click "Sync to ExpertAgent" → Credentials encrypted and cached locally
-6. First API call will trigger browser-based OAuth flow
+5. Click "Start OAuth2 Flow" → Browser window opens for authentication
+6. Grant permissions in Google OAuth consent screen
+7. You'll be redirected back to commonUI (http://localhost:8501)
+8. Token is automatically saved to MyVault and encrypted locally
+9. Status indicator shows "✅ Token valid" when authentication is complete
+
+**Two Authentication Methods:**
+
+1. **Web Application Flow (Recommended for commonUI):**
+   - OAuth2 callback handled by commonUI
+   - redirect_uri: `http://localhost:8501`
+   - No browser popup blocking issues
+   - Automatic token save to MyVault
+
+2. **Desktop Application Flow (Legacy):**
+   - Browser-based authentication on first API call
+   - Uses `run_local_server()` from google-auth-oauthlib
+   - Manual MyVault update recommended after token refresh
 
 **Security Features:**
 
@@ -534,12 +586,11 @@ ADMIN_TOKEN=your-admin-token
 
 **Setup Guide:**
 
-1. **Generate Encryption Key:**
-   ```python
-   from cryptography.fernet import Fernet
-   key = Fernet.generate_key()
-   print(key.decode())  # Add this to MyVault as GOOGLE_CREDS_ENCRYPTION_KEY
-   ```
+1. **Encryption Key (Auto-generated):**
+   - `GOOGLE_CREDS_ENCRYPTION_KEY` is **automatically created** by MyVault when you create a new project
+   - This global encryption key is used to encrypt all project credentials locally
+   - **No manual setup required** - MyVault handles this in `app/api/projects.py:create_project()`
+   - The key is **hidden from commonUI** - cannot be viewed or edited by users
 
 2. **Get Google Credentials:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
@@ -550,16 +601,22 @@ ADMIN_TOKEN=your-admin-token
      - **承認済みのリダイレクト URI**: `http://localhost:8501`
    - Download `credentials.json` (Webアプリケーションのクライアントシークレット)
 
-3. **Add to MyVault via commonUI:**
+3. **Add Credentials to MyVault via commonUI:**
    - Open commonUI → MyVault → Google認証 tab
-   - Select your project
+   - Select your project (encryption key auto-generated when project was created)
    - Paste `credentials.json` content
-   - Click "Save to MyVault" then "Sync to ExpertAgent"
+   - Click "Save to MyVault"
 
-4. **First-time Authentication:**
-   - When ExpertAgent first uses Google API, browser will open
-   - Grant permissions to your Google account
-   - Token will be saved and auto-refreshed
+4. **Authenticate with Google:**
+   - Click "Start OAuth2 Flow" in commonUI
+   - Grant permissions in the browser window
+   - Token is automatically saved to MyVault and encrypted locally
+   - Status updates to "✅ Token valid"
+
+5. **Token Management:**
+   - Tokens are auto-refreshed when expired (if refresh_token available)
+   - Refreshed tokens are saved locally and **should be manually synced to MyVault**
+   - Use "Check Token Status" in commonUI to verify validity
 
 **Troubleshooting:**
 
@@ -580,7 +637,11 @@ See [CLAUDE.md](../CLAUDE.md) for detailed workflow information.
 
 ## Version
 
-Current version: 0.2.0 (includes Playwright MCP and Wikipedia MCP integration)
+Current version: 0.2.1
+
+**Recent Updates:**
+- v0.2.1 (2025-10): Google OAuth2 Web Application flow with encrypted credential management
+- v0.2.0: Playwright MCP and Wikipedia MCP integration
 
 ## License
 
