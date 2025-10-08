@@ -6,7 +6,8 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from core.config import settings
-from core.google_creds import google_creds_manager
+from core.google_creds import get_project_name, google_creds_manager
+from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ async def get_token_status(
     """Check Google token validity for specified project."""
     verify_admin_token(x_admin_token)
 
-    project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+    project_name = get_project_name(project)
     is_valid, error_msg = google_creds_manager.check_token_validity(project_name)
 
     return TokenStatusResponse(
@@ -102,7 +103,7 @@ async def sync_from_myvault(
             status_code=500, detail="Failed to sync from MyVault. Check logs."
         )
 
-    project_name = request.project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+    project_name = get_project_name(request.project)
     return {
         "message": f"Synced from MyVault successfully for project: {project_name}",
         "project": project_name,
@@ -135,7 +136,7 @@ async def oauth2_start(
             redirect_uri=request.redirect_uri
         )
 
-        project_name = request.project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+        project_name = get_project_name(request.project)
 
         return OAuth2StartResponse(
             auth_url=auth_url,
@@ -172,27 +173,26 @@ async def oauth2_callback(
             detail="Failed to complete OAuth2 flow. Check logs."
         )
 
-    project_name = request.project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+    project_name = get_project_name(request.project)
 
     # Auto-save token to MyVault
     try:
         # Get the token that was just saved
         token_path = google_creds_manager.get_token_path(project_name)
-        if token_path:
+        if token_path and secrets_manager.myvault_client:
             with open(token_path) as f:
                 token_json = f.read()
 
             # Save to MyVault
-            from core.secrets import secrets_manager
             secrets_manager.myvault_client.update_secret(
                 project=project_name,
                 path="GOOGLE_TOKEN_JSON",
                 value=token_json
             )
-            logger.info(f"✓ Token auto-saved to MyVault for project: {project_name}")
+            logger.info(f"Token auto-saved to MyVault for project: {project_name}")
     except Exception as e:
         # Non-fatal: token is saved locally, MyVault save failed
-        logger.warning(f"⚠ Failed to auto-save token to MyVault: {e}")
+        logger.warning(f"Failed to auto-save token to MyVault: {e}")
 
     return OAuth2CallbackResponse(
         success=True,
@@ -211,7 +211,7 @@ async def get_token_data(
     """
     verify_admin_token(x_admin_token)
 
-    project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+    project_name = get_project_name(project)
 
     try:
         token_path = google_creds_manager.get_token_path(project_name)
@@ -252,7 +252,7 @@ async def save_token(
     """
     verify_admin_token(x_admin_token)
 
-    project_name = request.project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+    project_name = get_project_name(request.project)
 
     # Save to local encrypted storage
     success = google_creds_manager.save_token(request.token_json, project_name)
@@ -264,9 +264,8 @@ async def save_token(
         )
 
     # Optionally save to MyVault
-    if request.save_to_myvault:
+    if request.save_to_myvault and secrets_manager.myvault_client:
         try:
-            from core.secrets import secrets_manager
             # Save to MyVault for persistence
             secrets_manager.myvault_client.update_secret(
                 project=project_name,

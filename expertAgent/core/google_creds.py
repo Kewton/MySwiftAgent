@@ -23,6 +23,11 @@ SCOPES = [
 ]
 
 
+def get_project_name(project: Optional[str] = None) -> str:
+    """Get project name with fallback to default."""
+    return project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+
+
 class GoogleCredsManager:
     """Manage encrypted Google credentials with project support."""
 
@@ -34,7 +39,7 @@ class GoogleCredsManager:
 
     def _get_project_dir(self, project: Optional[str] = None) -> Path:
         """Get project-specific credentials directory."""
-        project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+        project_name = get_project_name(project)
         project_dir = CREDS_DIR / project_name
         project_dir.mkdir(exist_ok=True, mode=0o700)
         return project_dir
@@ -97,7 +102,7 @@ class GoogleCredsManager:
         Sync credentials from MyVault to local encrypted files.
         """
         try:
-            project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+            project_name = get_project_name(project)
             logger.info(f"🔄 Syncing credentials for project: {project_name}")
 
             # Get credentials from MyVault
@@ -137,7 +142,7 @@ class GoogleCredsManager:
         Get credentials file path, syncing from MyVault if needed.
         Returns decrypted file path in temp location.
         """
-        project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+        project_name = get_project_name(project)
         creds_file = self._get_credentials_file(project_name)
 
         # Check if encrypted file exists
@@ -168,7 +173,7 @@ class GoogleCredsManager:
 
     def get_token_path(self, project: Optional[str] = None) -> Optional[str]:
         """Get token file path, returns None if not exists."""
-        project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+        project_name = get_project_name(project)
         token_file = self._get_token_file(project_name)
 
         if not token_file.exists():
@@ -198,7 +203,7 @@ class GoogleCredsManager:
         Save token to encrypted file and notify for MyVault update.
         """
         try:
-            project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+            project_name = get_project_name(project)
 
             # Validate JSON
             json.loads(token_json_str)
@@ -225,7 +230,7 @@ class GoogleCredsManager:
         self, project: Optional[str] = None
     ) -> Tuple[bool, Optional[str]]:
         """Check if token exists and is valid for project."""
-        project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+        project_name = get_project_name(project)
         token_file = self._get_token_file(project_name)
 
         if not token_file.exists():
@@ -302,7 +307,7 @@ class GoogleCredsManager:
 
         from google_auth_oauthlib.flow import Flow
 
-        project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+        project_name = get_project_name(project)
 
         try:
             # Get decrypted credentials

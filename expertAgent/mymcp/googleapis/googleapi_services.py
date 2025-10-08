@@ -1,7 +1,8 @@
 """Google API services with project-specific encrypted credentials."""
 import atexit
+import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
@@ -9,11 +10,12 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from core.config import settings
-from core.google_creds import SCOPES, google_creds_manager
+from core.google_creds import SCOPES, get_project_name, google_creds_manager
+
+logger = logging.getLogger(__name__)
 
 # Temp file cleanup
-_temp_files = []
+_temp_files: list[str] = []
 
 
 def _cleanup_temp_files():
@@ -22,9 +24,9 @@ def _cleanup_temp_files():
         try:
             if os.path.exists(path):
                 os.remove(path)
-                print(f"🧹 Cleaned up temp file: {path}")
+                logger.debug(f"Cleaned up temp file: {path}")
         except Exception as e:
-            print(f"⚠ Failed to clean up {path}: {e}")
+            logger.warning(f"Failed to clean up {path}: {e}")
 
 
 atexit.register(_cleanup_temp_files)
@@ -32,7 +34,7 @@ atexit.register(_cleanup_temp_files)
 
 def get_googleapis_service(
     _serviceName: str, project: Optional[str] = None
-) -> Optional[any]:
+) -> Optional[Any]:
     """
     Get Google API service with project-specific encrypted credentials.
 
@@ -43,8 +45,8 @@ def get_googleapis_service(
     Returns:
         Google API service object or None if authentication fails
     """
-    project_name = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
-    print(f"🔐 Project: {project_name} - 認証情報を確認します...")
+    project_name = get_project_name(project)
+    logger.info(f"Project: {project_name} - Checking credentials...")
 
     try:
         # Get decrypted credentials paths from encrypted storage
@@ -55,18 +57,18 @@ def get_googleapis_service(
         if token_path:
             _temp_files.append(token_path)
     except FileNotFoundError as e:
-        print(f"❌ Credentials not found: {e}")
-        print(
-            f"📝 Please add GOOGLE_CREDENTIALS_JSON to MyVault project: {project_name}"
+        logger.error(f"Credentials not found: {e}")
+        logger.info(
+            f"Please add GOOGLE_CREDENTIALS_JSON to MyVault project: {project_name}"
         )
-        print("   Use commonUI → MyVault → Google認証タブ to upload credentials")
+        logger.info("Use commonUI → MyVault → Google Auth tab to upload credentials")
         return None
     except ValueError as e:
-        print(f"❌ Decryption failed: {e}")
-        print("   Check GOOGLE_CREDS_ENCRYPTION_KEY in MyVault")
+        logger.error(f"Decryption failed: {e}")
+        logger.info("Check GOOGLE_CREDS_ENCRYPTION_KEY in MyVault")
         return None
     except Exception as e:
-        print(f"❌ Failed to get credentials: {e}")
+        logger.error(f"Failed to get credentials: {e}")
         return None
 
     creds: Optional[Credentials] = None
@@ -75,44 +77,44 @@ def get_googleapis_service(
     if token_path and os.path.exists(token_path):
         try:
             creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-            print(f"✓ 既存のトークンを読み込みました")
+            logger.info("Loaded existing token")
         except Exception as e:
-            print(f"⚠ トークンの読み込みに失敗: {e}")
+            logger.warning(f"Failed to load token: {e}")
             creds = None
 
     # Check validity and refresh if needed
     if not creds or not creds.valid:
-        print("🔄 認証情報が無効または期限切れです")
+        logger.info("Credentials invalid or expired")
 
         if creds and creds.expired and creds.refresh_token:
-            print("🔄 リフレッシュトークンで更新を試みます...")
+            logger.info("Attempting to refresh token...")
             try:
                 creds.refresh(Request())
-                print("✓ トークンのリフレッシュに成功")
+                logger.info("Token refresh successful")
 
                 # Save refreshed token
                 token_json = creds.to_json()
                 google_creds_manager.save_token(token_json, project_name)
-                print(f"✓ 更新されたトークンを保存しました (project: {project_name})")
-                print(
-                    "ℹ️  MyVaultへの手動更新を推奨: commonUI → MyVault → Google認証タブ"
+                logger.info(f"Saved refreshed token (project: {project_name})")
+                logger.info(
+                    "Manual MyVault update recommended: commonUI → MyVault → Google Auth tab"
                 )
             except RefreshError as e:
-                print(f"❌ リフレッシュ失敗: {e}")
-                print("🔄 再認証が必要です")
+                logger.error(f"Token refresh failed: {e}")
+                logger.info("Re-authentication required")
                 creds = None
             except Exception as e:
-                print(f"❌ 予期せぬエラー: {e}")
+                logger.error(f"Unexpected error during refresh: {e}")
                 creds = None
 
         # New authentication flow
         if not creds:
-            print("🆕 新規認証フローを開始します...")
+            logger.info("Starting new authentication flow...")
 
             if not os.path.exists(credentials_path):
-                print(f"❌ クレデンシャルファイルが見つかりません")
-                print(
-                    "   commonUI → MyVault → Google認証タブ から credentials.json をアップロードしてください"
+                logger.error("Credentials file not found")
+                logger.info(
+                    "Please upload credentials.json via commonUI → MyVault → Google Auth tab"
                 )
                 return None
 
@@ -122,31 +124,31 @@ def get_googleapis_service(
                 )
                 creds = flow.run_local_server(
                     port=0,
-                    authorization_prompt_message="🌐 ブラウザを開いて認証してください: {url}",
-                    success_message="✅ 認証完了。このウィンドウは閉じて構いません。",
+                    authorization_prompt_message="Open browser to authenticate: {url}",
+                    success_message="Authentication complete. You can close this window.",
                     open_browser=True,
                 )
-                print("✓ 新規認証に成功しました")
+                logger.info("New authentication successful")
 
                 # Save new token
                 token_json = creds.to_json()
                 google_creds_manager.save_token(token_json, project_name)
-                print(f"✓ 新しいトークンを保存しました (project: {project_name})")
-                print(
-                    "ℹ️  MyVaultへの手動更新を推奨: commonUI → MyVault → Google認証タブ"
+                logger.info(f"Saved new token (project: {project_name})")
+                logger.info(
+                    "Manual MyVault update recommended: commonUI → MyVault → Google Auth tab"
                 )
             except Exception as e:
-                print(f"❌ 認証フロー失敗: {e}")
+                logger.error(f"Authentication flow failed: {e}")
                 return None
 
     # Final validation
     if not creds or not creds.valid:
-        print("❌ 有効な認証情報を取得できませんでした")
+        logger.error("Failed to obtain valid credentials")
         return None
 
     # Build service
     try:
-        print(f"🔧 '{_serviceName}' サービスをビルドします...")
+        logger.info(f"Building '{_serviceName}' service...")
         if _serviceName == "gmail":
             service = build("gmail", "v1", credentials=creds)
         elif _serviceName == "drive":
@@ -154,11 +156,11 @@ def get_googleapis_service(
         elif _serviceName == "sheets":
             service = build("sheets", "v4", credentials=creds)
         else:
-            print(f"❌ 不明なサービス名: {_serviceName}")
+            logger.error(f"Unknown service name: {_serviceName}")
             return None
 
-        print("✅ サービスのビルドに成功しました")
+        logger.info("Service build successful")
         return service
     except Exception as e:
-        print(f"❌ サービスのビルド失敗: {e}")
+        logger.error(f"Service build failed: {e}")
         return None

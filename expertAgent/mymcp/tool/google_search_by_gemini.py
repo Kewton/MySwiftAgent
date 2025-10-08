@@ -1,11 +1,10 @@
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-
-import os
 
 from core.logger import getlogger
 from mymcp.utils.extract_knowledge_from_text import extract_knowledge_from_text
