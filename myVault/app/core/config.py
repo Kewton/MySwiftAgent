@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         # Override database_url from YAML if not set in environment
         if not self.database_url:
             self.database_url = self._yaml_config.get("database", {}).get(
-                "url", "sqlite:///./myvault.db"
+                "url", "sqlite:///./data/myvault.db"
             )
 
     @field_validator("msa_master_key")

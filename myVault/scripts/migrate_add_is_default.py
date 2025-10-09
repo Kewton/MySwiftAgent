@@ -13,7 +13,7 @@ from pathlib import Path
 def main():
     """Run migration."""
     # Database path
-    db_path = Path(__file__).parent.parent / "myvault.db"
+    db_path = Path(__file__).parent.parent / "data" / "myvault.db"
 
     if not db_path.exists():
         print(f"❌ Database not found at {db_path}")
