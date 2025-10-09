@@ -190,6 +190,133 @@ Coverage failure: total of 85.36 is less than fail-under=90.00
    - エッジケース
    - 例外パス
 
+### 6. MyPy 型エラー (Type Checking)
+
+#### 6.1 Pydantic Field() の構文エラー
+
+**エラー例:**
+```
+No overload variant of "Field" matches argument types "str", "str"
+```
+
+**原因:** Pydantic v2では `Field()` は位置引数を受け付けません。
+
+**悪い例 (Pydantic v1スタイル):**
+```python
+from pydantic import BaseModel, Field
+
+class Settings(BaseModel):
+    api_key: str = Field("", env="API_KEY")  # ❌ 位置引数
+    base_url: str = Field(..., description="Base URL")  # ❌ ... を位置引数で使用
+```
+
+**良い例 (Pydantic v2スタイル):**
+```python
+from pydantic import BaseModel, Field
+
+class Settings(BaseModel):
+    api_key: str = Field(default="")  # ✅ キーワード引数のみ
+    base_url: str = Field(description="Base URL")  # ✅ default不要なら省略
+```
+
+**pydantic_settings の場合:**
+```python
+from pydantic_settings import BaseSettings
+from pydantic import Field
+
+class Settings(BaseSettings):
+    # envパラメータは不要 - フィールド名が自動的に環境変数名になる
+    api_key: str = Field(default="")  # ✅ API_KEY環境変数から読み込まれる
+    base_url: str = Field(default="http://localhost:8000")
+```
+
+#### 6.2 Literal 型のキャストエラー
+
+**エラー例:**
+```
+Argument has incompatible type "str"; expected "Literal['JobQueue', 'MyScheduler']"
+```
+
+**対策:** 明示的に型キャストする
+
+```python
+from typing import Literal, cast
+
+def get_service_name() -> str:
+    return "JobQueue"  # 実行時は文字列を返す
+
+# ❌ 型エラー
+service: Literal["JobQueue", "MyScheduler"] = get_service_name()
+
+# ✅ 型キャストで解決
+service: Literal["JobQueue", "MyScheduler"] = cast(
+    Literal["JobQueue", "MyScheduler"],
+    get_service_name()
+)
+```
+
+#### 6.3 Any 型からの返却エラー
+
+**エラー例:**
+```
+Returning Any from function declared to return "str"
+```
+
+**対策:** 明示的に型キャストする
+
+```python
+def get_dict_value(data: dict) -> str:
+    # ❌ dict[key] は Any 型を返す
+    return data["key"]
+
+    # ✅ 明示的にstr()でキャスト
+    return str(data["key"])
+```
+
+#### 6.4 サードパーティライブラリの型警告
+
+**エラー例:**
+```
+Skipping analyzing "google_auth_oauthlib.flow": module is installed, but missing library stubs
+```
+
+**対策:** `type: ignore` コメントで警告を抑制
+
+```python
+from google_auth_oauthlib.flow import Flow  # type: ignore[import-untyped]
+```
+
+#### 6.5 環境変数読み込みの型エラー
+
+**CommonUI での dotenv 読み込み:**
+
+```python
+"""Configuration management for CommonUI Streamlit application."""
+
+import os
+from pathlib import Path
+from typing import Literal, cast
+
+import streamlit as st
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
+# Load environment variables from .env file
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
+
+class Config:
+    def _get_setting(self, key: str, default: str = "") -> str:
+        """Get setting from Streamlit secrets or environment variables."""
+        try:
+            if hasattr(st, "secrets") and key in st.secrets:
+                return str(st.secrets[key])  # ✅ 明示的にstr()でキャスト
+        except Exception:
+            pass
+        return os.getenv(key, default)
+```
+
 ## 📋 コミットメッセージ規約
 
 Conventional Commits 形式に従ってください:
@@ -265,6 +392,7 @@ uv run pytest tests/ --cov=app --cov=core
 2. **ローカルで再現**
    ```bash
    uv run ruff check .  # Linting エラーの場合
+   uv run mypy app/ core/  # 型エラーの場合
    uv run pytest tests/  # Test エラーの場合
    ```
 
@@ -282,3 +410,5 @@ uv run pytest tests/ --cov=app --cov=core
 - [Pre-commit Hooks](https://pre-commit.com/)
 - [Pytest Best Practices](https://docs.pytest.org/en/stable/goodpractices.html)
 - [Conventional Commits](https://www.conventionalcommits.org/)
+- [Pydantic V2 Migration Guide](https://docs.pydantic.dev/latest/migration/)
+- [MyPy Documentation](https://mypy.readthedocs.io/)
