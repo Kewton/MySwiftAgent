@@ -1,39 +1,46 @@
 """Configuration management for CommonUI Streamlit application."""
 
 import os
-from typing import Literal
+from pathlib import Path
+from typing import Literal, cast
 
 import streamlit as st
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+# Load environment variables from .env file
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
 
 
 class APIConfig(BaseModel):
     """API configuration for external services."""
 
-    base_url: str = Field(..., description="Base URL for the API")
-    token: str = Field(..., description="API authentication token")
+    base_url: str = Field(description="Base URL for the API")
+    token: str = Field(description="API authentication token")
 
 
 class MyVaultConfig(BaseModel):
     """MyVault API configuration with custom authentication."""
 
-    base_url: str = Field(..., description="Base URL for MyVault API")
-    service_name: str = Field(..., description="Service name for authentication")
-    service_token: str = Field(..., description="Service token for authentication")
+    base_url: str = Field(description="Base URL for MyVault API")
+    service_name: str = Field(description="Service name for authentication")
+    service_token: str = Field(description="Service token for authentication")
 
 
 class ExpertAgentConfig(BaseModel):
     """ExpertAgent API configuration with admin token."""
 
-    base_url: str = Field(..., description="Base URL for ExpertAgent API")
-    admin_token: str = Field(..., description="Admin token for cache management")
+    base_url: str = Field(description="Base URL for ExpertAgent API")
+    admin_token: str = Field(description="Admin token for cache management")
 
 
 class GraphAiServerConfig(BaseModel):
     """GraphAiServer API configuration with admin token."""
 
-    base_url: str = Field(..., description="Base URL for GraphAiServer API")
-    admin_token: str = Field(..., description="Admin token for cache management")
+    base_url: str = Field(description="Base URL for GraphAiServer API")
+    admin_token: str = Field(description="Admin token for cache management")
 
 
 class UIConfig(BaseModel):
@@ -90,8 +97,14 @@ class Config:
 
         self.ui = UIConfig(
             polling_interval=int(self._get_setting("POLLING_INTERVAL", "5")),
-            default_service=self._get_setting("DEFAULT_SERVICE", "JobQueue"),
-            operation_mode=self._get_setting("OPERATION_MODE", "full"),
+            default_service=cast(
+                Literal["JobQueue", "MyScheduler", "MyVault"],
+                self._get_setting("DEFAULT_SERVICE", "JobQueue"),
+            ),
+            operation_mode=cast(
+                Literal["full", "readonly"],
+                self._get_setting("OPERATION_MODE", "full"),
+            ),
         )
 
     def _get_setting(self, key: str, default: str = "") -> str:
@@ -99,7 +112,7 @@ class Config:
         # Try Streamlit secrets first
         try:
             if hasattr(st, "secrets") and key in st.secrets:
-                return st.secrets[key]
+                return str(st.secrets[key])
         except Exception:
             pass
 

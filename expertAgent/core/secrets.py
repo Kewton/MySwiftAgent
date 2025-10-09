@@ -165,7 +165,7 @@ class SecretsManager:
         """
         # Check env var override
         if self.settings.MYVAULT_DEFAULT_PROJECT:
-            return self.settings.MYVAULT_DEFAULT_PROJECT
+            return str(self.settings.MYVAULT_DEFAULT_PROJECT)
 
         # Get from MyVault API
         if not self.myvault_client:
@@ -205,7 +205,7 @@ class SecretsManager:
 
         _, timestamp = self._cache[project][key]
         age = time.time() - timestamp
-        return age < self.cache_ttl
+        return bool(age < self.cache_ttl)
 
     def _update_cache(self, project: str, key: str, value: str):
         """Update cache with new value and timestamp."""

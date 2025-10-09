@@ -63,7 +63,7 @@ class MyVaultClient:
             projects = response.json()
             for project in projects:
                 if project.get("is_default", False):
-                    return project["name"]
+                    return str(project["name"])
 
             return None
 
@@ -126,7 +126,7 @@ class MyVaultClient:
             response.raise_for_status()
 
             secret_data = response.json()
-            return secret_data["value"]
+            return str(secret_data["value"])
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:

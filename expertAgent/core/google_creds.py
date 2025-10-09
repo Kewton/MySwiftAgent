@@ -306,7 +306,7 @@ class GoogleCredsManager:
         """
         import secrets as py_secrets
 
-        from google_auth_oauthlib.flow import Flow
+        from google_auth_oauthlib.flow import Flow  # type: ignore[import-untyped]
 
         project_name = get_project_name(project)
 
