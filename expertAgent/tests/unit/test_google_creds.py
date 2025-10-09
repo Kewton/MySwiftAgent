@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -66,7 +66,9 @@ class TestGoogleCredsManager:
             mock_token_file.exists.return_value = True
             mock_get_file.return_value = mock_token_file
 
-            with patch.object(manager, "_decrypt_file", side_effect=Exception("Decrypt error")):
+            with patch.object(
+                manager, "_decrypt_file", side_effect=Exception("Decrypt error")
+            ):
                 is_valid, error = manager.check_token_validity("test-project")
                 assert is_valid is False
                 assert "Decrypt error" in error
@@ -115,7 +117,9 @@ class TestGoogleCredsManager:
         """Test save_token when exception occurs."""
         token_json = '{"access_token": "test"}'
 
-        with patch.object(manager, "_encrypt_file", side_effect=Exception("Encrypt error")):
+        with patch.object(
+            manager, "_encrypt_file", side_effect=Exception("Encrypt error")
+        ):
             result = manager.save_token(token_json, "test-project")
             assert result is False
 
@@ -129,7 +133,9 @@ class TestGoogleCredsManager:
             )
             MockFlow.from_client_secrets_file.return_value = mock_flow_instance
 
-            with patch.object(manager, "get_credentials_path", return_value="/tmp/creds.json"):
+            with patch.object(
+                manager, "get_credentials_path", return_value="/tmp/creds.json"
+            ):
                 auth_url, state = manager.initiate_oauth2_flow(
                     project="test", redirect_uri="http://localhost:8501"
                 )
@@ -141,7 +147,9 @@ class TestGoogleCredsManager:
 
     def test_initiate_oauth2_flow_exception(self, manager):
         """Test initiate_oauth2_flow when exception occurs."""
-        with patch.object(manager, "get_credentials_path", side_effect=FileNotFoundError("No creds")):
+        with patch.object(
+            manager, "get_credentials_path", side_effect=FileNotFoundError("No creds")
+        ):
             with pytest.raises(ValueError) as exc_info:
                 manager.initiate_oauth2_flow(project="test")
 
@@ -162,7 +170,13 @@ class TestGoogleCredsManager:
         mock_creds.to_json.return_value = '{"token": "test"}'
         mock_flow.credentials = mock_creds
 
-        manager._oauth_flows = {"state123": {"flow": mock_flow, "project": "test", "redirect_uri": "http://localhost"}}
+        manager._oauth_flows = {
+            "state123": {
+                "flow": mock_flow,
+                "project": "test",
+                "redirect_uri": "http://localhost",
+            }
+        }
 
         with patch.object(manager, "save_token", return_value=True):
             result = manager.complete_oauth2_flow(
@@ -180,7 +194,13 @@ class TestGoogleCredsManager:
         mock_creds.to_json.return_value = '{"token": "test"}'
         mock_flow.credentials = mock_creds
 
-        manager._oauth_flows = {"state123": {"flow": mock_flow, "project": "test", "redirect_uri": "http://localhost"}}
+        manager._oauth_flows = {
+            "state123": {
+                "flow": mock_flow,
+                "project": "test",
+                "redirect_uri": "http://localhost",
+            }
+        }
 
         with patch.object(manager, "save_token", return_value=False):
             result = manager.complete_oauth2_flow(
@@ -255,7 +275,6 @@ class TestGoogleCredsManager:
 
     def test_decrypt_file_not_found(self, manager):
         """Test _decrypt_file when file doesn't exist."""
-        from pathlib import Path
 
         non_existent_file = Path("/tmp/nonexistent.enc")
 
@@ -265,8 +284,6 @@ class TestGoogleCredsManager:
 
     def test_decrypt_file_invalid_token(self, manager):
         """Test _decrypt_file with invalid encryption key."""
-        from pathlib import Path
-        from unittest.mock import mock_open
 
         test_file = Path("/tmp/test.enc")
 
@@ -329,9 +346,7 @@ class TestGoogleCredsManager:
                     mock_creds.valid = False
                     mock_creds.expired = True
                     mock_creds.refresh_token = "refresh-token"
-                    mock_creds_class.from_authorized_user_info.return_value = (
-                        mock_creds
-                    )
+                    mock_creds_class.from_authorized_user_info.return_value = mock_creds
 
                     is_valid, error = manager.check_token_validity("test-project")
                     assert is_valid is False
@@ -354,9 +369,7 @@ class TestGoogleCredsManager:
                     mock_creds.valid = False
                     mock_creds.expired = False
                     mock_creds.refresh_token = None
-                    mock_creds_class.from_authorized_user_info.return_value = (
-                        mock_creds
-                    )
+                    mock_creds_class.from_authorized_user_info.return_value = mock_creds
 
                     is_valid, error = manager.check_token_validity("test-project")
                     assert is_valid is False
@@ -372,7 +385,6 @@ class TestGoogleCredsManager:
 
     def test_list_projects_with_projects(self, manager):
         """Test list_projects when multiple projects exist."""
-        from pathlib import Path
 
         with patch("core.google_creds.CREDS_DIR") as mock_dir:
             mock_dir.exists.return_value = True
@@ -417,7 +429,11 @@ class TestGoogleCredsManager:
         mock_flow.fetch_token.side_effect = Exception("Token exchange failed")
 
         manager._oauth_flows = {
-            "state123": {"flow": mock_flow, "project": "test", "redirect_uri": "http://localhost"}
+            "state123": {
+                "flow": mock_flow,
+                "project": "test",
+                "redirect_uri": "http://localhost",
+            }
         }
 
         result = manager.complete_oauth2_flow(
