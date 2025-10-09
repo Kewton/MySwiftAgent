@@ -358,6 +358,7 @@ out/
 .coverage
 .coverage.*
 coverage.xml
+coverage.json
 htmlcov/
 .tox/
 .pytest_cache/
