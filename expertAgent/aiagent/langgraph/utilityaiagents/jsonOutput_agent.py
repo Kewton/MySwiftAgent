@@ -4,6 +4,7 @@ import re
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
+
 # Lazy import to avoid loading Google credentials at module import time
 # from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
@@ -47,7 +48,9 @@ async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
         # gemini-2.5-flash-preview-04-17
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
+
         from core.secrets import secrets_manager
+
         google_api_key = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
         llm_openai = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key)
     elif isClaude(_model):

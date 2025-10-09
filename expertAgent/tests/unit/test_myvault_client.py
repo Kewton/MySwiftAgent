@@ -1,8 +1,9 @@
 """Unit tests for MyVault client."""
 
-import pytest
 from unittest.mock import Mock, patch
+
 import httpx
+import pytest
 
 from core.myvault_client import MyVaultClient, MyVaultError
 

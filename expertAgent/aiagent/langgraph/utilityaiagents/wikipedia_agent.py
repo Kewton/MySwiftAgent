@@ -15,7 +15,8 @@ async def wikipediaagent(query: str, _modelname: str, language: str = "ja") -> s
         str: 実行結果のメッセージ
     """
     # System message to inform Wikipedia capabilities
-    system_msg = SystemMessage(content=f"""You are a Wikipedia research assistant with access to Wikipedia tools.
+    system_msg = SystemMessage(
+        content=f"""You are a Wikipedia research assistant with access to Wikipedia tools.
 Language: {language}
 Available capabilities:
 - Search Wikipedia articles
@@ -24,7 +25,8 @@ Available capabilities:
 - Extract specific sections
 - Find related topics and links
 
-Provide comprehensive and accurate information from Wikipedia.""")
+Provide comprehensive and accurate information from Wikipedia."""
+    )
 
     human_msg = HumanMessage(content=query)
 

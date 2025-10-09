@@ -1,7 +1,8 @@
 """Unit tests for admin endpoints."""
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, Mock
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -58,14 +59,10 @@ class TestAdminEndpoints:
         data = response.json()
         assert data["status"] == "success"
         assert "test-project" in data["message"]
-        mock_secrets_manager.clear_cache.assert_called_once_with(
-            project="test-project"
-        )
+        mock_secrets_manager.clear_cache.assert_called_once_with(project="test-project")
 
     @patch("app.api.v1.admin_endpoints.settings")
-    def test_reload_secrets_invalid_token(
-        self, mock_settings, client, admin_token
-    ):
+    def test_reload_secrets_invalid_token(self, mock_settings, client, admin_token):
         """Test reload with invalid admin token."""
         mock_settings.ADMIN_TOKEN = admin_token
 

@@ -54,9 +54,14 @@ async def make_graph(
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
+
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
-        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
+        google_api_key_for_model = secrets_manager.get_secret(
+            "GOOGLE_API_KEY", project=project
+        )
+        model = ChatGoogleGenerativeAI(
+            model=_model, google_api_key=google_api_key_for_model
+        )
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:
@@ -68,10 +73,16 @@ async def make_graph(
     # Get secrets from SecretsManager (MyVault priority)
     try:
         google_api_key = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
-        print(f"[DEBUG make_graph] Retrieved GOOGLE_API_KEY: {google_api_key[:10]}..." if google_api_key else "[DEBUG make_graph] GOOGLE_API_KEY is empty")
+        print(
+            f"[DEBUG make_graph] Retrieved GOOGLE_API_KEY: {google_api_key[:10]}..."
+            if google_api_key
+            else "[DEBUG make_graph] GOOGLE_API_KEY is empty"
+        )
     except ValueError:
         google_api_key = ""
-        print("[DEBUG make_graph] Failed to retrieve GOOGLE_API_KEY - using empty string")
+        print(
+            "[DEBUG make_graph] Failed to retrieve GOOGLE_API_KEY - using empty string"
+        )
 
     try:
         openai_api_key = secrets_manager.get_secret("OPENAI_API_KEY", project=project)
@@ -120,6 +131,7 @@ async def make_graph(
         ollama_model = ""
 
     import os
+
     mcp_env = {
         "GOOGLE_API_KEY": google_api_key,
         "OPENAI_API_KEY": openai_api_key,
@@ -145,7 +157,11 @@ async def make_graph(
         ),
     }
 
-    print(f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..." if mcp_env['GOOGLE_API_KEY'] else "[DEBUG] mcp_env GOOGLE_API_KEY is empty")
+    print(
+        f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..."
+        if mcp_env["GOOGLE_API_KEY"]
+        else "[DEBUG] mcp_env GOOGLE_API_KEY is empty"
+    )
 
     mcp_client = MultiServerMCPClient(
         {
@@ -189,9 +205,14 @@ async def make_utility_graph(
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
+
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=project)
-        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
+        google_api_key_for_model = secrets_manager.get_secret(
+            "GOOGLE_API_KEY", project=project
+        )
+        model = ChatGoogleGenerativeAI(
+            model=_model, google_api_key=google_api_key_for_model
+        )
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:
@@ -250,6 +271,7 @@ async def make_utility_graph(
         ollama_model = ""
 
     import os
+
     mcp_env = {
         "GOOGLE_API_KEY": google_api_key,
         "OPENAI_API_KEY": openai_api_key,
@@ -275,7 +297,11 @@ async def make_utility_graph(
         ),
     }
 
-    print(f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..." if mcp_env['GOOGLE_API_KEY'] else "[DEBUG] mcp_env GOOGLE_API_KEY is empty")
+    print(
+        f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..."
+        if mcp_env["GOOGLE_API_KEY"]
+        else "[DEBUG] mcp_env GOOGLE_API_KEY is empty"
+    )
 
     mcp_client = MultiServerMCPClient(
         {
@@ -326,9 +352,14 @@ async def make_playwright_graph(
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
+
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
-        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
+        google_api_key_for_model = secrets_manager.get_secret(
+            "GOOGLE_API_KEY", project=None
+        )
+        model = ChatGoogleGenerativeAI(
+            model=_model, google_api_key=google_api_key_for_model
+        )
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:
@@ -340,7 +371,14 @@ async def make_playwright_graph(
         {
             "playwright": {
                 "command": "npx",
-                "args": ["-y", "@playwright/mcp@latest", "--headless", "--no-sandbox", "--browser", "chromium"],
+                "args": [
+                    "-y",
+                    "@playwright/mcp@latest",
+                    "--headless",
+                    "--no-sandbox",
+                    "--browser",
+                    "chromium",
+                ],
                 "transport": "stdio",
             }
         }
@@ -384,9 +422,14 @@ async def make_wikipedia_graph(
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
+
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
-        model = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key_for_model)
+        google_api_key_for_model = secrets_manager.get_secret(
+            "GOOGLE_API_KEY", project=None
+        )
+        model = ChatGoogleGenerativeAI(
+            model=_model, google_api_key=google_api_key_for_model
+        )
     elif isClaude(_model):
         model = ChatAnthropic(model=_model)
     else:

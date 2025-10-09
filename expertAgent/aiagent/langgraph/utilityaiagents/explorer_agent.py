@@ -3,9 +3,7 @@ from langchain_core.messages import AIMessage
 from aiagent.langgraph.common import make_utility_graph
 
 
-async def exploreragent(
-    query: str, _modelname: str, project: str | None = None
-) -> str:
+async def exploreragent(query: str, _modelname: str, project: str | None = None) -> str:
     async with make_utility_graph(
         "mymcp.stdio_explorer", "exploreragent", _modelname, 2, project=project
     ) as graph:

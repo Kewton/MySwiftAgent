@@ -4,8 +4,9 @@ These tests require MyVault service to be running.
 Run with: pytest tests/integration/test_myvault_integration.py -v
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -124,13 +125,13 @@ class TestMyVaultIntegration:
         """Test that different projects have isolated caches."""
         # Get secret from project1
         try:
-            value1 = secrets_manager.get_secret("OPENAI_API_KEY", project="project1")
+            _value1 = secrets_manager.get_secret("OPENAI_API_KEY", project="project1")
         except Exception:
             pytest.skip("Project1 not configured")
 
         # Get secret from project2
         try:
-            value2 = secrets_manager.get_secret("OPENAI_API_KEY", project="project2")
+            _value2 = secrets_manager.get_secret("OPENAI_API_KEY", project="project2")
         except Exception:
             pytest.skip("Project2 not configured")
 

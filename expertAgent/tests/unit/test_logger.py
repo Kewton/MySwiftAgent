@@ -114,6 +114,7 @@ class TestDeclogger:
 
     def test_declogger_decorator(self):
         """Test that declogger decorator wraps function correctly."""
+
         @declogger
         def test_function(x, y):
             return x + y
@@ -124,6 +125,7 @@ class TestDeclogger:
 
     def test_declogger_with_kwargs(self):
         """Test declogger with keyword arguments."""
+
         @declogger
         def test_function(x, y=10):
             return x * y

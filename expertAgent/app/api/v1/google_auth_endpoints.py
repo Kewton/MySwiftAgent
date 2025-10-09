@@ -1,4 +1,5 @@
 """Google authentication management endpoints for commonUI."""
+
 import logging
 from typing import Optional
 
@@ -121,9 +122,7 @@ async def list_projects(x_admin_token: str = Header(...)):
 
 
 @router.post("/oauth2-start", response_model=OAuth2StartResponse)
-async def oauth2_start(
-    request: OAuth2StartRequest, x_admin_token: str = Header(...)
-):
+async def oauth2_start(request: OAuth2StartRequest, x_admin_token: str = Header(...)):
     """
     Initiate OAuth2 flow for web application.
     Returns authorization URL and state for CSRF protection.
@@ -132,22 +131,16 @@ async def oauth2_start(
 
     try:
         auth_url, state = google_creds_manager.initiate_oauth2_flow(
-            project=request.project,
-            redirect_uri=request.redirect_uri
+            project=request.project, redirect_uri=request.redirect_uri
         )
 
         project_name = get_project_name(request.project)
 
-        return OAuth2StartResponse(
-            auth_url=auth_url,
-            state=state,
-            project=project_name
-        )
+        return OAuth2StartResponse(auth_url=auth_url, state=state, project=project_name)
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to initiate OAuth2 flow: {str(e)}"
+            status_code=500, detail=f"Failed to initiate OAuth2 flow: {str(e)}"
         ) from e
 
 
@@ -162,15 +155,12 @@ async def oauth2_callback(
     verify_admin_token(x_admin_token)
 
     success = google_creds_manager.complete_oauth2_flow(
-        state=request.state,
-        code=request.code,
-        project=request.project
+        state=request.state, code=request.code, project=request.project
     )
 
     if not success:
         raise HTTPException(
-            status_code=500,
-            detail="Failed to complete OAuth2 flow. Check logs."
+            status_code=500, detail="Failed to complete OAuth2 flow. Check logs."
         )
 
     project_name = get_project_name(request.project)
@@ -185,9 +175,7 @@ async def oauth2_callback(
 
             # Save to MyVault
             secrets_manager.myvault_client.update_secret(
-                project=project_name,
-                path="GOOGLE_TOKEN_JSON",
-                value=token_json
+                project=project_name, path="GOOGLE_TOKEN_JSON", value=token_json
             )
             logger.info(f"Token auto-saved to MyVault for project: {project_name}")
     except Exception as e:
@@ -197,7 +185,7 @@ async def oauth2_callback(
     return OAuth2CallbackResponse(
         success=True,
         message=f"OAuth2 flow completed successfully for project: {project_name}",
-        project=project_name
+        project=project_name,
     )
 
 
@@ -221,7 +209,7 @@ async def get_token_data(
                 exists=False,
                 token_json=None,
                 project=project_name,
-                error_message=f"Token not found for project: {project_name}"
+                error_message=f"Token not found for project: {project_name}",
             )
 
         # Read decrypted token content
@@ -229,9 +217,7 @@ async def get_token_data(
             token_json = f.read()
 
         return TokenDataResponse(
-            exists=True,
-            token_json=token_json,
-            project=project_name
+            exists=True, token_json=token_json, project=project_name
         )
 
     except Exception as e:
@@ -239,14 +225,12 @@ async def get_token_data(
             exists=False,
             token_json=None,
             project=project_name,
-            error_message=f"Failed to read token: {str(e)}"
+            error_message=f"Failed to read token: {str(e)}",
         )
 
 
 @router.post("/save-token")
-async def save_token(
-    request: SaveTokenRequest, x_admin_token: str = Header(...)
-):
+async def save_token(request: SaveTokenRequest, x_admin_token: str = Header(...)):
     """
     Save token.json to local encrypted storage and optionally to MyVault.
     """
@@ -259,8 +243,7 @@ async def save_token(
 
     if not success:
         raise HTTPException(
-            status_code=500,
-            detail="Failed to save token locally. Check logs."
+            status_code=500, detail="Failed to save token locally. Check logs."
         )
 
     # Optionally save to MyVault
@@ -268,9 +251,7 @@ async def save_token(
         try:
             # Save to MyVault for persistence
             secrets_manager.myvault_client.update_secret(
-                project=project_name,
-                path="GOOGLE_TOKEN_JSON",
-                value=request.token_json
+                project=project_name, path="GOOGLE_TOKEN_JSON", value=request.token_json
             )
         except Exception as e:
             # Non-fatal: local save succeeded, MyVault save failed
@@ -279,12 +260,12 @@ async def save_token(
                 "message": f"Token saved locally for project: {project_name}",
                 "myvault_saved": False,
                 "myvault_error": str(e),
-                "project": project_name
+                "project": project_name,
             }
 
     return {
         "success": True,
         "message": f"Token saved successfully for project: {project_name}",
         "myvault_saved": request.save_to_myvault,
-        "project": project_name
+        "project": project_name,
     }

@@ -54,9 +54,7 @@ async def reload_secrets(
         )
 
     if not x_admin_token or x_admin_token != settings.ADMIN_TOKEN:
-        raise HTTPException(
-            status_code=401, detail="Invalid or missing admin token"
-        )
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
 
     # Clear cache
     try:
@@ -80,9 +78,7 @@ async def reload_secrets(
     summary="Admin health check",
     description="Health check for admin endpoints",
 )
-async def admin_health(
-    x_admin_token: str | None = Header(None, alias="X-Admin-Token")
-):
+async def admin_health(x_admin_token: str | None = Header(None, alias="X-Admin-Token")):
     """Admin health check endpoint.
 
     Requires ADMIN_TOKEN in X-Admin-Token header for authentication.
@@ -95,9 +91,7 @@ async def admin_health(
         return {"status": "warning", "message": "Admin token not configured"}
 
     if not x_admin_token or x_admin_token != settings.ADMIN_TOKEN:
-        raise HTTPException(
-            status_code=401, detail="Invalid or missing admin token"
-        )
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
 
     return {
         "status": "healthy",

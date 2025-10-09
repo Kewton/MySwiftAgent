@@ -114,7 +114,11 @@ def googleSearchAgent(_input: str) -> str:
     # 参考: https://ai.google.dev/gemini-api/docs/google-search?hl=ja
     # MCP process uses environment variables passed from parent process
     api_key = os.getenv("GOOGLE_API_KEY", "")
-    print(f"[DEBUG MCP subprocess] GOOGLE_API_KEY from os.getenv: {api_key[:10]}..." if api_key else "[DEBUG MCP subprocess] GOOGLE_API_KEY is empty or not set")
+    print(
+        f"[DEBUG MCP subprocess] GOOGLE_API_KEY from os.getenv: {api_key[:10]}..."
+        if api_key
+        else "[DEBUG MCP subprocess] GOOGLE_API_KEY is empty or not set"
+    )
     if not api_key:
         raise ValueError("GOOGLE_API_KEY environment variable is not set")
     client = genai.Client(api_key=api_key)
@@ -198,15 +202,19 @@ def googleSearchAgent(_input: str) -> str:
                     segment = support.segment
                     grounding_supports.append(
                         GroundingSupport(
-                            segment_text=segment.text if hasattr(segment, "text") else "",
+                            segment_text=segment.text
+                            if hasattr(segment, "text")
+                            else "",
                             segment_start_index=(
                                 segment.start_index
-                                if hasattr(segment, "start_index") and segment.start_index is not None
+                                if hasattr(segment, "start_index")
+                                and segment.start_index is not None
                                 else 0
                             ),
                             segment_end_index=(
                                 segment.end_index
-                                if hasattr(segment, "end_index") and segment.end_index is not None
+                                if hasattr(segment, "end_index")
+                                and segment.end_index is not None
                                 else 0
                             ),
                             grounding_chunk_indices=(

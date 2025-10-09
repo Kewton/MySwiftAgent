@@ -1,4 +1,5 @@
 """Google credentials management with project support and encryption."""
+
 import json
 import logging
 import tempfile
@@ -315,9 +316,7 @@ class GoogleCredsManager:
 
             # Create flow with web application configuration
             flow = Flow.from_client_secrets_file(
-                creds_path,
-                scopes=SCOPES,
-                redirect_uri=redirect_uri
+                creds_path, scopes=SCOPES, redirect_uri=redirect_uri
             )
 
             # Generate state for CSRF protection
@@ -325,23 +324,25 @@ class GoogleCredsManager:
 
             # Get authorization URL
             auth_url, _ = flow.authorization_url(
-                access_type='offline',
-                include_granted_scopes='true',
+                access_type="offline",
+                include_granted_scopes="true",
                 state=state,
-                prompt='consent'  # Force consent to get refresh_token
+                prompt="consent",  # Force consent to get refresh_token
             )
 
             # Store flow in memory (temporary)
             # In production, consider using Redis or similar
-            if not hasattr(self, '_oauth_flows'):
+            if not hasattr(self, "_oauth_flows"):
                 self._oauth_flows = {}
             self._oauth_flows[state] = {
-                'flow': flow,
-                'project': project_name,
-                'redirect_uri': redirect_uri
+                "flow": flow,
+                "project": project_name,
+                "redirect_uri": redirect_uri,
             }
 
-            logger.info(f"✓ OAuth2 flow initiated for project: {project_name}, redirect_uri: {redirect_uri}")
+            logger.info(
+                f"✓ OAuth2 flow initiated for project: {project_name}, redirect_uri: {redirect_uri}"
+            )
             return auth_url, state
 
         except Exception as e:
@@ -363,12 +364,12 @@ class GoogleCredsManager:
             True if token successfully saved
         """
         try:
-            if not hasattr(self, '_oauth_flows') or state not in self._oauth_flows:
+            if not hasattr(self, "_oauth_flows") or state not in self._oauth_flows:
                 raise ValueError("Invalid or expired OAuth2 state")
 
             flow_data = self._oauth_flows[state]
-            flow = flow_data['flow']
-            project_name = project or flow_data['project']
+            flow = flow_data["flow"]
+            project_name = project or flow_data["project"]
 
             # Exchange authorization code for credentials
             flow.fetch_token(code=code)

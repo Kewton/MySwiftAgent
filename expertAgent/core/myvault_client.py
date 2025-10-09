@@ -101,12 +101,9 @@ class MyVaultClient:
                 raise MyVaultError(f"Project '{project}' not found") from e
             status_code = e.response.status_code
             logger.error(
-                f"Failed to get secrets for project '{project}': "
-                f"HTTP {status_code}"
+                f"Failed to get secrets for project '{project}': HTTP {status_code}"
             )
-            raise MyVaultError(
-                f"Failed to get secrets for '{project}': {e}"
-            ) from e
+            raise MyVaultError(f"Failed to get secrets for '{project}': {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error getting secrets: {e}")
             raise MyVaultError(f"Unexpected error: {e}") from e
@@ -134,17 +131,13 @@ class MyVaultClient:
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 logger.warning(
-                    f"Secret '{secret_name}' not found in "
-                    f"project '{project}'"
+                    f"Secret '{secret_name}' not found in project '{project}'"
                 )
                 raise MyVaultError(
-                    f"Secret '{secret_name}' not found in "
-                    f"project '{project}'"
+                    f"Secret '{secret_name}' not found in project '{project}'"
                 ) from e
             status_code = e.response.status_code
-            logger.error(
-                f"Failed to get secret '{secret_name}': HTTP {status_code}"
-            )
+            logger.error(f"Failed to get secret '{secret_name}': HTTP {status_code}")
             msg = f"Failed to get secret '{secret_name}': {e}"
             raise MyVaultError(msg) from e
         except Exception as e:
@@ -166,8 +159,7 @@ class MyVaultClient:
             # Try to update existing secret first
             try:
                 response = self.client.patch(
-                    f"/api/secrets/{project}/{path}",
-                    json={"value": value}
+                    f"/api/secrets/{project}/{path}", json={"value": value}
                 )
                 response.raise_for_status()
                 logger.info(f"Updated secret '{path}' in project '{project}'")
@@ -177,11 +169,7 @@ class MyVaultClient:
                     # Secret doesn't exist, create it
                     response = self.client.post(
                         "/api/secrets",
-                        json={
-                            "project": project,
-                            "path": path,
-                            "value": value
-                        }
+                        json={"project": project, "path": path, "value": value},
                     )
                     response.raise_for_status()
                     logger.info(f"Created secret '{path}' in project '{project}'")
@@ -195,9 +183,7 @@ class MyVaultClient:
                 f"Failed to update secret '{path}' in project '{project}': "
                 f"HTTP {status_code}"
             )
-            raise MyVaultError(
-                f"Failed to update secret '{path}': {e}"
-            ) from e
+            raise MyVaultError(f"Failed to update secret '{path}': {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error updating secret: {e}")
             raise MyVaultError(f"Unexpected error: {e}") from e

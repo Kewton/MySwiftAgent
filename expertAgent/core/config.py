@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = Field(default="", env="ANTHROPIC_API_KEY")
     LOG_DIR: str = Field(default="./", env="LOG_DIR")
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    GRAPH_AGENT_MODEL: str = Field(default="gemini-2.0-flash-exp", env="GRAPH_AGENT_MODEL")
+    GRAPH_AGENT_MODEL: str = Field(
+        default="gemini-2.0-flash-exp", env="GRAPH_AGENT_MODEL"
+    )
     GOOGLE_APIS_TOKEN_PATH: str = Field(
         default="./token/token.json", env="GOOGLE_APIS_TOKEN_PATH"
     )
