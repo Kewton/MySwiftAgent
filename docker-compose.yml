@@ -59,6 +59,41 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # MyVault Service - Secrets management service
+  myvault:
+    image: myswiftagent-myvault:${MYVAULT_VERSION:-0.1.0}
+    build:
+      context: ./myVault
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-myvault:${MYVAULT_VERSION:-0.1.0}"
+        - "myswiftagent-myvault:latest"
+    container_name: myswiftagent-myvault
+    ports:
+      - "8100:8000"
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      # Master encryption key (REQUIRED - set in .env)
+      - MSA_MASTER_KEY=${MSA_MASTER_KEY}
+      # Service authentication tokens
+      - TOKEN_expertagent=${MYVAULT_TOKEN_EXPERTAGENT}
+      - TOKEN_myscheduler=${MYVAULT_TOKEN_MYSCHEDULER}
+      - TOKEN_jobqueue=${MYVAULT_TOKEN_JOBQUEUE}
+      - TOKEN_commonui=${MYVAULT_TOKEN_COMMONUI}
+    volumes:
+      - ./docker-compose-data/myvault:/app/data
+      - ./myVault/config.yaml:/app/config.yaml:ro
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
   # ExpertAgent Service - AI agent service
   expertagent:
     image: myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}
@@ -74,7 +109,13 @@ services:
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
-      # API Keys
+      # MyVault Configuration (Priority for secrets management)
+      - MYVAULT_ENABLED=${MYVAULT_ENABLED:-true}
+      - MYVAULT_BASE_URL=http://myvault:8000
+      - MYVAULT_SERVICE_NAME=expertagent
+      - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_EXPERTAGENT}
+      - MYVAULT_DEFAULT_PROJECT=${MYVAULT_DEFAULT_PROJECT:-expertagent}
+      # API Keys (Fallback when MyVault is disabled)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -110,6 +151,9 @@ services:
     # Add SYS_ADMIN capability for Chromium sandboxing
     cap_add:
       - SYS_ADMIN
+    depends_on:
+      myvault:
+        condition: service_healthy
     networks:
       - myswiftagent
     healthcheck:
