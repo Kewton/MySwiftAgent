@@ -4,15 +4,15 @@
 
 # MySwiftAgent
 
-🚀 **MySwiftAgent** は、手軽で小回りの効く **パーソナルAIエージェント／LLMワークフロー** です。  
-複雑な設定を避けつつ、日常タスクや開発支援をすばやく実行する「自分だけのAIエージェント」を目指しています。  
+🚀 **MySwiftAgent** は、手軽で小回りの効く **パーソナルAIエージェント／LLMワークフロー** です。
+複雑な設定を避けつつ、日常タスクや開発支援をすばやく実行する「自分だけのAIエージェント」を目指しています。
 
 ## ✨ 特徴
 
-- ⚡ **Swift**：軽快に動作し、小回りの効く応答  
-- 🧩 **Extensible**：モジュール的に機能を追加可能  
-- 🎯 **Personalized**：ユーザーの目的に合わせたカスタマイズ  
-- 🔄 **Workflow-oriented**：LLMを軸にした柔軟なワークフロー設計 
+- ⚡ **Swift**：軽快に動作し、小回りの効く応答
+- 🧩 **Extensible**：モジュール的に機能を追加可能
+- 🎯 **Personalized**：ユーザーの目的に合わせたカスタマイズ
+- 🔄 **Workflow-oriented**：LLMを軸にした柔軟なワークフロー設計
 
 # 開発ルール
 
@@ -1149,3 +1149,8 @@ git push
 - ⚙️ **VS Code設定**: `.vscode/settings.json`
 - 🪝 **Pre-commit Hooks設定**: `.pre-commit-config.yaml`
 
+# 開発における制約条件
+- 品質担保方針に従うこと
+- Claude Code 利用時のルールに従うこと
+- アーキテクチャおよび設計ポリシーは、./docs/design/*.md に従うこと
+- ./scripts/pre-push-check.sh にて合格していること

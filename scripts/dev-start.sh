@@ -19,16 +19,25 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Load .env file if it exists
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    set -a  # Automatically export all variables
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
 # Service ports (can be overridden via environment variables)
 JOBQUEUE_PORT="${JOBQUEUE_PORT:-8001}"
 MYSCHEDULER_PORT="${MYSCHEDULER_PORT:-8002}"
-EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8003}"
-GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8004}"
+MYVAULT_PORT="${MYVAULT_PORT:-8003}"
+EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
+GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
 COMMONUI_PORT="${COMMONUI_PORT:-8501}"
 
 # Service directories
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
 MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
+MYVAULT_DIR="$PROJECT_ROOT/myVault"
 EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
 GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
 COMMONUI_DIR="$PROJECT_ROOT/commonUI"
@@ -40,6 +49,7 @@ PID_DIR="$PROJECT_ROOT/.pids"
 # Log files
 JOBQUEUE_LOG="$LOG_DIR/jobqueue.log"
 MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
+MYVAULT_LOG="$LOG_DIR/myvault.log"
 EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 COMMONUI_LOG="$LOG_DIR/commonui.log"
@@ -48,6 +58,7 @@ SETUP_LOG="$LOG_DIR/setup.log"
 # PID files
 JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
 MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
+MYVAULT_PID="$PID_DIR/myvault.pid"
 EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
@@ -67,6 +78,7 @@ show_banner() {
 ║                                                                               ║
 ║   📋 JobQueue      - Job queue management API                                 ║
 ║   ⏰ MyScheduler   - Job scheduling service                                   ║
+║   🔐 MyVault       - Secrets management service                               ║
 ║   🤖 ExpertAgent   - AI agent service                                         ║
 ║   🔄 GraphAiServer - Graph AI workflow service                                ║
 ║   🎨 CommonUI      - Web interface                                            ║
@@ -113,6 +125,9 @@ init_directories() {
     > "$SETUP_LOG"
     > "$JOBQUEUE_LOG" 2>/dev/null || true
     > "$MYSCHEDULER_LOG" 2>/dev/null || true
+    > "$MYVAULT_LOG" 2>/dev/null || true
+    > "$EXPERTAGENT_LOG" 2>/dev/null || true
+    > "$GRAPHAISERVER_LOG" 2>/dev/null || true
     > "$COMMONUI_LOG" 2>/dev/null || true
 
     print_success "Directories initialized"
@@ -181,6 +196,11 @@ JOBQUEUE_BASE_URL=http://localhost:$JOBQUEUE_PORT
 JOBQUEUE_API_TOKEN=$DEV_JOBQUEUE_TOKEN
 MYSCHEDULER_BASE_URL=http://localhost:$MYSCHEDULER_PORT
 MYSCHEDULER_API_TOKEN=$DEV_MYSCHEDULER_TOKEN
+MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT
+MYVAULT_SERVICE_NAME=commonui
+MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_COMMONUI:-dev-myvault-token}
+EXPERTAGENT_BASE_URL=http://localhost:$EXPERTAGENT_PORT/aiagent-api
+GRAPHAISERVER_BASE_URL=http://localhost:$GRAPHAISERVER_PORT/api
 POLLING_INTERVAL=5
 DEFAULT_SERVICE=JobQueue
 OPERATION_MODE=full
@@ -468,6 +488,10 @@ show_service_urls() {
     echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$MYSCHEDULER_PORT/health${NC}${CYAN}                  │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$MYSCHEDULER_PORT/docs${NC}${CYAN}                    │${NC}"
     echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 🔐 MyVault API:       ${WHITE}http://localhost:$MYVAULT_PORT${NC}${CYAN}                           │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$MYVAULT_PORT/health${NC}${CYAN}                   │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$MYVAULT_PORT/docs${NC}${CYAN}                     │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} 🤖 ExpertAgent API:   ${WHITE}http://localhost:$EXPERTAGENT_PORT${NC}${CYAN}                          │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$EXPERTAGENT_PORT/health${NC}${CYAN}                  │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$EXPERTAGENT_PORT/aiagent-api/docs${NC}${CYAN}        │${NC}"
@@ -496,6 +520,10 @@ show_logs() {
         tail -n 20 "$MYSCHEDULER_LOG" 2>/dev/null || echo "No logs available"
         echo ""
 
+        echo -e "${YELLOW}=== MyVault Logs ===${NC}"
+        tail -n 20 "$MYVAULT_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
         echo -e "${YELLOW}=== ExpertAgent Logs ===${NC}"
         tail -n 20 "$EXPERTAGENT_LOG" 2>/dev/null || echo "No logs available"
         echo ""
@@ -519,6 +547,10 @@ show_logs() {
                 print_info "Following MyScheduler logs (Ctrl+C to stop):"
                 tail -f "$MYSCHEDULER_LOG"
                 ;;
+            myvault)
+                print_info "Following MyVault logs (Ctrl+C to stop):"
+                tail -f "$MYVAULT_LOG"
+                ;;
             expertagent)
                 print_info "Following ExpertAgent logs (Ctrl+C to stop):"
                 tail -f "$EXPERTAGENT_LOG"
@@ -537,7 +569,7 @@ show_logs() {
                 ;;
             *)
                 print_error "Unknown service: $service"
-                echo "Available services: jobqueue, myscheduler, expertagent, graphaiserver, commonui, setup"
+                echo "Available services: jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, setup"
                 return 1
                 ;;
         esac
@@ -618,6 +650,9 @@ clean_temp_files() {
 
     # Stop all services first
     stop_service "CommonUI" "$COMMONUI_PID"
+    stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
+    stop_service "ExpertAgent" "$EXPERTAGENT_PID"
+    stop_service "MyVault" "$MYVAULT_PID"
     stop_service "MyScheduler" "$MYSCHEDULER_PID"
     stop_service "JobQueue" "$JOBQUEUE_PID"
 
@@ -703,6 +738,16 @@ main() {
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 install_service_deps "MyScheduler" "$MYSCHEDULER_DIR" || exit 1
             fi
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                install_service_deps "MyVault" "$MYVAULT_DIR" || exit 1
+                mkdir -p "$MYVAULT_DIR/data"
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
+                install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
+                install_service_deps "GraphAiServer" "$GRAPHAISERVER_DIR" || exit 1
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 install_service_deps "CommonUI" "$COMMONUI_DIR" || exit 1
             fi
@@ -729,6 +774,21 @@ main() {
                 install_service_deps "MyScheduler" "$MYSCHEDULER_DIR" || exit 1
                 start_service "MyScheduler" "$MYSCHEDULER_DIR" $MYSCHEDULER_PORT "$MYSCHEDULER_PID" "$MYSCHEDULER_LOG" \
                     "uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
+            fi
+
+            # Start MyVault
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                # Check if master key is set
+                if [[ -z "${MSA_MASTER_KEY}" ]]; then
+                    print_warning "MyVault: MSA_MASTER_KEY not set, skipping startup"
+                    print_info "MyVault: Set MSA_MASTER_KEY in .env to enable MyVault service"
+                else
+                    install_service_deps "MyVault" "$MYVAULT_DIR" || exit 1
+                    # Create data directory
+                    mkdir -p "$MYVAULT_DIR/data"
+                    start_service "MyVault" "$MYVAULT_DIR" $MYVAULT_PORT "$MYVAULT_PID" "$MYVAULT_LOG" \
+                        "DATABASE_URL='sqlite:///./data/myvault.db' MSA_MASTER_KEY='${MSA_MASTER_KEY}' TOKEN_commonui='${MYVAULT_TOKEN_COMMONUI:-dev-myvault-token}' TOKEN_expertagent='${MYVAULT_TOKEN_EXPERTAGENT:-dev-expertagent-token}' TOKEN_myscheduler='${MYVAULT_TOKEN_MYSCHEDULER:-dev-myscheduler-token}' TOKEN_jobqueue='${MYVAULT_TOKEN_JOBQUEUE:-dev-jobqueue-token}' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYVAULT_PORT" || print_warning "MyVault: Failed to start (check logs for details)"
+                fi
             fi
 
             # Start ExpertAgent
@@ -790,6 +850,9 @@ main() {
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 stop_service "ExpertAgent" "$EXPERTAGENT_PID"
             fi
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                stop_service "MyVault" "$MYVAULT_PID"
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 stop_service "MyScheduler" "$MYSCHEDULER_PID"
             fi
@@ -814,6 +877,9 @@ main() {
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 check_service_status "MyScheduler" "$MYSCHEDULER_PID" $MYSCHEDULER_PORT
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                check_service_status "MyVault" "$MYVAULT_PID" $MYVAULT_PORT
             fi
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 check_service_status "ExpertAgent" "$EXPERTAGENT_PID" $EXPERTAGENT_PORT

@@ -7,7 +7,6 @@ services:
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}"
-        - "myswiftagent-jobqueue:latest"
     container_name: myswiftagent-jobqueue
     ports:
       - "8001:8000"
@@ -35,7 +34,6 @@ services:
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}"
-        - "myswiftagent-myscheduler:latest"
     container_name: myswiftagent-myscheduler
     ports:
       - "8002:8000"
@@ -67,13 +65,14 @@ services:
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-myvault:${MYVAULT_VERSION:-0.1.0}"
-        - "myswiftagent-myvault:latest"
     container_name: myswiftagent-myvault
     ports:
-      - "8100:8000"
+      - "8003:8000"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
+      # Database configuration
+      - DATABASE_URL=sqlite:///./data/myvault.db
       # Master encryption key (REQUIRED - set in .env)
       - MSA_MASTER_KEY=${MSA_MASTER_KEY}
       # Service authentication tokens
@@ -102,10 +101,9 @@ services:
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}"
-        - "myswiftagent-expertagent:latest"
     container_name: myswiftagent-expertagent
     ports:
-      - "8003:8000"
+      - "8004:8000"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
@@ -172,10 +170,9 @@ services:
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}"
-        - "myswiftagent-graphaiserver:latest"
     container_name: myswiftagent-graphaiserver
     ports:
-      - "8004:8000"
+      - "8005:8000"
     environment:
       - NODE_ENV=production
       - PORT=8000
@@ -204,23 +201,33 @@ services:
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}"
-        - "myswiftagent-commonui:latest"
     container_name: myswiftagent-commonui
     ports:
       - "8501:8501"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
-      - JOBQUEUE_API_URL=http://jobqueue:8000
-      - MYSCHEDULER_API_URL=http://myscheduler:8000
-      - EXPERTAGENT_API_URL=http://expertagent:8000
-      - GRAPHAISERVER_API_URL=http://graphaiserver:8000
+      # Service API URLs (using correct environment variable names for config.py)
+      - JOBQUEUE_BASE_URL=http://jobqueue:8000
+      - MYSCHEDULER_BASE_URL=http://myscheduler:8000
+      - MYVAULT_BASE_URL=http://myvault:8000
+      - EXPERTAGENT_BASE_URL=http://expertagent:8000
+      - GRAPHAISERVER_BASE_URL=http://graphaiserver:8000
+      # Service authentication tokens
+      - JOBQUEUE_API_TOKEN=${JOBQUEUE_API_TOKEN:-}
+      - MYSCHEDULER_API_TOKEN=${MYSCHEDULER_API_TOKEN:-}
+      - MYVAULT_SERVICE_NAME=commonui
+      - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_COMMONUI}
+      - EXPERTAGENT_ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN:-}
+      - GRAPHAISERVER_ADMIN_TOKEN=${GRAPHAISERVER_ADMIN_TOKEN:-}
     volumes:
       - ./docker-compose-data/commonUI:/app/data
     depends_on:
       jobqueue:
         condition: service_healthy
       myscheduler:
+        condition: service_healthy
+      myvault:
         condition: service_healthy
       expertagent:
         condition: service_healthy

@@ -13,7 +13,7 @@ application:
 # Database configuration
 database:
   # Can be overridden by DATABASE_URL environment variable
-  url: "sqlite:///./myvault.db"
+  url: "sqlite:///./data/myvault.db"
 
 # Security configuration
 security:
@@ -114,20 +114,20 @@ services:
       - newsbot-scheduler-reader
       - common-reader
 
-  - name: commonui-service
+  - name: commonui
     description: "CommonUI management interface - full administrative access"
     enabled: true
     roles:
       - commonui-admin
 
-  - name: expertagent-service
+  - name: expertagent
     description: "ExpertAgent AI service - read-only access to secrets + Google OAuth management"
     enabled: true
     roles:
       - expertagent-reader
       - expertagent-google-editor
 
-  - name: graphaiserver-service
+  - name: graphaiserver
     description: "GraphAI Server - read-only access to secrets for AI agent workflows"
     enabled: true
     roles:

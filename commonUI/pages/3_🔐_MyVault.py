@@ -6,13 +6,6 @@ Streamlit page for managing secrets and projects in MyVault service.
 
 from pathlib import Path
 
-# IMPORTANT: Load .env BEFORE importing config
-from dotenv import load_dotenv
-
-env_path = Path(__file__).parent.parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
-
 from typing import Any
 
 import pandas as pd

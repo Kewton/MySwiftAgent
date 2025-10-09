@@ -15,6 +15,13 @@ NC='\033[0m'
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Load .env file if it exists
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    set -a  # Automatically export all variables
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
 echo -e "${BLUE}🚀 MySwiftAgent Quick Start${NC}"
 echo -e "${BLUE}═══════════════════════════${NC}"
 echo ""
@@ -31,12 +38,13 @@ chmod +x "$SCRIPT_DIR/dev-start.sh"
 # Allocate local ports that avoid docker-compose collisions (override with env vars if needed)
 : "${JOBQUEUE_PORT:=8101}"
 : "${MYSCHEDULER_PORT:=8102}"
-: "${EXPERTAGENT_PORT:=8103}"
-: "${GRAPHAISERVER_PORT:=8104}"
+: "${MYVAULT_PORT:=8103}"
+: "${EXPERTAGENT_PORT:=8104}"
+: "${GRAPHAISERVER_PORT:=8105}"
 : "${COMMONUI_PORT:=8601}"
-export JOBQUEUE_PORT MYSCHEDULER_PORT EXPERTAGENT_PORT GRAPHAISERVER_PORT COMMONUI_PORT
+export JOBQUEUE_PORT MYSCHEDULER_PORT MYVAULT_PORT EXPERTAGENT_PORT GRAPHAISERVER_PORT COMMONUI_PORT
 
-echo -e "${BLUE}Using local ports${NC}: JobQueue=${JOBQUEUE_PORT}, MyScheduler=${MYSCHEDULER_PORT}, ExpertAgent=${EXPERTAGENT_PORT}, GraphAiServer=${GRAPHAISERVER_PORT}, CommonUI=${COMMONUI_PORT}"
+echo -e "${BLUE}Using local ports${NC}: JobQueue=${JOBQUEUE_PORT}, MyScheduler=${MYSCHEDULER_PORT}, MyVault=${MYVAULT_PORT}, ExpertAgent=${EXPERTAGENT_PORT}, GraphAiServer=${GRAPHAISERVER_PORT}, CommonUI=${COMMONUI_PORT}"
 
 echo -e "${YELLOW}⚡ Starting all services...${NC}"
 echo ""

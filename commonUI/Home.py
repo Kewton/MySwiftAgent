@@ -7,13 +7,6 @@ Streamlit multi-page application for managing JobQueue and MyScheduler services.
 import os
 from pathlib import Path
 
-# IMPORTANT: Load .env BEFORE importing config
-from dotenv import load_dotenv
-
-env_path = Path(__file__).parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
-
 import streamlit as st
 
 from components.http_client import HTTPClient
