@@ -22,6 +22,9 @@ COPY core/ ./core/
 COPY components/ ./components/
 COPY pages/ ./pages/
 
+# Copy configuration files (not mounted by volumes)
+COPY data/ ./config/
+
 # Health check endpoint - Streamlit health endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8501/_stcore/health || exit 1

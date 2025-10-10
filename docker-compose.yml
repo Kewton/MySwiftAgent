@@ -107,6 +107,8 @@ services:
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
+      # Admin authentication
+      - ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN}
       # MyVault Configuration (Priority for secrets management)
       - MYVAULT_ENABLED=${MYVAULT_ENABLED:-true}
       - MYVAULT_BASE_URL=http://myvault:8000
@@ -178,6 +180,8 @@ services:
       - PORT=8000
       - TZ=Asia/Tokyo
       - MODEL_BASE_PATH=/app/config/graphai/
+      # Admin authentication
+      - ADMIN_TOKEN=${GRAPHAISERVER_ADMIN_TOKEN}
       # Add your API keys here or use .env file
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}

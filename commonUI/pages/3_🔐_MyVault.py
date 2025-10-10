@@ -44,7 +44,12 @@ def initialize_session_state() -> None:
 def load_secret_definitions() -> dict[str, Any]:
     """Load secret definitions from YAML file."""
     try:
-        yaml_path = Path(__file__).parent.parent / "data" / "myvault_secrets.yaml"
+        # Use /app/config/ path in Docker container, fallback to local path for development
+        yaml_path = Path("/app/config/myvault_secrets.yaml")
+        if not yaml_path.exists():
+            # Fallback to local development path
+            yaml_path = Path(__file__).parent.parent / "data" / "myvault_secrets.yaml"
+
         if yaml_path.exists():
             with open(yaml_path) as f:
                 return yaml.safe_load(f)
