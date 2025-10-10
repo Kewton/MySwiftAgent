@@ -9,6 +9,7 @@
 # ===================================================================
 
 # Byte-compiled / optimized / DLL files
+/.playwright-mcp
 __pycache__/
 *.py[cod]
 *$py.class
@@ -529,7 +530,7 @@ target/
 Cargo.lock
 
 # ===================================================================
-# workspace files   
+# workspace files
 # ===================================================================
 workspace/*
 

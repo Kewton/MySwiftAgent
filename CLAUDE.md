@@ -219,6 +219,23 @@ tests/                  # テストコード
 
 ## 🛡️ 品質担保方針
 
+### 原理原則
+
+下記の原理原則従いコード品質を担保すること
+
+- SOLID
+  - Single Responsibility Principle (単一責任原則)
+  - Open-Closed Principle (開放/閉鎖原則)
+  - Liskov Substitution Principle (リスコフの置換原則)
+  - Interface Segregation Principle (インターフェース分離の原則)
+  - Dependency Inversion Principle (依存性逆転の原則)
+- KISS
+  - Keep It Simple, Stupid
+- YAGNI
+  - You Aren't Gonna Need It
+- DRY
+  - Don't Repeat Yourself
+
 ### 静的解析・コード品質
 
 | ツール | 用途 | 設定ファイル | 実行コマンド |
@@ -1152,7 +1169,24 @@ git push
 # 開発における制約条件
 - [ ] 本ドキュメントの品質担保方針に従うこと
 - [ ] Claude Code 利用時のルールに従うこと
+- [ ] コード追加時は下記原則に従うこと
+  - SOLID
+    - Single Responsibility Principle (単一責任原則)
+    - Open-Closed Principle (開放/閉鎖原則)
+    - Liskov Substitution Principle (リスコフの置換原則)
+    - Interface Segregation Principle (インターフェース分離の原則)
+    - Dependency Inversion Principle (依存性逆転の原則)
+  - KISS
+    - Keep It Simple, Stupid
+  - YAGNI
+    - You Aren't Gonna Need It
+  - DRY
+    - Don't Repeat Yourself
 - [ ] アーキテクチャは、 ./docs/design/architecture-overview.md に従うこと
 - [ ] システムで管理すべきパラメータは環境変数で管理するものとし、使用方法は、 ./docs/design/environment-variables.md に従うこと
 - [ ] ユーザーが管理すべきパラメータはmyVaultで管理するものとし、使用方法は、./docs/design/myvault-integration.md に従うこと
-- [ ] ./scripts/pre-push-check.sh にて合格したものをコミットすること
+- [ ] コミットする前に、./scripts/pre-push-check.sh を実行し合格することを確認すること
+- [ ] ユーザーからの依頼に対し下記方針で作業を進めること
+  1. 対策案を提示する
+  1. ユーザーが指示した対策案に対し実行計画を提示する
+  1. ユーザーからの承認を持って実行計画を実行する

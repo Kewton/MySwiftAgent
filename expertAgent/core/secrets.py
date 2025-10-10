@@ -27,6 +27,8 @@ class SecretsManager:
         self.myvault_enabled = settings.MYVAULT_ENABLED
         self.myvault_client: Optional[MyVaultClient] = None
 
+        logger.debug(f"SecretsManager init: MYVAULT_ENABLED={self.myvault_enabled}, BASE_URL={settings.MYVAULT_BASE_URL}, SERVICE_NAME={settings.MYVAULT_SERVICE_NAME}, TOKEN={'*' * 10 if settings.MYVAULT_SERVICE_TOKEN else 'EMPTY'}")
+
         if self.myvault_enabled:
             try:
                 self.myvault_client = MyVaultClient(
@@ -35,11 +37,13 @@ class SecretsManager:
                     token=settings.MYVAULT_SERVICE_TOKEN,
                 )
                 logger.info(
-                    f"MyVault client initialized: {settings.MYVAULT_BASE_URL}"
+                    f"✓ MyVault client initialized: {settings.MYVAULT_BASE_URL}"
                 )
             except Exception as e:
-                logger.error(f"Failed to initialize MyVault client: {e}")
+                logger.error(f"❌ Failed to initialize MyVault client: {e}")
                 self.myvault_enabled = False
+        else:
+            logger.warning("⚠ MyVault is disabled - using environment variables only")
 
     def get_secret(self, key: str, project: Optional[str] = None) -> str:
         """Get secret value with MyVault priority.
@@ -135,8 +139,11 @@ class SecretsManager:
             value = self.myvault_client.get_secret(project_name, key)
             self._update_cache(project_name, key, value)
             return value
-        except MyVaultError:
+        except MyVaultError as e:
             # Secret not found in this project
+            logger.warning(
+                f"MyVault retrieval failed for '{key}' in project '{project_name}': {e}"
+            )
             return None
 
     def _get_project_secrets(self, project: str) -> Dict[str, str]:
@@ -159,23 +166,28 @@ class SecretsManager:
         """Resolve default project name.
 
         Priority:
-        1. MYVAULT_DEFAULT_PROJECT env var (override)
-        2. Default project from MyVault API
+        1. Default project from MyVault API (is_default flag)
+        2. MYVAULT_DEFAULT_PROJECT env var (override for special cases)
         3. Raise error if not found
         """
-        # Check env var override
+        # 1. Try to get default project from MyVault API first
+        if self.myvault_client:
+            try:
+                default_project = self.myvault_client.get_default_project()
+                if default_project:
+                    logger.debug(f"Using default project from MyVault API: {default_project}")
+                    return default_project
+            except MyVaultError as e:
+                logger.warning(f"Failed to get default project from MyVault API: {e}")
+                # Continue to fallback
+
+        # 2. Fallback to env var override (special cases only)
         if self.settings.MYVAULT_DEFAULT_PROJECT:
+            logger.debug(f"Using default project from environment variable: {self.settings.MYVAULT_DEFAULT_PROJECT}")
             return str(self.settings.MYVAULT_DEFAULT_PROJECT)
 
-        # Get from MyVault API
-        if not self.myvault_client:
-            raise MyVaultError("MyVault client not initialized")
-
-        default_project = self.myvault_client.get_default_project()
-        if not default_project:
-            raise MyVaultError("No default project found in MyVault")
-
-        return default_project
+        # 3. No default project found
+        raise MyVaultError("No default project found in MyVault or environment variables")
 
     def _get_all_env_secrets(self) -> Dict[str, str]:
         """Get all secrets from environment variables."""

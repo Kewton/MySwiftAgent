@@ -11,6 +11,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+from core.config import settings
 from core.google_creds import SCOPES, get_project_name, google_creds_manager
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ def get_googleapis_service(
     Returns:
         Google API service object or None if authentication fails
     """
+    # Resolve project name (supports environment variable from MCP context)
     project_name = get_project_name(project)
     logger.info(f"Project: {project_name} - Checking credentials...")
 

@@ -1,8 +1,10 @@
+import os
 from typing import Dict
 
 from mcp.server.fastmcp import FastMCP
 
 from core.config import settings
+from core.logger import setup_logging
 from mymcp.googleapis.gmail.readonly import get_emails_by_keyword
 from mymcp.googleapis.gmail.send import send_email
 from mymcp.specializedtool.generate_melmaga_script import (
@@ -17,6 +19,55 @@ from mymcp.tool.google_search_by_gemini import googleSearchAgent
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
 from mymcp.utils.html2markdown import getMarkdown
+
+# デバッグ: MCPサブプロセス起動を記録（stdio通信と干渉しないようにファイルへ）
+debug_trace_file = "/tmp/mcp_stdio_debug.log"
+try:
+    with open(debug_trace_file, "a") as f:
+        f.write(f"=== MCP subprocess (stdioall.py) started (PID: {os.getpid()}) ===\n")
+        f.write(f"MCP_LOG_FILE env: {os.getenv('MCP_LOG_FILE')}\n")
+        f.write(f"LOG_DIR env: {os.getenv('LOG_DIR')}\n")
+        f.write(f"LOG_LEVEL env: {os.getenv('LOG_LEVEL')}\n")
+
+        # MyVault関連の環境変数確認
+        f.write(f"\n=== MyVault Environment Variables ===\n")
+        f.write(f"MYVAULT_ENABLED: {os.getenv('MYVAULT_ENABLED')}\n")
+        f.write(f"MYVAULT_BASE_URL: {os.getenv('MYVAULT_BASE_URL')}\n")
+        f.write(f"MYVAULT_SERVICE_NAME: {os.getenv('MYVAULT_SERVICE_NAME')}\n")
+        f.write(f"MYVAULT_SERVICE_TOKEN: {'*' * 10 if os.getenv('MYVAULT_SERVICE_TOKEN') else 'EMPTY'}\n")
+
+        # Google APIs関連の環境変数確認
+        f.write(f"\n=== Google APIs Environment Variables ===\n")
+        f.write(f"GOOGLE_APIS_DEFAULT_PROJECT: {os.getenv('GOOGLE_APIS_DEFAULT_PROJECT')}\n")
+        f.write(f"GOOGLE_API_KEY: {'*' * 10 if os.getenv('GOOGLE_API_KEY') else 'EMPTY'}\n")
+
+        # その他のAPI Key確認
+        f.write(f"\n=== Other API Keys ===\n")
+        f.write(f"OPENAI_API_KEY: {'*' * 10 if os.getenv('OPENAI_API_KEY') else 'EMPTY'}\n")
+        f.write(f"ANTHROPIC_API_KEY: {'*' * 10 if os.getenv('ANTHROPIC_API_KEY') else 'EMPTY'}\n")
+        f.write(f"SERPER_API_KEY: {'*' * 10 if os.getenv('SERPER_API_KEY') else 'EMPTY'}\n")
+
+        f.write(f"\n=== End of Environment Variables Check ===\n\n")
+except Exception:
+    # デバッグ出力失敗は無視（本番動作に影響させない）
+    pass
+
+# MCPサブプロセス専用のログファイル名を環境変数から取得
+mcp_log_file = os.getenv("MCP_LOG_FILE", "mcp_stdio.log")
+
+try:
+    with open(debug_trace_file, "a") as f:
+        f.write(f"Calling setup_logging(log_file_name='{mcp_log_file}')\n")
+except Exception:
+    pass
+
+setup_logging(log_file_name=mcp_log_file)
+
+try:
+    with open(debug_trace_file, "a") as f:
+        f.write(f"setup_logging() completed successfully\n")
+except Exception:
+    pass
 
 PODCAST_SCRIPT_DEFAULT_MODEL = settings.PODCAST_SCRIPT_DEFAULT_MODEL
 mcp = FastMCP("myMcp")

@@ -6,8 +6,20 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load environment variables from myVault/.env (new policy)
+# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+env_path = PROJECT_ROOT / ".env"
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path, override=False)
+else:
+    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
+    load_dotenv(override=False)
 
 
 def load_config_yaml() -> dict[str, Any]:
@@ -44,9 +56,7 @@ class Settings(BaseSettings):
     - DATABASE_URL (optional): Override database URL from config.yaml
     """
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="allow"
-    )
+    model_config = SettingsConfigDict(extra="allow")
 
     # Master encryption key (Base64-encoded 32 bytes) - MUST be in environment
     msa_master_key: str = Field(
@@ -59,6 +69,10 @@ class Settings(BaseSettings):
         default=None,
         description="Database connection URL (overrides config.yaml if set)",
     )
+
+    # Logging configuration
+    log_level: str = Field(default="INFO", description="Logging level")
+    log_dir: str = Field(default="./", description="Log directory path")
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize settings and load YAML configuration."""

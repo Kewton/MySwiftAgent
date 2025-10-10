@@ -1,8 +1,19 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings  # pydantic_settingsからインポート
 
-load_dotenv()
+# Load environment variables from expertAgent/.env (new policy)
+# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
+PROJECT_ROOT = Path(__file__).parent.parent
+env_path = PROJECT_ROOT / ".env"
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path, override=False)
+else:
+    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
+    load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
@@ -12,8 +23,6 @@ class Settings(BaseSettings):
     LOG_DIR: str = Field(default="./")
     LOG_LEVEL: str = Field(default="INFO")
     GRAPH_AGENT_MODEL: str = Field(default="gemini-2.0-flash-exp")
-    GOOGLE_APIS_TOKEN_PATH: str = Field(default="./token/token.json")
-    GOOGLE_APIS_CREDENTIALS_PATH: str = Field(default="./token/credentials.json")
     PODCAST_SCRIPT_DEFAULT_MODEL: str = Field(default="gpt-4o-mini")
     MAIL_TO: str = Field(default="")
     SPREADSHEET_ID: str = Field(default="")
@@ -25,13 +34,18 @@ class Settings(BaseSettings):
 
     # MyVault Configuration
     MYVAULT_ENABLED: bool = Field(default=False)
-    MYVAULT_BASE_URL: str = Field(default="http://localhost:8000")
-    MYVAULT_SERVICE_NAME: str = Field(default="expertagent-service")
+    MYVAULT_BASE_URL: str = Field(default="http://localhost:8103")
+    MYVAULT_SERVICE_NAME: str = Field(default="expertagent")
     MYVAULT_SERVICE_TOKEN: str = Field(default="")
     MYVAULT_DEFAULT_PROJECT: str = Field(
         default=""
     )  # Optional override for default project
     SECRETS_CACHE_TTL: int = Field(default=300)  # 5 minutes cache TTL
+
+    # Google APIs Configuration
+    GOOGLE_APIS_DEFAULT_PROJECT: str = Field(
+        default="default_project"
+    )  # Default project for Google APIs (gmail, drive, sheets)
 
     # Admin Configuration
     ADMIN_TOKEN: str = Field(default="")  # For reload secrets endpoint

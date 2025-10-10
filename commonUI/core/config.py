@@ -8,10 +8,14 @@ import streamlit as st
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-# Load environment variables from .env file
+# Load environment variables from commonUI/.env (new policy)
+# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
 _env_path = Path(__file__).parent.parent / ".env"
 if _env_path.exists():
-    load_dotenv(_env_path)
+    load_dotenv(_env_path, override=False)
+else:
+    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
+    load_dotenv(override=False)
 
 
 class APIConfig(BaseModel):
@@ -66,31 +70,31 @@ class Config:
         """Load configuration from environment and Streamlit secrets."""
         # Try Streamlit secrets first, then environment variables
         self.jobqueue = APIConfig(
-            base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8001"),
+            base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8101"),
             token=self._get_setting("JOBQUEUE_API_TOKEN", ""),
         )
 
         self.myscheduler = APIConfig(
-            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8002"),
+            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8102"),
             token=self._get_setting("MYSCHEDULER_API_TOKEN", ""),
         )
 
         self.myvault = MyVaultConfig(
-            base_url=self._get_setting("MYVAULT_BASE_URL", "http://localhost:8000"),
-            service_name=self._get_setting("MYVAULT_SERVICE_NAME", "commonui-service"),
+            base_url=self._get_setting("MYVAULT_BASE_URL", "http://localhost:8103"),
+            service_name=self._get_setting("MYVAULT_SERVICE_NAME", "commonui"),
             service_token=self._get_setting("MYVAULT_SERVICE_TOKEN", ""),
         )
 
         self.expertagent = ExpertAgentConfig(
             base_url=self._get_setting(
-                "EXPERTAGENT_BASE_URL", "http://localhost:8103/aiagent-api",
+                "EXPERTAGENT_BASE_URL", "http://localhost:8104/aiagent-api",
             ),
             admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
         )
 
         self.graphaiserver = GraphAiServerConfig(
             base_url=self._get_setting(
-                "GRAPHAISERVER_BASE_URL", "http://localhost:8104/api",
+                "GRAPHAISERVER_BASE_URL", "http://localhost:8105/api",
             ),
             admin_token=self._get_setting("GRAPHAISERVER_ADMIN_TOKEN", ""),
         )

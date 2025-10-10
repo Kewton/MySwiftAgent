@@ -97,18 +97,31 @@ async def sync_from_myvault(
     """Sync credentials from MyVault to local encrypted files."""
     verify_admin_token(x_admin_token)
 
-    success = google_creds_manager.sync_from_myvault(request.project)
+    try:
+        success = google_creds_manager.sync_from_myvault(request.project)
 
-    if not success:
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"GOOGLE_CREDENTIALS_JSON not found in MyVault for project: "
+                    f"{get_project_name(request.project)}. "
+                    "Please add the credentials to MyVault first."
+                ),
+            )
+
+        project_name = get_project_name(request.project)
+        return {
+            "message": f"Synced from MyVault successfully for project: {project_name}",
+            "project": project_name,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during sync: {e}")
         raise HTTPException(
-            status_code=500, detail="Failed to sync from MyVault. Check logs."
-        )
-
-    project_name = get_project_name(request.project)
-    return {
-        "message": f"Synced from MyVault successfully for project: {project_name}",
-        "project": project_name,
-    }
+            status_code=500, detail=f"Unexpected error during sync: {str(e)}"
+        ) from e
 
 
 @router.get("/list-projects", response_model=ListProjectsResponse)
@@ -154,7 +167,7 @@ async def oauth2_callback(
     """
     verify_admin_token(x_admin_token)
 
-    success = google_creds_manager.complete_oauth2_flow(
+    success, project_name = google_creds_manager.complete_oauth2_flow(
         state=request.state, code=request.code, project=request.project
     )
 
@@ -163,12 +176,12 @@ async def oauth2_callback(
             status_code=500, detail="Failed to complete OAuth2 flow. Check logs."
         )
 
-    project_name = get_project_name(request.project)
-
     # Auto-save token to MyVault
     try:
         # Get the token that was just saved
         token_path = google_creds_manager.get_token_path(project_name)
+        logger.info(f"DEBUG: token_path={token_path}, myvault_client={secrets_manager.myvault_client}")
+
         if token_path and secrets_manager.myvault_client:
             with open(token_path) as f:
                 token_json = f.read()
@@ -178,6 +191,8 @@ async def oauth2_callback(
                 project=project_name, path="GOOGLE_TOKEN_JSON", value=token_json
             )
             logger.info(f"Token auto-saved to MyVault for project: {project_name}")
+        else:
+            logger.warning(f"DEBUG: Auto-save skipped - token_path={token_path is not None}, myvault_client={secrets_manager.myvault_client is not None}")
     except Exception as e:
         # Non-fatal: token is saved locally, MyVault save failed
         logger.warning(f"Failed to auto-save token to MyVault: {e}")

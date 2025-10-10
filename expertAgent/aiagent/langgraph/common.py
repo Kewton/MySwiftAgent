@@ -1,3 +1,4 @@
+import logging
 import operator
 import re
 from contextlib import asynccontextmanager
@@ -18,6 +19,8 @@ from aiagent.langgraph.util import (
 )
 from core.config import settings
 from core.secrets import secrets_manager
+
+logger = logging.getLogger(__name__)
 
 
 def remove_think_tags(text: str) -> str:
@@ -56,9 +59,15 @@ async def make_graph(
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret(
-            "GOOGLE_API_KEY", project=project
-        )
+        try:
+            google_api_key_for_model = secrets_manager.get_secret(
+                "GOOGLE_API_KEY", project=project
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize Gemini model '{_model}': {e}. "
+                f"Please ensure GOOGLE_API_KEY is set in MyVault for project: {project or 'default'}"
+            ) from e
         model = ChatGoogleGenerativeAI(
             model=_model, google_api_key=google_api_key_for_model
         )
@@ -132,6 +141,11 @@ async def make_graph(
 
     import os
 
+    # Resolve project name for Google APIs
+    from core.google_creds import get_project_name
+
+    resolved_project = get_project_name(project)
+
     mcp_env = {
         "GOOGLE_API_KEY": google_api_key,
         "OPENAI_API_KEY": openai_api_key,
@@ -149,13 +163,20 @@ async def make_graph(
         "MLX_LLM_SERVER_URL": os.getenv(
             "MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL
         ),
-        "GOOGLE_APIS_TOKEN_PATH": os.getenv(
-            "GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH
-        ),
-        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv(
-            "GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH
-        ),
+        # Google APIs project specification
+        "GOOGLE_APIS_DEFAULT_PROJECT": resolved_project,
+        # MyVault configuration for MCP subprocess
+        "MYVAULT_ENABLED": "true" if settings.MYVAULT_ENABLED else "false",
+        "MYVAULT_BASE_URL": settings.MYVAULT_BASE_URL,
+        "MYVAULT_SERVICE_NAME": settings.MYVAULT_SERVICE_NAME,
+        "MYVAULT_SERVICE_TOKEN": settings.MYVAULT_SERVICE_TOKEN,
+        # Logging configuration for MCP subprocess
+        "LOG_DIR": settings.LOG_DIR,
+        "LOG_LEVEL": "DEBUG",  # Force DEBUG for MCP subprocess
+        "MCP_LOG_FILE": "mcp_stdio.log",
     }
+
+    logger.debug(f"mcp_env: {mcp_env}")
 
     print(
         f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..."
@@ -207,9 +228,15 @@ async def make_utility_graph(
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret(
-            "GOOGLE_API_KEY", project=project
-        )
+        try:
+            google_api_key_for_model = secrets_manager.get_secret(
+                "GOOGLE_API_KEY", project=project
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize Gemini model '{_model}': {e}. "
+                f"Please ensure GOOGLE_API_KEY is set in MyVault for project: {project or 'default'}"
+            ) from e
         model = ChatGoogleGenerativeAI(
             model=_model, google_api_key=google_api_key_for_model
         )
@@ -272,6 +299,11 @@ async def make_utility_graph(
 
     import os
 
+    # Resolve project name for Google APIs
+    from core.google_creds import get_project_name
+
+    resolved_project = get_project_name(project)
+
     mcp_env = {
         "GOOGLE_API_KEY": google_api_key,
         "OPENAI_API_KEY": openai_api_key,
@@ -289,18 +321,29 @@ async def make_utility_graph(
         "MLX_LLM_SERVER_URL": os.getenv(
             "MLX_LLM_SERVER_URL", settings.MLX_LLM_SERVER_URL
         ),
-        "GOOGLE_APIS_TOKEN_PATH": os.getenv(
-            "GOOGLE_APIS_TOKEN_PATH", settings.GOOGLE_APIS_TOKEN_PATH
-        ),
-        "GOOGLE_APIS_CREDENTIALS_PATH": os.getenv(
-            "GOOGLE_APIS_CREDENTIALS_PATH", settings.GOOGLE_APIS_CREDENTIALS_PATH
-        ),
+        # Google APIs project specification
+        "GOOGLE_APIS_DEFAULT_PROJECT": resolved_project,
+        # MyVault configuration for MCP subprocess
+        "MYVAULT_ENABLED": "true" if settings.MYVAULT_ENABLED else "false",
+        "MYVAULT_BASE_URL": settings.MYVAULT_BASE_URL,
+        "MYVAULT_SERVICE_NAME": settings.MYVAULT_SERVICE_NAME,
+        "MYVAULT_SERVICE_TOKEN": settings.MYVAULT_SERVICE_TOKEN,
+        # Logging configuration for MCP subprocess
+        "LOG_DIR": settings.LOG_DIR,
+        "LOG_LEVEL": "DEBUG",  # Force DEBUG for MCP subprocess
+        "MCP_LOG_FILE": "mcp_stdio.log",
     }
 
     print(
         f"[DEBUG] mcp_env GOOGLE_API_KEY: {mcp_env['GOOGLE_API_KEY'][:10]}..."
         if mcp_env["GOOGLE_API_KEY"]
         else "[DEBUG] mcp_env GOOGLE_API_KEY is empty"
+    )
+
+    print(
+        f"[DEBUG] mcp_env GOOGLE_APIS_DEFAULT_PROJECT: {mcp_env['GOOGLE_APIS_DEFAULT_PROJECT'][:10]}..."
+        if mcp_env["GOOGLE_APIS_DEFAULT_PROJECT"]
+        else "[DEBUG] mcp_env GOOGLE_APIS_DEFAULT_PROJECT is empty"
     )
 
     mcp_client = MultiServerMCPClient(
@@ -354,9 +397,15 @@ async def make_playwright_graph(
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret(
-            "GOOGLE_API_KEY", project=None
-        )
+        try:
+            google_api_key_for_model = secrets_manager.get_secret(
+                "GOOGLE_API_KEY", project=None
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize Gemini model '{_model}': {e}. "
+                "Please ensure GOOGLE_API_KEY is set in MyVault for default project"
+            ) from e
         model = ChatGoogleGenerativeAI(
             model=_model, google_api_key=google_api_key_for_model
         )
@@ -424,9 +473,15 @@ async def make_wikipedia_graph(
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         # Get API key from secrets_manager for Gemini
-        google_api_key_for_model = secrets_manager.get_secret(
-            "GOOGLE_API_KEY", project=None
-        )
+        try:
+            google_api_key_for_model = secrets_manager.get_secret(
+                "GOOGLE_API_KEY", project=None
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize Gemini model '{_model}': {e}. "
+                "Please ensure GOOGLE_API_KEY is set in MyVault for default project"
+            ) from e
         model = ChatGoogleGenerativeAI(
             model=_model, google_api_key=google_api_key_for_model
         )

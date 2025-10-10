@@ -25,8 +25,53 @@ SCOPES = [
 
 
 def get_project_name(project: Optional[str] = None) -> str:
-    """Get project name with fallback to default."""
-    return project or settings.MYVAULT_DEFAULT_PROJECT or "default"
+    """Get project name with fallback to MyVault default project.
+
+    Priority:
+    1. Explicit project parameter
+    2. Default project from MyVault API (is_default flag)
+    3. Environment variable GOOGLE_APIS_DEFAULT_PROJECT (MCP context override)
+    4. MYVAULT_DEFAULT_PROJECT setting (override)
+    5. "default" (fallback)
+
+    Note: This priority order matches _resolve_default_project() in secrets.py
+    """
+    import os
+
+    logger.debug(f"[get_project_name] Called with project={project}")
+
+    if project:
+        logger.debug(f"[get_project_name] Using explicit project: {project}")
+        return project
+
+    # Try MyVault API first (standard behavior)
+    logger.debug(f"[get_project_name] Checking MyVault API for default project...")
+    logger.debug(f"[get_project_name] secrets_manager.myvault_client exists: {secrets_manager.myvault_client is not None}")
+    try:
+        if secrets_manager.myvault_client:
+            default_project = secrets_manager.myvault_client.get_default_project()
+            if default_project:
+                logger.debug(f"[get_project_name] Using default project from MyVault API: {default_project}")
+                return default_project
+    except Exception as e:
+        logger.debug(f"[get_project_name] Failed to get default project from MyVault API: {e}")
+        pass  # Fall through to other options
+
+    # Try environment variable (for MCP context override)
+    env_project = os.getenv("GOOGLE_APIS_DEFAULT_PROJECT")
+    logger.debug(f"[get_project_name] GOOGLE_APIS_DEFAULT_PROJECT env: {env_project}")
+    if env_project:
+        logger.debug(f"[get_project_name] Using default project from GOOGLE_APIS_DEFAULT_PROJECT env: {env_project}")
+        return env_project
+
+    # Try MYVAULT_DEFAULT_PROJECT override
+    logger.debug(f"[get_project_name] MYVAULT_DEFAULT_PROJECT setting: {settings.MYVAULT_DEFAULT_PROJECT}")
+    if settings.MYVAULT_DEFAULT_PROJECT:
+        logger.debug(f"[get_project_name] Using default project from MYVAULT_DEFAULT_PROJECT setting: {settings.MYVAULT_DEFAULT_PROJECT}")
+        return settings.MYVAULT_DEFAULT_PROJECT
+
+    logger.debug(f"[get_project_name] Using fallback: 'default'")
+    return "default"
 
 
 class GoogleCredsManager:
@@ -35,7 +80,7 @@ class GoogleCredsManager:
     def __init__(self):
         """Initialize credentials manager."""
         CREDS_DIR.mkdir(exist_ok=True, mode=0o700)
-        self._fernet: Optional[Fernet] = None
+        self._fernet_cache: dict[str, Fernet] = {}
         self._current_project: Optional[str] = None
 
     def _get_project_dir(self, project: Optional[str] = None) -> Path:
@@ -53,43 +98,46 @@ class GoogleCredsManager:
         """Get token file path for project."""
         return self._get_project_dir(project) / "token.json.enc"
 
-    def _get_encryption_key(self) -> bytes:
+    def _get_encryption_key(self, project: Optional[str] = None) -> bytes:
         """
-        Get encryption key from MyVault (global, not project-specific).
+        Get encryption key from MyVault for specific project.
         """
         try:
-            # Get global encryption key from MyVault
-            key_str = secrets_manager.get_secret("GOOGLE_CREDS_ENCRYPTION_KEY")
-            logger.info("✓ Encryption key loaded from MyVault")
+            project_name = get_project_name(project)
+            # Get project-specific encryption key from MyVault
+            key_str = secrets_manager.get_secret("GOOGLE_CREDS_ENCRYPTION_KEY", project=project_name)
+            logger.info(f"✓ Encryption key loaded from MyVault (project: {project_name})")
             return key_str.encode()
         except ValueError as e:
-            logger.error("❌ Encryption key not found in MyVault")
+            project_name = get_project_name(project)
+            logger.error(f"❌ Encryption key not found in MyVault (project: {project_name})")
             raise ValueError(
-                "GOOGLE_CREDS_ENCRYPTION_KEY not found in MyVault. "
+                f"GOOGLE_CREDS_ENCRYPTION_KEY not found in MyVault for project: {project_name}. "
                 "Please set up encryption key first."
             ) from e
 
-    def _get_fernet(self) -> Fernet:
-        """Get Fernet cipher instance."""
-        if self._fernet is None:
-            key = self._get_encryption_key()
-            self._fernet = Fernet(key)
-        return self._fernet
+    def _get_fernet(self, project: Optional[str] = None) -> Fernet:
+        """Get Fernet cipher instance for specific project."""
+        project_name = get_project_name(project)
+        if project_name not in self._fernet_cache:
+            key = self._get_encryption_key(project_name)
+            self._fernet_cache[project_name] = Fernet(key)
+        return self._fernet_cache[project_name]
 
-    def _encrypt_file(self, data: str, file_path: Path) -> None:
+    def _encrypt_file(self, data: str, file_path: Path, project: Optional[str] = None) -> None:
         """Encrypt and write data to file."""
-        fernet = self._get_fernet()
+        fernet = self._get_fernet(project)
         encrypted = fernet.encrypt(data.encode())
         file_path.write_bytes(encrypted)
         file_path.chmod(0o600)
         logger.info(f"✓ Encrypted file written: {file_path.name}")
 
-    def _decrypt_file(self, file_path: Path) -> str:
+    def _decrypt_file(self, file_path: Path, project: Optional[str] = None) -> str:
         """Read and decrypt file."""
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        fernet = self._get_fernet()
+        fernet = self._get_fernet(project)
         encrypted = file_path.read_bytes()
         try:
             decrypted = fernet.decrypt(encrypted)
@@ -105,18 +153,22 @@ class GoogleCredsManager:
         try:
             project_name = get_project_name(project)
             logger.info(f"🔄 Syncing credentials for project: {project_name}")
+            logger.debug(f"[sync_from_myvault] secrets_manager.myvault_enabled: {secrets_manager.myvault_enabled}")
+            logger.debug(f"[sync_from_myvault] secrets_manager.myvault_client: {secrets_manager.myvault_client}")
 
             # Get credentials from MyVault
+            logger.debug(f"[sync_from_myvault] Attempting to get GOOGLE_CREDENTIALS_JSON from MyVault...")
             creds_json = secrets_manager.get_secret(
                 "GOOGLE_CREDENTIALS_JSON", project=project_name
             )
+            logger.debug(f"[sync_from_myvault] Successfully retrieved GOOGLE_CREDENTIALS_JSON (length: {len(creds_json)})")
 
             # Validate JSON
             json.loads(creds_json)
 
             # Encrypt and save
             creds_file = self._get_credentials_file(project_name)
-            self._encrypt_file(creds_json, creds_file)
+            self._encrypt_file(creds_json, creds_file, project_name)
             logger.info(f"✓ Credentials synced for project: {project_name}")
 
             # Try to sync token (optional)
@@ -126,7 +178,7 @@ class GoogleCredsManager:
                 )
                 json.loads(token_json)
                 token_file = self._get_token_file(project_name)
-                self._encrypt_file(token_json, token_file)
+                self._encrypt_file(token_json, token_file, project_name)
                 logger.info(f"✓ Token synced for project: {project_name}")
             except ValueError:
                 logger.info(f"ℹ Token not found for project: {project_name} (OK)")
@@ -157,7 +209,7 @@ class GoogleCredsManager:
                 )
 
         # Decrypt to temp file
-        creds_json = self._decrypt_file(creds_file)
+        creds_json = self._decrypt_file(creds_file, project_name)
 
         temp_file = tempfile.NamedTemporaryFile(
             mode="w",
@@ -182,7 +234,7 @@ class GoogleCredsManager:
             return None
 
         try:
-            token_json = self._decrypt_file(token_file)
+            token_json = self._decrypt_file(token_file, project_name)
 
             temp_file = tempfile.NamedTemporaryFile(
                 mode="w",
@@ -211,7 +263,7 @@ class GoogleCredsManager:
 
             # Encrypt and save locally
             token_file = self._get_token_file(project_name)
-            self._encrypt_file(token_json_str, token_file)
+            self._encrypt_file(token_json_str, token_file, project_name)
             logger.info(f"✓ Token saved for project: {project_name}")
 
             # NOTE: Manual MyVault update required via commonUI
@@ -238,7 +290,7 @@ class GoogleCredsManager:
             return False, f"Token not found for project: {project_name}"
 
         try:
-            token_json = self._decrypt_file(token_file)
+            token_json = self._decrypt_file(token_file, project_name)
             token_dict = json.loads(token_json)
 
             # Create Credentials object to check validity
@@ -351,7 +403,7 @@ class GoogleCredsManager:
 
     def complete_oauth2_flow(
         self, state: str, code: str, project: Optional[str] = None
-    ) -> bool:
+    ) -> Tuple[bool, str]:
         """
         Complete OAuth2 flow with authorization code.
 
@@ -361,7 +413,7 @@ class GoogleCredsManager:
             project: Project name (optional, will use stored value from state)
 
         Returns:
-            True if token successfully saved
+            Tuple of (success, project_name)
         """
         try:
             if not hasattr(self, "_oauth_flows") or state not in self._oauth_flows:
@@ -384,14 +436,14 @@ class GoogleCredsManager:
 
             if success:
                 logger.info(f"✓ OAuth2 flow completed for project: {project_name}")
-                return True
+                return True, project_name
             else:
                 logger.error(f"❌ Failed to save token for project: {project_name}")
-                return False
+                return False, project_name
 
         except Exception as e:
             logger.error(f"❌ Failed to complete OAuth2 flow: {e}")
-            return False
+            return False, ""
 
 
 # Global instance

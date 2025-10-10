@@ -19,12 +19,15 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Load .env file if it exists
-if [[ -f "$PROJECT_ROOT/.env" ]]; then
-    set -a  # Automatically export all variables
-    source "$PROJECT_ROOT/.env"
-    set +a
-fi
+# Load project-level .env files (new policy)
+# Each service has its own .env file with minimal configuration
+for project in myVault jobqueue myscheduler expertAgent graphAiServer commonUI; do
+    if [[ -f "$PROJECT_ROOT/$project/.env" ]]; then
+        set -a
+        source "$PROJECT_ROOT/$project/.env"
+        set +a
+    fi
+done
 
 # Service ports (can be overridden via environment variables)
 JOBQUEUE_PORT="${JOBQUEUE_PORT:-8001}"
@@ -33,6 +36,14 @@ MYVAULT_PORT="${MYVAULT_PORT:-8003}"
 EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
 GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
 COMMONUI_PORT="${COMMONUI_PORT:-8501}"
+
+# Automatically configure service URLs (new policy)
+export JOBQUEUE_API_URL="http://localhost:${JOBQUEUE_PORT}"
+export JOBQUEUE_BASE_URL="http://localhost:${JOBQUEUE_PORT}"
+export MYSCHEDULER_BASE_URL="http://localhost:${MYSCHEDULER_PORT}"
+export MYVAULT_BASE_URL="http://localhost:${MYVAULT_PORT}"
+export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
+export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
 
 # Service directories
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
@@ -187,28 +198,9 @@ check_dependencies() {
 setup_dev_environment() {
     print_step "Setting up development environment..."
 
-    # Setup CommonUI environment
-    if [[ ! -f "$COMMONUI_DIR/.env" ]]; then
-        print_info "Creating CommonUI .env file..."
-        cat > "$COMMONUI_DIR/.env" << EOF
-# Development Environment Configuration
-JOBQUEUE_BASE_URL=http://localhost:$JOBQUEUE_PORT
-JOBQUEUE_API_TOKEN=$DEV_JOBQUEUE_TOKEN
-MYSCHEDULER_BASE_URL=http://localhost:$MYSCHEDULER_PORT
-MYSCHEDULER_API_TOKEN=$DEV_MYSCHEDULER_TOKEN
-MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT
-MYVAULT_SERVICE_NAME=commonui
-MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_COMMONUI:-dev-myvault-token}
-EXPERTAGENT_BASE_URL=http://localhost:$EXPERTAGENT_PORT/aiagent-api
-GRAPHAISERVER_BASE_URL=http://localhost:$GRAPHAISERVER_PORT/api
-POLLING_INTERVAL=5
-DEFAULT_SERVICE=JobQueue
-OPERATION_MODE=full
-EOF
-        print_success "Created CommonUI .env file"
-    else
-        print_info "CommonUI .env file already exists"
-    fi
+    # Note: CommonUI/.env is now managed as a project-level .env file
+    # Service URLs are automatically configured via environment variables (see above)
+    # No need to regenerate CommonUI/.env on every startup
 
     # Setup development tokens for APIs (if they support it)
     echo "DEV_MODE=true" > "$LOG_DIR/dev_tokens.txt"
@@ -662,8 +654,7 @@ clean_temp_files() {
     # Clean PID files
     rm -f "$PID_DIR"/*.pid 2>/dev/null || true
 
-    # Clean CommonUI .env (will be recreated on next start)
-    rm -f "$COMMONUI_DIR/.env" 2>/dev/null || true
+    # Note: CommonUI/.env is now managed as a project-level .env file (not auto-generated)
 
     print_success "Temporary files cleaned"
 }
@@ -772,8 +763,10 @@ main() {
             # Start MyScheduler
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 install_service_deps "MyScheduler" "$MYSCHEDULER_DIR" || exit 1
+                # Note: Most env vars are loaded from myscheduler/.env
+                # Override JOBQUEUE_API_URL to use local port
                 start_service "MyScheduler" "$MYSCHEDULER_DIR" $MYSCHEDULER_PORT "$MYSCHEDULER_PID" "$MYSCHEDULER_LOG" \
-                    "uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
+                    "JOBQUEUE_API_URL='http://localhost:$JOBQUEUE_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
             fi
 
             # Start MyVault
@@ -781,21 +774,25 @@ main() {
                 # Check if master key is set
                 if [[ -z "${MSA_MASTER_KEY}" ]]; then
                     print_warning "MyVault: MSA_MASTER_KEY not set, skipping startup"
-                    print_info "MyVault: Set MSA_MASTER_KEY in .env to enable MyVault service"
+                    print_info "MyVault: Create myVault/.env and set MSA_MASTER_KEY to enable MyVault service"
                 else
                     install_service_deps "MyVault" "$MYVAULT_DIR" || exit 1
                     # Create data directory
                     mkdir -p "$MYVAULT_DIR/data"
+                    # Note: Most env vars (MSA_MASTER_KEY, TOKEN_*) are loaded from myVault/.env
+                    # Only override DATABASE_URL here
                     start_service "MyVault" "$MYVAULT_DIR" $MYVAULT_PORT "$MYVAULT_PID" "$MYVAULT_LOG" \
-                        "DATABASE_URL='sqlite:///./data/myvault.db' MSA_MASTER_KEY='${MSA_MASTER_KEY}' TOKEN_commonui='${MYVAULT_TOKEN_COMMONUI:-dev-myvault-token}' TOKEN_expertagent='${MYVAULT_TOKEN_EXPERTAGENT:-dev-expertagent-token}' TOKEN_myscheduler='${MYVAULT_TOKEN_MYSCHEDULER:-dev-myscheduler-token}' TOKEN_jobqueue='${MYVAULT_TOKEN_JOBQUEUE:-dev-jobqueue-token}' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYVAULT_PORT" || print_warning "MyVault: Failed to start (check logs for details)"
+                        "DATABASE_URL='sqlite:///./data/myvault.db' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYVAULT_PORT" || print_warning "MyVault: Failed to start (check logs for details)"
                 fi
             fi
 
             # Start ExpertAgent
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
+                # Note: Most env vars are loaded from expertAgent/.env
+                # Only override MYVAULT_BASE_URL and PORT here
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT" || exit 1
+                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT" || exit 1
             fi
 
             # Start GraphAiServer
