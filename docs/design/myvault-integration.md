@@ -1,131 +1,131 @@
-# MyVault Integration Policy
+# MyVault 統合規約
 
-**Version:** 1.0.0
-**Last Updated:** 2025-10-10
-**Status:** Active
-
----
-
-## 📋 Overview
-
-This document defines the standard integration policy for MyVault across all MySwiftAgent services. MyVault is the centralized secrets management service that provides:
-
-- 🔒 **Encrypted Storage**: AES-256-GCM encryption for all secrets
-- 🛂 **Role-Based Access Control (RBAC)**: Fine-grained permissions per service
-- 📡 **HTTP API**: RESTful interface for CRUD operations
-- 🧾 **Audit Trail**: Version history and modification tracking
-- 🔑 **Token-Based Authentication**: Service identity verification
+**バージョン:** 1.0.0
+**最終更新日:** 2025-10-10
+**ステータス:** 有効
 
 ---
 
-## 🏗️ Architecture
+## 📋 概要
 
-### Service Communication Pattern
+本ドキュメントは、MySwiftAgentの全サービスにおけるMyVault統合の標準規約を定義します。MyVaultは以下の機能を提供する集中型シークレット管理サービスです:
+
+- 🔒 **暗号化ストレージ**: 全シークレットをAES-256-GCMで暗号化
+- 🛂 **ロールベースアクセス制御 (RBAC)**: サービスごとの細かい権限管理
+- 📡 **HTTP API**: CRUD操作のためのRESTfulインターフェース
+- 🧾 **監査証跡**: バージョン履歴と変更追跡
+- 🔑 **トークンベース認証**: サービス識別の検証
+
+---
+
+## 🏗️ アーキテクチャ
+
+### サービス間通信パターン
 
 ```
 ┌──────────────────┐
-│  Consumer Service │
+│  消費サービス     │
 │  (ExpertAgent,   │
-│   CommonUI, etc.)│
+│   CommonUI等)    │
 └─────────┬────────┘
-          │ HTTP Request
-          │ Headers:
+          │ HTTPリクエスト
+          │ ヘッダー:
           │ - X-Service: <service-name>
           │ - X-Token: <service-token>
           ▼
 ┌──────────────────┐
-│    MyVault API   │
-│   (Port 8000)    │
+│   MyVault API    │
+│   (ポート 8000)  │
 └─────────┬────────┘
           │
           ▼
 ┌──────────────────┐
-│ Encrypted SQLite │
-│  (data/myvault.db)│
+│暗号化SQLite      │
+│ (data/myvault.db)│
 └──────────────────┘
 ```
 
-### Key Components
+### 主要コンポーネント
 
-| Component | Description | Location |
+| コンポーネント | 説明 | 場所 |
 |-----------|-------------|----------|
-| **MyVault Service** | FastAPI-based secrets management API | `myVault/` |
-| **Config File** | Non-sensitive configuration (policies, services) | `myVault/config.yaml` |
-| **Environment File** | Sensitive credentials (master key, tokens) | `myVault/.env` |
-| **Database** | Encrypted SQLite database | `myVault/data/myvault.db` |
-| **Client Libraries** | Service-specific integration code | `<service>/core/myvault_client.py` |
+| **MyVaultサービス** | FastAPIベースのシークレット管理API | `myVault/` |
+| **設定ファイル** | 非機密設定 (ポリシー、サービス定義) | `myVault/config.yaml` |
+| **環境変数ファイル** | 機密情報 (マスターキー、トークン) | `myVault/.env` |
+| **データベース** | 暗号化SQLiteデータベース | `myVault/data/myvault.db` |
+| **クライアントライブラリ** | サービス固有の統合コード | `<service>/core/myvault_client.py` |
 
 ---
 
-## 🔑 Required Parameters
+## 🔑 必須パラメータ
 
-### Environment Variables (All Consumer Services)
+### 環境変数 (全消費サービス)
 
-Every service integrating with MyVault MUST define these environment variables:
+MyVaultと連携する全サービスは以下の環境変数を定義する必要があります:
 
-| Variable Name | Type | Required | Description | Example |
+| 変数名 | 型 | 必須 | 説明 | 例 |
 |---------------|------|----------|-------------|---------|
-| `MYVAULT_BASE_URL` | String | ✅ Yes | MyVault API endpoint URL | `http://localhost:8000` (dev)<br>`http://myvault:8000` (docker) |
-| `MYVAULT_SERVICE_NAME` | String | ✅ Yes | Service identifier for authentication | `expertagent`, `commonui`, `graphaiserver` |
-| `MYVAULT_SERVICE_TOKEN` | String | ✅ Yes | Authentication token for service | Generated securely (see below) |
-| `MYVAULT_ENABLED` | Boolean | ⚠️ Optional | Enable/disable MyVault integration | `true` (default: `false`) |
-| `MYVAULT_DEFAULT_PROJECT` | String | ⚠️ Optional | Default project name for secrets | `myproject`, `default` |
-| `SECRETS_CACHE_TTL` | Integer | ⚠️ Optional | Cache TTL in seconds | `300` (5 minutes) |
+| `MYVAULT_BASE_URL` | String | ✅ はい | MyVault APIエンドポイントURL | `http://localhost:8000` (開発)<br>`http://myvault:8000` (docker) |
+| `MYVAULT_SERVICE_NAME` | String | ✅ はい | 認証用のサービス識別子 | `expertagent`, `commonui`, `graphaiserver` |
+| `MYVAULT_SERVICE_TOKEN` | String | ✅ はい | サービス用認証トークン | 安全に生成されたトークン (後述) |
+| `MYVAULT_ENABLED` | Boolean | ⚠️ 任意 | MyVault統合の有効/無効 | `true` (デフォルト: `false`) |
+| `MYVAULT_DEFAULT_PROJECT` | String | ⚠️ 任意 | シークレットのデフォルトプロジェクト名 | `myproject`, `default` |
+| `SECRETS_CACHE_TTL` | Integer | ⚠️ 任意 | キャッシュTTL (秒) | `300` (5分) |
 
-### MyVault Server Configuration
+### MyVaultサーバー設定
 
-MyVault server requires these environment variables:
+MyVaultサーバーには以下の環境変数が必要です:
 
-| Variable Name | Type | Required | Description | Example |
+| 変数名 | 型 | 必須 | 説明 | 例 |
 |---------------|------|----------|-------------|---------|
-| `MSA_MASTER_KEY` | String | ✅ Yes | Base64-encoded 32-byte encryption key | `base64:jFi1bkzTyKQ5BLtw...` |
-| `MYVAULT_TOKEN_<SERVICE>` | String | ✅ Yes | Token for each service (e.g., `MYVAULT_TOKEN_EXPERTAGENT`) | Generated securely |
+| `MSA_MASTER_KEY` | String | ✅ はい | Base64エンコードされた32バイト暗号化キー | `base64:jFi1bkzTyKQ5BLtw...` |
+| `MYVAULT_TOKEN_<SERVICE>` | String | ✅ はい | 各サービスのトークン (例: `MYVAULT_TOKEN_EXPERTAGENT`) | 安全に生成されたトークン |
 
 ---
 
-## 🛡️ Authentication & Authorization
+## 🛡️ 認証・認可
 
-### Authentication Flow
+### 認証フロー
 
-1. **Consumer Service** sends HTTP request with headers:
+1. **消費サービス**がHTTPリクエストにヘッダーを付与:
    ```
    X-Service: expertagent
    X-Token: <service-token>
    ```
 
-2. **MyVault** validates:
-   - Service name exists in `config.yaml` (services section)
-   - Token matches environment variable `MYVAULT_TOKEN_<SERVICE>`
-   - Service is enabled (`enabled: true`)
+2. **MyVault**が検証:
+   - サービス名が`config.yaml`のservicesセクションに存在するか
+   - トークンが環境変数`MYVAULT_TOKEN_<SERVICE>`と一致するか
+   - サービスが有効化されているか (`enabled: true`)
 
-3. **Authorization Check**:
-   - Load service's assigned roles from `config.yaml`
-   - Evaluate permissions against requested resource
-   - Allow/deny based on RBAC policy
+3. **認可チェック**:
+   - `config.yaml`からサービスに割り当てられたロールを読み込み
+   - 要求されたリソースに対して権限を評価
+   - RBACポリシーに基づいて許可/拒否
 
-### RBAC Actions
+### RBACアクション
 
-| Action | Description | Use Case |
+| アクション | 説明 | ユースケース |
 |--------|-------------|----------|
-| `read` | Retrieve secret values | Applications reading credentials |
-| `write` | Create or update secrets | Admin services managing configurations |
-| `delete` | Remove secrets | Secret rotation and cleanup |
-| `list` | Enumerate secrets (values redacted) | Discovery and inventory |
+| `read` | シークレット値の取得 | アプリケーションによる認証情報の読み取り |
+| `write` | シークレットの作成・更新 | 管理サービスによる設定管理 |
+| `delete` | シークレットの削除 | シークレットローテーションとクリーンアップ |
+| `list` | シークレット一覧 (値はマスク) | 探索とインベントリ操作 |
 
-### Example RBAC Policy
+### RBACポリシー例
 
 ```yaml
 # config.yaml
 policies:
   - name: expertagent-reader
-    description: "Read-only access to all secrets for AI agent"
+    description: "AIエージェント向け全シークレット読み取り専用アクセス"
     permissions:
       - effect: "allow"
         actions: ["read", "list"]
         resources: ["secret:*:*"]
 
   - name: expertagent-google-editor
-    description: "Write access to Google OAuth secrets"
+    description: "Google OAuth シークレット書き込みアクセス"
     permissions:
       - effect: "allow"
         actions: ["read", "write", "list"]
@@ -133,7 +133,7 @@ policies:
 
 services:
   - name: expertagent
-    description: "ExpertAgent AI service"
+    description: "ExpertAgent AIサービス"
     enabled: true
     roles:
       - expertagent-reader
@@ -142,38 +142,38 @@ services:
 
 ---
 
-## 🔧 Integration Implementation
+## 🔧 統合実装手順
 
-### Step 1: Generate Service Token
+### ステップ1: サービストークンの生成
 
 ```bash
-# Generate secure token for new service
+# 新サービス用の安全なトークンを生成
 python -c "import secrets; print(secrets.token_urlsafe(32))"
-# Output: AbC123XyZ456...
+# 出力: AbC123XyZ456...
 ```
 
-### Step 2: Configure MyVault Server
+### ステップ2: MyVaultサーバーの設定
 
-Add service definition to `myVault/config.yaml`:
+`myVault/config.yaml`にサービス定義を追加:
 
 ```yaml
 services:
   - name: mynewservice
-    description: "My new service with MyVault integration"
+    description: "MyVault統合を持つ新サービス"
     enabled: true
     roles:
-      - common-reader  # Reuse existing policy or create new one
+      - common-reader  # 既存ポリシーを再利用または新規作成
 ```
 
-Add token to `myVault/.env`:
+`myVault/.env`にトークンを追加:
 
 ```env
 MYVAULT_TOKEN_MYNEWSERVICE=AbC123XyZ456...
 ```
 
-### Step 3: Configure Consumer Service
+### ステップ3: 消費サービスの設定
 
-Add environment variables to service configuration:
+サービス設定に環境変数を追加:
 
 **Docker Compose (`docker-compose.yml`):**
 ```yaml
@@ -185,16 +185,16 @@ services:
       - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_MYNEWSERVICE}
 ```
 
-**Local Development (`.env` or `dev-start.sh`):**
+**ローカル開発 (`.env` または `dev-start.sh`):**
 ```env
-MYVAULT_BASE_URL=http://localhost:8003  # or 8103 for quick-start.sh
+MYVAULT_BASE_URL=http://localhost:8003  # またはquick-start.shの場合は8103
 MYVAULT_SERVICE_NAME=mynewservice
 MYVAULT_SERVICE_TOKEN=AbC123XyZ456...
 ```
 
-### Step 4: Implement Client Code
+### ステップ4: クライアントコードの実装
 
-#### Python Example (FastAPI/Pydantic)
+#### Python実装例 (FastAPI/Pydantic)
 
 ```python
 # core/config.py
@@ -202,7 +202,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 
 class Settings(BaseSettings):
-    # MyVault Configuration
+    # MyVault設定
     MYVAULT_ENABLED: bool = Field(default=False)
     MYVAULT_BASE_URL: str = Field(default="http://localhost:8000")
     MYVAULT_SERVICE_NAME: str = Field(default="mynewservice")
@@ -233,13 +233,13 @@ class MyVaultClient:
         )
 
     def get_secret(self, project: str, path: str) -> str:
-        """Retrieve a secret value."""
+        """シークレット値を取得"""
         response = self.client.get(f"/api/secrets/{project}/{path}")
         response.raise_for_status()
         return str(response.json()["value"])
 
     def set_secret(self, project: str, path: str, value: str) -> None:
-        """Create or update a secret."""
+        """シークレットを作成または更新"""
         response = self.client.post(
             "/api/secrets",
             json={"project": project, "path": path, "value": value},
@@ -248,7 +248,7 @@ class MyVaultClient:
 ```
 
 ```python
-# core/secrets.py (Unified secrets manager)
+# core/secrets.py (統合シークレットマネージャー)
 from typing import Optional
 import os
 import time
@@ -270,21 +270,21 @@ class SecretsManager:
 
     def get_secret(self, key: str, project: Optional[str] = None) -> str:
         """
-        Get secret with MyVault priority, fallback to environment variables.
+        MyVault優先でシークレットを取得し、環境変数にフォールバック
 
         Args:
-            key: Secret key (e.g., "OPENAI_API_KEY")
-            project: MyVault project name (optional)
+            key: シークレットキー (例: "OPENAI_API_KEY")
+            project: MyVaultプロジェクト名 (任意)
 
         Returns:
-            Secret value
+            シークレット値
         """
-        # Check cache first
+        # まずキャッシュをチェック
         cache_key = f"{project or 'default'}:{key}"
         if self._is_cache_valid(cache_key):
             return self._cache[cache_key][0]
 
-        # Try MyVault
+        # MyVaultを試行
         if self.myvault_client:
             try:
                 proj = project or settings.MYVAULT_DEFAULT_PROJECT or "default"
@@ -292,29 +292,29 @@ class SecretsManager:
                 self._cache[cache_key] = (value, time.time())
                 return value
             except Exception as e:
-                # Log warning and fallback
-                print(f"MyVault lookup failed for {key}: {e}, falling back to env")
+                # 警告をログに記録してフォールバック
+                print(f"MyVault検索失敗 {key}: {e}、環境変数にフォールバック")
 
-        # Fallback to environment variable
+        # 環境変数にフォールバック
         value = os.getenv(key, "")
         if not value:
-            raise ValueError(f"Secret '{key}' not found in MyVault or environment")
+            raise ValueError(f"シークレット '{key}' がMyVaultまたは環境変数に見つかりません")
 
         self._cache[cache_key] = (value, time.time())
         return value
 
     def _is_cache_valid(self, key: str) -> bool:
-        """Check if cached value is within TTL."""
+        """キャッシュ値がTTL内かチェック"""
         if key not in self._cache:
             return False
         _, timestamp = self._cache[key]
         return (time.time() - timestamp) < self.cache_ttl
 
-# Global instance
+# グローバルインスタンス
 secrets_manager = SecretsManager()
 ```
 
-#### TypeScript Example (Express/Node.js)
+#### TypeScript実装例 (Express/Node.js)
 
 ```typescript
 // src/config/settings.ts
@@ -362,32 +362,32 @@ export class MyVaultClient {
 
 ---
 
-## 📡 API Endpoints
+## 📡 APIエンドポイント
 
-### Authentication Headers (All Requests)
+### 認証ヘッダー (全リクエスト共通)
 
 ```http
 X-Service: <service-name>
 X-Token: <service-token>
 ```
 
-### Available Endpoints
+### 利用可能なエンドポイント
 
-| Method | Path | Description | Request Body | Response |
+| メソッド | パス | 説明 | リクエストボディ | レスポンス |
 |--------|------|-------------|--------------|----------|
-| **GET** | `/health` | Health check | - | `{"status":"healthy","service":"myVault"}` |
-| **POST** | `/api/secrets/test` | Test authentication | - | `{"status":"ok","message":"..."}` |
-| **GET** | `/api/projects` | List all projects | - | `[{"id":1,"name":"myproject",...}]` |
-| **POST** | `/api/projects` | Create project | `{"name":"myproject","description":"..."}` | `{"id":1,"name":"myproject",...}` |
-| **GET** | `/api/secrets` | List secrets (values redacted) | - | `[{"id":1,"project":"test","path":"api-key",...}]` |
-| **GET** | `/api/secrets/{project}/{path}` | Get secret value | - | `{"id":1,"project":"test","path":"api-key","value":"secret123",...}` |
-| **POST** | `/api/secrets` | Create secret | `{"project":"test","path":"api-key","value":"secret123"}` | `{"id":1,"project":"test",...}` |
-| **PATCH** | `/api/secrets/{project}/{path}` | Update secret (rotation) | `{"value":"new-secret456"}` | `{"id":1,"version":2,...}` |
-| **DELETE** | `/api/secrets/{project}/{path}` | Delete secret | - | HTTP 204 No Content |
+| **GET** | `/health` | ヘルスチェック | - | `{"status":"healthy","service":"myVault"}` |
+| **POST** | `/api/secrets/test` | 認証テスト | - | `{"status":"ok","message":"..."}` |
+| **GET** | `/api/projects` | プロジェクト一覧 | - | `[{"id":1,"name":"myproject",...}]` |
+| **POST** | `/api/projects` | プロジェクト作成 | `{"name":"myproject","description":"..."}` | `{"id":1,"name":"myproject",...}` |
+| **GET** | `/api/secrets` | シークレット一覧 (値はマスク) | - | `[{"id":1,"project":"test","path":"api-key",...}]` |
+| **GET** | `/api/secrets/{project}/{path}` | シークレット値取得 | - | `{"id":1,"project":"test","path":"api-key","value":"secret123",...}` |
+| **POST** | `/api/secrets` | シークレット作成 | `{"project":"test","path":"api-key","value":"secret123"}` | `{"id":1,"project":"test",...}` |
+| **PATCH** | `/api/secrets/{project}/{path}` | シークレット更新 (ローテーション) | `{"value":"new-secret456"}` | `{"id":1,"version":2,...}` |
+| **DELETE** | `/api/secrets/{project}/{path}` | シークレット削除 | - | HTTP 204 No Content |
 
-### Example API Calls
+### API呼び出し例
 
-**Create Secret:**
+**シークレット作成:**
 ```bash
 curl -X POST http://localhost:8000/api/secrets \
   -H "Content-Type: application/json" \
@@ -400,14 +400,14 @@ curl -X POST http://localhost:8000/api/secrets \
   }'
 ```
 
-**Retrieve Secret:**
+**シークレット取得:**
 ```bash
 curl http://localhost:8000/api/secrets/myproject/OPENAI_API_KEY \
   -H "X-Service: expertagent" \
   -H "X-Token: <service-token>"
 ```
 
-**Update Secret (Rotation):**
+**シークレット更新 (ローテーション):**
 ```bash
 curl -X PATCH http://localhost:8000/api/secrets/myproject/OPENAI_API_KEY \
   -H "Content-Type: application/json" \
@@ -420,24 +420,24 @@ curl -X PATCH http://localhost:8000/api/secrets/myproject/OPENAI_API_KEY \
 
 ---
 
-## 🌐 Port Configuration
+## 🌐 ポート構成
 
-### Standard Ports (Docker Compose / dev-start.sh)
+### 標準ポート (Docker Compose / dev-start.sh)
 
-| Environment | MyVault Port | Usage |
+| 環境 | MyVaultポート | 使用方法 |
 |-------------|--------------|-------|
-| **Docker Compose** | `8003` | Internal container network: `http://myvault:8000`<br>External host: `http://localhost:8003` |
-| **dev-start.sh** | `8003` | Local development: `http://localhost:8003` |
+| **Docker Compose** | `8003` | 内部コンテナネットワーク: `http://myvault:8000`<br>外部ホスト: `http://localhost:8003` |
+| **dev-start.sh** | `8003` | ローカル開発: `http://localhost:8003` |
 
-### Alternative Ports (quick-start.sh)
+### 代替ポート (quick-start.sh)
 
-| Environment | MyVault Port | Usage |
+| 環境 | MyVaultポート | 使用方法 |
 |-------------|--------------|-------|
-| **quick-start.sh** | `8103` | Local development (parallel): `http://localhost:8103` |
+| **quick-start.sh** | `8103` | ローカル開発 (並行実行): `http://localhost:8103` |
 
-### Service-Specific Configuration
+### サービス別設定
 
-| Service | Docker Compose | dev-start.sh | quick-start.sh |
+| サービス | Docker Compose | dev-start.sh | quick-start.sh |
 |---------|----------------|--------------|----------------|
 | **ExpertAgent** | `MYVAULT_BASE_URL=http://myvault:8000` | `MYVAULT_BASE_URL=http://localhost:8003` | `MYVAULT_BASE_URL=http://localhost:8103` |
 | **CommonUI** | `MYVAULT_BASE_URL=http://myvault:8000` | `MYVAULT_BASE_URL=http://localhost:8003` | `MYVAULT_BASE_URL=http://localhost:8103` |
@@ -445,60 +445,60 @@ curl -X PATCH http://localhost:8000/api/secrets/myproject/OPENAI_API_KEY \
 
 ---
 
-## 🔒 Security Best Practices
+## 🔒 セキュリティベストプラクティス
 
-### 1. Token Management
+### 1. トークン管理
 
-- ✅ **Generate Cryptographically Secure Tokens**:
+- ✅ **暗号学的に安全なトークンの生成**:
   ```bash
   python -c "import secrets; print(secrets.token_urlsafe(32))"
   ```
 
-- ✅ **Never Commit Tokens to Git**:
-  - Store in `.env` files (gitignored)
-  - Use environment variable injection in CI/CD
+- ✅ **トークンを絶対にGitにコミットしない**:
+  - `.env`ファイルに保存 (gitignore設定済み)
+  - CI/CDで環境変数インジェクションを使用
 
-- ✅ **Rotate Tokens Regularly**:
-  - Recommended: Every 90 days
-  - Update both MyVault `.env` and consumer service `.env`
+- ✅ **トークンの定期的なローテーション**:
+  - 推奨: 90日ごと
+  - MyVaultの`.env`と消費サービスの`.env`の両方を更新
 
-### 2. Master Key Management
+### 2. マスターキー管理
 
-- ✅ **Generate Strong Master Key**:
+- ✅ **強力なマスターキーの生成**:
   ```bash
   python -c "import secrets, base64; print('base64:' + base64.b64encode(secrets.token_bytes(32)).decode())"
   ```
 
-- ❌ **Never Share Master Key Between Environments**:
-  - Development, staging, and production MUST use different keys
+- ❌ **環境間でマスターキーを共有しない**:
+  - 開発、ステージング、本番環境で異なるキーを使用
 
-- ✅ **Backup Master Key Securely**:
-  - Use password managers or hardware security modules (HSM)
-  - Encrypt backups with separate encryption key
+- ✅ **マスターキーの安全なバックアップ**:
+  - パスワードマネージャーまたはハードウェアセキュリティモジュール (HSM) を使用
+  - バックアップは別の暗号化キーで暗号化
 
-### 3. Access Control
+### 3. アクセス制御
 
-- ✅ **Principle of Least Privilege**:
-  - Grant only the minimum required permissions
-  - Use specific resource patterns instead of wildcards where possible
+- ✅ **最小権限の原則**:
+  - 必要最小限の権限のみを付与
+  - 可能な限りワイルドカードではなく具体的なリソースパターンを使用
 
-- ✅ **Separate Policies by Environment**:
-  - Development services should NOT access production secrets
-  - Use project namespacing (e.g., `myproject:dev/*`, `myproject:prod/*`)
+- ✅ **環境別のポリシー分離**:
+  - 開発サービスは本番シークレットにアクセスすべきでない
+  - プロジェクトネームスペースを使用 (例: `myproject:dev/*`, `myproject:prod/*`)
 
-### 4. Network Security
+### 4. ネットワークセキュリティ
 
-- ✅ **Use HTTPS in Production**:
-  - Configure reverse proxy (nginx, Traefik) with TLS
-  - Enforce `https://` scheme in `MYVAULT_BASE_URL`
+- ✅ **本番環境ではHTTPSを使用**:
+  - リバースプロキシ (nginx, Traefik) でTLSを設定
+  - `MYVAULT_BASE_URL`で`https://`スキームを強制
 
-- ✅ **Restrict Network Access**:
-  - Docker networks should isolate services
-  - Firewall rules should block external access to MyVault port
+- ✅ **ネットワークアクセスの制限**:
+  - Dockerネットワークでサービスを隔離
+  - ファイアウォールルールでMyVaultポートへの外部アクセスをブロック
 
-### 5. Audit & Monitoring
+### 5. 監査・モニタリング
 
-- ✅ **Enable Audit Logging**:
+- ✅ **監査ログの有効化**:
   ```yaml
   # config.yaml
   audit:
@@ -508,61 +508,61 @@ curl -X PATCH http://localhost:8000/api/secrets/myproject/OPENAI_API_KEY \
     retention_days: 90
   ```
 
-- ✅ **Monitor for Anomalies**:
-  - Failed authentication attempts
-  - Unusual access patterns
-  - Secrets accessed by unauthorized services
+- ✅ **異常の監視**:
+  - 認証失敗の試行
+  - 異常なアクセスパターン
+  - 未承認サービスによるシークレットへのアクセス
 
 ---
 
-## 🧪 Testing & Validation
+## 🧪 テスト・検証
 
-### Health Check
+### ヘルスチェック
 
 ```bash
 curl http://localhost:8000/health
-# Expected: {"status":"healthy","service":"myVault"}
+# 期待値: {"status":"healthy","service":"myVault"}
 ```
 
-### Authentication Test
+### 認証テスト
 
 ```bash
 curl -X POST http://localhost:8000/api/secrets/test \
   -H "X-Service: expertagent" \
   -H "X-Token: <service-token>"
-# Expected: {"status":"ok","message":"Authentication successful for service 'expertagent'"}
+# 期待値: {"status":"ok","message":"Authentication successful for service 'expertagent'"}
 ```
 
-### Integration Test (Python)
+### 統合テスト (Python)
 
 ```python
 import pytest
 from core.secrets import secrets_manager
 
 def test_myvault_integration():
-    # Test secret retrieval
+    # シークレット取得のテスト
     api_key = secrets_manager.get_secret("OPENAI_API_KEY", project="test")
     assert api_key is not None
     assert len(api_key) > 0
 
-    # Test caching (second call should be faster)
+    # キャッシングのテスト (2回目の呼び出しは高速であるべき)
     import time
     start = time.time()
     api_key_cached = secrets_manager.get_secret("OPENAI_API_KEY", project="test")
     elapsed = time.time() - start
 
     assert api_key == api_key_cached
-    assert elapsed < 0.01  # Cached retrieval should be < 10ms
+    assert elapsed < 0.01  # キャッシュ取得は10ms未満であるべき
 ```
 
 ---
 
-## 📚 Common Integration Patterns
+## 📚 一般的な統合パターン
 
-### Pattern 1: Direct Retrieval (Simple)
+### パターン1: 直接取得 (シンプル)
 
 ```python
-# Use for: One-time secret lookup during initialization
+# 用途: 初期化時の1回限りのシークレット検索
 from core.myvault_client import MyVaultClient
 
 client = MyVaultClient(
@@ -573,20 +573,20 @@ client = MyVaultClient(
 api_key = client.get_secret("myproject", "OPENAI_API_KEY")
 ```
 
-### Pattern 2: Unified Secrets Manager (Recommended)
+### パターン2: 統合シークレットマネージャー (推奨)
 
 ```python
-# Use for: Fallback to environment variables, caching support
+# 用途: 環境変数へのフォールバック、キャッシュサポート
 from core.secrets import secrets_manager
 
 api_key = secrets_manager.get_secret("OPENAI_API_KEY", project="myproject")
-# Automatically tries MyVault first, falls back to os.getenv()
+# 自動的にまずMyVaultを試行し、次にos.getenv()にフォールバック
 ```
 
-### Pattern 3: Lazy Loading with Settings
+### パターン3: Settingsでの遅延ロード
 
 ```python
-# Use for: Pydantic settings with MyVault integration
+# 用途: MyVault統合を持つPydantic settings
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from core.secrets import secrets_manager
@@ -596,38 +596,38 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Override with MyVault if available
+        # MyVaultが利用可能な場合はオーバーライド
         if not self.OPENAI_API_KEY:
             try:
                 self.OPENAI_API_KEY = secrets_manager.get_secret("OPENAI_API_KEY")
             except ValueError:
-                pass  # Use default from environment
+                pass  # 環境変数のデフォルト値を使用
 
 settings = Settings()
 ```
 
 ---
 
-## 🔄 Secret Rotation Workflow
+## 🔄 シークレットローテーションワークフロー
 
-### Manual Rotation
+### 手動ローテーション
 
 ```bash
-# 1. Generate new secret (e.g., new API key from external service)
+# 1. 新しいシークレットを生成 (例: 外部サービスからの新APIキー)
 NEW_API_KEY="sk-new-openai-key-789"
 
-# 2. Update in MyVault
+# 2. MyVaultで更新
 curl -X PATCH http://localhost:8000/api/secrets/myproject/OPENAI_API_KEY \
   -H "Content-Type: application/json" \
   -H "X-Service: commonui" \
   -H "X-Token: <admin-token>" \
   -d "{\"value\":\"$NEW_API_KEY\"}"
 
-# 3. Restart dependent services (or wait for cache TTL expiration)
+# 3. 依存サービスを再起動 (またはキャッシュTTL期限を待つ)
 docker-compose restart expertagent
 ```
 
-### Automated Rotation (Python Example)
+### 自動ローテーション (Python実装例)
 
 ```python
 import schedule
@@ -636,114 +636,114 @@ from core.myvault_client import MyVaultClient
 from external_api import generate_new_api_key
 
 def rotate_api_key():
-    """Rotate API key every 90 days."""
+    """90日ごとにAPIキーをローテーション"""
     client = MyVaultClient(...)
 
-    # 1. Generate new key from external service
+    # 1. 外部サービスから新キーを生成
     new_key = generate_new_api_key()
 
-    # 2. Update in MyVault
+    # 2. MyVaultで更新
     client.update_secret("myproject", "OPENAI_API_KEY", new_key)
 
-    # 3. Notify monitoring
-    print(f"✅ API key rotated at {time.ctime()}")
+    # 3. モニタリングに通知
+    print(f"✅ APIキーをローテーション: {time.ctime()}")
 
-# Schedule rotation every 90 days
+# 90日ごとにローテーションをスケジュール
 schedule.every(90).days.do(rotate_api_key)
 
 while True:
     schedule.run_pending()
-    time.sleep(86400)  # Check daily
+    time.sleep(86400)  # 毎日チェック
 ```
 
 ---
 
-## 🚨 Troubleshooting
+## 🚨 トラブルシューティング
 
-### Error: "[Errno 61] Connection refused"
+### エラー: "[Errno 61] Connection refused"
 
-**Cause**: MyVault service is not running or wrong port configured.
+**原因**: MyVaultサービスが起動していないか、ポート設定が間違っている
 
-**Solution**:
+**解決策**:
 ```bash
-# 1. Check MyVault is running
+# 1. MyVaultが起動しているか確認
 curl http://localhost:8003/health  # dev-start.sh
 curl http://localhost:8103/health  # quick-start.sh
 
-# 2. Check environment variable
+# 2. 環境変数を確認
 echo $MYVAULT_BASE_URL
 
-# 3. Restart MyVault
+# 3. MyVaultを再起動
 docker-compose restart myvault  # Docker
 ./scripts/restart-myvault.sh    # dev-start.sh
 ```
 
-### Error: "403 Forbidden - Service does not have access"
+### エラー: "403 Forbidden - Service does not have access"
 
-**Cause**: Service lacks RBAC permissions for requested resource.
+**原因**: サービスが要求されたリソースへのRBACアクセス権限を持っていない
 
-**Solution**:
+**解決策**:
 ```bash
-# 1. Check service roles in config.yaml
+# 1. config.yamlでサービスのロールを確認
 cat myVault/config.yaml | grep -A 5 "name: expertagent"
 
-# 2. Add required policy
-# Edit myVault/config.yaml and add/modify roles
+# 2. 必要なポリシーを追加
+# myVault/config.yamlを編集してロールを追加/修正
 
-# 3. Restart MyVault to reload config
+# 3. 設定を再読み込みするためMyVaultを再起動
 ./scripts/restart-myvault.sh
 ```
 
-### Error: "401 Unauthorized - Invalid service token"
+### エラー: "401 Unauthorized - Invalid service token"
 
-**Cause**: Token mismatch between consumer and MyVault.
+**原因**: 消費サービスとMyVault間でトークンが一致していない
 
-**Solution**:
+**解決策**:
 ```bash
-# 1. Verify token in consumer service
+# 1. 消費サービスのトークンを確認
 cat expertAgent/.env | grep MYVAULT_SERVICE_TOKEN
 
-# 2. Verify token in MyVault server
+# 2. MyVaultサーバーのトークンを確認
 cat myVault/.env | grep MYVAULT_TOKEN_EXPERTAGENT
 
-# 3. Ensure tokens match (update if necessary)
-# 4. Restart both services
+# 3. トークンが一致することを確認 (必要に応じて更新)
+# 4. 両サービスを再起動
 ```
 
 ---
 
-## 📖 Related Documentation
+## 📖 関連ドキュメント
 
 - **MyVault README**: [`myVault/README.md`](../../myVault/README.md)
-- **Architecture Overview**: [`docs/design/architecture-overview.md`](./architecture-overview.md)
-- **Environment Variables**: [`docs/design/environment-variables.md`](./environment-variables.md)
-- **Docker Guide**: [`docs/guide/DOCKER_GUIDE.md`](../guide/DOCKER_GUIDE.md)
-- **Development Guide**: [`docs/guide/DEVELOPMENT_GUIDE.md`](../guide/DEVELOPMENT_GUIDE.md)
+- **アーキテクチャ概要**: [`docs/design/architecture-overview.md`](./architecture-overview.md)
+- **環境変数一覧**: [`docs/design/environment-variables.md`](./environment-variables.md)
+- **Dockerガイド**: [`docs/guide/DOCKER_GUIDE.md`](../guide/DOCKER_GUIDE.md)
+- **開発ガイド**: [`docs/guide/DEVELOPMENT_GUIDE.md`](../guide/DEVELOPMENT_GUIDE.md)
 
 ---
 
-## ✅ Compliance Checklist
+## ✅ コンプライアンスチェックリスト
 
-Before deploying a new service with MyVault integration:
+新サービスをMyVault統合でデプロイする前に:
 
-- [ ] Service name added to `myVault/config.yaml` (services section)
-- [ ] RBAC policy defined with appropriate permissions
-- [ ] Service token generated securely and added to `myVault/.env`
-- [ ] Consumer service configured with required environment variables
-- [ ] Client code implemented (MyVaultClient or SecretsManager)
-- [ ] Unit tests written for MyVault integration
-- [ ] Integration tests verified in local development
-- [ ] Health check endpoint tested (`/health`)
-- [ ] Authentication tested (`/api/secrets/test`)
-- [ ] Secret retrieval tested for all required secrets
-- [ ] Error handling implemented for MyVault unavailability
-- [ ] Fallback to environment variables verified
-- [ ] Cache TTL configured appropriately
-- [ ] Documentation updated (README, .env.example)
-- [ ] Security review completed (token management, permissions)
-- [ ] Deployment tested in Docker Compose environment
+- [ ] `myVault/config.yaml`のservicesセクションにサービス名を追加
+- [ ] 適切な権限を持つRBACポリシーを定義
+- [ ] サービストークンを安全に生成し`myVault/.env`に追加
+- [ ] 必須の環境変数で消費サービスを設定
+- [ ] クライアントコード (MyVaultClientまたはSecretsManager) を実装
+- [ ] MyVault統合の単体テストを作成
+- [ ] ローカル開発環境で統合テストを検証
+- [ ] ヘルスチェックエンドポイント (`/health`) をテスト
+- [ ] 認証 (`/api/secrets/test`) をテスト
+- [ ] 必要な全シークレットの取得をテスト
+- [ ] MyVault利用不可時のエラーハンドリングを実装
+- [ ] 環境変数へのフォールバックを検証
+- [ ] キャッシュTTLを適切に設定
+- [ ] ドキュメント (README, .env.example) を更新
+- [ ] セキュリティレビューを完了 (トークン管理、権限)
+- [ ] Docker Compose環境でデプロイをテスト
 
 ---
 
-**Maintained by**: MySwiftAgent Core Team
-**Questions**: Open an issue in the main repository
+**管理者**: MySwiftAgentコアチーム
+**質問**: メインリポジトリでissueを開く
