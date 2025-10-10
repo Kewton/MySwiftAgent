@@ -22,26 +22,29 @@ def generate_podcast_mp3_and_upload(
         str: Google Driveへのアップロード結果を示すメッセージまたはファイルURL。
     """
     logger.info("generate_podcast_mp3_and_uploadを実行します")
-    print(f"Generating script for MP3 with model: {model_name}")  # デバッグ用
+    logger.info(f"Generating script for MP3 with model: {model_name}")
+    logger.debug(f"Topic details length: {len(topic_details)}, Subject max length: {subject_max_length}")
+
     # 1. 台本生成
     script = generate_podcast_script(model_name=model_name, input_info=topic_details)
 
     if not script or not isinstance(script, str) or len(script.strip()) == 0:
+        logger.error("台本の生成に失敗したか、内容が空です")
         return "エラー: 台本の生成に失敗したか、内容が空です。"
 
-    print(f"Script generated, length: {len(script)}")  # デバッグ用
+    logger.info(f"Script generated successfully, length: {len(script)}")
 
     # 2. 件名生成
     subject = generate_subject_from_text(script, subject_max_length)
-    print(f"Subject generated: {subject}")  # デバッグ用
+    logger.info(f"Subject generated: {subject}")
 
     # 3. 音声化とアップロード
     try:
         upload_result = tts_and_upload_drive(subject, script)
-        print(f"TTS and upload result: {upload_result}")  # デバッグ用
+        logger.info(f"TTS and upload completed: {upload_result}")
         return upload_result
     except Exception as e:
-        print(f"Error during TTS/Upload: {e}")  # エラーログ
+        logger.error(f"Error during TTS/Upload: {e}", exc_info=True)
         return f"エラー: 音声化またはアップロード中に問題が発生しました - {e}"
 
 

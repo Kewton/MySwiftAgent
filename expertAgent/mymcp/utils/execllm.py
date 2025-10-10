@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import google.generativeai as genai
@@ -6,6 +7,8 @@ from openai import OpenAI
 from app.schemas.standardAiAgent import ChatMessage
 from core.secrets import secrets_manager
 from mymcp.utils.chatollama import chatOllama
+
+logger = logging.getLogger(__name__)
 
 # Lazy initialization - clients are created when first used
 _chatgpt_client = None
@@ -16,8 +19,10 @@ def get_chatgpt_client() -> OpenAI:
     """Get or create OpenAI client with API key from SecretsManager."""
     global _chatgpt_client
     if _chatgpt_client is None:
+        logger.info("Initializing OpenAI client")
         api_key = secrets_manager.get_secret("OPENAI_API_KEY")
         _chatgpt_client = OpenAI(api_key=api_key)
+        logger.debug("OpenAI client initialized successfully")
     return _chatgpt_client
 
 
@@ -25,9 +30,11 @@ def configure_genai() -> None:
     """Configure Google Generative AI with API key from SecretsManager."""
     global _genai_configured
     if not _genai_configured:
+        logger.info("Configuring Google Generative AI")
         api_key = secrets_manager.get_secret("GOOGLE_API_KEY")
         genai.configure(api_key=api_key)
         _genai_configured = True
+        logger.debug("Google Generative AI configured successfully")
 
 
 def isChatGptAPI(_selected_model):
@@ -72,7 +79,7 @@ def buildInpurtMessages(_messages, encoded_file):
             _systemrole = _rec["content"]
         elif _rec["role"] == "user":
             if len(encoded_file) > 0:
-                print("append image")
+                logger.debug("Appending image to message content")
                 _content = []
                 _content.append(
                     {
@@ -116,24 +123,37 @@ def buildInpurtMessagesForGemini(_messages: List[ChatMessage]):
 
 
 def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
+    logger.info(f"Executing LLM API call with model: {_selected_model}")
+    logger.debug(f"Number of messages: {len(_messages)}")
+
     if isChatGptAPI(_selected_model) or isChatGPT_o(_selected_model):
+        logger.info(f"Using ChatGPT API with model: {_selected_model}")
         client = get_chatgpt_client()
         response = client.chat.completions.create(
             model=_selected_model, messages=_messages
         )
-        return response.choices[0].message.content
+        result = response.choices[0].message.content
+        logger.info(f"ChatGPT API call completed successfully. Response length: {len(result) if result else 0}")
+        return result
 
     elif isGemini(_selected_model):
+        logger.info(f"Using Google Gemini API with model: {_selected_model}")
         configure_genai()
         _inpurt_messages, _systemrole = buildInpurtMessagesForGemini(_messages)
+        logger.debug(f"System instruction length: {len(_systemrole) if _systemrole else 0}")
         # モデル名を有効なものにすること！ (例: "gemini-1.5-flash-latest")
         model = genai.GenerativeModel(
             model_name=_selected_model,  # ★★★ モデル名を有効なものに！ ★★★
             system_instruction=_systemrole,
         )
         response = model.generate_content(_inpurt_messages)
-        return response.text
+        result = response.text
+        logger.info(f"Gemini API call completed successfully. Response length: {len(result) if result else 0}")
+        return result
 
     else:
         # Ollama APIを使用してチャットを行う関数
-        return chatOllama(_messages, _selected_model)
+        logger.info(f"Using Ollama API with model: {_selected_model}")
+        result = chatOllama(_messages, _selected_model)
+        logger.info(f"Ollama API call completed successfully. Response length: {len(result) if result else 0}")
+        return result

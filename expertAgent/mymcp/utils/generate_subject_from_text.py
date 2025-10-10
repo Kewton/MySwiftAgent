@@ -1,7 +1,10 @@
 from core.config import settings
+from core.logger import getlogger
 
 # import google.generativeai as genai
 from mymcp.utils.execllm import execLlmApi
+
+logger = getlogger()
 
 # def getmodel():
 #     # --- 1. APIクライアントの準備 ---
@@ -79,8 +82,8 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
 
         # 必要に応じてさらに後処理 (例: 長すぎる場合の切り詰め)
         if len(generated_subject) > max_length * 1.5:  # 多少のオーバーは許容
-            print(
-                f"Warning: Generated subject is longer than expected ({len(generated_subject)} chars). Truncating."
+            logger.warning(
+                f"Generated subject is longer than expected ({len(generated_subject)} chars). Truncating."
             )
             # 単純に切り詰めるか、再度生成を試みるかなどの戦略が必要
             generated_subject = generated_subject[:max_length] + "..."
@@ -92,7 +95,7 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
         return generated_subject
 
     except Exception as e:
-        print(f"件名生成中にエラーが発生しました: {e}")
+        logger.error(f"Error during subject generation: {e}", exc_info=True)
         # response オブジェクトが存在すれば、ブロック理由などを確認できる場合がある
         # try:
         #     if response and response.prompt_feedback:

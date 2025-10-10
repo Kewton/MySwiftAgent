@@ -1,5 +1,8 @@
 from core.config import settings
+from core.logger import getlogger
 from mymcp.utils.execllm import execLlmApi
+
+logger = getlogger()
 
 
 def extract_knowledge_from_text(
@@ -31,7 +34,7 @@ def extract_knowledge_from_text(
 
     result = execLlmApi(_model, _messages)
 
-    print("@extract_knowledge_from_text:")
-    print(result)
+    logger.info("Knowledge extraction completed")
+    logger.debug(f"Extracted knowledge (length: {len(result) if result else 0}): {result[:200] if result and len(result) > 200 else result}")
 
     return result
