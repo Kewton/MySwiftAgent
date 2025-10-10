@@ -361,6 +361,16 @@ def render_secrets_section():
     """Render secrets section for selected project."""
     selected_project = st.session_state.myvault_selected_project
 
+    # Auto-select default project if none is selected
+    if not selected_project and st.session_state.myvault_projects:
+        default_project = next(
+            (p for p in st.session_state.myvault_projects if p.get("is_default", False)),
+            st.session_state.myvault_projects[0] if st.session_state.myvault_projects else None,
+        )
+        if default_project:
+            st.session_state.myvault_selected_project = default_project["name"]
+            selected_project = default_project["name"]
+
     if not selected_project:
         st.info("👆 Select a project above to view and manage its secrets.")
         return
@@ -808,6 +818,16 @@ def handle_oauth2_callback():
 def render_google_auth_section():
     """Render Google authentication management section."""
     selected_project = st.session_state.myvault_selected_project
+
+    # Auto-select default project if none is selected
+    if not selected_project and st.session_state.myvault_projects:
+        default_project = next(
+            (p for p in st.session_state.myvault_projects if p.get("is_default", False)),
+            st.session_state.myvault_projects[0] if st.session_state.myvault_projects else None,
+        )
+        if default_project:
+            st.session_state.myvault_selected_project = default_project["name"]
+            selected_project = default_project["name"]
 
     if not selected_project:
         st.info("👆 Select a project in the 'Projects' tab to manage Google authentication.")
