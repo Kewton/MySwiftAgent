@@ -1150,7 +1150,9 @@ git push
 - 🪝 **Pre-commit Hooks設定**: `.pre-commit-config.yaml`
 
 # 開発における制約条件
-- 品質担保方針に従うこと
-- Claude Code 利用時のルールに従うこと
-- アーキテクチャおよび設計ポリシーは、./docs/design/*.md に従うこと
-- ./scripts/pre-push-check.sh にて合格していること
+- [ ] 本ドキュメントの品質担保方針に従うこと
+- [ ] Claude Code 利用時のルールに従うこと
+- [ ] アーキテクチャは、 ./docs/design/architecture-overview.md に従うこと
+- [ ] システムで管理すべきパラメータは環境変数で管理するものとし、使用方法は、 ./docs/design/environment-variables.md に従うこと
+- [ ] ユーザーが管理すべきパラメータはmyVaultで管理するものとし、使用方法は、./docs/design/myvault-integration.md に従うこと
+- [ ] ./scripts/pre-push-check.sh にて合格したものをコミットすること
