@@ -30,24 +30,36 @@ try:
         f.write(f"LOG_LEVEL env: {os.getenv('LOG_LEVEL')}\n")
 
         # MyVault関連の環境変数確認
-        f.write(f"\n=== MyVault Environment Variables ===\n")
+        f.write("\n=== MyVault Environment Variables ===\n")
         f.write(f"MYVAULT_ENABLED: {os.getenv('MYVAULT_ENABLED')}\n")
         f.write(f"MYVAULT_BASE_URL: {os.getenv('MYVAULT_BASE_URL')}\n")
         f.write(f"MYVAULT_SERVICE_NAME: {os.getenv('MYVAULT_SERVICE_NAME')}\n")
-        f.write(f"MYVAULT_SERVICE_TOKEN: {'*' * 10 if os.getenv('MYVAULT_SERVICE_TOKEN') else 'EMPTY'}\n")
+        f.write(
+            f"MYVAULT_SERVICE_TOKEN: {'*' * 10 if os.getenv('MYVAULT_SERVICE_TOKEN') else 'EMPTY'}\n"
+        )
 
         # Google APIs関連の環境変数確認
-        f.write(f"\n=== Google APIs Environment Variables ===\n")
-        f.write(f"GOOGLE_APIS_DEFAULT_PROJECT: {os.getenv('GOOGLE_APIS_DEFAULT_PROJECT')}\n")
-        f.write(f"GOOGLE_API_KEY: {'*' * 10 if os.getenv('GOOGLE_API_KEY') else 'EMPTY'}\n")
+        f.write("\n=== Google APIs Environment Variables ===\n")
+        f.write(
+            f"GOOGLE_APIS_DEFAULT_PROJECT: {os.getenv('GOOGLE_APIS_DEFAULT_PROJECT')}\n"
+        )
+        f.write(
+            f"GOOGLE_API_KEY: {'*' * 10 if os.getenv('GOOGLE_API_KEY') else 'EMPTY'}\n"
+        )
 
         # その他のAPI Key確認
-        f.write(f"\n=== Other API Keys ===\n")
-        f.write(f"OPENAI_API_KEY: {'*' * 10 if os.getenv('OPENAI_API_KEY') else 'EMPTY'}\n")
-        f.write(f"ANTHROPIC_API_KEY: {'*' * 10 if os.getenv('ANTHROPIC_API_KEY') else 'EMPTY'}\n")
-        f.write(f"SERPER_API_KEY: {'*' * 10 if os.getenv('SERPER_API_KEY') else 'EMPTY'}\n")
+        f.write("\n=== Other API Keys ===\n")
+        f.write(
+            f"OPENAI_API_KEY: {'*' * 10 if os.getenv('OPENAI_API_KEY') else 'EMPTY'}\n"
+        )
+        f.write(
+            f"ANTHROPIC_API_KEY: {'*' * 10 if os.getenv('ANTHROPIC_API_KEY') else 'EMPTY'}\n"
+        )
+        f.write(
+            f"SERPER_API_KEY: {'*' * 10 if os.getenv('SERPER_API_KEY') else 'EMPTY'}\n"
+        )
 
-        f.write(f"\n=== End of Environment Variables Check ===\n\n")
+        f.write("\n=== End of Environment Variables Check ===\n\n")
 except Exception:
     # デバッグ出力失敗は無視（本番動作に影響させない）
     pass
@@ -65,7 +77,7 @@ setup_logging(log_file_name=mcp_log_file)
 
 try:
     with open(debug_trace_file, "a") as f:
-        f.write(f"setup_logging() completed successfully\n")
+        f.write("setup_logging() completed successfully\n")
 except Exception:
     pass
 

@@ -15,9 +15,11 @@ class TestGetProjectName:
     def test_get_project_name_with_none(self):
         """Test get_project_name with None returns 'default' or settings value."""
         with patch("core.google_creds.settings") as mock_settings:
-            mock_settings.MYVAULT_DEFAULT_PROJECT = "default"
-            result = get_project_name(None)
-            assert result == "default"
+            with patch("core.google_creds.secrets_manager") as mock_sm:
+                mock_settings.MYVAULT_DEFAULT_PROJECT = "default"
+                mock_sm.myvault_client = None  # No MyVault client
+                result = get_project_name(None)
+                assert result == "default"
 
     def test_get_project_name_with_value(self):
         """Test get_project_name with a value returns that value."""
@@ -35,7 +37,7 @@ class TestGoogleCredsManager:
     def test_initialization(self, manager):
         """Test GoogleCredsManager initialization."""
         assert manager is not None
-        assert manager._fernet is None
+        assert manager._fernet_cache == {}
         assert manager._current_project is None
 
     def test_get_token_path_not_exists(self, manager):
@@ -157,10 +159,11 @@ class TestGoogleCredsManager:
 
     def test_complete_oauth2_flow_invalid_state(self, manager):
         """Test complete_oauth2_flow with invalid state."""
-        result = manager.complete_oauth2_flow(
+        success, project_name = manager.complete_oauth2_flow(
             state="invalid_state", code="auth_code", project="test"
         )
-        assert result is False
+        assert success is False
+        assert project_name == ""
 
     def test_complete_oauth2_flow_success(self, manager):
         """Test complete_oauth2_flow success case."""
@@ -179,11 +182,12 @@ class TestGoogleCredsManager:
         }
 
         with patch.object(manager, "save_token", return_value=True):
-            result = manager.complete_oauth2_flow(
+            success, project_name = manager.complete_oauth2_flow(
                 state="state123", code="auth_code", project="test"
             )
 
-            assert result is True
+            assert success is True
+            assert project_name == "test"
             mock_flow.fetch_token.assert_called_once_with(code="auth_code")
             assert "state123" not in manager._oauth_flows  # Cleaned up
 
@@ -203,11 +207,12 @@ class TestGoogleCredsManager:
         }
 
         with patch.object(manager, "save_token", return_value=False):
-            result = manager.complete_oauth2_flow(
+            success, project_name = manager.complete_oauth2_flow(
                 state="state123", code="auth_code", project="test"
             )
 
-            assert result is False
+            assert success is False
+            assert project_name == "test"
 
     def test_switch_project_success(self, manager):
         """Test switch_project success case."""
@@ -436,8 +441,8 @@ class TestGoogleCredsManager:
             }
         }
 
-        result = manager.complete_oauth2_flow(
+        success, project_name = manager.complete_oauth2_flow(
             state="state123", code="auth_code", project="test"
         )
 
-        assert result is False
+        assert success is False

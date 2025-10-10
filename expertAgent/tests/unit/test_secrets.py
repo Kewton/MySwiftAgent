@@ -186,6 +186,9 @@ class TestSecretsManager:
 
     def test_resolve_default_project_from_env(self, manager_with_myvault):
         """Test _resolve_default_project from environment variable."""
+        # Mock API to return None so it falls back to env var
+        manager_with_myvault.myvault_client.get_default_project.return_value = None
+
         with patch.object(
             manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", "env-project"
         ):
@@ -209,7 +212,7 @@ class TestSecretsManager:
         manager_with_myvault.myvault_client = None
 
         with patch.object(manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", ""):
-            with pytest.raises(MyVaultError, match="MyVault client not initialized"):
+            with pytest.raises(MyVaultError, match="No default project found in MyVault or environment variables"):
                 manager_with_myvault._resolve_default_project()
 
     def test_resolve_default_project_not_found_raises_error(self, manager_with_myvault):
@@ -217,7 +220,7 @@ class TestSecretsManager:
         manager_with_myvault.myvault_client.get_default_project.return_value = None
 
         with patch.object(manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", ""):
-            with pytest.raises(MyVaultError, match="No default project found in MyVault"):
+            with pytest.raises(MyVaultError, match="No default project found in MyVault or environment variables"):
                 manager_with_myvault._resolve_default_project()
 
     def test_get_all_env_secrets(self, manager_without_myvault):

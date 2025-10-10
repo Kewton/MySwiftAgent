@@ -3,10 +3,10 @@ import os
 from mcp.server.fastmcp import FastMCP
 
 from core.config import settings
+from core.logger import setup_logging
 from mymcp.googleapis.gmail.send import send_email
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
-from core.logger import setup_logging
 
 # デバッグ: MCPサブプロセス起動を記録（stdio通信と干渉しないように stderr へ）
 debug_trace_file = "/tmp/mcp_stdio_debug.log"
@@ -16,7 +16,7 @@ try:
         f.write(f"MCP_LOG_FILE env: {os.getenv('MCP_LOG_FILE')}\n")
         f.write(f"LOG_DIR env: {os.getenv('LOG_DIR')}\n")
         f.write(f"LOG_LEVEL env: {os.getenv('LOG_LEVEL')}\n")
-except Exception as e:
+except Exception:
     # デバッグ出力失敗は無視（本番動作に影響させない）
     pass
 
@@ -33,7 +33,7 @@ setup_logging(log_file_name=mcp_log_file)
 
 try:
     with open(debug_trace_file, "a") as f:
-        f.write(f"setup_logging() completed successfully\n")
+        f.write("setup_logging() completed successfully\n")
 except Exception:
     pass
 
@@ -90,6 +90,7 @@ async def tts_and_upload_drive_tool(input_message: str, file_name: str) -> str:
 
 if __name__ == "__main__":
     import logging
+
     logger = logging.getLogger(__name__)
     logger.debug("Starting myMcp with stdio transport")
     mcp.run(transport="stdio")

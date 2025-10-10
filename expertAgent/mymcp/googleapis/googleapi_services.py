@@ -11,7 +11,6 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from core.config import settings
 from core.google_creds import SCOPES, get_project_name, google_creds_manager
 
 logger = logging.getLogger(__name__)

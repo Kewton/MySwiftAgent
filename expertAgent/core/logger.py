@@ -23,15 +23,19 @@ def setup_logging(log_file_name: str = "app.log"):
     debug_trace_file = "/tmp/mcp_stdio_debug.log"
     try:
         with open(debug_trace_file, "a") as f:
-            f.write(f"[logger.py] setup_logging() called with log_file_name='{log_file_name}'\n")
-            f.write(f"[logger.py] logging_setup_done={logging_setup_done}, PID={os.getpid()}\n")
+            f.write(
+                f"[logger.py] setup_logging() called with log_file_name='{log_file_name}'\n"
+            )
+            f.write(
+                f"[logger.py] logging_setup_done={logging_setup_done}, PID={os.getpid()}\n"
+            )
     except Exception:
         pass
 
     if logging_setup_done:
         try:
             with open(debug_trace_file, "a") as f:
-                f.write(f"[logger.py] Skipping setup (already done)\n")
+                f.write("[logger.py] Skipping setup (already done)\n")
         except Exception:
             pass
         return  # すでに実行済みなら何もしない
@@ -106,7 +110,7 @@ def setup_logging(log_file_name: str = "app.log"):
     # デバッグトレース
     try:
         with open(debug_trace_file, "a") as f:
-            f.write(f"[logger.py] Log config applied successfully\n")
+            f.write("[logger.py] Log config applied successfully\n")
             f.write(f"[logger.py] Main log: {main_log_path}\n")
             f.write(f"[logger.py] Error log: {error_log_path}\n")
     except Exception:

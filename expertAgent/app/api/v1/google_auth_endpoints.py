@@ -180,7 +180,9 @@ async def oauth2_callback(
     try:
         # Get the token that was just saved
         token_path = google_creds_manager.get_token_path(project_name)
-        logger.info(f"DEBUG: token_path={token_path}, myvault_client={secrets_manager.myvault_client}")
+        logger.info(
+            f"DEBUG: token_path={token_path}, myvault_client={secrets_manager.myvault_client}"
+        )
 
         if token_path and secrets_manager.myvault_client:
             with open(token_path) as f:
@@ -192,7 +194,9 @@ async def oauth2_callback(
             )
             logger.info(f"Token auto-saved to MyVault for project: {project_name}")
         else:
-            logger.warning(f"DEBUG: Auto-save skipped - token_path={token_path is not None}, myvault_client={secrets_manager.myvault_client is not None}")
+            logger.warning(
+                f"DEBUG: Auto-save skipped - token_path={token_path is not None}, myvault_client={secrets_manager.myvault_client is not None}"
+            )
     except Exception as e:
         # Non-fatal: token is saved locally, MyVault save failed
         logger.warning(f"Failed to auto-save token to MyVault: {e}")

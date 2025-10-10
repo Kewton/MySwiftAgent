@@ -83,7 +83,7 @@ class TestGoogleAuthEndpoints:
         """Test OAuth2 callback endpoint - success case."""
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
             with patch("app.api.v1.google_auth_endpoints.secrets_manager") as mock_sm:
-                mock_gcm.complete_oauth2_flow.return_value = True
+                mock_gcm.complete_oauth2_flow.return_value = (True, "test")
                 mock_gcm.get_token_path.return_value = "/tmp/token.json"
                 mock_sm.myvault_client = MagicMock()
 
@@ -106,7 +106,7 @@ class TestGoogleAuthEndpoints:
     def test_oauth2_callback_flow_failure(self, client, mock_admin_token):
         """Test OAuth2 callback endpoint - flow completion failure."""
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
-            mock_gcm.complete_oauth2_flow.return_value = False
+            mock_gcm.complete_oauth2_flow.return_value = (False, "test")
 
             response = client.post(
                 "/v1/google-auth/oauth2-callback",
@@ -121,7 +121,7 @@ class TestGoogleAuthEndpoints:
         """Test OAuth2 callback endpoint - MyVault save error (non-fatal)."""
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
             with patch("app.api.v1.google_auth_endpoints.secrets_manager") as mock_sm:
-                mock_gcm.complete_oauth2_flow.return_value = True
+                mock_gcm.complete_oauth2_flow.return_value = (True, "test")
                 mock_gcm.get_token_path.return_value = "/tmp/token.json"
 
                 # MyVault client exists but update fails
@@ -313,8 +313,11 @@ class TestGoogleAuthEndpoints:
                 headers={"X-Admin-Token": mock_admin_token},
             )
 
-            assert response.status_code == 500
-            assert "Failed to sync from MyVault" in response.json()["detail"]
+            assert response.status_code == 404
+            assert (
+                "GOOGLE_CREDENTIALS_JSON not found in MyVault"
+                in response.json()["detail"]
+            )
 
     def test_list_projects_success(self, client, mock_admin_token):
         """Test list projects endpoint - success."""
