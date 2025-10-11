@@ -6,12 +6,14 @@ JobQueueとMyScheduler向けの統一されたWeb UIを通じて、直感的な�
 ## ✨ 特徴
 
 - 🚀 **Streamlit**: 高速なプロトタイピングと直感的なUI
-- 🔄 **Multi-Service**: JobQueueとMyScheduler両方に対応
+- 🔄 **Multi-Service**: JobQueue、MyScheduler、MyVault全てに対応
+- 🔐 **MyVault統合**: シークレット管理・キャッシュリロード・認証設定
 - 🛡️ **堅牢性**: エラーハンドリング、リトライ処理、通知システム
 - 🔧 **設定管理**: 環境変数とStreamlit Secretsによる柔軟な設定
 - 📱 **レスポンシブ**: サイドバーベースの使いやすいレイアウト
 - 📊 **リアルタイム**: 実行履歴の自動更新とライブモニタリング
 - 🎯 **実行制御**: Trigger Now機能による即座のジョブ実行
+- 🧪 **テストカバレッジ**: MyVault認証含む包括的なテスト (7 tests)
 
 ## 📦 プロジェクト構成
 
@@ -20,7 +22,8 @@ commonUI/
 ├── Home.py                # Streamlitメインアプリ（ホーム画面）
 ├── pages/                 # マルチページアプリのページ群
 │   ├── 1_📋_JobQueue.py   # JobQueue管理画面
-│   └── 2_⏰_MyScheduler.py # MyScheduler管理画面
+│   ├── 2_⏰_MyScheduler.py # MyScheduler管理画面
+│   └── 3_🔐_MyVault.py    # 🆕 MyVault管理画面（シークレット管理）
 ├── components/            # 共通UIコンポーネント
 │   ├── sidebar.py         # サイドバー設定
 │   ├── http_client.py     # HTTPクライアントとリトライ処理
@@ -72,6 +75,19 @@ JOBQUEUE_API_TOKEN=your-jobqueue-token
 MYSCHEDULER_BASE_URL=http://localhost:8003
 MYSCHEDULER_API_TOKEN=your-myscheduler-token
 
+# MyVault API設定（シークレット管理）
+MYVAULT_BASE_URL=http://localhost:8105
+MYVAULT_SERVICE_NAME=commonUI
+MYVAULT_SERVICE_TOKEN=your-service-token
+
+# ExpertAgent API設定（シークレットキャッシュリロード）
+EXPERTAGENT_BASE_URL=http://localhost:8103
+EXPERTAGENT_ADMIN_TOKEN=your-admin-token
+
+# GraphAiServer API設定（シークレットキャッシュリロード）
+GRAPHAISERVER_BASE_URL=http://localhost:8100
+GRAPHAISERVER_ADMIN_TOKEN=your-admin-token
+
 # UI設定
 POLLING_INTERVAL=5
 DEFAULT_SERVICE=JobQueue
@@ -113,6 +129,39 @@ uv run streamlit run Home.py
 - ジョブ定義・実行結果表示
 - キャンセル・再実行操作
 - Live更新（ポーリング）
+
+### MyVault管理画面 🆕
+
+#### シークレット管理タブ
+- **プロジェクト選択**: ドロップダウンでプロジェクトを切り替え
+- **シークレット一覧**: プロジェクトごとのシークレットkey/value表示
+- **シークレット追加・更新**: key/valueペアの登録・上書き
+- **シークレット削除**: 不要なシークレットの削除
+- **マスク表示**: デフォルトで値をマスク、クリックで表示切替
+
+#### キャッシュリロードタブ
+- **ExpertAgent**:
+  - 全体キャッシュクリア（全プロジェクト）
+  - プロジェクト別キャッシュクリア
+  - リロード結果の即時フィードバック
+- **GraphAiServer**:
+  - 全体キャッシュクリア（全プロジェクト）
+  - プロジェクト別キャッシュクリア
+  - リロード結果の即時フィードバック
+
+#### 認証設定タブ
+- **シークレット定義管理**:
+  - `myvault_secrets.yaml`の編集
+  - プロジェクトごとのシークレットキー定義
+  - YAMLバリデーション
+  - 設定保存とリロード
+
+**主な機能:**
+- 🔐 複数プロジェクトのシークレット一元管理
+- 🔄 ExpertAgent/GraphAiServerのキャッシュリロード
+- 🛡️ X-Service/X-Token認証対応
+- 📝 シークレット定義のYAML管理
+- ⚡ リアルタイム更新と即時反映
 
 ### MyScheduler管理画面
 

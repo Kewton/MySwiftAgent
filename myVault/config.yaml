@@ -1,0 +1,151 @@
+# MyVault Configuration File
+# This file contains non-sensitive configuration and policies.
+# Sensitive data (tokens, master key) are loaded from environment variables.
+
+# Application configuration
+application:
+  title: "myVault"
+  version: "0.1.0"
+  description: "Secure personal data vault and secret management service"
+  host: "0.0.0.0"
+  port: 8000
+
+# Database configuration
+database:
+  # Can be overridden by DATABASE_URL environment variable
+  url: "sqlite:///./data/myvault.db"
+
+# Security configuration
+security:
+  # Master key MUST be set via MSA_MASTER_KEY environment variable
+  # Token rotation policy (days)
+  token_rotation_days: 90
+  # Session timeout (minutes)
+  session_timeout_minutes: 30
+
+# RBAC Policies
+# Define reusable access control policies with fine-grained permissions
+policies:
+  # NewsBot production editor - read and write access
+  - name: newsbot-prod-editor
+    description: "Full read/write access to NewsBot production secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "list"]
+        resources: ["secret:newsbot*:prod/*"]
+
+  # NewsBot worker - read-only access to worker and database secrets
+  - name: newsbot-worker-reader
+    description: "Read-only access to worker and database secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:newsbot:prod/worker/*", "secret:newsbot:prod/database/*"]
+
+  # NewsBot scheduler - read-only access to scheduler secrets
+  - name: newsbot-scheduler-reader
+    description: "Read-only access to scheduler secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read"]
+        resources: ["secret:newsbot:prod/scheduler/*"]
+
+  # Common secrets - read-only access
+  - name: common-reader
+    description: "Read-only access to common secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "list"]
+        resources: ["secret:common:*"]
+
+  # Common secrets - full access
+  - name: common-editor
+    description: "Full read/write access to common secrets"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "delete", "list"]
+        resources: ["secret:common:*"]
+
+  # CommonUI Admin - full access to all projects and secrets
+  - name: commonui-admin
+    description: "Full administrative access for CommonUI management interface"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "delete", "list"]
+        resources: ["secret:*:*"]
+
+  # ExpertAgent - read-only access to all projects
+  - name: expertagent-reader
+    description: "Read-only access to secrets for expertAgent service"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "list"]
+        resources: ["secret:*:*"]
+
+  # ExpertAgent Google Auth - write access for managing Google OAuth tokens
+  - name: expertagent-google-editor
+    description: "Write access to Google-related secrets for expertAgent OAuth flow"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "list"]
+        resources: ["secret:*:GOOGLE_*"]
+
+# Service definitions
+# Tokens are loaded from environment variables: TOKEN_<service-name>
+# Services are assigned roles which grant specific permissions
+services:
+  - name: newsbot-api
+    description: "NewsBot API service - full access to newsbot production and common secrets"
+    enabled: true
+    roles:
+      - newsbot-prod-editor
+      - common-editor
+
+  - name: newsbot-worker
+    description: "NewsBot worker - read-only access to data processing secrets"
+    enabled: true
+    roles:
+      - newsbot-worker-reader
+
+  - name: newsbot-scheduler
+    description: "NewsBot scheduler - read-only access to scheduling secrets"
+    enabled: true
+    roles:
+      - newsbot-scheduler-reader
+      - common-reader
+
+  - name: commonui
+    description: "CommonUI management interface - full administrative access"
+    enabled: true
+    roles:
+      - commonui-admin
+
+  - name: expertagent
+    description: "ExpertAgent AI service - read-only access to secrets + Google OAuth management"
+    enabled: true
+    roles:
+      - expertagent-reader
+      - expertagent-google-editor
+
+  - name: graphaiserver
+    description: "GraphAI Server - read-only access to secrets for AI agent workflows"
+    enabled: true
+    roles:
+      - expertagent-reader
+
+# Audit configuration
+audit:
+  enabled: true
+  log_access: true
+  log_modifications: true
+  retention_days: 90
+
+# CORS configuration
+cors:
+  allow_origins:
+    - "*"  # Configure appropriately for production
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"

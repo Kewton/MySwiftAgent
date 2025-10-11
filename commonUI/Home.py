@@ -4,21 +4,38 @@ CommonUI - MySwiftAgent Management Interface
 Streamlit multi-page application for managing JobQueue and MyScheduler services.
 """
 
-import os
+import logging
+import sys
 from pathlib import Path
-
-# IMPORTANT: Load .env BEFORE importing config
-from dotenv import load_dotenv
-
-env_path = Path(__file__).parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
 
 import streamlit as st
 
+from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
+
+# Configure logging
+log_dir = Path(config.log_dir)
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "app.log"
+
+logging.basicConfig(
+    level=getattr(logging, config.log_level.upper(), logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, mode="a", encoding="utf-8"),
+    ],
+    force=True,  # Force reconfiguration even if logging was already configured
+)
+
+logger = logging.getLogger(__name__)
+logger.info(
+    "Logging configured (dir=%s, level=%s)",
+    log_dir,
+    config.log_level,
+)
 
 # Page configuration
 st.set_page_config(
@@ -29,8 +46,8 @@ st.set_page_config(
     menu_items={
         "Get Help": "https://github.com/Kewton/MySwiftAgent/issues",
         "Report a bug": "https://github.com/Kewton/MySwiftAgent/issues",
-        "About": "CommonUI v0.1.0 - MySwiftAgent Management Interface"
-    }
+        "About": "CommonUI v0.1.0 - MySwiftAgent Management Interface",
+    },
 )
 
 
@@ -45,21 +62,21 @@ def render_welcome_section() -> None:
         st.metric(
             label="🚀 Streamlit",
             value="Multi-Page",
-            help="High-performance web interface"
+            help="High-performance web interface",
         )
 
     with col2:
         st.metric(
             label="🔄 Services",
             value="2 Available",
-            help="JobQueue and MyScheduler management"
+            help="JobQueue and MyScheduler management",
         )
 
     with col3:
         st.metric(
             label="🛡️ Features",
             value="Full Stack",
-            help="Error handling, retries, notifications"
+            help="Error handling, retries, notifications",
         )
 
 
@@ -69,10 +86,9 @@ def render_service_overview() -> None:
 
     col1, col2 = st.columns(2)
 
-    with col1:
-        with st.container(border=True):
-            st.subheader("📋 JobQueue")
-            st.write("""
+    with col1, st.container(border=True):
+        st.subheader("📋 JobQueue")
+        st.write("""
             **Job Queue Management System**
 
             Features:
@@ -83,18 +99,17 @@ def render_service_overview() -> None:
             - 🔍 Search and filter job history
             """)
 
-            if config.is_service_configured("JobQueue"):
-                st.success("✅ Configured and ready")
-            else:
-                st.error("❌ Not configured")
+        if config.is_service_configured("JobQueue"):
+            st.success("✅ Configured and ready")
+        else:
+            st.error("❌ Not configured")
 
-            if st.button("Open JobQueue", key="btn_jobqueue", use_container_width=True):
-                st.switch_page("pages/1_📋_JobQueue.py")
+        if st.button("Open JobQueue", key="btn_jobqueue", use_container_width=True):
+            st.switch_page("pages/1_📋_JobQueue.py")
 
-    with col2:
-        with st.container(border=True):
-            st.subheader("⏰ MyScheduler")
-            st.write("""
+    with col2, st.container(border=True):
+        st.subheader("⏰ MyScheduler")
+        st.write("""
             **Job Scheduling System**
 
             Features:
@@ -105,13 +120,15 @@ def render_service_overview() -> None:
             - 🔧 Manage job definitions
             """)
 
-            if config.is_service_configured("MyScheduler"):
-                st.success("✅ Configured and ready")
-            else:
-                st.error("❌ Not configured")
+        if config.is_service_configured("MyScheduler"):
+            st.success("✅ Configured and ready")
+        else:
+            st.error("❌ Not configured")
 
-            if st.button("Open MyScheduler", key="btn_myscheduler", use_container_width=True):
-                st.switch_page("pages/2_⏰_MyScheduler.py")
+        if st.button(
+            "Open MyScheduler", key="btn_myscheduler", use_container_width=True,
+        ):
+            st.switch_page("pages/2_⏰_MyScheduler.py")
 
 
 def render_system_status() -> None:
@@ -178,12 +195,16 @@ def render_footer() -> None:
     with col1:
         st.markdown("**🔗 Links**")
         st.markdown("- [GitHub Repository](https://github.com/Kewton/MySwiftAgent)")
-        st.markdown("- [Documentation](https://github.com/Kewton/MySwiftAgent/blob/main/commonUI/README.md)")
+        st.markdown(
+            "- [Documentation](https://github.com/Kewton/MySwiftAgent/blob/main/commonUI/README.md)",
+        )
 
     with col2:
         st.markdown("**📞 Support**")
         st.markdown("- [Issues](https://github.com/Kewton/MySwiftAgent/issues)")
-        st.markdown("- [Feature Requests](https://github.com/Kewton/MySwiftAgent/issues/new)")
+        st.markdown(
+            "- [Feature Requests](https://github.com/Kewton/MySwiftAgent/issues/new)",
+        )
 
     with col3:
         st.markdown("**ℹ️ Version**")
@@ -194,6 +215,36 @@ def render_footer() -> None:
 def main() -> None:
     """Main application entry point."""
     try:
+        # Handle OAuth2 callback if present (Google redirects to home page)
+        query_params = st.query_params
+        if "code" in query_params and "state" in query_params:
+            st.info("🔄 Processing Google OAuth2 callback...")
+            try:
+                api_config = config.get_api_config("expertagent")
+                with HTTPClient(api_config, "ExpertAgent") as client:
+                    callback_data = {
+                        "state": query_params["state"],
+                        "code": query_params["code"],
+                        "project": None,  # expertAgent will use stored value
+                    }
+                    response = client.post(
+                        "/v1/google-auth/oauth2-callback", callback_data,
+                    )
+                    project = response.get("project", "default_project")
+
+                st.success(
+                    f"✅ Google authentication successful for project: {project}",
+                )
+                st.info("✅ Token saved to MyVault")
+                st.info("📍 Navigate to 🔐 MyVault → Google認証 tab to verify")
+
+                # Clear query params
+                st.query_params.clear()
+                st.balloons()
+            except Exception as e:
+                st.error(f"❌ OAuth2 callback failed: {e}")
+                st.query_params.clear()
+
         # Render sidebar
         selected_service, ui_settings = SidebarManager.render_complete_sidebar()
 
@@ -216,20 +267,25 @@ def main() -> None:
 
         # Show initial configuration warning if needed
         unconfigured = [
-            service for service in ["JobQueue", "MyScheduler"]
+            service
+            for service in ["JobQueue", "MyScheduler"]
             if not config.is_service_configured(service)
         ]
 
         if unconfigured:
+            services_text = "services are" if len(unconfigured) > 1 else "service is"
             st.warning(
                 f"⚠️ **Configuration Required**: {', '.join(unconfigured)} "
-                f"{'services are' if len(unconfigured) > 1 else 'service is'} not configured. "
-                "Please check the Quick Setup Guide above."
+                f"{services_text} not configured. "
+                "Please check the Quick Setup Guide above.",
             )
 
     except Exception as e:
         NotificationManager.handle_exception(e, "Home Page")
-        st.error("An error occurred while loading the application. Please check the configuration.")
+        st.error(
+            "An error occurred while loading the application. "
+            "Please check the configuration.",
+        )
 
 
 if __name__ == "__main__":

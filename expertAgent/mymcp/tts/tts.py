@@ -4,14 +4,21 @@ import tempfile
 from openai import OpenAI
 from pydub import AudioSegment
 
-from core.config import settings
 from core.logger import getlogger
+from core.secrets import resolve_runtime_value
 
 logger = getlogger()
 
 
+def _resolve_openai_key() -> str:
+    api_key = resolve_runtime_value("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY is not configured")
+    return str(api_key)
+
+
 def tts_old(speech_file_path, _input):
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    client = OpenAI(api_key=_resolve_openai_key())
     with client.audio.speech.with_streaming_response.create(
         model="gpt-4o-mini-tts",
         voice="coral",
@@ -30,20 +37,20 @@ def tts(speech_file_path: str, _input: str):
         speech_file_path (str): 保存するMP3ファイルのパス。
         _input (str): 音声に変換するテキスト。
     """
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    client = OpenAI(api_key=_resolve_openai_key())
     chunk_size = 1500  # OpenAI TTSの推奨または安全な文字数に調整することを推奨します
 
     if len(_input) <= chunk_size:
         # 1000文字以下の場合はそのまま処理
         try:
-            with (
-                client.audio.speech.with_streaming_response.create(
-                    model="gpt-4o-mini-tts",  # 最新の推奨モデルを確認してください
-                    voice="coral",
-                    input=_input,
-                    instructions="Speak in a cheerful and positive tone.",  # 必要に応じて指示を追加
-                ) as response
-            ):
+            with client.audio.speech.with_streaming_response.create(
+                model="gpt-4o-mini-tts",  # 最新の推奨モデルを確認してください
+                voice="coral",
+                input=_input,
+                instructions=(
+                    "Speak in a cheerful and positive tone."
+                ),  # 指示は必要に応じて調整
+            ) as response:
                 response.stream_to_file(speech_file_path)
             print(f"音声ファイルが '{speech_file_path}' に保存されました。")
         except Exception as e:
@@ -69,14 +76,14 @@ def tts(speech_file_path: str, _input: str):
                     f"チャンク {i + 1}/{len(text_chunks)} を処理中: '{chunk[:30]}...'"
                 )
                 try:
-                    with (
-                        client.audio.speech.with_streaming_response.create(
-                            model="gpt-4o-mini-tts",  # 最新の推奨モデルを確認してください
-                            voice="coral",
-                            input=chunk,
-                            instructions="Speak in a cheerful and positive tone.",  # 必要に応じて指示を追加
-                        ) as response
-                    ):
+                    with client.audio.speech.with_streaming_response.create(
+                        model="gpt-4o-mini-tts",  # 最新の推奨モデルを確認してください
+                        voice="coral",
+                        input=chunk,
+                        instructions=(
+                            "Speak in a cheerful and positive tone."
+                        ),  # 指示は必要に応じて調整
+                    ) as response:
                         response.stream_to_file(temp_speech_file_path)
                     temp_audio_files.append(temp_speech_file_path)
                 except Exception as e:

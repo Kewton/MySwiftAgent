@@ -6,10 +6,10 @@ from aiagent.langgraph.common import make_graph
 
 
 # Run the graph with question
-async def ainvoke_graphagent(query):
+async def ainvoke_graphagent(query, project: str | None = None):
     chat_history = []
     chat_history.append({"role": "user", "content": query})
-    async with make_graph() as graph:
+    async with make_graph(project=project) as graph:
         result = await graph.ainvoke({"messages": query})
         # 1. 'messages' キーでメッセージリストを取得
         message_list = result.get(

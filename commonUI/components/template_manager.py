@@ -10,7 +10,9 @@ from core.template_storage import TemplateStorage
 class TemplateManager:
     """Template manager component."""
 
-    def __init__(self, service_name: str, storage: TemplateStorage | None = None) -> None:
+    def __init__(
+        self, service_name: str, storage: TemplateStorage | None = None,
+    ) -> None:
         """Initialize template manager.
 
         Args:
@@ -21,7 +23,8 @@ class TemplateManager:
         self.storage = storage or TemplateStorage()
 
     def render_template_selector(
-        self, current_data: dict[str, Any] | None = None
+        self,
+        current_data: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """Render template selector and management UI.
 
@@ -38,21 +41,24 @@ class TemplateManager:
         with col1:
             selected_template = st.selectbox(
                 "📋 テンプレート選択",
-                [""] + templates,
+                ["", *templates],
                 help="保存済みテンプレートから選択",
             )
 
         with col2:
-            if st.button("🗑️ 削除", disabled=not selected_template, use_container_width=True):
-                if selected_template:
-                    self.storage.delete_template(self.service_name, selected_template)
-                    st.success(f"テンプレート '{selected_template}' を削除しました")
-                    st.rerun()
+            if st.button(
+                "🗑️ 削除", disabled=not selected_template, use_container_width=True,
+            ) and selected_template:
+                self.storage.delete_template(self.service_name, selected_template)
+                st.success(f"テンプレート '{selected_template}' を削除しました")
+                st.rerun()
 
         # Load selected template
         loaded_data = None
         if selected_template:
-            loaded_data = self.storage.load_template(self.service_name, selected_template)
+            loaded_data = self.storage.load_template(
+                self.service_name, selected_template,
+            )
             if loaded_data:
                 st.info(f"✅ テンプレート '{selected_template}' を読み込みました")
 
@@ -67,7 +73,9 @@ class TemplateManager:
             if st.button("保存", disabled=not template_name or not current_data):
                 if template_name and current_data:
                     self.storage.save_template(
-                        self.service_name, template_name, current_data
+                        self.service_name,
+                        template_name,
+                        current_data,
                     )
                     st.success(f"テンプレート '{template_name}' を保存しました")
                     st.rerun()
@@ -87,12 +95,14 @@ class TemplateManager:
 
         selected_template = st.selectbox(
             "📋 テンプレートから読み込み",
-            [""] + templates,
+            ["", *templates],
             help="保存済みテンプレートから選択",
         )
 
         if selected_template:
-            loaded_data = self.storage.load_template(self.service_name, selected_template)
+            loaded_data = self.storage.load_template(
+                self.service_name, selected_template,
+            )
             if loaded_data:
                 st.info(f"✅ テンプレート '{selected_template}' を読み込みました")
                 return loaded_data

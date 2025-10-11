@@ -51,6 +51,8 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "pandas>=2.0.0",
     "pydub>=0.25.0",
+    # Security and encryption
+    "cryptography>=41.0.0",
 ]
 
 [project.optional-dependencies]
@@ -90,6 +92,7 @@ known-first-party = ["app"]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
+files = ["app"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -108,6 +111,9 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
 
 [tool.coverage.run]
 source = ["app", "core"]

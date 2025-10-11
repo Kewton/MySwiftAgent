@@ -18,12 +18,33 @@ MySwiftAgent/
 ├── jobqueue/        # ジョブキューシステム (Python/FastAPI)
 ├── expertAgent/     # AIエージェント (Python/LangGraph/MCP)
 ├── graphAiServer/   # GraphAI ワークフローサーバー (TypeScript/Express)
+├── myvault/         # 🔐 シークレット管理システム (Python/FastAPI)
 ├── commonUI/        # Web UI (Python/Streamlit)
 ├── docs/            # プロジェクトドキュメント（軽量ワークフロー対応）
 ├── scripts/         # 開発支援スクリプト
 ├── .github/         # GitHub Actions ワークフロー
 └── CLAUDE.md        # 開発ガイドライン（詳細）
 ```
+
+## 🔐 MyVault統合
+
+**MyVault** は、APIキーやトークンなどのシークレット情報を一元管理するセキュアなシークレット管理システムです。
+
+### 主な機能
+
+- **🔒 優先度ベースのシークレット取得**: MyVault → 環境変数 → エラー
+- **⚡ TTLベースキャッシング**: デフォルト300秒のキャッシュでパフォーマンス向上
+- **🔄 手動キャッシュリロード**: Admin APIによる即時キャッシュ更新
+- **📁 プロジェクト単位のシークレット管理**: マルチプロジェクト対応
+- **🛡️ 包括的エラーハンドリング**: 安全なフォールバック機構
+
+### 統合サービス
+
+- **expertAgent**: Python/FastAPI - LangGraphベースAIエージェント
+- **graphAiServer**: TypeScript/Node.js - GraphAIワークフローサーバー
+- **commonUI**: Python/Streamlit - シークレット管理UI
+
+詳細は各プロジェクトのREADMEを参照してください。
 
 ## 🚀 クイックスタート
 
@@ -42,6 +63,7 @@ curl http://localhost:8102/health  # MyScheduler
 curl http://localhost:8101/health  # JobQueue
 curl http://localhost:8103/health  # ExpertAgent
 curl http://localhost:8104/health  # GraphAiServer
+curl http://localhost:8105/health  # MyVault
 # CommonUI: http://localhost:8501
 ```
 
@@ -60,6 +82,7 @@ curl http://localhost:8102/health  # MyScheduler
 curl http://localhost:8101/health  # JobQueue
 curl http://localhost:8103/health  # ExpertAgent
 curl http://localhost:8104/health  # GraphAiServer
+curl http://localhost:8105/health  # MyVault
 # CommonUI: http://localhost:8501
 ```
 
@@ -74,6 +97,55 @@ cd myscheduler
 uv sync
 uv run uvicorn app.main:app --reload --port 8102
 ```
+
+## 📊 コードベース計測
+
+プロジェクトごとのコード量を確認したい場合は、以下のスクリプトをリポジトリルートで実行してください。事前に `cloc` がインストールされている必要があります（未導入の場合は `brew install cloc` を実行）。
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+projects=(commonUI expertAgent graphAiServer jobqueue myscheduler myVault)
+
+test_dir_candidates=(tests __tests__ test spec)
+test_exclude_list="$(IFS=,; echo "${test_dir_candidates[*]}")"
+prod_exclude_list=".venv,node_modules,${test_exclude_list}"
+
+if ! command -v cloc >/dev/null 2>&1; then
+  echo "clocが見つかりません。brew install cloc を実行してください。" >&2
+  exit 1
+fi
+
+for project in "${projects[@]}"; do
+  echo "=== ${project} ==="
+  echo "-- プロダクションコード --"
+  cloc --exclude-dir="${prod_exclude_list}" "${project}"
+
+  test_targets=()
+  while IFS= read -r -d '' dir; do
+    test_targets+=("$dir")
+  done < <(find "${project}" -type d \( -name "tests" -o -name "__tests__" -o -name "test" -o -name "spec" \) -print0)
+
+  if [ ${#test_targets[@]} -eq 0 ]; then
+    echo "-- テストコード --"
+    echo "テストディレクトリが見つかりません。"
+  else
+    echo "-- テストコード --"
+    cloc --exclude-dir=.venv,node_modules "${test_targets[@]}"
+  fi
+  echo
+done
+```
+
+上記スクリプトを `scripts/count-lines.sh` などの任意のファイル名で保存し、実行権限を付与して利用します。
+
+```bash
+chmod +x scripts/count-lines.sh
+./scripts/count-lines.sh
+```
+
+`tests`, `test`, `spec`, `__tests__` という名前のディレクトリがテストコードとして集計されます。
 
 ---
 

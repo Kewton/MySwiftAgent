@@ -10,9 +10,34 @@ from core.config import settings
 logging_setup_done = False
 
 
-def setup_logging():
+def setup_logging(log_file_name: str = "app.log"):
+    """ロギングをセットアップします。
+
+    Args:
+        log_file_name: メインログファイル名（デフォルト: app.log）
+                      MCPサブプロセス用には mcp_stdio.log 等を指定可能
+    """
     global logging_setup_done
+
+    # デバッグトレース
+    debug_trace_file = "/tmp/mcp_stdio_debug.log"
+    try:
+        with open(debug_trace_file, "a") as f:
+            f.write(
+                f"[logger.py] setup_logging() called with log_file_name='{log_file_name}'\n"
+            )
+            f.write(
+                f"[logger.py] logging_setup_done={logging_setup_done}, PID={os.getpid()}\n"
+            )
+    except Exception:
+        pass
+
     if logging_setup_done:
+        try:
+            with open(debug_trace_file, "a") as f:
+                f.write("[logger.py] Skipping setup (already done)\n")
+        except Exception:
+            pass
         return  # すでに実行済みなら何もしない
     else:
         print("setup_logging start")
@@ -22,10 +47,22 @@ def setup_logging():
 
     # ディレクトリが存在しない場合は作成
     if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-        print(f"Directory {log_dir} created.")
+        try:
+            os.makedirs(log_dir)
+            print(f"Directory {log_dir} created.")
+        except OSError as e:
+            # ディレクトリ作成失敗時は /tmp にフォールバック
+            err_msg = f"Failed to create {log_dir}: {e}. Falling back to /tmp"
+            print(err_msg)
+            log_dir = "/tmp"
     else:
         print(f"Directory {log_dir} already exists.")
+
+    # ログファイルのパス
+    main_log_path = os.path.join(log_dir, log_file_name)
+    # エラーログは常に rotation.log を使用（ファイル名の一貫性のため）
+    error_log_base = log_file_name.replace(".log", "_rotation.log")
+    error_log_path = os.path.join(log_dir, error_log_base)
 
     # ログ設定の定義
     log_config = {
@@ -41,7 +78,7 @@ def setup_logging():
                 "class": "logging.handlers.RotatingFileHandler",
                 "level": log_level,
                 "formatter": "_formatter",
-                "filename": os.path.join(log_dir, "app.log"),
+                "filename": main_log_path,
                 "mode": "a",
                 "maxBytes": 1024 * 1024,
                 "backupCount": 5,
@@ -51,7 +88,7 @@ def setup_logging():
                 "class": "logging.handlers.TimedRotatingFileHandler",
                 "level": "ERROR",
                 "formatter": "_formatter",
-                "filename": os.path.join(log_dir, "rotation.log"),
+                "filename": error_log_path,
                 "when": "S",  # 秒ごとのローテーション
                 "interval": 1,  # ローテーション間隔
                 "backupCount": 5,
@@ -68,7 +105,16 @@ def setup_logging():
 
     # ログ設定を適用
     logging.config.dictConfig(log_config)
-    logging.info("Logging is set up.")
+    logging.info(f"Logging is set up. Log file: {main_log_path}")
+
+    # デバッグトレース
+    try:
+        with open(debug_trace_file, "a") as f:
+            f.write("[logger.py] Log config applied successfully\n")
+            f.write(f"[logger.py] Main log: {main_log_path}\n")
+            f.write(f"[logger.py] Error log: {error_log_path}\n")
+    except Exception:
+        pass
 
     # 実行フラグをTrueに設定
     logging_setup_done = True

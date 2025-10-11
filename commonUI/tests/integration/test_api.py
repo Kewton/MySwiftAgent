@@ -1,18 +1,18 @@
-def test_health_check(client):
+def test_health_check(client) -> None:
     """ヘルスチェックエンドポイントのテスト"""
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy", "service": "commonUI"}
 
 
-def test_root_endpoint(client):
+def test_root_endpoint(client) -> None:
     """ルートエンドポイントのテスト"""
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {"message": "Welcome to commonUI"}
 
 
-def test_api_root_endpoint(client):
+def test_api_root_endpoint(client) -> None:
     """API v1 ルートエンドポイントのテスト"""
     response = client.get("/api/v1/")
     assert response.status_code == 200

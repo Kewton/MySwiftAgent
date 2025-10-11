@@ -6,14 +6,21 @@ from typing import List, Tuple, Union  # Tupleを追加
 from pydantic import BaseModel, Field
 
 # from mymcp.utils.html2markdown import getMarkdown # 重複インポートなのでコメントアウト
-from core.config import settings
 from core.logger import getlogger
+from core.secrets import resolve_runtime_value
 from mymcp.utils.chatollama import (
     extract_knowledge_from_text,
 )  # この関数のシグネチャが変わることを想定
 from mymcp.utils.html2markdown import getMarkdown
 
 logger = getlogger()
+
+
+def _resolve_serper_api_key() -> str:
+    api_key = resolve_runtime_value("SERPER_API_KEY")
+    if not api_key:
+        raise ValueError("SERPER_API_KEY is not configured")
+    return str(api_key)
 
 
 class SerperSearchResult(BaseModel):
@@ -40,10 +47,16 @@ async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
     for _query in queries:
         conn = http.client.HTTPSConnection("google.serper.dev")
         payload = json.dumps(
-            {"q": _query, "location": "Japan", "gl": "jp", "hl": "ja", "num": num}
+            {
+                "q": _query,
+                "location": "Japan",
+                "gl": "jp",
+                "hl": "ja",
+                "num": num,
+            }
         )
         headers = {
-            "X-API-KEY": settings.SERPER_API_KEY,
+            "X-API-KEY": _resolve_serper_api_key(),
             "Content-Type": "application/json",
         }
         try:
@@ -105,10 +118,16 @@ async def get_overview_by_google_serper(queries: List[str], num: int = 3) -> str
     for _query in queries:
         conn = http.client.HTTPSConnection("google.serper.dev")
         payload = json.dumps(
-            {"q": _query, "location": "Japan", "gl": "jp", "hl": "ja", "num": num}
+            {
+                "q": _query,
+                "location": "Japan",
+                "gl": "jp",
+                "hl": "ja",
+                "num": num,
+            }
         )
         headers = {
-            "X-API-KEY": settings.SERPER_API_KEY,
+            "X-API-KEY": _resolve_serper_api_key(),
             "Content-Type": "application/json",
         }
         try:
@@ -164,7 +183,11 @@ def get_entry_summary(_organic: dict, _original_query: str):
     title = _organic.get("title", "タイトルなし")
     link = _organic.get("link", "")
 
-    logger.info(f"get_entry_summary start: '{title}' (Query: '{_original_query}')")
+    logger.info(
+        "get_entry_summary start: '%s' (Query: '%s')",
+        title,
+        _original_query,
+    )
 
     md_content = getMarkdown(link, False)
     kl = "情報なし"
@@ -207,16 +230,21 @@ def get_entry_summary(_organic: dict, _original_query: str):
             start += window_size - overlap
         knowledges = []
 
-        print(
-            f"Extracting knowledge from {len(snippets)} snippets for query: {_original_query}"
+        logger.info(
+            "Extracting knowledge from %s snippets for query: %s",
+            len(snippets),
+            _original_query,
         )
-        print(f"Snippets: {snippets}")
+        logger.debug("Snippets: %s", snippets)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             _model_name = "mlx-community"
             futures_extraction = [
                 executor.submit(
-                    extract_knowledge_from_text, _original_query, snippet, _model_name
+                    extract_knowledge_from_text,
+                    _original_query,
+                    snippet,
+                    _model_name,
                 )
                 for snippet in snippets
             ]

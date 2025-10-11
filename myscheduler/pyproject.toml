@@ -78,6 +78,7 @@ no_implicit_optional = false  # Allow implicit Optional types
 warn_redundant_casts = true
 warn_unused_ignores = true
 ignore_missing_imports = true  # Ignore missing type stubs for external libraries
+files = ["app"]
 
 # Allow relaxed checking for external libraries
 [[tool.mypy.overrides]]

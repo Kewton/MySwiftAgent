@@ -4,12 +4,12 @@ from typing import List
 import requests
 
 from app.schemas.standardAiAgent import ChatMessage
-from core.config import settings
+from core.secrets import resolve_runtime_value
 
 
 def chatOllama(
     _messages: List[ChatMessage],
-    _model: str = settings.OLLAMA_DEF_SMALL_MODEL,
+    _model: str | None = None,
     _stream: bool = False,
 ) -> str:
     """
@@ -19,21 +19,31 @@ def chatOllama(
         _model (str): 使用するモデルの名前。デフォルトは"gemma3:27b-it-qat"。
     """
     # APIエンドポイント（ローカル）
-    url = settings.OLLAMA_URL + "/api/chat"
+    resolved_model_value = _model or resolve_runtime_value("OLLAMA_DEF_SMALL_MODEL")
+    if not resolved_model_value:
+        raise ValueError("OLLAMA_DEF_SMALL_MODEL is not configured")
+
+    resolved_model = str(resolved_model_value)
+
+    ollama_url_value = resolve_runtime_value("OLLAMA_URL")
+    if not ollama_url_value:
+        raise ValueError("OLLAMA_URL is not configured")
+
+    url = str(ollama_url_value).rstrip("/") + "/api/chat"
 
     # 128000
     # 32,768
 
-    if "gemma3" in _model:
+    if "gemma3" in resolved_model:
         _num_ctx = 128000
-    elif "qwen3" in _model:
+    elif "qwen3" in resolved_model:
         _num_ctx = 32768
     else:
         _num_ctx = 4096
 
     # リクエストボディ
     payload = {
-        "model": _model,
+        "model": resolved_model,
         "messages": _messages,
         "stream": _stream,  # Trueにするとストリームレスポンスになる
         "options": {"num_ctx": _num_ctx},
@@ -58,7 +68,11 @@ def chatMlx(_messages: List[ChatMessage]) -> str:
         _model (str): 使用するモデルの名前。デフォルトは"gemma3:27b-it-qat"。
     """
     # APIエンドポイント（ローカル）
-    url = f"{settings.MLX_LLM_SERVER_URL}/v1/chat/completions"
+    mlx_base_url = resolve_runtime_value("MLX_LLM_SERVER_URL")
+    if not mlx_base_url:
+        raise ValueError("MLX_LLM_SERVER_URL is not configured")
+
+    url = str(mlx_base_url).rstrip("/") + "/v1/chat/completions"
     HEADERS = {"Content-Type": "application/json"}
 
     # リクエストボディ
@@ -75,7 +89,11 @@ def chatMlx(_messages: List[ChatMessage]) -> str:
         return "Error occurred"
 
 
-def extract_knowledge_from_text(_question, _text, _model: str = "gemma3:27b-it-qat"):
+def extract_knowledge_from_text(
+    _question,
+    _text,
+    _model: str = "gemma3:27b-it-qat",
+):
     _query = f"""
 
         # 命令指示書
@@ -83,7 +101,8 @@ def extract_knowledge_from_text(_question, _text, _model: str = "gemma3:27b-it-q
         前提条件と制約条件に従いユーザーの興味と収集した情報を元に下記手順で最高の成果物を生成してください。
 
         1. ユーザーの興味を整理するための質問を出力すること
-        2. 1で出力した質問に対する回答を収集した情報から抽出し、成果物フォーマットの「FAQ」に列挙すること。回答不可の場合は「回答不可」とすること。
+          2. 1で出力した質問に対する回答を収集した情報から抽出し、
+              成果物フォーマットの「FAQ」に列挙すること。回答不可の場合は「回答不可」とすること。
         3. 収集した情報から最大3つの事実を抽出し、成果物フォーマットの「事実」に列挙すること。可能な限り5W2Hを明らかにし定量的に表現すること。
 
 

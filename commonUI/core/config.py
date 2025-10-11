@@ -1,28 +1,63 @@
 """Configuration management for CommonUI Streamlit application."""
 
 import os
-from typing import Literal
+from pathlib import Path
+from typing import Literal, cast
 
 import streamlit as st
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+# Load environment variables from commonUI/.env (new policy)
+# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path, override=True)
+else:
+    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
+    load_dotenv(override=False)
 
 
 class APIConfig(BaseModel):
     """API configuration for external services."""
 
-    base_url: str = Field(..., description="Base URL for the API")
-    token: str = Field(..., description="API authentication token")
+    base_url: str = Field(description="Base URL for the API")
+    token: str = Field(description="API authentication token")
+
+
+class MyVaultConfig(BaseModel):
+    """MyVault API configuration with custom authentication."""
+
+    base_url: str = Field(description="Base URL for MyVault API")
+    service_name: str = Field(description="Service name for authentication")
+    service_token: str = Field(description="Service token for authentication")
+
+
+class ExpertAgentConfig(BaseModel):
+    """ExpertAgent API configuration with admin token."""
+
+    base_url: str = Field(description="Base URL for ExpertAgent API")
+    admin_token: str = Field(description="Admin token for cache management")
+
+
+class GraphAiServerConfig(BaseModel):
+    """GraphAiServer API configuration with admin token."""
+
+    base_url: str = Field(description="Base URL for GraphAiServer API")
+    admin_token: str = Field(description="Admin token for cache management")
 
 
 class UIConfig(BaseModel):
     """UI configuration settings."""
 
     polling_interval: int = Field(default=5, description="Polling interval in seconds")
-    default_service: Literal["JobQueue", "MyScheduler"] = Field(
-        default="JobQueue", description="Default service to display"
+    default_service: Literal["JobQueue", "MyScheduler", "MyVault"] = Field(
+        default="JobQueue",
+        description="Default service to display",
     )
     operation_mode: Literal["full", "readonly"] = Field(
-        default="full", description="Operation mode"
+        default="full",
+        description="Operation mode",
     )
 
 
@@ -36,42 +71,83 @@ class Config:
     def _load_config(self) -> None:
         """Load configuration from environment and Streamlit secrets."""
         # Try Streamlit secrets first, then environment variables
+        default_log_dir = Path(__file__).resolve().parents[2] / "logs"
+        self.log_dir = self._get_setting("LOG_DIR", str(default_log_dir))
+        self.log_level = self._get_setting("LOG_LEVEL", "INFO")
+
         self.jobqueue = APIConfig(
-            base_url=self._get_setting("JOBQUEUE_API_URL", "http://localhost:8001"),
-            token=self._get_setting("JOBQUEUE_API_TOKEN", "")
+            base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8101"),
+            token=self._get_setting("JOBQUEUE_API_TOKEN", ""),
         )
 
         self.myscheduler = APIConfig(
-            base_url=self._get_setting("MYSCHEDULER_API_URL", "http://localhost:8002"),
-            token=self._get_setting("MYSCHEDULER_API_TOKEN", "")
+            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8102"),
+            token=self._get_setting("MYSCHEDULER_API_TOKEN", ""),
+        )
+
+        self.myvault = MyVaultConfig(
+            base_url=self._get_setting("MYVAULT_BASE_URL", "http://localhost:8103"),
+            service_name=self._get_setting("MYVAULT_SERVICE_NAME", "commonui"),
+            service_token=self._get_setting("MYVAULT_SERVICE_TOKEN", ""),
+        )
+
+        self.expertagent = ExpertAgentConfig(
+            base_url=self._get_setting(
+                "EXPERTAGENT_BASE_URL",
+                "http://localhost:8104/aiagent-api",
+            ),
+            admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
+        )
+
+        self.graphaiserver = GraphAiServerConfig(
+            base_url=self._get_setting(
+                "GRAPHAISERVER_BASE_URL",
+                "http://localhost:8105/api",
+            ),
+            admin_token=self._get_setting("GRAPHAISERVER_ADMIN_TOKEN", ""),
         )
 
         self.ui = UIConfig(
             polling_interval=int(self._get_setting("POLLING_INTERVAL", "5")),
-            default_service=self._get_setting("DEFAULT_SERVICE", "JobQueue"),
-            operation_mode=self._get_setting("OPERATION_MODE", "full")
+            default_service=cast(
+                "Literal['JobQueue', 'MyScheduler', 'MyVault']",
+                self._get_setting("DEFAULT_SERVICE", "JobQueue"),
+            ),
+            operation_mode=cast(
+                "Literal['full', 'readonly']",
+                self._get_setting("OPERATION_MODE", "full"),
+            ),
         )
 
     def _get_setting(self, key: str, default: str = "") -> str:
         """Get setting from Streamlit secrets or environment variables."""
         # Try Streamlit secrets first
         try:
-            if hasattr(st, 'secrets') and key in st.secrets:
-                return st.secrets[key]
+            if hasattr(st, "secrets") and key in st.secrets:
+                return str(st.secrets[key])
         except Exception:
             pass
 
         # Fall back to environment variables
         return os.getenv(key, default)
 
-    def get_api_config(self, service: str) -> APIConfig:
+    def get_api_config(
+        self,
+        service: str,
+    ) -> APIConfig | MyVaultConfig | ExpertAgentConfig | GraphAiServerConfig:
         """Get API configuration for specified service."""
         if service.lower() == "jobqueue":
             return self.jobqueue
-        elif service.lower() == "myscheduler":
+        if service.lower() == "myscheduler":
             return self.myscheduler
-        else:
-            raise ValueError(f"Unknown service: {service}")
+        if service.lower() == "myvault":
+            return self.myvault
+        if service.lower() == "expertagent":
+            return self.expertagent
+        if service.lower() == "graphaiserver":
+            return self.graphaiserver
+        msg = f"Unknown service: {service}"
+        raise ValueError(msg)
 
     def is_service_configured(self, service: str) -> bool:
         """Check if service is properly configured."""

@@ -1,0 +1,69 @@
+# MyVault Test Configuration
+# This file is used during automated testing
+
+# Application configuration
+application:
+  title: "myVault-Test"
+  version: "0.1.0"
+  description: "Test configuration for myVault"
+  host: "0.0.0.0"
+  port: 8000
+
+# Database configuration
+database:
+  # Tests use in-memory SQLite
+  url: "sqlite:///:memory:"
+
+# Security configuration
+security:
+  token_rotation_days: 90
+  session_timeout_minutes: 30
+
+# RBAC Policies for testing
+policies:
+  # Test service with full access
+  - name: test-full-access
+    description: "Full access to test resources"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "write", "delete", "list"]
+        resources: ["secret:test:*", "secret:common:*"]
+
+  # Read-only test service
+  - name: test-read-only
+    description: "Read-only access to test resources"
+    permissions:
+      - effect: "allow"
+        actions: ["read", "list"]
+        resources: ["secret:other:*"]
+
+# Test services
+services:
+  - name: test-service
+    description: "Test service with full access"
+    enabled: true
+    roles:
+      - test-full-access
+
+  - name: other-service
+    description: "Test service with read-only access"
+    enabled: true
+    roles:
+      - test-read-only
+
+# Audit configuration
+audit:
+  enabled: false  # Disabled for tests
+  log_access: false
+  log_modifications: false
+  retention_days: 1
+
+# CORS configuration
+cors:
+  allow_origins:
+    - "*"
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"
