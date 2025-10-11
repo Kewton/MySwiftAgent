@@ -92,6 +92,7 @@ known-first-party = ["app"]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
+files = ["app"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

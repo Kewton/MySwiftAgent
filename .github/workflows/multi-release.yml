@@ -535,7 +535,7 @@ jobs:
       - name: Run Python type checking
         if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'
         working-directory: ./${{ matrix.project }}
-        run: uv run mypy app/
+        run: uv run mypy .
 
       - name: Run Python unit tests
         if: matrix.project != 'docs' && steps.detect-lang.outputs.language == 'python'

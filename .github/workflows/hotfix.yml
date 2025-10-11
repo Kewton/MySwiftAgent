@@ -202,7 +202,7 @@ jobs:
 
       - name: Run type checking
         working-directory: ./${{ matrix.project }}
-        run: uv run mypy app/ || echo "⚠️ Type checking issues found, but continuing with hotfix"
+        run: uv run mypy . || echo "⚠️ Type checking issues found, but continuing with hotfix"
 
       - name: Run critical tests only
         working-directory: ./${{ matrix.project }}
