@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { runGraphAI, testGraphAI } from './services/graphai.js';
+import { runGraphAI, testGraphAI, GraphAIResponse } from './services/graphai.js';
 import { secretsManager } from './services/secretsManager.js';
 import { settings } from './config/settings.js';
 
@@ -31,12 +31,35 @@ app.get('/api/v1/', (_req: Request, res: Response) => {
 app.get('/api/v1/test', async (_req: Request, res: Response) => {
   try {
     console.log("Executing GraphAI sample...");
-    const result = await testGraphAI();
+    const result: GraphAIResponse = await testGraphAI();
     console.log("GraphAI sample finished.");
-    res.json(result);
+
+    // Check if there are any errors in the execution
+    const hasErrors = Object.keys(result.errors).length > 0;
+    const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
+
+    if (hasErrors || hasTimedOutNodes) {
+      // Return 500 if there are errors or timeouts, but include full details
+      res.status(500).json(result);
+    } else {
+      // Return 200 for successful execution
+      res.json(result);
+    }
   } catch (error) {
     console.error("Error executing GraphAI sample:", error);
-    res.status(500).json({ error: 'An error occurred while executing the GraphAI sample.' });
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    res.status(500).json({
+      error: 'An error occurred while executing the GraphAI sample.',
+      details: {
+        message: errorMessage,
+        type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
+        timestamp: new Date().toISOString(),
+      },
+      ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
+    });
   }
 });
 
@@ -62,11 +85,34 @@ app.post('/api/v1/myagent/:category/:model', async (req: Request, res: Response)
     // Construct model_name from category and model
     const model_name = `${category}/${model}`;
 
-    const result = await runGraphAI(user_input, model_name, project);
-    res.json(result);
+    const result: GraphAIResponse = await runGraphAI(user_input, model_name, project);
+
+    // Check if there are any errors in the execution
+    const hasErrors = Object.keys(result.errors).length > 0;
+    const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
+
+    if (hasErrors || hasTimedOutNodes) {
+      // Return 500 if there are errors or timeouts, but include full details
+      res.status(500).json(result);
+    } else {
+      // Return 200 for successful execution
+      res.json(result);
+    }
   } catch (error) {
     console.error("Error executing GraphAI sample:", error);
-    res.status(500).json({ error: 'An error occurred while executing the GraphAI sample.' });
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    res.status(500).json({
+      error: 'An error occurred while executing the GraphAI sample.',
+      details: {
+        message: errorMessage,
+        type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
+        timestamp: new Date().toISOString(),
+      },
+      ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
+    });
   }
 });
 
@@ -83,11 +129,34 @@ app.post('/api/v1/myagent', async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await runGraphAI(user_input, model_name, project);
-    res.json(result);
+    const result: GraphAIResponse = await runGraphAI(user_input, model_name, project);
+
+    // Check if there are any errors in the execution
+    const hasErrors = Object.keys(result.errors).length > 0;
+    const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
+
+    if (hasErrors || hasTimedOutNodes) {
+      // Return 500 if there are errors or timeouts, but include full details
+      res.status(500).json(result);
+    } else {
+      // Return 200 for successful execution
+      res.json(result);
+    }
   } catch (error) {
     console.error("Error executing GraphAI sample:", error);
-    res.status(500).json({ error: 'An error occurred while executing the GraphAI sample.' });
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    res.status(500).json({
+      error: 'An error occurred while executing the GraphAI sample.',
+      details: {
+        message: errorMessage,
+        type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
+        timestamp: new Date().toISOString(),
+      },
+      ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
+    });
   }
 });
 

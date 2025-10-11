@@ -108,9 +108,41 @@ Executes a GraphAI workflow from `config/graphai/{category}/{model}.yml`.
 **Success Response (200 OK):**
 ```json
 {
-  // GraphAI execution result
+  "results": {
+    "source": "User input text",
+    "node1": { "output": "..." },
+    "node2": { "output": "..." }
+  },
+  "errors": {},
+  "logs": [
+    {
+      "nodeId": "node1",
+      "state": "completed",
+      "startTime": 1760175441540,
+      "endTime": 1760175441553,
+      "retryCount": 0
+    },
+    {
+      "nodeId": "node2",
+      "state": "completed",
+      "startTime": 1760175441553,
+      "endTime": 1760175441560,
+      "retryCount": 0
+    }
+  ]
 }
 ```
+
+**Response Fields:**
+- `results` (object): All node execution results (includes intermediate nodes)
+- `errors` (object): Map of node IDs to error details (empty if no errors)
+- `logs` (array): Execution logs for each node
+  - `nodeId` (string): Node identifier
+  - `state` (string): Node state (`injected`, `completed`, `failed`, `timed-out`, etc.)
+  - `errorMessage` (string, optional): Error message if node failed
+  - `startTime` (number, optional): Execution start timestamp (milliseconds)
+  - `endTime` (number, optional): Execution end timestamp (milliseconds)
+  - `retryCount` (number, optional): Number of retry attempts
 
 **Error Responses:**
 
@@ -133,12 +165,55 @@ Executes a GraphAI workflow from `config/graphai/{category}/{model}.yml`.
   }
   ```
 
-- **500 Internal Server Error** - Execution error:
+- **500 Internal Server Error** - Execution error with detailed diagnostics:
+
+  **Node-level errors (timeout, agent failure, etc.):**
   ```json
   {
-    "error": "An error occurred while executing the GraphAI sample."
+    "results": {
+      "source": "User input",
+      "node1": { "output": "..." }
+    },
+    "errors": {
+      "node2": {
+        "message": "Timeout",
+        "stack": "Error: Timeout\n    at ComputedNode.executeTimeout..."
+      }
+    },
+    "logs": [
+      {
+        "nodeId": "node1",
+        "state": "completed",
+        "startTime": 1760175441540,
+        "endTime": 1760175441553,
+        "retryCount": 0
+      },
+      {
+        "nodeId": "node2",
+        "state": "timed-out",
+        "errorMessage": "Timeout",
+        "startTime": 1760175441560,
+        "endTime": 1760175471560,
+        "retryCount": 1
+      }
+    ]
   }
   ```
+
+  **Initialization errors (YAML parsing, file not found, etc.):**
+  ```json
+  {
+    "error": "An error occurred while executing the GraphAI sample.",
+    "details": {
+      "message": "Cannot find module './config/graphai/default/test.yml'",
+      "type": "initialization_error",
+      "timestamp": "2025-10-11T09:00:42.000Z"
+    },
+    "stack": "Error: Cannot find module...\n    at ..."
+  }
+  ```
+
+  Note: `stack` field is only included when `NODE_ENV !== 'production'`
 
 ---
 
@@ -168,6 +243,94 @@ curl -X POST http://localhost:8000/api/v1/myagent \
 ```
 
 **Note:** This format is maintained for backward compatibility. New integrations should use the path parameter format.
+
+---
+
+## Error Handling and Debugging
+
+### Understanding Response Structure
+
+All GraphAI execution responses include three main fields:
+
+1. **`results`** - Contains execution results for all nodes (including intermediate nodes when `run(true)` is used)
+2. **`errors`** - Map of node IDs to error details (empty object if no errors occurred)
+3. **`logs`** - Array of execution logs showing the state and timing of each node
+
+### Node States
+
+The `state` field in logs can have the following values:
+
+- `injected` - Node value was injected (e.g., source input)
+- `waiting` - Node is waiting for dependencies
+- `queued` - Node is queued for execution
+- `executing` - Node is currently executing
+- `completed` - Node execution completed successfully
+- `failed` - Node execution failed with an error
+- `timed-out` - Node execution exceeded timeout limit
+
+### Debugging Timeouts
+
+When a timeout occurs, you can identify:
+
+1. **Which node timed out** - Check `logs` for nodes with `state: "timed-out"`
+2. **Execution duration** - Calculate `endTime - startTime` to see how long it ran
+3. **Retry attempts** - Check `retryCount` to see if retries were attempted
+4. **Error details** - Check `errors` object for the specific error message and stack trace
+
+**Example timeout scenario:**
+
+```json
+{
+  "results": {
+    "source": "User input",
+    "llm": null
+  },
+  "errors": {
+    "llm": {
+      "message": "Timeout",
+      "stack": "Error: Timeout\n    at ComputedNode.executeTimeout..."
+    }
+  },
+  "logs": [
+    {
+      "nodeId": "source",
+      "state": "injected",
+      "endTime": 1760175441540
+    },
+    {
+      "nodeId": "llm",
+      "state": "timed-out",
+      "errorMessage": "Timeout",
+      "startTime": 1760175441540,
+      "endTime": 1760175641540,
+      "retryCount": 0
+    }
+  ]
+}
+```
+
+In this example:
+- The `llm` node timed out after 200 seconds (200000 milliseconds)
+- No retries were attempted (`retryCount: 0`)
+- The timeout error is captured in both `errors` and `logs`
+
+### Debugging Node Failures
+
+For non-timeout failures (agent errors, invalid inputs, etc.):
+
+1. Check `errors` for detailed error messages and stack traces
+2. Review `logs` to see which nodes completed successfully before the failure
+3. Examine `results` to see partial outputs from completed nodes
+
+### Development vs Production
+
+- **Development mode** (`NODE_ENV !== 'production'`):
+  - Full error stack traces included in responses
+  - Detailed error messages for initialization errors
+
+- **Production mode** (`NODE_ENV === 'production'`):
+  - Stack traces omitted from responses
+  - Generic error messages for security
 
 ---
 
