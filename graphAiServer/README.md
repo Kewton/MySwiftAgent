@@ -128,9 +128,27 @@ curl http://localhost:8000/api/v1/test
 **Response:**
 ```json
 {
-  "result": "..."
+  "results": {
+    "source": "Input text",
+    "node1": { "output": "..." }
+  },
+  "errors": {},
+  "logs": [
+    {
+      "nodeId": "node1",
+      "state": "completed",
+      "startTime": 1760175441540,
+      "endTime": 1760175441553,
+      "retryCount": 0
+    }
+  ]
 }
 ```
+
+**Response includes:**
+- `results`: All node execution results (including intermediate nodes)
+- `errors`: Map of failed nodes with error details
+- `logs`: Execution logs showing node states, timing, and retry information
 
 ### GraphAI Agent Endpoint
 
@@ -162,9 +180,62 @@ curl -X POST http://localhost:8104/api/v1/myagent \
 **Response:**
 ```json
 {
-  "result": "..."
+  "results": {
+    "source": "GraphAIについて教えて",
+    "output": { "text": "GraphAI response..." }
+  },
+  "errors": {},
+  "logs": [
+    {
+      "nodeId": "source",
+      "state": "injected",
+      "endTime": 1760175441540
+    },
+    {
+      "nodeId": "output",
+      "state": "completed",
+      "startTime": 1760175441540,
+      "endTime": 1760175441553,
+      "retryCount": 0
+    }
+  ]
 }
 ```
+
+**Error Response (if timeout or node failure):**
+```json
+{
+  "results": {
+    "source": "Input text",
+    "node1": { "output": "..." }
+  },
+  "errors": {
+    "node2": {
+      "message": "Timeout",
+      "stack": "Error: Timeout\n    at ..."
+    }
+  },
+  "logs": [
+    {
+      "nodeId": "node1",
+      "state": "completed",
+      "startTime": 1760175441540,
+      "endTime": 1760175441553,
+      "retryCount": 0
+    },
+    {
+      "nodeId": "node2",
+      "state": "timed-out",
+      "errorMessage": "Timeout",
+      "startTime": 1760175441560,
+      "endTime": 1760175471560,
+      "retryCount": 1
+    }
+  ]
+}
+```
+
+For detailed API documentation including all response formats, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md).
 
 ## MyVault Integration
 
