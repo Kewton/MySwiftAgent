@@ -19,16 +19,36 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Load project-level .env files (new policy)
+# Each service has its own .env file with minimal configuration
+for project in myVault jobqueue myscheduler expertAgent graphAiServer commonUI; do
+    if [[ -f "$PROJECT_ROOT/$project/.env" ]]; then
+        set -a
+        source "$PROJECT_ROOT/$project/.env"
+        set +a
+    fi
+done
+
 # Service ports (can be overridden via environment variables)
 JOBQUEUE_PORT="${JOBQUEUE_PORT:-8001}"
 MYSCHEDULER_PORT="${MYSCHEDULER_PORT:-8002}"
-EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8003}"
-GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8004}"
+MYVAULT_PORT="${MYVAULT_PORT:-8003}"
+EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
+GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
 COMMONUI_PORT="${COMMONUI_PORT:-8501}"
+
+# Automatically configure service URLs (new policy)
+export JOBQUEUE_API_URL="http://localhost:${JOBQUEUE_PORT}"
+export JOBQUEUE_BASE_URL="http://localhost:${JOBQUEUE_PORT}"
+export MYSCHEDULER_BASE_URL="http://localhost:${MYSCHEDULER_PORT}"
+export MYVAULT_BASE_URL="http://localhost:${MYVAULT_PORT}"
+export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
+export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
 
 # Service directories
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
 MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
+MYVAULT_DIR="$PROJECT_ROOT/myVault"
 EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
 GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
 COMMONUI_DIR="$PROJECT_ROOT/commonUI"
@@ -40,6 +60,7 @@ PID_DIR="$PROJECT_ROOT/.pids"
 # Log files
 JOBQUEUE_LOG="$LOG_DIR/jobqueue.log"
 MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
+MYVAULT_LOG="$LOG_DIR/myvault.log"
 EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 COMMONUI_LOG="$LOG_DIR/commonui.log"
@@ -48,6 +69,7 @@ SETUP_LOG="$LOG_DIR/setup.log"
 # PID files
 JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
 MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
+MYVAULT_PID="$PID_DIR/myvault.pid"
 EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
@@ -67,6 +89,7 @@ show_banner() {
 ║                                                                               ║
 ║   📋 JobQueue      - Job queue management API                                 ║
 ║   ⏰ MyScheduler   - Job scheduling service                                   ║
+║   🔐 MyVault       - Secrets management service                               ║
 ║   🤖 ExpertAgent   - AI agent service                                         ║
 ║   🔄 GraphAiServer - Graph AI workflow service                                ║
 ║   🎨 CommonUI      - Web interface                                            ║
@@ -113,6 +136,9 @@ init_directories() {
     > "$SETUP_LOG"
     > "$JOBQUEUE_LOG" 2>/dev/null || true
     > "$MYSCHEDULER_LOG" 2>/dev/null || true
+    > "$MYVAULT_LOG" 2>/dev/null || true
+    > "$EXPERTAGENT_LOG" 2>/dev/null || true
+    > "$GRAPHAISERVER_LOG" 2>/dev/null || true
     > "$COMMONUI_LOG" 2>/dev/null || true
 
     print_success "Directories initialized"
@@ -172,23 +198,9 @@ check_dependencies() {
 setup_dev_environment() {
     print_step "Setting up development environment..."
 
-    # Setup CommonUI environment
-    if [[ ! -f "$COMMONUI_DIR/.env" ]]; then
-        print_info "Creating CommonUI .env file..."
-        cat > "$COMMONUI_DIR/.env" << EOF
-# Development Environment Configuration
-JOBQUEUE_BASE_URL=http://localhost:$JOBQUEUE_PORT
-JOBQUEUE_API_TOKEN=$DEV_JOBQUEUE_TOKEN
-MYSCHEDULER_BASE_URL=http://localhost:$MYSCHEDULER_PORT
-MYSCHEDULER_API_TOKEN=$DEV_MYSCHEDULER_TOKEN
-POLLING_INTERVAL=5
-DEFAULT_SERVICE=JobQueue
-OPERATION_MODE=full
-EOF
-        print_success "Created CommonUI .env file"
-    else
-        print_info "CommonUI .env file already exists"
-    fi
+    # Note: CommonUI/.env is now managed as a project-level .env file
+    # Service URLs are automatically configured via environment variables (see above)
+    # No need to regenerate CommonUI/.env on every startup
 
     # Setup development tokens for APIs (if they support it)
     echo "DEV_MODE=true" > "$LOG_DIR/dev_tokens.txt"
@@ -468,6 +480,10 @@ show_service_urls() {
     echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$MYSCHEDULER_PORT/health${NC}${CYAN}                  │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$MYSCHEDULER_PORT/docs${NC}${CYAN}                    │${NC}"
     echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 🔐 MyVault API:       ${WHITE}http://localhost:$MYVAULT_PORT${NC}${CYAN}                           │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$MYVAULT_PORT/health${NC}${CYAN}                   │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$MYVAULT_PORT/docs${NC}${CYAN}                     │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} 🤖 ExpertAgent API:   ${WHITE}http://localhost:$EXPERTAGENT_PORT${NC}${CYAN}                          │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$EXPERTAGENT_PORT/health${NC}${CYAN}                  │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$EXPERTAGENT_PORT/aiagent-api/docs${NC}${CYAN}        │${NC}"
@@ -496,6 +512,10 @@ show_logs() {
         tail -n 20 "$MYSCHEDULER_LOG" 2>/dev/null || echo "No logs available"
         echo ""
 
+        echo -e "${YELLOW}=== MyVault Logs ===${NC}"
+        tail -n 20 "$MYVAULT_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
         echo -e "${YELLOW}=== ExpertAgent Logs ===${NC}"
         tail -n 20 "$EXPERTAGENT_LOG" 2>/dev/null || echo "No logs available"
         echo ""
@@ -519,6 +539,10 @@ show_logs() {
                 print_info "Following MyScheduler logs (Ctrl+C to stop):"
                 tail -f "$MYSCHEDULER_LOG"
                 ;;
+            myvault)
+                print_info "Following MyVault logs (Ctrl+C to stop):"
+                tail -f "$MYVAULT_LOG"
+                ;;
             expertagent)
                 print_info "Following ExpertAgent logs (Ctrl+C to stop):"
                 tail -f "$EXPERTAGENT_LOG"
@@ -537,7 +561,7 @@ show_logs() {
                 ;;
             *)
                 print_error "Unknown service: $service"
-                echo "Available services: jobqueue, myscheduler, expertagent, graphaiserver, commonui, setup"
+                echo "Available services: jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, setup"
                 return 1
                 ;;
         esac
@@ -618,6 +642,9 @@ clean_temp_files() {
 
     # Stop all services first
     stop_service "CommonUI" "$COMMONUI_PID"
+    stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
+    stop_service "ExpertAgent" "$EXPERTAGENT_PID"
+    stop_service "MyVault" "$MYVAULT_PID"
     stop_service "MyScheduler" "$MYSCHEDULER_PID"
     stop_service "JobQueue" "$JOBQUEUE_PID"
 
@@ -627,8 +654,7 @@ clean_temp_files() {
     # Clean PID files
     rm -f "$PID_DIR"/*.pid 2>/dev/null || true
 
-    # Clean CommonUI .env (will be recreated on next start)
-    rm -f "$COMMONUI_DIR/.env" 2>/dev/null || true
+    # Note: CommonUI/.env is now managed as a project-level .env file (not auto-generated)
 
     print_success "Temporary files cleaned"
 }
@@ -703,6 +729,16 @@ main() {
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 install_service_deps "MyScheduler" "$MYSCHEDULER_DIR" || exit 1
             fi
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                install_service_deps "MyVault" "$MYVAULT_DIR" || exit 1
+                mkdir -p "$MYVAULT_DIR/data"
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
+                install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
+                install_service_deps "GraphAiServer" "$GRAPHAISERVER_DIR" || exit 1
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 install_service_deps "CommonUI" "$COMMONUI_DIR" || exit 1
             fi
@@ -727,15 +763,36 @@ main() {
             # Start MyScheduler
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 install_service_deps "MyScheduler" "$MYSCHEDULER_DIR" || exit 1
+                # Note: Most env vars are loaded from myscheduler/.env
+                # Override JOBQUEUE_API_URL to use local port
                 start_service "MyScheduler" "$MYSCHEDULER_DIR" $MYSCHEDULER_PORT "$MYSCHEDULER_PID" "$MYSCHEDULER_LOG" \
-                    "uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
+                    "JOBQUEUE_API_URL='http://localhost:$JOBQUEUE_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
+            fi
+
+            # Start MyVault
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                # Check if master key is set
+                if [[ -z "${MSA_MASTER_KEY}" ]]; then
+                    print_warning "MyVault: MSA_MASTER_KEY not set, skipping startup"
+                    print_info "MyVault: Create myVault/.env and set MSA_MASTER_KEY to enable MyVault service"
+                else
+                    install_service_deps "MyVault" "$MYVAULT_DIR" || exit 1
+                    # Create data directory
+                    mkdir -p "$MYVAULT_DIR/data"
+                    # Note: Most env vars (MSA_MASTER_KEY, TOKEN_*) are loaded from myVault/.env
+                    # Only override DATABASE_URL here
+                    start_service "MyVault" "$MYVAULT_DIR" $MYVAULT_PORT "$MYVAULT_PID" "$MYVAULT_LOG" \
+                        "DATABASE_URL='sqlite:///./data/myvault.db' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYVAULT_PORT" || print_warning "MyVault: Failed to start (check logs for details)"
+                fi
             fi
 
             # Start ExpertAgent
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
+                # Note: Most env vars are loaded from expertAgent/.env
+                # Only override MYVAULT_BASE_URL and PORT here
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT" || exit 1
+                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT" || exit 1
             fi
 
             # Start GraphAiServer
@@ -790,6 +847,9 @@ main() {
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 stop_service "ExpertAgent" "$EXPERTAGENT_PID"
             fi
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                stop_service "MyVault" "$MYVAULT_PID"
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 stop_service "MyScheduler" "$MYSCHEDULER_PID"
             fi
@@ -814,6 +874,9 @@ main() {
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 check_service_status "MyScheduler" "$MYSCHEDULER_PID" $MYSCHEDULER_PORT
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
+                check_service_status "MyVault" "$MYVAULT_PID" $MYVAULT_PORT
             fi
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 check_service_status "ExpertAgent" "$EXPERTAGENT_PID" $EXPERTAGENT_PORT

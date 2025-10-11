@@ -44,6 +44,7 @@ class TestDeclogger:
 
     def test_declogger_basic(self):
         """Test declogger decorator on a simple function."""
+
         @declogger
         def sample_function(x, y):
             return x + y
@@ -54,6 +55,7 @@ class TestDeclogger:
 
     def test_declogger_with_kwargs(self):
         """Test declogger decorator with keyword arguments."""
+
         @declogger
         def sample_function(x, y=10):
             return x * y
@@ -63,6 +65,7 @@ class TestDeclogger:
 
     def test_declogger_preserves_function_name(self):
         """Test that declogger preserves function name."""
+
         @declogger
         def my_test_function():
             return "test"

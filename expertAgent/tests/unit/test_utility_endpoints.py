@@ -20,7 +20,9 @@ class TestTtsAndUploadDrive:
     @patch("app.api.v1.utility_endpoints.send_email")
     @patch("app.api.v1.utility_endpoints.tts_and_upload_drive")
     @patch("app.api.v1.utility_endpoints.generate_subject_from_text")
-    async def test_tts_and_upload_drive_success(self, mock_subject, mock_tts, mock_email):
+    async def test_tts_and_upload_drive_success(
+        self, mock_subject, mock_tts, mock_email
+    ):
         """Test successful TTS and upload."""
         mock_subject.return_value = "Test Title"
         mock_tts.return_value = "https://drive.google.com/file/123"

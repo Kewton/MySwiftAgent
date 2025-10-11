@@ -1,9 +1,41 @@
+import os
+
 from mcp.server.fastmcp import FastMCP
 
-from core.config import settings
+from core.logger import setup_logging
+from core.secrets import resolve_runtime_value
 from mymcp.googleapis.gmail.send import send_email
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
+
+# デバッグ: MCPサブプロセス起動を記録（stdio通信と干渉しないように stderr へ）
+debug_trace_file = "/tmp/mcp_stdio_debug.log"
+try:
+    with open(debug_trace_file, "a") as f:
+        f.write(f"=== MCP subprocess started (PID: {os.getpid()}) ===\n")
+        f.write(f"MCP_LOG_FILE env: {os.getenv('MCP_LOG_FILE')}\n")
+        f.write(f"LOG_DIR env: {os.getenv('LOG_DIR')}\n")
+        f.write(f"LOG_LEVEL env: {os.getenv('LOG_LEVEL')}\n")
+except Exception:
+    # デバッグ出力失敗は無視（本番動作に影響させない）
+    pass
+
+# MCPサブプロセス専用のログファイル名を環境変数から取得
+mcp_log_file = os.getenv("MCP_LOG_FILE", "mcp_stdio.log")
+
+try:
+    with open(debug_trace_file, "a") as f:
+        f.write(f"Calling setup_logging(log_file_name='{mcp_log_file}')\n")
+except Exception:
+    pass
+
+setup_logging(log_file_name=mcp_log_file)
+
+try:
+    with open(debug_trace_file, "a") as f:
+        f.write("setup_logging() completed successfully\n")
+except Exception:
+    pass
 
 mcp = FastMCP("myMcp")
 
@@ -22,11 +54,18 @@ async def send_email_tool(body: str) -> str:
         str: 成功時は成功メッセージ、失敗時はエラーメッセージ。
     """
     subject = generate_subject_from_text(body)
-    return send_email(settings.MAIL_TO, subject, body)
+    mail_to = resolve_runtime_value("MAIL_TO")
+    if not mail_to:
+        raise ValueError("MAIL_TO is not configured")
+
+    return send_email(str(mail_to), subject, body)
 
 
 # @mcp.tool()
-# async def generate_subject_from_text_tool(text_body: str, max_length: int = 20) -> str:
+# async def generate_subject_from_text_tool(
+#     text_body: str,
+#     max_length: int = 20,
+# ) -> str:
 #     """与えられたテキスト本文からタイトルを生成します。
 
 #     Args:
@@ -57,4 +96,8 @@ async def tts_and_upload_drive_tool(input_message: str, file_name: str) -> str:
 
 
 if __name__ == "__main__":
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.debug("Starting myMcp with stdio transport")
     mcp.run(transport="stdio")

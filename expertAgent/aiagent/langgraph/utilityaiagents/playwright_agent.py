@@ -14,15 +14,15 @@ async def playwrightagent(query: str, _modelname: str) -> str:
         str: 実行結果のメッセージ
     """
     # System message to inform that browser is already installed
-    system_msg = SystemMessage(content="""IMPORTANT: Chromium browser is already installed and ready to use.
+    system_msg = SystemMessage(
+        content="""IMPORTANT: Chromium browser is already installed and ready to use.
 Do NOT use browser_install tool. Start directly with browser_navigate to access web pages.
-Environment: Linux ARM64 with Chromium headless browser pre-installed.""")
+Environment: Linux ARM64 with Chromium headless browser pre-installed."""
+    )
 
     human_msg = HumanMessage(content=query)
 
-    async with make_playwright_graph(
-        "playwrightagent", _modelname, 15
-    ) as graph:
+    async with make_playwright_graph("playwrightagent", _modelname, 15) as graph:
         result = await graph.ainvoke({"messages": [system_msg, human_msg]})
         aiMessage = ""
         for message in result.get("messages", []):

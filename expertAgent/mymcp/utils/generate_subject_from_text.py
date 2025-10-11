@@ -1,13 +1,19 @@
-from core.config import settings
+from typing import cast
+
+from app.schemas.standardAiAgent import ChatMessage
+from core.logger import getlogger
+from core.secrets import resolve_runtime_value
 
 # import google.generativeai as genai
 from mymcp.utils.execllm import execLlmApi
+
+logger = getlogger()
 
 # def getmodel():
 #     # --- 1. APIクライアントの準備 ---
 #     try:
 #         # 環境変数などからAPIキーを取得
-#         GOOGLE_API_KEY = settings.GOOGLE_API_KEY
+#         GOOGLE_API_KEY = resolve_runtime_value("GOOGLE_API_KEY")
 #         if not GOOGLE_API_KEY:
 #             raise ValueError("環境変数 'GOOGLE_API_KEY' が設定されていません。")
 
@@ -75,12 +81,21 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
 
         # 前後に不要な引用符などが付いていたら削除
         # generated_subject = generated_subject.strip('"`\'')
-        generated_subject = execLlmApi(settings.OLLAMA_DEF_SMALL_MODEL, _messages)
+        resolved_model = resolve_runtime_value("OLLAMA_DEF_SMALL_MODEL")
+        if not resolved_model:
+            raise ValueError("OLLAMA_DEF_SMALL_MODEL is not configured")
+
+        generated_subject_raw = execLlmApi(
+            str(resolved_model),
+            cast(list[ChatMessage], _messages),
+        )
+        generated_subject = str(generated_subject_raw or "")
 
         # 必要に応じてさらに後処理 (例: 長すぎる場合の切り詰め)
         if len(generated_subject) > max_length * 1.5:  # 多少のオーバーは許容
-            print(
-                f"Warning: Generated subject is longer than expected ({len(generated_subject)} chars). Truncating."
+            logger.warning(
+                "Generated subject is longer than expected (%s chars). Truncating.",
+                len(generated_subject),
             )
             # 単純に切り詰めるか、再度生成を試みるかなどの戦略が必要
             generated_subject = generated_subject[:max_length] + "..."
@@ -92,18 +107,31 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
         return generated_subject
 
     except Exception as e:
-        print(f"件名生成中にエラーが発生しました: {e}")
+        logger.error("Error during subject generation: %s", e, exc_info=True)
         # response オブジェクトが存在すれば、ブロック理由などを確認できる場合がある
         # try:
         #     if response and response.prompt_feedback:
         #         print(f"Prompt Feedback: {response.prompt_feedback}")
         #     # Gemini API の safety ratings によりブロックされた場合など
-        #     if response and response.candidates and response.candidates[0].finish_reason.name != "STOP":
-        #         print(f"Generation finished with reason: {response.candidates[0].finish_reason.name}")
+        #     if (
+        #         response
+        #         and response.candidates
+        #         and response.candidates[0].finish_reason.name != "STOP"
+        #     ):
+        #         print(
+        #             "Generation finished with reason: "
+        #             f"{response.candidates[0].finish_reason.name}"
+        #         )
         #         if response.candidates[0].safety_ratings:
-        #             print(f"Safety Ratings: {response.candidates[0].safety_ratings}")
+        #             print(
+        #                 "Safety Ratings: "
+        #                 f"{response.candidates[0].safety_ratings}"
+        #             )
 
         # except Exception as inner_e:
-        #     print(f"Error details unavailable or failed to access: {inner_e}")
+        #     print(
+        #         "Error details unavailable or failed to access: "
+        #         f"{inner_e}"
+        #     )
 
         return f"エラー: 件名生成中にエラーが発生しました: {e}"

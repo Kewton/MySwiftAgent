@@ -18,6 +18,7 @@ class ExpertAiAgentRequest(BaseModel):
     user_input: str
     system_imput: str | None = None
     model_name: str | None = None
+    project: str | None = None  # MyVault project name for secrets
 
 
 class ExpertAiAgentResponse(BaseModel):

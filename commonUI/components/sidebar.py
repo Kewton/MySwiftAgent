@@ -80,16 +80,9 @@ class SidebarManager:
             help="How often to refresh data from the API"
         )
 
-        operation_mode = st.sidebar.selectbox(
-            "Operation Mode",
-            ["full", "readonly"],
-            index=0 if config.ui.operation_mode == "full" else 1,
-            help="Full: All operations enabled, Readonly: View only"
-        )
-
         return {
             "polling_interval": polling_interval,
-            "operation_mode": operation_mode
+            "operation_mode": config.ui.operation_mode  # Use default from config
         }
 
     @staticmethod
@@ -122,27 +115,20 @@ class SidebarManager:
     @staticmethod
     def render_complete_sidebar() -> tuple[str, dict]:
         """Render complete sidebar and return selected service and UI settings."""
-        # Service selection
-        selected_service = SidebarManager.render_service_selector()
-
-        # API settings
-        SidebarManager.render_api_settings(selected_service)
-
         # UI settings
         ui_settings = SidebarManager.render_ui_settings()
-
-        # System info
-        SidebarManager.render_system_info()
 
         # Divider and app info
         st.sidebar.divider()
         st.sidebar.markdown(
             """
-            **CommonUI v0.1.0**
+            **CommonUI v0.2.1**
             MySwiftAgent Management Interface
 
             📖 [Documentation](https://github.com/Kewton/MySwiftAgent)
             """
         )
 
+        # Return default service from config
+        selected_service = config.ui.default_service
         return selected_service, ui_settings

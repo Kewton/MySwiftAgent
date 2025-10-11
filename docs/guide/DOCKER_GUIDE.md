@@ -27,17 +27,18 @@ docker compose version
 
 ## サービス構成
 
-MySwiftAgentは5つのマイクロサービスで構成されています：
+MySwiftAgentは6つのマイクロサービスで構成されています：
 
 | サービス名 | ポート | 説明 | 技術スタック |
 |-----------|--------|------|-------------|
 | **JobQueue** | 8001 | ジョブキュー管理API | Python/FastAPI |
 | **MyScheduler** | 8002 | ジョブスケジューリングサービス | Python/FastAPI/APScheduler |
-| **ExpertAgent** | 8003 | AIエージェントサービス | Python/FastAPI/LangChain |
-| **GraphAiServer** | 8004 | グラフAIワークフローサービス | TypeScript/Node.js |
+| **MyVault** | 8003 | シークレット管理サービス | Python/FastAPI/Cryptography |
+| **ExpertAgent** | 8004 | AIエージェントサービス | Python/FastAPI/LangChain |
+| **GraphAiServer** | 8005 | グラフAIワークフローサービス | TypeScript/Node.js |
 | **CommonUI** | 8501 | Webインターフェース | Python/Streamlit |
 
-> ℹ️ ローカル開発スクリプト（`./scripts/dev-start.sh`）も同じポートを使用します。`./scripts/quick-start.sh` を併用する場合は、デフォルトで **8101〜8104** と **8601** の代替ポートを利用するため Docker Compose と競合しません。必要に応じて `JOBQUEUE_PORT=8111 ./scripts/quick-start.sh` のように環境変数でポートを上書きできます。
+> ℹ️ ローカル開発スクリプト（`./scripts/dev-start.sh`）も同じポートを使用します。`./scripts/quick-start.sh` を併用する場合は、デフォルトで **8101〜8105** と **8601** の代替ポートを利用するため Docker Compose と競合しません。必要に応じて `JOBQUEUE_PORT=8111 ./scripts/quick-start.sh` のように環境変数でポートを上書きできます。
 
 ### サービス間の依存関係
 
@@ -45,9 +46,11 @@ MySwiftAgentは5つのマイクロサービスで構成されています：
 graph TD
     A[CommonUI:8501] --> B[JobQueue:8001]
     A --> C[MyScheduler:8002]
-    A --> D[ExpertAgent:8003]
-    A --> E[GraphAiServer:8004]
+    A --> D[MyVault:8003]
+    A --> E[ExpertAgent:8004]
+    A --> F[GraphAiServer:8005]
     C --> B
+    E --> D
 ```
 
 ## イメージのバージョン管理
@@ -94,7 +97,10 @@ docker compose ps --format json | jq -r '.[] | "\(.Service): \(.Image)"'
 # .env
 JOBQUEUE_VERSION=0.1.0
 MYSCHEDULER_VERSION=0.2.0
+MYVAULT_VERSION=0.1.0
 EXPERTAGENT_VERSION=0.1.2
+GRAPHAISERVER_VERSION=0.1.0
+COMMONUI_VERSION=0.2.0
 ```
 
 または、環境変数で直接指定：
@@ -120,6 +126,16 @@ cp .env.example .env
 OPENAI_API_KEY=sk-your-openai-api-key
 ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
 GOOGLE_API_KEY=your-google-api-key
+
+# MyVault設定（Secrets Management）
+MYVAULT_ENABLED=true
+MSA_MASTER_KEY=base64:your-generated-key  # python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# サービス認証トークン
+MYVAULT_TOKEN_EXPERTAGENT=your-generated-token
+MYVAULT_TOKEN_MYSCHEDULER=your-generated-token
+MYVAULT_TOKEN_JOBQUEUE=your-generated-token
+MYVAULT_TOKEN_COMMONUI=your-generated-token
 
 # その他の設定は必要に応じて変更
 TZ=Asia/Tokyo
@@ -147,6 +163,7 @@ docker compose logs -f
 # 特定サービスのログ確認
 docker compose logs -f jobqueue
 docker compose logs -f myscheduler
+docker compose logs -f myvault
 docker compose logs -f expertagent
 docker compose logs -f graphaiserver
 docker compose logs -f commonui
@@ -163,11 +180,14 @@ curl http://localhost:8001/health
 # MyScheduler
 curl http://localhost:8002/health
 
-# ExpertAgent
+# MyVault
 curl http://localhost:8003/health
 
-# GraphAiServer
+# ExpertAgent
 curl http://localhost:8004/health
+
+# GraphAiServer
+curl http://localhost:8005/health
 
 # CommonUI
 curl http://localhost:8501/health
@@ -185,8 +205,15 @@ curl http://localhost:8501/health
 
 - **JobQueue API Docs**: http://localhost:8001/docs
 - **MyScheduler API Docs**: http://localhost:8002/docs
-- **ExpertAgent API Docs**: http://localhost:8003/aiagent-api/docs
+- **MyVault API Docs**: http://localhost:8003/docs
+- **ExpertAgent API Docs**: http://localhost:8004/aiagent-api/docs
 - **CommonUI**: http://localhost:8501
+
+**CommonUI の各ページ:**
+- Home: http://localhost:8501/
+- JobQueue: http://localhost:8501/JobQueue
+- MyScheduler: http://localhost:8501/MyScheduler
+- MyVault: http://localhost:8501/MyVault
 
 ### 6. サービスの停止
 
@@ -210,6 +237,8 @@ docker compose down -v
 | `OPENAI_API_KEY` | オプション | OpenAI APIキー（GPTモデル使用時） |
 | `ANTHROPIC_API_KEY` | オプション | Anthropic APIキー（Claudeモデル使用時） |
 | `GOOGLE_API_KEY` | オプション | Google APIキー（Geminiモデル使用時） |
+| `MSA_MASTER_KEY` | 推奨 | MyVault暗号化キー（Fernet形式） |
+| `MYVAULT_TOKEN_*` | 推奨 | 各サービスのMyVault認証トークン |
 | `TZ` | 推奨 | タイムゾーン設定（デフォルト: Asia/Tokyo） |
 
 ### サービス固有の環境変数
@@ -229,13 +258,24 @@ PYTHONPATH=/app
 DATABASE_URL=sqlite:///./data/jobs.db
 ```
 
+#### MyVault
+
+```yaml
+MSA_MASTER_KEY=base64:your-generated-key
+DATABASE_PATH=./data/myvault.db
+PYTHONPATH=/app
+```
+
 #### CommonUI
 
 ```yaml
-JOBQUEUE_API_URL=http://jobqueue:8000
-MYSCHEDULER_API_URL=http://myscheduler:8000
-EXPERTAGENT_API_URL=http://expertagent:8000
-GRAPHAISERVER_API_URL=http://graphaiserver:8000
+JOBQUEUE_BASE_URL=http://jobqueue:8000
+MYSCHEDULER_BASE_URL=http://myscheduler:8000
+MYVAULT_BASE_URL=http://myvault:8000
+MYVAULT_SERVICE_NAME=commonui
+MYVAULT_SERVICE_TOKEN=your-service-token
+EXPERTAGENT_BASE_URL=http://expertagent:8000
+GRAPHAISERVER_BASE_URL=http://graphaiserver:8000
 ```
 
 ## 開発環境での使用
@@ -310,6 +350,7 @@ docker volume ls | grep myswiftagent
 # ボリュームの詳細情報
 docker volume inspect myswiftagent-jobqueue-data
 docker volume inspect myswiftagent-myscheduler-data
+docker volume inspect myswiftagent-myvault-data
 ```
 
 ### データのバックアップ
@@ -322,6 +363,10 @@ docker compose cp jobqueue:/tmp/jobqueue-backup.tar.gz ./jobqueue-backup-$(date 
 # MySchedulerのデータベースをバックアップ
 docker compose exec myscheduler tar czf /tmp/myscheduler-backup.tar.gz -C /app/data .
 docker compose cp myscheduler:/tmp/myscheduler-backup.tar.gz ./myscheduler-backup-$(date +%Y%m%d).tar.gz
+
+# MyVaultのデータベースをバックアップ
+docker compose exec myvault tar czf /tmp/myvault-backup.tar.gz -C /app/data .
+docker compose cp myvault:/tmp/myvault-backup.tar.gz ./myvault-backup-$(date +%Y%m%d).tar.gz
 ```
 
 ### データのリストア
@@ -336,6 +381,11 @@ docker compose restart jobqueue
 docker compose cp ./myscheduler-backup-20250101.tar.gz myscheduler:/tmp/myscheduler-backup.tar.gz
 docker compose exec myscheduler tar xzf /tmp/myscheduler-backup.tar.gz -C /app/data
 docker compose restart myscheduler
+
+# MyVaultのバックアップを展開
+docker compose cp ./myvault-backup-20250101.tar.gz myvault:/tmp/myvault-backup.tar.gz
+docker compose exec myvault tar xzf /tmp/myvault-backup.tar.gz -C /app/data
+docker compose restart myvault
 ```
 
 ## トラブルシューティング
@@ -353,7 +403,7 @@ Error: bind: address already in use
 **解決方法**:
 ```bash
 # 使用中のポートを確認（Docker既定ポート + Quick Start 代替ポート）
-lsof -i :8001 -i :8002 -i :8003 -i :8004 -i :8501 -i :8101 -i :8102 -i :8103 -i :8104 -i :8601
+lsof -i :8001 -i :8002 -i :8003 -i :8004 -i :8005 -i :8501 -i :8101 -i :8102 -i :8103 -i :8104 -i :8105 -i :8601
 
 # ローカル開発スクリプトを利用している場合は停止
 ./scripts/dev-start.sh stop  # または ./scripts/quick-start.sh stop
@@ -395,6 +445,27 @@ docker compose build --no-cache
 docker compose build --no-cache expertagent
 ```
 
+#### 5. CommonUI で MyVault 接続エラー
+
+**症状**: CommonUI の MyVault ページで "[Errno 61] Connection refused" エラー
+
+**原因**: 環境変数が正しく読み込まれていない
+
+**解決方法**:
+```bash
+# 1. CommonUI/.env ファイルを確認
+cat commonUI/.env
+
+# 2. MYVAULT_BASE_URL が正しいポートを指しているか確認
+# Docker Compose: http://localhost:8003
+# Quick Start: http://localhost:8103
+
+# 3. CommonUI を再起動
+docker compose restart commonui
+# または
+./scripts/quick-start.sh restart commonui
+```
+
 ### デバッグコマンド
 
 ```bash
@@ -406,6 +477,7 @@ docker compose exec jobqueue uv run python -c "import app; print(app.__version__
 
 # ネットワーク接続テスト
 docker compose exec commonui curl http://jobqueue:8000/health
+docker compose exec commonui curl http://myvault:8000/health
 ```
 
 ### リソース使用状況の確認
@@ -474,5 +546,6 @@ services:
 
 - [Docker Compose公式ドキュメント](https://docs.docker.com/compose/)
 - [Docker公式ドキュメント](https://docs.docker.com/)
-- [MySwiftAgent公式README](./README.md)
-- [開発環境スクリプト](./scripts/dev-start.sh)
+- [MySwiftAgent公式README](../../README.md)
+- [開発環境スクリプト](../../scripts/dev-start.sh)
+- [Quick Startスクリプト](../../scripts/quick-start.sh)

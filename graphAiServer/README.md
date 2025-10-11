@@ -6,9 +6,10 @@
 
 - ⚡ Fast and lightweight Express server
 - 🧠 GraphAI framework integration for complex AI workflows
+- 🔐 **MyVault integration** for centralized secret management with cache
 - 🔒 Security-first with Helmet middleware
 - 🌐 CORS-enabled for cross-origin requests
-- 🧪 Comprehensive testing with Jest and Supertest
+- 🧪 Comprehensive testing with Jest and Supertest (29 MyVault tests included)
 - 🐳 Docker-ready with multi-stage build
 - 📊 Health check endpoint for monitoring
 - 📝 YAML-based workflow configuration
@@ -164,6 +165,81 @@ curl -X POST http://localhost:8104/api/v1/myagent \
   "result": "..."
 }
 ```
+
+## MyVault Integration
+
+🔐 **SecretsManager** provides centralized secret management with MyVault priority and environment variable fallback.
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# Server Configuration
+PORT=8100
+NODE_ENV=development
+
+# MyVault Configuration (recommended for secret management)
+MYVAULT_ENABLED=true
+MYVAULT_BASE_URL=http://localhost:8105
+MYVAULT_SERVICE_NAME=graphAiServer
+MYVAULT_SERVICE_TOKEN=your-service-token
+MYVAULT_DEFAULT_PROJECT=your-project-name
+SECRETS_CACHE_TTL=300  # Cache TTL in seconds (default: 300)
+
+# API Keys (fallback if MyVault is unavailable)
+OPENAI_API_KEY=your-openai-key
+ANTHROPIC_API_KEY=your-anthropic-key
+GOOGLE_API_KEY=your-google-key
+GROQ_API_KEY=your-groq-key
+```
+
+### Features
+
+- 🔒 Priority-based secret retrieval: MyVault → Environment Variables → Error
+- ⚡ TTL-based caching (default 300s) for performance
+- 🔄 Manual cache reload capabilities
+- 📁 Project-level secret grouping
+- 🛡️ Comprehensive error handling
+
+### Usage Example
+
+```typescript
+import { secretsManager } from './src/services/secretsManager';
+
+// Get secret (tries MyVault first, falls back to env var)
+const apiKey = await secretsManager.getSecret('OPENAI_API_KEY');
+
+// Get secret from specific project
+const apiKey = await secretsManager.getSecret('OPENAI_API_KEY', 'my-project');
+
+// Get all secrets for a project
+const secrets = await secretsManager.getSecretsForProject('my-project');
+
+// Clear cache (manual reload)
+secretsManager.clearCache();  // Clear all cache
+secretsManager.clearCache('my-project');  // Clear specific project
+```
+
+### Secret Retrieval Priority
+
+1. **MyVault** (if `MYVAULT_ENABLED=true`)
+   - Checks cache first (if within TTL)
+   - Fetches from MyVault API if cache miss
+   - Uses specified project or default project
+2. **Environment Variable** (fallback)
+   - Falls back to `.env` or system environment
+3. **Error** (if not found anywhere)
+   - Throws error with descriptive message
+
+### Test Coverage
+
+The MyVault integration includes comprehensive tests:
+- `tests/myvaultClient.test.ts` - 13 tests for MyVault HTTP client
+- `tests/secretsManager.test.ts` - 16 tests for SecretsManager logic
+- `tests/integration/app.test.ts` - Integration tests
+
+Run tests: `npm test`
 
 ## Development
 

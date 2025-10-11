@@ -9,6 +9,7 @@
 # ===================================================================
 
 # Byte-compiled / optimized / DLL files
+/.playwright-mcp
 __pycache__/
 *.py[cod]
 *$py.class
@@ -358,6 +359,7 @@ out/
 .coverage
 .coverage.*
 coverage.xml
+coverage.json
 htmlcov/
 .tox/
 .pytest_cache/
@@ -376,6 +378,9 @@ test*.db
 myscheduler/jobs.db*
 myscheduler/data/
 jobqueue/data/
+myVault/myvault.db*
+myVault/data/*
+!myVault/data/.gitkeep
 commonUI/.streamlit/secrets.toml
 
 # Development scripts output
@@ -476,6 +481,9 @@ id_ed25519
 !*template*
 !*sample*
 
+# Force include .gitkeep files (for empty directories)
+!**/.gitkeep
+
 # ===================================================================
 # Project Structure Specific Ignores
 # ===================================================================
@@ -522,7 +530,7 @@ target/
 Cargo.lock
 
 # ===================================================================
-# workspace files   
+# workspace files
 # ===================================================================
 workspace/*
 

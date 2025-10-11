@@ -1,7 +1,20 @@
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+# Load environment variables from myscheduler/.env (new policy)
+# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+env_path = PROJECT_ROOT / ".env"
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path, override=False)
+else:
+    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
+    load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
@@ -34,8 +47,7 @@ class Settings(BaseSettings):
     # ログ
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    log_dir: str = "./"
 
     @property
     def tz(self) -> ZoneInfo:

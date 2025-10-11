@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { runGraphAI, testGraphAI } from './services/graphai.js';
+import { secretsManager } from './services/secretsManager.js';
+import { settings } from './config/settings.js';
 
 const app = express();
 
@@ -40,7 +42,7 @@ app.get('/api/v1/test', async (_req: Request, res: Response) => {
 
 // GraphAI agent endpoint
 app.post('/api/v1/myagent', async (req: Request, res: Response) => {
-  const { user_input, model_name } = req.body;
+  const { user_input, model_name, project } = req.body;
 
   if (!user_input) {
     return res.status(400).json({ error: 'user_input is required' });
@@ -51,11 +53,39 @@ app.post('/api/v1/myagent', async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await runGraphAI(user_input, model_name);
+    const result = await runGraphAI(user_input, model_name, project);
     res.json(result);
   } catch (error) {
     console.error("Error executing GraphAI sample:", error);
     res.status(500).json({ error: 'An error occurred while executing the GraphAI sample.' });
+  }
+});
+
+// Admin token middleware
+const requireAdminToken = (req: Request, res: Response, next: Function) => {
+  const token = req.headers['x-admin-token'];
+  if (!settings.ADMIN_TOKEN || token !== settings.ADMIN_TOKEN) {
+    return res.status(403).json({ error: 'Invalid admin token' });
+  }
+  next();
+};
+
+// Admin health check
+app.get('/api/v1/admin/health', (req: Request, res: Response) => {
+  res.json({ status: 'healthy', service: 'graphaiserver-admin' });
+});
+
+// Cache reload endpoint
+app.post('/api/v1/admin/reload-secrets', requireAdminToken, (req: Request, res: Response) => {
+  try {
+    const { project } = req.body;
+    secretsManager.clearCache(project);
+    res.json({
+      success: true,
+      message: project ? `Cache cleared for project: ${project}` : 'All cache cleared',
+    });
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
   }
 });
 

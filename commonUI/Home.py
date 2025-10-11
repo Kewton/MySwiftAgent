@@ -4,21 +4,40 @@ CommonUI - MySwiftAgent Management Interface
 Streamlit multi-page application for managing JobQueue and MyScheduler services.
 """
 
+import logging
+import sys
 import os
 from pathlib import Path
 
-# IMPORTANT: Load .env BEFORE importing config
-from dotenv import load_dotenv
-
-env_path = Path(__file__).parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
-
 import streamlit as st
 
+from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
+
+
+# Configure logging
+log_dir = Path(config.log_dir)
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "app.log"
+
+logging.basicConfig(
+    level=getattr(logging, config.log_level.upper(), logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, mode="a", encoding="utf-8"),
+    ],
+    force=True,  # Force reconfiguration even if logging was already configured
+)
+
+logger = logging.getLogger(__name__)
+logger.info(
+    "Logging configured (dir=%s, level=%s)",
+    log_dir,
+    config.log_level,
+)
 
 # Page configuration
 st.set_page_config(
@@ -194,6 +213,32 @@ def render_footer() -> None:
 def main() -> None:
     """Main application entry point."""
     try:
+        # Handle OAuth2 callback if present (Google redirects to home page)
+        query_params = st.query_params
+        if "code" in query_params and "state" in query_params:
+            st.info("🔄 Processing Google OAuth2 callback...")
+            try:
+                api_config = config.get_api_config("expertagent")
+                with HTTPClient(api_config, "ExpertAgent") as client:
+                    callback_data = {
+                        "state": query_params["state"],
+                        "code": query_params["code"],
+                        "project": None  # expertAgent will use stored value
+                    }
+                    response = client.post("/v1/google-auth/oauth2-callback", callback_data)
+                    project = response.get("project", "default_project")
+
+                st.success(f"✅ Google authentication successful for project: {project}")
+                st.info("✅ Token saved to MyVault")
+                st.info("📍 Navigate to 🔐 MyVault → Google認証 tab to verify")
+
+                # Clear query params
+                st.query_params.clear()
+                st.balloons()
+            except Exception as e:
+                st.error(f"❌ OAuth2 callback failed: {e}")
+                st.query_params.clear()
+
         # Render sidebar
         selected_service, ui_settings = SidebarManager.render_complete_sidebar()
 

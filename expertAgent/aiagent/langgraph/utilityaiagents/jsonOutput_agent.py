@@ -4,7 +4,9 @@ import re
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_google_genai import ChatGoogleGenerativeAI
+
+# Lazy import to avoid loading Google credentials at module import time
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 
@@ -13,9 +15,11 @@ from aiagent.langgraph.util import isChatGPT_o, isChatGptAPI, isClaude, isGemini
 from core.config import settings
 
 
-async def jsonOutputagent(query: str, _modelname: str = "gpt-4o-mini") -> dict:
+async def jsonOutputagent(
+    query: str, _modelname: str = "gpt-4o-mini", project: str | None = None
+) -> dict:
     async with make_utility_graph(
-        "mymcp.stdio_explorer", "exploreragent", _modelname, 2
+        "mymcp.stdio_explorer", "exploreragent", _modelname, 2, project=project
     ) as graph:
         print(f"mymcp.stdio_explorer start query:{query}")
         result = await graph.ainvoke({"messages": query})
@@ -42,7 +46,13 @@ async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
         llm_openai = ChatOpenAI(model=_model, temperature=0.3)
     elif isGemini(_model):
         # gemini-2.5-flash-preview-04-17
-        llm_openai = ChatGoogleGenerativeAI(model=_model)
+        # Lazy import to avoid loading Google credentials at module import time
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        from core.secrets import secrets_manager
+
+        google_api_key = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
+        llm_openai = ChatGoogleGenerativeAI(model=_model, google_api_key=google_api_key)
     elif isClaude(_model):
         llm_openai = ChatAnthropic(model=_model)
     else:
