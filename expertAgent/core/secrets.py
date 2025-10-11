@@ -1,12 +1,14 @@
 """Unified secrets manager for expertAgent.
 
-Handles secret retrieval from MyVault (priority) or environment variables (fallback).
+Handles secret retrieval from MyVault (priority) or
+environment variables (fallback).
 Includes caching with TTL and manual reload support.
+Provides helpers for resolving runtime configuration values.
 """
 
 import logging
 import time
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from core.config import settings
 from core.myvault_client import MyVaultClient, MyVaultError
@@ -27,7 +29,14 @@ class SecretsManager:
         self.myvault_enabled = settings.MYVAULT_ENABLED
         self.myvault_client: Optional[MyVaultClient] = None
 
-        logger.debug(f"SecretsManager init: MYVAULT_ENABLED={self.myvault_enabled}, BASE_URL={settings.MYVAULT_BASE_URL}, SERVICE_NAME={settings.MYVAULT_SERVICE_NAME}, TOKEN={'*' * 10 if settings.MYVAULT_SERVICE_TOKEN else 'EMPTY'}")
+        logger.debug(
+            "SecretsManager init: MYVAULT_ENABLED=%s, BASE_URL=%s, "
+            "SERVICE_NAME=%s, TOKEN=%s",
+            self.myvault_enabled,
+            settings.MYVAULT_BASE_URL,
+            settings.MYVAULT_SERVICE_NAME,
+            "*" * 10 if settings.MYVAULT_SERVICE_TOKEN else "EMPTY",
+        )
 
         if self.myvault_enabled:
             try:
@@ -37,13 +46,16 @@ class SecretsManager:
                     token=settings.MYVAULT_SERVICE_TOKEN,
                 )
                 logger.info(
-                    f"✓ MyVault client initialized: {settings.MYVAULT_BASE_URL}"
+                    "✓ MyVault client initialized: %s",
+                    settings.MYVAULT_BASE_URL,
                 )
             except Exception as e:
                 logger.error(f"❌ Failed to initialize MyVault client: {e}")
                 self.myvault_enabled = False
         else:
-            logger.warning("⚠ MyVault is disabled - using environment variables only")
+            logger.warning(
+                "⚠ MyVault is disabled - using environment variables only"
+            )
 
     def get_secret(self, key: str, project: Optional[str] = None) -> str:
         """Get secret value with MyVault priority.
@@ -68,8 +80,16 @@ class SecretsManager:
             try:
                 value = self._get_from_myvault(key, project)
                 if value:
-                    project_name = project or self.settings.MYVAULT_DEFAULT_PROJECT or "default"
-                    logger.info(f"✓ Secret '{key}' retrieved from MyVault (project: {project_name})")
+                    project_name = (
+                        project
+                        or self.settings.MYVAULT_DEFAULT_PROJECT
+                        or "default"
+                    )
+                    logger.info(
+                        "✓ Secret '%s' retrieved from MyVault (project: %s)",
+                        key,
+                        project_name,
+                    )
                     return value
             except MyVaultError as e:
                 logger.warning(f"MyVault retrieval failed for '{key}': {e}")
@@ -78,7 +98,10 @@ class SecretsManager:
         # 2. Fallback to environment variable
         env_value = getattr(self.settings, key, "")
         if env_value:
-            logger.info(f"↓ Secret '{key}' retrieved from environment variable (fallback)")
+            logger.info(
+                "↓ Secret '%s' retrieved from environment variable (fallback)",
+                key,
+            )
             return env_value
 
         # 3. Not found anywhere
@@ -86,7 +109,9 @@ class SecretsManager:
             f"Secret '{key}' not found in MyVault or environment variables"
         )
 
-    def get_secrets_for_project(self, project: Optional[str] = None) -> Dict[str, str]:
+    def get_secrets_for_project(
+        self, project: Optional[str] = None
+    ) -> Dict[str, str]:
         """Get all secrets for a project (or default project).
 
         Args:
@@ -103,7 +128,9 @@ class SecretsManager:
             project_name = project or self._resolve_default_project()
             return self._get_project_secrets(project_name)
         except MyVaultError:
-            logger.warning(f"Failed to get secrets from MyVault, using env vars")
+            logger.warning(
+                "Failed to get secrets from MyVault, using env vars"
+            )
             return self._get_all_env_secrets()
 
     def clear_cache(self, project: Optional[str] = None):
@@ -119,7 +146,9 @@ class SecretsManager:
             self._cache.clear()
             logger.info("All cache cleared")
 
-    def _get_from_myvault(self, key: str, project: Optional[str]) -> Optional[str]:
+    def _get_from_myvault(
+        self, key: str, project: Optional[str]
+    ) -> Optional[str]:
         """Get secret from MyVault with cache."""
         if not self.myvault_client:
             return None
@@ -127,7 +156,9 @@ class SecretsManager:
         # Resolve project name
         project_name = project or self._resolve_default_project()
         if not project_name:
-            raise MyVaultError("No project specified and no default project found")
+            raise MyVaultError(
+                "No project specified and no default project found"
+            )
 
         # Check cache
         if self._is_cache_valid(project_name, key):
@@ -142,7 +173,10 @@ class SecretsManager:
         except MyVaultError as e:
             # Secret not found in this project
             logger.warning(
-                f"MyVault retrieval failed for '{key}' in project '{project_name}': {e}"
+                "MyVault retrieval failed for '%s' in project '%s': %s",
+                key,
+                project_name,
+                e,
             )
             return None
 
@@ -175,19 +209,29 @@ class SecretsManager:
             try:
                 default_project = self.myvault_client.get_default_project()
                 if default_project:
-                    logger.debug(f"Using default project from MyVault API: {default_project}")
+                    logger.debug(
+                        "Using default project from MyVault API: %s",
+                        default_project,
+                    )
                     return default_project
             except MyVaultError as e:
-                logger.warning(f"Failed to get default project from MyVault API: {e}")
+                logger.warning(
+                    "Failed to get default project from MyVault API: %s", e
+                )
                 # Continue to fallback
 
         # 2. Fallback to env var override (special cases only)
         if self.settings.MYVAULT_DEFAULT_PROJECT:
-            logger.debug(f"Using default project from environment variable: {self.settings.MYVAULT_DEFAULT_PROJECT}")
+            logger.debug(
+                "Using default project from environment variable: %s",
+                self.settings.MYVAULT_DEFAULT_PROJECT,
+            )
             return str(self.settings.MYVAULT_DEFAULT_PROJECT)
 
         # 3. No default project found
-        raise MyVaultError("No default project found in MyVault or environment variables")
+        raise MyVaultError(
+            "No default project found in MyVault or environment variables"
+        )
 
     def _get_all_env_secrets(self) -> Dict[str, str]:
         """Get all secrets from environment variables."""
@@ -229,3 +273,31 @@ class SecretsManager:
 
 # Global instance
 secrets_manager = SecretsManager()
+
+
+_SETTINGS_ONLY_KEYS = {
+    "LOG_LEVEL",
+    "LOG_DIR",
+    "MYVAULT_ENABLED",
+    "MYVAULT_SERVICE_NAME",
+    "MYVAULT_SERVICE_TOKEN",
+    "MYVAULT_DEFAULT_PROJECT",
+    "ADMIN_TOKEN",
+}
+
+
+def resolve_runtime_value(
+    key: str,
+    project: Optional[str] = None,
+    *,
+    default: Optional[Any] = None,
+):
+    """Resolve configuration values with MyVault priority and env fallback."""
+
+    if key in _SETTINGS_ONLY_KEYS:
+        return getattr(settings, key, default)
+
+    try:
+        return secrets_manager.get_secret(key, project=project)
+    except ValueError:
+        return getattr(settings, key, default)

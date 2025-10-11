@@ -2,8 +2,8 @@ import os
 
 from mcp.server.fastmcp import FastMCP
 
-from core.config import settings
 from core.logger import setup_logging
+from core.secrets import resolve_runtime_value
 from mymcp.googleapis.gmail.send import send_email
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
@@ -54,11 +54,18 @@ async def send_email_tool(body: str) -> str:
         str: 成功時は成功メッセージ、失敗時はエラーメッセージ。
     """
     subject = generate_subject_from_text(body)
-    return send_email(settings.MAIL_TO, subject, body)
+    mail_to = resolve_runtime_value("MAIL_TO")
+    if not mail_to:
+        raise ValueError("MAIL_TO is not configured")
+
+    return send_email(str(mail_to), subject, body)
 
 
 # @mcp.tool()
-# async def generate_subject_from_text_tool(text_body: str, max_length: int = 20) -> str:
+# async def generate_subject_from_text_tool(
+#     text_body: str,
+#     max_length: int = 20,
+# ) -> str:
 #     """与えられたテキスト本文からタイトルを生成します。
 
 #     Args:

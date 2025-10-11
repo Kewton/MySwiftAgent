@@ -4,6 +4,8 @@ CommonUI - MySwiftAgent Management Interface
 Streamlit multi-page application for managing JobQueue and MyScheduler services.
 """
 
+import logging
+import sys
 import os
 from pathlib import Path
 
@@ -13,6 +15,29 @@ from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
+
+
+# Configure logging
+log_dir = Path(config.log_dir)
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "app.log"
+
+logging.basicConfig(
+    level=getattr(logging, config.log_level.upper(), logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, mode="a", encoding="utf-8"),
+    ],
+    force=True,  # Force reconfiguration even if logging was already configured
+)
+
+logger = logging.getLogger(__name__)
+logger.info(
+    "Logging configured (dir=%s, level=%s)",
+    log_dir,
+    config.log_level,
+)
 
 # Page configuration
 st.set_page_config(

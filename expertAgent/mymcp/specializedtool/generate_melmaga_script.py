@@ -1,6 +1,6 @@
 import ast
 
-from core.config import settings
+from core.secrets import resolve_runtime_value
 from mymcp.googleapis.gmail.send import send_email
 from mymcp.tool.generate_melmaga_script import generate_melmaga_script
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
@@ -26,7 +26,8 @@ def safe_string_to_list(input_str: str) -> list | None:
             return evaluated_value
         else:
             print(
-                f"Warning: Input string evaluated to {type(evaluated_value).__name__}, not a list."
+                "Warning: Input string evaluated to "
+                f"{type(evaluated_value).__name__}, not a list."
             )
             return None
     except (ValueError, SyntaxError, TypeError) as e:
@@ -52,7 +53,9 @@ def generate_melmaga_and_send_email_from_urls(urls: list | str):
     各テーマのタイトルは、URLから取得した情報を元に生成されます。
 
     Args:
-        urls (list): メルマガを生成するためのURLのリスト。例）['https://sportsbull.jp/p/2047296/', 'https://www.expo2025.or.jp/']
+        urls (list): メルマガを生成するためのURLのリスト。
+            例）['https://sportsbull.jp/p/2047296/',
+                'https://www.expo2025.or.jp/']
 
     Returns:
         str: 生成したメルマガ
@@ -62,7 +65,10 @@ def generate_melmaga_and_send_email_from_urls(urls: list | str):
 
     try:
         if isinstance(urls, str):
-            urls = safe_string_to_list(urls)
+            parsed_urls = safe_string_to_list(urls)
+            if parsed_urls is None:
+                raise ValueError("urls must be a list or a string")
+            urls = parsed_urls
         if not isinstance(urls, list):
             raise ValueError("urls must be a list or a string")
         if not urls:
@@ -81,8 +87,14 @@ def generate_melmaga_and_send_email_from_urls(urls: list | str):
             input_info += f"{getMarkdown(url)}\n\n"
             input_info += "----------------"
         body = generate_melmaga_script(input_info)
+        if not isinstance(body, str) or not body:
+            raise ValueError("Generated newsletter body is empty")
+
         subject = generate_subject_from_text(body)
-        return send_email(settings.MAIL_TO, subject, body)
+        mail_to = resolve_runtime_value("MAIL_TO")
+        if not mail_to:
+            raise ValueError("MAIL_TO is not configured")
+        return send_email(str(mail_to), subject, body)
 
     except ValueError as e:
         print(f"ValueError: {e}")

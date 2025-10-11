@@ -23,7 +23,9 @@ def generate_podcast_mp3_and_upload(
     """
     logger.info("generate_podcast_mp3_and_uploadを実行します")
     logger.info(f"Generating script for MP3 with model: {model_name}")
-    logger.debug(f"Topic details length: {len(topic_details)}, Subject max length: {subject_max_length}")
+    logger.debug(
+        f"Topic details length: {len(topic_details)}, Subject max length: {subject_max_length}"
+    )
 
     # 1. 台本生成
     script = generate_podcast_script(model_name=model_name, input_info=topic_details)

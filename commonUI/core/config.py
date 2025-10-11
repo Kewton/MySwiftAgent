@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 # Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
 _env_path = Path(__file__).parent.parent / ".env"
 if _env_path.exists():
-    load_dotenv(_env_path, override=False)
+    load_dotenv(_env_path, override=True)
 else:
     # Fallback to auto-detection (for docker-compose where env vars are pre-set)
     load_dotenv(override=False)
@@ -69,6 +69,10 @@ class Config:
     def _load_config(self) -> None:
         """Load configuration from environment and Streamlit secrets."""
         # Try Streamlit secrets first, then environment variables
+        default_log_dir = Path(__file__).resolve().parents[2] / "logs"
+        self.log_dir = self._get_setting("LOG_DIR", str(default_log_dir))
+        self.log_level = self._get_setting("LOG_LEVEL", "INFO")
+
         self.jobqueue = APIConfig(
             base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8101"),
             token=self._get_setting("JOBQUEUE_API_TOKEN", ""),

@@ -2,7 +2,7 @@
 
 import logging
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from core.logger import (
     StopWatch,
@@ -31,58 +31,64 @@ class TestLogger:
         # Logger name should be the module name where getlogger is defined
         assert logger.name == "core.logger"
 
-    def test_setup_logging_creates_log_directory(self, monkeypatch, tmp_path):
+    def test_setup_logging_creates_log_directory(self, tmp_path):
         """Test that setup_logging creates log directory."""
+        from unittest.mock import patch
+
         # Use temporary directory for testing
         log_dir = tmp_path / "test_logs"
-        monkeypatch.setenv("LOG_DIR", str(log_dir))
 
-        # Re-import to pick up new env var
-        from importlib import reload
+        # Patch settings.LOG_DIR directly
+        from core.config import settings
 
-        import core.config
+        with patch.object(settings, "LOG_DIR", str(log_dir)):
+            # Import logger module
+            import sys
 
-        reload(core.config)
-        from core import logger as logger_module
+            if "core.logger" in sys.modules:
+                del sys.modules["core.logger"]
 
-        reload(logger_module)
+            from core import logger as logger_module
 
-        # Reset the flag
-        logger_module.logging_setup_done = False
+            # Reset the flag
+            logger_module.logging_setup_done = False
 
-        # Setup logging
-        logger_module.setup_logging()
+            # Setup logging
+            logger_module.setup_logging()
 
-        # Check directory was created
-        assert log_dir.exists()
-        assert log_dir.is_dir()
+            # Check directory was created
+            assert log_dir.exists()
+            assert log_dir.is_dir()
 
-    def test_setup_logging_with_existing_directory(self, monkeypatch, tmp_path):
+    def test_setup_logging_with_existing_directory(self, tmp_path):
         """Test that setup_logging works with existing log directory."""
+        from unittest.mock import patch
+
         # Create directory before setup
         log_dir = tmp_path / "existing_logs"
         log_dir.mkdir()
-        monkeypatch.setenv("LOG_DIR", str(log_dir))
 
-        # Re-import to pick up new env var
-        from importlib import reload
+        # Patch settings.LOG_DIR directly
+        from core.config import settings
 
-        import core.config
+        with patch.object(settings, "LOG_DIR", str(log_dir)):
+            # Import logger module
+            import sys
 
-        reload(core.config)
-        from core import logger as logger_module
+            if "core.logger" in sys.modules:
+                del sys.modules["core.logger"]
 
-        reload(logger_module)
+            from core import logger as logger_module
 
-        # Reset the flag
-        logger_module.logging_setup_done = False
+            # Reset the flag
+            logger_module.logging_setup_done = False
 
-        # Setup logging with existing directory
-        logger_module.setup_logging()
+            # Setup logging with existing directory
+            logger_module.setup_logging()
 
-        # Check directory still exists
-        assert log_dir.exists()
-        assert log_dir.is_dir()
+            # Check directory still exists
+            assert log_dir.exists()
+            assert log_dir.is_dir()
 
     def test_setup_logging_idempotent(self):
         """Test that setup_logging can be called multiple times safely."""
@@ -133,19 +139,31 @@ class TestDeclogger:
         result = test_function(5, y=3)
         assert result == 15
 
-    @patch("core.logger.getlogger")
-    def test_declogger_logs_messages(self, mock_getlogger):
+    def test_declogger_logs_messages(self, caplog):
         """Test that declogger logs start and end messages."""
-        mock_logger = MagicMock()
-        mock_getlogger.return_value = mock_logger
+        import logging
 
-        @declogger
-        def test_function():
-            return "result"
+        # Set logger level to DEBUG to capture debug messages
+        with caplog.at_level(logging.DEBUG, logger="core.logger"):
 
-        result = test_function()
-        assert result == "result"
-        assert mock_logger.debug.call_count >= 2
+            @declogger
+            def test_function():
+                return "result"
+
+            result = test_function()
+
+            # Verify result
+            assert result == "result"
+
+            # Verify log messages were generated
+            debug_messages = [
+                record.message
+                for record in caplog.records
+                if record.levelname == "DEBUG"
+            ]
+            assert len(debug_messages) >= 2
+            assert any("start" in msg for msg in debug_messages)
+            assert any("end" in msg for msg in debug_messages)
 
 
 class TestEdtmessage:
@@ -178,38 +196,44 @@ class TestEdtmessage:
 class TestWriteLogs:
     """Test write log functions."""
 
-    @patch("core.logger.getlogger")
-    def test_writedebuglog(self, mock_getlogger):
+    def test_writedebuglog(self, caplog):
         """Test writedebuglog function."""
-        mock_logger = MagicMock()
-        mock_getlogger.return_value = mock_logger
+        import logging
 
-        writedebuglog("Debug message")
-        mock_logger.debug.assert_called_once()
-        call_args = mock_logger.debug.call_args[0][0]
-        assert "Debug message" in call_args
+        with caplog.at_level(logging.DEBUG, logger="core.logger"):
+            writedebuglog("Debug message")
 
-    @patch("core.logger.getlogger")
-    def test_writeinfolog(self, mock_getlogger):
+            # Verify log was generated
+            assert len(caplog.records) >= 1
+            debug_records = [r for r in caplog.records if r.levelname == "DEBUG"]
+            assert len(debug_records) >= 1
+            assert "Debug message" in debug_records[0].message
+
+    def test_writeinfolog(self, caplog):
         """Test writeinfolog function."""
-        mock_logger = MagicMock()
-        mock_getlogger.return_value = mock_logger
+        import logging
 
-        writeinfolog("Info message")
-        mock_logger.info.assert_called_once()
-        call_args = mock_logger.info.call_args[0][0]
-        assert "Info message" in call_args
+        with caplog.at_level(logging.INFO, logger="core.logger"):
+            writeinfolog("Info message")
 
-    @patch("core.logger.getlogger")
-    def test_writeerrorlog(self, mock_getlogger):
+            # Verify log was generated
+            assert len(caplog.records) >= 1
+            info_records = [r for r in caplog.records if r.levelname == "INFO"]
+            assert len(info_records) >= 1
+            assert "Info message" in info_records[0].message
+
+    def test_writeerrorlog(self, caplog):
         """Test writeerrorlog function."""
-        mock_logger = MagicMock()
-        mock_getlogger.return_value = mock_logger
+        import logging
 
-        writeerrorlog("Error message")
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0][0]
-        assert "Error message" in call_args
+        with caplog.at_level(logging.ERROR, logger="core.logger"):
+            writeerrorlog("Error message")
+
+            # Verify log was generated
+            assert len(caplog.records) >= 1
+            error_records = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(error_records) >= 1
+            assert "Error message" in error_records[0].message
 
 
 class TestStopWatch:

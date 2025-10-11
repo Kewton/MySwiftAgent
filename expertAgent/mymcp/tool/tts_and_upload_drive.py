@@ -34,7 +34,6 @@ def tts_and_upload_drive(input_message, file_name):
     if file_name is None:
         file_name = "AIエージェントからの手紙"
 
-    name = "tts_and_upload_to_google_drive"
     target_folder_name = "./MyAiAgent/podcast"
 
     try:
@@ -88,7 +87,9 @@ def tts_and_upload_drive(input_message, file_name):
 
         # 3. Google Drive へのファイルアップロード
         drive_filename = f"{file_name}.mp3"
-        logger.info(f"Uploading '{speech_file_path.name}' as '{drive_filename}' to folder '{folder_id}'")
+        logger.info(
+            f"Uploading '{speech_file_path.name}' as '{drive_filename}' to folder '{folder_id}'"
+        )
         uploaded_file_id: Optional[str] = None
         try:
             # resumable_upload がアップロード成功時にファイルIDを返すことを想定
@@ -136,7 +137,9 @@ def tts_and_upload_drive(input_message, file_name):
                 with open(md_file_path, "w", encoding="utf-8") as f:
                     f.write(input_message)
             except IOError as e:
-                logger.error(f"Error writing to file '{md_file_path}': {e}", exc_info=True)
+                logger.error(
+                    f"Error writing to file '{md_file_path}': {e}", exc_info=True
+                )
 
             # googl drive にアップロード
             folder_id = get_or_create_folder("./MyAiAgent/podcast_input")

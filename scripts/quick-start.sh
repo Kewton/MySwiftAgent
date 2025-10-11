@@ -55,7 +55,7 @@ export JOBQUEUE_API_URL="http://localhost:${JOBQUEUE_PORT}"
 export MYSCHEDULER_BASE_URL="http://localhost:${MYSCHEDULER_PORT}"
 export MYVAULT_BASE_URL="http://localhost:${MYVAULT_PORT}"
 export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
-export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
+export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}/api"
 
 # CommonUI specific URLs
 export JOBQUEUE_BASE_URL="http://localhost:${JOBQUEUE_PORT}"

@@ -2,10 +2,10 @@ import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from core.logger import getlogger
 from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
+from core.logger import getlogger
 from mymcp.googleapis.googleapi_services import get_googleapis_service
 
 logger = getlogger()

@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 env_path = PROJECT_ROOT / ".env"
 
 if env_path.exists():
-    load_dotenv(dotenv_path=env_path, override=False)
+    load_dotenv(dotenv_path=env_path, override=True)
 else:
     # Fallback to auto-detection (for docker-compose where env vars are pre-set)
     load_dotenv(override=False)

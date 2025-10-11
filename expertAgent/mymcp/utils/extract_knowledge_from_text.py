@@ -1,12 +1,13 @@
-from core.config import settings
 from core.logger import getlogger
+from core.secrets import resolve_runtime_value
 from mymcp.utils.execllm import execLlmApi
 
 logger = getlogger()
 
 
 def extract_knowledge_from_text(
-    _text: str, _model: str = settings.EXTRACT_KNOWLEDGE_MODEL
+    _text: str,
+    _model: str | None = None,
 ):
     _query = f"""
     # 命令指示書
@@ -32,9 +33,18 @@ def extract_knowledge_from_text(
     _messages = []
     _messages.append({"role": "user", "content": _query})
 
-    result = execLlmApi(_model, _messages)
+    resolved_model = _model or resolve_runtime_value("EXTRACT_KNOWLEDGE_MODEL")
+    if not resolved_model:
+        raise ValueError("EXTRACT_KNOWLEDGE_MODEL is not configured")
+
+    result = execLlmApi(str(resolved_model), _messages)
 
     logger.info("Knowledge extraction completed")
-    logger.debug(f"Extracted knowledge (length: {len(result) if result else 0}): {result[:200] if result and len(result) > 200 else result}")
+    snippet = result[:200] if result and len(result) > 200 else result
+    logger.debug(
+        "Extracted knowledge (length: %s): %s",
+        len(result) if result else 0,
+        snippet,
+    )
 
     return result

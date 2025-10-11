@@ -23,9 +23,7 @@ def delete_file(_file_path) -> bool:
         logger.error(f"Permission denied to delete file '{file_path_obj}'")
         return False
     except IsADirectoryError:
-        logger.error(
-            f"'{file_path_obj}' is a directory, not a file"
-        )
+        logger.error(f"'{file_path_obj}' is a directory, not a file")
         # ディレクトリを削除する場合は Path.rmdir() (空の場合) や shutil.rmtree() を使います。
         return False
     except Exception as e:

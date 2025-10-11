@@ -1,10 +1,14 @@
 """Admin endpoints for expertAgent."""
 
+import logging
+
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from core.config import settings
 from core.secrets import secrets_manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -53,6 +57,10 @@ async def reload_secrets(
             detail="Admin token not configured. Set ADMIN_TOKEN environment variable.",
         )
 
+    logger.info("reload_secrets called")
+    logger.info(f"request: {request}")
+    logger.info(f"x_admin_token: {x_admin_token}")
+    logger.info(f"settings.ADMIN_TOKEN: {settings.ADMIN_TOKEN}")
     if not x_admin_token or x_admin_token != settings.ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Invalid or missing admin token")
 

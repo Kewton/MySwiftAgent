@@ -133,14 +133,18 @@ def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
             model=_selected_model, messages=_messages
         )
         result = response.choices[0].message.content
-        logger.info(f"ChatGPT API call completed successfully. Response length: {len(result) if result else 0}")
+        logger.info(
+            f"ChatGPT API call completed successfully. Response length: {len(result) if result else 0}"
+        )
         return result
 
     elif isGemini(_selected_model):
         logger.info(f"Using Google Gemini API with model: {_selected_model}")
         configure_genai()
         _inpurt_messages, _systemrole = buildInpurtMessagesForGemini(_messages)
-        logger.debug(f"System instruction length: {len(_systemrole) if _systemrole else 0}")
+        logger.debug(
+            f"System instruction length: {len(_systemrole) if _systemrole else 0}"
+        )
         # モデル名を有効なものにすること！ (例: "gemini-1.5-flash-latest")
         model = genai.GenerativeModel(
             model_name=_selected_model,  # ★★★ モデル名を有効なものに！ ★★★
@@ -148,12 +152,16 @@ def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
         )
         response = model.generate_content(_inpurt_messages)
         result = response.text
-        logger.info(f"Gemini API call completed successfully. Response length: {len(result) if result else 0}")
+        logger.info(
+            f"Gemini API call completed successfully. Response length: {len(result) if result else 0}"
+        )
         return result
 
     else:
         # Ollama APIを使用してチャットを行う関数
         logger.info(f"Using Ollama API with model: {_selected_model}")
         result = chatOllama(_messages, _selected_model)
-        logger.info(f"Ollama API call completed successfully. Response length: {len(result) if result else 0}")
+        logger.info(
+            f"Ollama API call completed successfully. Response length: {len(result) if result else 0}"
+        )
         return result

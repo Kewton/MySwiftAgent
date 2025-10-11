@@ -16,6 +16,9 @@ from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
+import logging
+logger = logging.getLogger(__name__)
+
 
 # Page configuration
 st.set_page_config(
@@ -527,6 +530,10 @@ def reload_expertagent_cache(project: str | None = None) -> None:
             return  # ExpertAgent not configured, skip reload
 
         api_config = config.get_api_config("expertagent")
+        logger.debug("==================================")
+        logger.debug("reload_expertagent_cache called")
+        logger.debug(f"api_config: {api_config}")
+        logger.debug("==================================")
 
         # Check if admin token is configured
         if not api_config.admin_token:
@@ -555,6 +562,12 @@ def reload_graphaiserver_cache(project: str | None = None) -> None:
             return  # GraphAiServer not configured, skip reload
 
         api_config = config.get_api_config("graphaiserver")
+        logger.debug("==================================")
+        logger.debug("reload_graphaiserver_cache called")
+        logger.debug(f"api_config: {api_config}")
+        logger.debug(f"api_config.admin_token: {api_config.admin_token}")
+        logger.debug(f"project: {project}")
+        logger.debug("==================================")
 
         # Check if admin token is configured
         if not api_config.admin_token:
@@ -563,7 +576,7 @@ def reload_graphaiserver_cache(project: str | None = None) -> None:
         # Call reload endpoint
         with HTTPClient(api_config, "GraphAiServer") as client:
             reload_data = {"project": project} if project else {}
-            client.post("/v1/admin/reload-secrets", reload_data)
+            client.post("/api/v1/admin/reload-secrets", reload_data)
 
     except Exception as e:
         # Log warning but don't fail the operation
