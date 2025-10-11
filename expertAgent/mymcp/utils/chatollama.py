@@ -15,10 +15,18 @@ def chatOllama(
     _stream: bool = False,
 ) -> str:
     """
-    Ollama APIを使用してチャットを行う関数
+    Ollama APIまたはLM Studio APIを使用してチャットを行う関数
+
+    URLに"1234"が含まれている場合はLM Studio (OpenAI互換API)、
+    それ以外の場合はOllama APIを使用します。
+
     Args:
         _messages (list): チャットメッセージのリスト。各メッセージは辞書形式で、"role"と"content"を含む。
-        _model (str): 使用するモデルの名前。デフォルトは"gemma3:27b-it-qat"。
+        _model (str | None): 使用するモデルの名前。Noneの場合は環境変数OLLAMA_DEF_SMALL_MODELから取得。
+        _stream (bool): ストリーミングレスポンスの有効化。デフォルトはFalse。
+
+    Returns:
+        str: AIモデルからの応答テキスト
     """
     # APIエンドポイント（ローカル）
     resolved_model_value = _model or resolve_runtime_value("OLLAMA_DEF_SMALL_MODEL")
@@ -29,17 +37,28 @@ def chatOllama(
 
     ollama_url_value = resolve_runtime_value("OLLAMA_URL")
 
-    logger.info("===========================")
-    logger.info("chatOllama:")
-    logger.info(f"Resolved model: {resolved_model}")
-    logger.info(f"Using Ollama model: {resolved_model}")
-    logger.info(f"OLLAMA_URL: {ollama_url_value}")
-    logger.info("===========================")
-
     if not ollama_url_value:
         raise ValueError("OLLAMA_URL is not configured")
 
-    url = str(ollama_url_value).rstrip("/") + "/api/chat"
+    # URLに基づいてAPI形式を判定
+    is_lm_studio = "1234" in str(ollama_url_value)
+
+    if is_lm_studio:
+        # LM Studio の場合 (OpenAI互換API)
+        url = str(ollama_url_value).rstrip("/") + "/v1/chat/completions"
+        api_type = "LM Studio (OpenAI-compatible)"
+    else:
+        # Ollama の場合
+        url = str(ollama_url_value).rstrip("/") + "/api/chat"
+        api_type = "Ollama"
+
+    logger.info("===========================")
+    logger.info("chatOllama:")
+    logger.info(f"API Type: {api_type}")
+    logger.info(f"Resolved model: {resolved_model}")
+    logger.info(f"Using model: {resolved_model}")
+    logger.info(f"URL: {ollama_url_value}")
+    logger.info("===========================")
 
     # 128000
     # 32,768
@@ -51,23 +70,61 @@ def chatOllama(
     else:
         _num_ctx = 4096
 
-    # リクエストボディ
-    payload = {
-        "model": resolved_model,
-        "messages": _messages,
-        "stream": _stream,  # Trueにするとストリームレスポンスになる
-        "options": {"num_ctx": _num_ctx},
-    }
+    # リクエストボディ - API形式に応じて構造を変更
+    if is_lm_studio:
+        # LM Studio (OpenAI互換) のペイロード
+        # OpenAI APIは options フィールドを使用しない
+        payload = {
+            "model": resolved_model,
+            "messages": _messages,
+            "stream": _stream,
+            "max_tokens": _num_ctx,  # OpenAI互換では max_tokens を使用
+        }
+    else:
+        # Ollama のペイロード
+        payload = {
+            "model": resolved_model,
+            "messages": _messages,
+            "stream": _stream,
+            "options": {"num_ctx": _num_ctx},
+        }
+
+    # タイムアウト設定 - モデルサイズに応じて動的に調整
+    # 大規模モデル（100B以上）は長時間かかるため、タイムアウトを延長
+    if any(size in resolved_model.lower() for size in ["120b", "100b", "70b"]):
+        timeout = 300  # 5分
+        logger.info(
+            f"Large model detected ({resolved_model}), using extended timeout: {timeout}s"
+        )
+    elif any(size in resolved_model.lower() for size in ["27b", "30b"]):
+        timeout = 180  # 3分
+        logger.info(
+            f"Medium model detected ({resolved_model}), using timeout: {timeout}s"
+        )
+    else:
+        timeout = 60  # 1分（デフォルト）
+        logger.info(f"Using default timeout: {timeout}s")
+
+    logger.info(f"Request payload: {payload}")
 
     # リクエスト送信
-    response = requests.post(url, json=payload, timeout=60)
+    response = requests.post(url, json=payload, timeout=timeout)
 
     logger.info(f"Response status code: {response.status_code}")
     logger.info(f"Response content: {response.text}")
 
-    # 結果出力
+    # 結果出力 - API形式に応じてパース方法を変更
     if response.ok:
-        return response.json()["message"]["content"]
+        response_json = response.json()
+
+        if is_lm_studio:
+            # LM Studio (OpenAI互換) のレスポンス形式
+            # {"choices": [{"message": {"content": "..."}}]}
+            return response_json["choices"][0]["message"]["content"]
+        else:
+            # Ollama のレスポンス形式
+            # {"message": {"content": "..."}}
+            return response_json["message"]["content"]
     else:
         logger.error(f"Error: {response.status_code}, {response.text}")
         return "Error occurred"

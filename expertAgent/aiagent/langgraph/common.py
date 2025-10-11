@@ -394,7 +394,10 @@ async def make_utility_graph(
         # LangGraph では「1 思考 + 1 ツール実行」を 2 ステップと数えるので、
         # 推奨式  recursion_limit = 2 * max_iterations + 1
         recursion_limit = 2 * _max_iterations + 1
+        print(f"[DEBUG make_utility_graph] Setting recursion_limit={recursion_limit} (_max_iterations={_max_iterations})")
         graph = graph.with_config(recursion_limit=recursion_limit, max_concurrency=2)
+    else:
+        print("[DEBUG make_utility_graph] _max_iterations is None, using default recursion_limit")
 
     graph.name = _graphname
     yield graph
