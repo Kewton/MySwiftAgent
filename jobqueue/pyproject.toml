@@ -66,6 +66,7 @@ warn_unused_ignores = true
 warn_return_any = true
 strict_equality = true
 files = ["app"]
+exclude = ["tests"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
