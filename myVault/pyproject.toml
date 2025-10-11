@@ -1,6 +1,6 @@
 [project]
 name = "myVault"
-version = "0.1.0"
+version = "0.2.0"
 description = "Secure personal data vault and secret management service"
 authors = [
     {name = "MySwiftAgent Team", email = "noreply@example.com"},
