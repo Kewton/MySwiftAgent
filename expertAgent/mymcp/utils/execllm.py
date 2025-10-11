@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 import google.generativeai as genai
 from openai import OpenAI
@@ -101,12 +101,24 @@ def buildInpurtMessages(_messages, encoded_file):
 
 
 def buildInpurtMessagesForGemini(_messages: List[ChatMessage]):
+    """
+    Build messages in Gemini API format from ChatMessage objects.
+
+    Args:
+        _messages: List of ChatMessage Pydantic models
+
+    Returns:
+        Tuple of (contents_for_api, system_instruction)
+    """
     system_instruction = None
     contents_for_api = []
 
     for msg in _messages:
-        role = msg.get("role")
-        content = msg.get("content")
+        # Convert ChatMessage object to dict
+        msg_dict = msg.model_dump()
+        role = msg_dict.get("role")
+        content = msg_dict.get("content")
+
         if not role or not content:
             continue
 
@@ -122,15 +134,32 @@ def buildInpurtMessagesForGemini(_messages: List[ChatMessage]):
     return contents_for_api, system_instruction
 
 
-def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
+def execLlmApi(_selected_model: str, _messages: List[ChatMessage]) -> Optional[str]:
+    """
+    Execute LLM API call with the specified model and messages.
+
+    Args:
+        _selected_model: Model name/identifier (e.g., "gpt-4o", "gemini-1.5-flash", "ollama:model")
+        _messages: List of ChatMessage Pydantic objects
+
+    Returns:
+        Optional[str]: Generated response text, or None if generation fails
+
+    Note:
+        Phase 3: Type-safe design - only accepts ChatMessage objects.
+        All messages must be ChatMessage instances with 'role' and 'content' fields.
+    """
     logger.info(f"Executing LLM API call with model: {_selected_model}")
     logger.debug(f"Number of messages: {len(_messages)}")
+
+    # Convert ChatMessage objects to dictionaries for API calls
+    messages_dict = [msg.model_dump() for msg in _messages]
 
     if isChatGptAPI(_selected_model) or isChatGPT_o(_selected_model):
         logger.info(f"Using ChatGPT API with model: {_selected_model}")
         client = get_chatgpt_client()
         response = client.chat.completions.create(
-            model=_selected_model, messages=_messages
+            model=_selected_model, messages=messages_dict  # type: ignore[arg-type]
         )
         result = response.choices[0].message.content
         logger.info(
@@ -150,18 +179,17 @@ def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
             model_name=_selected_model,  # ★★★ モデル名を有効なものに！ ★★★
             system_instruction=_systemrole,
         )
-        response = model.generate_content(_inpurt_messages)
-        result = response.text
+        gemini_response = model.generate_content(_inpurt_messages)
+        gemini_result: Optional[str] = gemini_response.text
         logger.info(
-            f"Gemini API call completed successfully. Response length: {len(result) if result else 0}"
+            f"Gemini API call completed successfully. Response length: {len(gemini_result) if gemini_result else 0}"
         )
-        return result
+        return gemini_result
 
     else:
         # Ollama APIを使用してチャットを行う関数
         logger.info(f"Using Ollama API with model: {_selected_model}")
-        # Convert ChatMessage objects to dictionaries for JSON serialization
-        messages_dict = [msg.model_dump() for msg in _messages]
+        # messages_dict is already normalized to dictionary format
         result = chatOllama(messages_dict, _selected_model)
         logger.info(
             f"Ollama API call completed successfully. Response length: {len(result) if result else 0}"
