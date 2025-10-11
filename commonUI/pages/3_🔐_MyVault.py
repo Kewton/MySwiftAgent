@@ -4,8 +4,8 @@ MyVault Management Page
 Streamlit page for managing secrets and projects in MyVault service.
 """
 
+import logging
 from pathlib import Path
-
 from typing import Any
 
 import pandas as pd
@@ -16,7 +16,7 @@ from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,8 +66,9 @@ def load_secret_definitions() -> dict[str, Any]:
 # Dialog functions for project management
 # ============================================================================
 
+
 @st.dialog("🆕 Create New Project", width="large")
-def show_create_project_dialog():
+def show_create_project_dialog() -> None:
     """Show project creation dialog."""
     st.write("Register a new project in MyVault")
 
@@ -90,10 +91,12 @@ def show_create_project_dialog():
             return
 
         try:
-            create_project({
-                "name": project_name,
-                "description": description or "",
-            })
+            create_project(
+                {
+                    "name": project_name,
+                    "description": description or "",
+                },
+            )
             st.success(f"Project '{project_name}' created successfully!")
             st.rerun()
         except Exception as e:
@@ -101,7 +104,7 @@ def show_create_project_dialog():
 
 
 @st.dialog("✏️ Edit Project", width="large")
-def show_edit_project_dialog(project: dict[str, Any]):
+def show_edit_project_dialog(project: dict[str, Any]) -> None:
     """Show project editing dialog."""
     st.write(f"Edit project: **{project['name']}**")
 
@@ -139,8 +142,9 @@ def show_edit_project_dialog(project: dict[str, Any]):
 # Dialog functions for secret management
 # ============================================================================
 
+
 @st.dialog("🆕 Create New Secret", width="large")
-def show_create_secret_dialog(project: str):
+def show_create_secret_dialog(project: str) -> None:
     """Show secret creation dialog."""
     secret_defs = st.session_state.myvault_secret_definitions
     available_secrets = secret_defs.get("secrets", [])
@@ -166,7 +170,9 @@ def show_create_secret_dialog(project: str):
         )
     else:
         # Show description for selected secret
-        selected_def = next((s for s in available_secrets if s["name"] == selected_option), None)
+        selected_def = next(
+            (s for s in available_secrets if s["name"] == selected_option), None,
+        )
         if selected_def and selected_def.get("description"):
             st.info(f"ℹ️ {selected_def['description']}")
         secret_name = selected_option
@@ -199,12 +205,14 @@ def show_create_secret_dialog(project: str):
 
 
 @st.dialog("✏️ Edit Secret", width="large")
-def show_edit_secret_dialog(secret: dict[str, Any]):
+def show_edit_secret_dialog(secret: dict[str, Any]) -> None:
     """Show secret editing dialog."""
     # Load secret definitions to show description
     secret_defs = st.session_state.myvault_secret_definitions
     available_secrets = secret_defs.get("secrets", [])
-    selected_def = next((s for s in available_secrets if s["name"] == secret["path"]), None)
+    selected_def = next(
+        (s for s in available_secrets if s["name"] == secret["path"]), None,
+    )
 
     st.write(f"Edit secret: **{secret['project']}:{secret['path']}**")
 
@@ -262,7 +270,9 @@ def show_edit_secret_dialog(secret: dict[str, Any]):
 
             try:
                 update_secret(secret["project"], secret["path"], secret_value)
-                st.success(f"Secret '{secret['project']}:{secret['path']}' updated successfully!")
+                st.success(
+                    f"Secret '{secret['project']}:{secret['path']}' updated successfully!",
+                )
                 st.rerun()
             except Exception as e:
                 NotificationManager.handle_exception(e, "Secret Update")
@@ -276,7 +286,8 @@ def show_edit_secret_dialog(secret: dict[str, Any]):
 # Main content rendering functions
 # ============================================================================
 
-def render_projects_section():
+
+def render_projects_section() -> None:
     """Render projects section with action buttons."""
     col1, col2, col3 = st.columns([6, 1, 1])
 
@@ -289,7 +300,9 @@ def render_projects_section():
             st.rerun()
 
     with col3:
-        if st.button("➕ New", key="new_project", type="primary", use_container_width=True):
+        if st.button(
+            "➕ New", key="new_project", type="primary", use_container_width=True,
+        ):
             show_create_project_dialog()
 
     projects = st.session_state.myvault_projects
@@ -327,10 +340,12 @@ def render_projects_section():
 
         # Show action buttons
         st.divider()
-        col1, col2, col3, col4, col5 = st.columns([6, 1, 1, 1, 1])
+        col1, col2, col3, col4, _col5 = st.columns([6, 1, 1, 1, 1])
 
         with col1:
-            default_indicator = "⭐" if selected_project.get("is_default", False) else ""
+            default_indicator = (
+                "⭐" if selected_project.get("is_default", False) else ""
+            )
             st.write(f"**Selected:** {default_indicator} {selected_project['name']}")
 
         with col2:
@@ -339,7 +354,13 @@ def render_projects_section():
             button_label = "⭐" if is_default else "☆"
             button_help = "Already default" if is_default else "Set as default project"
 
-            if st.button(button_label, key="set_default_project", use_container_width=True, help=button_help, disabled=is_default):
+            if st.button(
+                button_label,
+                key="set_default_project",
+                use_container_width=True,
+                help=button_help,
+                disabled=is_default,
+            ):
                 try:
                     set_default_project(selected_project["name"])
                     st.rerun()
@@ -351,7 +372,12 @@ def render_projects_section():
                 show_edit_project_dialog(selected_project)
 
         with col4:
-            if st.button("🗑️ Delete", key="delete_project", type="secondary", use_container_width=True):
+            if st.button(
+                "🗑️ Delete",
+                key="delete_project",
+                type="secondary",
+                use_container_width=True,
+            ):
                 try:
                     delete_project(selected_project["name"])
                     st.session_state.myvault_selected_project = None
@@ -360,15 +386,21 @@ def render_projects_section():
                     NotificationManager.handle_exception(e, "Project Deletion")
 
 
-def render_secrets_section():
+def render_secrets_section() -> None:
     """Render secrets section for selected project."""
     selected_project = st.session_state.myvault_selected_project
 
     # Auto-select default project if none is selected
     if not selected_project and st.session_state.myvault_projects:
         default_project = next(
-            (p for p in st.session_state.myvault_projects if p.get("is_default", False)),
-            st.session_state.myvault_projects[0] if st.session_state.myvault_projects else None,
+            (
+                p
+                for p in st.session_state.myvault_projects
+                if p.get("is_default", False)
+            ),
+            st.session_state.myvault_projects[0]
+            if st.session_state.myvault_projects
+            else None,
         )
         if default_project:
             st.session_state.myvault_selected_project = default_project["name"]
@@ -386,18 +418,27 @@ def render_secrets_section():
         st.subheader(f"🔐 Secrets for: {selected_project}")
 
     with col2:
-        if st.button("🔄 Reload Cache", key="reload_cache", use_container_width=True, help="Reload secrets cache in all services (graphAiServer, expertAgent)"):
+        if st.button(
+            "🔄 Reload Cache",
+            key="reload_cache",
+            use_container_width=True,
+            help="Reload secrets cache in all services (graphAiServer, expertAgent)",
+        ):
             with st.spinner("Reloading cache..."):
                 results = reload_all_services_cache(selected_project)
                 success_count = sum(1 for v in results.values() if v)
                 total_count = len(results)
 
                 if success_count == total_count:
-                    st.success(f"✅ Successfully reloaded cache for all services ({', '.join(results.keys())})")
+                    st.success(
+                        f"✅ Successfully reloaded cache for all services ({', '.join(results.keys())})",
+                    )
                 elif success_count > 0:
                     success_services = [k for k, v in results.items() if v]
                     failed_services = [k for k, v in results.items() if not v]
-                    st.warning(f"⚠️ Partially reloaded: ✅ {', '.join(success_services)} | ❌ {', '.join(failed_services)}")
+                    st.warning(
+                        f"⚠️ Partially reloaded: ✅ {', '.join(success_services)} | ❌ {', '.join(failed_services)}",
+                    )
                 else:
                     st.error("❌ Failed to reload cache for all services")
 
@@ -407,19 +448,25 @@ def render_secrets_section():
             st.rerun()
 
     with col4:
-        if st.button("➕ New", key="new_secret", type="primary", use_container_width=True):
+        if st.button(
+            "➕ New", key="new_secret", type="primary", use_container_width=True,
+        ):
             show_create_secret_dialog(selected_project)
 
     # Filter secrets for selected project (exclude system-managed secrets)
     all_secrets = st.session_state.myvault_secrets
     project_secrets = [
-        s for s in all_secrets
+        s
+        for s in all_secrets
         if s.get("project") == selected_project
-        and s.get("path") != "GOOGLE_CREDS_ENCRYPTION_KEY"  # System-managed secret, hidden from UI
+        and s.get("path")
+        != "GOOGLE_CREDS_ENCRYPTION_KEY"  # System-managed secret, hidden from UI
     ]
 
     if not project_secrets:
-        st.info(f"No secrets found for '{selected_project}'. Click '➕ New' to create a secret.")
+        st.info(
+            f"No secrets found for '{selected_project}'. Click '➕ New' to create a secret.",
+        )
         return
 
     # Convert to DataFrame
@@ -460,7 +507,12 @@ def render_secrets_section():
                 show_edit_secret_dialog(selected_secret)
 
         with col3:
-            if st.button("🗑️ Delete", key="delete_secret", type="secondary", use_container_width=True):
+            if st.button(
+                "🗑️ Delete",
+                key="delete_secret",
+                type="secondary",
+                use_container_width=True,
+            ):
                 try:
                     delete_secret(selected_secret["project"], selected_secret["path"])
                     st.rerun()
@@ -472,11 +524,12 @@ def render_secrets_section():
 # API functions
 # ============================================================================
 
+
 def create_project(project_data: dict[str, Any]) -> None:
     """Create a new project via API."""
     api_config = config.get_api_config("MyVault")
     with HTTPClient(api_config, "MyVault") as client:
-        response = client.post("/api/projects", project_data)
+        client.post("/api/projects", project_data)
         load_projects()
         st.session_state.myvault_selected_project = project_data["name"]
 
@@ -486,7 +539,7 @@ def update_project(project_name: str, description: str) -> None:
     api_config = config.get_api_config("MyVault")
     with HTTPClient(api_config, "MyVault") as client:
         project_data = {"description": description}
-        response = client.patch(f"/api/projects/{project_name}", project_data)
+        client.patch(f"/api/projects/{project_name}", project_data)
         load_projects()
 
 
@@ -512,7 +565,9 @@ def load_projects() -> None:
         api_config = config.get_api_config("MyVault")
         with HTTPClient(api_config, "MyVault") as client:
             response = client.get("/api/projects")
-            st.session_state.myvault_projects = response if isinstance(response, list) else []
+            st.session_state.myvault_projects = (
+                response if isinstance(response, list) else []
+            )
     except Exception as e:
         NotificationManager.handle_exception(e, "Load Projects")
         st.session_state.myvault_projects = []
@@ -621,7 +676,7 @@ def create_secret(project: str, path: str, value: str) -> None:
             "path": path,
             "value": value,
         }
-        response = client.post("/api/secrets", secret_data)
+        client.post("/api/secrets", secret_data)
         load_secrets(project)
         reload_all_services_cache(project)
 
@@ -631,7 +686,7 @@ def update_secret(project: str, path: str, value: str) -> None:
     api_config = config.get_api_config("MyVault")
     with HTTPClient(api_config, "MyVault") as client:
         secret_data = {"value": value}
-        response = client.patch(f"/api/secrets/{project}/{path}", secret_data)
+        client.patch(f"/api/secrets/{project}/{path}", secret_data)
         load_secrets(project)
         reload_all_services_cache(project)
 
@@ -659,7 +714,9 @@ def load_secrets(project: str | None = None) -> None:
         with HTTPClient(api_config, "MyVault") as client:
             params = {"project": project} if project else None
             response = client.get("/api/secrets", params=params)
-            st.session_state.myvault_secrets = response if isinstance(response, list) else []
+            st.session_state.myvault_secrets = (
+                response if isinstance(response, list) else []
+            )
     except Exception as e:
         NotificationManager.handle_exception(e, "Load Secrets")
         st.session_state.myvault_secrets = []
@@ -668,6 +725,7 @@ def load_secrets(project: str | None = None) -> None:
 # ============================================================================
 # Google Authentication API functions
 # ============================================================================
+
 
 def get_google_token_status(project: str) -> dict[str, Any]:
     """Get Google token status from ExpertAgent."""
@@ -688,9 +746,12 @@ def save_google_credentials_to_myvault(project: str, credentials_json: str) -> N
         }
         # Check if secret exists
         try:
-            existing = client.get(f"/api/secrets/{project}/GOOGLE_CREDENTIALS_JSON")
+            client.get(f"/api/secrets/{project}/GOOGLE_CREDENTIALS_JSON")
             # Update existing secret
-            client.patch(f"/api/secrets/{project}/GOOGLE_CREDENTIALS_JSON", {"value": credentials_json})
+            client.patch(
+                f"/api/secrets/{project}/GOOGLE_CREDENTIALS_JSON",
+                {"value": credentials_json},
+            )
         except Exception:
             # Create new secret
             client.post("/api/secrets", secret_data)
@@ -712,12 +773,15 @@ def list_google_cached_projects() -> list[str]:
         return response.get("projects", []) if isinstance(response, dict) else []
 
 
-def start_google_oauth2_flow(project: str, redirect_uri: str | None = None) -> dict[str, Any]:
+def start_google_oauth2_flow(
+    project: str, redirect_uri: str | None = None,
+) -> dict[str, Any]:
     """Start OAuth2 flow for Google authentication."""
     # Get redirect_uri dynamically from Streamlit config if not provided
     if redirect_uri is None:
         try:
             import streamlit as st_config
+
             port = st_config.config.get_option("server.port")
             redirect_uri = f"http://localhost:{port}"
         except Exception as e:
@@ -732,12 +796,14 @@ def start_google_oauth2_flow(project: str, redirect_uri: str | None = None) -> d
     with HTTPClient(api_config, "ExpertAgent") as client:
         request_data = {
             "project": project,
-            "redirect_uri": redirect_uri
+            "redirect_uri": redirect_uri,
         }
         return client.post("/v1/google-auth/oauth2-start", request_data)
 
 
-def complete_google_oauth2_flow(state: str, code: str, project: str | None = None) -> dict[str, Any]:
+def complete_google_oauth2_flow(
+    state: str, code: str, project: str | None = None,
+) -> dict[str, Any]:
     """Complete OAuth2 flow with authorization code.
 
     Args:
@@ -753,7 +819,7 @@ def complete_google_oauth2_flow(state: str, code: str, project: str | None = Non
         callback_data = {
             "state": state,
             "code": code,
-            "project": project
+            "project": project,
         }
         return client.post("/v1/google-auth/oauth2-callback", callback_data)
 
@@ -766,14 +832,16 @@ def get_google_token_data(project: str) -> dict[str, Any]:
         return client.get("/v1/google-auth/token-data", params=params)
 
 
-def save_google_token(project: str, token_json: str, save_to_myvault: bool = False) -> None:
+def save_google_token(
+    project: str, token_json: str, save_to_myvault: bool = False,
+) -> None:
     """Save token.json to ExpertAgent and optionally to MyVault."""
     api_config = config.get_api_config("expertagent")
     with HTTPClient(api_config, "ExpertAgent") as client:
         token_data = {
             "project": project,
             "token_json": token_json,
-            "save_to_myvault": save_to_myvault
+            "save_to_myvault": save_to_myvault,
         }
         client.post("/v1/google-auth/save-token", token_data)
 
@@ -782,7 +850,8 @@ def save_google_token(project: str, token_json: str, save_to_myvault: bool = Fal
 # OAuth2 Callback Handler (must be called outside tabs)
 # ============================================================================
 
-def handle_oauth2_callback():
+
+def handle_oauth2_callback() -> None:
     """Handle OAuth2 callback - must be called outside tabs to work correctly."""
     query_params = st.query_params
 
@@ -805,7 +874,9 @@ def handle_oauth2_callback():
             # Get project name from response
             callback_project = response.get("project", "default_project")
 
-            st.success(f"✅ Token refreshed successfully for project: {callback_project}")
+            st.success(
+                f"✅ Token refreshed successfully for project: {callback_project}",
+            )
             st.info("✅ Token encrypted and cached locally in ExpertAgent")
             st.info("✅ Token automatically saved to MyVault")
 
@@ -828,22 +899,31 @@ def handle_oauth2_callback():
 # Main function
 # ============================================================================
 
-def render_google_auth_section():
+
+def render_google_auth_section() -> None:
     """Render Google authentication management section."""
     selected_project = st.session_state.myvault_selected_project
 
     # Auto-select default project if none is selected
     if not selected_project and st.session_state.myvault_projects:
         default_project = next(
-            (p for p in st.session_state.myvault_projects if p.get("is_default", False)),
-            st.session_state.myvault_projects[0] if st.session_state.myvault_projects else None,
+            (
+                p
+                for p in st.session_state.myvault_projects
+                if p.get("is_default", False)
+            ),
+            st.session_state.myvault_projects[0]
+            if st.session_state.myvault_projects
+            else None,
         )
         if default_project:
             st.session_state.myvault_selected_project = default_project["name"]
             selected_project = default_project["name"]
 
     if not selected_project:
-        st.info("👆 Select a project in the 'Projects' tab to manage Google authentication.")
+        st.info(
+            "👆 Select a project in the 'Projects' tab to manage Google authentication.",
+        )
         return
 
     st.subheader(f"🔑 Google Authentication for: {selected_project}")
@@ -851,7 +931,9 @@ def render_google_auth_section():
 
     # Check if ExpertAgent is configured
     if not config.is_service_configured("expertagent"):
-        st.warning("⚠️ ExpertAgent is not configured. Google authentication requires ExpertAgent.")
+        st.warning(
+            "⚠️ ExpertAgent is not configured. Google authentication requires ExpertAgent.",
+        )
         st.info("""
         **Required Environment Variables:**
         - `EXPERTAGENT_BASE_URL`: ExpertAgent API base URL
@@ -866,7 +948,9 @@ def render_google_auth_section():
         st.markdown("### 📊 Current Status")
 
     with col2:
-        if st.button("🔄 Refresh Status", key="refresh_google_status", use_container_width=True):
+        if st.button(
+            "🔄 Refresh Status", key="refresh_google_status", use_container_width=True,
+        ):
             st.rerun()
 
     try:
@@ -904,7 +988,9 @@ def render_google_auth_section():
     # Credentials setup help section
     st.markdown("### 📝 Credentials Setup")
 
-    with st.expander("ℹ️ How to get Google Credentials (credentials.json)", expanded=False):
+    with st.expander(
+        "ℹ️ How to get Google Credentials (credentials.json)", expanded=False,
+    ):
         st.markdown("""
         **Google OAuth 2.0 Credentials の取得方法:**
 
@@ -941,18 +1027,31 @@ def render_google_auth_section():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("🔄 Sync to ExpertAgent", key="sync_google_creds", type="primary", use_container_width=True):
+        if st.button(
+            "🔄 Sync to ExpertAgent",
+            key="sync_google_creds",
+            type="primary",
+            use_container_width=True,
+        ):
             try:
                 sync_google_credentials_to_expertagent(selected_project)
-                st.success(f"✅ Credentials synced to ExpertAgent for project: {selected_project}")
-                st.info("Credentials are now encrypted and cached locally in ExpertAgent")
+                st.success(
+                    f"✅ Credentials synced to ExpertAgent for project: {selected_project}",
+                )
+                st.info(
+                    "Credentials are now encrypted and cached locally in ExpertAgent",
+                )
                 st.rerun()
 
             except Exception as e:
                 NotificationManager.handle_exception(e, "Sync Google Credentials")
 
     with col2:
-        if st.button("📋 List Cached Projects", key="list_google_projects", use_container_width=True):
+        if st.button(
+            "📋 List Cached Projects",
+            key="list_google_projects",
+            use_container_width=True,
+        ):
             try:
                 projects = list_google_cached_projects()
                 if projects:
@@ -984,49 +1083,76 @@ def render_google_auth_section():
                     "token.json content",
                     value=token_json_content,
                     height=300,
-                    help="View or edit your Google OAuth 2.0 token"
+                    help="View or edit your Google OAuth 2.0 token",
                 )
 
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    if st.button("💾 Save Locally", key="save_token_local", use_container_width=True):
+                    if st.button(
+                        "💾 Save Locally",
+                        key="save_token_local",
+                        use_container_width=True,
+                    ):
                         try:
                             # Validate JSON
                             import json
+
                             json.loads(token_json_edit)
 
                             # Save locally only
-                            save_google_token(selected_project, token_json_edit, save_to_myvault=False)
-                            st.success(f"✅ Token saved locally for project: {selected_project}")
+                            save_google_token(
+                                selected_project, token_json_edit, save_to_myvault=False,
+                            )
+                            st.success(
+                                f"✅ Token saved locally for project: {selected_project}",
+                            )
                             st.info("Token is encrypted and cached in ExpertAgent")
 
                         except json.JSONDecodeError as e:
                             st.error(f"Invalid JSON format: {e!s}")
                         except Exception as e:
-                            NotificationManager.handle_exception(e, "Save Token Locally")
+                            NotificationManager.handle_exception(
+                                e, "Save Token Locally",
+                            )
 
                 with col2:
-                    if st.button("💾 Save to MyVault", key="save_token_myvault", type="primary", use_container_width=True):
+                    if st.button(
+                        "💾 Save to MyVault",
+                        key="save_token_myvault",
+                        type="primary",
+                        use_container_width=True,
+                    ):
                         try:
                             # Validate JSON
                             import json
+
                             json.loads(token_json_edit)
 
                             # Save to both local and MyVault
-                            save_google_token(selected_project, token_json_edit, save_to_myvault=True)
-                            st.success(f"✅ Token saved to MyVault for project: {selected_project}")
-                            st.info("Token is now persisted in MyVault and encrypted locally")
+                            save_google_token(
+                                selected_project, token_json_edit, save_to_myvault=True,
+                            )
+                            st.success(
+                                f"✅ Token saved to MyVault for project: {selected_project}",
+                            )
+                            st.info(
+                                "Token is now persisted in MyVault and encrypted locally",
+                            )
 
                         except json.JSONDecodeError as e:
                             st.error(f"Invalid JSON format: {e!s}")
                         except Exception as e:
-                            NotificationManager.handle_exception(e, "Save Token to MyVault")
+                            NotificationManager.handle_exception(
+                                e, "Save Token to MyVault",
+                            )
 
             else:
                 error_msg = token_data_response.get("error_message", "Unknown error")
                 st.warning(f"⚠️ {error_msg}")
-                st.info("Token will be created automatically when you complete OAuth2 flow")
+                st.info(
+                    "Token will be created automatically when you complete OAuth2 flow",
+                )
 
         except Exception as e:
             st.error(f"Failed to get token data: {e!s}")
@@ -1037,7 +1163,12 @@ def render_google_auth_section():
     st.markdown("### 🔄 Token Refresh")
     st.caption("Refresh your Google OAuth 2.0 token periodically to maintain access")
 
-    if st.button("🔄 Refresh Token", key="refresh_google_token", type="secondary", use_container_width=True):
+    if st.button(
+        "🔄 Refresh Token",
+        key="refresh_google_token",
+        type="secondary",
+        use_container_width=True,
+    ):
         try:
             # Start OAuth2 flow (project info is stored in expertAgent's state)
             # redirect_uri will be auto-detected from Streamlit config
@@ -1051,13 +1182,14 @@ def render_google_auth_section():
 
                 st.info("🌐 Opening Google authentication in new window...")
                 st.markdown(f"[🔗 Click here to authenticate with Google]({auth_url})")
-                st.caption("After authentication, you will be redirected back to this page")
+                st.caption(
+                    "After authentication, you will be redirected back to this page",
+                )
             else:
                 st.error("Failed to start OAuth2 flow")
 
         except Exception as e:
             NotificationManager.handle_exception(e, "Start OAuth2 Flow")
-
 
 
 def main() -> None:
@@ -1066,7 +1198,7 @@ def main() -> None:
     initialize_session_state()
 
     # Render sidebar
-    selected_service, ui_settings = SidebarManager.render_complete_sidebar()
+    _selected_service, _ui_settings = SidebarManager.render_complete_sidebar()
 
     # Page header
     st.title("🔐 MyVault Management")
@@ -1074,7 +1206,9 @@ def main() -> None:
 
     # Check if service is configured
     if not config.is_service_configured("MyVault"):
-        st.error("❌ MyVault is not configured. Please check your environment settings.")
+        st.error(
+            "❌ MyVault is not configured. Please check your environment settings.",
+        )
         st.info("""
         **Required Environment Variables:**
         - `MYVAULT_BASE_URL`: MyVault API base URL
@@ -1088,9 +1222,16 @@ def main() -> None:
         load_projects()
 
         # Auto-select default project on first load
-        if st.session_state.myvault_projects and not st.session_state.myvault_selected_project:
+        if (
+            st.session_state.myvault_projects
+            and not st.session_state.myvault_selected_project
+        ):
             default_project = next(
-                (p for p in st.session_state.myvault_projects if p.get("is_default", False)),
+                (
+                    p
+                    for p in st.session_state.myvault_projects
+                    if p.get("is_default", False)
+                ),
                 None,
             )
             if default_project:

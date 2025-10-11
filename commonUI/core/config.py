@@ -52,10 +52,12 @@ class UIConfig(BaseModel):
 
     polling_interval: int = Field(default=5, description="Polling interval in seconds")
     default_service: Literal["JobQueue", "MyScheduler", "MyVault"] = Field(
-        default="JobQueue", description="Default service to display",
+        default="JobQueue",
+        description="Default service to display",
     )
     operation_mode: Literal["full", "readonly"] = Field(
-        default="full", description="Operation mode",
+        default="full",
+        description="Operation mode",
     )
 
 
@@ -91,14 +93,16 @@ class Config:
 
         self.expertagent = ExpertAgentConfig(
             base_url=self._get_setting(
-                "EXPERTAGENT_BASE_URL", "http://localhost:8104/aiagent-api",
+                "EXPERTAGENT_BASE_URL",
+                "http://localhost:8104/aiagent-api",
             ),
             admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
         )
 
         self.graphaiserver = GraphAiServerConfig(
             base_url=self._get_setting(
-                "GRAPHAISERVER_BASE_URL", "http://localhost:8105/api",
+                "GRAPHAISERVER_BASE_URL",
+                "http://localhost:8105/api",
             ),
             admin_token=self._get_setting("GRAPHAISERVER_ADMIN_TOKEN", ""),
         )
@@ -106,11 +110,11 @@ class Config:
         self.ui = UIConfig(
             polling_interval=int(self._get_setting("POLLING_INTERVAL", "5")),
             default_service=cast(
-                Literal["JobQueue", "MyScheduler", "MyVault"],
+                "Literal['JobQueue', 'MyScheduler', 'MyVault']",
                 self._get_setting("DEFAULT_SERVICE", "JobQueue"),
             ),
             operation_mode=cast(
-                Literal["full", "readonly"],
+                "Literal['full', 'readonly']",
                 self._get_setting("OPERATION_MODE", "full"),
             ),
         )
@@ -128,7 +132,8 @@ class Config:
         return os.getenv(key, default)
 
     def get_api_config(
-        self, service: str,
+        self,
+        service: str,
     ) -> APIConfig | MyVaultConfig | ExpertAgentConfig | GraphAiServerConfig:
         """Get API configuration for specified service."""
         if service.lower() == "jobqueue":
@@ -141,7 +146,8 @@ class Config:
             return self.expertagent
         if service.lower() == "graphaiserver":
             return self.graphaiserver
-        raise ValueError(f"Unknown service: {service}")
+        msg = f"Unknown service: {service}"
+        raise ValueError(msg)
 
     def is_service_configured(self, service: str) -> bool:
         """Check if service is properly configured."""

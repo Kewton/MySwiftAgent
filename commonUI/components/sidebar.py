@@ -15,14 +15,13 @@ class SidebarManager:
         """Render service selection in sidebar."""
         st.sidebar.header("🔧 Service Settings")
 
-        service = st.sidebar.selectbox(
+        return st.sidebar.selectbox(
             "Select Service",
             ["JobQueue", "MyScheduler"],
             index=0 if config.ui.default_service == "JobQueue" else 1,
-            help="Choose the service to manage"
+            help="Choose the service to manage",
         )
 
-        return service
 
     @staticmethod
     def render_api_settings(service: str) -> None:
@@ -36,7 +35,7 @@ class SidebarManager:
             "Base URL",
             value=api_config.base_url,
             disabled=True,
-            help="API base URL (configured via environment)"
+            help="API base URL (configured via environment)",
         )
 
         # Masked token display
@@ -46,7 +45,7 @@ class SidebarManager:
             value=masked_token,
             disabled=True,
             type="password",
-            help="API authentication token (configured via environment)"
+            help="API authentication token (configured via environment)",
         )
 
         # Connection status check
@@ -77,12 +76,12 @@ class SidebarManager:
             min_value=1,
             max_value=30,
             value=config.ui.polling_interval,
-            help="How often to refresh data from the API"
+            help="How often to refresh data from the API",
         )
 
         return {
             "polling_interval": polling_interval,
-            "operation_mode": config.ui.operation_mode  # Use default from config
+            "operation_mode": config.ui.operation_mode,  # Use default from config
         }
 
     @staticmethod
@@ -102,14 +101,13 @@ class SidebarManager:
 
         # Configuration warnings
         unconfigured_services = [
-            service for service, status in services_status.items()
-            if status == "❌"
+            service for service, status in services_status.items() if status == "❌"
         ]
 
         if unconfigured_services:
             st.sidebar.warning(
                 f"⚠️ Configure: {', '.join(unconfigured_services)}\n\n"
-                "Check your .env file or Streamlit secrets"
+                "Check your .env file or Streamlit secrets",
             )
 
     @staticmethod
@@ -126,7 +124,7 @@ class SidebarManager:
             MySwiftAgent Management Interface
 
             📖 [Documentation](https://github.com/Kewton/MySwiftAgent)
-            """
+            """,
         )
 
         # Return default service from config

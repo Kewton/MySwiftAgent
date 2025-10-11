@@ -1,5 +1,6 @@
 """HTTP client with retry logic for CommonUI application."""
 
+import contextlib
 import logging
 from typing import Any
 
@@ -77,14 +78,15 @@ class HTTPClient:
                 retry_after = response.headers.get("Retry-After")
                 raise RateLimitError(int(retry_after) if retry_after else None)
             if response.status_code >= 500:
-                raise ServiceUnavailableError(self.service_name, self.api_config.base_url)
+                raise ServiceUnavailableError(
+                    self.service_name, self.api_config.base_url,
+                )
             error_data = {}
-            try:
+            with contextlib.suppress(Exception):
                 error_data = response.json()
-            except Exception:
-                pass
+            msg = f"HTTP {response.status_code}: {response.reason_phrase}"
             raise APIError(
-                f"HTTP {response.status_code}: {response.reason_phrase}",
+                msg,
                 status_code=response.status_code,
                 response_data=error_data,
             )
@@ -92,12 +94,15 @@ class HTTPClient:
             # Handle JSON decode errors (ValueError covers json.JSONDecodeError in older Python versions)
             if response.status_code in [200, 201]:  # Also update this condition
                 return {"message": "Success", "data": response.text}
+            msg = f"Invalid JSON response: {response.text[:100]}"
             raise APIError(
-                f"Invalid JSON response: {response.text[:100]}",
+                msg,
                 status_code=response.status_code,
             )
 
-    def _request_with_retry(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]:
+    def _request_with_retry(
+        self, method: str, url: str, **kwargs: Any,
+    ) -> dict[str, Any]:
         """Make HTTP request with automatic retry for 5xx errors."""
         max_retries = 3
         retry_count = 0
@@ -110,28 +115,39 @@ class HTTPClient:
                 retry_count += 1
                 if retry_count >= max_retries:
                     raise
-                st.info(f"Service temporarily unavailable, retrying... ({retry_count}/{max_retries})")
+                st.info(
+                    f"Service temporarily unavailable, retrying... ({retry_count}/{max_retries})",
+                )
             except (AuthenticationError, RateLimitError, APIError):
                 raise
             except Exception as e:
                 logger.exception(f"Unexpected error during {method} {url}")
-                raise APIError(f"Unexpected error: {e!s}")
+                msg = f"Unexpected error: {e!s}"
+                raise APIError(msg)
 
         raise ServiceUnavailableError(self.service_name, self.api_config.base_url)
 
-    def get(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def get(
+        self, endpoint: str, params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Make GET request."""
         return self._request_with_retry("GET", endpoint, params=params)
 
-    def post(self, endpoint: str, json_data: dict[str, Any] | None = None) -> dict[str, Any]:
+    def post(
+        self, endpoint: str, json_data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Make POST request."""
         return self._request_with_retry("POST", endpoint, json=json_data)
 
-    def put(self, endpoint: str, json_data: dict[str, Any] | None = None) -> dict[str, Any]:
+    def put(
+        self, endpoint: str, json_data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Make PUT request."""
         return self._request_with_retry("PUT", endpoint, json=json_data)
 
-    def patch(self, endpoint: str, json_data: dict[str, Any] | None = None) -> dict[str, Any]:
+    def patch(
+        self, endpoint: str, json_data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Make PATCH request."""
         return self._request_with_retry("PATCH", endpoint, json=json_data)
 

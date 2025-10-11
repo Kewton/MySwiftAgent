@@ -2,8 +2,6 @@
 
 from unittest.mock import Mock, patch
 
-import pytest
-
 from components.http_client import HTTPClient
 from core.config import ExpertAgentConfig, GraphAiServerConfig, MyVaultConfig
 
@@ -12,7 +10,7 @@ class TestMyVaultAuthentication:
     """Test cases for MyVault authentication in HTTPClient."""
 
     @patch("components.http_client.httpx.Client")
-    def test_myvault_auth_headers(self, mock_client_class):
+    def test_myvault_auth_headers(self, mock_client_class) -> None:
         """Test MyVault authentication uses X-Service and X-Token headers."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -35,7 +33,7 @@ class TestMyVaultAuthentication:
         assert "Authorization" not in call_kwargs["headers"]
 
     @patch("components.http_client.httpx.Client")
-    def test_expertagent_auth_headers(self, mock_client_class):
+    def test_expertagent_auth_headers(self, mock_client_class) -> None:
         """Test ExpertAgent authentication uses X-Admin-Token header."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -57,7 +55,7 @@ class TestMyVaultAuthentication:
         assert "X-Service" not in call_kwargs["headers"]
 
     @patch("components.http_client.httpx.Client")
-    def test_graphaiserver_auth_headers(self, mock_client_class):
+    def test_graphaiserver_auth_headers(self, mock_client_class) -> None:
         """Test GraphAiServer authentication uses X-Admin-Token header."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -79,7 +77,7 @@ class TestMyVaultAuthentication:
         assert "X-Service" not in call_kwargs["headers"]
 
     @patch("components.http_client.httpx.Client")
-    def test_myvault_without_credentials(self, mock_client_class):
+    def test_myvault_without_credentials(self, mock_client_class) -> None:
         """Test MyVault client initialization without credentials."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -100,7 +98,7 @@ class TestMyVaultAuthentication:
         assert "X-Token" not in call_kwargs["headers"]
 
     @patch("components.http_client.httpx.Client")
-    def test_expertagent_without_admin_token(self, mock_client_class):
+    def test_expertagent_without_admin_token(self, mock_client_class) -> None:
         """Test ExpertAgent client initialization without admin token."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -119,7 +117,7 @@ class TestMyVaultAuthentication:
         assert "X-Admin-Token" not in call_kwargs["headers"]
 
     @patch("components.http_client.httpx.Client")
-    def test_myvault_partial_credentials(self, mock_client_class):
+    def test_myvault_partial_credentials(self, mock_client_class) -> None:
         """Test MyVault with partial credentials (only service name or token)."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -153,7 +151,7 @@ class TestMyVaultAuthentication:
         assert "X-Token" not in call_kwargs["headers"]
 
     @patch("components.http_client.httpx.Client")
-    def test_http_client_request_with_myvault_auth(self, mock_client_class):
+    def test_http_client_request_with_myvault_auth(self, mock_client_class) -> None:
         """Test that MyVault authentication headers are used in requests."""
         mock_client = Mock()
         mock_response = Mock()

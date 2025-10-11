@@ -12,13 +12,13 @@ from .exceptions import (
 )
 
 __all__ = [
-    "Config",
-    "config",
-    "CommonUIError",
     "APIError",
-    "ConfigurationError",
-    "ValidationError",
-    "ServiceUnavailableError",
     "AuthenticationError",
+    "CommonUIError",
+    "Config",
+    "ConfigurationError",
     "RateLimitError",
+    "ServiceUnavailableError",
+    "ValidationError",
+    "config",
 ]

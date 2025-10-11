@@ -25,7 +25,9 @@ class TemplateStorage:
         """
         if storage_dir is None:
             # Auto-detect environment
-            if os.getenv("JOBQUEUE_API_URL") and "jobqueue:8000" in os.getenv("JOBQUEUE_API_URL", ""):
+            if os.getenv("JOBQUEUE_API_URL") and "jobqueue:8000" in os.getenv(
+                "JOBQUEUE_API_URL", "",
+            ):
                 # Running in docker-compose (internal service URLs)
                 storage_dir = "/app/data/templates"
             else:
@@ -47,7 +49,10 @@ class TemplateStorage:
         return self.storage_dir / f"{service_name}_templates.json"
 
     def save_template(
-        self, service_name: str, template_name: str, template_data: dict[str, Any]
+        self,
+        service_name: str,
+        template_name: str,
+        template_data: dict[str, Any],
     ) -> None:
         """Save a template.
 
@@ -72,7 +77,9 @@ class TemplateStorage:
         with file_path.open("w", encoding="utf-8") as f:
             json.dump(templates, f, indent=2, ensure_ascii=False)
 
-    def load_template(self, service_name: str, template_name: str) -> dict[str, Any] | None:
+    def load_template(
+        self, service_name: str, template_name: str,
+    ) -> dict[str, Any] | None:
         """Load a specific template.
 
         Args:

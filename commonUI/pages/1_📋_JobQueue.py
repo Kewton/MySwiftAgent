@@ -5,11 +5,8 @@ Streamlit page for managing job queue operations including job creation,
 monitoring, and execution control.
 """
 
-from pathlib import Path
-
 import time
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -23,7 +20,7 @@ from core.config import config
 st.set_page_config(
     page_title="JobQueue - CommonUI",
     page_icon="📋",
-    layout="wide"
+    layout="wide",
 )
 
 
@@ -43,6 +40,7 @@ def render_job_creation_form() -> None:
 
     # Template management
     from components.template_manager import TemplateManager
+
     template_mgr = TemplateManager("jobqueue")
 
     # Collect current form data for template saving
@@ -50,7 +48,9 @@ def render_job_creation_form() -> None:
         "api_url": st.session_state.get("jobqueue_api_url_outside", ""),
         "api_method": st.session_state.get("jobqueue_current_api_method", "POST"),
         "api_headers": st.session_state.get("jobqueue_api_headers_outside", ""),
-        "api_query_params": st.session_state.get("jobqueue_api_query_params_outside", ""),
+        "api_query_params": st.session_state.get(
+            "jobqueue_api_query_params_outside", "",
+        ),
         "api_body": st.session_state.get("jobqueue_api_body_outside", ""),
         "body_type": st.session_state.get("jobqueue_body_type_outside", "JSON"),
     }
@@ -63,18 +63,38 @@ def render_job_creation_form() -> None:
         # Use a flag to track if we've already applied this template
         template_key = f"jobqueue_loaded_template_{hash(str(loaded_template))}"
 
-        if template_key not in st.session_state or not st.session_state.get(template_key, False):
-            st.session_state["jobqueue_api_url_outside"] = loaded_template.get("api_url", "")
-            st.session_state["jobqueue_current_api_method"] = loaded_template.get("api_method", "POST")
-            st.session_state["jobqueue_api_headers_outside"] = loaded_template.get("api_headers", "")
-            st.session_state["jobqueue_api_query_params_outside"] = loaded_template.get("api_query_params", "")
-            st.session_state["jobqueue_api_body_outside"] = loaded_template.get("api_body", "")
-            st.session_state["jobqueue_body_type_outside"] = loaded_template.get("body_type", "JSON")
-            st.session_state["jobqueue_current_body_type"] = loaded_template.get("body_type", "JSON")
+        if template_key not in st.session_state or not st.session_state.get(
+            template_key, False,
+        ):
+            st.session_state["jobqueue_api_url_outside"] = loaded_template.get(
+                "api_url", "",
+            )
+            st.session_state["jobqueue_current_api_method"] = loaded_template.get(
+                "api_method", "POST",
+            )
+            st.session_state["jobqueue_api_headers_outside"] = loaded_template.get(
+                "api_headers", "",
+            )
+            st.session_state["jobqueue_api_query_params_outside"] = loaded_template.get(
+                "api_query_params", "",
+            )
+            st.session_state["jobqueue_api_body_outside"] = loaded_template.get(
+                "api_body", "",
+            )
+            st.session_state["jobqueue_body_type_outside"] = loaded_template.get(
+                "body_type", "JSON",
+            )
+            st.session_state["jobqueue_current_body_type"] = loaded_template.get(
+                "body_type", "JSON",
+            )
             st.session_state[template_key] = True
 
             # Clear other template flags
-            keys_to_clear = [k for k in st.session_state.keys() if k.startswith("jobqueue_loaded_template_") and k != template_key]
+            keys_to_clear = [
+                k
+                for k in st.session_state
+                if k.startswith("jobqueue_loaded_template_") and k != template_key
+            ]
             for k in keys_to_clear:
                 del st.session_state[k]
 
@@ -94,7 +114,7 @@ def render_job_creation_form() -> None:
             "🌐 API Endpoint URL",
             key="jobqueue_api_url_outside",
             placeholder="https://api.example.com/v1/endpoint",
-            help="Target API endpoint URL"
+            help="Target API endpoint URL",
         )
     with col2:
         # Get method index
@@ -107,7 +127,7 @@ def render_job_creation_form() -> None:
             methods,
             key="jobqueue_api_method_outside",
             index=method_index,
-            help="HTTP method"
+            help="HTTP method",
         )
 
     # Store in session state for form access
@@ -116,7 +136,9 @@ def render_job_creation_form() -> None:
 
     # Headers configuration (outside form for consistency)
     st.subheader("📋 Request Headers")
-    st.caption("HTTP headers to include in the API request (Content-Type, Authorization, etc.)")
+    st.caption(
+        "HTTP headers to include in the API request (Content-Type, Authorization, etc.)",
+    )
 
     # Initialize session state if not exists
     if "jobqueue_api_headers_outside" not in st.session_state:
@@ -127,7 +149,7 @@ def render_job_creation_form() -> None:
         key="jobqueue_api_headers_outside",
         placeholder='{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-api-token",\n  "X-Custom-Header": "custom-value"\n}',
         help="HTTP headers in JSON format - commonly used for authentication and content type specification",
-        height=100
+        height=100,
     )
     st.session_state["jobqueue_current_api_headers"] = api_headers
 
@@ -145,7 +167,7 @@ def render_job_creation_form() -> None:
             key="jobqueue_api_query_params_outside",
             placeholder='{\n  "page": 1,\n  "limit": 100,\n  "filter": "active",\n  "sort": "created_at"\n}',
             help="Query parameters in JSON format - will be appended to the URL as ?key=value",
-            height=80
+            height=80,
         )
         st.session_state["jobqueue_current_api_query_params"] = api_query_params
     else:
@@ -159,14 +181,18 @@ def render_job_creation_form() -> None:
         # Get body type index
         body_types = ["JSON", "Form Data", "Raw Text"]
         current_body_type = st.session_state.get("jobqueue_body_type_outside", "JSON")
-        body_type_index = body_types.index(current_body_type) if current_body_type in body_types else 0
+        body_type_index = (
+            body_types.index(current_body_type)
+            if current_body_type in body_types
+            else 0
+        )
 
         body_type = st.selectbox(
             "Body Data Type",
             body_types,
             key="jobqueue_body_type_outside",
             index=body_type_index,
-            help="Format of the request body data"
+            help="Format of the request body data",
         )
 
         # Initialize session state if not exists
@@ -179,7 +205,7 @@ def render_job_creation_form() -> None:
                 key="jobqueue_api_body_outside",
                 placeholder='{\n  "name": "example",\n  "data": {\n    "field1": "value1",\n    "field2": 123,\n    "active": true\n  }\n}',
                 help="JSON data to send in the request body",
-                height=120
+                height=120,
             )
         elif body_type == "Form Data":
             api_body = st.text_area(
@@ -187,7 +213,7 @@ def render_job_creation_form() -> None:
                 key="jobqueue_api_body_outside",
                 placeholder='{\n  "username": "john_doe",\n  "email": "john@example.com",\n  "age": 30\n}',
                 help="Form fields as JSON - will be sent as application/x-www-form-urlencoded",
-                height=120
+                height=120,
             )
         else:  # Raw Text
             api_body = st.text_area(
@@ -195,7 +221,7 @@ def render_job_creation_form() -> None:
                 key="jobqueue_api_body_outside",
                 placeholder="Plain text content to send as request body",
                 help="Raw text content for request body",
-                height=120
+                height=120,
             )
         st.session_state["jobqueue_current_api_body"] = api_body
         st.session_state["jobqueue_current_body_type"] = body_type
@@ -214,20 +240,26 @@ def render_job_creation_form() -> None:
             job_name = st.text_input(
                 "Job Name*",
                 placeholder="Enter job name",
-                help="Unique identifier for the job"
+                help="Unique identifier for the job",
             )
 
             job_type = st.selectbox(
                 "Job Type*",
-                ["api_sync", "data_processing", "batch_analysis", "file_conversion", "custom"],
-                help="Select the type of job to execute"
+                [
+                    "api_sync",
+                    "data_processing",
+                    "batch_analysis",
+                    "file_conversion",
+                    "custom",
+                ],
+                help="Select the type of job to execute",
             )
 
             priority = st.selectbox(
                 "Priority",
                 ["low", "normal", "high", "urgent"],
                 index=1,
-                help="Job execution priority"
+                help="Job execution priority",
             )
 
         with col2:
@@ -236,7 +268,7 @@ def render_job_creation_form() -> None:
                 min_value=0,
                 max_value=10,
                 value=3,
-                help="Maximum number of retry attempts"
+                help="Maximum number of retry attempts",
             )
 
             timeout = st.number_input(
@@ -244,7 +276,7 @@ def render_job_creation_form() -> None:
                 min_value=10,
                 max_value=3600,
                 value=300,
-                help="Job execution timeout"
+                help="Job execution timeout",
             )
 
         # Get API configuration from session state (set outside form)
@@ -266,20 +298,20 @@ def render_job_creation_form() -> None:
             "Parameters (JSON)",
             placeholder=parameter_placeholder,
             help="Job-specific parameters in JSON format",
-            height=120
+            height=120,
         )
 
         # Tags
         tags = st.text_input(
             "Tags (comma-separated)",
             placeholder="tag1, tag2, tag3",
-            help="Optional tags for job categorization"
+            help="Optional tags for job categorization",
         )
 
         submitted = st.form_submit_button(
             "🚀 Create Job",
             type="primary",
-            use_container_width=True
+            use_container_width=True,
         )
 
         if submitted:
@@ -290,17 +322,22 @@ def render_job_creation_form() -> None:
             try:
                 # Parse job parameters
                 import json
+
                 job_params = json.loads(parameters) if parameters.strip() else {}
 
                 # Parse tags
-                job_tags = [tag.strip() for tag in tags.split(",") if tag.strip()] if tags else []
+                job_tags = (
+                    [tag.strip() for tag in tags.split(",") if tag.strip()]
+                    if tags
+                    else []
+                )
 
                 # Build API configuration if any API settings are provided
                 api_config = {}
                 if api_url.strip():  # Only include API config if URL is provided
                     api_config = {
                         "url": api_url,
-                        "method": api_method
+                        "method": api_method,
                     }
 
                     # Parse and add headers
@@ -309,7 +346,7 @@ def render_job_creation_form() -> None:
                             headers = json.loads(api_headers)
                             api_config["headers"] = headers
                         except json.JSONDecodeError as e:
-                            st.error(f"Invalid JSON in Request Headers field: {str(e)}")
+                            st.error(f"Invalid JSON in Request Headers field: {e!s}")
                             return
 
                     # Parse and add query parameters
@@ -318,7 +355,7 @@ def render_job_creation_form() -> None:
                             query_params = json.loads(api_query_params)
                             api_config["query_params"] = query_params
                         except json.JSONDecodeError as e:
-                            st.error(f"Invalid JSON in Query Parameters field: {str(e)}")
+                            st.error(f"Invalid JSON in Query Parameters field: {e!s}")
                             return
 
                     # Parse and add request body
@@ -335,29 +372,43 @@ def render_job_creation_form() -> None:
                                     if "Invalid control character" in str(e):
                                         try:
                                             import re
+
                                             # Replace control characters (newlines, tabs, etc.) in string values
                                             # This regex finds strings and replaces control chars within them
                                             def escape_control_chars(match):
                                                 text = match.group(0)
                                                 # Escape newlines, tabs, carriage returns
-                                                text = text.replace('\n', '\\n')
-                                                text = text.replace('\r', '\\r')
-                                                text = text.replace('\t', '\\t')
-                                                return text
+                                                text = text.replace("\n", "\\n")
+                                                text = text.replace("\r", "\\r")
+                                                return text.replace("\t", "\\t")
 
                                             # Find all string values (between quotes) and escape control chars
-                                            fixed_json = re.sub(r'"[^"]*"', escape_control_chars, api_body)
+                                            fixed_json = re.sub(
+                                                r'"[^"]*"',
+                                                escape_control_chars,
+                                                api_body,
+                                            )
                                             body_data = json.loads(fixed_json)
                                             api_config["body"] = body_data
                                             api_config["body_type"] = "json"
-                                            st.info("💡 自動的に制御文字をエスケープしました。")
-                                        except Exception as escape_err:
-                                            st.error(f"❌ Invalid JSON in Request Body field: {str(e)}")
-                                            st.info("💡 Tip: JSON文字列値内で改行を使う場合は `\\n` を使用してください。または、Body Data Type を 'Raw Text' に変更してください。")
+                                            st.info(
+                                                "💡 自動的に制御文字をエスケープしました。",
+                                            )
+                                        except Exception:
+                                            st.error(
+                                                f"❌ Invalid JSON in Request Body field: {e!s}",
+                                            )
+                                            st.info(
+                                                "💡 Tip: JSON文字列値内で改行を使う場合は `\\n` を使用してください。または、Body Data Type を 'Raw Text' に変更してください。",
+                                            )
                                             return
                                     else:
-                                        st.error(f"❌ Invalid JSON in Request Body field: {str(e)}")
-                                        st.info("💡 Tip: JSON文字列値内で改行を使う場合は `\\n` を使用してください。または、Body Data Type を 'Raw Text' に変更してください。")
+                                        st.error(
+                                            f"❌ Invalid JSON in Request Body field: {e!s}",
+                                        )
+                                        st.info(
+                                            "💡 Tip: JSON文字列値内で改行を使う場合は `\\n` を使用してください。または、Body Data Type を 'Raw Text' に変更してください。",
+                                        )
                                         return
                             elif body_type == "Form Data":
                                 try:
@@ -365,7 +416,7 @@ def render_job_creation_form() -> None:
                                     api_config["body"] = form_data
                                     api_config["body_type"] = "form"
                                 except json.JSONDecodeError as e:
-                                    st.error(f"Invalid JSON in Form Data field: {str(e)}")
+                                    st.error(f"Invalid JSON in Form Data field: {e!s}")
                                     return
                             else:  # Raw Text
                                 # Wrap raw text in a dict for API compatibility
@@ -384,13 +435,13 @@ def render_job_creation_form() -> None:
                     "max_retries": max_retries,
                     "timeout": timeout,
                     "parameters": job_params,
-                    "tags": job_tags
+                    "tags": job_tags,
                 }
 
                 create_job(job_data)
 
             except json.JSONDecodeError as e:
-                st.error(f"Invalid JSON format: {str(e)}")
+                st.error(f"Invalid JSON format: {e!s}")
             except Exception as e:
                 NotificationManager.handle_exception(e, "Job Creation")
 
@@ -398,7 +449,7 @@ def render_job_creation_form() -> None:
 def get_parameter_placeholder(job_type: str) -> str:
     """Get parameter placeholder text based on job type."""
     placeholders = {
-        "api_sync": '''{
+        "api_sync": """{
   "sync_direction": "bidirectional",
   "source_filters": {
     "updated_since": "2024-01-01T00:00:00Z"
@@ -407,36 +458,36 @@ def get_parameter_placeholder(job_type: str) -> str:
   "mapping_rules": {
     "source_field": "target_field"
   }
-}''',
-        "data_processing": '''{
+}""",
+        "data_processing": """{
   "input_file": "/data/input.csv",
   "output_file": "/data/processed/output.csv",
   "operations": ["clean", "normalize", "validate"],
   "encoding": "utf-8"
-}''',
-        "batch_analysis": '''{
+}""",
+        "batch_analysis": """{
   "data_source": "/data/analytics/dataset.csv",
   "analysis_type": "trend_analysis",
   "output_format": "report",
   "date_range": "last_30_days"
-}''',
-        "file_conversion": '''{
+}""",
+        "file_conversion": """{
   "input_directory": "/uploads/original/",
   "output_directory": "/uploads/converted/",
   "source_format": "pdf",
   "target_format": "docx",
   "quality": "high"
-}''',
-        "custom": '''{
+}""",
+        "custom": """{
   "script_path": "/scripts/custom_job.py",
   "environment": "production",
   "custom_param": "value"
-}'''
+}""",
     }
     return placeholders.get(job_type, '{\n  "key": "value"\n}')
 
 
-def create_job(job_data: Dict[str, Any]) -> None:
+def create_job(job_data: dict[str, Any]) -> None:
     """Create a new job via API."""
     try:
         api_config = config.get_api_config("JobQueue")
@@ -447,7 +498,7 @@ def create_job(job_data: Dict[str, Any]) -> None:
             if job_data.get("type") == "api_sync":
                 parameters = job_data.get("parameters", {})
                 api_config_data = parameters.get("api_config", {})
-                
+
                 if api_config_data:
                     # Transform to JobQueue API format
                     transformed_data = {
@@ -455,27 +506,33 @@ def create_job(job_data: Dict[str, Any]) -> None:
                         "method": api_config_data.get("method", "GET"),
                         "url": api_config_data.get("url", ""),
                         "headers": api_config_data.get("headers"),
-                        "params": api_config_data.get("query_params"),  # Rename query_params to params
+                        "params": api_config_data.get(
+                            "query_params",
+                        ),  # Rename query_params to params
                         "body": api_config_data.get("body"),
-                        "timeout_sec": job_data.get("timeout", 30)  # Include timeout from job_data
+                        "timeout_sec": job_data.get(
+                            "timeout", 30,
+                        ),  # Include timeout from job_data
                     }
-                    
+
                     # Remove None values
-                    transformed_data = {k: v for k, v in transformed_data.items() if v is not None}
-                    
-                    st.info(f"🚀 Sending POST request to JobQueue API...")
+                    transformed_data = {
+                        k: v for k, v in transformed_data.items() if v is not None
+                    }
+
+                    st.info("🚀 Sending POST request to JobQueue API...")
                     response = client.post("/api/v1/jobs", transformed_data)
-                    st.success(f"✅ API responded successfully")
+                    st.success("✅ API responded successfully")
                 else:
                     # No API config provided, use original structure
-                    st.info(f"🚀 Sending POST request to JobQueue API...")
+                    st.info("🚀 Sending POST request to JobQueue API...")
                     response = client.post("/api/v1/jobs", job_data)
-                    st.success(f"✅ API responded successfully")
+                    st.success("✅ API responded successfully")
             else:
                 # For non-api_sync jobs, use original structure
-                st.info(f"🚀 Sending POST request to JobQueue API...")
+                st.info("🚀 Sending POST request to JobQueue API...")
                 response = client.post("/api/v1/jobs", job_data)
-                st.success(f"✅ API responded successfully")
+                st.success("✅ API responded successfully")
 
             job_id = response.get("job_id")
             NotificationManager.operation_completed("Job creation")
@@ -502,35 +559,42 @@ def render_job_list() -> None:
         status_filter = st.selectbox(
             "Status Filter",
             ["All", "pending", "running", "completed", "failed", "cancelled"],
-            help="Filter jobs by status"
+            help="Filter jobs by status",
         )
 
     with col2:
         priority_filter = st.selectbox(
             "Priority Filter",
             ["All", "low", "normal", "high", "urgent"],
-            help="Filter jobs by priority"
+            help="Filter jobs by priority",
         )
 
     with col3:
         job_type_filter = st.selectbox(
             "Job Type Filter",
-            ["All", "api_sync", "data_processing", "batch_analysis", "file_conversion", "custom"],
-            help="Filter jobs by job type"
+            [
+                "All",
+                "api_sync",
+                "data_processing",
+                "batch_analysis",
+                "file_conversion",
+                "custom",
+            ],
+            help="Filter jobs by job type",
         )
 
     with col4:
         search_query = st.text_input(
             "Search Jobs",
             placeholder="Search by name or ID",
-            help="Search jobs by name or job ID"
+            help="Search jobs by name or job ID",
         )
 
     with col5:
         auto_refresh = st.checkbox(
             "Auto Refresh",
             value=st.session_state.jobqueue_auto_refresh,
-            help="Automatically refresh job list"
+            help="Automatically refresh job list",
         )
         st.session_state.jobqueue_auto_refresh = auto_refresh
 
@@ -547,7 +611,9 @@ def render_job_list() -> None:
         return
 
     # Filter jobs - Updated to include job type filter
-    filtered_jobs = filter_jobs(jobs, status_filter, priority_filter, job_type_filter, search_query)
+    filtered_jobs = filter_jobs(
+        jobs, status_filter, priority_filter, job_type_filter, search_query,
+    )
 
     if not filtered_jobs:
         st.warning("No jobs match the current filters.")
@@ -568,7 +634,13 @@ def render_job_list() -> None:
             "name": "Name",
             "type": st.column_config.SelectboxColumn(
                 "Type",
-                options=["api_sync", "data_processing", "batch_analysis", "file_conversion", "custom"],
+                options=[
+                    "api_sync",
+                    "data_processing",
+                    "batch_analysis",
+                    "file_conversion",
+                    "custom",
+                ],
             ),
             "status": st.column_config.SelectboxColumn(
                 "Status",
@@ -580,17 +652,25 @@ def render_job_list() -> None:
             ),
             "created_at": st.column_config.DatetimeColumn("Created"),
             "updated_at": st.column_config.DatetimeColumn("Updated"),
-        }
+        },
     )
 
     # Handle row selection
     if event.selection.rows:
         selected_idx = event.selection.rows[0]
         selected_job = filtered_jobs[selected_idx]
-        st.session_state.jobqueue_selected_job = selected_job["id"]  # Changed from "job_id" to "id"
+        st.session_state.jobqueue_selected_job = selected_job[
+            "id"
+        ]  # Changed from "job_id" to "id"
 
 
-def filter_jobs(jobs: List[Dict], status_filter: str, priority_filter: str, job_type_filter: str, search_query: str) -> List[Dict]:
+def filter_jobs(
+    jobs: list[dict],
+    status_filter: str,
+    priority_filter: str,
+    job_type_filter: str,
+    search_query: str,
+) -> list[dict]:
     """Filter jobs based on criteria."""
     filtered = jobs
 
@@ -610,9 +690,12 @@ def filter_jobs(jobs: List[Dict], status_filter: str, priority_filter: str, job_
     if search_query:
         query_lower = search_query.lower()
         filtered = [
-            job for job in filtered
-            if (query_lower in job.get("name", "").lower() or
-                query_lower in str(job.get("id", "")))  # Changed from "job_id" to "id"
+            job
+            for job in filtered
+            if (
+                query_lower in job.get("name", "").lower()
+                or query_lower in str(job.get("id", ""))
+            )  # Changed from "job_id" to "id"
         ]
 
     return filtered
@@ -641,7 +724,10 @@ def render_job_detail() -> None:
 
             with col2:
                 st.metric("Progress", f"{job_detail.get('progress', 0)}%")
-                st.metric("Retries", f"{job_detail.get('retry_count', 0)}/{job_detail.get('max_retries', 0)}")
+                st.metric(
+                    "Retries",
+                    f"{job_detail.get('retry_count', 0)}/{job_detail.get('max_retries', 0)}",
+                )
 
             with col3:
                 created_at = job_detail.get("created_at", "Unknown")
@@ -656,19 +742,27 @@ def render_job_detail() -> None:
             current_status = job_detail.get("status")
 
             with col1:
-                if current_status in ["pending", "failed"] and st.button("▶️ Start", use_container_width=True):
+                if current_status in ["pending", "failed"] and st.button(
+                    "▶️ Start", use_container_width=True,
+                ):
                     control_job(job_id, "start")
 
             with col2:
-                if current_status == "running" and st.button("⏸️ Pause", use_container_width=True):
+                if current_status == "running" and st.button(
+                    "⏸️ Pause", use_container_width=True,
+                ):
                     control_job(job_id, "pause")
 
             with col3:
-                if current_status in ["running", "pending"] and st.button("⏹️ Cancel", use_container_width=True):
+                if current_status in ["running", "pending"] and st.button(
+                    "⏹️ Cancel", use_container_width=True,
+                ):
                     control_job(job_id, "cancel")
 
             with col4:
-                if current_status == "failed" and st.button("🔄 Retry", use_container_width=True):
+                if current_status == "failed" and st.button(
+                    "🔄 Retry", use_container_width=True,
+                ):
                     control_job(job_id, "retry")
 
             # Job details tabs - Removed Logs tab
@@ -681,33 +775,39 @@ def render_job_detail() -> None:
                 # Fetch job results from separate endpoint
                 try:
                     job_result = client.get(f"/api/v1/jobs/{job_id}/result")
-                    
+
                     # Check if result has actual data
-                    if (job_result.get("response_status") is not None or 
-                        job_result.get("response_body") is not None or 
-                        job_result.get("error") is not None):
-                        
+                    if (
+                        job_result.get("response_status") is not None
+                        or job_result.get("response_body") is not None
+                        or job_result.get("error") is not None
+                    ):
                         st.subheader("🌐 HTTP Response")
-                        
+
                         # Show response status and duration
                         result_col1, result_col2 = st.columns(2)
                         with result_col1:
-                            st.metric("Response Status", job_result.get("response_status", "N/A"))
+                            st.metric(
+                                "Response Status",
+                                job_result.get("response_status", "N/A"),
+                            )
                         with result_col2:
                             duration_ms = job_result.get("duration_ms")
-                            duration_display = f"{duration_ms}ms" if duration_ms is not None else "N/A"
+                            duration_display = (
+                                f"{duration_ms}ms" if duration_ms is not None else "N/A"
+                            )
                             st.metric("Duration", duration_display)
-                        
+
                         # Show error if exists
                         if job_result.get("error"):
                             st.error(f"**Error:** {job_result.get('error')}")
-                        
+
                         # Show response headers
                         response_headers = job_result.get("response_headers")
                         if response_headers:
                             st.subheader("📋 Response Headers")
                             st.json(response_headers)
-                        
+
                         # Show response body
                         response_body = job_result.get("response_body")
                         if response_body:
@@ -715,46 +815,57 @@ def render_job_detail() -> None:
                             st.json(response_body)
                     else:
                         st.info("No results available yet.")
-                        
+
                 except Exception as result_error:
-                    st.warning(f"Could not fetch results: {str(result_error)}")
+                    st.warning(f"Could not fetch results: {result_error!s}")
 
             with tab3:
                 # Display HTTP request parameters
                 st.subheader("🌐 HTTP Request Configuration")
-                
+
                 # Basic request info
                 req_col1, req_col2 = st.columns(2)
                 with req_col1:
-                    st.text_input("Method", value=job_detail.get("method", ""), disabled=True)
-                    st.text_input("Timeout (sec)", value=str(job_detail.get("timeout_sec", "")), disabled=True)
+                    st.text_input(
+                        "Method", value=job_detail.get("method", ""), disabled=True,
+                    )
+                    st.text_input(
+                        "Timeout (sec)",
+                        value=str(job_detail.get("timeout_sec", "")),
+                        disabled=True,
+                    )
                 with req_col2:
-                    st.text_area("URL", value=job_detail.get("url", ""), disabled=True, height=100)
-                
+                    st.text_area(
+                        "URL",
+                        value=job_detail.get("url", ""),
+                        disabled=True,
+                        height=100,
+                    )
+
                 # Request Headers
                 headers = job_detail.get("headers")
                 if headers:
                     st.subheader("📋 Request Headers")
                     st.json(headers)
-                
+
                 # Query Parameters
                 params = job_detail.get("params")
                 if params:
                     st.subheader("🔗 Query Parameters")
                     st.json(params)
-                
+
                 # Request Body
                 body = job_detail.get("body")
                 if body:
                     st.subheader("📄 Request Body")
                     st.json(body)
-                
+
                 # Tags
                 tags = job_detail.get("tags")
                 if tags:
                     st.subheader("🏷️ Tags")
                     st.write(", ".join(tags))
-                
+
                 # Show message if no parameters
                 if not any([headers, params, body, tags]):
                     st.info("No additional parameters specified for this job.")
@@ -763,7 +874,7 @@ def render_job_detail() -> None:
         NotificationManager.handle_exception(e, "Job Detail")
 
 
-def calculate_duration(job_detail: Dict) -> str:
+def calculate_duration(job_detail: dict) -> str:
     """Calculate job duration."""
     try:
         created_at = job_detail.get("created_at")
@@ -772,6 +883,7 @@ def calculate_duration(job_detail: Dict) -> str:
         if created_at and updated_at:
             # Parse timestamps (assuming ISO format)
             from datetime import datetime
+
             start = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
             end = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
             duration = end - start
@@ -779,12 +891,11 @@ def calculate_duration(job_detail: Dict) -> str:
 
             if total_seconds < 60:
                 return f"{total_seconds}s"
-            elif total_seconds < 3600:
+            if total_seconds < 3600:
                 return f"{total_seconds // 60}m {total_seconds % 60}s"
-            else:
-                hours = total_seconds // 3600
-                minutes = (total_seconds % 3600) // 60
-                return f"{hours}h {minutes}m"
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            return f"{hours}h {minutes}m"
 
         return "N/A"
     except Exception:
@@ -798,7 +909,7 @@ def control_job(job_id: str, action: str) -> None:
         with HTTPClient(api_config, "JobQueue") as client:
             NotificationManager.operation_started(f"Job {action}")
 
-            response = client.post(f"/api/v1/jobs/{job_id}/{action}")
+            client.post(f"/api/v1/jobs/{job_id}/{action}")
 
             NotificationManager.operation_completed(f"Job {action}")
             NotificationManager.success(f"Job {action} executed successfully!")
@@ -830,14 +941,16 @@ def main() -> None:
     initialize_session_state()
 
     # Render sidebar
-    selected_service, ui_settings = SidebarManager.render_complete_sidebar()
+    _selected_service, ui_settings = SidebarManager.render_complete_sidebar()
 
     # Page header
     st.title("📋 JobQueue Management")
 
     # Check if service is configured
     if not config.is_service_configured("JobQueue"):
-        st.error("❌ JobQueue is not configured. Please check your environment settings.")
+        st.error(
+            "❌ JobQueue is not configured. Please check your environment settings.",
+        )
         st.stop()
 
     # Load initial data

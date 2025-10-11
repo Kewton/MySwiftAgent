@@ -1,7 +1,6 @@
 """Notification and toast management for CommonUI application."""
 
 import logging
-from typing import Optional
 
 import streamlit as st
 
@@ -54,7 +53,7 @@ class NotificationManager:
         logger.error(f"Error: {message}")
 
     @staticmethod
-    def handle_exception(e: Exception, context: Optional[str] = None) -> None:
+    def handle_exception(e: Exception, context: str | None = None) -> None:
         """Handle and display exceptions with appropriate notifications."""
         context_prefix = f"[{context}] " if context else ""
 
@@ -65,7 +64,9 @@ class NotificationManager:
             message = f"{context_prefix}Authentication failed for '{e.service_name}'. Please check your API token."
             NotificationManager.error(message)
         elif isinstance(e, RateLimitError):
-            retry_msg = f" Try again in {e.retry_after} seconds." if e.retry_after else ""
+            retry_msg = (
+                f" Try again in {e.retry_after} seconds." if e.retry_after else ""
+            )
             message = f"{context_prefix}Rate limit exceeded.{retry_msg}"
             NotificationManager.warning(message)
         elif isinstance(e, ConfigurationError):
@@ -83,7 +84,7 @@ class NotificationManager:
             message = f"{context_prefix}{e.message}"
             NotificationManager.error(message)
         else:
-            message = f"{context_prefix}Unexpected error: {str(e)}"
+            message = f"{context_prefix}Unexpected error: {e!s}"
             NotificationManager.error(message)
             logger.exception("Unexpected error occurred")
 
@@ -100,7 +101,7 @@ class NotificationManager:
         NotificationManager.progress_toast(message)
 
     @staticmethod
-    def operation_completed(operation: str, duration: Optional[float] = None) -> None:
+    def operation_completed(operation: str, duration: float | None = None) -> None:
         """Notify that an operation has completed."""
         message = f"{operation} completed"
         if duration:
@@ -111,6 +112,10 @@ class NotificationManager:
     def connection_status(service_name: str, is_connected: bool) -> None:
         """Display connection status for a service."""
         if is_connected:
-            NotificationManager.success(f"✅ Connected to {service_name}", show_toast=False)
+            NotificationManager.success(
+                f"✅ Connected to {service_name}", show_toast=False,
+            )
         else:
-            NotificationManager.error(f"❌ Cannot connect to {service_name}", show_toast=False)
+            NotificationManager.error(
+                f"❌ Cannot connect to {service_name}", show_toast=False,
+            )
