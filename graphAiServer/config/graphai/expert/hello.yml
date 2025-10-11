@@ -1,0 +1,25 @@
+version: 0.5
+nodes:
+  source: {}
+  expert_hello:
+    # expertAgentのAPIを実行する場合は、 fetchAgent を使用する
+    agent: fetchAgent
+    console:
+      before: expert_hello start
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1
+      method: GET
+  output:
+    agent: copyAgent
+    params:
+      namedKey: text
+    console:
+      before: output start
+      after: true
+    inputs:
+      text: :expert_hello
+    isResult: true
+    # 下記が返却される
+    # "output":{
+    #  "message":"Hello World"
+    # }

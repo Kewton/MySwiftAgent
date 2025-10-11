@@ -1,0 +1,21 @@
+version: 0.5
+nodes:
+  source: {}
+  expertAgent:
+    agent: fetchAgent
+    console:
+      before: expertAgent start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/sample
+      method: POST
+      body:
+        user_input: :source
+  output:
+    agent: copyAgent
+    console:
+      before: output start
+    inputs:
+      text: :expertAgent.text
+      history: :expertAgent.chathistory
+    isResult: true

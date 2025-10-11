@@ -40,7 +40,37 @@ app.get('/api/v1/test', async (_req: Request, res: Response) => {
   }
 });
 
-// GraphAI agent endpoint
+// GraphAI agent endpoint with path parameters (new format)
+app.post('/api/v1/myagent/:category/:model', async (req: Request, res: Response) => {
+  const { user_input, project } = req.body;
+  const { category, model } = req.params;
+
+  if (!user_input) {
+    return res.status(400).json({ error: 'user_input is required' });
+  }
+
+  // Path traversal security validation
+  if (category.includes('..') || category.includes('/') || category.includes('\\')) {
+    return res.status(400).json({ error: 'Invalid category parameter' });
+  }
+
+  if (model.includes('..') || model.includes('/') || model.includes('\\')) {
+    return res.status(400).json({ error: 'Invalid model parameter' });
+  }
+
+  try {
+    // Construct model_name from category and model
+    const model_name = `${category}/${model}`;
+
+    const result = await runGraphAI(user_input, model_name, project);
+    res.json(result);
+  } catch (error) {
+    console.error("Error executing GraphAI sample:", error);
+    res.status(500).json({ error: 'An error occurred while executing the GraphAI sample.' });
+  }
+});
+
+// GraphAI agent endpoint (legacy format for backward compatibility)
 app.post('/api/v1/myagent', async (req: Request, res: Response) => {
   const { user_input, model_name, project } = req.body;
 
@@ -71,7 +101,7 @@ const requireAdminToken = (req: Request, res: Response, next: Function) => {
 };
 
 // Admin health check
-app.get('/api/v1/admin/health', (req: Request, res: Response) => {
+app.get('/api/v1/admin/health', (_req: Request, res: Response) => {
   res.json({ status: 'healthy', service: 'graphaiserver-admin' });
 });
 
