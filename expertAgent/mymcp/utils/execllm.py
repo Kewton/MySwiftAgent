@@ -160,7 +160,9 @@ def execLlmApi(_selected_model: str, _messages: List[ChatMessage]):
     else:
         # Ollama APIを使用してチャットを行う関数
         logger.info(f"Using Ollama API with model: {_selected_model}")
-        result = chatOllama(_messages, _selected_model)
+        # Convert ChatMessage objects to dictionaries for JSON serialization
+        messages_dict = [msg.model_dump() for msg in _messages]
+        result = chatOllama(messages_dict, _selected_model)
         logger.info(
             f"Ollama API call completed successfully. Response length: {len(result) if result else 0}"
         )

@@ -1,14 +1,16 @@
+import logging
 from datetime import datetime
-from typing import List
+from typing import Any, List
 
 import requests
 
-from app.schemas.standardAiAgent import ChatMessage
 from core.secrets import resolve_runtime_value
+
+logger = logging.getLogger(__name__)
 
 
 def chatOllama(
-    _messages: List[ChatMessage],
+    _messages: List[dict[str, Any]],
     _model: str | None = None,
     _stream: bool = False,
 ) -> str:
@@ -26,6 +28,14 @@ def chatOllama(
     resolved_model = str(resolved_model_value)
 
     ollama_url_value = resolve_runtime_value("OLLAMA_URL")
+
+    logger.info("===========================")
+    logger.info("chatOllama:")
+    logger.info(f"Resolved model: {resolved_model}")
+    logger.info(f"Using Ollama model: {resolved_model}")
+    logger.info(f"OLLAMA_URL: {ollama_url_value}")
+    logger.info("===========================")
+
     if not ollama_url_value:
         raise ValueError("OLLAMA_URL is not configured")
 
@@ -52,15 +62,18 @@ def chatOllama(
     # リクエスト送信
     response = requests.post(url, json=payload, timeout=60)
 
+    logger.info(f"Response status code: {response.status_code}")
+    logger.info(f"Response content: {response.text}")
+
     # 結果出力
     if response.ok:
         return response.json()["message"]["content"]
     else:
-        print("Error:", response.status_code, response.text)
+        logger.error(f"Error: {response.status_code}, {response.text}")
         return "Error occurred"
 
 
-def chatMlx(_messages: List[ChatMessage]) -> str:
+def chatMlx(_messages: List[dict[str, Any]]) -> str:
     """
     MLX APIを使用してチャットを行う関数
     Args:
