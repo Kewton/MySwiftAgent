@@ -34,7 +34,6 @@ def tts_and_upload_drive(input_message, file_name):
     if file_name is None:
         file_name = "AIエージェントからの手紙"
 
-    name = "tts_and_upload_to_google_drive"
     target_folder_name = "./MyAiAgent/podcast"
 
     try:
@@ -49,7 +48,7 @@ def tts_and_upload_drive(input_message, file_name):
         speech_file_path = temp_dir / unique_filename
 
         # 1. テキスト -> 音声ファイル (TTS)
-        print(f"[{name}] INFO: Generating speech file at '{speech_file_path}'...")
+        logger.info(f"Generating speech file at '{speech_file_path}'")
         try:
             # tts関数がファイルパス(文字列)とテキストを引数に取ることを想定
             tts(str(speech_file_path), input_message)
@@ -62,14 +61,12 @@ def tts_and_upload_drive(input_message, file_name):
                 return f"エラー: TTS処理に失敗しました。音声ファイルが生成されませんでした。Text: '{input_message[:50]}...'"
         except Exception as e:
             # TTS実行中の予期せぬエラー
-            logger.error(f"Error during TTS: {e}")
+            logger.error(f"Error during TTS: {e}", exc_info=True)
             return f"エラー: 音声ファイル生成中に予期せぬエラーが発生しました: {e}"
-        print(f"[{name}] INFO: Speech file generated successfully.")
+        logger.info("Speech file generated successfully")
 
         # 2. Google Drive アップロード先フォルダIDの取得
-        print(
-            f"[{name}] INFO: Searching for Google Drive folder '{target_folder_name}'..."
-        )
+        logger.info(f"Searching for Google Drive folder '{target_folder_name}'")
         folder_id: Optional[str] = None
         try:
             # 注意: get_file_id_and_mime_typeは同名フォルダ/ファイルが複数ある場合、
@@ -84,14 +81,14 @@ def tts_and_upload_drive(input_message, file_name):
             #     return f"エラー: Google Drive で見つかった '{target_folder_name}' はフォルダではありません (Type: {mimeType})。"
         except Exception as e:
             # フォルダ検索中のエラー
-            logger.error(f"Error during Google Drive folder search: {e}")
+            logger.error(f"Error during Google Drive folder search: {e}", exc_info=True)
             return f"エラー: Google Drive フォルダ '{target_folder_name}' の検索中にエラーが発生しました: {e}"
-        print(f"[{name}] INFO: Found folder ID: {folder_id}")
+        logger.info(f"Found folder ID: {folder_id}")
 
         # 3. Google Drive へのファイルアップロード
         drive_filename = f"{file_name}.mp3"
-        print(
-            f"[{name}] INFO: Uploading '{speech_file_path.name}' as '{drive_filename}' to folder '{folder_id}'..."
+        logger.info(
+            f"Uploading '{speech_file_path.name}' as '{drive_filename}' to folder '{folder_id}'"
         )
         uploaded_file_id: Optional[str] = None
         try:
@@ -106,12 +103,12 @@ def tts_and_upload_drive(input_message, file_name):
                 return f"エラー: Google Drive へのファイル '{drive_filename}' のアップロードに失敗しました（ファイルIDが返されませんでした）。"
         except Exception as e:
             # アップロード中のエラー
-            logger.error(f"Error during Google Drive upload: {e}")
+            logger.error(f"Error during Google Drive upload: {e}", exc_info=True)
             return f"エラー: Google Drive へのアップロード中にエラーが発生しました: {e}"
-        print(f"[{name}] INFO: File uploaded successfully. File ID: {uploaded_file_id}")
+        logger.info(f"File uploaded successfully. File ID: {uploaded_file_id}")
 
         # 4. アップロードされたファイルのリンク取得
-        print(f"[{name}] INFO: Getting links for file ID '{uploaded_file_id}'...")
+        logger.info(f"Getting links for file ID '{uploaded_file_id}'")
         try:
             link_info = get_google_drive_file_links(uploaded_file_id)
             if not link_info or not link_info.get("webViewLink"):
@@ -119,7 +116,7 @@ def tts_and_upload_drive(input_message, file_name):
                 return f"エラー: アップロードされたファイル (ID: {uploaded_file_id}) のリンクを取得できませんでした。"
 
             web_view_link = link_info["webViewLink"]
-            print(f"[{name}] INFO: Successfully retrieved webViewLink: {web_view_link}")
+            logger.info(f"Successfully retrieved webViewLink: {web_view_link}")
             # 成功時の返り値 (AI に分かりやすいメッセージ形式)
 
             # ---------------
@@ -140,12 +137,13 @@ def tts_and_upload_drive(input_message, file_name):
                 with open(md_file_path, "w", encoding="utf-8") as f:
                     f.write(input_message)
             except IOError as e:
-                logger.error(f"Error writing to file '{md_file_path}': {e}")
-                print(f"ファイルの書き込みエラー: {e}")
+                logger.error(
+                    f"Error writing to file '{md_file_path}': {e}", exc_info=True
+                )
 
             # googl drive にアップロード
             folder_id = get_or_create_folder("./MyAiAgent/podcast_input")
-            print("@ ファイルをアップロードします @")
+            logger.info("Uploading markdown file to Google Drive")
             _id = upload_file(
                 f"{drive_filename}.md", md_file_path, "text/plain", folder_id
             )
@@ -171,22 +169,19 @@ def tts_and_upload_drive(input_message, file_name):
 
         except Exception as e:
             # リンク取得中のエラー
-            logger.error(f"Error during link retrieval: {e}")
+            logger.error(f"Error during link retrieval: {e}", exc_info=True)
             return f"エラー: アップロードされたファイルのリンク取得中にエラーが発生しました (File ID: {uploaded_file_id}): {e}"
 
     finally:
         # 5. 一時ファイルの削除 (tryブロックの成功・失敗に関わらず実行)
         if speech_file_path and speech_file_path.exists():
-            print(f"[{name}] INFO: Deleting temporary file '{speech_file_path}'...")
+            logger.info(f"Deleting temporary file '{speech_file_path}'")
             try:
                 # delete_file 関数がファイルパス文字列を期待する場合
                 delete_file(str(speech_file_path))
-                print(f"[{name}] INFO: Temporary file deleted.")
+                logger.info("Temporary file deleted")
             except Exception as e:
                 # 一時ファイルの削除失敗は警告に留める (主要処理ではないため)
                 logger.warning(
                     f"Failed to delete temporary file '{speech_file_path}': {e}"
-                )
-                print(
-                    f"[{name}] WARNING: Failed to delete temporary file '{speech_file_path}': {e}"
                 )

@@ -65,9 +65,7 @@ class TestExecMyllm:
         """Test exec_myllm with system message."""
         mock_chat.return_value = "Test response"
         request = ExpertAiAgentRequest(
-            user_input="Hello",
-            system_imput="You are helpful",
-            model_name="llama2"
+            user_input="Hello", system_imput="You are helpful", model_name="llama2"
         )
 
         result = exec_myllm(request)

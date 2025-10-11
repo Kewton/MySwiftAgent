@@ -104,7 +104,7 @@ jobs:
 
       - name: Run type checking
         working-directory: ./${{ matrix.project }}
-        run: uv run mypy app/
+        run: uv run mypy .
 
       - name: Run tests with coverage
         working-directory: ./${{ matrix.project }}

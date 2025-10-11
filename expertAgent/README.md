@@ -9,9 +9,10 @@
 - 🔧 MCP (Model Context Protocol) servers and tools
 - 🎭 **Playwright MCP integration** for web automation and scraping
 - 📚 **Wikipedia MCP integration** for knowledge retrieval and research
+- 🔐 **MyVault integration** for centralized secret management with cache
 - 🌐 Multiple AI provider support (OpenAI, Google Gemini, Anthropic, Ollama)
 - 🔒 CORS-enabled for cross-origin requests
-- 🧪 Comprehensive testing with pytest
+- 🧪 Comprehensive testing with pytest (30 MyVault tests included)
 - 🐳 Docker-ready with uv package manager
 - 📊 Health check endpoint for monitoring
 - 🎯 Type-safe with Pydantic models
@@ -23,8 +24,9 @@ expertAgent/
 ├── app/                    # FastAPI application
 │   ├── main.py            # FastAPI entry point
 │   ├── api/v1/            # API endpoints
-│   │   ├── agent_endpoints.py     # AI agent endpoints
-│   │   └── utility_endpoints.py  # Utility endpoints
+│   │   ├── agent_endpoints.py       # AI agent endpoints
+│   │   ├── utility_endpoints.py     # Utility endpoints
+│   │   └── google_auth_endpoints.py # 🔐 Google OAuth2 endpoints
 │   ├── schemas/           # Pydantic schemas
 │   ├── core/              # Core functionality
 │   └── models/            # Database models
@@ -45,9 +47,13 @@ expertAgent/
 │   ├── tool/                     # General tools
 │   ├── specializedtool/          # Specialized tools
 │   └── googleapis/               # Google API tools
+│       └── googleapi_services.py # 🔐 Google API service builder
 ├── core/                  # Core configuration
-│   ├── config.py
-│   └── logger.py
+│   ├── config.py          # Settings and configuration
+│   ├── logger.py          # Logging setup
+│   ├── secrets.py         # 🔐 SecretsManager with MyVault integration
+│   ├── myvault_client.py  # 🔐 MyVault HTTP client
+│   └── google_creds.py    # 🔐 Google OAuth2 credentials manager
 ├── tests/                 # Test files
 ├── Dockerfile
 ├── pyproject.toml
@@ -347,8 +353,277 @@ HOST=0.0.0.0
 PORT=8000
 LOG_LEVEL=info
 
-# Add your environment variables here
+# MyVault Configuration (recommended for secret management)
+MYVAULT_ENABLED=true
+MYVAULT_BASE_URL=http://localhost:8105
+MYVAULT_SERVICE_NAME=expertAgent
+MYVAULT_SERVICE_TOKEN=your-service-token
+MYVAULT_DEFAULT_PROJECT=your-project-name
+SECRETS_CACHE_TTL=300  # Cache TTL in seconds (default: 300)
+
+# API Keys (fallback if MyVault is unavailable)
+OPENAI_API_KEY=your-openai-key
+ANTHROPIC_API_KEY=your-anthropic-key
+GOOGLE_API_KEY=your-google-key
 ```
+
+### MyVault Integration
+
+🔐 **SecretsManager** provides centralized secret management with MyVault priority and environment variable fallback.
+
+**Features:**
+- 🔒 Priority-based secret retrieval: MyVault → Environment Variables → Error
+- ⚡ TTL-based caching (default 300s) for performance
+- 🔄 Manual cache reload via admin API
+- 📁 Project-level secret grouping
+- 🛡️ Comprehensive error handling
+
+**Usage Example:**
+
+```python
+from core.secrets import secrets_manager
+
+# Get secret (tries MyVault first, falls back to env var)
+api_key = secrets_manager.get_secret("OPENAI_API_KEY")
+
+# Get secret from specific project
+api_key = secrets_manager.get_secret("OPENAI_API_KEY", project="my-project")
+
+# Get all secrets for a project
+secrets = secrets_manager.get_secrets_for_project("my-project")
+
+# Clear cache (manual reload)
+secrets_manager.clear_cache()  # Clear all cache
+secrets_manager.clear_cache("my-project")  # Clear specific project
+```
+
+**Admin API for Cache Reload:**
+
+```bash
+# Reload secrets cache (requires X-Admin-Token header)
+curl -X POST "http://localhost:8103/aiagent-api/v1/admin/reload-secrets" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{"project": null}'
+
+# Reload specific project cache
+curl -X POST "http://localhost:8103/aiagent-api/v1/admin/reload-secrets" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{"project": "my-project"}'
+```
+
+**Secret Retrieval Priority:**
+
+1. **MyVault** (if `MYVAULT_ENABLED=true`)
+   - Checks cache first (if within TTL)
+   - Fetches from MyVault API if cache miss
+   - Uses specified project or default project
+2. **Environment Variable** (fallback)
+   - Falls back to `.env` or system environment
+3. **Error** (if not found anywhere)
+   - Raises `ValueError` with descriptive message
+
+**Test Coverage:**
+
+The MyVault integration includes comprehensive tests:
+- `tests/unit/test_myvault_client.py` - 11 tests for MyVault HTTP client
+- `tests/unit/test_secrets_manager.py` - 11 tests for SecretsManager logic
+- `tests/unit/test_admin_endpoints.py` - 8 tests for admin API endpoints
+
+Run tests: `uv run pytest tests/unit/test_myvault_client.py tests/unit/test_secrets_manager.py tests/unit/test_admin_endpoints.py -v`
+
+### Google Authentication Management
+
+🔑 **Google Credentials Manager** provides project-based Google OAuth 2.0 credentials management with encrypted local caching.
+
+**Features:**
+- 🔒 Project-level credential isolation
+- 🔐 Fernet symmetric encryption for local credentials cache
+- 📁 Integrated with MyVault for centralized storage
+- 🔄 Automatic token refresh with OAuth 2.0 flow
+- 🌐 Support for Gmail, Drive, and Sheets APIs
+- 🛡️ Secure file permissions (0o600)
+- 🔑 Global encryption key management
+- 🗑️ Automatic temp file cleanup
+
+**Architecture:**
+
+1. **Storage Layer:**
+   - MyVault: Source of truth for credentials (GOOGLE_CREDENTIALS_JSON, GOOGLE_TOKEN_JSON)
+   - Local Cache: `.google_credentials/{project}/` with encrypted files (*.enc)
+   - Global Encryption Key: Stored in MyVault as `GOOGLE_CREDS_ENCRYPTION_KEY`
+
+2. **Authentication Flow:**
+   - Credentials synced from MyVault → Encrypted locally
+   - Decrypted to temp files when needed
+   - Google OAuth 2.0 flow (browser-based for first-time auth)
+   - Token auto-refresh with refresh_token
+   - Refreshed tokens saved locally (manual MyVault update recommended)
+
+**Usage Example:**
+
+```python
+from mymcp.googleapis.googleapi_services import get_googleapis_service
+
+# Get Gmail service for specific project
+gmail_service = get_googleapis_service("gmail", project="my-project")
+
+# Get Drive service for default project
+drive_service = get_googleapis_service("drive")
+
+# Get Sheets service
+sheets_service = get_googleapis_service("sheets", project="another-project")
+```
+
+**API Endpoints:**
+
+```bash
+# Check token status for a project
+curl -X GET "http://localhost:8000/v1/google-auth/token-status?project=my-project" \
+    -H "X-Admin-Token: your-admin-token"
+
+# Sync credentials from MyVault to local cache
+curl -X POST "http://localhost:8000/v1/google-auth/sync-from-myvault" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{"project": "my-project"}'
+
+# List all projects with cached credentials
+curl -X GET "http://localhost:8000/v1/google-auth/list-projects" \
+    -H "X-Admin-Token: your-admin-token"
+
+# Start OAuth2 flow (for Web Application)
+curl -X POST "http://localhost:8000/v1/google-auth/oauth2-start" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "project": "my-project",
+      "redirect_uri": "http://localhost:8501"
+    }'
+
+# Complete OAuth2 flow with authorization code
+curl -X POST "http://localhost:8000/v1/google-auth/oauth2-callback" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "state": "state-from-oauth2-start",
+      "code": "authorization-code-from-google",
+      "project": "my-project"
+    }'
+
+# Get token data for backup or viewing
+curl -X GET "http://localhost:8000/v1/google-auth/token-data?project=my-project" \
+    -H "X-Admin-Token: your-admin-token"
+
+# Save token manually (with optional MyVault sync)
+curl -X POST "http://localhost:8000/v1/google-auth/save-token" \
+    -H "X-Admin-Token: your-admin-token" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "project": "my-project",
+      "token_json": "{\"token\": \"...\", \"refresh_token\": \"...\"}",
+      "save_to_myvault": true
+    }'
+```
+
+**commonUI Integration:**
+
+The `commonUI` provides a web interface for Google credential management with OAuth2 Web Application flow:
+
+1. Navigate to **MyVault → Google認証** tab
+2. Select a project from the dropdown
+3. Paste `credentials.json` content from Google Cloud Console (Web Application type)
+4. Click "Save to MyVault" → Credentials stored in MyVault
+5. Click "Start OAuth2 Flow" → Browser window opens for authentication
+6. Grant permissions in Google OAuth consent screen
+7. You'll be redirected back to commonUI (http://localhost:8501)
+8. Token is automatically saved to MyVault and encrypted locally
+9. Status indicator shows "✅ Token valid" when authentication is complete
+
+**Two Authentication Methods:**
+
+1. **Web Application Flow (Recommended for commonUI):**
+   - OAuth2 callback handled by commonUI
+   - redirect_uri: `http://localhost:8501`
+   - No browser popup blocking issues
+   - Automatic token save to MyVault
+
+2. **Desktop Application Flow (Legacy):**
+   - Browser-based authentication on first API call
+   - Uses `run_local_server()` from google-auth-oauthlib
+   - Manual MyVault update recommended after token refresh
+
+**Security Features:**
+
+- **Encryption:** Fernet (AES-128-CBC) for local credential files
+- **File Permissions:** 0o600 (owner read/write only)
+- **Temp Files:** Auto-cleanup on process exit with `atexit`
+- **Token Storage:** Encrypted at rest in `.google_credentials/{project}/token.json.enc`
+- **No Hardcoded Keys:** Encryption key stored in MyVault
+
+**Google API Scopes:**
+
+Default scopes configured in `core/google_creds.py`:
+- `https://www.googleapis.com/auth/gmail.readonly` - Read Gmail messages
+- `https://www.googleapis.com/auth/gmail.send` - Send emails
+- `https://www.googleapis.com/auth/drive` - Full Drive access
+- `https://www.googleapis.com/auth/spreadsheets` - Sheets access
+
+**Environment Variables:**
+
+```env
+# MyVault Configuration (required)
+MYVAULT_ENABLED=true
+MYVAULT_BASE_URL=http://localhost:8105
+MYVAULT_SERVICE_NAME=expertAgent
+MYVAULT_SERVICE_TOKEN=your-service-token
+MYVAULT_DEFAULT_PROJECT=your-project-name
+
+# Admin Token (required for Google Auth API)
+ADMIN_TOKEN=your-admin-token
+```
+
+**Setup Guide:**
+
+1. **Encryption Key (Auto-generated):**
+   - `GOOGLE_CREDS_ENCRYPTION_KEY` is **automatically created** by MyVault when you create a new project
+   - This global encryption key is used to encrypt all project credentials locally
+   - **No manual setup required** - MyVault handles this in `app/api/projects.py:create_project()`
+   - The key is **hidden from commonUI** - cannot be viewed or edited by users
+
+2. **Get Google Credentials:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Create OAuth 2.0 Client ID (**Web application** - not Desktop app)
+   - Configure OAuth consent screen if not already done
+   - **重要**: 以下の設定が必要です（[公式ガイド](https://developers.google.com/workspace/guides/create-credentials?hl=ja#desktop-app)参照）
+     - **承認済みの JavaScript 生成元**: `http://localhost:8501`
+     - **承認済みのリダイレクト URI**: `http://localhost:8501`
+   - Download `credentials.json` (Webアプリケーションのクライアントシークレット)
+
+3. **Add Credentials to MyVault via commonUI:**
+   - Open commonUI → MyVault → Google認証 tab
+   - Select your project (encryption key auto-generated when project was created)
+   - Paste `credentials.json` content
+   - Click "Save to MyVault"
+
+4. **Authenticate with Google:**
+   - Click "Start OAuth2 Flow" in commonUI
+   - Grant permissions in the browser window
+   - Token is automatically saved to MyVault and encrypted locally
+   - Status updates to "✅ Token valid"
+
+5. **Token Management:**
+   - Tokens are auto-refreshed when expired (if refresh_token available)
+   - Refreshed tokens are saved locally and **should be manually synced to MyVault**
+   - Use "Check Token Status" in commonUI to verify validity
+
+**Troubleshooting:**
+
+- **Token expired:** Run sync-from-myvault API to refresh local cache
+- **Encryption key missing:** Add `GOOGLE_CREDS_ENCRYPTION_KEY` to MyVault (global, not project-specific)
+- **Credentials not found:** Check MyVault has `GOOGLE_CREDENTIALS_JSON` for the project
+- **Permission denied:** Check `.google_credentials/` directory has correct permissions (0o700)
 
 ## CI/CD Integration
 
@@ -362,7 +637,11 @@ See [CLAUDE.md](../CLAUDE.md) for detailed workflow information.
 
 ## Version
 
-Current version: 0.2.0 (includes Playwright MCP and Wikipedia MCP integration)
+Current version: 0.2.1
+
+**Recent Updates:**
+- v0.2.1 (2025-10): Google OAuth2 Web Application flow with encrypted credential management
+- v0.2.0: Playwright MCP and Wikipedia MCP integration
 
 ## License
 

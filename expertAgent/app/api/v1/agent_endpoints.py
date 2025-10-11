@@ -64,9 +64,7 @@ def exec_myllm(request: ExpertAiAgentRequest):
     print(f"result: {cleaned_result}")
 
     return ExpertAiAgentResponse(
-        result=cleaned_result,
-        text=cleaned_result,
-        type="exec_myllm"
+        result=cleaned_result, text=cleaned_result, type="exec_myllm"
     )
 
 
@@ -85,11 +83,17 @@ async def aiagent_graph(request: ExpertAiAgentRequest):
         {request.user_input}
         """
         print(f"request.user_input:{_input}")
-        chat_history, aiMessage = await ainvoke_graphagent(_input)
+        chat_history, aiMessage = await ainvoke_graphagent(
+            _input, project=request.project
+        )
         _response = {"result": aiMessage, "type": "sample", "chathistory": chat_history}
         return ExpertAiAgentResponse(**_response)
     except Exception as e:
+        import traceback
+
         print(f"An unexpected error occurred: {e}")
+        print("Full traceback:")
+        traceback.print_exc()
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the agent."
         ) from e
@@ -110,30 +114,46 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
         {request.user_input}
         """
 
-        model_name = request.model_name if request.model_name is not None else "gpt-4o-mini"
+        model_name = (
+            request.model_name if request.model_name is not None else "gpt-4o-mini"
+        )
 
         if "jsonoutput" in agent_name:
             print(f"request.user_input:{_input}")
-            parsed_json = await jsonOutputagent(_input, model_name)
+            parsed_json = await jsonOutputagent(
+                _input, model_name, project=request.project
+            )
             return ExpertAiAgentResponseJson(result=parsed_json, type="jsonOutput")
         elif "explorer" in agent_name:
             print(f"request.user_input:{_input}")
-            result = await exploreragent(_input, model_name)
-            return ExpertAiAgentResponse(result=remove_think_tags(result), type="explorer")
+            result = await exploreragent(_input, model_name, project=request.project)
+            return ExpertAiAgentResponse(
+                result=remove_think_tags(result), type="explorer"
+            )
         elif "action" in agent_name:
             print(f"request.user_input:{_input}")
-            result = await actionagent(_input, model_name)
-            return ExpertAiAgentResponse(result=remove_think_tags(result), type="action")
+            result = await actionagent(_input, model_name, project=request.project)
+            return ExpertAiAgentResponse(
+                result=remove_think_tags(result), type="action"
+            )
         elif "playwright" in agent_name:
             print(f"request.user_input:{_input}")
             result = await playwrightagent(_input, model_name)
-            return ExpertAiAgentResponse(result=remove_think_tags(result), type="playwright")
+            return ExpertAiAgentResponse(
+                result=remove_think_tags(result), type="playwright"
+            )
         elif "wikipedia" in agent_name:
             print(f"request.user_input:{_input}")
             # Extract language parameter if provided, default to Japanese
-            language = request.language if hasattr(request, 'language') and request.language else "ja"
+            language = (
+                request.language
+                if hasattr(request, "language") and request.language
+                else "ja"
+            )
             result = await wikipediaagent(_input, model_name, language)
-            return ExpertAiAgentResponse(result=remove_think_tags(result), type="wikipedia")
+            return ExpertAiAgentResponse(
+                result=remove_think_tags(result), type="wikipedia"
+            )
         return {"message": "No matching agent found."}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")

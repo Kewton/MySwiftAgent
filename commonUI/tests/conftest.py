@@ -27,13 +27,13 @@ def clean_environment():
 
     # Clear relevant environment variables
     env_vars_to_clear = [
-        'JOBQUEUE_BASE_URL',
-        'JOBQUEUE_API_TOKEN',
-        'MYSCHEDULER_BASE_URL',
-        'MYSCHEDULER_API_TOKEN',
-        'POLLING_INTERVAL',
-        'DEFAULT_SERVICE',
-        'OPERATION_MODE'
+        "JOBQUEUE_BASE_URL",
+        "JOBQUEUE_API_TOKEN",
+        "MYSCHEDULER_BASE_URL",
+        "MYSCHEDULER_API_TOKEN",
+        "POLLING_INTERVAL",
+        "DEFAULT_SERVICE",
+        "OPERATION_MODE",
     ]
 
     for var in env_vars_to_clear:
@@ -51,7 +51,8 @@ def clean_environment():
 def sample_api_config():
     """Provide sample API configuration for testing."""
     from core.config import APIConfig
+
     return APIConfig(
         base_url="http://localhost:8001",
-        token="test-token-123"
+        token="test-token-123",
     )

@@ -1,13 +1,18 @@
+# Docker Compose configuration for MySwiftAgent services
+# Docker Compose uses .env.docker for environment variables
+# See docs/design/environment-variables.md for details
+
 services:
   # JobQueue Service - Job queue management API
   jobqueue:
+    env_file:
+      - .env.docker
     image: myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}
     build:
       context: ./jobqueue
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}"
-        - "myswiftagent-jobqueue:latest"
     container_name: myswiftagent-jobqueue
     ports:
       - "8001:8000"
@@ -15,8 +20,11 @@ services:
       - PYTHONPATH=/app
       - JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db
       - TZ=Asia/Tokyo
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./docker-compose-data/jobqueue:/app/data
+      - ./docker-compose-data/jobqueue/logs:/app/logs
     networks:
       - myswiftagent
     healthcheck:
@@ -29,13 +37,14 @@ services:
 
   # MyScheduler Service - Job scheduling service
   myscheduler:
+    env_file:
+      - .env.docker
     image: myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}
     build:
       context: ./myscheduler
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}"
-        - "myswiftagent-myscheduler:latest"
     container_name: myswiftagent-myscheduler
     ports:
       - "8002:8000"
@@ -44,8 +53,11 @@ services:
       - TZ=Asia/Tokyo
       - JOBQUEUE_API_URL=http://jobqueue:8000
       - DATABASE_URL=sqlite:///./data/jobs.db
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./docker-compose-data/myscheduler:/app/data
+      - ./docker-compose-data/myscheduler/logs:/app/logs
     depends_on:
       jobqueue:
         condition: service_healthy
@@ -59,22 +71,74 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # MyVault Service - Secrets management service
+  myvault:
+    env_file:
+      - .env.docker
+    image: myswiftagent-myvault:${MYVAULT_VERSION:-0.1.0}
+    build:
+      context: ./myVault
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-myvault:${MYVAULT_VERSION:-0.1.0}"
+    container_name: myswiftagent-myvault
+    ports:
+      - "8003:8000"
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      # Database configuration
+      - DATABASE_URL=sqlite:///./data/myvault.db
+      # Master encryption key (REQUIRED - set in .env)
+      - MSA_MASTER_KEY=${MSA_MASTER_KEY}
+      # Service authentication tokens
+      - TOKEN_expertagent=${MYVAULT_TOKEN_EXPERTAGENT}
+      - TOKEN_myscheduler=${MYVAULT_TOKEN_MYSCHEDULER}
+      - TOKEN_jobqueue=${MYVAULT_TOKEN_JOBQUEUE}
+      - TOKEN_commonui=${MYVAULT_TOKEN_COMMONUI}
+      # Logging
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./docker-compose-data/myvault:/app/data
+      - ./docker-compose-data/myvault/logs:/app/logs
+      - ./myVault/config.yaml:/app/config.yaml:ro
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
   # ExpertAgent Service - AI agent service
   expertagent:
+    env_file:
+      - .env.docker
     image: myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}
     build:
       context: ./expertAgent
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}"
-        - "myswiftagent-expertagent:latest"
     container_name: myswiftagent-expertagent
     ports:
-      - "8003:8000"
+      - "8004:8000"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
-      # API Keys
+      # Admin authentication
+      - ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN}
+      # MyVault Configuration (Priority for secrets management)
+      - MYVAULT_ENABLED=${MYVAULT_ENABLED:-true}
+      - MYVAULT_BASE_URL=http://myvault:8000
+      - MYVAULT_SERVICE_NAME=expertagent
+      - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_EXPERTAGENT}
+      - MYVAULT_DEFAULT_PROJECT=${MYVAULT_DEFAULT_PROJECT:-expertagent}
+      - GOOGLE_APIS_DEFAULT_PROJECT=${GOOGLE_APIS_DEFAULT_PROJECT:-default_project}
+      # API Keys (Fallback when MyVault is disabled)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -110,6 +174,9 @@ services:
     # Add SYS_ADMIN capability for Chromium sandboxing
     cap_add:
       - SYS_ADMIN
+    depends_on:
+      myvault:
+        condition: service_healthy
     networks:
       - myswiftagent
     healthcheck:
@@ -122,26 +189,33 @@ services:
 
   # GraphAiServer Service - Graph AI workflow service
   graphaiserver:
+    env_file:
+      - .env.docker
     image: myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}
     build:
       context: ./graphAiServer
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}"
-        - "myswiftagent-graphaiserver:latest"
     container_name: myswiftagent-graphaiserver
     ports:
-      - "8004:8000"
+      - "8005:8000"
     environment:
       - NODE_ENV=production
       - PORT=8000
       - TZ=Asia/Tokyo
       - MODEL_BASE_PATH=/app/config/graphai/
+      # Admin authentication
+      - ADMIN_TOKEN=${GRAPHAISERVER_ADMIN_TOKEN}
       # Add your API keys here or use .env file
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Logging
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./docker-compose-data/graphaiserver/config:/app/config
+      - ./docker-compose-data/graphaiserver/logs:/app/logs
     networks:
       - myswiftagent
     healthcheck:
@@ -154,29 +228,45 @@ services:
 
   # CommonUI Service - Web interface (Streamlit)
   commonui:
+    env_file:
+      - .env.docker
     image: myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}
     build:
       context: ./commonUI
       dockerfile: Dockerfile
       tags:
         - "myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}"
-        - "myswiftagent-commonui:latest"
     container_name: myswiftagent-commonui
     ports:
       - "8501:8501"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
-      - JOBQUEUE_API_URL=http://jobqueue:8000
-      - MYSCHEDULER_API_URL=http://myscheduler:8000
-      - EXPERTAGENT_API_URL=http://expertagent:8000
-      - GRAPHAISERVER_API_URL=http://graphaiserver:8000
+      # Service API URLs (using correct environment variable names for config.py)
+      - JOBQUEUE_BASE_URL=http://jobqueue:8000
+      - MYSCHEDULER_BASE_URL=http://myscheduler:8000
+      - MYVAULT_BASE_URL=http://myvault:8000
+      - EXPERTAGENT_BASE_URL=http://expertagent:8000
+      - GRAPHAISERVER_BASE_URL=http://graphaiserver:8000
+      # Service authentication tokens
+      - JOBQUEUE_API_TOKEN=${JOBQUEUE_API_TOKEN:-}
+      - MYSCHEDULER_API_TOKEN=${MYSCHEDULER_API_TOKEN:-}
+      - MYVAULT_SERVICE_NAME=commonui
+      - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_COMMONUI}
+      - EXPERTAGENT_ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN:-}
+      - GRAPHAISERVER_ADMIN_TOKEN=${GRAPHAISERVER_ADMIN_TOKEN:-}
+      # Logging
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./docker-compose-data/commonUI:/app/data
+      - ./docker-compose-data/commonUI/logs:/app/logs
     depends_on:
       jobqueue:
         condition: service_healthy
       myscheduler:
+        condition: service_healthy
+      myvault:
         condition: service_healthy
       expertagent:
         condition: service_healthy
