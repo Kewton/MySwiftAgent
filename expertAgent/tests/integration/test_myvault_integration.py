@@ -72,7 +72,7 @@ class TestMyVaultIntegration:
     def test_admin_reload_endpoint(self, client):
         """Test admin reload endpoint."""
         # Setup admin token
-        admin_token = "test-admin-token"
+        admin_token = "test-admin-token"  # noqa: S105 # Test fixture token
 
         with patch("app.api.v1.admin_endpoints.settings.ADMIN_TOKEN", admin_token):
             response = client.post(
@@ -97,8 +97,9 @@ class TestMyVaultIntegration:
         start1 = time.time()
         try:
             secrets_manager.get_secret("OPENAI_API_KEY")
-        except Exception:
-            pass  # May fail if not configured
+        except Exception as e:
+            # May fail if not configured - this is expected in test environment
+            print(f"Cache test: First call failed (expected): {e}")
         end1 = time.time()
         time1 = end1 - start1
 
@@ -106,8 +107,9 @@ class TestMyVaultIntegration:
         start2 = time.time()
         try:
             secrets_manager.get_secret("OPENAI_API_KEY")
-        except Exception:
-            pass
+        except Exception as e:
+            # May fail if not configured - this is expected in test environment
+            print(f"Cache test: Second call failed (expected): {e}")
         end2 = time.time()
         time2 = end2 - start2
 
@@ -167,9 +169,9 @@ class TestMyVaultIntegration:
             )
             # If we get here, fallback worked
             assert result is not None
-        except (ValueError, Exception):
-            # Expected if no fallback available
-            pass
+        except (ValueError, Exception) as e:
+            # Expected if no fallback available - this is normal behavior
+            print(f"Error handling test: Expected error occurred: {e}")
 
     @pytest.mark.integration
     @pytest.mark.skipif(
