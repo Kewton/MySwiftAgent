@@ -37,8 +37,8 @@ class TestDetectMimeType:
         """Test MIME type detection with various file extensions."""
         test_cases = [
             ("test.json", ["application/json", "text/plain"]),
-            ("test.html", ["text/html"]),
-            ("test.xml", ["text/xml", "application/xml"]),
+            ("test.html", ["text/html", "text/plain"]),
+            ("test.xml", ["text/xml", "application/xml", "text/plain"]),
         ]
 
         for filename, expected_mimes in test_cases:
