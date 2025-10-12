@@ -20,8 +20,8 @@ class TestGoogleAuthEndpoints:
     def mock_admin_token(self):
         """Mock admin token for testing."""
         with patch("app.api.v1.google_auth_endpoints.settings") as mock_settings:
-            mock_settings.ADMIN_TOKEN = "test-admin-token"
-            yield "test-admin-token"
+            mock_settings.ADMIN_TOKEN = "test-admin-token"  # noqa: S105 # Test fixture token
+            yield "test-admin-token"  # noqa: S105 # Test fixture token
 
     def test_oauth2_start_success(self, client, mock_admin_token):
         """Test OAuth2 start endpoint - success case."""
@@ -68,7 +68,7 @@ class TestGoogleAuthEndpoints:
     def test_oauth2_start_invalid_token(self, client):
         """Test OAuth2 start endpoint - invalid admin token."""
         with patch("app.api.v1.google_auth_endpoints.settings") as mock_settings:
-            mock_settings.ADMIN_TOKEN = "correct-token"
+            mock_settings.ADMIN_TOKEN = "correct-token"  # noqa: S105 # Test fixture token
 
             response = client.post(
                 "/v1/google-auth/oauth2-start",
@@ -84,7 +84,7 @@ class TestGoogleAuthEndpoints:
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
             with patch("app.api.v1.google_auth_endpoints.secrets_manager") as mock_sm:
                 mock_gcm.complete_oauth2_flow.return_value = (True, "test")
-                mock_gcm.get_token_path.return_value = "/tmp/token.json"
+                mock_gcm.get_token_path.return_value = "/tmp/token.json"  # noqa: S108 # Test fixture path
                 mock_sm.myvault_client = MagicMock()
 
                 with patch("builtins.open", mock_open(read_data='{"token": "test"}')):
@@ -122,7 +122,7 @@ class TestGoogleAuthEndpoints:
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
             with patch("app.api.v1.google_auth_endpoints.secrets_manager") as mock_sm:
                 mock_gcm.complete_oauth2_flow.return_value = (True, "test")
-                mock_gcm.get_token_path.return_value = "/tmp/token.json"
+                mock_gcm.get_token_path.return_value = "/tmp/token.json"  # noqa: S108 # Test fixture path
 
                 # MyVault client exists but update fails
                 mock_sm.myvault_client = MagicMock()
@@ -159,7 +159,7 @@ class TestGoogleAuthEndpoints:
     def test_get_token_data_exists(self, client, mock_admin_token):
         """Test get token data endpoint - token exists."""
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
-            mock_gcm.get_token_path.return_value = "/tmp/token.json"
+            mock_gcm.get_token_path.return_value = "/tmp/token.json"  # noqa: S108 # Test fixture path
 
             with patch(
                 "builtins.open", mock_open(read_data='{"access_token": "test"}')
@@ -172,7 +172,7 @@ class TestGoogleAuthEndpoints:
             assert response.status_code == 200
             data = response.json()
             assert data["exists"] is True
-            assert data["token_json"] == '{"access_token": "test"}'
+            assert data["token_json"] == '{"access_token": "test"}'  # noqa: S105 # Test fixture
 
     def test_get_token_data_not_found(self, client, mock_admin_token):
         """Test get token data endpoint - token not found."""
@@ -193,7 +193,7 @@ class TestGoogleAuthEndpoints:
     def test_get_token_data_read_error(self, client, mock_admin_token):
         """Test get token data endpoint - file read error."""
         with patch("app.api.v1.google_auth_endpoints.google_creds_manager") as mock_gcm:
-            mock_gcm.get_token_path.return_value = "/tmp/token.json"
+            mock_gcm.get_token_path.return_value = "/tmp/token.json"  # noqa: S108 # Test fixture path
 
             with patch("builtins.open", side_effect=IOError("Permission denied")):
                 response = client.get(
