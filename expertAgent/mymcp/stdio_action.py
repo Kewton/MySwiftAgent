@@ -21,7 +21,10 @@ try:
 except Exception as e:
     # デバッグ出力失敗は無視（本番動作に影響させない）
     import sys
-    print(f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True)
+
+    print(
+        f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True
+    )
 
 # MCPサブプロセス専用のログファイル名を環境変数から取得
 mcp_log_file = os.getenv("MCP_LOG_FILE", "mcp_stdio.log")
@@ -32,7 +35,10 @@ try:
 except Exception as e:
     # デバッグ出力失敗は無視（本番動作に影響させない）
     import sys
-    print(f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True)
+
+    print(
+        f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True
+    )
 
 setup_logging(log_file_name=mcp_log_file)
 
@@ -42,7 +48,10 @@ try:
 except Exception as e:
     # デバッグ出力失敗は無視（本番動作に影響させない）
     import sys
-    print(f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True)
+
+    print(
+        f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True
+    )
 
 mcp = FastMCP("myMcp")
 
