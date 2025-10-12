@@ -1,8 +1,11 @@
 def isChatGptAPI(_selected_model):
+    # gpt-oss は Ollama のローカルモデルなので除外
+    if "gpt-oss" in _selected_model:
+        return False
+    # OpenAI の公式モデル名のみマッチ
     if "gpt" in _selected_model:
         return True
-    else:
-        return False
+    return False
 
 
 def isChatGPT_o(_selected_model):

@@ -53,7 +53,17 @@ async def make_graph(
         _model = settings.GRAPH_AGENT_MODEL
 
     if isChatGptAPI(_model) or isChatGPT_o(_model):
-        model = ChatOpenAI(model=_model)
+        # Get OpenAI API key from secrets_manager
+        try:
+            openai_api_key_for_model = secrets_manager.get_secret(
+                "OPENAI_API_KEY", project=project
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize OpenAI model '{_model}': {e}. "
+                f"Please ensure OPENAI_API_KEY is set in MyVault for project: {project or 'default'}"
+            ) from e
+        model = ChatOpenAI(model=_model, openai_api_key=openai_api_key_for_model)
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
@@ -222,7 +232,23 @@ async def make_utility_graph(
         _model = settings.GRAPH_AGENT_MODEL
 
     if isChatGptAPI(_model) or isChatGPT_o(_model):
-        model = ChatOpenAI(model=_model)
+        # Get OpenAI API key from secrets_manager
+        try:
+            openai_api_key_for_model = secrets_manager.get_secret(
+                "OPENAI_API_KEY", project=project
+            )
+            print(
+                f"[DEBUG make_utility_graph] Retrieved OPENAI_API_KEY for project={project}: {openai_api_key_for_model[:10]}..."
+                if openai_api_key_for_model
+                else f"[DEBUG make_utility_graph] OPENAI_API_KEY is empty for project={project}"
+            )
+        except ValueError as e:
+            print(f"[DEBUG make_utility_graph] Failed to get OPENAI_API_KEY: {e}")
+            raise ValueError(
+                f"Failed to initialize OpenAI model '{_model}': {e}. "
+                f"Please ensure OPENAI_API_KEY is set in MyVault for project: {project or 'default'}"
+            ) from e
+        model = ChatOpenAI(model=_model, openai_api_key=openai_api_key_for_model)
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
@@ -368,7 +394,14 @@ async def make_utility_graph(
         # LangGraph では「1 思考 + 1 ツール実行」を 2 ステップと数えるので、
         # 推奨式  recursion_limit = 2 * max_iterations + 1
         recursion_limit = 2 * _max_iterations + 1
+        print(
+            f"[DEBUG make_utility_graph] Setting recursion_limit={recursion_limit} (_max_iterations={_max_iterations})"
+        )
         graph = graph.with_config(recursion_limit=recursion_limit, max_concurrency=2)
+    else:
+        print(
+            "[DEBUG make_utility_graph] _max_iterations is None, using default recursion_limit"
+        )
 
     graph.name = _graphname
     yield graph
@@ -391,7 +424,17 @@ async def make_playwright_graph(
         _model = settings.GRAPH_AGENT_MODEL
 
     if isChatGptAPI(_model) or isChatGPT_o(_model):
-        model = ChatOpenAI(model=_model)
+        # Get OpenAI API key from secrets_manager
+        try:
+            openai_api_key_for_model = secrets_manager.get_secret(
+                "OPENAI_API_KEY", project=None
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize OpenAI model '{_model}': {e}. "
+                "Please ensure OPENAI_API_KEY is set in MyVault for default project"
+            ) from e
+        model = ChatOpenAI(model=_model, openai_api_key=openai_api_key_for_model)
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI
@@ -467,7 +510,17 @@ async def make_wikipedia_graph(
         _model = settings.GRAPH_AGENT_MODEL
 
     if isChatGptAPI(_model) or isChatGPT_o(_model):
-        model = ChatOpenAI(model=_model)
+        # Get OpenAI API key from secrets_manager
+        try:
+            openai_api_key_for_model = secrets_manager.get_secret(
+                "OPENAI_API_KEY", project=None
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize OpenAI model '{_model}': {e}. "
+                "Please ensure OPENAI_API_KEY is set in MyVault for default project"
+            ) from e
+        model = ChatOpenAI(model=_model, openai_api_key=openai_api_key_for_model)
     elif isGemini(_model):
         # Lazy import to avoid loading Google credentials at module import time
         from langchain_google_genai import ChatGoogleGenerativeAI

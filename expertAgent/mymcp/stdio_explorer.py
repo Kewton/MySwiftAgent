@@ -20,7 +20,7 @@ async def google_search_tool(input_query: List[str]) -> str:
         - text (str): 取得結果。成功時はOKが返却されます
         - result (List[dict]): 検索結果から抽出したナレッジ
     """
-    return get_overview_by_google_serper(input_query)
+    return await get_overview_by_google_serper(input_query)
 
 
 if __name__ == "__main__":
