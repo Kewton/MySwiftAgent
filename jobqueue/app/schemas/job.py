@@ -17,7 +17,7 @@ class JobCreate(BaseModel):
     headers: dict[str, str] | None = Field(None, description="HTTP headers")
     params: dict[str, Any] | None = Field(None, description="Query parameters")
     body: dict[str, Any] | None = Field(None, description="Request body")
-    timeout_sec: int = Field(default=30, ge=1, le=300, description="Timeout in seconds")
+    timeout_sec: int = Field(default=30, ge=1, le=3600, description="Timeout in seconds (max: 1 hour)")
     priority: int = Field(default=5, ge=1, le=10, description="Priority (1=highest, 10=lowest)")
     max_attempts: int = Field(default=1, ge=1, le=10, description="Maximum retry attempts")
     backoff_strategy: BackoffStrategy = Field(

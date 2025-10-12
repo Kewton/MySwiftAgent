@@ -165,6 +165,31 @@ export const runGraphAI = async (user_input: string, model_name: string, project
     retryCount: log.retryCount,
   }));
 
+  // ⑦ エラー情報を詳細にログ出力
+  if (Object.keys(errors).length > 0) {
+    console.error("=== GraphAI Execution Errors ===");
+    for (const [nodeId, error] of Object.entries(errors)) {
+      const nodeConfig = graph_data.nodes[nodeId];
+      const agentName = nodeConfig?.agent || 'unknown';
+
+      console.error(`ERROR: <-- NodeId: ${nodeId}, Agent: ${agentName}`);
+      console.error(`ERROR: Message: ${error.message}`);
+
+      // fetchAgent固有のエラー詳細を表示
+      if (agentName === 'fetchAgent' && nodeConfig?.inputs) {
+        const inputs = nodeConfig.inputs as Record<string, unknown>;
+        console.error(`ERROR: URL: ${inputs.url || 'not specified'}`);
+        console.error(`ERROR: Method: ${inputs.method || 'GET'}`);
+      }
+
+      if (error.stack) {
+        console.error(`ERROR: Stack Trace:`);
+        console.error(error.stack);
+      }
+      console.error(`ERROR: -->`);
+    }
+  }
+
   console.log("GraphAI Results:", results);
   console.log("GraphAI Errors:", errors);
   console.log("GraphAI Logs:", logs);
@@ -241,6 +266,31 @@ export const testGraphAI = async (project?: string): Promise<GraphAIResponse> =>
     endTime: log.endTime,
     retryCount: log.retryCount,
   }));
+
+  // エラー情報を詳細にログ出力
+  if (Object.keys(errors).length > 0) {
+    console.error("=== GraphAI Execution Errors ===");
+    for (const [nodeId, error] of Object.entries(errors)) {
+      const nodeConfig = graph_data.nodes[nodeId];
+      const agentName = nodeConfig?.agent || 'unknown';
+
+      console.error(`ERROR: <-- NodeId: ${nodeId}, Agent: ${agentName}`);
+      console.error(`ERROR: Message: ${error.message}`);
+
+      // fetchAgent固有のエラー詳細を表示
+      if (agentName === 'fetchAgent' && nodeConfig?.inputs) {
+        const inputs = nodeConfig.inputs as Record<string, unknown>;
+        console.error(`ERROR: URL: ${inputs.url || 'not specified'}`);
+        console.error(`ERROR: Method: ${inputs.method || 'GET'}`);
+      }
+
+      if (error.stack) {
+        console.error(`ERROR: Stack Trace:`);
+        console.error(error.stack);
+      }
+      console.error(`ERROR: -->`);
+    }
+  }
 
   console.log("GraphAI Results:", results);
   console.log("GraphAI Errors:", errors);
