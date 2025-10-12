@@ -53,7 +53,7 @@ app.include_router(google_auth_endpoints.router, prefix="/v1")
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    """Health check endpoint (used by CI/CD)."""
+    """Health check endpoint (used by CI/CD and monitoring)."""
     return {"status": "healthy", "service": "expertAgent"}
 
 
