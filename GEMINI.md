@@ -133,13 +133,12 @@ curl http://127.0.0.1:8104/health
 
 ```bash
 # 開発用エンドポイントで実行（想定）
-curl -X POST http://127.0.0.1:8105/api/v1/workflow/execute \
+curl -X POST http://127.0.0.1:8105/api/v1/myagent \
   -H "Content-Type: application/json" \
   -d '{
-    "workflow_file": "llmwork/{your_workflow}.yml",
-    "input": "ユーザー入力テキスト"
-  }'
-```
+    "model_name": "llmwork/{your_workflow_name_without_extension}",
+    "user_input": "ユーザー入力テキスト"
+  }' ```
 
 ### 4. エラー発生時の対応
 
