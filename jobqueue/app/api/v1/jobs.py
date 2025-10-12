@@ -76,9 +76,7 @@ async def get_job_result(
         raise HTTPException(status_code=404, detail="Job not found")
 
     # Get result if exists
-    result = await db.scalar(
-        select(JobResult).where(JobResult.job_id == job_id)
-    )
+    result = await db.scalar(select(JobResult).where(JobResult.job_id == job_id))
 
     return JobResultResponse(
         job_id=job.id,
@@ -160,7 +158,9 @@ async def list_jobs(
         conditions.append(Job.status == status)
     if tags:
         # Filter jobs that have any of the specified tags
-        tag_conditions = [Job.tags.op("JSON_EXTRACT")("$[*]").op("LIKE")(f"%{tag}%") for tag in tags]
+        tag_conditions = [
+            Job.tags.op("JSON_EXTRACT")("$[*]").op("LIKE")(f"%{tag}%") for tag in tags
+        ]
         conditions.append(or_(*tag_conditions))
 
     # Build base query
@@ -175,7 +175,9 @@ async def list_jobs(
     total = await db.scalar(count_query)
 
     # Apply pagination and ordering
-    jobs_query = query.order_by(desc(Job.created_at)).offset((page - 1) * size).limit(size)
+    jobs_query = (
+        query.order_by(desc(Job.created_at)).offset((page - 1) * size).limit(size)
+    )
     jobs_result = await db.scalars(jobs_query)
     jobs_list = jobs_result.all()
 

@@ -87,7 +87,9 @@ class TestJobExecutor:
             mock_session.commit.assert_called()
 
     @pytest.mark.asyncio
-    async def test_execute_job_http_error(self, mock_session, mock_settings, sample_job):
+    async def test_execute_job_http_error(
+        self, mock_session, mock_settings, sample_job
+    ):
         """Test job execution with HTTP error response."""
         # Mock HTTP response with error
         mock_response = MagicMock()
@@ -113,7 +115,9 @@ class TestJobExecutor:
             assert sample_job.finished_at is not None
 
     @pytest.mark.asyncio
-    async def test_execute_job_exception_with_retry(self, mock_session, mock_settings, sample_job):
+    async def test_execute_job_exception_with_retry(
+        self, mock_session, mock_settings, sample_job
+    ):
         """Test job execution with exception and retry."""
         mock_session.scalar.return_value = None
 
@@ -132,7 +136,9 @@ class TestJobExecutor:
             assert sample_job.next_attempt_at > datetime.utcnow()
 
     @pytest.mark.asyncio
-    async def test_execute_job_exception_no_more_retries(self, mock_session, mock_settings, sample_job):
+    async def test_execute_job_exception_no_more_retries(
+        self, mock_session, mock_settings, sample_job
+    ):
         """Test job execution with exception when no more retries available."""
         # Set to last attempt
         sample_job.attempt = sample_job.max_attempts

@@ -2,17 +2,17 @@ version: 0.5
 nodes:
   source: {}
   expertAgent:
-    # モデルを指定してexpertAgetのAPIを実行する
     agent: fetchAgent
     console:
       before: expertAgent start
       after: true
     inputs:
-      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/sample
       method: POST
       body:
         user_input: :source
-        model_name: gpt-oss:120b
+    timeout: 30
+    retry: 0
   output:
     agent: copyAgent
     console:
