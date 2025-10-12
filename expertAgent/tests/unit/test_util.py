@@ -1,7 +1,5 @@
 """Unit tests for aiagent.langgraph.util module."""
 
-import pytest
-
 from aiagent.langgraph.util import (
     isChatGPT_o,
     isChatGptAPI,

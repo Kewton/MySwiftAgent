@@ -159,7 +159,8 @@ def execLlmApi(_selected_model: str, _messages: List[ChatMessage]) -> Optional[s
         logger.info(f"Using ChatGPT API with model: {_selected_model}")
         client = get_chatgpt_client()
         response = client.chat.completions.create(
-            model=_selected_model, messages=messages_dict  # type: ignore[arg-type]
+            model=_selected_model,
+            messages=messages_dict,  # type: ignore[arg-type]
         )
         result = response.choices[0].message.content
         logger.info(
