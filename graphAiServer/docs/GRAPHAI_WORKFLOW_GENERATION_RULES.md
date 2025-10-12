@@ -433,6 +433,14 @@ explorer:
 
 **用途**: Gmail経由のメール送信、Google Driveファイル操作、カレンダー操作、自動化されたワークフロー実行、外部サービスとの統合。
 
+**注意: 利用可能なツールの制約**
+`action` エージェントが内部で使用するツールには、それぞれ固有の制約が存在する場合があります。
+
+**例: `send_email_tool` の場合**
+- **宛先の固定**: 現在の実装では、メールの宛先はツール内部で設定された固定のアドレスとなっており、プロンプトから動的に宛先を指定することはできません。
+
+ワークフロー設計時には、このようなツールの制約を考慮する必要があります。
+
 ```yaml
 action:
   agent: fetchAgent
@@ -669,6 +677,22 @@ mapper:
         inputs:
           title: :row.title        # ✅ 各要素のフィールドにアクセス
           queries: :row.query_hint # ✅
+```
+
+### 5. APIエンドポイントの不一致
+
+**エラー**: `Cannot POST /api/v1/workflow/execute`
+
+**原因**: ドキュメント等で参照したエンドポイントが、実際の `graphAiServer` の実装と異なっている。
+
+**解決策**: `graphAiServer/src/app.ts` などのルーティング定義ファイルを確認し、正しいエンドポイントを使用する。2025年10月現在、ワークフロー実行用のエンドポイントは `POST /api/v1/myagent` です。
+
+```bash
+# ❌ 間違い
+curl -X POST http://127.0.0.1:8105/api/v1/workflow/execute
+
+# ✅ 正しい
+curl -X POST http://127.0.0.1:8105/api/v1/myagent
 ```
 
 ---
@@ -1829,12 +1853,12 @@ graphAiServer経由で動作確認を行い、エラーがあれば原因を調�
 # graphAiServerが起動していることを確認
 curl http://127.0.0.1:8105/health
 
-# ワークフロー実行（開発用エンドポイント想定）
-curl -X POST http://127.0.0.1:8105/api/v1/workflow/execute \
+# ワークフロー実行
+curl -X POST http://127.0.0.1:8105/api/v1/myagent \
   -H "Content-Type: application/json" \
   -d '{
-    "workflow_file": "llmwork/podcast_generation_20251012.yml",
-    "input": "量子コンピュータの最新動向"
+    "model_name": "llmwork/{your_workflow_name_without_extension}",
+    "user_input": "ユーザー入力テキスト"
   }'
 ```
 
