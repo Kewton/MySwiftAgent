@@ -4,6 +4,23 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import app from './app.js';
 
+// Configure global fetch timeout (300 seconds)
+const originalFetch = global.fetch;
+global.fetch = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 seconds
+
+  try {
+    const response = await originalFetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 // Load environment variables from graphAiServer/.env (new policy)
 // Note: override=false respects existing environment variables set by quick-start.sh or docker-compose
 const __filename = fileURLToPath(import.meta.url);
