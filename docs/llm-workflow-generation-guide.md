@@ -397,6 +397,486 @@ YMLファイルでmapAgentに `concurrency` パラメータがあるか確認
 | **既知のエラー** | ⭕ 不要 | YMLファイルのみ修正 |
 | **ユーザー固有のエラー** | ⭕ 不要 | YMLファイルのNotesに記載 |
 
+## 🌐 Playwright Agent 統合
+
+### 概要
+
+Playwright Agentは、Webブラウザを自動操作してWebページからデータを抽出・処理するエージェントです。expertAgent API経由でLangGraph ReAct agentパターンで統合されており、Playwright MCPの20種類以上のツールを活用できます。
+
+### コア機能
+
+#### 1. **Webページの遷移・操作**
+
+- **ページナビゲーション**: URL遷移、戻る操作
+- **フォーム操作**: テキスト入力、ボタンクリック、ドロップダウン選択
+- **インタラクション**: ドラッグ&ドロップ、ホバー、キーボード入力
+- **タブ管理**: 新規タブ作成、タブ切替、タブクローズ
+
+#### 2. **Webページからのデータ抽出**
+
+- **ページ全体のテキスト取得**: `browser_snapshot`でアクセシビリティツリー形式で構造化されたテキストを取得
+- **特定要素のテキスト抽出**: セレクタ指定で特定部分のみ抽出
+- **ファイルリンクの一括抽出**: PDFリンク、画像リンク、ダウンロードリンク等を自動収集
+- **スクリーンショット取得**: ページ全体または特定要素のスクリーンショット
+
+#### 3. **動的コンテンツ対応**
+
+- **要素の出現待機**: 特定のテキストや要素が表示されるまで待機
+- **JavaScript実行**: カスタムJavaScriptをページ上で実行
+- **ネットワーク監視**: HTTPリクエスト/レスポンスの記録
+- **コンソールログ取得**: ブラウザコンソールのログ・エラーを取得
+
+### GraphAI YML統合パターン
+
+#### パターン1: Webページからテキスト抽出
+
+```yaml
+# ニュースサイトから記事本文を抽出
+web_scraper:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    method: "POST"
+    data:
+      user_input: "下記サイトから記事のタイトルと本文を抽出してください。\nhttps://example.com/news/article-123"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン2: PDFリンク一括抽出
+
+```yaml
+# 政府サイトから公開資料のPDFリンクを全て抽出
+pdf_link_extractor:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    method: "POST"
+    data:
+      user_input: "下記サイトから全てのPDFファイルのURLリンクを抽出してください。\nhttps://japancredit.go.jp/data/"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン3: 複数ページから情報収集
+
+```yaml
+# 複数の製品ページから価格情報を収集
+price_collector:
+  agent: "mapAgent"
+  inputs:
+    rows: [":product_urls"]
+  params:
+    concurrency: 2  # 並列数制限（Bot検出回避）
+  graph:
+    nodes:
+      fetch_price:
+        agent: "fetchAgent"
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+          method: "POST"
+          data:
+            user_input: "下記製品ページから製品名と価格を抽出してください。\n:row"
+            model_name: "gpt-4o-mini"
+        isResult: true
+```
+
+### 利用可能なPlaywright MCPツール（主要20種類）
+
+expertAgent内部で使用可能なツール一覧（使用頻度順）:
+
+| ツール名 | 機能 | 使用例 |
+|---------|------|-------|
+| `browser_snapshot` | ページ全体の構造・テキスト取得 | テキスト抽出、構造解析 |
+| `browser_navigate` | URL遷移 | ページ移動、初回アクセス |
+| `browser_click` | 要素クリック | ボタン押下、リンククリック |
+| `browser_type` | テキスト入力 | フォーム入力、検索ボックス |
+| `browser_take_screenshot` | スクリーンショット | ページキャプチャ、証拠保存 |
+| `browser_wait_for` | 要素の出現待機 | 動的コンテンツ読込待ち |
+| `browser_evaluate` | JavaScript実行 | カスタム処理、データ抽出 |
+| `browser_fill_form` | フォーム一括入力 | 複数フィールド入力 |
+| `browser_network_requests` | ネットワーク監視 | API呼び出し確認 |
+| `browser_console_messages` | コンソールログ取得 | エラー確認、デバッグ |
+| その他10種類 | select_option, hover, drag, tabs等 | - |
+
+**重要**: これらのツールはLLMエージェントが自動選択します。ワークフロー作成者が直接指定する必要はありません。
+
+### 技術的注意事項
+
+#### expertAgent API統合
+
+- **ポート番号**: `127.0.0.1:8104`（expertAgent）
+- **エンドポイント**: `/aiagent-api/v1/aiagent/utility/playwright`
+- **推奨モデル**: `gpt-4o-mini`（Playwright指示理解に最適、コスト効率良好）
+- **最大イテレーション**: 5回（デフォルト）
+
+#### Bot検出対策
+
+expertAgentでは以下の対策が実装済み:
+
+- **User-Agent設定**: Chrome 131相当の現実的なUser-Agentを自動設定
+- **Headlessモード**: `--headless`オプション有効
+- **並列数制限**: mapAgent使用時は`concurrency: 2`推奨（同時アクセス過多を回避）
+
+**対応例**:
+- ✅ `https://japancredit.go.jp/data/` - 403エラーを回避（User-Agent設定により解決済み）
+- ✅ 一般的な企業サイト - 問題なくアクセス可能
+
+#### Docker要件
+
+- **共有メモリ**: `shm_size: 2gb` 必須（Chromiumブラウザ動作に必要）
+- **設定場所**: `docker-compose.yml`の`expertagent`サービス
+
+```yaml
+services:
+  expertagent:
+    shm_size: 2gb  # Playwright動作に必須
+```
+
+#### タイムアウト設定
+
+- **グローバルタイムアウト**: 300秒（5分）
+- **ページロードタイムアウト**: 30秒（Playwright MCP内部設定）
+- **並列処理時の注意**: 重いLLM（gpt-oss:120b）使用時はconcurrency:1-2推奨
+
+### よくある使用パターン
+
+#### 使用例1: 競合他社の価格調査
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      competitors:
+        - "https://competitor-a.com/product"
+        - "https://competitor-b.com/product"
+
+  price_research:
+    agent: "mapAgent"
+    inputs:
+      rows: [":source.competitors"]
+    params:
+      concurrency: 2
+    graph:
+      nodes:
+        scrape:
+          agent: "fetchAgent"
+          params:
+            url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+            method: "POST"
+            data:
+              user_input: "下記ページから製品名、価格、在庫状況を抽出してください。\n:row"
+              model_name: "gpt-4o-mini"
+          isResult: true
+    isResult: true
+```
+
+#### 使用例2: 公開資料の自動収集
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      target_url: "https://example.gov.jp/reports/"
+
+  collect_pdf_links:
+    agent: "fetchAgent"
+    inputs:
+      url: [":source.target_url"]
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+      method: "POST"
+      data:
+        user_input: "下記サイトから全てのPDFファイルのURLリンクを抽出してください。\n:source.target_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+    isResult: true
+```
+
+## 📄 File Reader Agent 統合
+
+### 概要
+
+File Reader Agentは、Web上やローカルのファイルを読み込み、内容を抽出するエージェントです。PDF、画像、音声、テキストなど様々なファイル形式に対応しており、expertAgent API経由でFastMCP stdioトランスポートで統合されています。
+
+### コア機能
+
+#### 1. **マルチフォーマット対応**
+
+- **PDF処理**: PyPDF2で全ページのテキストを抽出（要約なし、原文そのまま）
+- **画像処理**: OpenAI Vision API（gpt-4o）でOCR・画像解析
+- **音声処理**: OpenAI Whisper API（whisper-1）で音声文字起こし
+- **テキスト処理**: UTF-8/Shift-JIS/EUC-JP等、複数エンコーディング対応
+- **CSV処理**: 解析・整形してテキスト化
+
+#### 2. **多様なデータソース対応**
+
+- **インターネットURL**: HTTP/HTTPS経由でファイルをダウンロード（タイムアウト30秒）
+- **Google Drive**: OAuth2認証でプライベートファイルにアクセス（MyVault管理）
+- **ローカルファイル**: セキュリティ制限付きで許可ディレクトリ内のファイルを読込
+
+#### 3. **自動処理判定**
+
+ユーザーの指示文の内容に応じて、最適な処理方法を自動選択:
+
+- "テキストを抽出してください" → PDF全文抽出（PyPDF2）
+- "画像の内容を説明してください" → Vision API解析（gpt-4o）
+- "文字起こししてください" → Whisper API文字起こし（whisper-1）
+
+### GraphAI YML統合パターン
+
+#### パターン1: PDF全文抽出
+
+```yaml
+# Google DriveのPDFホワイトペーパーから全文を抽出
+pdf_extractor:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記ファイルのテキスト情報を全て抽出してください。可能な限り元のファイルに忠実にしてください。\nhttps://drive.google.com/file/d/1ABC123XYZ/view"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン2: 画像からのOCR
+
+```yaml
+# スクリーンショット画像からテキストを抽出
+image_ocr:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記画像ファイルのテキストを抽出してください（OCR）。\nhttps://example.com/screenshot.png"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン3: 音声文字起こし
+
+```yaml
+# ポッドキャスト音声を文字起こし
+audio_transcription:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記音声ファイルを文字起こししてください。\nhttps://example.com/podcast/episode-01.mp3"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン4: 複数PDFの一括処理
+
+```yaml
+# 複数のレポートPDFから情報を抽出・要約
+pdf_batch_processor:
+  agent: "mapAgent"
+  inputs:
+    rows: [":pdf_urls"]  # PDFのURLリスト
+  params:
+    concurrency: 3  # 3ファイル並列処理
+  graph:
+    nodes:
+      extract_and_summarize:
+        agent: "fetchAgent"
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+          method: "POST"
+          data:
+            user_input: "下記PDFファイルから重要なポイントを3つ抽出してください。\n:row"
+            model_name: "gpt-4o-mini"
+        isResult: true
+```
+
+### 対応形式一覧表
+
+| ファイル形式 | 処理方法 | API/ライブラリ | 出力形式 | タイムアウト |
+|------------|---------|-------------|---------|------------|
+| **PDF** | 全ページテキスト抽出 | PyPDF2 | `--- Page N ---` 区切り付き全文 | - |
+| **PNG/JPG/JPEG** | Vision API解析 | OpenAI gpt-4o | ユーザー指示に応じた結果 | - |
+| **MP3/MP4/WAV** | 音声文字起こし | OpenAI whisper-1 | 全文テキスト | - |
+| **TXT/MD** | 直接読込 | Python標準 | 全文テキスト | - |
+| **CSV** | 解析・整形 | Python CSV | 整形済みテキスト | - |
+
+**処理特性:**
+- **PDF**: 要約せず、全ページの原文をそのまま返す
+- **画像**: max_tokens=1000（Vision API制限）
+- **音声**: response_format="text"（Whisper API）
+
+### 重要な使用上の注意
+
+#### ❗ 画像ファイル指定時の必須表現
+
+画像ファイルを処理する場合、指示文に**必ず「画像」「画像ファイル」という表現を含める**必要があります。
+
+**失敗例:**
+```yaml
+# ❌ NG: LLMがツール呼び出しを拒否
+data:
+  user_input: "テキストを抽出してください。\nhttps://drive.google.com/file/d/IMAGE_ID/view"
+```
+
+**成功例:**
+```yaml
+# ✅ OK: 「画像ファイルの」を明記
+data:
+  user_input: "下記画像ファイルのテキストを抽出してください。\nhttps://drive.google.com/file/d/IMAGE_ID/view"
+
+# ✅ OK: 「画像の内容を」を明記
+data:
+  user_input: "下記画像の内容を説明してください。\nhttps://example.com/screenshot.png"
+```
+
+**理由**: LLMが「テキスト抽出」=「PDF」と解釈し、画像ファイルに対してツール呼び出しを拒否するため。
+
+#### Google Drive認証
+
+- **認証方法**: MyVault経由でOAuth2トークンを自動取得
+- **事前準備**: ユーザーがMyVaultでGoogle認証を完了している必要あり
+- **対応URL形式**:
+  - `https://drive.google.com/file/d/FILE_ID/view`
+  - `https://drive.google.com/open?id=FILE_ID`
+
+**権限エラーが発生する場合:**
+1. Google Drive側で「リンクを知っている全員」に共有設定
+2. MyVaultでGoogle認証を再実行
+
+#### ローカルファイルのセキュリティ制限
+
+**許可ディレクトリ:**
+- `/tmp`, `/var/tmp`
+- `~/Downloads`, `~/Documents`
+
+**使用例:**
+```yaml
+local_file_reader:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記ファイルの内容を表示してください。\n/tmp/document.pdf"
+      model_name: "gpt-4o-mini"
+```
+
+**エラー例:**
+```
+Error: File path is outside allowed directories
+```
+
+### 技術的注意事項
+
+#### expertAgent API統合
+
+- **ポート番号**: `127.0.0.1:8104`（expertAgent）
+- **エンドポイント**: `/aiagent-api/v1/aiagent/utility/file_reader`
+- **推奨モデル**: `gpt-4o-mini`（指示理解に最適、コスト効率良好）
+
+#### ファイル処理の制限
+
+| 項目 | 制限値 | 備考 |
+|------|--------|------|
+| **ファイルサイズ** | 50MB | デフォルト設定、変更可能 |
+| **HTTPタイムアウト** | 30秒 | ダウンロード時 |
+| **Vision API max_tokens** | 1000トークン | 画像解析の出力長 |
+
+#### 一時ファイル管理
+
+- **保存先**: `/tmp/tmpXXXXXX.tmp`
+- **クリーンアップ**: 処理完了後に自動削除
+- **セキュリティ**: Path Traversal攻撃対策実装済み
+
+#### 使用API
+
+| 処理 | API | モデル | コスト |
+|------|-----|--------|--------|
+| **画像解析** | OpenAI Vision API | gpt-4o | $$$ |
+| **音声文字起こし** | OpenAI Whisper API | whisper-1 | $ |
+| **PDF抽出** | PyPDF2（ローカル） | - | 無料 |
+
+**コスト最適化**: PDFはローカル処理のため無料。画像・音声はOpenAI API使用のためコスト発生。
+
+### よくある使用パターン
+
+#### 使用例1: 技術ドキュメントの内容抽出→要約
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      pdf_url: "https://example.com/technical-whitepaper.pdf"
+
+  extract_pdf:
+    agent: "fetchAgent"
+    inputs:
+      url: [":source.pdf_url"]
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+      method: "POST"
+      data:
+        user_input: "下記PDFファイルのテキストを全て抽出してください。\n:source.pdf_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+
+  summarize:
+    agent: "openAIAgent"
+    inputs:
+      content: [":extract_pdf"]
+    params:
+      model: "gpt-oss:120b"  # ローカルLLM使用
+      system: "技術ドキュメントを読み、重要なポイントを3つ挙げてください。"
+      prompt: ":content"
+    isResult: true
+```
+
+#### 使用例2: 画像ベースの議事録作成
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      screenshot_url: "https://drive.google.com/file/d/SCREENSHOT_ID/view"
+
+  ocr_screenshot:
+    agent: "fetchAgent"
+    inputs:
+      url: [":source.screenshot_url"]
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+      method: "POST"
+      data:
+        user_input: "下記画像ファイルのテキストを抽出してください（ホワイトボードの議事録）。\n:source.screenshot_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+
+  format_minutes:
+    agent: "openAIAgent"
+    inputs:
+      ocr_text: [":ocr_screenshot"]
+    params:
+      model: "gpt-oss:20b"
+      system: "議事録を整形し、決定事項、アクションアイテム、次回予定を抽出してください。"
+      prompt: ":ocr_text"
+    isResult: true
+```
+
 ## 📚 参考ドキュメント
 
 - 📄 **[GRAPHAI_WORKFLOW_GENERATION_RULES.md](../graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)** - ワークフロー生成の詳細ルール（必須）
@@ -405,6 +885,8 @@ YMLファイルでmapAgentに `concurrency` パラメータがあるか確認
 - 🌐 **[Google AI Studio](https://aistudio.google.com/)** - Gemini API管理
 - 🔧 **[GraphAI公式ドキュメント](https://github.com/receptron/graphai)** - GraphAIフレームワーク仕様
 - 📖 **[expertAgent API仕様](../expertAgent/docs/)** - expertAgent統合ガイド
+- 🌐 **[expertAgent README - Playwright Agent](../expertAgent/README.md#2-playwright-agent統合mcp)** - Playwright Agent詳細仕様
+- 📄 **[File Reader利用ガイド](../expertAgent/docs/file-reader-usage-guide.md)** - File Reader Agent完全ガイド
 
 ## 🤝 サポート
 
