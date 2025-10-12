@@ -1058,12 +1058,21 @@ git commit -m "your message"
 #### 使用方法
 
 ```bash
-# プッシュ前に必ず実行
+# 全プロジェクトをチェック（推奨）
+./scripts/pre-push-check-all.sh
+
+# expertAgentプロジェクトのみチェック（高速）
 ./scripts/pre-push-check.sh
 ```
 
 #### チェック内容
 
+**pre-push-check-all.sh** （マルチプロジェクト対応版）:
+- 対象プロジェクト: expertAgent, jobqueue, myscheduler, myVault, graphAiServer
+- Python プロジェクト: Ruff linting, Ruff formatting, MyPy type checking, Unit tests, Coverage check (90%以上)
+- TypeScript プロジェクト: ESLint, TypeScript compilation, Build
+
+**pre-push-check.sh** （expertAgent専用）:
 1. ✅ Ruff linting
 2. ✅ Ruff formatting
 3. ✅ MyPy type checking
@@ -1100,7 +1109,7 @@ git commit -m "your message"
 - [ ] 新しいテストを追加したか？
 - [ ] カバレッジは維持されているか？ (90%以上)
 - [ ] コミットメッセージは規約に従っているか？
-- [ ] プッシュ前に `./scripts/pre-push-check.sh` を実行したか？
+- [ ] プッシュ前に `./scripts/pre-push-check-all.sh` を実行したか？
 
 ## 🔄 CI/CDエラー発生時の対応手順
 
@@ -1137,7 +1146,7 @@ open htmlcov/index.html
 uv run ruff check . --fix
 
 # テスト追加後、全チェック実行
-./scripts/pre-push-check.sh
+./scripts/pre-push-check-all.sh
 
 # コミット・プッシュ
 git add -u
@@ -1162,7 +1171,8 @@ git push
 ## 📚 参考ドキュメント
 
 - 📖 **詳細ガイド**: `DEVELOPMENT_GUIDE.md`
-- 🔧 **Pre-commitチェックスクリプト**: `scripts/pre-push-check.sh`
+- 🔧 **Pre-commitチェックスクリプト（全プロジェクト）**: `scripts/pre-push-check-all.sh`
+- 🔧 **Pre-commitチェックスクリプト（expertAgent専用）**: `scripts/pre-push-check.sh`
 - ⚙️ **VS Code設定**: `.vscode/settings.json`
 - 🪝 **Pre-commit Hooks設定**: `.pre-commit-config.yaml`
 
@@ -1185,7 +1195,7 @@ git push
 - [ ] アーキテクチャは、 ./docs/design/architecture-overview.md に従うこと
 - [ ] システムで管理すべきパラメータは環境変数で管理するものとし、使用方法は、 ./docs/design/environment-variables.md に従うこと
 - [ ] ユーザーが管理すべきパラメータはmyVaultで管理するものとし、使用方法は、./docs/design/myvault-integration.md に従うこと
-- [ ] コミットする前に、./scripts/pre-push-check.sh を実行し合格することを確認すること
+- [ ] コミットする前に、./scripts/pre-push-check-all.sh を実行し全プロジェクトの品質チェックに合格することを確認すること（単一プロジェクトのみ変更した場合は ./scripts/pre-push-check.sh でも可）
 - [ ] ユーザーからの依頼に対し下記方針で作業を進めること
   1. 対策案を提示する
   1. ユーザーが指示した対策案に対し実行計画を提示する
