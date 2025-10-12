@@ -31,8 +31,12 @@ class JobExecutor:
         Note: Job status is already set to RUNNING by _get_next_job,
         so we don't need to update it again here.
         """
-        logger.info(f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}")
-        logger.info(f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}, status={job.status}")
+        logger.info(
+            f"[EXECUTE_JOB] Starting job execution: job_id={job.id}, name={job.name}, method={job.method}, url={job.url}"
+        )
+        logger.info(
+            f"[EXECUTE_JOB] Job details: attempt={job.attempt}/{job.max_attempts}, priority={job.priority}, status={job.status}"
+        )
 
         # Ensure started_at is set (defensive programming for tests/manual execution)
         if job.started_at is None:
@@ -63,7 +67,9 @@ class JobExecutor:
                     json=job.body if job.body else None,
                     timeout=job.timeout_sec,
                 )
-                logger.info(f"[EXECUTE_JOB] HTTP request completed for job {job.id}: status={response.status_code}")
+                logger.info(
+                    f"[EXECUTE_JOB] HTTP request completed for job {job.id}: status={response.status_code}"
+                )
 
                 # Limit response body size
                 response_body = None
@@ -84,7 +90,9 @@ class JobExecutor:
                     response_status=response.status_code,
                     response_headers=dict(response.headers),
                     response_body=response_body,
-                    error=None if response.is_success else f"HTTP {response.status_code}: {response.text}"
+                    error=None
+                    if response.is_success
+                    else f"HTTP {response.status_code}: {response.text}",
                 )
 
                 # Update job status
@@ -97,18 +105,16 @@ class JobExecutor:
                     job.status = JobStatus.FAILED
                     job.finished_at = datetime.utcnow()
                     error_message = f"HTTP {response.status_code}: {response.text}"
-                    logger.warning(f"Job {job.id} failed with HTTP {response.status_code}")
+                    logger.warning(
+                        f"Job {job.id} failed with HTTP {response.status_code}"
+                    )
 
         except Exception as e:
             error_message = str(e)
             logger.error(f"Job {job.id} failed with exception: {error_message}")
 
             # Store error result using unified method
-            await self._store_job_result(
-                job.id,
-                start_time,
-                error=error_message
-            )
+            await self._store_job_result(job.id, start_time, error=error_message)
 
             # Determine if we should retry
             if job.attempt < job.max_attempts:
@@ -126,7 +132,7 @@ class JobExecutor:
         response_status: int | None = None,
         response_headers: dict[str, Any] | None = None,
         response_body: dict[str, Any] | None = None,
-        error: str | None = None
+        error: str | None = None,
     ) -> None:
         """Store or update job result safely using upsert pattern."""
         duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -153,7 +159,7 @@ class JobExecutor:
                     response_headers=response_headers,
                     response_body=response_body,
                     error=error,
-                    duration_ms=duration_ms
+                    duration_ms=duration_ms,
                 )
                 self.session.add(result)
                 await self.session.flush()  # Flush to catch constraint violations
@@ -184,7 +190,9 @@ class JobExecutor:
         job.next_attempt_at = datetime.utcnow() + timedelta(seconds=backoff_delay)
         job.status = JobStatus.QUEUED
 
-        logger.info(f"Scheduling retry {job.attempt}/{job.max_attempts} for job {job.id} at {job.next_attempt_at}")
+        logger.info(
+            f"Scheduling retry {job.attempt}/{job.max_attempts} for job {job.id} at {job.next_attempt_at}"
+        )
 
     def _calculate_backoff(self, job: Job) -> float:
         """Calculate backoff delay based on strategy."""
@@ -196,7 +204,7 @@ class JobExecutor:
         elif job.backoff_strategy == BackoffStrategy.LINEAR:
             return base_delay * attempt
         elif job.backoff_strategy == BackoffStrategy.EXPONENTIAL:
-            return float(base_delay * (2 ** attempt))
+            return float(base_delay * (2**attempt))
         else:
             return float(base_delay)
 
@@ -251,13 +259,19 @@ class WorkerManager:
                     job = await self._get_next_job(session)
 
                     if job:
-                        logger.info(f"[WORKER] {worker_name} picked up job: {job.id} (name={job.name})")
+                        logger.info(
+                            f"[WORKER] {worker_name} picked up job: {job.id} (name={job.name})"
+                        )
                         executor = JobExecutor(session, self.settings)
                         await executor.execute_job(job)
-                        logger.info(f"[WORKER] {worker_name} finished executing job: {job.id}")
+                        logger.info(
+                            f"[WORKER] {worker_name} finished executing job: {job.id}"
+                        )
                     else:
                         # No jobs available, wait before polling again
-                        logger.debug(f"[WORKER] {worker_name} found no jobs, sleeping for {self.settings.poll_interval}s")
+                        logger.debug(
+                            f"[WORKER] {worker_name} found no jobs, sleeping for {self.settings.poll_interval}s"
+                        )
                         await asyncio.sleep(self.settings.poll_interval)
 
             except asyncio.CancelledError:
@@ -283,13 +297,12 @@ class WorkerManager:
             .where(
                 and_(
                     Job.status == JobStatus.QUEUED,
-                    or_(
-                        Job.next_attempt_at.is_(None),
-                        Job.next_attempt_at <= now
-                    )
+                    or_(Job.next_attempt_at.is_(None), Job.next_attempt_at <= now),
                 )
             )
-            .order_by(Job.priority.asc(), Job.created_at.asc())  # Higher priority first (lower number)
+            .order_by(
+                Job.priority.asc(), Job.created_at.asc()
+            )  # Higher priority first (lower number)
             .limit(1)
         )
 
@@ -305,7 +318,8 @@ class WorkerManager:
             .where(
                 and_(
                     Job.id == candidate_id,
-                    Job.status == JobStatus.QUEUED  # Only if still queued (not claimed by another worker)
+                    Job.status
+                    == JobStatus.QUEUED,  # Only if still queued (not claimed by another worker)
                 )
             )
             .values(status=JobStatus.RUNNING, started_at=now)

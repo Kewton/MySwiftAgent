@@ -1,0 +1,479 @@
+version: 0.5
+nodes:
+  # 1. キーワードを入力
+  source: {}
+
+  # 共通パラメータ
+  common_param:
+    value:
+      target: 39歳、男性
+
+  # 2. Plnnerが章に分割しアウトラインを生成
+  prePlannerPromptBuilder:
+    agent: stringTemplateAgent
+    inputs:
+      keywords: :source
+    console:
+      before: prePlannerPromptBuilder start
+      #after: true
+    params:
+      template: |-
+
+        # 指示書
+        あなたは優れたポッドキャストの編集者兼ライターです。
+        ユーザーからの入力を元にポッドキャストキャストの台本を作成するための情報収集を行います。
+        以下の制約条件に従いユーザーから入力に関する情報を広く収集するためのgoogle検索用のクエリを作成してください。
+        なお、クエリはシンプルかつ多くの視点で検索できるようにしてください。
+
+        # 制約条件
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - クエリは最低でも2つ出力し、最大3つまで出力すること
+
+        # RESPONSE FORMAT:
+        {
+          "querylist": [
+              "google検索用クエリ1",
+              "google検索用クエリ2",
+              "google検索用クエリ3"
+          ]
+        }
+
+        # ユーザーからの入力:
+        ${keywords}
+
+  prePlanner:
+    agent: fetchAgent
+    console:
+      before: prePlanner start
+      after: true
+    inputs:
+      # jsonフォーマットでの出力を行うユーティティエージェント
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :prePlannerPromptBuilder
+        model_name: gpt-oss:120b
+
+  preExplorer_search:
+    agent: fetchAgent
+    console:
+      before: preExplorer_search
+      after: true
+    inputs:
+      # google検索を使用して情報収集するユーティティエージェント
+      url: http://127.0.0.1:8104/aiagent-api/v1/utility/google_search
+      method: POST
+      body:
+        queries: :prePlanner.result.querylist
+        num: 3
+
+  preExplorerPromptBuilder:
+    agent: stringTemplateAgent
+    inputs:
+      keywords: :source
+      target: :common_param.target
+      querylist: :prePlanner.result.querylist
+      google_search_result: :preExplorer_search.result
+    console:
+      before: preExplorerPromptBuilder start
+    params:
+      template: |-
+
+        # 命令指示書
+        あなたはプロのジャーナリストです。
+        コンテンツを作成するために収集した情報を整理しています。
+        制約条件に従い入力情報を元に下記手順で最高の成果物を生成してください。
+
+        1. 入力情報から12この用語を抽出すること。
+        2. 抽出した用語の意味や概念を整理し、成果物フォーマットの「用語名の意味や概念」に列挙すること。必要に応じてあなたの知見を付与すること。
+        3. 入力情報から12この事実を抽出し、成果物フォーマットの「事実」に列挙すること。可能な限り5W2Hを明らかにし定量的に表現すること。
+
+        # 制約条件
+        - コードや論理式ではなく日本語のレポートとして出力すること
+        - 最終成果物のみ出力すること
+
+        # 具体例
+        - 入力情報
+            ```
+            国科学技術大学を中心とする研究チームが発表した論文「Exploring the boundary of quantum correlations with a time-domain optical processor」は、光子を使った量子物理学の実験で、37次元という極めて複雑な状態を作り出すことに成功した研究報告である。
+
+            研究チームが焦点を当てたのは、グリーンバーガー・ホーン・ツァイリンガー（GHZ）タイプのパラドックスと呼ばれる現象だ。このパラドックスは量子測定の文脈依存性を示すもので、量子力学の基本的な特徴を明らかにする重要な実験として知られている。
+            ```
+        - 出力結果
+            ```
+            ## 1.用語の意味や概念:
+                - 量子物理学: 光子を使った実験が行われる分野であり、本研究では37次元という極めて複雑な状態を作り出すことに成功したと報告されている。
+                - グリーンバーガー・ホーン・ツァイリンガー（GHZ）タイプのパラドックス: 量子測定の文脈依存性を示す現象であり、量子力学の基本的な特徴を明らかにする重要な実験として知られている。
+                - 量子測定の文脈依存性: グリーンバーガー・ホーン・ツァイリンガー（GHZ）タイプのパラドックスによって示される、量子力学の基本的な特徴の一つ。
+
+            ## 2.事実:
+                - **誰が・何を・どのように・いくつ:** 国科学技術大学を中心とする研究チームが、光子を使った量子物理学の実験において、37次元という極めて複雑な状態を作り出すことに成功した。
+                - **誰が・何に・なぜ:** 同研究チームは、グリーンバーガー・ホーン・ツァイリンガー（GHZ）タイプのパラドックスと呼ばれる現象に焦点を当てた。これは、その現象が量子測定の文脈依存性を示すためである。
+                - **誰が・何を:** 国科学技術大学を中心とする研究チームが、「Exploring the boundary of quantum correlations with a time-domain optical processor」という論文を発表した。
+            ```
+
+        # 入力情報:
+        ## ターゲットユーザー
+        ${target}
+
+        ## ユーザーからのキーワード
+        ${keywords}
+
+        ## Explore_Result
+        ### Queries
+        ${querylist}
+
+        ### google_search_result
+        ${google_search_result}
+
+        # 成果物フォーマット
+        ```
+        ## 1.用語の意味や概念:
+            - "用語1": "用語の説明"
+            - "用語2": "用語の説明"
+            ・・・
+
+        ## 2.事実:
+            - "事実1"
+            - "事実2"
+            ・・・
+        ```
+
+
+  preExplorer:
+    agent: fetchAgent
+    console:
+      before: preExplorer start
+      after: true
+    inputs:
+      # google検索を使用して情報収集するユーティティエージェント
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer
+      method: POST
+      body:
+        user_input: :preExplorerPromptBuilder
+        model_name: gpt-oss:120b
+
+  # 2. Plnnerが章に分割しアウトラインを生成
+  plannerPromptBuilder:
+    agent: stringTemplateAgent
+    inputs:
+      keywords: :source
+      target: :common_param.target
+      infolist: :preExplorer.result
+    console:
+      before: plannerPrompt start
+      #after: true
+    params:
+      template: |-
+
+        # 指示書
+        あなたは優れたポッドキャストの編集者兼ライターです。
+        関係する情報を元に、「${target}」向けに以下の出力指示詳細と制約条件に従いユーザー入力に関するポッドキャストの台本のアウトラインを出力してください。
+
+        ## 出力指示詳細
+        1. アウトラインは序論・説明・分析・結論の4部構成とし、入力情報を元に各章のtitleを考えること。各章のタイトルは具体的なキーワードを考えること
+        2. 入力情報とタイトルを元に各章のoverviewを200-300文字程度で記載すること。あなたの知見をフルに活用して深掘りすること。
+        3. 序論・説明・分析・結論を含む一貫性のあるoverviewとなるようにブラッシュアップすること
+        4. 各章で議論を深掘るためのgoogle検索用のクエリを出力すること。query_hintは最大1つまでとすること
+        5. 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # 制約条件
+        - 日本語で出力すること
+        - query_hintは最大2つまでとすること
+
+        # 入力情報
+        ## ユーザー入力:
+        ${keywords}
+
+        ## 関係する情報
+        ${infolist}
+
+        # RESPONSE FORMAT:
+        {
+          "outline": [
+              {
+                "title": "...", // 序論・分析・説明・結論のいずれかが分かるように明記するとともに、具体的なキーワードを考えること。例）【導入】LLM技術のトレンドとAIエージェントの動向
+                "overview": "...",
+                "query_hint": ["...", "..."] // google検索用クエリ
+              },
+              {
+                "title": "...",
+                "overview": "...",
+                "query_hint": ["...", "..."]
+              }
+          ]
+        }
+
+  planner:
+    agent: fetchAgent
+    console:
+      before: planner start
+      after: true
+    inputs:
+      # jsonフォーマットでの出力を行うユーティティエージェント
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :plannerPromptBuilder
+        model_name: gpt-oss:120b
+
+  # 3. Explorerが章毎に必要な情報を収集 ＊並列処理
+  explorer_mapper:
+    agent: mapAgent
+    inputs:
+      rows: :planner.result.outline
+    console:
+      before: explorer_mapper start
+    params:
+      compositeResult: true
+      concurrency: 2  # 並列数を2に制限（expertAgent過負荷防止）
+    graph:
+      nodes:
+        explorer_search:
+          agent: fetchAgent
+          console:
+            before: explorer_search start ${queries}
+            after: true
+          inputs:
+            # google検索を使用して情報収集するユーティティエージェント
+            url: http://127.0.0.1:8104/aiagent-api/v1/utility/google_search
+            method: POST
+            body:
+              queries: :row.query_hint
+
+        explorerPromptBuilder:
+          agent: stringTemplateAgent
+          inputs:
+            title: :row.title
+            overview: :row.overview
+            query_hint: :row.query_hint
+            google_search_result: :explorer_search.result
+          console:
+            before: explorerPromptBuilder start
+          params:
+            template: |-
+
+              # 指示書
+              あなたは優れた情報収集者です。
+              以下の制約条件に従い、入力情報のExplore_Resultをもとにあなたの知見と合わせてポッドキャストの台本の作成に必要な情報（用語の意味や概念、事実など）を日本語で整理してください。
+              最後に、整理した情報と入力情報を元に、500~800文字程度で台本の初版を作成してください。
+
+              # 制約条件
+              - 出力は RESPONSE_FORMAT に従うこと
+              - 説明と分析では十分に掘り下げた議論を行うこと
+              - 結論では考察を行うこと
+
+              # 入力情報:
+              ## Title
+              ${title}
+
+              ## Overview
+              ${overview}
+
+              ## Explore_Result
+              ### Queries
+              ${query_hint}
+
+              ### google_search_result
+              ${google_search_result}
+
+              # RESPONSE_FORMAT:
+              #### 用語の意味や概念
+              // ここに用語の意味や概念を記載してください
+
+              #### 事実
+              // ここに事実を記載してください
+
+              #### 一般的な見解
+              // 研究結果など客観的な事実を元にした見解を記載してください
+
+              #### Fist Edition of the Script
+              // Title と Overview と google_search_result を元に深掘りを行い台本の初版を作成してください
+
+        explorer:
+          agent: fetchAgent
+          console:
+            before: explorer start
+          inputs:
+            # google検索を使用して情報収集するユーティティエージェント
+            url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer
+            method: POST
+            body:
+              user_input: :explorerPromptBuilder
+              model_name: gpt-oss:20b # 並列処理のため軽量モデルを指定
+        explorer_result_summary:
+          agent: stringTemplateAgent
+          inputs:
+            title: :row.title
+            # overview: :row.overview
+            query_hint: :row.query_hint
+            text: :explorer.result
+          console:
+            before: explorer_result_summary start
+          params:
+            template: |-
+
+              ### Subject：
+              ${title}
+
+              #### keyword:
+              ${query_hint}
+
+              ${text}
+          isResult: true
+
+  explorer_mapper_output:
+    agent: arrayJoinAgent
+    console:
+      before: explorer_mapper_output start
+    params:
+      separator: \n---\n
+    inputs:
+      array: :explorer_mapper.explorer_result_summary
+
+  # 4. Generatorがアウトラインと情報をもとに台本を生成
+  generatorPromptBuilder:
+    agent: stringTemplateAgent
+    inputs:
+      explorer_result: :explorer_mapper_output.text
+      source: :source
+      target: :common_param.target
+      infolist: :preExplorer.result
+    console:
+      before: generatorPromptBuilder start
+      after: true
+    params:
+      template: |-
+        # 指示書
+        あなたは、複数の情報源からのデータを統合してポッドキャスト台本を作成するツールです。
+        以下のポッドキャストパラメータと制約条件に従い入力情報とに基づいて、ユーザーから指定されたキーワードに関する一貫性のある台本テキストのみを出力してください。
+
+        ## 出力指示詳細
+        - ターゲットユーザーは「${target}」とする
+        - 全体のアウトラインと抽出・統合した情報に基づき、序論・説明・分析・結論を含む一貫性のある台本を作成してください
+        - 説明と分析では十分に掘り下げた議論を行うこと
+        - 結論では考察を行うこと
+
+        # ポッドキャストパラメータ
+        * **tone:** 深掘り討論
+        * **volume:** 日本語で1500~2500文字（6000バイト程度）
+
+        # 制約条件
+        - 日本語で出力すること
+        - 出力に記号やマークダウンは含めないこと
+          - NG例: **スパースアクティベーション**
+          - OK例: スパースアクティベーション
+        - BGMの考慮はしないこと
+          - 下記のような出力は不要
+            ```
+            ## 【イントロダクション】
+            （背景音：穏やかなピアノメロディ）
+            ```
+        - AI(TTS)により音声化することを想定した改行とすること
+        - 返却結果をそのままmp3ファイルに変換するので台本テキストのみとすること
+        - 「はい、承知いたしました〜」は出力せず、ポッドキャストの台本のみを出力すること
+          - NG例：はい、承知いたしました〜・・・。\n\n---\n\n皆さん、こんにちは。・・
+          - OK例：皆さん、こんにちは。・・・
+
+        # 入力情報
+        ## ユーザーからのキーワード
+        ${source}
+
+        ## infolist
+        ${infolist}
+
+        ## 全体のアウトラインと抽出・統合した情報
+        ${explorer_result}
+
+        # 生成開始
+
+  generator:
+    agent: fetchAgent
+    console:
+      before: generator start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :generatorPromptBuilder
+        # qwen3:235b-a22b-q4_K_M, qwen3:32b-fp16
+        model_name: gpt-oss:20b
+
+  # 5. Actionが台本を音声化しGoogle Driveにアップ
+  actionPromptBuilder:
+    agent: stringTemplateAgent
+    inputs:
+      script: :generator.text
+    console:
+      before: actionPromptBuilder start
+    params:
+      template: |-
+        # 指示書
+        下記台本を元にポッドキャストをmp3フォーマットで生成してGoogle Driveにアップしファイルへのリンクを出力してください
+        なお、返却は JSON 形式で行い、コメントやマークダウンは含めないでください。
+
+        # 台本
+        ${script}
+
+        # RESPONSE FORMAT:
+        {
+          "link": "..."
+        }
+
+        /no_think
+  action:
+    agent: fetchAgent
+    console:
+      before: action start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+      method: POST
+      body:
+        user_input: :actionPromptBuilder
+        model_name: gpt-oss:20b
+
+  # 6. Actionが作成した音声をメール送信
+  actionPromptBuilder2:
+    agent: stringTemplateAgent
+    inputs:
+      script: :generator.text
+      link: :action.result
+    console:
+      before: actionPromptBuilder2 start
+    params:
+      template: |-
+        # 指示書
+        下記台本とポッドキャストのリンクをメール送信してください
+
+        # 台本
+        ${script}
+
+        # 生成したポッドキャストのリンク
+        ${link}
+
+        /no_think
+  action2:
+    agent: fetchAgent
+    console:
+      before: action2 start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+      method: POST
+      body:
+        user_input: :actionPromptBuilder2
+        model_name: gpt-oss:120b
+
+  # 7. 結果出力
+  output:
+    agent: copyAgent
+    console:
+      before: output start
+    params:
+      namedKey: text
+    inputs:
+      text: :action2.result
+    isResult: true

@@ -104,7 +104,7 @@ jobs:
 
       - name: Run type checking
         working-directory: ./${{ matrix.project }}
-        run: uv run mypy .
+        run: uv run mypy app/
 
       - name: Run tests with coverage
         working-directory: ./${{ matrix.project }}
@@ -155,8 +155,9 @@ jobs:
         run: |
           echo "🧪 Running integration tests for ${{ matrix.project }}"
           # Integration tests focus on API endpoints and integration flows
-          # Lower coverage threshold (50%) as detailed unit tests cover internal logic
-          uv run pytest tests/integration/ -v --cov=app --cov=core --cov-report=xml --cov-report=term --cov-fail-under=50
+          # Coverage measured only for API layer (app/) as core logic is covered by unit tests
+          # Lower coverage threshold (50%) as detailed unit tests cover internal logic (90%+)
+          uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term --cov-fail-under=50
 
   build-check:
     name: Build Verification

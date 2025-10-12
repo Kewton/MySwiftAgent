@@ -2,7 +2,9 @@ import inspect
 import logging
 import logging.config
 import os
+import tempfile
 import time
+from pathlib import Path
 
 from core.config import settings
 
@@ -20,7 +22,7 @@ def setup_logging(log_file_name: str = "app.log"):
     global logging_setup_done
 
     # デバッグトレース
-    debug_trace_file = "/tmp/mcp_stdio_debug.log"
+    debug_trace_file = Path(tempfile.gettempdir()) / "mcp_stdio_debug.log"
     try:
         with open(debug_trace_file, "a") as f:
             f.write(
@@ -29,15 +31,17 @@ def setup_logging(log_file_name: str = "app.log"):
             f.write(
                 f"[logger.py] logging_setup_done={logging_setup_done}, PID={os.getpid()}\n"
             )
-    except Exception:
-        pass
+    except Exception as e:
+        # デバッグ出力失敗は無視（本番動作に影響させない）
+        print(f"[logger.py] Debug trace write failed: {e}", flush=True)
 
     if logging_setup_done:
         try:
             with open(debug_trace_file, "a") as f:
                 f.write("[logger.py] Skipping setup (already done)\n")
-        except Exception:
-            pass
+        except Exception as e:
+            # デバッグ出力失敗は無視（本番動作に影響させない）
+            print(f"[logger.py] Debug trace write failed: {e}", flush=True)
         return  # すでに実行済みなら何もしない
     else:
         print("setup_logging start")
@@ -51,10 +55,10 @@ def setup_logging(log_file_name: str = "app.log"):
             os.makedirs(log_dir)
             print(f"Directory {log_dir} created.")
         except OSError as e:
-            # ディレクトリ作成失敗時は /tmp にフォールバック
-            err_msg = f"Failed to create {log_dir}: {e}. Falling back to /tmp"
+            # ディレクトリ作成失敗時は tempfile.gettempdir() にフォールバック
+            err_msg = f"Failed to create {log_dir}: {e}. Falling back to {tempfile.gettempdir()}"
             print(err_msg)
-            log_dir = "/tmp"
+            log_dir = tempfile.gettempdir()
     else:
         print(f"Directory {log_dir} already exists.")
 
@@ -113,8 +117,9 @@ def setup_logging(log_file_name: str = "app.log"):
             f.write("[logger.py] Log config applied successfully\n")
             f.write(f"[logger.py] Main log: {main_log_path}\n")
             f.write(f"[logger.py] Error log: {error_log_path}\n")
-    except Exception:
-        pass
+    except Exception as e:
+        # デバッグ出力失敗は無視（本番動作に影響させない）
+        print(f"[logger.py] Debug trace write failed: {e}", flush=True)
 
     # 実行フラグをTrueに設定
     logging_setup_done = True

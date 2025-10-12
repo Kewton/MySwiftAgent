@@ -1,0 +1,59 @@
+version: 0.5
+nodes:
+  # 1. キーワードを入力
+  source: {}
+
+  # 2. プロンプトビルダー（jsonoutput用）
+  prePlannerPromptBuilder:
+    agent: stringTemplateAgent
+    inputs:
+      keywords: :source
+    console:
+      before: prePlannerPromptBuilder start
+    params:
+      template: |-
+        # 指示書
+        あなたは優れたポッドキャストの編集者兼ライターです。
+        ユーザーからの入力を元にポッドキャストキャストの台本を作成するための情報収集を行います。
+        以下の制約条件に従いユーザーから入力に関する情報を広く収集するためのgoogle検索用のクエリを作成してください。
+        なお、クエリはシンプルかつ多くの視点で検索できるようにしてください。
+
+        # 制約条件
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - クエリは最低でも2つ出力し、最大3つまで出力すること
+
+        # RESPONSE FORMAT:
+        {
+          "querylist": [
+              "google検索用クエリ1",
+              "google検索用クエリ2",
+              "google検索用クエリ3"
+          ]
+        }
+
+        # ユーザーからの入力:
+        ${keywords}
+
+  # 3. prePlanner - gpt-oss:20b を使用してJSON出力
+  prePlanner:
+    agent: fetchAgent
+    console:
+      before: prePlanner start (testing gpt-oss:20b with jsonoutput)
+      after: true
+    inputs:
+      url: http://127.0.0.1:8004/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :prePlannerPromptBuilder
+        model_name: gpt-oss:20b
+
+  # 4. 結果の出力
+  output:
+    agent: copyAgent
+    console:
+      before: output start
+      after: true
+    inputs:
+      result: :prePlanner.result
+    isResult: true

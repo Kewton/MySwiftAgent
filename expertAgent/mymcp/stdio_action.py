@@ -1,4 +1,6 @@
 import os
+import tempfile
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -9,16 +11,20 @@ from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
 
 # デバッグ: MCPサブプロセス起動を記録（stdio通信と干渉しないように stderr へ）
-debug_trace_file = "/tmp/mcp_stdio_debug.log"
+debug_trace_file = Path(tempfile.gettempdir()) / "mcp_stdio_debug.log"
 try:
     with open(debug_trace_file, "a") as f:
         f.write(f"=== MCP subprocess started (PID: {os.getpid()}) ===\n")
         f.write(f"MCP_LOG_FILE env: {os.getenv('MCP_LOG_FILE')}\n")
         f.write(f"LOG_DIR env: {os.getenv('LOG_DIR')}\n")
         f.write(f"LOG_LEVEL env: {os.getenv('LOG_LEVEL')}\n")
-except Exception:
+except Exception as e:
     # デバッグ出力失敗は無視（本番動作に影響させない）
-    pass
+    import sys
+
+    print(
+        f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True
+    )
 
 # MCPサブプロセス専用のログファイル名を環境変数から取得
 mcp_log_file = os.getenv("MCP_LOG_FILE", "mcp_stdio.log")
@@ -26,16 +32,26 @@ mcp_log_file = os.getenv("MCP_LOG_FILE", "mcp_stdio.log")
 try:
     with open(debug_trace_file, "a") as f:
         f.write(f"Calling setup_logging(log_file_name='{mcp_log_file}')\n")
-except Exception:
-    pass
+except Exception as e:
+    # デバッグ出力失敗は無視（本番動作に影響させない）
+    import sys
+
+    print(
+        f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True
+    )
 
 setup_logging(log_file_name=mcp_log_file)
 
 try:
     with open(debug_trace_file, "a") as f:
         f.write("setup_logging() completed successfully\n")
-except Exception:
-    pass
+except Exception as e:
+    # デバッグ出力失敗は無視（本番動作に影響させない）
+    import sys
+
+    print(
+        f"[stdio_action.py] Debug trace write failed: {e}", file=sys.stderr, flush=True
+    )
 
 mcp = FastMCP("myMcp")
 

@@ -22,9 +22,7 @@ class JobResult(Base):
 
     # HTTP response data
     response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    response_headers: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    response_headers: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     response_body: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Error information

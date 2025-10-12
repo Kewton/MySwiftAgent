@@ -1,0 +1,115 @@
+version: 0.5
+nodes:
+  source: {}
+  plannerPrompt:
+    agent: stringTemplateAgent
+    inputs:
+      keywords: :source
+    console:
+      before: plannerPrompt start
+      #after: true
+    params:
+      template: |-
+        あなたは優れたポッドキャストの編集者兼ライターです。
+        以下のキーワードをもとに情報を収集し、あなたの知見と合わせてポッドキャストの台本のアウトラインを２部構成で日本語で作成してください。
+        また、各章で深掘りすべき具体的なキーワードも考えてください。（一般的な表現は使わず、具体的なキーワードを考えてください。）
+        なお、返却は JSON 形式で行い、コメントやマークダウンは含めないでください。
+
+        RESPONSE FORMAT:
+        {
+          "outline": [
+              {
+                "title": "...",
+                "overview": "...",
+                "query_hint": ["...", "..."]
+              },
+              {
+                "title": "...",
+                "overview": "...",
+                "query_hint": ["...", "..."]
+              }
+          ]
+        }
+
+        User keywords: ${keywords}
+  planner:
+    agent: fetchAgent
+    console:
+      before: planner start
+      # after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :plannerPrompt
+
+  podcast_info:
+    agent: mapAgent
+    inputs:
+      rows: :planner.result.outline
+    graph:
+      nodes:
+        prompt_builder:
+          agent: stringTemplateAgent
+          inputs:
+            title: :row.title
+            overview: :row.overview
+            query_hint: :row.query_hint
+          console:
+            before: prompt start
+            after: true
+          params:
+            template: |-
+              あなたは優れた情報収集者です。
+              以下のキーワードをもとに広く情報を収集し、あなたの知見と合わせてポッドキャストの台本の作成に必要な情報（用語の意味や概念など）を日本語で整理してください。
+
+              Title：${title}
+              Overview：${overview}
+              Query_hint: ${query_hint}
+          #isResult: true
+        explorer:
+          agent: fetchAgent
+          console:
+            before: explorer start
+            #after: true
+          timeout: 600000
+          inputs:
+            url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer
+            method: POST
+            body:
+              user_input: :prompt_builder
+          #isResult: true
+        research_summary:
+          agent: stringTemplateAgent
+          inputs:
+            title: :row.title
+            overview: :row.overview
+            query_hint: :row.query_hint
+            text: :explorer.result
+          console:
+            before: prompt start
+            #after: true
+          params:
+            template: |-
+              # Subject：
+              ${title}
+
+              # Overview：
+              ${overview}
+
+              # keyword:
+              ${query_hint}
+
+              # Reference_Information:
+              ${text}
+          isResult: true
+
+# 統合
+  podcast_info_output:
+    agent: copyAgent
+    console:
+      before: output start
+      after: true
+    inputs:
+      result: :podcast_info
+    isResult: true

@@ -261,17 +261,19 @@ tests/                  # テストコード
 **結合テスト (50%要件)**:
 - **目的**: APIエンドポイントの動作確認、統合フロー検証
 - **対象**: HTTPリクエスト/レスポンス、認証、エンドポイント間の連携
-- **実行**: `uv run pytest tests/integration/` で実行（cd-develop.yml）
+- **測定範囲**: `--cov=app` でAPIレイヤー (`app/`) のみ測定（`core/` は除外）
+- **実行**: `uv run pytest tests/integration/ --cov=app --cov-fail-under=50` で実行（cd-develop.yml）
 - **カバレッジが低い理由**:
-  - 内部ロジックは既に単体テストで100%近くカバー済み
+  - 内部ロジック (`core/`) は既に単体テストで100%近くカバー済み
   - 結合テストはエンドポイント呼び出しのみ実行するため、全コードパスを通らない
+  - APIレイヤーのみ測定することで、結合テストの本質（エンドポイント動作確認）に焦点を絞る
   - 低いしきい値（50%）でも統合フロー検証の目的は十分達成できる
 
 **CI/CDでの運用**:
 - **Feature/Fix PR (ci-feature.yml)**: 単体テスト + 結合テスト両方実行（90%要件適用）
 - **Develop統合 (cd-develop.yml)**:
-  - 単体テスト: 90%要件
-  - 結合テスト: 50%要件（`--cov-fail-under=50`で個別指定）
+  - 単体テスト: 90%要件（`--cov=app --cov=core` で全体測定）
+  - 結合テスト: 50%要件（`--cov=app` でAPIレイヤーのみ測定、`--cov-fail-under=50`）
 - **最終品質保証**: 単体テストと結合テストを組み合わせて全体で90%以上を確保
 
 ### 必須チェック項目
@@ -1058,12 +1060,21 @@ git commit -m "your message"
 #### 使用方法
 
 ```bash
-# プッシュ前に必ず実行
+# 全プロジェクトをチェック（推奨）
+./scripts/pre-push-check-all.sh
+
+# expertAgentプロジェクトのみチェック（高速）
 ./scripts/pre-push-check.sh
 ```
 
 #### チェック内容
 
+**pre-push-check-all.sh** （マルチプロジェクト対応版）:
+- 対象プロジェクト: expertAgent, jobqueue, myscheduler, myVault, graphAiServer
+- Python プロジェクト: Ruff linting, Ruff formatting, MyPy type checking, Unit tests, Coverage check (90%以上)
+- TypeScript プロジェクト: ESLint, TypeScript compilation, Build
+
+**pre-push-check.sh** （expertAgent専用）:
 1. ✅ Ruff linting
 2. ✅ Ruff formatting
 3. ✅ MyPy type checking
@@ -1100,7 +1111,7 @@ git commit -m "your message"
 - [ ] 新しいテストを追加したか？
 - [ ] カバレッジは維持されているか？ (90%以上)
 - [ ] コミットメッセージは規約に従っているか？
-- [ ] プッシュ前に `./scripts/pre-push-check.sh` を実行したか？
+- [ ] プッシュ前に `./scripts/pre-push-check-all.sh` を実行したか？
 
 ## 🔄 CI/CDエラー発生時の対応手順
 
@@ -1137,7 +1148,7 @@ open htmlcov/index.html
 uv run ruff check . --fix
 
 # テスト追加後、全チェック実行
-./scripts/pre-push-check.sh
+./scripts/pre-push-check-all.sh
 
 # コミット・プッシュ
 git add -u
@@ -1162,7 +1173,8 @@ git push
 ## 📚 参考ドキュメント
 
 - 📖 **詳細ガイド**: `DEVELOPMENT_GUIDE.md`
-- 🔧 **Pre-commitチェックスクリプト**: `scripts/pre-push-check.sh`
+- 🔧 **Pre-commitチェックスクリプト（全プロジェクト）**: `scripts/pre-push-check-all.sh`
+- 🔧 **Pre-commitチェックスクリプト（expertAgent専用）**: `scripts/pre-push-check.sh`
 - ⚙️ **VS Code設定**: `.vscode/settings.json`
 - 🪝 **Pre-commit Hooks設定**: `.pre-commit-config.yaml`
 
@@ -1185,7 +1197,7 @@ git push
 - [ ] アーキテクチャは、 ./docs/design/architecture-overview.md に従うこと
 - [ ] システムで管理すべきパラメータは環境変数で管理するものとし、使用方法は、 ./docs/design/environment-variables.md に従うこと
 - [ ] ユーザーが管理すべきパラメータはmyVaultで管理するものとし、使用方法は、./docs/design/myvault-integration.md に従うこと
-- [ ] コミットする前に、./scripts/pre-push-check.sh を実行し合格することを確認すること
+- [ ] コミットする前に、./scripts/pre-push-check-all.sh を実行し全プロジェクトの品質チェックに合格することを確認すること（単一プロジェクトのみ変更した場合は ./scripts/pre-push-check.sh でも可）
 - [ ] ユーザーからの依頼に対し下記方針で作業を進めること
   1. 対策案を提示する
   1. ユーザーが指示した対策案に対し実行計画を提示する

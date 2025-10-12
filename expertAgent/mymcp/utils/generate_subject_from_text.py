@@ -1,5 +1,3 @@
-from typing import cast
-
 from app.schemas.standardAiAgent import ChatMessage
 from core.logger import getlogger
 from core.secrets import resolve_runtime_value
@@ -74,9 +72,10 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
         # # --- 4. 結果の取得と後処理 ---
         # generated_subject = response.text.strip()
 
+        # Phase 2: Use ChatMessage objects instead of dictionaries for type safety
         _messages = [
-            {"role": "system", "content": "あなたは世界一のポッドキャスターです"},
-            {"role": "user", "content": prompt},
+            ChatMessage(role="system", content="あなたは世界一のポッドキャスターです"),
+            ChatMessage(role="user", content=prompt),
         ]
 
         # 前後に不要な引用符などが付いていたら削除
@@ -87,7 +86,7 @@ def generate_subject_from_text(text_body: str, max_length: int = 20) -> str:
 
         generated_subject_raw = execLlmApi(
             str(resolved_model),
-            cast(list[ChatMessage], _messages),
+            _messages,  # Now passing ChatMessage objects directly
         )
         generated_subject = str(generated_subject_raw or "")
 

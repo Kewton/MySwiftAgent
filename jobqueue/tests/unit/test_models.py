@@ -1,6 +1,5 @@
 """Test database models."""
 
-
 from app.models.job import BackoffStrategy, Job, JobStatus
 from app.models.result import JobResult
 
@@ -20,13 +19,13 @@ class TestJobModel:
         assert job.method == "POST"
         assert job.url == "https://httpbin.org/post"
         # Defaults are set by SQLAlchemy - we'll test they exist, values might be None until persisted
-        assert hasattr(job, 'status')
-        assert hasattr(job, 'attempt')
-        assert hasattr(job, 'max_attempts')
-        assert hasattr(job, 'priority')
-        assert hasattr(job, 'timeout_sec')
-        assert hasattr(job, 'backoff_strategy')
-        assert hasattr(job, 'backoff_seconds')
+        assert hasattr(job, "status")
+        assert hasattr(job, "attempt")
+        assert hasattr(job, "max_attempts")
+        assert hasattr(job, "priority")
+        assert hasattr(job, "timeout_sec")
+        assert hasattr(job, "backoff_strategy")
+        assert hasattr(job, "backoff_seconds")
 
     def test_job_with_optional_fields(self):
         """Test job creation with optional fields."""
