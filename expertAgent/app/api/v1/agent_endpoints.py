@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from aiagent.langgraph.sampleagent.graphagent import ainvoke_graphagent
 from aiagent.langgraph.utilityaiagents.action_agent import actionagent
 from aiagent.langgraph.utilityaiagents.explorer_agent import exploreragent
+from aiagent.langgraph.utilityaiagents.file_reader_agent import filereaderagent
 from aiagent.langgraph.utilityaiagents.jsonOutput_agent import jsonOutputagent
 from aiagent.langgraph.utilityaiagents.playwright_agent import playwrightagent
 from aiagent.langgraph.utilityaiagents.wikipedia_agent import wikipediaagent
@@ -163,6 +164,12 @@ async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
             result = await wikipediaagent(_input, model_name, language)
             return ExpertAiAgentResponse(
                 result=remove_think_tags(result), type="wikipedia"
+            )
+        elif "file_reader" in agent_name or "filereader" in agent_name:
+            print(f"request.user_input:{_input}")
+            result = await filereaderagent(_input, model_name, project=request.project)
+            return ExpertAiAgentResponse(
+                result=remove_think_tags(result), type="file_reader"
             )
         return {"message": "No matching agent found."}
     except Exception as e:
