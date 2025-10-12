@@ -46,7 +46,9 @@ class TestDetectMimeType:
             test_file.write_text("content")
             mime_type = detect_mime_type(test_file)
             # MIME type should match one of the expected types or be octet-stream
-            assert mime_type in expected_mimes or mime_type == "application/octet-stream"
+            assert (
+                mime_type in expected_mimes or mime_type == "application/octet-stream"
+            )
 
 
 class TestValidateFileSize:

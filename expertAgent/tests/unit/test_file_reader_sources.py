@@ -20,7 +20,9 @@ class TestDownloadFromUrl:
     async def test_download_from_url_success(self):
         """Test successful download from URL."""
         # Use a simple test URL
-        test_url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        test_url = (
+            "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        )
 
         file_path, mime_type = await download_from_url(test_url)
 

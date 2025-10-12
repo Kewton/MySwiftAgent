@@ -111,13 +111,19 @@ class HeaderFooterRemover:
         min_count = int(total_pages * self.threshold)
 
         headers = {
-            pattern for pattern, count in self.header_candidates.items() if count >= min_count
+            pattern
+            for pattern, count in self.header_candidates.items()
+            if count >= min_count
         }
         footers = {
-            pattern for pattern, count in self.footer_candidates.items() if count >= min_count
+            pattern
+            for pattern, count in self.footer_candidates.items()
+            if count >= min_count
         }
 
-        logger.debug(f"Found {len(headers)} header patterns, {len(footers)} footer patterns")
+        logger.debug(
+            f"Found {len(headers)} header patterns, {len(footers)} footer patterns"
+        )
         return headers, footers
 
     def remove(self, text: str, headers: set[str], footers: set[str]) -> str:
@@ -143,7 +149,9 @@ class ParagraphEstimator:
     """段落推定ユーティリティ"""
 
     # 段落タイプ判定パターン
-    HEADING_PATTERN = re.compile(r"^(?:第?\d+[章節条項]|Chapter\s+\d+|Section\s+\d+)", re.IGNORECASE)
+    HEADING_PATTERN = re.compile(
+        r"^(?:第?\d+[章節条項]|Chapter\s+\d+|Section\s+\d+)", re.IGNORECASE
+    )
     LIST_PATTERN = re.compile(r"^[\s]*[-•・*■○①②③④⑤⑥⑦⑧⑨⑩]\s+")
     CODE_PATTERN = re.compile(r"^[\s]{4,}|^\t")  # インデントされたコード
 
@@ -230,11 +238,13 @@ class OutlineExtractor:
                     except Exception as e:
                         logger.debug(f"Could not extract page number for outline: {e}")
 
-                    outlines_info.append({
-                        "title": title,
-                        "level": level,
-                        "page": page_num,
-                    })
+                    outlines_info.append(
+                        {
+                            "title": title,
+                            "level": level,
+                            "page": page_num,
+                        }
+                    )
 
             process_outline_item(reader.outline)
             logger.debug(f"Extracted {len(outlines_info)} outline items")
@@ -323,7 +333,9 @@ class AttachmentExtractor:
     """添付ファイル（EmbeddedFiles）抽出ユーティリティ"""
 
     @staticmethod
-    def extract_attachments(reader: PdfReader, output_dir: Path) -> list[dict[str, Any]]:
+    def extract_attachments(
+        reader: PdfReader, output_dir: Path
+    ) -> list[dict[str, Any]]:
         """PDF内の添付ファイルを抽出
 
         Args:
@@ -371,20 +383,26 @@ class AttachmentExtractor:
                     file_data = embedded_file_obj.get_data()
 
                     # ファイル保存
-                    safe_filename = "".join(c if c.isalnum() or c in ".-_" else "_" for c in filename)
+                    safe_filename = "".join(
+                        c if c.isalnum() or c in ".-_" else "_" for c in filename
+                    )
                     filepath = output_dir / safe_filename
 
                     with open(filepath, "wb") as f:
                         f.write(file_data)
 
-                    attachments_info.append({
-                        "filename": filename,
-                        "safe_filename": safe_filename,
-                        "path": str(filepath),
-                        "size_bytes": len(file_data),
-                    })
+                    attachments_info.append(
+                        {
+                            "filename": filename,
+                            "safe_filename": safe_filename,
+                            "path": str(filepath),
+                            "size_bytes": len(file_data),
+                        }
+                    )
 
-                    logger.debug(f"Extracted attachment: {filename} ({len(file_data)} bytes)")
+                    logger.debug(
+                        f"Extracted attachment: {filename} ({len(file_data)} bytes)"
+                    )
 
                 except Exception as e:
                     logger.warning(f"Failed to extract attachment {i // 2}: {e}")
@@ -460,10 +478,14 @@ class ImageExtractor:
                         }
                     )
 
-                    logger.debug(f"Extracted image: {filename} ({width}x{height}, {ext})")
+                    logger.debug(
+                        f"Extracted image: {filename} ({width}x{height}, {ext})"
+                    )
 
                 except Exception as e:
-                    logger.warning(f"Failed to extract image {idx} from page {page_num}: {e}")
+                    logger.warning(
+                        f"Failed to extract image {idx} from page {page_num}: {e}"
+                    )
 
         except Exception as e:
             logger.error(f"Failed to access XObjects on page {page_num}: {e}")
@@ -526,7 +548,9 @@ class AdvancedPDFProcessor:
 
         # 添付ファイル抽出
         attachments_dir = output_dir / "attachments" / self.doc_id
-        attachments = self.attachment_extractor.extract_attachments(reader, attachments_dir)
+        attachments = self.attachment_extractor.extract_attachments(
+            reader, attachments_dir
+        )
 
         # 全ページテキスト抽出（ヘッダ/フッタ検出用）
         pages_text_raw = []
@@ -569,7 +593,7 @@ class AdvancedPDFProcessor:
                         "source": "pypdf",
                         "hash": text_hash,
                         "has_images": False,  # 後で更新
-                        "has_links": False,   # 後で更新
+                        "has_links": False,  # 後で更新
                     },
                 )
                 chunks.append(chunk)
@@ -647,7 +671,9 @@ class AdvancedPDFProcessor:
                 "producer": reader.metadata.get("/Producer", ""),
             }
 
-        logger.info(f"Preflight: {metadata['num_pages']} pages, encrypted={metadata['is_encrypted']}")
+        logger.info(
+            f"Preflight: {metadata['num_pages']} pages, encrypted={metadata['is_encrypted']}"
+        )
         return metadata
 
     def _compute_file_hash(self, file_path: Path) -> str:

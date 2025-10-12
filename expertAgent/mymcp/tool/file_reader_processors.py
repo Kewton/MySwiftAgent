@@ -102,7 +102,7 @@ def process_pdf(
     file_path: Path,
     use_advanced: bool = False,
     extract_images: bool = False,
-    output_dir: Optional[Path] = None
+    output_dir: Optional[Path] = None,
 ) -> str:
     """PDFファイルからテキストを抽出します。
 
@@ -147,7 +147,7 @@ def process_pdf(
             result = processor.process_pdf(
                 file_path=file_path,
                 extract_images=extract_images,
-                output_dir=output_dir
+                output_dir=output_dir,
             )
 
             # 結果を整形されたテキストとして返す
@@ -167,35 +167,37 @@ def process_pdf(
             ]
 
             # メタデータを追加
-            metadata = result['metadata']
+            metadata = result["metadata"]
             output_lines.append(f"Filename: {metadata['filename']}")
             output_lines.append(f"File size: {metadata['file_size_bytes']:,} bytes")
             output_lines.append(f"Encrypted: {metadata['is_encrypted']}")
 
-            if 'pdf_metadata' in metadata:
-                pdf_meta = metadata['pdf_metadata']
-                if pdf_meta.get('title'):
+            if "pdf_metadata" in metadata:
+                pdf_meta = metadata["pdf_metadata"]
+                if pdf_meta.get("title"):
                     output_lines.append(f"Title: {pdf_meta['title']}")
-                if pdf_meta.get('author'):
+                if pdf_meta.get("author"):
                     output_lines.append(f"Author: {pdf_meta['author']}")
 
             # アウトライン（しおり）がある場合
-            if result['outlines']:
+            if result["outlines"]:
                 output_lines.append("")
                 output_lines.append("=== Outlines (Table of Contents) ===")
-                for outline in result['outlines'][:10]:  # 最初の10件のみ
-                    indent = "  " * outline['level']
-                    page_info = f" (p.{outline['page']})" if outline['page'] else ""
+                for outline in result["outlines"][:10]:  # 最初の10件のみ
+                    indent = "  " * outline["level"]
+                    page_info = f" (p.{outline['page']})" if outline["page"] else ""
                     output_lines.append(f"{indent}- {outline['title']}{page_info}")
-                if len(result['outlines']) > 10:
+                if len(result["outlines"]) > 10:
                     output_lines.append(f"... and {len(result['outlines']) - 10} more")
 
             # リンクがある場合
-            if result['links']:
+            if result["links"]:
                 output_lines.append("")
                 output_lines.append(f"=== Links ({len(result['links'])} total) ===")
                 external_links = [
-                    link for link in result['links'] if link.get('link_type') == 'external'
+                    link
+                    for link in result["links"]
+                    if link.get("link_type") == "external"
                 ]
                 if external_links:
                     output_lines.append(f"External links: {len(external_links)}")
@@ -203,10 +205,10 @@ def process_pdf(
                         output_lines.append(f"  - {link.get('uri', 'N/A')}")
 
             # 添付ファイルがある場合
-            if result['attachments']:
+            if result["attachments"]:
                 output_lines.append("")
                 output_lines.append("=== Attachments ===")
-                for attach in result['attachments']:
+                for attach in result["attachments"]:
                     output_lines.append(
                         f"- {attach['filename']} ({attach['size_bytes']:,} bytes)"
                     )
@@ -216,9 +218,10 @@ def process_pdf(
             output_lines.append("=== Text Chunks (sample) ===")
 
             import json
-            chunks_file = Path(result['chunks_file'])
+
+            chunks_file = Path(result["chunks_file"])
             if chunks_file.exists():
-                with open(chunks_file, 'r', encoding='utf-8') as f:
+                with open(chunks_file, "r", encoding="utf-8") as f:
                     for i, line in enumerate(f):
                         if i >= 3:  # 最初の3チャンクのみ
                             break
@@ -228,7 +231,9 @@ def process_pdf(
                         )
 
             full_text = "\n".join(output_lines)
-            logger.info(f"Advanced PDF processing complete. Output length: {len(full_text)}")
+            logger.info(
+                f"Advanced PDF processing complete. Output length: {len(full_text)}"
+            )
             return full_text
 
         else:
@@ -243,7 +248,9 @@ def process_pdf(
                 page_text = page.extract_text()
                 if page_text:
                     text_parts.append(f"--- Page {page_num} ---\n{page_text}")
-                    logger.debug(f"Extracted {len(page_text)} chars from page {page_num}")
+                    logger.debug(
+                        f"Extracted {len(page_text)} chars from page {page_num}"
+                    )
 
             full_text = "\n\n".join(text_parts)
             logger.info(f"PDF processing complete. Total text length: {len(full_text)}")

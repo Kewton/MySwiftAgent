@@ -264,9 +264,9 @@ class TestOutlineExtractor:
 
         # シンプルなアウトラインをモック
         mock_outline_item = MagicMock()
-        mock_outline_item.get = lambda key, default=None: {
-            "/Title": "Chapter 1"
-        }.get(key, default)
+        mock_outline_item.get = lambda key, default=None: {"/Title": "Chapter 1"}.get(
+            key, default
+        )
 
         mock_reader.outline = [mock_outline_item]
         mock_reader.pages = []
@@ -307,7 +307,9 @@ class TestLinkExtractor:
         mock_annot.get_object.return_value = mock_annot_obj
 
         mock_page.__contains__ = lambda self, key: key == "/Annots"
-        mock_page.__getitem__ = lambda self, key: [mock_annot] if key == "/Annots" else None
+        mock_page.__getitem__ = (
+            lambda self, key: [mock_annot] if key == "/Annots" else None
+        )
 
         # Note: Complex mocking, may need adjustment for actual implementation
 

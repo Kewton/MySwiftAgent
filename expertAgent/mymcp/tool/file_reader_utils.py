@@ -64,7 +64,9 @@ def detect_mime_type(file_path: Path) -> str:
         guessed_type = mimetypes.guess_type(str(file_path))
         detected_type: Optional[str] = guessed_type[0] if guessed_type[0] else None
         if detected_type:
-            logger.debug(f"Detected MIME type (mimetypes): {detected_type} for {file_path}")
+            logger.debug(
+                f"Detected MIME type (mimetypes): {detected_type} for {file_path}"
+            )
             return detected_type
         logger.warning(f"Could not detect MIME type for {file_path}")
         return "application/octet-stream"
