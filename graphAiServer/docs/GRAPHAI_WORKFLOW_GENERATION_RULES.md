@@ -16,6 +16,7 @@
 10. [実装例](#実装例)
 11. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
 12. [LLMワークフロー作成手順](#llmワークフロー作成手順)
+13. [ワークフロー作成時の動作確認方法](#ワークフロー作成時の動作確認方法)
 
 ---
 
@@ -2085,6 +2086,302 @@ AIエージェントは以下のチェックリストを参照し、各フェー
 - [ ] ファイル配置が適切か確認した
 - [ ] ドキュメント更新を実施した（必要に応じて）
 - [ ] ユーザーへ完了報告を送信した
+
+---
+
+## ワークフロー作成時の動作確認方法
+
+GraphAI YMLワークフローを実行する前に、必要なサービスが正常に起動しているか確認し、適切な方法でワークフローを実行してください。
+
+### 前提条件の確認
+
+#### 1. graphAiServerの起動確認
+
+**ポート**: 8105
+
+**確認方法**:
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8105/health
+
+# 期待されるレスポンス
+# {"status": "healthy", "service": "graphAiServer"}
+```
+
+**起動方法（未起動の場合）**:
+```bash
+# プロジェクトルートから実行
+./scripts/dev-start.sh
+
+# またはgraphAiServerディレクトリから実行
+cd graphAiServer
+npm run dev
+```
+
+**ログ確認**:
+```bash
+# graphAiServerのログを確認
+tail -f logs/graphaiserver.log
+```
+
+#### 2. expertAgentの起動確認
+
+**ポート**: 8104
+
+**確認方法**:
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8104/health
+
+# 期待されるレスポンス
+# {"status": "healthy", "service": "expertAgent"}
+```
+
+**起動方法（未起動の場合）**:
+```bash
+# プロジェクトルートから実行
+./scripts/dev-start.sh
+
+# または手動でワーカー数を指定して起動
+cd expertAgent
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4
+```
+
+**ワーカー数の確認**:
+```bash
+# expertAgentのプロセス一覧を確認
+ps aux | grep "uvicorn.*8104"
+
+# 並列処理を行う場合は --workers 4 以上を推奨
+# 1ワーカーのみの場合、mapAgentで並列処理がタイムアウトする可能性がある
+```
+
+**ログ確認**:
+```bash
+# expertAgentのログを確認
+tail -f logs/expertagent.log
+
+# エラーログのみ確認
+tail -f logs/expertagent.log | grep -i error
+```
+
+#### 3. myVaultの起動確認
+
+**ポート**: 8103
+
+**確認方法**:
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8103/health
+
+# 期待されるレスポンス
+# {"status": "healthy", "service": "myVault"}
+```
+
+**起動方法（未起動の場合）**:
+```bash
+# プロジェクトルートから実行
+./scripts/dev-start.sh
+
+# または手動で起動
+cd myVault
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8103
+```
+
+**ログ確認**:
+```bash
+# myVaultのログを確認
+tail -f logs/myvault.log
+```
+
+### LLMワークフローの実行方法
+
+#### 方法1: graphAiServer経由での実行（推奨）
+
+graphAiServerは、YMLワークフローファイルを読み込み、GraphAIエンジンで実行します。
+
+**実行コマンド例**:
+```bash
+# graphAiServerのAPIエンドポイント経由で実行
+curl -X POST http://127.0.0.1:8105/api/v1/workflow/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_file": "llmwork/podcast_generation_20251012.yml",
+    "input": "量子コンピュータの最新動向"
+  }'
+```
+
+**パラメータ説明**:
+- `workflow_file`: `./graphAiServer/config/graphai/` 以下の相対パス
+  - 例: `llmwork/sample.yml` → `./graphAiServer/config/graphai/llmwork/sample.yml`
+  - 例: `default/test.yml` → `./graphAiServer/config/graphai/default/test.yml`
+- `input`: sourceノードに注入される文字列データ
+
+**成功時のレスポンス例**:
+```json
+{
+  "status": "success",
+  "result": {
+    "text": "生成された最終テキスト..."
+  },
+  "execution_time_ms": 45000
+}
+```
+
+**エラー時のレスポンス例**:
+```json
+{
+  "status": "error",
+  "error": "TypeError: fetch failed",
+  "details": "expertAgentへの接続失敗。ポート8104が起動しているか確認してください。"
+}
+```
+
+#### 方法2: expertAgentのエンドポイント直接呼び出し
+
+expertAgentの個別機能を単体テストする場合に使用します。
+
+**mylllmエンドポイント（汎用LLM実行）**:
+```bash
+curl -X POST http://127.0.0.1:8104/aiagent-api/v1/mylllm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "量子コンピュータの最新動向を教えてください",
+    "model_name": "gpt-oss:20b"
+  }'
+```
+
+**jsonoutputエンドポイント（JSON構造化出力）**:
+```bash
+curl -X POST http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "以下の形式でアウトラインを生成してください: {\"outline\": [{\"title\": \"章タイトル\", \"overview\": \"概要\"}]}",
+    "model_name": "gpt-oss:20b"
+  }'
+```
+
+**google_searchエンドポイント（Google検索）**:
+```bash
+curl -X POST http://127.0.0.1:8104/aiagent-api/v1/utility/google_search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "queries": ["量子コンピュータ 2025", "量子ビット 最新技術"],
+    "num": 3
+  }'
+```
+
+### トラブルシューティング
+
+#### エラーパターン1: サービス起動失敗
+
+**症状**:
+```bash
+curl: (7) Failed to connect to 127.0.0.1 port 8104: Connection refused
+```
+
+**原因**: expertAgentが起動していない
+
+**対応**:
+```bash
+# expertAgentを起動
+cd expertAgent
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4
+
+# または dev-start.sh で全サービス起動
+./scripts/dev-start.sh
+```
+
+#### エラーパターン2: fetch failed（並列処理時）
+
+**症状**:
+```
+TypeError: fetch failed
+    at node:internal/deps/undici/undici:15363:13
+```
+
+**原因**:
+1. expertAgentのワーカー数不足（1ワーカーで並列リクエスト処理不可）
+2. mapAgentの`concurrency`設定なし
+
+**対応**:
+```yaml
+# YMLファイルに concurrency を追加
+explorer_mapper:
+  agent: mapAgent
+  params:
+    concurrency: 2  # ← 追加
+```
+
+```bash
+# expertAgentをワーカー数4で再起動
+pkill -f "uvicorn.*8104"
+cd expertAgent
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4
+```
+
+#### エラーパターン3: タイムアウトエラー
+
+**症状**:
+```
+Error: Request timeout after 30000ms
+```
+
+**原因**: graphAiServerのグローバルfetchタイムアウトが短い
+
+**対応**:
+graphAiServer/src/index.ts で以下を確認:
+```typescript
+// グローバルfetchタイムアウト設定（300秒）
+const originalFetch = global.fetch;
+global.fetch = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 300秒
+
+  try {
+    const response = await originalFetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+```
+
+設定後、graphAiServerを再起動:
+```bash
+./scripts/dev-start.sh restart
+```
+
+### 動作確認チェックリスト
+
+ワークフローを実行する前に、以下を確認してください：
+
+- [ ] graphAiServerが起動している（ポート8105）
+- [ ] expertAgentが起動している（ポート8104）
+- [ ] myVaultが起動している（ポート8103）
+- [ ] expertAgentは `--workers 4` 以上で起動している（並列処理を行う場合）
+- [ ] YMLファイルが正しいディレクトリに配置されている（`./graphAiServer/config/graphai/`）
+- [ ] YMLファイルに `concurrency` パラメータが設定されている（mapAgent使用時）
+- [ ] graphAiServerのグローバルfetchタイムアウトが300秒に設定されている
+
+### ログ監視方法
+
+ワークフロー実行中は、以下のコマンドで各サービスのログをリアルタイム監視してください：
+
+```bash
+# graphAiServerのログ監視（新しいターミナル）
+tail -f logs/graphaiserver.log
+
+# expertAgentのログ監視（新しいターミナル）
+tail -f logs/expertagent.log
+
+# エラーログのみ監視
+tail -f logs/graphaiserver.log | grep -i error
+tail -f logs/expertagent.log | grep -i error
+```
 
 ---
 
