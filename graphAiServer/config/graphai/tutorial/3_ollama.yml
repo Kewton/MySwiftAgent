@@ -1,0 +1,29 @@
+version: 0.5
+nodes:
+  source: {}
+  expertAgent:
+    # モデルを指定してexpertAgetのAPIを実行する
+    agent: fetchAgent
+    console:
+      before: expertAgent start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :source
+        model_name: gpt-oss:20b
+        # gpt-oss:120b
+        # qwen3-next-80b-a3b-thinking-mlx
+        # gemma3n:latest
+        # qwen/qwen3-next-80b
+  output:
+    agent: copyAgent
+    console:
+      before: output start
+    inputs:
+      text: :expertAgent.text
+      history: :expertAgent.chathistory
+    isResult: true
+
+# http://localhost:11434 -> http://192.168.11.6:1234

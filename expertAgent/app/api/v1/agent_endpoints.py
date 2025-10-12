@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import datetime
 
@@ -16,6 +17,8 @@ from app.schemas.standardAiAgent import (
     ExpertAiAgentResponseJson,
 )
 from mymcp.utils.chatollama import chatOllama
+
+logger = logging.getLogger(__name__)
 
 
 def remove_think_tags(text: str) -> str:
@@ -50,18 +53,25 @@ def home_hello_world():
 
 @router.post("/mylllm", summary="", description="")
 def exec_myllm(request: ExpertAiAgentRequest):
+    logger.info("exec_myllm called")
+    logger.info(f"Request data: {request}")
+
     _messages: list[ChatMessage] = []
     if request.system_imput is not None:
         _messages.append(ChatMessage(role="system", content=request.system_imput))
     _messages.append(ChatMessage(role="user", content=request.user_input))
 
     print(f"request.user_input:{_messages}")
+    logger.info(f"Messages for LLM: {_messages}")
 
     model_name = request.model_name if request.model_name is not None else "gpt-4o-mini"
-    result = chatOllama(_messages, model_name)
+    # Convert ChatMessage objects to dictionaries for JSON serialization
+    messages_dict = [msg.model_dump() for msg in _messages]
+    result = chatOllama(messages_dict, model_name)
     cleaned_result = remove_think_tags(result)
 
     print(f"result: {cleaned_result}")
+    logger.info(f"LLM result: {cleaned_result}")
 
     return ExpertAiAgentResponse(
         result=cleaned_result, text=cleaned_result, type="exec_myllm"

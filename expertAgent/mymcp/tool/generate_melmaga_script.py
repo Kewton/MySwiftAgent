@@ -1,3 +1,4 @@
+from app.schemas.standardAiAgent import ChatMessage
 from mymcp.utils.execllm import execLlmApi
 
 
@@ -35,9 +36,10 @@ def generate_melmaga_script(input_info: str, model_name: str = "gpt-4o-mini"):
     文章全体のトーンはビジネス視点を中心に、親しみやすさと専門性のバランスを考慮してください。
     """
 
+    # Phase 2: Use ChatMessage objects instead of dictionaries for type safety
     _messages = [
-        {"role": "system", "content": "あなたは優れた編集者兼ライターです"},
-        {"role": "user", "content": _input},
+        ChatMessage(role="system", content="あなたは優れた編集者兼ライターです"),
+        ChatMessage(role="user", content=_input),
     ]
 
     return execLlmApi(model_name, _messages)

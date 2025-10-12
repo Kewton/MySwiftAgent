@@ -1,3 +1,4 @@
+from app.schemas.standardAiAgent import ChatMessage
 from core.logger import getlogger
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.execllm import execLlmApi
@@ -42,7 +43,7 @@ def generate_podcast_mp3_and_upload(
 
     # 3. 音声化とアップロード
     try:
-        upload_result = tts_and_upload_drive(subject, script)
+        upload_result: str = tts_and_upload_drive(subject, script)
         logger.info(f"TTS and upload completed: {upload_result}")
         return upload_result
     except Exception as e:
@@ -71,9 +72,10 @@ def generate_podcast_script(
     # 生成開始
     """
 
+    # Phase 2: Use ChatMessage objects instead of dictionaries for type safety
     _messages = [
-        {"role": "system", "content": "あなたは世界一のポッドキャスターです"},
-        {"role": "user", "content": _input},
+        ChatMessage(role="system", content="あなたは世界一のポッドキャスターです"),
+        ChatMessage(role="user", content=_input),
     ]
 
     return execLlmApi(model_name, _messages)

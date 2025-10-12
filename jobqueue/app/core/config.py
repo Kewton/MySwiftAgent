@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite+aiosqlite:///./data/jobqueue.db")
 
     # Worker
-    concurrency: int = Field(default=4)  # Number of concurrent workers (safe with optimistic locking)
+    concurrency: int = Field(
+        default=4
+    )  # Number of concurrent workers (safe with optimistic locking)
     poll_interval: float = Field(default=0.3)
 
     # HTTP

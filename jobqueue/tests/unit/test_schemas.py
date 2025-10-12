@@ -87,7 +87,7 @@ class TestJobSchemas:
             JobCreate(method="GET", url="https://httpbin.org/get", timeout_sec=0)
 
         with pytest.raises(ValidationError):
-            JobCreate(method="GET", url="https://httpbin.org/get", timeout_sec=301)
+            JobCreate(method="GET", url="https://httpbin.org/get", timeout_sec=3601)
 
         # Test priority range
         with pytest.raises(ValidationError):

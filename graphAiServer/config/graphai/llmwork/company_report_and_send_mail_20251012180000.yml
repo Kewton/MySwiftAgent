@@ -1,0 +1,172 @@
+# =============================================================================
+# GraphAI Workflow File
+# =============================================================================
+# Created: 2025-10-12 18:00:00
+# User Request:
+#   企業名を入力すると、その企業の過去５年の売り上げとビジネスモデルの変化をまとめてメール送信する。
+#
+# Test Results:
+#   - [2025-10-12 18:05] Status: SUCCESS - 机上デバッグ完了。データフローとパラメータに問題なし。
+#
+# Description:
+#   企業名をもとにGoogle検索で過去5年間の売上とビジネスモデルの変化を調査し、
+#   レポートを生成してメールで送信するワークフロー。
+#   1. 検索クエリ生成 (jsonoutput)
+#   2. Google検索 (google_search)
+#   3. 情報分析・要約 (explorer)
+#   4. メール本文生成 (mylllm)
+#   5. メール送信 (action)
+#
+# Notes:
+#   - メール送信先は、send_mail_action_prompt_builder ノードのプロンプト内で変更できます。
+#   - メール送信には、事前に expertAgent 側でGoogle認証が必要です。
+#   - expertAgentは --workers 4 以上での起動を推奨します。
+# =============================================================================
+
+version: 0.5
+nodes:
+  source:
+    console:
+      after: true
+
+  # 1. 検索クエリを生成する
+  search_query_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source
+    params:
+      template: |-
+        # 指示書
+        企業「${company_name}」の過去5年間の「売上高」と「ビジネスモデルの変化（新規事業、M&A、事業撤退など）」について調査するための、具体的で効果的なGoogle検索クエリを5つ生成してください。
+
+        # 出力形式（JSON）
+        {
+          "queries": [
+            "クエリ1",
+            "クエリ2",
+            "クエリ3",
+            "クエリ4",
+            "クエリ5"
+          ]
+        }
+
+  search_query_generator:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :search_query_prompt_builder
+        model_name: gpt-oss:20b
+
+  # 2. Google検索を実行する
+  google_search:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/utility/google_search
+      method: POST
+      body:
+        queries: :search_query_generator.result.queries
+        num: 5 # 各クエリで5件取得
+
+  # 3. 検索結果を分析・要約する
+  information_analyzer_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source
+      search_results: :google_search.result
+    params:
+      template: |-
+        # 指示書
+        以下のGoogle検索結果を元に、企業「${company_name}」の過去5年間における「売上高の推移」と「ビジネスモデルの変化」について、それぞれ詳細に分析し、要点をまとめてください。
+        売上高については、具体的な数値を時系列で示してください。
+        ビジネスモデルの変化については、新規事業、主力事業の変化、M&A、事業撤退などの具体的な出来事を時系列で記述してください。
+
+        # Google検索結果
+        ${search_results}
+
+  information_analyzer:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer
+      method: POST
+      body:
+        user_input: :information_analyzer_prompt_builder
+        model_name: gpt-oss:120b # 詳細な分析のために高精度モデルを使用
+
+  # 4. メール本文を生成する
+  report_generator_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source
+      analysis_result: :information_analyzer.result
+    params:
+      template: |-
+        # 指示書
+        以下の分析結果を元に、企業「${company_name}」に関する調査レポートとして、丁寧な文体のメール本文を作成してください。
+
+        件名: 企業調査レポート：${company_name}
+
+        本文:
+        関係者各位
+
+        お世話になっております。
+        ご依頼いただきました「${company_name}」に関する調査結果を以下の通りご報告いたします。
+
+        ---
+        ${analysis_result}
+        ---
+
+        ご確認のほど、よろしくお願い申し上げます。
+
+  report_generator:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :report_generator_prompt_builder
+        model_name: gpt-oss:20b
+
+  # 5. メールを送信する
+  send_mail_action_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      report: :report_generator.text
+    params:
+      template: |-
+        # 指示書
+        以下の内容でメールを送信してください。
+        宛先: user@example.com
+        件名と本文は以下の通りです。
+
+        ---
+        ${report}
+        ---
+
+  send_mail_action:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+      method: POST
+      body:
+        user_input: :send_mail_action_prompt_builder
+        model_name: gpt-oss:20b
+        project: default_project
+
+  # 6. 最終結果を出力
+  output:
+    agent: copyAgent
+    inputs:
+      result: :send_mail_action.result
+    isResult: true

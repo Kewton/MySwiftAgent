@@ -792,7 +792,7 @@ main() {
                 # Note: Most env vars are loaded from expertAgent/.env
                 # Only override MYVAULT_BASE_URL and PORT here
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT" || exit 1
+                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
             fi
 
             # Start GraphAiServer

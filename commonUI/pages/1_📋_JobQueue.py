@@ -545,7 +545,16 @@ def create_job(job_data: dict[str, Any]) -> None:
             st.session_state.jobqueue_selected_job = job_id
 
     except Exception as e:
-        NotificationManager.handle_exception(e, "Job Creation")
+        # HTTP 422エラーの場合、より詳細なメッセージを表示
+        error_str = str(e).lower()
+        if "422" in error_str or "unprocessable" in error_str:
+            if "timeout" in error_str:
+                st.error("❌ Timeout value exceeds maximum allowed (3600 seconds). Please reduce the timeout.")
+            else:
+                st.error(f"❌ Invalid request data: {e}")
+                st.info("💡 Please check all fields meet the validation requirements.")
+        else:
+            NotificationManager.handle_exception(e, "Job Creation")
 
 
 def render_job_list() -> None:

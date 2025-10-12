@@ -1,3 +1,4 @@
+from app.schemas.standardAiAgent import ChatMessage
 from core.logger import getlogger
 from core.secrets import resolve_runtime_value
 from mymcp.utils.execllm import execLlmApi
@@ -30,8 +31,8 @@ def extract_knowledge_from_text(
     /no_think
     """
 
-    _messages = []
-    _messages.append({"role": "user", "content": _query})
+    # Phase 2: Use ChatMessage objects instead of dictionaries for type safety
+    _messages = [ChatMessage(role="user", content=_query)]
 
     resolved_model = _model or resolve_runtime_value("EXTRACT_KNOWLEDGE_MODEL")
     if not resolved_model:
