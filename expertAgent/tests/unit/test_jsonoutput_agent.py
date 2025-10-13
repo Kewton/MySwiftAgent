@@ -29,8 +29,7 @@ class TestToParseJson:
     def test_parse_json_array_with_objects(self):
         """Test parsing JSON array containing objects."""
         input_text = (
-            '```json\n[{"id": 1, "name": "Alice"}, '
-            '{"id": 2, "name": "Bob"}]\n```'
+            '```json\n[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]\n```'
         )
         result = toParseJson(input_text)
         assert result == [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
