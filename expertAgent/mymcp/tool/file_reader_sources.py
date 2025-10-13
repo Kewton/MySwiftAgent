@@ -51,8 +51,17 @@ async def download_from_url(url: str) -> Tuple[Path, str]:
     """
     logger.info(f"Downloading from URL: {url}")
 
+    # User-Agentヘッダーを追加（HTTP 403エラー回避）
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
+
     try:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, headers=headers) as client:
             # HEADリクエストでContent-Typeを事前取得
             try:
                 head_response = await client.head(url, follow_redirects=True)

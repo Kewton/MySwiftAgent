@@ -247,6 +247,11 @@ nodes:
 - 🔧 **[GraphAI公式ドキュメント](https://github.com/receptron/graphai)** - GraphAIフレームワーク仕様
 - 📖 **[expertAgent API仕様](./expertAgent/docs/)** - expertAgent統合ガイド
 
+## 動作確認を進め方
+1. LLMワークフローを2~4つのブロックに分割する
+1. ブロック毎に動作確認する
+1. 動作確認に失敗した場合はサポートを参照
+
 ## 🤝 サポート
 
 ワークフロー生成で問題が発生した場合:

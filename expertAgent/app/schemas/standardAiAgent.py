@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Any, List, Literal
 
 from pydantic import BaseModel
 
@@ -30,7 +30,7 @@ class ExpertAiAgentResponse(BaseModel):
 
 
 class ExpertAiAgentResponseJson(BaseModel):
-    # result フィールドを ChatMessage モデルのリストとして定義
-    result: dict
+    # result can be either dict (JSON object) or list (JSON array)
+    result: dict | list[Any]
     type: str | None = None
     chathistory: List[ChatMessage] | None = None

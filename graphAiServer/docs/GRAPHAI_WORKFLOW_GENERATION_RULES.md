@@ -415,6 +415,13 @@ json_output:
 
 **用途**: 市場調査レポート、技術動向分析、競合分析、学術的調査、複数情報源からの包括的な情報整理。
 
+**🆕 利用可能なMCPツール**:
+- **html2markdown**: WebページをMarkdown形式に変換（Webページからのテキスト・情報抽出に最適、Playwright Agentより高精度）
+- **google_search**: Google Custom Search APIでキーワード検索
+- **gmail_search**: Gmail検索（OAuth2認証、MyVault経由）
+
+**推奨用途**: Webページからのテキスト抽出は **html2markdown** を使用することで、Playwright Agentより高精度な結果が得られます。
+
 ```yaml
 explorer:
   agent: fetchAgent
@@ -453,11 +460,16 @@ action:
       project: default_project  # オプション: プロジェクト指定
 ```
 
-#### 5. `/aiagent-api/v1/aiagent/utility/playwright` - Webスクレイピングエージェント
+#### 5. `/aiagent-api/v1/aiagent/utility/playwright` - Webブラウザ操作エージェント
 
-**提供サービス**: Playwrightを使用した高度なWebブラウザ自動操作。JavaScript動的レンダリングサイトのスクレイピング、フォーム入力・送信、ボタンクリック、スクリーンショット取得に対応。
+**提供サービス**: Playwrightを使用した高度なWebブラウザ自動操作。フォーム入力・送信、ボタンクリック、スクリーンショット取得、JavaScript実行に対応。
 
-**用途**: SPA（Single Page Application）のデータ抽出、ログイン必須サイトの情報取得、自動テスト、UI操作の自動化、動的コンテンツの収集。
+**⚠️ 重要な制限事項**:
+- **Webサイトからの情報抽出には不向き**: ブラウザの構造化データ取得の精度が低く、特定要素の抽出が困難
+- **推奨用途**: フォーム操作、スクリーンショット取得、JavaScript実行など、ブラウザ操作が必要な場合のみ
+- **代替手段**: Webページからのテキスト・情報抽出には **Explorer Agent（html2markdown）** の使用を強く推奨
+
+**適切な用途**: ログイン必須サイトへのアクセス、フォーム自動入力、UI操作の自動化、スクリーンショット取得、JavaScript実行。
 
 ```yaml
 playwright:

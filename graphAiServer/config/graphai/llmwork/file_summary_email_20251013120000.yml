@@ -1,0 +1,225 @@
+# =============================================================================
+# GraphAI Workflow File
+# =============================================================================
+# Created: 2025-10-13 12:00:00
+# User Request:
+#   指定したサイトからファイル名を指定（複数の場合も可）し、そこからテキストを抽出して、ファイル毎に概要をまとめてメール送信する
+#
+# Test Results:
+#   - [2025-10-13 12:00] Status: PENDING - 初期実装完了。動作確認待ち。
+#   - [2025-10-13 19:26] Status: FIXED - arrayJoinAgent出力参照とrecipient入力形式を修正。
+#   - [2025-10-13 19:32] Status: FIXED - 空配列エラーを修正（if条件追加）。
+#   - [2025-10-13 19:35] Status: FIXED - stringTemplateAgent構文エラーを修正。旧形式（文字列入力）に統一。
+#   - [2025-10-13 19:54] Status: INVESTIGATING - propertyFilterAgent使用後もarrayJoinAgentが「配列でない」エラー。
+#   - [2025-10-13 20:02] Status: FIXED - ワイルドカード構文 (*.format_summary) を使用してmapAgentから直接抽出。
+#
+# Description:
+#   指定されたURLからPlaywright AgentでPDFリンクを抽出
+#   キーワードに一致するファイルのテキストをFile Reader Agentで読み込みます。
+#   その後、LLMで内容を要約し、結果を結合してAction Agentでメール送信します。
+#
+# Notes:
+#   - Action Agentのメール送信先は現在固定アドレスにしか対応していません。
+#   - Playwright Agentの出力がJSON文字列であることを想定しています。
+#
+# Input Format:
+#   このワークフローは文字列形式の入力に対応しています：
+#
+#   入力例:
+#   "https://japancredit.go.jp/english/ から英語版のPDFファイルを全て抽出し、各ファイルの概要を要約してください"
+#
+#   メール送信先: newtons.boiled.clock@gmail.com (固定)
+# =============================================================================
+
+version: 0.5
+nodes:
+  source: {}
+
+  # 1. Playwright用のプロンプトを構築
+  playwright_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      userInput: :source
+    params:
+      template: |
+        # Instructions
+        ${userInput}
+
+        ## 手順
+        1. 指定されたウェブページにアクセスしてください。
+        2. ページ内にユーザーから支持のあったキーワードに該当するテキストを抽出してください。
+        3. テキストの周囲のリンクを調査し、PDFファイルのURLを抽出しリストアップしてください。（*.pdf or *.PDF）
+
+        # Output Format
+        返却は JSON 形式で行い、コメントやマークダウンは含めないでください。
+
+        ## Example Output Format
+        ```json
+        [
+          "https://example.com/file1.pdf",
+          "https://example.com/file2.pdf"
+        ]
+        ```
+
+    console:
+      before: true
+      after: true
+
+  # 2. ページからフィルタリング済みのPDFリンクを抽出
+  get_filtered_urls:
+    agent: fetchAgent
+    inputs:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+      method: "POST"
+      body:
+        user_input: :playwright_prompt_builder
+        model_name: "gpt-4o-mini"
+    console:
+      before: true
+      after: true
+
+  # 3. パース用プロンプトを構築
+  parse_json_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      raw_output: :get_filtered_urls.result
+    console:
+      before: true
+      after: true
+    params:
+      template: |
+        # Instructions
+        Extract the JSON array from the following text. The JSON array contains a list of URLs.
+        Ignore any surrounding text, explanations, or markdown formatting.
+        Output ONLY the raw, valid JSON array.
+
+        # Text to Parse
+        ${raw_output}
+
+  # 4. jsonoutputエージェントでJSON文字列をパース
+  parse_json_output:
+    agent: fetchAgent
+    inputs:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput"
+      method: "POST"
+      body:
+        user_input: :parse_json_prompt_builder
+        model_name: "gpt-4o-mini"
+    console:
+      before: true
+      after: true
+
+  # 5. フィルタリングした各ファイルを処理
+  process_files_mapper:
+    agent: mapAgent
+    inputs:
+      rows: :parse_json_output.result
+    params:
+      concurrency: 2
+    graph:
+      nodes:
+        # 5a. File Reader用のプロンプト構築
+        file_reader_prompt_builder:
+          agent: stringTemplateAgent
+          inputs:
+            file_url: :row
+          params:
+            template: |
+              下記ファイルのテキスト情報を全て抽出してください。
+              ${file_url}
+
+        # 5b. ファイル内容をテキストとして抽出
+        extract_text:
+          agent: fetchAgent
+          inputs:
+            url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+            method: "POST"
+            body:
+              user_input: :file_reader_prompt_builder
+              model_name: "gpt-4o-mini"
+          console:
+            before: true
+            after: true
+
+        # 5c. 要約用のプロンプト構築
+        summarize_prompt_builder:
+          agent: stringTemplateAgent
+          inputs:
+            content: :extract_text.result
+          params:
+            template: |
+              以下の内容を300字程度で要約してください。
+
+              ${content}
+
+        # 5d. テキストを要約
+        summarize_text:
+          agent: fetchAgent
+          inputs:
+            url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+            method: "POST"
+            body:
+              user_input: :summarize_prompt_builder
+              model_name: "gpt-oss:20b"
+          console:
+            before: true
+            after: true
+
+        # 5e. ファイル名と要約をフォーマット
+        format_summary:
+          agent: stringTemplateAgent
+          inputs:
+            file_url: :row
+            summary: :summarize_text.result
+          params:
+            template: |
+              ファイル: ${file_url}
+              概要:
+              ${summary}
+          isResult: true
+
+  # 6. 全ての要約を結合してメール本文を作成
+  join_summaries:
+    agent: arrayJoinAgent
+    inputs:
+      array: :process_files_mapper.*.format_summary
+    params:
+      separator: "\n\n---\n\n"
+    console:
+      before: true
+      after: true
+
+  # 7. メール送信用プロンプトを作成
+  send_email_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      summaries: :join_summaries.text
+    params:
+      template: |
+        以下の内容でメールを送信してください。
+        宛先: newtons.boiled.clock@gmail.com
+        件名: ファイル要約レポート
+        本文:
+        ${summaries}
+    console:
+      before: true
+      after: true
+
+  # 8. メールを送信
+  send_email:
+    agent: fetchAgent
+    inputs:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action"
+      method: "POST"
+      body:
+        user_input: :send_email_prompt_builder
+        model_name: "gpt-oss:20b"
+    console:
+      before: true
+      after: true
+
+  # 9. 最終結果
+  output:
+    agent: copyAgent
+    inputs:
+      result: :send_email.result
