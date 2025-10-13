@@ -17,6 +17,7 @@ from app.schemas.standardAiAgent import (
     ExpertAiAgentResponse,
     ExpertAiAgentResponseJson,
 )
+from core.test_mode_handler import handle_test_mode
 from mymcp.utils.chatollama import chatOllama
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,11 @@ def exec_myllm(request: ExpertAiAgentRequest):
     logger.info("exec_myllm called")
     logger.info(f"Request data: {request}")
 
+    # Test mode check using common handler
+    test_result = handle_test_mode(request.test_mode, request.test_response, "mylllm")
+    if test_result is not None:
+        return test_result
+
     _messages: list[ChatMessage] = []
     if request.system_imput is not None:
         _messages.append(ChatMessage(role="system", content=request.system_imput))
@@ -86,6 +92,13 @@ def exec_myllm(request: ExpertAiAgentRequest):
 )
 async def aiagent_graph(request: ExpertAiAgentRequest):
     try:
+        # Test mode check using common handler
+        test_result = handle_test_mode(
+            request.test_mode, request.test_response, "sample"
+        )
+        if test_result is not None:
+            return test_result
+
         _input = f"""
         # メタ情報:
         - 現在の時刻は「{datetime.now()}」です。
@@ -117,6 +130,13 @@ async def aiagent_graph(request: ExpertAiAgentRequest):
 )
 async def myaiagents(request: ExpertAiAgentRequest, agent_name: str):
     try:
+        # Test mode check using common handler
+        test_result = handle_test_mode(
+            request.test_mode, request.test_response, agent_name
+        )
+        if test_result is not None:
+            return test_result
+
         _input = f"""
         # メタ情報:
         - 現在の時刻は「{datetime.now()}」です。

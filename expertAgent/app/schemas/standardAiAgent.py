@@ -19,6 +19,8 @@ class ExpertAiAgentRequest(BaseModel):
     system_imput: str | None = None
     model_name: str | None = None
     project: str | None = None  # MyVault project name for secrets
+    test_mode: bool = False  # Test mode flag for workflow development
+    test_response: dict | str | None = None  # Test response data
 
 
 class ExpertAiAgentResponse(BaseModel):
