@@ -8,16 +8,24 @@
 2. [必須要素](#必須要素)
 3. [エージェント種別](#エージェント種別)
 4. [データフローパターン](#データフローパターン)
-5. [expertAgent API統合](#expertagent-api統合)
+5. [Agent選択指針](#agent選択指針)
+6. [モデル選択指針](#モデル選択指針)
+7. [expertAgent API統合](#expertagent-api統合)
+   - [共通APIスキーマ](#共通apiスキーマ)
    - [テストモード機能](#テストモード機能)
-6. [エラー回避パターン](#エラー回避パターン)
-7. [パフォーマンスと並列処理の最適化](#パフォーマンスと並列処理の最適化)
-8. [命名規則](#命名規則)
-9. [デバッグとログ](#デバッグとログ)
-10. [実装例](#実装例)
-11. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
-12. [LLMワークフロー作成手順](#llmワークフロー作成手順)
-13. [ワークフロー作成時の動作確認方法](#ワークフロー作成時の動作確認方法)
+8. [エラー回避パターン](#エラー回避パターン)
+9. [パフォーマンスと並列処理の最適化](#パフォーマンスと並列処理の最適化)
+10. [命名規則](#命名規則)
+11. [デバッグとログ](#デバッグとログ)
+12. [実装例](#実装例)
+13. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
+14. [LLMワークフロー作成手順](#llmワークフロー作成手順)
+15. [動作確認とトラブルシューティング](#動作確認とトラブルシューティング)
+16. [ワークフロー作成時の動作確認方法](#ワークフロー作成時の動作確認方法)
+17. [付録](#付録)
+    - [付録A: Playwright Agent 完全ガイド](#付録a-playwright-agent-完全ガイド)
+    - [付録B: Explorer Agent 完全ガイド](#付録b-explorer-agent-完全ガイド)
+    - [付録C: File Reader Agent 完全ガイド](#付録c-file-reader-agent-完全ガイド)
 
 ---
 
@@ -214,6 +222,21 @@ output:
 
 ### パターン1: シンプルな順次処理
 
+**データフロー図**:
+```mermaid
+flowchart TD
+  n_source(source)
+  n_process_step1(process_step1<br/>fetchAgent)
+  n_source --> n_process_step1
+  n_process_step2(process_step2<br/>fetchAgent)
+  n_process_step1 -- result --> n_process_step2
+  n_output(output<br/>copyAgent)
+  n_process_step2 -- result --> n_output
+  class n_source staticNode
+  class n_process_step1,n_process_step2,n_output computedNode
+```
+
+**YAML定義**:
 ```yaml
 version: 0.5
 nodes:
@@ -242,6 +265,23 @@ nodes:
 
 ### パターン2: プロンプトビルダーパターン
 
+**データフロー図**:
+```mermaid
+flowchart TD
+  n_source(source)
+  n_common_param(common_param)
+  n_prompt_builder(prompt_builder<br/>stringTemplateAgent)
+  n_source --> n_prompt_builder
+  n_common_param -- target --> n_prompt_builder
+  n_llm_execution(llm_execution<br/>fetchAgent)
+  n_prompt_builder --> n_llm_execution
+  n_output(output<br/>copyAgent)
+  n_llm_execution -- text --> n_output
+  class n_source,n_common_param staticNode
+  class n_prompt_builder,n_llm_execution,n_output computedNode
+```
+
+**YAML定義**:
 ```yaml
 version: 0.5
 nodes:
@@ -286,6 +326,33 @@ nodes:
 
 ### パターン3: 並列処理パターン（MapAgent）
 
+**データフロー図**:
+```mermaid
+flowchart TD
+  n_source(source)
+  n_planner(planner<br/>fetchAgent)
+  n_source --> n_planner
+  subgraph n_process_mapper[process_mapper: mapAgent]
+    n_process_mapper_search(search<br/>fetchAgent)
+    n_process_mapper_row -- query_hint --> n_process_mapper_search
+    n_process_mapper_explorer(explorer<br/>fetchAgent)
+    n_process_mapper_row -- overview --> n_process_mapper_explorer
+    n_process_mapper_search -- result --> n_process_mapper_explorer
+    n_process_mapper_summary(summary<br/>stringTemplateAgent)
+    n_process_mapper_row -- title --> n_process_mapper_summary
+    n_process_mapper_explorer -- result --> n_process_mapper_summary
+  end
+  n_planner -- result.outline --> n_process_mapper
+  n_join_results(join_results<br/>arrayJoinAgent)
+  n_process_mapper -- summary --> n_join_results
+  n_output(output<br/>copyAgent)
+  n_join_results -- text --> n_output
+  class n_source staticNode
+  class n_planner,n_process_mapper_search,n_process_mapper_explorer,n_process_mapper_summary,n_join_results,n_output computedNode
+  class n_process_mapper nestedGraph
+```
+
+**YAML定義**:
 ```yaml
 version: 0.5
 nodes:
@@ -359,6 +426,306 @@ nodes:
 
 ---
 
+## Agent選択指針
+
+このセクションでは、タスクに応じて最適なAgentを選択するための指針を提供します。
+
+### 選択フローチャート
+
+```
+タスクを分析
+  │
+  ├─ Web情報収集が必要？
+  │   YES → Explorer Agent or Playwright Agent
+  │          （詳細は下記比較表参照）
+  │   NO → 次へ
+  │
+  ├─ ファイル読み込みが必要？
+  │   YES → File Reader Agent
+  │   NO → 次へ
+  │
+  ├─ 構造化JSON出力が必要？
+  │   YES → jsonoutput Agent
+  │   NO → 次へ
+  │
+  ├─ Gmail/カレンダー操作が必要？
+  │   YES → Action Agent
+  │   NO → 次へ
+  │
+  └─ その他のLLM処理
+      → mylllm Agent（汎用LLM呼び出し）
+```
+
+### Web情報収集: Explorer Agent vs Playwright Agent
+
+**重要**: Webページからの情報抽出には **Explorer Agent（html2markdown MCP）** の使用を強く推奨します。
+
+| 観点 | Explorer Agent | Playwright Agent |
+|------|---------------|------------------|
+| **推奨用途** | ✅ **Webページのテキスト・情報抽出** | ⚠️ ブラウザ操作・スクリーンショット |
+| **テキスト抽出精度** | ⭐⭐⭐⭐⭐ 高精度<br>（html2markdown MCP） | ⭐⭐ 低精度<br>（アクセシビリティツリー） |
+| **構造保持** | ⭐⭐⭐⭐⭐ Markdown形式<br>（見出し、リスト、表を保持） | ⭐⭐ アクセシビリティツリー<br>（構造が崩れやすい） |
+| **処理速度** | ⭐⭐⭐⭐⭐ 高速 | ⭐⭐⭐ 中速 |
+| **コスト** | $ 低コスト | $$ 中コスト |
+| **典型的なユースケース** | ・ニュース記事の本文抽出<br>・ブログ記事の取得<br>・PDFリンクの一括抽出<br>・技術ドキュメントの解析<br>・Google検索結果の詳細取得 | ・フォーム操作（入力、送信）<br>・スクリーンショット取得<br>・JavaScript実行 |
+
+**判断基準**:
+- **テキスト抽出が主目的** → **Explorer Agent**
+- **ブラウザ操作が必要** → Playwright Agent
+- **迷ったら** → まず**Explorer Agent**を試す
+
+**例: ニュース記事の抽出**
+```yaml
+# ✅ 推奨: Explorer Agent
+news_extractor:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+    method: "POST"
+    body:
+      user_input: "下記サイトの記事本文をMarkdown形式で抽出してください。\nhttps://example.com/news/article-123"
+      model_name: "gpt-4o-mini"
+
+# ⚠️ 非推奨: Playwright Agent（精度が低い）
+news_extractor_playwright:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    method: "POST"
+    body:
+      user_input: "下記サイトから記事のタイトルと本文を抽出してください。\nhttps://example.com/news/article-123"
+      model_name: "gpt-4o-mini"
+```
+
+### ファイル処理: File Reader Agent
+
+**対応ファイル形式**:
+
+| ファイル形式 | 処理方法 | コスト | 備考 |
+|------------|---------|--------|------|
+| **PDF** | PyPDF2で全文抽出 | 無料 | 要約なし、原文そのまま |
+| **画像** (PNG/JPG) | OpenAI Vision API | $$$ | gpt-4o使用 |
+| **音声** (MP3/WAV) | OpenAI Whisper API | $ | whisper-1使用 |
+| **テキスト/CSV** | Python標準ライブラリ | 無料 | 複数エンコーディング対応 |
+
+**データソース**:
+- ✅ インターネットURL（HTTP/HTTPS）
+- ✅ Google Drive（OAuth2認証、MyVault管理）
+- ✅ ローカルファイル（セキュリティ制限あり: `/tmp`, `~/Downloads`, `~/Documents`）
+
+**重要な注意点**:
+
+1. **画像処理時の必須表現**:
+   ```yaml
+   # ❌ NG: LLMがツール呼び出しを拒否
+   user_input: "テキストを抽出してください。\nhttps://example.com/image.png"
+
+   # ✅ OK: 「画像ファイルの」を明記
+   user_input: "下記画像ファイルのテキストを抽出してください。\nhttps://example.com/image.png"
+   ```
+
+2. **Google Driveアクセス**:
+   - ユーザーがMyVaultでGoogle認証を完了している必要あり
+   - 権限エラー発生時は「リンクを知っている全員」に共有設定
+
+**例: PDF全文抽出**
+```yaml
+pdf_extractor:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    body:
+      user_input: "下記PDFファイルのテキストを全て抽出してください。\nhttps://example.com/whitepaper.pdf"
+      model_name: "gpt-4o-mini"
+```
+
+### 構造化JSON出力: jsonoutput Agent
+
+**用途**: LLMの出力を特定のJSON構造に整形する必要がある場合
+
+**典型的なユースケース**:
+- アウトライン生成（章立て、見出し構造）
+- プランナーとして複数タスクのリストを生成
+- MapAgentの入力データ作成
+
+**例: アウトライン生成**
+```yaml
+planner:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput"
+    method: "POST"
+    body:
+      user_input: |
+        下記トピックについて、4-6章構成のアウトラインを作成してください。
+        各章には title, overview, query_hint を含めてください。
+
+        トピック: :source
+      model_name: "gpt-oss:120b"
+```
+
+### Gmail/カレンダー操作: Action Agent
+
+**用途**: Gmail送信、Googleカレンダー操作など、外部サービスとの連携
+
+**典型的なユースケース**:
+- メール送信
+- カレンダーイベント作成
+- Google Drive操作
+
+**例: メール送信**
+```yaml
+send_notification:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action"
+    method: "POST"
+    body:
+      user_input: |
+        下記の内容でメールを送信してください。
+        宛先: user@example.com
+        件名: レポート完成のお知らせ
+        本文: :report_result
+      model_name: "gpt-4o-mini"
+```
+
+### Wikipedia検索: wikipedia Agent
+
+**用途**: Wikipedia記事の検索と要約取得
+
+**典型的なユースケース**:
+- 基礎知識の取得
+- 用語の定義確認
+- 概要情報の収集
+
+**例: Wikipedia検索**
+```yaml
+wiki_search:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/wikipedia"
+    method: "POST"
+    body:
+      user_input: "量子コンピュータについて調べてください"
+      model_name: "gpt-4o-mini"
+```
+
+---
+
+## モデル選択指針
+
+このセクションでは、タスクに応じて最適なLLMモデルを選択するための指針を提供します。
+
+### 推奨モデル一覧
+
+| モデル | 推奨度 | 特徴 | 使用ケース | コスト |
+|--------|--------|------|-----------|--------|
+| **gpt-oss:20b** | ⭐⭐⭐ | 軽量・高速、ローカル実行 | 単純なタスク、リアルタイム応答 | 無料 |
+| **gpt-oss:120b** | ⭐⭐⭐ | 高精度、ローカル実行 | 複雑な推論、レポート生成 | 無料 |
+| **gpt-4o-mini** | ⭐⭐⭐ | バランス型、API | Agent統合（Playwright/Explorer） | $ |
+| **Gemini 2.5 Flash** | ⭐⭐⭐ | 高速、100万トークン | 大規模文書処理 | $ |
+| **Gemini 2.5 Pro** | ⭐⭐ | 最高精度、思考プロセス付き | 極めて複雑なタスク | $$$ |
+| **Claude Sonnet 4.5** | ⭐⭐ | コーディング最高精度 | ワークフロー生成、コード生成 | $$ |
+
+### タスク別推奨モデル
+
+#### 1. ワークフロー生成・コーディング
+
+- **第1選択**: Claude Sonnet 4.5
+- **第2選択**: Gemini 2.5 Flash
+- **理由**: YML構造の正確な理解、長文コンテキスト対応
+
+#### 2. レポート生成・要約
+
+- **第1選択**: gpt-oss:120b（ローカル）
+- **第2選択**: Gemini 2.5 Flash
+- **理由**: コスト無料、高精度
+
+#### 3. Agent統合（Playwright/Explorer/File Reader）
+
+- **第1選択**: gpt-4o-mini
+- **理由**: Agent指示理解に最適、コスト効率良好
+
+**重要**: Agent統合時は必ず **gpt-4o-mini** を使用してください。他のモデルではツール呼び出しが正常に動作しない場合があります。
+
+#### 4. リアルタイム対話
+
+- **第1選択**: gpt-oss:20b（ローカル）
+- **理由**: 高速応答、コスト無料
+
+#### 5. 大規模文書処理（100ページ以上のPDF等）
+
+- **第1選択**: Gemini 2.5 Flash
+- **理由**: 100万トークンコンテキスト
+
+### コスト最適化戦略
+
+1. **ローカルLLM優先**: まず **gpt-oss:20b/120b** を試す
+2. **Agent統合は gpt-4o-mini**: Playwright/Explorer/File Reader統合時は必須
+3. **高精度が必要な場合のみクラウドLLM**: Gemini/Claude
+4. **段階的スケールアップ**: 20b → 120b → gpt-4o-mini → Gemini Flash → Gemini Pro
+
+### expertAgent APIでのモデル指定方法
+
+```yaml
+# ローカルLLM（推奨・無料）
+model_name: "gpt-oss:20b"    # 軽量・高速
+model_name: "gpt-oss:120b"   # 高精度
+
+# クラウドLLM（有料）
+model_name: "gpt-4o-mini"       # Agent統合時に推奨
+model_name: "gemini-2.5-flash"  # 大規模文書処理
+model_name: "gemini-2.5-pro"    # 最高精度
+model_name: "claude-sonnet-4-5" # コーディング
+```
+
+### モデル選択の実践例
+
+#### 例1: ニュース記事の要約
+
+```yaml
+# ✅ 推奨: ローカルLLM（無料）
+summarizer:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+    method: "POST"
+    body:
+      user_input: "下記記事を3行で要約してください。\n:article_content"
+      model_name: "gpt-oss:120b"  # 高精度、無料
+```
+
+#### 例2: Playwright Agentでのスクレイピング
+
+```yaml
+# ⚠️ 必須: gpt-4o-mini を使用
+web_scraper:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    method: "POST"
+    body:
+      user_input: "下記サイトからタイトルを抽出してください。\nhttps://example.com"
+      model_name: "gpt-4o-mini"  # Agent統合時は必須
+```
+
+#### 例3: 大規模PDF処理
+
+```yaml
+# ✅ 推奨: Gemini 2.5 Flash（100万トークン対応）
+pdf_processor:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    body:
+      user_input: "下記200ページのPDFから重要ポイントを抽出してください。\n:pdf_url"
+      model_name: "gemini-2.5-flash"  # 長文対応
+```
+
+---
+
 ## expertAgent API統合
 
 ### 重要: ポート番号とエンドポイント
@@ -373,6 +740,67 @@ url: http://127.0.0.1:8104/aiagent-api/v1/endpoint
 url: http://127.0.0.1:8000/aiagent-api/v1/endpoint  # ポート8000は使用不可
 ```
 
+### 共通APIスキーマ
+
+expertAgent APIのエンドポイントは、以下の2種類のスキーマを使用します。
+
+#### 標準LLMエンドポイント用スキーマ
+
+`/aiagent-api/v1/mylllm`、`/aiagent-api/v1/aiagent/utility/jsonoutput` が使用。
+
+**リクエストボディ（ExpertAiAgentRequest）**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `user_input` | string | ✅ | - | ユーザーからの指示・プロンプト |
+| `system_imput` | string | ❌ | null | システムプロンプト（注: typo "imput"） |
+| `model_name` | string | ❌ | `gpt-oss:20b` | 使用するLLMモデル名 |
+| `project` | string | ❌ | null | MyVaultプロジェクト名 |
+| `test_mode` | boolean | ❌ | false | テストモードフラグ |
+| `test_response` | dict/string | ❌ | null | テストモード用モックレスポンス |
+
+**レスポンスボディ（ExpertAiAgentResponse）**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `result` | string | LLM生成結果（jsonoutputの場合はJSONオブジェクト） |
+| `text` | string | `result`と同じ（互換性のため） |
+| `type` | string | レスポンスタイプ（オプション） |
+| `chathistory` | array | チャット履歴（オプション） |
+
+#### Utilityエンドポイント用スキーマ
+
+`/aiagent-api/v1/aiagent/utility/explorer`、`action`、`playwright`、`wikipedia`、`file_reader` が使用。
+
+**リクエストボディ（UtilityRequest）**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `user_input` | string | ✅ | - | 実行する指示・タスク |
+| `project` | string | ❌ | null | MyVaultプロジェクト名（認証情報取得用） |
+| `test_mode` | boolean | ❌ | false | テストモードフラグ |
+| `test_response` | dict/string | ❌ | null | テストモード用モックレスポンス |
+
+**レスポンスボディ（UtilityResponse）**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `result` | string | 実行結果・生成されたレポート |
+
+#### Google検索エンドポイント用スキーマ
+
+`/aiagent-api/v1/utility/google_search`、`google_search_overview` が使用。
+
+**リクエストボディ（SearchUtilityRequest）**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `queries` | array[string] | ✅ | - | 検索クエリのリスト |
+| `num` | integer | ❌ | 3 | 検索結果数（1クエリあたり） |
+| `project` | string | ❌ | null | MyVaultプロジェクト名 |
+
+**レスポンスボディ（SearchUtilityResponse）**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `result` | array | 検索結果のリスト（タイトル、URL、スニペット含む） |
+
+---
+
 ### 主要エンドポイント
 
 #### 1. `/aiagent-api/v1/mylllm` - 汎用LLM実行
@@ -381,6 +809,25 @@ url: http://127.0.0.1:8000/aiagent-api/v1/endpoint  # ポート8000は使用不�
 
 **用途**: シンプルなテキスト生成、要約、翻訳、質問応答など基本的なLLMタスク。
 
+**リクエストボディスキーマ**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `user_input` | string | ✅ | - | ユーザーからの指示・プロンプト |
+| `system_imput` | string | ❌ | null | システムプロンプト（typo注意: "imput"） |
+| `model_name` | string | ❌ | `gpt-oss:20b` | 使用するLLMモデル名 |
+| `project` | string | ❌ | null | MyVaultプロジェクト名（秘密情報用） |
+| `test_mode` | boolean | ❌ | false | テストモードフラグ（開発用） |
+| `test_response` | dict/string | ❌ | null | テストモード用モックレスポンス |
+
+**レスポンスボディスキーマ**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `result` | string | LLMの生成結果テキスト（主要フィールド） |
+| `text` | string | `result`と同じ内容（互換性のため） |
+| `type` | string | レスポンスタイプ（オプション） |
+| `chathistory` | array | チャット履歴（オプション） |
+
+**使用例**:
 ```yaml
 llm_node:
   agent: fetchAgent
@@ -390,7 +837,7 @@ llm_node:
     body:
       user_input: :prompt_builder
       model_name: gpt-oss:20b  # モデル指定（後述）
-      system_input: システムプロンプト（オプション）
+      system_imput: システムプロンプト（オプション）
 ```
 
 #### 2. `/aiagent-api/v1/aiagent/utility/jsonoutput` - JSON構造化出力
@@ -399,6 +846,22 @@ llm_node:
 
 **用途**: アウトライン生成、タスク分割リスト、データベース挿入用構造化データ、API連携用フォーマット変換。
 
+**リクエストボディスキーマ**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `user_input` | string | ✅ | - | JSON出力を指示するプロンプト |
+| `model_name` | string | ❌ | `gpt-oss:20b` | 使用するLLMモデル名 |
+| `project` | string | ❌ | null | MyVaultプロジェクト名 |
+| `test_mode` | boolean | ❌ | false | テストモードフラグ |
+| `test_response` | dict/string | ❌ | null | テストモード用モックレスポンス |
+
+**レスポンスボディスキーマ**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `result` | object | パース済みJSON（LLM出力をJSON解析した結果） |
+| `text` | string | 元のLLM出力テキスト |
+
+**使用例**:
 ```yaml
 json_output:
   agent: fetchAgent
@@ -423,6 +886,20 @@ json_output:
 
 **推奨用途**: Webページからのテキスト抽出は **html2markdown** を使用することで、Playwright Agentより高精度な結果が得られます。
 
+**リクエストボディスキーマ**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `user_input` | string | ✅ | - | 情報収集・調査の指示 |
+| `project` | string | ❌ | null | MyVaultプロジェクト名（MCPツール認証用） |
+| `test_mode` | boolean | ❌ | false | テストモードフラグ |
+| `test_response` | dict/string | ❌ | null | テストモード用モックレスポンス |
+
+**レスポンスボディスキーマ**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `result` | string | 情報収集・分析結果のレポート |
+
+**使用例**:
 ```yaml
 explorer:
   agent: fetchAgent
@@ -431,8 +908,7 @@ explorer:
     method: POST
     body:
       user_input: :prompt_builder
-      search_result: :previous_search.result  # オプション: 事前検索結果
-      model_name: gpt-oss:120b
+      project: default_project  # MCPツール認証用
 ```
 
 #### 4. `/aiagent-api/v1/aiagent/utility/action` - アクション実行エージェント
@@ -921,14 +1397,21 @@ mapper:
 
 **原因**: ドキュメント等で参照したエンドポイントが、実際の `graphAiServer` の実装と異なっている。
 
-**解決策**: `graphAiServer/src/app.ts` などのルーティング定義ファイルを確認し、正しいエンドポイントを使用する。2025年10月現在、ワークフロー実行用のエンドポイントは `POST /api/v1/myagent` です。
+**解決策**: `graphAiServer/src/app.ts` などのルーティング定義ファイルを確認し、正しいエンドポイントを使用する。2025年10月現在、ワークフロー実行用のエンドポイントは以下の通りです：
 
 ```bash
 # ❌ 間違い
 curl -X POST http://127.0.0.1:8105/api/v1/workflow/execute
 
-# ✅ 正しい
-curl -X POST http://127.0.0.1:8105/api/v1/myagent
+# ✅ 正しい（新形式推奨: モデル名をURLパスに含める）
+curl -X POST http://127.0.0.1:8105/api/v1/myagent/llmwork/{workflow_name} \
+  -H "Content-Type: application/json" \
+  -d '{"user_input": "..."}'
+
+# ✅ 正しい（旧形式: 後方互換性のためサポート継続）
+curl -X POST http://127.0.0.1:8105/api/v1/myagent \
+  -H "Content-Type: application/json" \
+  -d '{"model_name": "llmwork/{workflow_name}", "user_input": "..."}'
 ```
 
 ---
@@ -1272,6 +1755,19 @@ prompt_builder:
 
 ### 例1: シンプルなLLM呼び出し
 
+**データフロー図**:
+```mermaid
+flowchart TD
+  n_source(source)
+  n_llm_call(llm_call<br/>fetchAgent)
+  n_source --> n_llm_call
+  n_output(output<br/>copyAgent)
+  n_llm_call -- text --> n_output
+  class n_source staticNode
+  class n_llm_call,n_output computedNode
+```
+
+**YAML定義**:
 ```yaml
 version: 0.5
 nodes:
@@ -1300,6 +1796,33 @@ nodes:
 
 ### 例2: Google検索 → 情報整理 → レポート生成
 
+**データフロー図**:
+```mermaid
+flowchart TD
+  n_source(source)
+  n_query_builder(query_builder<br/>stringTemplateAgent)
+  n_source --> n_query_builder
+  n_query_generator(query_generator<br/>fetchAgent)
+  n_query_builder --> n_query_generator
+  n_search(search<br/>fetchAgent)
+  n_query_generator -- result.querylist --> n_search
+  n_info_organizer_prompt(info_organizer_prompt<br/>stringTemplateAgent)
+  n_source --> n_info_organizer_prompt
+  n_search -- result --> n_info_organizer_prompt
+  n_info_organizer(info_organizer<br/>fetchAgent)
+  n_info_organizer_prompt --> n_info_organizer
+  n_report_generator_prompt(report_generator_prompt<br/>stringTemplateAgent)
+  n_source --> n_report_generator_prompt
+  n_info_organizer -- result --> n_report_generator_prompt
+  n_report_generator(report_generator<br/>fetchAgent)
+  n_report_generator_prompt --> n_report_generator
+  n_output(output<br/>copyAgent)
+  n_report_generator -- text --> n_output
+  class n_source staticNode
+  class n_query_builder,n_query_generator,n_search,n_info_organizer_prompt,n_info_organizer,n_report_generator_prompt,n_report_generator,n_output computedNode
+```
+
+**YAML定義**:
 ```yaml
 version: 0.5
 nodes:
@@ -1404,6 +1927,60 @@ nodes:
 
 ### 例3: ポッドキャスト台本生成（複雑な並列処理）
 
+**データフロー図**:
+```mermaid
+flowchart TD
+  n_source(source)
+  n_common_param(common_param)
+  n_pre_planner_prompt_builder(pre_planner_prompt_builder<br/>stringTemplateAgent)
+  n_source --> n_pre_planner_prompt_builder
+  n_pre_planner(pre_planner<br/>fetchAgent)
+  n_pre_planner_prompt_builder --> n_pre_planner
+  n_pre_explorer_search(pre_explorer_search<br/>fetchAgent)
+  n_pre_planner -- result.querylist --> n_pre_explorer_search
+  n_pre_explorer_prompt_builder(pre_explorer_prompt_builder<br/>stringTemplateAgent)
+  n_source --> n_pre_explorer_prompt_builder
+  n_common_param -- target --> n_pre_explorer_prompt_builder
+  n_pre_explorer_search -- result --> n_pre_explorer_prompt_builder
+  n_pre_explorer(pre_explorer<br/>fetchAgent)
+  n_pre_explorer_prompt_builder --> n_pre_explorer
+  n_planner_prompt_builder(planner_prompt_builder<br/>stringTemplateAgent)
+  n_source --> n_planner_prompt_builder
+  n_common_param -- target --> n_planner_prompt_builder
+  n_pre_explorer -- result --> n_planner_prompt_builder
+  n_planner(planner<br/>fetchAgent)
+  n_planner_prompt_builder --> n_planner
+  subgraph n_explorer_mapper[explorer_mapper: mapAgent]
+    n_explorer_mapper_explorer_search(explorer_search<br/>fetchAgent)
+    n_explorer_mapper_row -- query_hint --> n_explorer_mapper_explorer_search
+    n_explorer_mapper_explorer_prompt_builder(explorer_prompt_builder<br/>stringTemplateAgent)
+    n_explorer_mapper_row -- title --> n_explorer_mapper_explorer_prompt_builder
+    n_explorer_mapper_row -- overview --> n_explorer_mapper_explorer_prompt_builder
+    n_explorer_mapper_explorer_search -- result --> n_explorer_mapper_explorer_prompt_builder
+    n_explorer_mapper_explorer(explorer<br/>fetchAgent)
+    n_explorer_mapper_explorer_prompt_builder --> n_explorer_mapper_explorer
+    n_explorer_mapper_explorer_result_summary(explorer_result_summary<br/>stringTemplateAgent)
+    n_explorer_mapper_row -- title --> n_explorer_mapper_explorer_result_summary
+    n_explorer_mapper_explorer -- result --> n_explorer_mapper_explorer_result_summary
+  end
+  n_planner -- result.outline --> n_explorer_mapper
+  n_explorer_mapper_output(explorer_mapper_output<br/>arrayJoinAgent)
+  n_explorer_mapper -- explorer_result_summary --> n_explorer_mapper_output
+  n_generator_prompt_builder(generator_prompt_builder<br/>stringTemplateAgent)
+  n_source --> n_generator_prompt_builder
+  n_common_param -- target --> n_generator_prompt_builder
+  n_pre_explorer -- result --> n_generator_prompt_builder
+  n_explorer_mapper_output -- text --> n_generator_prompt_builder
+  n_generator(generator<br/>fetchAgent)
+  n_generator_prompt_builder --> n_generator
+  n_output(output<br/>copyAgent)
+  n_generator -- text --> n_output
+  class n_source,n_common_param staticNode
+  class n_pre_planner_prompt_builder,n_pre_planner,n_pre_explorer_search,n_pre_explorer_prompt_builder,n_pre_explorer,n_planner_prompt_builder,n_planner,n_explorer_mapper_explorer_search,n_explorer_mapper_explorer_prompt_builder,n_explorer_mapper_explorer,n_explorer_mapper_explorer_result_summary,n_explorer_mapper_output,n_generator_prompt_builder,n_generator,n_output computedNode
+  class n_explorer_mapper nestedGraph
+```
+
+**YAML定義**:
 ```yaml
 version: 0.5
 nodes:
@@ -2089,11 +2666,10 @@ graphAiServer経由で動作確認を行い、エラーがあれば原因を調�
 # graphAiServerが起動していることを確認
 curl http://127.0.0.1:8105/health
 
-# ワークフロー実行
-curl -X POST http://127.0.0.1:8105/api/v1/myagent \
+# ワークフロー実行（新形式: モデル名をURLパスに含める）
+curl -X POST http://127.0.0.1:8105/api/v1/myagent/llmwork/{your_workflow_name_without_extension} \
   -H "Content-Type: application/json" \
   -d '{
-    "model_name": "llmwork/{your_workflow_name_without_extension}",
     "user_input": "ユーザー入力テキスト"
   }'
 ```
@@ -2346,6 +2922,342 @@ AIエージェントは以下のチェックリストを参照し、各フェー
 - [ ] ファイル配置が適切か確認した
 - [ ] ドキュメント更新を実施した（必要に応じて）
 - [ ] ユーザーへ完了報告を送信した
+
+---
+
+## 動作確認とトラブルシューティング
+
+GraphAI YMLワークフローの動作確認を行う際の標準手順と、エラー発生時のトラブルシューティング方法を提供します。
+
+### サービス起動確認
+
+ワークフローを実行する前に、必要なサービスが正常に起動しているか確認してください。
+
+#### 1. graphAiServerの起動確認
+
+**ポート**: 8105
+
+**確認方法**:
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8105/health
+
+# 期待されるレスポンス
+# {"status": "healthy", "service": "graphAiServer"}
+```
+
+**起動方法（未起動の場合）**:
+```bash
+# プロジェクトルートから実行
+./scripts/dev-start.sh
+
+# またはgraphAiServerディレクトリから実行
+cd graphAiServer
+npm run dev
+```
+
+**ログ確認**:
+```bash
+# graphAiServerのログを確認
+tail -f logs/graphaiserver.log
+```
+
+#### 2. expertAgentの起動確認
+
+**ポート**: 8104
+
+**確認方法**:
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8104/health
+
+# 期待されるレスポンス
+# {"status": "healthy", "service": "expertAgent"}
+```
+
+**起動方法（未起動の場合）**:
+```bash
+# expertAgentディレクトリから実行
+cd expertAgent
+
+# 並列処理対応のため、4ワーカー推奨
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4
+```
+
+**ワーカー数の重要性**:
+- **ワーカー数 = 1**: 並列処理（mapAgent）が実行されない
+- **ワーカー数 ≥ 4**: 推奨設定（並列処理に対応）
+- **concurrency値との関係**: `workers ≥ concurrency` を確保すること
+
+**ログ確認**:
+```bash
+# expertAgentのログを確認
+tail -f logs/expertagent.log
+
+# ワーカー数確認
+grep "Started server process" logs/expertagent.log | wc -l
+# 出力が4以上であればOK
+```
+
+---
+
+### ワークフロー実行方法
+
+#### 基本的な実行コマンド
+
+```bash
+# 開発用エンドポイントで実行（新形式: モデル名をURLパスに含める）
+curl -X POST http://127.0.0.1:8105/api/v1/myagent/llmwork/{your_workflow_name_without_extension} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "ユーザー入力テキスト"
+  }'
+```
+
+**パラメータ説明**:
+- **URLパス**: `/api/v1/myagent/{category}/{model}`
+  - `category`: ワークフローのカテゴリ（例: `llmwork`）
+  - `model`: YMLファイル名（拡張子なし、例: `podcast_generation_20251012`）
+- **リクエストボディ**:
+  - `user_input`: sourceノードに渡される入力文字列（必須）
+  - `project`: プロジェクト名（オプション）
+
+**後方互換性**: 旧形式（`model_name`をリクエストボディに含める）も引き続きサポートされています：
+```bash
+# 旧形式（非推奨だが動作する）
+curl -X POST http://127.0.0.1:8105/api/v1/myagent \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_name": "llmwork/podcast_generation_20251012",
+    "user_input": "ユーザー入力テキスト"
+  }'
+```
+
+#### レスポンス確認
+
+**成功時のレスポンス例**:
+```json
+{
+  "status": "success",
+  "result": {
+    "text": "ワークフローの最終出力結果"
+  },
+  "execution_time": 123.45
+}
+```
+
+**失敗時のレスポンス例**:
+```json
+{
+  "status": "error",
+  "error_message": "TypeError: fetch failed",
+  "node": "explorer_mapper"
+}
+```
+
+---
+
+### ログ確認
+
+#### 1. graphAiServerログ
+
+```bash
+# リアルタイムでログを表示
+tail -f logs/graphaiserver.log
+
+# 最新100行を確認
+tail -n 100 logs/graphaiserver.log
+
+# エラーのみ抽出
+tail -n 100 logs/graphaiserver.log | grep -i error
+
+# 特定ノードのログを抽出
+grep "node_name start" logs/graphaiserver.log
+```
+
+**確認ポイント**:
+- ノード実行の開始・終了タイムスタンプ
+- エラーメッセージとスタックトレース
+- データフロー参照エラー（`undefined` など）
+
+#### 2. expertAgentログ
+
+```bash
+# リアルタイムでログを表示
+tail -f logs/expertagent.log
+
+# 最新100行を確認
+tail -n 100 logs/expertagent.log
+
+# エラーのみ抽出
+tail -n 100 logs/expertagent.log | grep -i error
+
+# ワーカー起動確認
+grep "Started server process" logs/expertagent.log
+```
+
+**確認ポイント**:
+- API呼び出しの成功・失敗
+- モデルのロード状況
+- RuntimeWarning（coroutine never awaited 等）
+- タイムアウトエラー
+
+---
+
+### よくあるエラーと対応
+
+| エラー | 原因 | 対応 |
+|-------|------|------|
+| `TypeError: fetch failed` | expertAgentへの接続失敗 | - expertAgent起動確認<br>- ポート番号確認（8104）<br>- ワーカー数確認（`--workers 4`） |
+| `undefined` が出力に含まれる | sourceノード参照エラー | YMLファイルで `:source.text` → `:source` に修正 |
+| `mapAgentでタイムアウト` | 並列処理過負荷 | YMLに `concurrency: 2` パラメータを追加 |
+| `RuntimeWarning: coroutine was never awaited` | expertAgent側のawait漏れ | expertAgentのPythonコードに `await` 追加 |
+| `Connection refused (port 8104)` | expertAgentが起動していない | expertAgentを起動（`--workers 4`） |
+| `HTTP 500 Internal Server Error` | graphAiServer内部エラー | - graphAiServerログ確認<br>- YML構文エラーをチェック |
+| `Model not found: gpt-oss:xxx` | 指定モデルが存在しない | - モデル名のタイポ確認<br>- 利用可能なモデルリスト確認 |
+
+詳細なエラー回避パターンは「[エラー回避パターン](#エラー回避パターン)」セクションを参照してください。
+
+---
+
+### エラー発生時の診断手順
+
+エラーが発生した場合、以下の手順で原因を特定してください。
+
+#### ステップ1: ログのタイムスタンプ確認
+
+```bash
+grep "node_name start" logs/graphaiserver.log
+# リクエストが同時刻に集中していないか確認
+```
+
+**確認ポイント**:
+- 並列処理（mapAgent）でリクエストが集中していないか
+- expertAgentへのリクエスト間隔が適切か
+
+#### ステップ2: expertAgentのワーカー数確認
+
+```bash
+grep "Started server process" logs/expertagent.log | wc -l
+# 出力が1の場合は並列処理に対応できていない
+```
+
+**判定基準**:
+- ワーカー数 = 1 → **NG**: 並列処理不可、起動オプションに `--workers 4` を追加
+- ワーカー数 ≥ 4 → **OK**: 並列処理対応
+
+#### ステップ3: 並列数（concurrency）確認
+
+YMLファイルでmapAgentに `concurrency` パラメータがあるか確認してください。
+
+```yaml
+# ❌ NG: concurrency がない
+explorer_mapper:
+  agent: mapAgent
+  inputs:
+    rows: :planner.result.outline
+  params:
+    compositeResult: true
+  # ← concurrency がない
+
+# ✅ OK: concurrency が設定されている
+explorer_mapper:
+  agent: mapAgent
+  inputs:
+    rows: :planner.result.outline
+  params:
+    compositeResult: true
+    concurrency: 2  # ← 追加
+```
+
+**推奨concurrency値**:
+| 処理の重さ | concurrency推奨値 | 説明 |
+|-----------|-----------------|------|
+| **軽量** | 4-8 | gpt-oss:4b 等、軽量モデル使用時 |
+| **中程度** | 2-3 | gpt-oss:20b、gpt-4o-mini 等 |
+| **重い** | 1-2 | gpt-oss:120b、gpt-4o 等、大型モデル使用時 |
+
+#### ステップ4: データフロー参照の確認
+
+YMLファイルのデータフロー参照が正しいか確認してください。
+
+**よくある誤り**:
+```yaml
+# ❌ NG: source.text としている
+inputs:
+  keywords: :source.text  # ← undefined になる
+
+# ✅ OK: source を直接参照
+inputs:
+  keywords: :source  # ← 正しい
+```
+
+#### ステップ5: エンドポイント動作確認
+
+expertAgentのエンドポイントが正常に動作するか直接テストしてください。
+
+```bash
+# expertAgentエンドポイントを直接テスト
+curl -X POST http://127.0.0.1:8104/aiagent-api/v1/mylllm \
+  -H "Content-Type: application/json" \
+  -d '{"user_input": "test", "model_name": "gpt-oss:20b"}'
+```
+
+**期待されるレスポンス**:
+```json
+{
+  "response": "テストレスポンス内容",
+  "model": "gpt-oss:20b"
+}
+```
+
+---
+
+### ルール更新の判断基準
+
+エラー修正後、本ドキュメント（GRAPHAI_WORKFLOW_GENERATION_RULES.md）の更新が必要か判断してください。
+
+| 状況 | ルール更新の必要性 | 更新内容 |
+|-----|----------------|---------|
+| **新しいエラーパターン発見** | ✅ 必要 | 「エラー回避パターン」セクションに追記 |
+| **新機能追加** | ✅ 必要 | 「expertAgent API統合」セクションに追記 |
+| **既知のエラー** | ⭕ 不要 | YMLファイルのみ修正 |
+| **ユーザー固有のエラー** | ⭕ 不要 | YMLファイルのNotesに記載 |
+
+**ルール更新の例**:
+
+**新しいエラーパターン発見時**:
+```markdown
+### エラー回避パターン
+
+#### [追加] sourceノード参照エラー
+
+**問題**: `:source.text` として参照すると `undefined` が出力される
+
+**原因**: sourceノードは文字列が直接注入されるため、プロパティアクセス不要
+
+**解決策**: `:source` で直接参照する
+```
+
+**新機能追加時**:
+```markdown
+### expertAgent API統合
+
+#### [追加] /utility/youtube_transcript エンドポイント
+
+**機能**: YouTubeの動画URLから字幕テキストを取得
+
+**使用例**:
+\`\`\`yaml
+youtube_fetcher:
+  agent: fetchAgent
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/utility/youtube_transcript"
+    method: "POST"
+    data:
+      video_url: ":source"
+\`\`\`
+```
 
 ---
 
@@ -2685,3 +3597,680 @@ tail -f logs/expertagent.log | grep -i error
 - 小さなワークフローから始めて段階的に複雑化
 - デバッグログを活用して動作確認
 - エラーが発生したら本ドキュメントのエラー回避パターンを確認
+
+---
+
+## 付録A: Playwright Agent 完全ガイド
+
+### 概要
+
+Playwright Agentは、Webブラウザを自動操作してWebページからデータを抽出・処理するエージェントです。expertAgent API経由でLangGraph ReAct agentパターンで統合されており、Playwright MCPの20種類以上のツールを活用できます。
+
+**⚠️ 重要な制限事項:**
+- **Webサイトからの情報抽出には不向き**: ブラウザの構造化データ取得の精度が低く、特定要素の抽出が困難
+- **推奨用途**: フォーム操作、スクリーンショット取得、JavaScript実行など、ブラウザ操作が必要な場合のみ
+- **代替手段**: Webページからのテキスト・情報抽出には **Explorer Agent（html2markdown MCP）** の使用を強く推奨
+
+### コア機能
+
+#### 1. **Webページの遷移・操作**
+
+- **ページナビゲーション**: URL遷移、戻る操作
+- **フォーム操作**: テキスト入力、ボタンクリック、ドロップダウン選択
+- **インタラクション**: ドラッグ&ドロップ、ホバー、キーボード入力
+- **タブ管理**: 新規タブ作成、タブ切替、タブクローズ
+
+#### 2. **Webページからのデータ抽出**
+
+- **ページ全体のテキスト取得**: `browser_snapshot`でアクセシビリティツリー形式で構造化されたテキストを取得
+- **特定要素のテキスト抽出**: セレクタ指定で特定部分のみ抽出
+- **ファイルリンクの一括抽出**: PDFリンク、画像リンク、ダウンロードリンク等を自動収集
+- **スクリーンショット取得**: ページ全体または特定要素のスクリーンショット
+
+#### 3. **動的コンテンツ対応**
+
+- **要素の出現待機**: 特定のテキストや要素が表示されるまで待機
+- **JavaScript実行**: カスタムJavaScriptをページ上で実行
+- **ネットワーク監視**: HTTPリクエスト/レスポンスの記録
+- **コンソールログ取得**: ブラウザコンソールのログ・エラーを取得
+
+### GraphAI YML統合パターン
+
+#### パターン1: Webページからテキスト抽出
+
+```yaml
+# ニュースサイトから記事本文を抽出
+web_scraper:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    method: "POST"
+    data:
+      user_input: "下記サイトから記事のタイトルと本文を抽出してください。\nhttps://example.com/news/article-123"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン2: PDFリンク一括抽出
+
+```yaml
+# 政府サイトから公開資料のPDFリンクを全て抽出
+pdf_link_extractor:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    method: "POST"
+    data:
+      user_input: "下記サイトから全てのPDFファイルのURLリンクを抽出してください。\nhttps://japancredit.go.jp/data/"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン3: 複数ページから情報収集
+
+```yaml
+# 複数の製品ページから価格情報を収集
+price_collector:
+  agent: "mapAgent"
+  inputs:
+    rows: [":product_urls"]
+  params:
+    concurrency: 2  # 並列数制限（Bot検出回避）
+  graph:
+    nodes:
+      fetch_price:
+        agent: "fetchAgent"
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+          method: "POST"
+          data:
+            user_input: "下記製品ページから製品名と価格を抽出してください。\n:row"
+            model_name: "gpt-4o-mini"
+        isResult: true
+```
+
+### 利用可能なPlaywright MCPツール（主要20種類）
+
+expertAgent内部で使用可能なツール一覧（使用頻度順）:
+
+| ツール名 | 機能 | 使用例 |
+|---------|------|-------|
+| `browser_snapshot` | ページ全体の構造・テキスト取得 | テキスト抽出、構造解析 |
+| `browser_navigate` | URL遷移 | ページ移動、初回アクセス |
+| `browser_click` | 要素クリック | ボタン押下、リンククリック |
+| `browser_type` | テキスト入力 | フォーム入力、検索ボックス |
+| `browser_take_screenshot` | スクリーンショット | ページキャプチャ、証拠保存 |
+| `browser_wait_for` | 要素の出現待機 | 動的コンテンツ読込待ち |
+| `browser_evaluate` | JavaScript実行 | カスタム処理、データ抽出 |
+| `browser_fill_form` | フォーム一括入力 | 複数フィールド入力 |
+| `browser_network_requests` | ネットワーク監視 | API呼び出し確認 |
+| `browser_console_messages` | コンソールログ取得 | エラー確認、デバッグ |
+| その他10種類 | select_option, hover, drag, tabs等 | - |
+
+**重要**: これらのツールはLLMエージェントが自動選択します。ワークフロー作成者が直接指定する必要はありません。
+
+### 技術的注意事項
+
+#### expertAgent API統合
+
+- **ポート番号**: `127.0.0.1:8104`（expertAgent）
+- **エンドポイント**: `/aiagent-api/v1/aiagent/utility/playwright`
+- **推奨モデル**: `gpt-4o-mini`（Playwright指示理解に最適、コスト効率良好）
+- **最大イテレーション**: 5回（デフォルト）
+
+#### Bot検出対策
+
+expertAgentでは以下の対策が実装済み:
+
+- **User-Agent設定**: Chrome 131相当の現実的なUser-Agentを自動設定
+- **Headlessモード**: `--headless`オプション有効
+- **並列数制限**: mapAgent使用時は`concurrency: 2`推奨（同時アクセス過多を回避）
+
+**対応例**:
+- ✅ `https://japancredit.go.jp/data/` - 403エラーを回避（User-Agent設定により解決済み）
+- ✅ 一般的な企業サイト - 問題なくアクセス可能
+
+#### Docker要件
+
+- **共有メモリ**: `shm_size: 2gb` 必須（Chromiumブラウザ動作に必要）
+- **設定場所**: `docker-compose.yml`の`expertagent`サービス
+
+```yaml
+services:
+  expertagent:
+    shm_size: 2gb  # Playwright動作に必須
+```
+
+#### タイムアウト設定
+
+- **グローバルタイムアウト**: 300秒（5分）
+- **ページロードタイムアウト**: 30秒（Playwright MCP内部設定）
+- **並列処理時の注意**: 重いLLM（gpt-oss:120b）使用時はconcurrency:1-2推奨
+
+### よくある使用パターン
+
+#### 使用例1: 競合他社の価格調査
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      competitors:
+        - "https://competitor-a.com/product"
+        - "https://competitor-b.com/product"
+
+  price_research:
+    agent: "mapAgent"
+    inputs:
+      rows: [":source.competitors"]
+    params:
+      concurrency: 2
+    graph:
+      nodes:
+        scrape:
+          agent: "fetchAgent"
+          params:
+            url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+            method: "POST"
+            data:
+              user_input: "下記ページから製品名、価格、在庫状況を抽出してください。\n:row"
+              model_name: "gpt-4o-mini"
+          isResult: true
+    isResult: true
+```
+
+#### 使用例2: 公開資料の自動収集
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      target_url: "https://example.gov.jp/reports/"
+
+  collect_pdf_links:
+    agent: "fetchAgent"
+    inputs:
+      url: [":source.target_url"]
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+      method: "POST"
+      data:
+        user_input: "下記サイトから全てのPDFファイルのURLリンクを抽出してください。\n:source.target_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+    isResult: true
+```
+
+---
+
+## 付録B: Explorer Agent 完全ガイド
+
+### 概要
+
+Explorer Agentは、Web検索とWebページコンテンツ抽出に特化したエージェントです。Google検索、WebサイトのHTML→Markdown変換、Gmail検索など、情報収集タスクに最適化されています。
+
+### コア機能
+
+#### 1. **Web検索（Google Custom Search API）**
+
+- **キーワード検索**: Google検索で情報を収集
+- **結果フィルタリング**: 件数指定、ドメイン制限
+- **構造化出力**: タイトル、URL、スニペット
+
+#### 2. **Webページコンテンツ抽出（html2markdown MCP）** 🆕
+
+- **HTMLをMarkdownに変換**: Webページの内容を構造化されたMarkdown形式で取得
+- **高精度**: Playwright Agentと比較して、テキスト抽出精度が大幅に向上
+- **推奨用途**: ニュース記事、ブログ記事、ドキュメントページなど、テキストコンテンツの抽出
+- **対応形式**: HTML → Markdown（見出し、リスト、リンク、表などを保持）
+
+**Playwright Agentとの比較:**
+
+| 項目 | Explorer Agent (html2markdown) | Playwright Agent |
+|------|-------------------------------|------------------|
+| **テキスト抽出精度** | ⭐⭐⭐⭐⭐ 高精度 | ⭐⭐ 低精度 |
+| **構造保持** | ⭐⭐⭐⭐⭐ Markdown形式 | ⭐⭐ アクセシビリティツリー |
+| **推奨用途** | **Webページの情報抽出** | ブラウザ操作・スクリーンショット |
+| **処理速度** | ⭐⭐⭐⭐⭐ 高速 | ⭐⭐⭐ 中速 |
+
+#### 3. **Gmail検索（Gmail MCP）** 🆕
+
+- **メール検索**: Gmail検索クエリでメールを検索
+- **フィルタリング**: 送信者、件名、日付範囲などで絞り込み
+- **本文取得**: メール本文の取得・解析
+- **OAuth2認証**: MyVault経由で安全にアクセス
+
+### GraphAI YML統合パターン
+
+#### パターン1: Webページからテキスト抽出（html2markdown）
+
+```yaml
+# ニュースサイトから記事本文を抽出
+web_content_extractor:
+  agent: fetchAgent
+  inputs:
+    url: :source
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+    method: "POST"
+    body:
+      user_input: "下記サイトの記事本文をMarkdown形式で抽出してください。\nhttps://example.com/news/article-123"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン2: Google検索とコンテンツ収集
+
+```yaml
+# Google検索で上位5件の記事を取得し、各記事の本文を抽出
+research_workflow:
+  agent: fetchAgent
+  inputs:
+    query: :source
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+    method: "POST"
+    body:
+      user_input: "下記キーワードでGoogle検索し、上位5件の記事の本文を抽出してMarkdownで出力してください。\n:query"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン3: Gmail検索とメール解析
+
+```yaml
+# 特定の送信者からの未読メールを検索・要約
+gmail_search:
+  agent: fetchAgent
+  inputs:
+    search_query: :source
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+    method: "POST"
+    body:
+      user_input: "Gmailで下記条件のメールを検索し、件名と本文の要約を出力してください。\n検索条件: from:boss@example.com is:unread"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+### 利用可能なMCPツール
+
+Explorer Agent内部で使用可能なツール一覧:
+
+| ツール名 | 機能 | 使用例 |
+|---------|------|-------|
+| **html2markdown** 🆕 | HTMLをMarkdownに変換 | Webページのテキスト抽出 |
+| **google_search** | Google Custom Search | キーワード検索、情報収集 |
+| **gmail_search** 🆕 | Gmail検索 | メール検索、受信トレイ管理 |
+
+**重要**: これらのツールはLLMエージェントが自動選択します。ワークフロー作成者が直接指定する必要はありません。
+
+### 技術的注意事項
+
+#### expertAgent API統合
+
+- **ポート番号**: `127.0.0.1:8104`（expertAgent）
+- **エンドポイント**: `/aiagent-api/v1/aiagent/utility/explorer`
+- **推奨モデル**: `gpt-4o-mini`（指示理解に最適、コスト効率良好）
+
+#### html2markdown MCP
+
+- **出力形式**: Markdown（見出し `#`, リスト `-`, リンク `[text](url)` など）
+- **文字コード**: UTF-8
+- **エラー処理**: ページ取得失敗時はエラーメッセージを返す
+
+#### Gmail MCP
+
+- **認証**: MyVault経由でOAuth2トークン取得
+- **権限**: Gmail読み取り専用スコープ
+- **事前準備**: ユーザーがMyVaultでGoogle認証を完了している必要あり
+
+### よくある使用パターン
+
+#### 使用例1: 競合他社のブログ記事分析
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      competitor_url: "https://competitor.com/blog/new-product"
+
+  extract_article:
+    agent: fetchAgent
+    inputs:
+      url: :source.competitor_url
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+      method: "POST"
+      body:
+        user_input: "下記ブログ記事の本文をMarkdown形式で抽出してください。\n:source.competitor_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+
+  analyze:
+    agent: fetchAgent
+    inputs:
+      content: :extract_article.result
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+      method: "POST"
+      body:
+        user_input: "以下のブログ記事を分析し、主要なポイントを3つ挙げてください。\n:content"
+        model_name: "gpt-oss:120b"
+    isResult: true
+```
+
+#### 使用例2: Gmail受信トレイの自動トリアージ
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      search_condition: "is:unread newer_than:1d"
+
+  search_emails:
+    agent: fetchAgent
+    inputs:
+      query: :source.search_condition
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+      method: "POST"
+      body:
+        user_input: "Gmailで下記条件のメールを検索し、各メールの送信者、件名、重要度を判定してください。\n検索条件: :query"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+    isResult: true
+```
+
+---
+
+## 付録C: File Reader Agent 完全ガイド
+
+### 概要
+
+File Reader Agentは、Web上やローカルのファイルを読み込み、内容を抽出するエージェントです。PDF、画像、音声、テキストなど様々なファイル形式に対応しており、expertAgent API経由でFastMCP stdioトランスポートで統合されています。
+
+### コア機能
+
+#### 1. **マルチフォーマット対応**
+
+- **PDF処理**: PyPDF2で全ページのテキストを抽出（要約なし、原文そのまま）
+- **画像処理**: OpenAI Vision API（gpt-4o）でOCR・画像解析
+- **音声処理**: OpenAI Whisper API（whisper-1）で音声文字起こし
+- **テキスト処理**: UTF-8/Shift-JIS/EUC-JP等、複数エンコーディング対応
+- **CSV処理**: 解析・整形してテキスト化
+
+#### 2. **多様なデータソース対応**
+
+- **インターネットURL**: HTTP/HTTPS経由でファイルをダウンロード（タイムアウト30秒）
+- **Google Drive**: OAuth2認証でプライベートファイルにアクセス（MyVault管理）
+- **ローカルファイル**: セキュリティ制限付きで許可ディレクトリ内のファイルを読込
+
+#### 3. **自動処理判定**
+
+ユーザーの指示文の内容に応じて、最適な処理方法を自動選択:
+
+- "テキストを抽出してください" → PDF全文抽出（PyPDF2）
+- "画像の内容を説明してください" → Vision API解析（gpt-4o）
+- "文字起こししてください" → Whisper API文字起こし（whisper-1）
+
+### GraphAI YML統合パターン
+
+#### パターン1: PDF全文抽出
+
+```yaml
+# Google DriveのPDFホワイトペーパーから全文を抽出
+pdf_extractor:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記ファイルのテキスト情報を全て抽出してください。可能な限り元のファイルに忠実にしてください。\nhttps://drive.google.com/file/d/1ABC123XYZ/view"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン2: 画像からのOCR
+
+```yaml
+# スクリーンショット画像からテキストを抽出
+image_ocr:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記画像ファイルのテキストを抽出してください（OCR）。\nhttps://example.com/screenshot.png"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン3: 音声文字起こし
+
+```yaml
+# ポッドキャスト音声を文字起こし
+audio_transcription:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記音声ファイルを文字起こししてください。\nhttps://example.com/podcast/episode-01.mp3"
+      model_name: "gpt-4o-mini"
+  console:
+    after: true
+```
+
+#### パターン4: 複数PDFの一括処理
+
+```yaml
+# 複数のレポートPDFから情報を抽出・要約
+pdf_batch_processor:
+  agent: "mapAgent"
+  inputs:
+    rows: [":pdf_urls"]  # PDFのURLリスト
+  params:
+    concurrency: 3  # 3ファイル並列処理
+  graph:
+    nodes:
+      extract_and_summarize:
+        agent: "fetchAgent"
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+          method: "POST"
+          data:
+            user_input: "下記PDFファイルから重要なポイントを3つ抽出してください。\n:row"
+            model_name: "gpt-4o-mini"
+        isResult: true
+```
+
+### 対応形式一覧表
+
+| ファイル形式 | 処理方法 | API/ライブラリ | 出力形式 | タイムアウト |
+|------------|---------|-------------|---------|------------|
+| **PDF** | 全ページテキスト抽出 | PyPDF2 | `--- Page N ---` 区切り付き全文 | - |
+| **PNG/JPG/JPEG** | Vision API解析 | OpenAI gpt-4o | ユーザー指示に応じた結果 | - |
+| **MP3/MP4/WAV** | 音声文字起こし | OpenAI whisper-1 | 全文テキスト | - |
+| **TXT/MD** | 直接読込 | Python標準 | 全文テキスト | - |
+| **CSV** | 解析・整形 | Python CSV | 整形済みテキスト | - |
+
+**処理特性:**
+- **PDF**: 要約せず、全ページの原文をそのまま返す
+- **画像**: max_tokens=1000（Vision API制限）
+- **音声**: response_format="text"（Whisper API）
+
+### 重要な使用上の注意
+
+#### ❗ 画像ファイル指定時の必須表現
+
+画像ファイルを処理する場合、指示文に**必ず「画像」「画像ファイル」という表現を含める**必要があります。
+
+**失敗例:**
+```yaml
+# ❌ NG: LLMがツール呼び出しを拒否
+data:
+  user_input: "テキストを抽出してください。\nhttps://drive.google.com/file/d/IMAGE_ID/view"
+```
+
+**成功例:**
+```yaml
+# ✅ OK: 「画像ファイルの」を明記
+data:
+  user_input: "下記画像ファイルのテキストを抽出してください。\nhttps://drive.google.com/file/d/IMAGE_ID/view"
+
+# ✅ OK: 「画像の内容を」を明記
+data:
+  user_input: "下記画像の内容を説明してください。\nhttps://example.com/screenshot.png"
+```
+
+**理由**: LLMが「テキスト抽出」=「PDF」と解釈し、画像ファイルに対してツール呼び出しを拒否するため。
+
+#### Google Drive認証
+
+- **認証方法**: MyVault経由でOAuth2トークンを自動取得
+- **事前準備**: ユーザーがMyVaultでGoogle認証を完了している必要あり
+- **対応URL形式**:
+  - `https://drive.google.com/file/d/FILE_ID/view`
+  - `https://drive.google.com/open?id=FILE_ID`
+
+**権限エラーが発生する場合:**
+1. Google Drive側で「リンクを知っている全員」に共有設定
+2. MyVaultでGoogle認証を再実行
+
+#### ローカルファイルのセキュリティ制限
+
+**許可ディレクトリ:**
+- `/tmp`, `/var/tmp`
+- `~/Downloads`, `~/Documents`
+
+**使用例:**
+```yaml
+local_file_reader:
+  agent: "fetchAgent"
+  params:
+    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+    method: "POST"
+    data:
+      user_input: "下記ファイルの内容を表示してください。\n/tmp/document.pdf"
+      model_name: "gpt-4o-mini"
+```
+
+**エラー例:**
+```
+Error: File path is outside allowed directories
+```
+
+### 技術的注意事項
+
+#### expertAgent API統合
+
+- **ポート番号**: `127.0.0.1:8104`（expertAgent）
+- **エンドポイント**: `/aiagent-api/v1/aiagent/utility/file_reader`
+- **推奨モデル**: `gpt-4o-mini`（指示理解に最適、コスト効率良好）
+
+#### ファイル処理の制限
+
+| 項目 | 制限値 | 備考 |
+|------|--------|------|
+| **ファイルサイズ** | 50MB | デフォルト設定、変更可能 |
+| **HTTPタイムアウト** | 30秒 | ダウンロード時 |
+| **Vision API max_tokens** | 1000トークン | 画像解析の出力長 |
+
+#### 一時ファイル管理
+
+- **保存先**: `/tmp/tmpXXXXXX.tmp`
+- **クリーンアップ**: 処理完了後に自動削除
+- **セキュリティ**: Path Traversal攻撃対策実装済み
+
+#### 使用API
+
+| 処理 | API | モデル | コスト |
+|------|-----|--------|--------|
+| **画像解析** | OpenAI Vision API | gpt-4o | $$$ |
+| **音声文字起こし** | OpenAI Whisper API | whisper-1 | $ |
+| **PDF抽出** | PyPDF2（ローカル） | - | 無料 |
+
+**コスト最適化**: PDFはローカル処理のため無料。画像・音声はOpenAI API使用のためコスト発生。
+
+### よくある使用パターン
+
+#### 使用例1: 技術ドキュメントの内容抽出→要約
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      pdf_url: "https://example.com/technical-whitepaper.pdf"
+
+  extract_pdf:
+    agent: "fetchAgent"
+    inputs:
+      url: [":source.pdf_url"]
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+      method: "POST"
+      data:
+        user_input: "下記PDFファイルのテキストを全て抽出してください。\n:source.pdf_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+
+  summarize:
+    agent: "openAIAgent"
+    inputs:
+      content: [":extract_pdf"]
+    params:
+      model: "gpt-oss:120b"  # ローカルLLM使用
+      system: "技術ドキュメントを読み、重要なポイントを3つ挙げてください。"
+      prompt: ":content"
+    isResult: true
+```
+
+#### 使用例2: 画像ベースの議事録作成
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      screenshot_url: "https://drive.google.com/file/d/SCREENSHOT_ID/view"
+
+  ocr_screenshot:
+    agent: "fetchAgent"
+    inputs:
+      url: [":source.screenshot_url"]
+    params:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader"
+      method: "POST"
+      data:
+        user_input: "下記画像ファイルのテキストを抽出してください（ホワイトボードの議事録）。\n:source.screenshot_url"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+
+  format_minutes:
+    agent: "openAIAgent"
+    inputs:
+      ocr_text: [":ocr_screenshot"]
+    params:
+      model: "gpt-oss:20b"
+      system: "議事録を整形し、決定事項、アクションアイテム、次回予定を抽出してください。"
+      prompt: ":ocr_text"
+    isResult: true
+```
