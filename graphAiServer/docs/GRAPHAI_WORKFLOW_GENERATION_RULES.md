@@ -186,6 +186,122 @@ mapper:
             data: :row.field  # 各要素にアクセス
 ```
 
+#### mapAgentの出力形式と参照方法（重要）
+
+mapAgentの出力形式は `compositeResult` パラメータによって大きく異なります。
+後続ノードでの参照方法も変わるため、**必ず理解してください**。
+
+##### パターンA: compositeResult なし（デフォルト）
+
+**出力形式**: オブジェクトの配列
+
+```json
+[
+  {
+    "read_pdf": {...},
+    "summarize_content": {...},
+    "format_summary": "文字列"
+  },
+  {
+    "read_pdf": {...},
+    "summarize_content": {...},
+    "format_summary": "文字列"
+  }
+]
+```
+
+**後続ノードでの参照**:
+- ❌ `:mapAgentノード名.format_summary` → **機能しない**
+- ✅ `nestedAgent` を使って変換が必要（後述のSolution 1参照）
+
+**YML例**:
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  # compositeResult 未指定
+  graph:
+    nodes:
+      format_summary:
+        agent: stringTemplateAgent
+        params:
+          template: "Result: ${input}"
+        isResult: true
+
+# この場合、後続ノードで nestedAgent が必要
+extract_summaries:
+  agent: nestedAgent
+  inputs:
+    array: :summarize_pdfs
+  graph:
+    nodes:
+      extract:
+        value: :row.format_summary
+        isResult: true
+  params:
+    compositeResult: true
+
+join_results:
+  agent: arrayJoinAgent
+  inputs:
+    array: :extract_summaries
+```
+
+##### パターンB: compositeResult: true（推奨）
+
+**出力形式**: `{ "isResultノード名": [...] }` 形式のオブジェクト
+
+```json
+{
+  "format_summary": [
+    "文字列1",
+    "文字列2",
+    "文字列3"
+  ]
+}
+```
+
+**重要**:
+- オブジェクトのキー名は、サブグラフ内で `isResult: true` が指定されたノードの名前
+- 値は、そのノードの出力の配列
+
+**後続ノードでの参照**:
+- ✅ `:mapAgentノード名.isResultノード名` → **配列が取得できる**
+
+**YML例**:
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  params:
+    compositeResult: true  # ← 必須
+  graph:
+    nodes:
+      format_summary:
+        agent: stringTemplateAgent
+        params:
+          template: "Result: ${input}"
+        isResult: true  # ← この名前が出力オブジェクトのキーになる
+
+# 直接参照可能（nestedAgent 不要）
+join_results:
+  agent: arrayJoinAgent
+  inputs:
+    array: :summarize_pdfs.format_summary  # ← プロパティアクセス
+```
+
+##### 推奨事項
+
+**mapAgentを使用する場合**:
+1. **必ず `compositeResult: true` を指定する**（パターンB）
+2. サブグラフの最終ノードに `isResult: true` を指定
+3. 後続ノードで `:mapAgentノード名.isResultノード名` で参照
+
+**理由**:
+- nestedAgentによる変換が不要（シンプル）
+- データ構造が予測可能
+- デバッグが容易
+
+---
+
 ### arrayJoinAgent
 
 配列を結合するエージェント。
@@ -1504,33 +1620,84 @@ extract_summaries:
 # 出力: ["要約1", "要約2", "要約3"]
 ```
 
-**解決策2: mapAgentのサブグラフで文字列を直接返す**
+**解決策2: stringTemplateAgent + compositeResult（推奨）**
 
-isResultノードで文字列を直接指定:
+mapAgentの `compositeResult: true` パラメータと `isResult: true` を組み合わせて、
+文字列を直接返却する方法です。
+
+**重要**: この方法では、mapAgentの出力が `{ "isResultノード名": [...] }` 形式になるため、
+後続ノードで `:mapAgentノード名.isResultノード名` という参照が必要です。
 
 ```yaml
 summarize_pdfs:
   agent: mapAgent
+  params:
+    compositeResult: true  # ← 必須
+    concurrency: 2
   inputs:
     rows: :pdf_urls
   graph:
     nodes:
-      summarizer:
+      read_pdf:
         agent: fetchAgent
+        inputs:
+          url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader
+          method: POST
+          body:
+            user_input: "PDFを読み込んでください: ${row}"
+
+      summarize:
+        agent: fetchAgent
+        inputs:
+          url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+          method: POST
+          body:
+            user_input: "要約してください: :read_pdf.result"
+            model_name: "gpt-oss:120b"
+
+      format_summary:
+        agent: stringTemplateAgent
+        inputs:
+          pdf_url: :row
+          summary: :summarize.result
         params:
-          url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
-          method: "POST"
-          data:
-            user_input: "要約してください"
+          template: |
+            PDF: ${pdf_url}
+            Summary: ${summary}
+        isResult: true  # ← この名前が重要
 
-      extract_text:
-        value: :summarizer.result  # 文字列を直接取得
-        isResult: true  # ← これにより文字列が直接返される
+# mapAgentの出力: { "format_summary": ["文字列1", "文字列2"] }
+
+join_summaries:
+  agent: arrayJoinAgent
+  inputs:
+    array: :summarize_pdfs.format_summary  # ← プロパティアクセス
   params:
-    compositeResult: true
-
-# 出力: ["要約1", "要約2", "要約3"]
+    separator: "\n\n---\n\n"
 ```
+
+**期待される動作**:
+1. `summarize_pdfs` の出力:
+   ```json
+   {
+     "format_summary": [
+       "PDF: url1\nSummary: 要約1",
+       "PDF: url2\nSummary: 要約2"
+     ]
+   }
+   ```
+
+2. `join_summaries` の入力:
+   ```json
+   ["PDF: url1\nSummary: 要約1", "PDF: url2\nSummary: 要約2"]
+   ```
+
+3. `join_summaries` の出力:
+   ```json
+   {
+     "text": "PDF: url1\nSummary: 要約1\n\n---\n\nPDF: url2\nSummary: 要約2"
+   }
+   ```
 
 **解決策3: copyAgentで単一フィールドを抽出**
 
@@ -2625,6 +2792,230 @@ nodes:
 - 小さなワークフローから始めて段階的に複雑化
 - デバッグログを活用して動作確認
 - エラーが発生したら本ドキュメントのエラー回避パターンを確認
+
+---
+
+## よくあるエラーパターンと対策
+
+### エラー1: `[object Object]` が出力される
+
+#### 症状
+arrayJoinAgent の出力が以下のようになる:
+```
+"[object Object]\n\n---\n\n[object Object]"
+```
+
+#### 原因
+1. mapAgentの出力がオブジェクトの配列
+2. arrayJoinAgentがオブジェクトを文字列化している
+
+#### 診断方法
+GraphAI APIレスポンスの `results` フィールドを確認:
+```json
+{
+  "results": {
+    "summarize_pdfs": [
+      {
+        "read_pdf": {...},
+        "format_summary": "文字列"  // ← オブジェクト内に文字列がある
+      }
+    ],
+    "join_summaries": {
+      "text": "[object Object]\\n\\n---\\n\\n[object Object]"
+    }
+  }
+}
+```
+
+#### 解決策
+**方法1**: `compositeResult: true` を追加（推奨）
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  params:
+    compositeResult: true  # ← 追加
+
+join_summaries:
+  agent: arrayJoinAgent
+  inputs:
+    array: :summarize_pdfs.format_summary  # ← プロパティアクセス
+```
+
+**方法2**: `nestedAgent` で変換
+```yaml
+extract_summaries:
+  agent: nestedAgent
+  inputs:
+    array: :summarize_pdfs
+  graph:
+    nodes:
+      extract:
+        value: :row.format_summary
+        isResult: true
+  params:
+    compositeResult: true
+
+join_summaries:
+  agent: arrayJoinAgent
+  inputs:
+    array: :extract_summaries
+```
+
+---
+
+### エラー2: arrayJoinAgent で `namedInputs.array is UNDEFINED`
+
+#### 症状
+```
+arrayJoinAgent: namedInputs.array is UNDEFINED!
+```
+
+#### 原因
+`:mapAgentノード名.プロパティ名` の参照が機能していない
+
+#### 診断方法
+GraphAI APIレスポンスで mapAgent の出力形式を確認:
+```json
+{
+  "results": {
+    "summarize_pdfs": [...]  // ← 配列の場合、プロパティアクセス不可
+  }
+}
+```
+
+#### 解決策
+`compositeResult: true` が指定されているか確認:
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  params:
+    compositeResult: true  # ← これがないとプロパティアクセス不可
+```
+
+---
+
+### エラー3: Silent Failure（データ捏造）
+
+#### 症状
+- エラーは発生しない
+- ワークフローは正常終了
+- しかし、最終出力が元データと異なる
+
+#### 原因
+1. 中間ノードでデータ破損（例: `[object Object]`）
+2. 後続のLLMが破損データを受け取る
+3. LLMが「それらしい内容」を生成（Hallucination）
+
+#### 診断方法
+**必須**: 中間ノードの出力を検証
+```yaml
+重要なノード:
+  agent: 何らかのエージェント
+  console:
+    after: true  # ← ログ出力を有効化
+```
+
+**確認**: GraphAI APIレスポンスの `results` フィールド
+```json
+{
+  "results": {
+    "join_summaries": {
+      "text": "[object Object]..."  // ← データ破損を検出
+    },
+    "create_email_body": {
+      "result": "それらしい内容"  // ← LLMが捏造
+    }
+  }
+}
+```
+
+#### 解決策
+1. **データフローの検証**
+   - 各ノードの出力形式を確認
+   - 期待値と実際値を比較
+
+2. **入力検証の追加**
+   - LLMノードの前に検証ノードを追加
+   - データ型チェック
+
+3. **デバッグの優先順位**
+   - ① GraphAI APIレスポンスの `results` フィールド
+   - ② コンソール出力（`console.after: true`）
+   - ③ ログファイル
+
+---
+
+### エラー4: jsonoutput Agent で HTTP 500 エラー
+
+#### 症状
+```
+parse_input node failed with HTTP error: 500
+The jsonoutput agent failed because the LLM did not return a valid JSON
+```
+
+#### 原因
+LLMへのプロンプトが不明確で、JSON形式で返さない
+
+#### 解決策
+**stringTemplateAgent で明確なプロンプトを作成**:
+```yaml
+parse_input_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    source: :source
+  params:
+    template: |
+      Please parse the following JSON string and return it as a valid JSON object.
+      Do not add any commentary, just return the JSON object.
+      Input:
+      ${source}
+
+parse_input:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+    method: POST
+    body:
+      user_input: :parse_input_prompt
+      model_name: "gpt-oss:20b"
+```
+
+---
+
+### デバッグのベストプラクティス
+
+#### 1. console.after を活用
+```yaml
+重要なノード:
+  agent: mapAgent
+  console:
+    after: true  # ← 必ず追加
+```
+
+#### 2. GraphAI APIレスポンスを記録
+```bash
+curl -X POST http://localhost:8105/api/v1/myagent/test \
+  -H "Content-Type: application/json" \
+  -d '{"user_input": "..."}' \
+  | jq '.' > response.json
+```
+
+#### 3. 中間データの検証
+```json
+{
+  "results": {
+    "mapAgentノード": {
+      // ← この構造を確認
+      "isResultノード名": [...]
+    }
+  }
+}
+```
+
+#### 4. エラーなし ≠ 正しい動作
+- LLMは破損データを受け取っても「それらしい出力」を生成する
+- 必ず中間ノードの出力を検証
+- 最終出力が元データに基づいているか確認
 
 ---
 
