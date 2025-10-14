@@ -1207,6 +1207,45 @@ git push
 
 # 📝 作業ドキュメント管理
 
+## GraphAI ワークフロー開発時の参照ドキュメント
+
+GraphAI ワークフローを開発する際は、以下のドキュメントを必ず参照してください：
+
+### 必須ドキュメント
+1. **GRAPHAI_WORKFLOW_GENERATION_RULES.md**
+   - パス: `./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md`
+   - 内容: GraphAI の完全リファレンス
+   - 特に重要: 「mapAgentの出力形式と参照方法」セクション（Lines 189-303）
+
+2. **WORKFLOW_DEVELOPMENT_TEMPLATE.md**
+   - パス: `./graphAiServer/docs/WORKFLOW_DEVELOPMENT_TEMPLATE.md`
+   - 内容: ワークフロー開発の標準テンプレート
+   - 使用タイミング: 開発開始前に必ず読む
+
+3. **ITERATION_RECORD_TEMPLATE.md**
+   - パス: `./graphAiServer/docs/ITERATION_RECORD_TEMPLATE.md`
+   - 内容: イテレーション記録の標準フォーマット
+   - 使用タイミング: テスト・デバッグ時
+
+### 重要な注意事項
+
+#### mapAgent使用時
+- ✅ 必ず `compositeResult: true` を指定
+- ✅ 後続ノードでは `:mapAgentノード名.isResultノード名` で参照
+- ✅ `console.after: true` を追加してログを有効化
+
+#### デバッグ時
+- ✅ GraphAI APIレスポンスの `results` フィールドを必ず確認
+- ✅ `[object Object]` エラーが出たら、GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン」（Lines 2798-3020）を参照
+- ⚠️ YML実装が正しくても、実行結果が異なる可能性があるため、APIレスポンスを信頼
+
+#### Silent Failure に注意
+- LLMは破損データを受け取っても「それらしい出力」を生成する
+- 中間ノードの出力を必ず検証
+- エラーなし ≠ 正しい動作
+
+---
+
 ## Claude Code 作業記録ルール
 
 Claude Codeによる開発作業では、以下のドキュメントを `./workspace/claudecode/` ディレクトリにMarkdown形式で保存します。

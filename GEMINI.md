@@ -21,14 +21,21 @@ Gemini CLIに以下のシステムプロンプトを設定してください:
 以下のドキュメントに従ってワークフローを生成してください：
 
 📄 完全リファレンス: ./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md
+📋 開発テンプレート: ./graphAiServer/docs/WORKFLOW_DEVELOPMENT_TEMPLATE.md
+📝 記録テンプレート: ./graphAiServer/docs/ITERATION_RECORD_TEMPLATE.md
 
 【必須タスク】
-1. フェーズ1-5を順番に実行
-2. 各フェーズ完了時に ./workspace/geminicli/{workflow_name}/phaseN-*.md に記録
-3. エラー発生時は最大5回までイテレーション
-4. 完了時に summary.md を生成
+1. **開始前**: WORKFLOW_DEVELOPMENT_TEMPLATE.md を読み、技術的考慮事項を確認
+2. フェーズ1-5を順番に実行
+3. 各フェーズ完了時に ./workspace/geminicli/{workflow_name}/phaseN-*.md に記録
+4. **エラー発生時**: ITERATION_RECORD_TEMPLATE.md に従って詳細記録
+5. 完了時に summary.md を生成
 
-【重要】各フェーズの記録を必ず保存してください。記録なしで次のフェーズに進まないこと。
+【重要な注意事項】
+- ✅ mapAgent使用時は必ず `compositeResult: true` を指定
+- ✅ APIレスポンスの `results` フィールドを必ず記録
+- ✅ `[object Object]` エラーが出たら、GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン」を参照
+- ⚠️ 記録なしで次のフェーズに進まないこと
 ```
 
 ### ステップ2: ワークフロー生成依頼
@@ -61,6 +68,38 @@ curl -X POST http://127.0.0.1:8105/api/v1/myagent/llmwork/{workflow_name} \
 tail -f logs/graphaiserver.log
 tail -f logs/expertagent.log
 ```
+
+---
+
+## ⚠️ mapAgent使用時の必須チェック
+
+mapAgentを使用する場合、以下を必ず確認してください：
+
+### 1. compositeResult: true の指定
+```yaml
+process_items:
+  agent: mapAgent
+  params:
+    compositeResult: true  # ← これがないと [object Object] エラー
+```
+
+### 2. 後続ノードでの正しい参照
+```yaml
+join_results:
+  agent: arrayJoinAgent
+  inputs:
+    array: :process_items.isResultノード名  # ← プロパティアクセス
+```
+
+### 3. デバッグ用ログの有効化
+```yaml
+process_items:
+  agent: mapAgent
+  console:
+    after: true  # ← 必ず追加
+```
+
+詳細: `./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md` の「mapAgentの出力形式と参照方法」セクション
 
 ---
 
@@ -209,6 +248,70 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4
 | **各Agent詳細ガイド** | Agent別の詳細仕様 | 中頻度 |
 
 **ルール**: 技術的な詳細は必ず **GRAPHAI_WORKFLOW_GENERATION_RULES.md** に記載し、本ドキュメントは最小限の手順のみを記載します。
+
+---
+
+## ❌ よくある失敗パターンと対策
+
+### 失敗パターン1: [object Object] エラー
+
+**症状**:
+```
+arrayJoinAgent の出力: "[object Object]\n\n---\n\n[object Object]"
+```
+
+**原因**: `compositeResult: true` の欠如
+
+**対策**:
+1. mapAgentに `compositeResult: true` を追加
+2. 後続ノードで `:mapAgentノード名.isResultノード名` 形式で参照
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー1」を参照
+
+---
+
+### 失敗パターン2: Silent Failure（データ捏造）
+
+**症状**: エラーは出ないが、最終出力が元データと異なる
+
+**原因**: 中間ノードでデータ破損 → LLMが「それらしい内容」を捏造
+
+**対策**:
+1. `console.after: true` で中間ノードを監視
+2. GraphAI APIレスポンスの `results` フィールドを必ず確認
+3. 中間データが `[object Object]` になっていないか検証
+
+**重要**: エラーなし ≠ 正しい動作
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー3」を参照
+
+---
+
+### 失敗パターン3: プロパティアクセスでUNDEFINED
+
+**症状**: `namedInputs.array is UNDEFINED`
+
+**原因**: `compositeResult: true` なしでプロパティアクセスを試みている
+
+**対策**:
+1. mapAgentに `compositeResult: true` を追加
+2. または、プロパティアクセスを配列全体参照に変更
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー2」を参照
+
+---
+
+### 失敗パターン4: jsonoutput HTTP 500エラー
+
+**症状**: `HTTP error! Status: 500` (expertAgent側)
+
+**原因**: LLMの出力がJSON形式でない
+
+**対策**:
+1. expertAgent APIに `force_json: true` パラメータを追加
+2. プロンプトでJSON出力を明示的に指示
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー4」を参照
 
 ---
 
