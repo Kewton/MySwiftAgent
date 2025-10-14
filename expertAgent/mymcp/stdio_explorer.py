@@ -40,9 +40,9 @@ async def getMarkdown_tool(input_url: str) -> str:
 
 
 @mcp.tool()
-async def gmail_search_search_tool(keywrod: str, top: int = 5) -> Any:
+async def gmail_search_search_tool(keyword: str, top: int = 5) -> Any:
     """gmailからキーワード検索した結果をtopに指定した件数文返却します。"""
-    return get_emails_by_keyword(keywrod, top)
+    return get_emails_by_keyword(keyword, top)
 
 
 if __name__ == "__main__":

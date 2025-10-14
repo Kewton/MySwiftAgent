@@ -1,8 +1,11 @@
 import base64
+import logging
 
 from mymcp.googleapis.googleapi_services import get_googleapis_service
 from mymcp.utils.extract_knowledge_from_text import extract_knowledge_from_text
 from mymcp.utils.html_operation import convert_html_to_markdown
+
+logger = logging.getLogger(__name__)
 
 SERVICE_NAME = "gmail"
 
@@ -28,7 +31,7 @@ def get_emails_by_keyword(subject_keyword: str, top: int = 5):
 
     messages = results.get("messages", [])
     if not messages:
-        print(f"No emails found with subject containing '{subject_keyword}'")
+        logger.warning(f"No emails found with keyword '{subject_keyword}'")
         return []
 
     email_bodies = []
@@ -61,6 +64,6 @@ def get_emails_by_keyword(subject_keyword: str, top: int = 5):
             )
             email_bodies.append({"email_body": convert_html_to_markdown(body_decoded)})
         else:
-            print(f"Could not extract body from email with ID {message['id']}")
+            logger.warning(f"Could not extract body from email with ID {message['id']}")
 
     return {"result": extract_knowledge_from_text(email_bodies)}
