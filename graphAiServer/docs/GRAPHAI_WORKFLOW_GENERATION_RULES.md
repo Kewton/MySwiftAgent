@@ -1437,6 +1437,138 @@ curl -X POST http://127.0.0.1:8105/api/v1/myagent \
   -d '{"model_name": "llmwork/{workflow_name}", "user_input": "..."}'
 ```
 
+### 6. mapAgent出力のオブジェクト配列変換エラー
+
+**エラー**: mapAgentの出力が `[{"key": "value"}, ...]` という形式で、後続のarrayJoinAgentが処理できない
+
+**原因**: mapAgentのサブグラフがオブジェクトを返すため、配列の各要素がオブジェクトになる
+
+**問題のある例**:
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  inputs:
+    rows: :pdf_urls
+  graph:
+    nodes:
+      summarizer:
+        agent: fetchAgent
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+          method: "POST"
+          data:
+            user_input: "要約してください"
+        isResult: true  # ← オブジェクトが返される
+  params:
+    compositeResult: true
+
+# 出力: [{"result": "要約1"}, {"result": "要約2"}]
+# 期待: ["要約1", "要約2"]
+```
+
+**解決策1: nestedAgent を使用（推奨）**
+
+nestedAgentで配列の各要素からプロパティを抽出:
+
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  inputs:
+    rows: :pdf_urls
+  graph:
+    nodes:
+      summarizer:
+        agent: fetchAgent
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+          method: "POST"
+          data:
+            user_input: "要約してください"
+        isResult: true
+  params:
+    compositeResult: true
+
+# mapAgentの出力を文字列配列に変換
+extract_summaries:
+  agent: nestedAgent
+  inputs:
+    array: :summarize_pdfs
+  graph:
+    nodes:
+      extract:
+        value: :row.result  # 各オブジェクトから result プロパティを抽出
+        isResult: true
+  params:
+    compositeResult: true  # 配列として結果を返す
+
+# 出力: ["要約1", "要約2", "要約3"]
+```
+
+**解決策2: mapAgentのサブグラフで文字列を直接返す**
+
+isResultノードで文字列を直接指定:
+
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  inputs:
+    rows: :pdf_urls
+  graph:
+    nodes:
+      summarizer:
+        agent: fetchAgent
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+          method: "POST"
+          data:
+            user_input: "要約してください"
+
+      extract_text:
+        value: :summarizer.result  # 文字列を直接取得
+        isResult: true  # ← これにより文字列が直接返される
+  params:
+    compositeResult: true
+
+# 出力: ["要約1", "要約2", "要約3"]
+```
+
+**解決策3: copyAgentで単一フィールドを抽出**
+
+特定のフィールドのみを取り出す:
+
+```yaml
+summarize_pdfs:
+  agent: mapAgent
+  inputs:
+    rows: :pdf_urls
+  graph:
+    nodes:
+      summarizer:
+        agent: fetchAgent
+        params:
+          url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+          method: "POST"
+          data:
+            user_input: "要約してください"
+
+      final_output:
+        agent: copyAgent
+        params:
+          namedKey: result
+        inputs:
+          result: :summarizer.result  # resultフィールドのみ返す
+        isResult: true
+  params:
+    compositeResult: true
+
+# 出力: ["要約1", "要約2", "要約3"]
+```
+
+**推奨**:
+- **シンプルな変換**: 解決策2（文字列直接返却）
+- **複雑なオブジェクト**: 解決策1（nestedAgent）
+- **既存YML修正**: 解決策1（既存mapAgentの後にnestedAgentを追加）
+
 ---
 
 ## パフォーマンスと並列処理の最適化
