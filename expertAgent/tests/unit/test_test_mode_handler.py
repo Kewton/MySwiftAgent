@@ -1,7 +1,5 @@
 """Unit tests for test_mode_handler module."""
 
-import pytest
-
 from app.schemas.standardAiAgent import ExpertAiAgentResponse
 from core.test_mode_handler import handle_test_mode
 

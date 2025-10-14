@@ -105,7 +105,7 @@ class TestAiagentGraph:
     @pytest.mark.asyncio
     @patch("app.api.v1.agent_endpoints.ainvoke_graphagent")
     async def test_aiagent_graph_success(self, mock_invoke):
-        """Test successful aiagent_graph execution."""
+        """Test successful aiagent_graph execution without force_json."""
         from app.schemas.standardAiAgent import ChatMessage
 
         chat_history = [
@@ -113,7 +113,7 @@ class TestAiagentGraph:
             ChatMessage(role="assistant", content="message2"),
         ]
         mock_invoke.return_value = (chat_history, "AI Response")
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         result = await aiagent_graph(request)
 
@@ -126,9 +126,9 @@ class TestAiagentGraph:
     @pytest.mark.asyncio
     @patch("app.api.v1.agent_endpoints.ainvoke_graphagent")
     async def test_aiagent_graph_error(self, mock_invoke):
-        """Test aiagent_graph error handling."""
+        """Test aiagent_graph error handling without force_json."""
         mock_invoke.side_effect = Exception("Test error")
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         with pytest.raises(HTTPException) as exc_info:
             await aiagent_graph(request)
@@ -157,7 +157,7 @@ class TestMyaiagents:
     async def test_myaiagents_explorer(self, mock_agent):
         """Test myaiagents with explorer agent."""
         mock_agent.return_value = "Explorer response <think>thought</think>"
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         result = await myaiagents(request, "explorer")
 
@@ -169,7 +169,7 @@ class TestMyaiagents:
     async def test_myaiagents_action(self, mock_agent):
         """Test myaiagents with action agent."""
         mock_agent.return_value = "Action response"
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         result = await myaiagents(request, "action")
 
@@ -181,7 +181,7 @@ class TestMyaiagents:
     async def test_myaiagents_playwright(self, mock_agent):
         """Test myaiagents with playwright agent."""
         mock_agent.return_value = "Playwright response <think>internal</think>"
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         result = await myaiagents(request, "playwright")
 
@@ -193,7 +193,7 @@ class TestMyaiagents:
     async def test_myaiagents_wikipedia(self, mock_agent):
         """Test myaiagents with wikipedia agent."""
         mock_agent.return_value = "Wikipedia response"
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         result = await myaiagents(request, "wikipedia")
 
@@ -208,7 +208,7 @@ class TestMyaiagents:
     @pytest.mark.asyncio
     async def test_myaiagents_unknown_agent(self):
         """Test myaiagents with unknown agent name."""
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         result = await myaiagents(request, "unknown")
 
@@ -219,7 +219,7 @@ class TestMyaiagents:
     async def test_myaiagents_error(self, mock_agent):
         """Test myaiagents error handling."""
         mock_agent.side_effect = Exception("Test error")
-        request = ExpertAiAgentRequest(user_input="Test query")
+        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
 
         with pytest.raises(HTTPException) as exc_info:
             await myaiagents(request, "jsonoutput")

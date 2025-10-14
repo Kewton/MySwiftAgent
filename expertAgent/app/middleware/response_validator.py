@@ -14,7 +14,7 @@ Response Validator Middleware
 
 import json
 import logging
-from typing import Callable
+from typing import Callable, cast
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -65,7 +65,7 @@ class ResponseValidatorMiddleware(BaseHTTPMiddleware):
 
         if not should_force_json:
             # force_json_paths に該当しない場合はそのまま返す
-            return response
+            return cast(Response, response)
 
         # Content-Type が JSON 以外の場合、JSON に変換
         content_type = response.headers.get("content-type", "")
@@ -92,7 +92,7 @@ class ResponseValidatorMiddleware(BaseHTTPMiddleware):
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 # JSON でない場合は JSON にラップ
                 logger.error(
-                    f"Forcing non-JSON content to JSON format: {body[:200]}... Error: {e}"
+                    f"Forcing non-JSON content to JSON format: {body[:200]!r}... Error: {e}"
                 )
                 json_content = {
                     "detail": "Non-JSON response was converted to JSON",
@@ -114,4 +114,4 @@ class ResponseValidatorMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        return response
+        return cast(Response, response)

@@ -13,6 +13,7 @@ JSON エラーが返されることを保証します。
 """
 
 import logging
+from typing import cast
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -74,4 +75,4 @@ class MethodValidatorMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        return await call_next(request)
+        return cast(Response, await call_next(request))

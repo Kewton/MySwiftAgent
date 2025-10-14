@@ -12,7 +12,7 @@ jsonOutput_agent.py のロジックを再利用し、全エンドポイントで
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.output_parsers import JsonOutputParser
 
@@ -51,7 +51,9 @@ def to_parse_json(content: str) -> dict | list[Any]:
 
     try:
         # 1. 直接 JSON としてパース
-        parsed_json = parser.parse(content)
+        parsed_json: dict[Any, Any] | list[Any] = cast(
+            dict[Any, Any] | list[Any], parser.parse(content)
+        )
         logger.info("Successfully parsed JSON directly")
         return parsed_json
     except Exception as e:
@@ -63,7 +65,7 @@ def to_parse_json(content: str) -> dict | list[Any]:
         if match:
             json_content = match.group(1)
             try:
-                parsed_json = json.loads(json_content)
+                parsed_json = cast(dict[Any, Any] | list[Any], json.loads(json_content))
                 logger.info("Successfully parsed JSON from code block")
                 return parsed_json
             except json.JSONDecodeError as json_err:
