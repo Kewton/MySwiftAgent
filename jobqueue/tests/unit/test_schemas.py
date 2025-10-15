@@ -1,6 +1,6 @@
 """Test Pydantic schemas."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -117,7 +117,7 @@ class TestJobSchemas:
 
     def test_job_detail_schema(self):
         """Test job detail schema."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         data = {
             "id": "j_01HXYZ123",
             "status": "running",

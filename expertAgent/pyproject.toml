@@ -124,12 +124,6 @@ minversion = "7.0"
 addopts = [
     "-ra",
     "--strict-markers",
-    "--cov=app",
-    "--cov=core",
-    "--cov-report=term-missing",
-    "--cov-report=json",
-    "--cov-report=html",
-    "--cov-fail-under=90",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

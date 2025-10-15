@@ -106,9 +106,7 @@ def test_delete_project_not_found(
     client: TestClient, auth_headers: dict[str, str]
 ) -> None:
     """Test deleting a non-existent project returns 404."""
-    response = client.delete(
-        "/api/projects/non-existent-project", headers=auth_headers
-    )
+    response = client.delete("/api/projects/non-existent-project", headers=auth_headers)
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
 
