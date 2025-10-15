@@ -117,9 +117,9 @@ class TestMyVaultIntegration:
         # (CI environments have high timing variability, so use relaxed threshold)
         if time1 > 0.001:  # Only test if first call took measurable time
             # Cache should be faster (allow for CI timing variability)
-            assert (
-                time2 < time1 * 0.8
-            ), f"Cache performance: {time2:.4f}s vs {time1:.4f}s (expected <{time1 * 0.8:.4f}s)"
+            assert time2 < time1 * 0.8, (
+                f"Cache performance: {time2:.4f}s vs {time1:.4f}s (expected <{time1 * 0.8:.4f}s)"
+            )
 
     @pytest.mark.integration
     @pytest.mark.skipif(
