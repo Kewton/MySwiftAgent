@@ -995,9 +995,10 @@ json_output:
 **🆕 利用可能なMCPツール**:
 - **html2markdown**: WebページをMarkdown形式に変換（Webページからのテキスト・情報抽出に最適、Playwright Agentより高精度）
 - **google_search**: Google Custom Search APIでキーワード検索
-- **gmail_search**: Gmail検索（OAuth2認証、MyVault経由）
 
 **推奨用途**: Webページからのテキスト抽出は **html2markdown** を使用することで、Playwright Agentより高精度な結果が得られます。
+
+**注意**: Gmail検索は専用の高速Utility API（`/v1/utility/gmail/search`）を使用してください。Explorer Agentでは利用できません。詳細は後述の主要エンドポイント一覧を参照。
 
 **リクエストボディスキーマ**:
 | パラメータ | 型 | 必須 | デフォルト | 説明 |
@@ -1186,6 +1187,109 @@ sample:
       user_input: :instruction
       project: default_project  # プロジェクト名（オプション）
 ```
+
+#### 12. `/aiagent-api/v1/utility/gmail/search` - Gmail検索Utility API
+
+**提供サービス**: 高速Gmail検索（5秒、LLM推論なし）。Direct API方式により、Utility Agentと比較して5-36倍高速化を実現。100% JSON構造化データを保証。
+
+**用途**: メール検索、未読メール確認、添付ファイル検索、特定期間のメール抽出、ラベルフィルタリング
+
+**主な特徴**:
+- ⚡ 高速: 5秒で完了（Utility Agent: 25-180秒）
+- ✅ JSON保証: 構造化データを100%保証
+- 🤖 AIフレンドリー: `ai_prompt_snippet` フィールドでプロンプトに直接埋め込み可能
+- 💰 トークン効率: 必要最小限の情報のみ
+
+**リクエストボディスキーマ**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `keyword` | string | ✅ | - | 検索キーワード |
+| `top` | integer | ❌ | 5 | 取得件数（1-100） |
+| `search_in` | string | ❌ | "all" | 検索対象（subject/body/from/to/all） |
+| `unread_only` | boolean | ❌ | false | 未読メールのみ検索 |
+| `has_attachment` | boolean | ❌ | null | 添付ファイル有無でフィルタ |
+| `date_after` | string | ❌ | null | 指定日以降（YYYY/MM/DD, YYYY-MM-DD, 7d/2w/3m/1y） |
+| `date_before` | string | ❌ | null | 指定日以前（YYYY/MM/DD or YYYY-MM-DD） |
+| `labels` | array[string] | ❌ | null | ラベルフィルタ（例: ['important', 'work']） |
+| `include_summary` | boolean | ❌ | false | AIサマリー含む（LLM呼び出しあり、+10-20秒） |
+| `project` | string | ❌ | null | MyVaultプロジェクト名（認証情報取得用） |
+
+**レスポンスボディスキーマ**:
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `total_count` | integer | 検索結果総数 |
+| `returned_count` | integer | 返却件数 |
+| `emails` | array[object] | メール詳細リスト（id, subject, from, date, body_text, snippet, is_unread, has_attachments, labels等） |
+| `ai_prompt_snippet` | string | AIプロンプト用整形済みテキスト（直接埋め込み可能） |
+| `query_info` | object | 検索条件サマリー |
+| `summary` | string | AIサマリー（include_summary=trueの場合のみ） |
+
+**使用例1: 基本的な検索**
+```yaml
+gmail_search:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/utility/gmail/search
+    method: POST
+    body:
+      keyword: "週刊Life is beautiful"
+      search_in: "subject"
+      date_after: "7d"
+      top: 10
+      unread_only: false
+```
+
+**使用例2: AI用スニペットの活用**
+```yaml
+# 1. Gmail検索
+gmail_search:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/utility/gmail/search
+    method: POST
+    body:
+      keyword: "プロジェクト進捗"
+      top: 5
+
+# 2. 検索結果をLLMに渡してサマリー生成
+summarize:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+    method: POST
+    body:
+      user_input: |
+        以下のメール検索結果から重要なアクションアイテムを抽出してください:
+
+        :gmail_search.ai_prompt_snippet
+      model_name: gpt-oss:20b
+```
+
+**使用例3: 添付ファイル付き未読メール検索**
+```yaml
+unread_with_attachments:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/utility/gmail/search
+    method: POST
+    body:
+      keyword: "請求書"
+      unread_only: true
+      has_attachment: true
+      date_after: "2025/10/01"
+      date_before: "2025/10/31"
+      labels: ["important"]
+      top: 20
+      project: default_project  # MyVault認証情報使用
+```
+
+**パフォーマンス比較**:
+| 処理内容 | Utility Agent | Gmail Utility API | 改善率 |
+|---------|--------------|------------------|--------|
+| 基本検索（top=5） | 25-30秒 | 5秒 | 5-6倍高速 |
+| 複雑検索（フィルタ多数） | 30-40秒 | 5秒 | 6-8倍高速 |
+| LLM推論なし | 不可 | 可能 | N/A |
+| JSON構造保証 | なし | 100% | N/A |
 
 ### テストモード機能
 
