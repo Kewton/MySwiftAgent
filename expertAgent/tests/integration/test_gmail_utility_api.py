@@ -242,3 +242,205 @@ class TestGmailUtilityAPI:
         assert query_info["unread_only"] is True
         assert query_info["has_attachment"] is True
         assert query_info["labels"] == ["important", "work"]
+
+
+class TestGmailSendAPI:
+    """Gmail Send APIエンドポイントのテスト"""
+
+    def test_gmail_send_minimal_single_recipient(self, mock_gmail_send_service):
+        """最小限のリクエスト（単一宛先）"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": "test@example.com",
+                "subject": "Test Subject",
+                "body": "Test body",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # レスポンス構造の検証
+        assert "success" in data
+        assert "message_id" in data
+        assert "thread_id" in data
+        assert "label_ids" in data
+        assert "sent_to" in data
+        assert "subject" in data
+        assert "sent_at" in data
+        assert "ai_summary" in data
+
+        # データの検証
+        assert data["success"] is True
+        assert data["sent_to"] == ["test@example.com"]
+        assert data["subject"] == "Test Subject"
+        assert "test@example.com" in data["ai_summary"]
+
+    def test_gmail_send_multiple_recipients(self, mock_gmail_send_service):
+        """複数宛先のリクエスト"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": ["user1@example.com", "user2@example.com"],
+                "subject": "Multi-recipient Test",
+                "body": "Test body for multiple recipients",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["success"] is True
+        assert len(data["sent_to"]) == 2
+        assert "user1@example.com" in data["sent_to"]
+        assert "user2@example.com" in data["sent_to"]
+        assert "user1@example.com, user2@example.com" in data["ai_summary"]
+
+    def test_gmail_send_missing_required_fields(self):
+        """必須フィールド未指定でエラー"""
+        # toなし
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={"subject": "Test", "body": "Test body"},
+        )
+        assert response.status_code == 422
+
+        # subjectなし
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={"to": "test@example.com", "body": "Test body"},
+        )
+        assert response.status_code == 422
+
+        # bodyなし
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={"to": "test@example.com", "subject": "Test"},
+        )
+        assert response.status_code == 422
+
+    def test_gmail_send_empty_subject(self):
+        """件名が空文字でバリデーションエラー"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={"to": "test@example.com", "subject": "", "body": "Test body"},
+        )
+
+        assert response.status_code == 422
+
+    def test_gmail_send_empty_body(self):
+        """本文が空文字でバリデーションエラー"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={"to": "test@example.com", "subject": "Test", "body": ""},
+        )
+
+        assert response.status_code == 422
+
+    def test_gmail_send_test_mode(self):
+        """テストモードの動作確認"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": "test@example.com",
+                "subject": "Test Subject",
+                "body": "Test body",
+                "test_mode": True,
+                "test_response": {
+                    "success": True,
+                    "message_id": "test_msg_123",
+                    "thread_id": "test_thread_123",
+                    "label_ids": ["SENT"],
+                    "sent_to": ["test@example.com"],
+                    "subject": "Test Subject",
+                    "sent_at": "2025-10-15T00:00:00Z",
+                    "ai_summary": "Test summary",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # テストレスポンスが返されること
+        assert data["success"] is True
+        assert data["message_id"] == "test_msg_123"
+        assert data["thread_id"] == "test_thread_123"
+
+    def test_gmail_send_ai_summary_content(self, mock_gmail_send_service):
+        """ai_summaryの内容検証"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": "recipient@example.com",
+                "subject": "Important Notice",
+                "body": "This is important",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # ai_summaryに必要な情報が含まれていること
+        assert "recipient@example.com" in data["ai_summary"]
+        assert "Important Notice" in data["ai_summary"]
+        assert "メール送信完了" in data["ai_summary"]
+
+    def test_gmail_send_json_guaranteed(self, mock_gmail_send_service):
+        """JSON形式が保証されていること"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": "test@example.com",
+                "subject": "Test",
+                "body": "Test body",
+            },
+        )
+
+        assert response.status_code == 200
+
+        # レスポンスがJSON形式であること
+        assert response.headers["content-type"] == "application/json"
+
+        # JSONパース可能であること
+        data = response.json()
+        assert isinstance(data, dict)
+
+    def test_gmail_send_performance(self, mock_gmail_send_service):
+        """レスポンス時間の検証（3秒以内）"""
+        import time
+
+        start_time = time.time()
+
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": "test@example.com",
+                "subject": "Performance Test",
+                "body": "Testing response time",
+            },
+        )
+
+        elapsed_time = time.time() - start_time
+
+        assert response.status_code == 200
+        # モックなので実際は1秒未満だが、実環境では3秒以内を想定
+        assert elapsed_time < 3.0
+
+    def test_gmail_send_with_project(self, mock_gmail_send_service):
+        """MyVaultプロジェクト指定のテスト"""
+        response = client.post(
+            "/v1/utility/gmail/send",
+            json={
+                "to": "test@example.com",
+                "subject": "Test with project",
+                "body": "Test body",
+                "project": "default_project",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["success"] is True

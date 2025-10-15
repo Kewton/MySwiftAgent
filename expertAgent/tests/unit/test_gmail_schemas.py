@@ -9,6 +9,8 @@ from app.schemas.gmailSchemas import (
     GmailEmailDetail,
     GmailSearchRequest,
     GmailSearchResponse,
+    GmailSendRequest,
+    GmailSendResponse,
 )
 
 
@@ -350,3 +352,163 @@ class TestGmailSearchResponse:
         assert response.query_info["unread_only"] is True
         assert response.query_info["has_attachment"] is True
         assert response.query_info["labels"] == ["important"]
+
+
+class TestGmailSendRequest:
+    """GmailSendRequestスキーマのテスト"""
+
+    def test_minimal_request_single_recipient(self):
+        """最小限のリクエスト（単一宛先）"""
+        request = GmailSendRequest(
+            to="test@example.com", subject="Test Subject", body="Test body"
+        )
+
+        assert request.to == "test@example.com"
+        assert request.subject == "Test Subject"
+        assert request.body == "Test body"
+        assert request.cc is None
+        assert request.bcc is None
+        assert request.html_body is None
+        assert request.project is None
+        assert request.test_mode is False
+        assert request.test_response is None
+
+    def test_minimal_request_multiple_recipients(self):
+        """最小限のリクエスト（複数宛先）"""
+        request = GmailSendRequest(
+            to=["user1@example.com", "user2@example.com"],
+            subject="Test Subject",
+            body="Test body",
+        )
+
+        assert isinstance(request.to, list)
+        assert len(request.to) == 2
+        assert request.to[0] == "user1@example.com"
+        assert request.to[1] == "user2@example.com"
+
+    def test_full_request(self):
+        """全パラメータ指定のリクエスト"""
+        request = GmailSendRequest(
+            to=["primary@example.com"],
+            subject="Important Notice",
+            body="This is the body",
+            cc=["cc@example.com"],
+            bcc=["bcc@example.com"],
+            html_body="<html>HTML body</html>",
+            project="default_project",
+            test_mode=True,
+            test_response={"message_id": "test123"},
+        )
+
+        assert request.to == ["primary@example.com"]
+        assert request.subject == "Important Notice"
+        assert request.body == "This is the body"
+        assert request.cc == ["cc@example.com"]
+        assert request.bcc == ["bcc@example.com"]
+        assert request.html_body == "<html>HTML body</html>"
+        assert request.project == "default_project"
+        assert request.test_mode is True
+        assert request.test_response == {"message_id": "test123"}
+
+    def test_empty_subject_validation(self):
+        """件名が空文字でバリデーションエラー"""
+        with pytest.raises(ValueError):
+            GmailSendRequest(to="test@example.com", subject="", body="Test")
+
+    def test_empty_body_validation(self):
+        """本文が空文字でバリデーションエラー"""
+        with pytest.raises(ValueError):
+            GmailSendRequest(to="test@example.com", subject="Test", body="")
+
+
+class TestGmailSendResponse:
+    """GmailSendResponseスキーマのテスト"""
+
+    def test_minimal_response(self):
+        """最小限のレスポンス"""
+        response = GmailSendResponse(
+            success=True,
+            message_id="msg123",
+            thread_id="thread123",
+            label_ids=["SENT"],
+            sent_to=["test@example.com"],
+            subject="Test Subject",
+            sent_at="2025-10-15T00:00:00Z",
+            ai_summary="test@example.com 宛にメール送信完了（件名: Test Subject）",
+        )
+
+        assert response.success is True
+        assert response.message_id == "msg123"
+        assert response.thread_id == "thread123"
+        assert response.label_ids == ["SENT"]
+        assert len(response.sent_to) == 1
+        assert response.sent_to[0] == "test@example.com"
+        assert response.subject == "Test Subject"
+        assert "2025-10-15" in response.sent_at
+        assert "test@example.com" in response.ai_summary
+
+    def test_from_gmail_result_single_recipient(self):
+        """from_gmail_result: 単一宛先"""
+        gmail_result = {
+            "id": "msg456",
+            "threadId": "thread456",
+            "labelIds": ["SENT"],
+        }
+
+        request = GmailSendRequest(
+            to="recipient@example.com", subject="Test", body="Body"
+        )
+
+        response = GmailSendResponse.from_gmail_result(gmail_result, request)
+
+        assert response.success is True
+        assert response.message_id == "msg456"
+        assert response.thread_id == "thread456"
+        assert response.label_ids == ["SENT"]
+        assert response.sent_to == ["recipient@example.com"]
+        assert response.subject == "Test"
+        assert "recipient@example.com" in response.ai_summary
+        assert "Test" in response.ai_summary
+
+    def test_from_gmail_result_multiple_recipients(self):
+        """from_gmail_result: 複数宛先"""
+        gmail_result = {
+            "id": "msg789",
+            "threadId": "thread789",
+            "labelIds": ["SENT"],
+        }
+
+        request = GmailSendRequest(
+            to=["user1@example.com", "user2@example.com"],
+            subject="Multi-recipient Test",
+            body="Test body",
+        )
+
+        response = GmailSendResponse.from_gmail_result(gmail_result, request)
+
+        assert response.success is True
+        assert len(response.sent_to) == 2
+        assert "user1@example.com" in response.sent_to
+        assert "user2@example.com" in response.sent_to
+        assert "user1@example.com, user2@example.com" in response.ai_summary
+
+    def test_generate_ai_summary(self):
+        """ai_summary生成のテスト"""
+        sent_to = ["recipient@example.com"]
+        subject = "Important Notice"
+
+        summary = GmailSendResponse._generate_ai_summary(sent_to, subject)
+
+        assert "recipient@example.com" in summary
+        assert "Important Notice" in summary
+        assert "メール送信完了" in summary
+
+    def test_generate_ai_summary_multiple_recipients(self):
+        """ai_summary生成のテスト（複数宛先）"""
+        sent_to = ["user1@example.com", "user2@example.com", "user3@example.com"]
+        subject = "Team Update"
+
+        summary = GmailSendResponse._generate_ai_summary(sent_to, subject)
+
+        assert "user1@example.com, user2@example.com, user3@example.com" in summary
+        assert "Team Update" in summary

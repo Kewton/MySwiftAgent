@@ -218,3 +218,26 @@ def mock_gmail_service_with_unread(monkeypatch):
         "app.api.v1.gmail_utility_endpoints.get_emails_by_keyword", mock_get_emails
     )
     return mock_result
+
+
+# ========================================
+# Gmail Send API Mock Fixtures
+# ========================================
+
+
+@pytest.fixture
+def mock_gmail_send_service(monkeypatch):
+    """Mock Gmail send service with successful response."""
+    mock_result = {
+        "id": "msg_test_123",
+        "threadId": "thread_test_123",
+        "labelIds": ["SENT"],
+    }
+
+    def mock_send_email(*args, **kwargs):
+        return mock_result
+
+    monkeypatch.setattr(
+        "app.api.v1.gmail_utility_endpoints.send_email_v2", mock_send_email
+    )
+    return mock_result

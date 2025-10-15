@@ -413,3 +413,200 @@ class GmailSearchResponse(BaseModel):
                 "ai_prompt_snippet": "検索結果: 15件中10件を表示\n\n【1】...",
             }
         }
+
+
+# ========================================
+# Gmail Send Schema
+# ========================================
+
+
+class GmailSendRequest(BaseModel):
+    """Gmail送信リクエスト
+
+    高速なGmail送信を実行するためのパラメータを指定します。
+    """
+
+    to: str | List[str] = Field(
+        ...,
+        description="宛先メールアドレス（必須）- 単一または複数指定可能",
+    )
+
+    subject: str = Field(
+        ...,
+        min_length=1,
+        description="件名（必須・1文字以上）",
+    )
+
+    body: str = Field(
+        ...,
+        min_length=1,
+        description="本文（必須・1文字以上）- プレーンテキスト",
+    )
+
+    # オプション（将来拡張用）
+    cc: Optional[List[str]] = Field(
+        default=None,
+        description="CC宛先リスト（将来拡張）",
+    )
+
+    bcc: Optional[List[str]] = Field(
+        default=None,
+        description="BCC宛先リスト（将来拡張）",
+    )
+
+    html_body: Optional[str] = Field(
+        default=None,
+        description="HTML本文（将来拡張）",
+    )
+
+    # MyVault認証情報
+    project: Optional[str] = Field(
+        default=None,
+        description="MyVaultプロジェクト名（認証情報取得用）",
+    )
+
+    # テストモード
+    test_mode: bool = Field(
+        default=False,
+        description="テストモードフラグ",
+    )
+
+    test_response: Optional[dict | str] = Field(
+        default=None,
+        description="テストモード用モックレスポンス",
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "to": "recipient@example.com",
+                "subject": "テストメール",
+                "body": "これはテストメールです。\n\nよろしくお願いします。",
+                "project": "default_project",
+            }
+        }
+
+
+class GmailSendResponse(BaseModel):
+    """Gmail送信レスポンス（AIエージェント最適化版）
+
+    AIエージェントが効率的に利用できるよう、以下の機能を提供:
+    - success: 送信成功フラグ（bool）
+    - message_id: GmailメッセージID
+    - ai_summary: AIプロンプト用要約テキスト
+    """
+
+    # ========================================
+    # 送信結果（必須フィールド）
+    # ========================================
+
+    success: bool = Field(
+        ...,
+        description="送信成功フラグ",
+    )
+
+    message_id: str = Field(
+        ...,
+        description="GmailメッセージID",
+    )
+
+    thread_id: str = Field(
+        ...,
+        description="スレッドID",
+    )
+
+    label_ids: List[str] = Field(
+        default_factory=list,
+        description="付与されたラベル（通常: ['SENT']）",
+    )
+
+    # ========================================
+    # 送信情報サマリー
+    # ========================================
+
+    sent_to: List[str] = Field(
+        default_factory=list,
+        description="送信先リスト",
+    )
+
+    subject: str = Field(
+        ...,
+        description="送信した件名",
+    )
+
+    sent_at: str = Field(
+        ...,
+        description="送信日時（ISO8601形式）",
+    )
+
+    # ========================================
+    # AIエージェント向けヘルパー
+    # ========================================
+
+    ai_summary: str = Field(
+        default="",
+        description="AIプロンプト用要約テキスト",
+    )
+
+    @classmethod
+    def from_gmail_result(
+        cls, result: dict, request: GmailSendRequest
+    ) -> "GmailSendResponse":
+        """send_email_v2()の返却値からAIフレンドリーなレスポンスを生成
+
+        Args:
+            result: send_email_v2()の返却値
+            request: 元のリクエストオブジェクト
+
+        Returns:
+            AIフレンドリーなGmailSendResponse
+        """
+        # 宛先をリスト化
+        sent_to = [request.to] if isinstance(request.to, str) else request.to
+
+        # AI要約生成
+        ai_summary = cls._generate_ai_summary(sent_to, request.subject)
+
+        # ISO8601形式の送信日時
+        from datetime import datetime, timezone
+
+        sent_at = datetime.now(timezone.utc).isoformat()
+
+        return cls(
+            success=True,
+            message_id=result.get("id", ""),
+            thread_id=result.get("threadId", ""),
+            label_ids=result.get("labelIds", ["SENT"]),
+            sent_to=sent_to,
+            subject=request.subject,
+            sent_at=sent_at,
+            ai_summary=ai_summary,
+        )
+
+    @staticmethod
+    def _generate_ai_summary(sent_to: List[str], subject: str) -> str:
+        """AI用要約を生成
+
+        Args:
+            sent_to: 送信先リスト
+            subject: 件名
+
+        Returns:
+            AI用要約テキスト
+        """
+        recipients_str = ", ".join(sent_to)
+        return f"{recipients_str} 宛にメール送信完了（件名: {subject}）"
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message_id": "18c5a2b3f4d6e890",
+                "thread_id": "18c5a2b3f4d6e890",
+                "label_ids": ["SENT"],
+                "sent_to": ["recipient@example.com"],
+                "subject": "テストメール",
+                "sent_at": "2025-10-15T10:30:45+09:00",
+                "ai_summary": "recipient@example.com 宛にメール送信完了（件名: テストメール）",
+            }
+        }
