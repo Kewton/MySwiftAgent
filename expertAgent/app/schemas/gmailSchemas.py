@@ -77,6 +77,17 @@ class GmailSearchRequest(BaseModel):
         description="MyVaultプロジェクト名（認証情報取得用）",
     )
 
+    # テストモード
+    test_mode: bool = Field(
+        default=False,
+        description="テストモードフラグ",
+    )
+
+    test_response: Optional[dict | str] = Field(
+        default=None,
+        description="テストモード用モックレスポンス",
+    )
+
     class Config:
         json_schema_extra = {
             "example": {

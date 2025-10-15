@@ -113,9 +113,13 @@ async def gmail_search_api(request: GmailSearchRequest) -> GmailSearchResponse:
             f"search_in='{request.search_in}', top={request.top}"
         )
 
-        # Test mode check (if needed in future)
-        # Note: GmailSearchRequest doesn't have test_mode/test_response fields
-        # This is intentionally commented out for now
+        # テストモードチェック
+        test_result = handle_test_mode(
+            request.test_mode, request.test_response, "gmail_search"
+        )
+        if test_result is not None:
+            # Type cast for test mode response
+            return test_result  # type: ignore[return-value]
 
         # Direct API呼び出し（高速: 5秒）
         result = get_emails_by_keyword(
