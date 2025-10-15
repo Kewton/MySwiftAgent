@@ -13,13 +13,25 @@
 7. [expertAgent API統合](#expertagent-api統合)
    - [共通APIスキーマ](#共通apiスキーマ)
    - [テストモード機能](#テストモード機能)
-8. [エラー回避パターン](#エラー回避パターン)
-9. [パフォーマンスと並列処理の最適化](#パフォーマンスと並列処理の最適化)
-10. [命名規則](#命名規則)
-11. [デバッグとログ](#デバッグとログ)
-12. [実装例](#実装例)
-13. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
-14. [Agent専用ガイド](./agents/)
+8. [Google Driveファイルアップロード統合](#google-driveファイルアップロード統合)
+   - [概要](#概要-7)
+   - [使用シーン](#使用シーン)
+   - [基本的な使い方](#基本的な使い方)
+   - [完全なワークフロー例](#完全なワークフロー例-1)
+   - [expertAgent MCPツールの内部パラメータ](#expertagent-mcpツールの内部パラメータ)
+   - [プロンプト作成のポイント](#プロンプト作成のポイント)
+   - [トラブルシューティング](#トラブルシューティング)
+   - [ベストプラクティス](#ベストプラクティス)
+9. [エラー回避パターン](#エラー回避パターン)
+10. [パフォーマンスと並列処理の最適化](#パフォーマンスと並列処理の最適化)
+11. [命名規則](#命名規則)
+12. [デバッグとログ](#デバッグとログ)
+13. [実装例](#実装例)
+14. [LLMプロンプト生成時の推奨事項](#llmプロンプト生成時の推奨事項)
+15. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
+16. [まとめ](#まとめ)
+17. [よくあるエラーパターンと対策](#よくあるエラーパターンと対策)
+18. [Agent専用ガイド](./agents/)
     - [Playwright Agent 完全ガイド](./agents/playwright-agent-guide.md)
     - [Explorer Agent 完全ガイド](./agents/explorer-agent-guide.md)
     - [File Reader Agent 完全ガイド](./agents/file-reader-agent-guide.md)
@@ -1726,6 +1738,416 @@ expertAgentのすべてのエンドポイントで `model_name` パラメータ�
 | **JSON出力** | gpt-oss:20b | 構造化出力に十分な性能 |
 | **簡単な変換** | pielee/qwen3-4b-thinking-2507_q8 | 高速処理、軽量タスク向け |
 | **クリエイティブ作業** | gemini-2.5-pro / claude-sonnet-4.5 | クラウドモデルの強み |
+
+---
+
+## Google Driveファイルアップロード統合
+
+### 概要
+
+expertAgentの `action` ユーティリティを使用して、GraphAIワークフロー内でLLMが生成したコンテンツを直接Google Driveにアップロードできます。
+
+**主な特徴**:
+- ✅ **メモリ上のコンテンツから直接アップロード**: ディスク上にファイルを事前作成する必要なし
+- ✅ **自動ファイル作成とクリーンアップ**: 一時ファイルは自動的に削除
+- ✅ **サブディレクトリ自動作成**: フォルダ階層を自動構築
+- ✅ **ファイル名衝突回避**: 既存ファイルがあれば自動リネーム（タイムスタンプ + 連番）
+- ✅ **柔軟なエンコーディング**: UTF-8テキスト、バイナリ、Base64エンコード済み文字列すべて対応
+
+### 使用シーン
+
+1. **LLMレポート生成 → Google Drive保存**
+   - LLMがMarkdownレポートを生成
+   - そのままGoogle Driveに自動保存
+
+2. **複数ドキュメント生成 → フォルダ整理**
+   - ワークフロー内で複数のファイルを生成
+   - サブディレクトリ別に自動的に整理
+
+3. **データ分析結果 → 共有可能な形式で保存**
+   - LLMがCSV/JSON/Markdown形式で分析結果を生成
+   - Google Driveに共有リンク付きで保存
+
+### 基本的な使い方
+
+#### ステップ1: コンテンツの準備
+
+LLMでコンテンツを生成、または固定コンテンツを用意します。
+
+```yaml
+# LLMで生成する場合
+content_generator:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+    method: POST
+    body:
+      user_input: :source
+      model_name: gpt-oss:20b
+
+# 固定コンテンツの場合
+fixed_content:
+  value: |-
+    # テストレポート
+
+    このファイルはGraphAIワークフローから生成されました。
+```
+
+#### ステップ2: アップロード指示プロンプトの作成
+
+`stringTemplateAgent` を使用して、expertAgentへの指示を構築します。
+
+```yaml
+upload_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    content: :content_generator.text  # または :fixed_content
+  params:
+    template: |-
+      以下のテキストコンテンツをGoogle Driveにアップロードしてください。
+
+      - ファイル名: report.md
+      - ファイルパス: /tmp/report.md
+      - サブディレクトリ: reports/daily
+      - コンテンツ:
+      ---
+      ${content}
+      ---
+
+      アップロード後、リンクURLを返却してください。
+
+      # RESPONSE FORMAT (JSON):
+      {
+        "status": "success",
+        "file_name": "...",
+        "web_view_link": "...",
+        "folder_path": "..."
+      }
+
+      /no_think
+```
+
+#### ステップ3: expertAgent action ユーティリティ呼び出し
+
+`fetchAgent` で expertAgent の `action` エンドポイントを呼び出します。
+
+```yaml
+upload_action:
+  agent: fetchAgent
+  console:
+    before: Uploading content to Google Drive
+    after: true
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+    method: POST
+    body:
+      user_input: :upload_prompt
+      model_name: gpt-oss:20b
+```
+
+**レスポンス例**:
+```json
+{
+  "result": "{\"status\": \"success\", \"file_name\": \"report_001_20251015_105714.md\", \"web_view_link\": \"https://drive.google.com/file/d/XXXXX/view?usp=drivesdk\", \"folder_path\": \"reports/daily\"}"
+}
+```
+
+### 完全なワークフロー例
+
+```yaml
+version: 0.5
+nodes:
+  # ユーザー入力
+  source: {}
+
+  # コンテンツ生成（LLM）
+  content_generator:
+    agent: fetchAgent
+    console:
+      before: Generating report content
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :source
+        model_name: gpt-oss:20b
+
+  # アップロード指示プロンプト
+  upload_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      user_input: :source
+      content: :content_generator.text
+    params:
+      template: |-
+        以下のテキストコンテンツをGoogle Driveにアップロードしてください。
+
+        ユーザー入力: ${user_input}
+
+        - ファイル名: daily_report.md
+        - ファイルパス: /tmp/daily_report.md
+        - サブディレクトリ: reports/daily
+        - コンテンツ:
+        ---
+        ${content}
+        ---
+
+        アップロード後、リンクURLを返却してください。
+
+        # RESPONSE FORMAT (JSON):
+        {
+          "status": "success",
+          "file_name": "...",
+          "web_view_link": "...",
+          "folder_path": "..."
+        }
+
+        /no_think
+
+  # expertAgent actionエージェント呼び出し
+  upload_action:
+    agent: fetchAgent
+    console:
+      before: Uploading to Google Drive
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+      method: POST
+      body:
+        user_input: :upload_prompt
+        model_name: gpt-oss:20b
+
+  # 結果整形
+  result_formatter:
+    agent: stringTemplateAgent
+    inputs:
+      result: :upload_action.result
+    params:
+      template: |-
+        ============================================================
+        🎉 Google Drive アップロード完了
+        ============================================================
+
+        ${result}
+
+        ============================================================
+
+  # 最終出力
+  output:
+    agent: copyAgent
+    params:
+      namedKey: text
+    inputs:
+      text: :result_formatter
+    isResult: true
+```
+
+### expertAgent MCPツールの内部パラメータ
+
+expertAgentの `action` ユーティリティは、内部的に以下のMCPツール `upload_file_to_drive_tool` を使用しています。
+
+#### パラメータ一覧
+
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| `file_path` | string | ✅ | - | アップロードするファイルのパス（作成先パス） |
+| `content` | string/bytes | ❌ | null | ファイル内容（UTF-8テキスト、バイナリ、Base64） |
+| `file_format` | string | ❌ | null | ファイル拡張子（"txt", "md", "pdf"など） |
+| `create_file` | boolean | ❌ | false | `true`の場合、`content`から一時ファイルを作成 |
+| `drive_folder_url` | string | ❌ | null | Google DriveフォルダURL（未指定時はMyVaultから取得） |
+| `file_name` | string | ❌ | null | アップロード後のファイル名（未指定時は元のファイル名） |
+| `sub_directory` | string | ❌ | null | フォルダ内のサブディレクトリパス（例: "reports/2025"） |
+| `size_threshold_mb` | integer | ❌ | 100 | Resumable Upload使用の閾値（MB） |
+
+#### 自動処理の詳細
+
+**ファイル作成時（`create_file=true`）**:
+1. 親ディレクトリが存在しない → 自動作成
+2. ファイル名が重複 → `{name}_{counter}_{timestamp}.{ext}` にリネーム
+3. Base64文字列を検出 → 自動デコードしてバイナリファイルとして保存
+4. アップロード成功 → 一時ファイルを自動削除
+
+**サブディレクトリ作成**:
+- `sub_directory` 指定時、Google Drive上に存在しなければ自動作成
+- 階層構造もサポート（例: "reports/2025/Q1"）
+
+**エラーハンドリング**:
+- ファイル作成失敗 → `RuntimeError` を返却（一時ファイルは作成されない）
+- アップロード失敗 → 一時ファイルは削除される
+- クリーンアップ失敗 → ログ出力のみ（処理は継続）
+
+### プロンプト作成のポイント
+
+#### 必須項目
+
+1. **ファイルパスの指定**:
+   ```yaml
+   - ファイルパス: /tmp/report.md
+   ```
+
+2. **コンテンツの埋め込み**:
+   ```yaml
+   - コンテンツ:
+   ---
+   ${content}
+   ---
+   ```
+
+3. **レスポンス形式の明示**:
+   ```yaml
+   # RESPONSE FORMAT (JSON):
+   {
+     "status": "success",
+     "file_name": "...",
+     "web_view_link": "...",
+     "folder_path": "..."
+   }
+   ```
+
+#### オプション項目
+
+**サブディレクトリ指定**:
+```yaml
+- サブディレクトリ: reports/daily
+```
+
+**カスタムファイル名**:
+```yaml
+- ファイル名: custom_report.md
+```
+
+**特定フォルダへのアップロード**:
+```yaml
+- Google DriveフォルダURL: https://drive.google.com/drive/folders/XXXXX
+```
+
+#### `/no_think` ディレクティブ
+
+expertAgentに直接実行を指示するため、プロンプト末尾に必ず `/no_think` を追加してください。
+
+```yaml
+template: |-
+  ...指示内容...
+
+  /no_think
+```
+
+### トラブルシューティング
+
+#### エラー: "content パラメータが必須です"
+
+**原因**: プロンプトに「コンテンツ:」セクションが含まれていない
+
+**解決策**:
+```yaml
+template: |-
+  - ファイルパス: /tmp/file.txt
+  - コンテンツ:
+  ---
+  ${content}
+  ---
+```
+
+#### エラー: "file_format パラメータが必須です"
+
+**原因**: `file_path` に拡張子が含まれていない、または認識できない
+
+**解決策**:
+```yaml
+# ✅ 正しい
+- ファイルパス: /tmp/report.md
+
+# ❌ 間違い
+- ファイルパス: /tmp/report
+```
+
+#### ファイルがアップロードされない
+
+**確認ポイント**:
+1. expertAgent（ポート8104）が起動しているか
+2. Google認証が完了しているか（MyVault設定）
+3. プロンプトに `/no_think` が含まれているか
+4. `console.after: true` でレスポンスログを確認
+
+#### 一時ファイルが残っている
+
+**通常の動作**: アップロード成功時は自動削除されます
+
+**残る場合**:
+- アップロード失敗（エラーログを確認）
+- expertAgentプロセスが強制終了された
+
+**手動削除**:
+```bash
+# expertAgentが作成した一時ファイルを削除
+rm /tmp/*_00*_*.txt
+```
+
+### ベストプラクティス
+
+#### 1. コンソールログの活用
+
+各ノードに `console.after: true` を設定して、データフローを追跡可能にします。
+
+```yaml
+upload_action:
+  agent: fetchAgent
+  console:
+    before: Uploading to Google Drive
+    after: true  # ✅ レスポンスを確認可能
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+    method: POST
+    body:
+      user_input: :upload_prompt
+      model_name: gpt-oss:20b
+```
+
+#### 2. エラーハンドリングの追加
+
+アップロード結果を検証するノードを追加します。
+
+```yaml
+validate_upload:
+  agent: stringTemplateAgent
+  inputs:
+    result: :upload_action.result
+  params:
+    template: |-
+      ${result}
+
+      # ✅ 検証: "status": "success" が含まれているか確認
+```
+
+#### 3. テストモードの活用
+
+開発時は `test_mode: true` でモックレスポンスを使用します。
+
+```yaml
+upload_action:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+    method: POST
+    body:
+      user_input: :upload_prompt
+      model_name: gpt-oss:20b
+      test_mode: true  # ✅ テストモード
+      test_response:
+        result: '{"status": "success", "file_name": "test.md", "web_view_link": "https://drive.google.com/file/d/TEST/view"}'
+```
+
+#### 4. ファイル名に日付を含める
+
+複数回実行時の識別を容易にします。
+
+```yaml
+template: |-
+  - ファイル名: report_{{ TODAY }}.md
+```
+
+expertAgentが自動的にタイムスタンプを追加するため、手動で日付を指定する必要はありません。
 
 ---
 
