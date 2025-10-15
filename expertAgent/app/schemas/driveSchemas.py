@@ -1,0 +1,104 @@
+"""Google Drive Upload API スキーマ定義
+
+このモジュールは、Google Drive Upload APIのリクエスト/レスポンススキーマを定義します。
+"""
+
+from typing import Optional, Union
+
+from pydantic import BaseModel, Field
+
+
+class DriveUploadRequest(BaseModel):
+    """Google Drive アップロードリクエスト
+
+    ローカルファイルのアップロードまたはコンテンツからファイルを生成してアップロードします。
+    """
+
+    file_path: str = Field(
+        ...,
+        description="アップロード対象のローカルファイルパス（必須）。"
+        "create_file=True の場合、作成先パスとして使用",
+    )
+    drive_folder_url: Optional[str] = Field(
+        None,
+        description="GoogleDriveフォルダのURL（任意、未指定時はルート）",
+    )
+    file_name: Optional[str] = Field(
+        None,
+        description="保存時のファイル名（任意、未指定時は元のファイル名）",
+    )
+    sub_directory: Optional[str] = Field(
+        None,
+        description="サブディレクトリパス（任意）",
+    )
+    size_threshold_mb: int = Field(
+        100,
+        description="Resumable Upload閾値（MB、デフォルト100MB）",
+        ge=1,
+        le=1000,
+    )
+
+    # コンテンツからファイル作成モード
+    content: Optional[Union[str, bytes]] = Field(
+        None,
+        description="ファイル内容（create_file=True時のみ使用）。"
+        "テキスト、バイナリ、Base64エンコード文字列に対応",
+    )
+    file_format: Optional[str] = Field(
+        None,
+        description="ファイル形式の拡張子（create_file=True時のみ使用）",
+    )
+    create_file: bool = Field(
+        False,
+        description="ファイル作成モードを有効化（デフォルト: False）",
+    )
+
+    # テストモード
+    test_mode: bool = Field(
+        False,
+        description="テストモード（CI/CD環境での自動テスト用）",
+    )
+    test_response: str = Field(
+        "",
+        description="テストモード時に返却するレスポンス",
+    )
+
+
+class DriveUploadResponse(BaseModel):
+    """Google Drive アップロードレスポンス
+
+    アップロード成功時のレスポンス情報
+    """
+
+    status: str = Field(
+        ...,
+        description="処理ステータス（success/error）",
+    )
+    file_id: str = Field(
+        ...,
+        description="Google Drive ファイルID",
+    )
+    file_name: str = Field(
+        ...,
+        description="アップロードされたファイル名",
+    )
+    web_view_link: str = Field(
+        ...,
+        description="ファイル閲覧用URL",
+    )
+    web_content_link: Optional[str] = Field(
+        None,
+        description="ファイルダウンロード用URL",
+    )
+    folder_path: str = Field(
+        ...,
+        description="アップロード先フォルダパス",
+    )
+    file_size_mb: float = Field(
+        ...,
+        description="ファイルサイズ（MB）",
+    )
+    upload_method: str = Field(
+        ...,
+        description="アップロードメソッド（normal/resumable）",
+    )

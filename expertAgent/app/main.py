@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1 import (
     admin_endpoints,
     agent_endpoints,
+    drive_endpoints,
     gmail_utility_endpoints,
     google_auth_endpoints,
     utility_endpoints,
@@ -127,6 +128,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(agent_endpoints.router, prefix="/v1")
 app.include_router(utility_endpoints.router, prefix="/v1")
 app.include_router(gmail_utility_endpoints.router, prefix="/v1")
+app.include_router(drive_endpoints.router, prefix="/v1", tags=["Drive Utilities"])
 app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
 
