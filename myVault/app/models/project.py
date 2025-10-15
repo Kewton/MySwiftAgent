@@ -14,7 +14,9 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

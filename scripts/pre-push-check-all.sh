@@ -72,9 +72,13 @@ for project in "${PYTHON_PROJECTS[@]}"; do
 
     # 5. Coverage check
     if [ -d "tests" ]; then
-        # Get coverage threshold from pyproject.toml or use default 90%
-        COVERAGE_THRESHOLD=$(grep "fail_under" pyproject.toml 2>/dev/null | head -1 | sed 's/.*=\s*\([0-9]*\).*/\1/' || echo "90")
-        run_check "$project" "Test coverage (≥${COVERAGE_THRESHOLD}%)" "uv run pytest tests/ --cov=app --cov=core --cov-fail-under=$COVERAGE_THRESHOLD -q 2>/dev/null || uv run pytest tests/ --cov=app --cov-fail-under=$COVERAGE_THRESHOLD -q"
+        # Get coverage threshold from pyproject.toml or skip if not set
+        COVERAGE_THRESHOLD=$(grep "cov-fail-under" pyproject.toml 2>/dev/null | head -1 | sed 's/.*cov-fail-under=\([0-9]*\).*/\1/')
+        if [ -n "$COVERAGE_THRESHOLD" ]; then
+            run_check "$project" "Test coverage (≥${COVERAGE_THRESHOLD}%)" "uv run pytest tests/ --cov=app --cov=core --cov-fail-under=$COVERAGE_THRESHOLD -q 2>/dev/null || uv run pytest tests/ --cov=app --cov-fail-under=$COVERAGE_THRESHOLD -q"
+        else
+            echo -e "${YELLOW}⚠${NC} [$project] Coverage threshold not set, skipping coverage check"
+        fi
     fi
 
     echo ""

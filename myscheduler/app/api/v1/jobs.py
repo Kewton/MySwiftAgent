@@ -109,13 +109,11 @@ async def get_job_executions(
     """ジョブの実行履歴を取得"""
     try:
         executions = execution_repository.get_executions_by_job_id(job_id, limit)
-        return {
-            "job_id": job_id,
-            "executions": executions,
-            "count": len(executions)
-        }
+        return {"job_id": job_id, "executions": executions, "count": len(executions)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get executions for job {job_id}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get executions for job {job_id}"
+        ) from e
 
 
 @router.get("/executions/recent")
@@ -123,9 +121,8 @@ async def get_recent_executions(limit: int = 100):
     """最近の実行履歴を取得"""
     try:
         executions = execution_repository.get_recent_executions(limit)
-        return {
-            "executions": executions,
-            "count": len(executions)
-        }
+        return {"executions": executions, "count": len(executions)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to get recent executions") from e
+        raise HTTPException(
+            status_code=500, detail="Failed to get recent executions"
+        ) from e

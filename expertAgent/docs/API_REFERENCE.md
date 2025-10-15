@@ -162,7 +162,227 @@ The threshold can be customized with the `size_threshold_mb` parameter.
 
 ---
 
-## TTS and Google Drive Upload API
+## Text-to-Speech (TTS) APIs
+
+### Convert Text to Speech (Base64)
+
+**POST** `/v1/utility/text_to_speech`
+
+Converts text to speech using OpenAI TTS API and returns Base64-encoded audio data.
+
+#### Features
+
+- OpenAI TTS APIによる高品質音声合成
+- 複数の音声タイプ選択可能（alloy, echo, fable, onyx, nova, shimmer）
+- 2つのモデル選択（tts-1: 標準品質、tts-1-hd: 高品質）
+- Base64エンコードでJSON形式で返却
+- メモリ効率の良い一時ファイル処理
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `text` | string | Yes | 音声合成するテキスト（最大4096文字） |
+| `model` | string | No | TTSモデル (tts-1, tts-1-hd)（デフォルト: tts-1） |
+| `voice` | string | No | 音声タイプ (alloy, echo, fable, onyx, nova, shimmer)（デフォルト: alloy） |
+| `test_mode` | boolean | No | テストモード（CI/CD用、デフォルト: false） |
+| `test_response` | string | No | テストモード時のレスポンス |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8000/v1/utility/text_to_speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "こんにちは、これはテスト音声です。",
+    "model": "tts-1",
+    "voice": "alloy"
+  }'
+```
+
+#### Success Response (200 OK)
+
+```json
+{
+  "audio_content": "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA...",
+  "format": "mp3",
+  "size_bytes": 15360
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `audio_content` | string | Base64エンコードされた音声データ（MP3形式） |
+| `format` | string | 音声フォーマット（常に "mp3"） |
+| `size_bytes` | integer | 元のファイルサイズ（バイト単位） |
+
+#### Error Responses
+
+**400 Bad Request - Text too long**
+
+```json
+{
+  "detail": "テキストは4096文字以内にしてください"
+}
+```
+
+**400 Bad Request - Invalid model**
+
+```json
+{
+  "detail": "モデルは 'tts-1' または 'tts-1-hd' を指定してください"
+}
+```
+
+**400 Bad Request - Invalid voice**
+
+```json
+{
+  "detail": "音声タイプは alloy, echo, fable, onyx, nova, shimmer のいずれかを指定してください"
+}
+```
+
+**500 Internal Server Error - TTS failure**
+
+```json
+{
+  "detail": "音声ファイルの生成に失敗しました"
+}
+```
+
+#### Notes
+
+- Base64デコード後、そのままMP3ファイルとして保存可能
+- 大きなテキスト（1500文字超）は自動的に分割して処理
+- Google OAuth2認証が必要です
+
+---
+
+### Convert Text to Speech and Upload to Drive
+
+**POST** `/v1/utility/text_to_speech_drive`
+
+Converts text to speech using OpenAI TTS API and uploads the audio file directly to Google Drive.
+
+#### Features
+
+- OpenAI TTS APIによる高品質音声合成
+- Google Driveへの直接アップロード
+- サブディレクトリ自動作成
+- 重複ファイル名自動回避
+- ファイルリンク返却
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `text` | string | Yes | 音声合成するテキスト（最大4096文字） |
+| `drive_folder_url` | string | No | Google DriveフォルダURL |
+| `file_name` | string | No | 保存ファイル名（未指定時は自動生成） |
+| `sub_directory` | string | No | サブディレクトリパス（例: "podcasts/2025"） |
+| `model` | string | No | TTSモデル (tts-1, tts-1-hd)（デフォルト: tts-1） |
+| `voice` | string | No | 音声タイプ (alloy, echo, fable, onyx, nova, shimmer)（デフォルト: alloy） |
+| `test_mode` | boolean | No | テストモード（CI/CD用、デフォルト: false） |
+| `test_response` | string | No | テストモード時のレスポンス |
+
+#### Request Examples
+
+**Example 1: Basic upload**
+
+```bash
+curl -X POST http://localhost:8000/v1/utility/text_to_speech_drive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "こんにちは、これはテスト音声です。"
+  }'
+```
+
+**Example 2: Upload with subdirectory**
+
+```bash
+curl -X POST http://localhost:8000/v1/utility/text_to_speech_drive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "本日のポッドキャストをお届けします。",
+    "drive_folder_url": "https://drive.google.com/drive/folders/1a2b3c4d5e",
+    "file_name": "podcast_episode_001",
+    "sub_directory": "podcasts/2025",
+    "model": "tts-1-hd",
+    "voice": "nova"
+  }'
+```
+
+#### Success Response (200 OK)
+
+```json
+{
+  "file_id": "1a2b3c4d5e6f7g8h9i0j",
+  "file_name": "podcast_episode_001.mp3",
+  "web_view_link": "https://drive.google.com/file/d/1a2b3c4d5e6f7g8h9i0j/view",
+  "web_content_link": "https://drive.google.com/uc?id=1a2b3c4d5e6f7g8h9i0j",
+  "folder_path": "podcasts/2025",
+  "file_size_mb": 0.15
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file_id` | string | Google Drive ファイルID |
+| `file_name` | string | アップロードされたファイル名 |
+| `web_view_link` | string | ファイル閲覧用URL |
+| `web_content_link` | string | ファイルダウンロード用URL（null の場合あり） |
+| `folder_path` | string | アップロード先フォルダパス |
+| `file_size_mb` | number | ファイルサイズ（MB） |
+
+#### Error Responses
+
+**400 Bad Request - Text too long**
+
+```json
+{
+  "detail": "テキストは4096文字以内にしてください"
+}
+```
+
+**400 Bad Request - Invalid Drive folder URL**
+
+```json
+{
+  "detail": "無効なGoogle DriveフォルダURLです"
+}
+```
+
+**500 Internal Server Error - TTS or upload failure**
+
+```json
+{
+  "detail": "音声変換またはアップロード中に予期しないエラーが発生しました"
+}
+```
+
+#### API Selection Guide
+
+| 要件 | 推奨API | 理由 |
+|------|---------|------|
+| 音声データをアプリ内で再生 | `/v1/utility/text_to_speech` | Base64デコードで即座に使用可能 |
+| 音声ファイルを長期保存 | `/v1/utility/text_to_speech_drive` | Drive URLで恒久的にアクセス可能 |
+| 音声ファイルを共有 | `/v1/utility/text_to_speech_drive` | Drive URLで簡単に共有可能 |
+| LLMワークフローで音声生成 | `/v1/utility/text_to_speech` + Drive Upload API | 柔軟な処理フロー構築が可能 |
+
+#### Notes
+
+- ファイル名が指定されていない場合は自動生成されます（例: `audio_001_20250101_120000.mp3`）
+- 同名ファイルが存在する場合、自動的に連番が付与されます
+- 一時ファイルは自動的に削除されます
+- Google OAuth2認証が必要です
+
+---
+
+## TTS and Google Drive Upload API (Legacy)
 
 ### Convert Text to Speech and Upload
 

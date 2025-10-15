@@ -16,6 +16,8 @@
      - [Gmail送信API](#12-gmail送信api)
      - [Google検索API](#13-google検索api)
      - [Google Drive UploadAPI](#14-google-drive-uploadapi)
+     - [Text-to-Speech API (Base64)](#15-text-to-speech-api-base64)
+     - [Text-to-Speech API (Google Drive Upload)](#16-text-to-speech-api-google-drive-upload)
    - [2. Utility AI Agent（Agent API）](#2-utility-ai-agentagent-api)
      - [Explorer Agent](#21-explorer-agent)
      - [Action Agent](#22-action-agent)
@@ -1116,6 +1118,77 @@ drive_upload:
 
 **レスポンス**: `file_id`, `file_name`, `web_view_link`, `folder_path`
 
+#### 1.5 Text-to-Speech API (Base64)
+
+**POST** `/v1/utility/text_to_speech`
+
+**用途**: テキストを音声に変換し、Base64エンコードされた音声データを返却（3-5秒）
+
+**リクエスト**:
+```yaml
+tts_base64:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/v1/utility/text_to_speech
+    method: POST
+    body:
+      text: "こんにちは。これはテスト音声です。"  # 必須: 音声合成するテキスト（最大4096文字）
+      model: "tts-1"                           # オプション: tts-1（標準）/ tts-1-hd（高品質）
+      voice: "alloy"                           # オプション: alloy/echo/fable/onyx/nova/shimmer
+```
+
+**レスポンス**: `audio_content` (Base64文字列), `format` (mp3), `size_bytes`
+
+**使用例**:
+- 音声データをフロントエンドで再生
+- 他のAPIに音声データを転送
+- 一時的な音声生成
+
+#### 1.6 Text-to-Speech API (Google Drive Upload)
+
+**POST** `/v1/utility/text_to_speech_drive`
+
+**用途**: テキストを音声に変換し、Google Driveにアップロード（5-10秒）
+
+**リクエスト**:
+```yaml
+tts_drive:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/v1/utility/text_to_speech_drive
+    method: POST
+    body:
+      text: "こんにちは。これはテスト音声です。"    # 必須: 音声合成するテキスト（最大4096文字）
+      drive_folder_url: "https://drive.google.com/drive/folders/xxx"  # 必須: アップロード先フォルダURL
+      file_name: "greeting"                        # オプション: ファイル名（拡張子なし）
+      sub_directory: "podcasts/2025"               # オプション: サブディレクトリパス
+      model: "tts-1"                               # オプション: tts-1（標準）/ tts-1-hd（高品質）
+      voice: "alloy"                               # オプション: alloy/echo/fable/onyx/nova/shimmer
+```
+
+**レスポンス**: `file_id`, `file_name`, `web_view_link`, `web_content_link`, `folder_path`, `file_size_mb`
+
+**使用例**:
+- ポッドキャスト用音声生成
+- レポート読み上げ音声の保存
+- アナウンス音声の作成と共有
+
+**音声タイプ (voice) の選択**:
+| 音声タイプ | 特徴 | 推奨用途 |
+|----------|------|---------|
+| **alloy** | 中性的、バランス型 | 汎用的なナレーション |
+| **echo** | 男性的、落ち着いた声 | ビジネスプレゼンテーション |
+| **fable** | 柔らかく暖かい声 | ストーリーテリング |
+| **onyx** | 深みのある男性的な声 | ニュースアナウンス |
+| **nova** | 明るく活発な声 | カジュアルな解説 |
+| **shimmer** | 優しく柔らかい声 | リラックス系コンテンツ |
+
+**モデルの選択**:
+| モデル | 品質 | 速度 | コスト | 推奨用途 |
+|--------|-----|------|-------|---------|
+| **tts-1** | 標準品質 | 高速 | $ | 一般的な音声生成 |
+| **tts-1-hd** | 高品質 | 中速 | $$ | プロフェッショナル品質が必要な場合 |
+
 ---
 
 ### 2. Utility AI Agent（Agent API）
@@ -1252,6 +1325,45 @@ json_generator:
 **選択の判断基準**:
 - ✅ `/mylllm`: 自由形式のテキスト生成
 - ✅ `/jsonoutput`: 構造化データが必須の場合
+
+#### Text-to-Speech（音声合成）
+
+| タスク | 推奨API | タイプ | 理由 |
+|-------|---------|-------|------|
+| **音声データ取得（Base64）** | `/v1/utility/text_to_speech` | Utility API | 3-5秒、フロントエンド再生・API転送に最適 |
+| **音声ファイル保存（Drive）** | `/v1/utility/text_to_speech_drive` | Utility API | 5-10秒、ポッドキャスト・レポート音声等の永続化 |
+| **条件付き音声生成** | Action Agent (`tts_and_upload_drive_tool`) | AI Agent | LLMが音声生成要否を判断 |
+
+**選択の判断基準**:
+- ✅ `/text_to_speech`: リアルタイム再生、一時的な音声データ取得
+- ✅ `/text_to_speech_drive`: ファイルとして保存・共有が必要な場合（推奨）
+- ✅ Action Agent: LLMに音声生成判断を任せたい場合（稀）
+
+**使用例シナリオ**:
+```yaml
+# シナリオ1: レポート生成 → 音声化 → Drive保存
+nodes:
+  # 1. LLMでレポート生成
+  generate_report:
+    agent: fetchAgent
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      body:
+        user_input: "日次レポートを作成"
+        model_name: "gpt-oss:120b"
+
+  # 2. レポート本文をTTS変換してDrive保存（推奨）
+  save_audio:
+    agent: fetchAgent
+    inputs:
+      url: http://127.0.0.1:8104/v1/utility/text_to_speech_drive
+      body:
+        text: :generate_report.result
+        drive_folder_url: "https://drive.google.com/drive/folders/xxx"
+        file_name: "daily_report"
+        sub_directory: "reports/audio"
+        voice: "onyx"  # ビジネス向けの落ち着いた声
+```
 
 #### **総合的な選択フローチャート**
 

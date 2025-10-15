@@ -16,10 +16,13 @@ class ExecutionRepository:
 
     def __init__(self):
         from ..db.session import _ensure_sqlite_directory
+
         _ensure_sqlite_directory(settings.database_url)
         self.engine = create_engine(settings.database_url)
         Base.metadata.create_all(self.engine)
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=self.engine
+        )
 
     def create_execution(
         self,
@@ -52,9 +55,11 @@ class ExecutionRepository:
     ) -> bool:
         """実行履歴を更新"""
         with self.SessionLocal() as db:
-            execution = db.query(JobExecutionORM).filter(
-                JobExecutionORM.execution_id == execution_id
-            ).first()
+            execution = (
+                db.query(JobExecutionORM)
+                .filter(JobExecutionORM.execution_id == execution_id)
+                .first()
+            )
 
             if not execution:
                 return False
@@ -108,9 +113,11 @@ class ExecutionRepository:
         """指定されたジョブIDの実行回数を取得"""
         try:
             with self.SessionLocal() as session:
-                count = session.query(JobExecutionORM).filter(
-                    JobExecutionORM.job_id == job_id
-                ).count()
+                count = (
+                    session.query(JobExecutionORM)
+                    .filter(JobExecutionORM.job_id == job_id)
+                    .count()
+                )
                 logger.info(f"Found {count} executions for job {job_id}")
                 return count
         except Exception as e:
@@ -123,9 +130,11 @@ class ExecutionRepository:
         cutoff_date = cutoff_date - timedelta(days=days)
 
         with self.SessionLocal() as db:
-            deleted_count = db.query(JobExecutionORM).filter(
-                JobExecutionORM.started_at < cutoff_date
-            ).delete()
+            deleted_count = (
+                db.query(JobExecutionORM)
+                .filter(JobExecutionORM.started_at < cutoff_date)
+                .delete()
+            )
 
             db.commit()
             return deleted_count

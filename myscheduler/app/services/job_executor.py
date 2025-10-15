@@ -27,11 +27,12 @@ def execute_http_job(
         try:
             # APSchedulerのJobExecutionContextから実行中のジョブIDを取得
             import inspect
+
             frame = inspect.currentframe()
             while frame:
-                if '_job' in frame.f_locals:
-                    apscheduler_job = frame.f_locals['_job']
-                    if hasattr(apscheduler_job, 'id'):
+                if "_job" in frame.f_locals:
+                    apscheduler_job = frame.f_locals["_job"]
+                    if hasattr(apscheduler_job, "id"):
                         actual_job_id = apscheduler_job.id
                         break
                 frame = frame.f_back
@@ -39,10 +40,13 @@ def execute_http_job(
             # フレームスタックでも見つからない場合は、グローバルから推測
             if not actual_job_id:
                 from threading import current_thread
+
                 thread_name = current_thread().name
-                if 'APScheduler' in thread_name and url:
+                if "APScheduler" in thread_name and url:
                     # ログから推測（最適ではないが、フォールバック）
-                    logger.info(f"Executing HTTP job without explicit job_id, URL: {url}")
+                    logger.info(
+                        f"Executing HTTP job without explicit job_id, URL: {url}"
+                    )
         except Exception as e:
             logger.debug(f"Could not determine job_id from context: {e}")
 
@@ -50,8 +54,12 @@ def execute_http_job(
     execution_id = None
     if actual_job_id:
         try:
-            execution_id = execution_repository.create_execution(actual_job_id, "running")
-            logger.info(f"Started execution tracking: {execution_id} for job {actual_job_id}")
+            execution_id = execution_repository.create_execution(
+                actual_job_id, "running"
+            )
+            logger.info(
+                f"Started execution tracking: {execution_id} for job {actual_job_id}"
+            )
         except Exception as e:
             logger.error(f"Failed to create execution record: {e}")
 
@@ -76,18 +84,20 @@ def execute_http_job(
                             url,
                             json=body,
                             timeout=timeout_sec,
-                            headers=headers or {}
+                            headers=headers or {},
                         )
                     else:
                         response = await client.request(
                             method.upper(),
                             url,
                             timeout=timeout_sec,
-                            headers=headers or {}
+                            headers=headers or {},
                         )
 
                     result["status_code"] = response.status_code
-                    result["response_size"] = len(response.content) if response.content else 0
+                    result["response_size"] = (
+                        len(response.content) if response.content else 0
+                    )
 
                     # レスポンスボディを保存
                     try:
@@ -99,7 +109,9 @@ def execute_http_job(
                     # 4xxエラーはリトライしない
                     if 400 <= response.status_code < 500:
                         result["error_message"] = f"Client error {response.status_code}"
-                        logger.error(f"Client error {response.status_code} for {method} {url}")
+                        logger.error(
+                            f"Client error {response.status_code} for {method} {url}"
+                        )
                         break
 
                     # 5xxエラーまたは200番台以外はリトライ対象
@@ -108,13 +120,17 @@ def execute_http_job(
                             await asyncio.sleep(retry_backoff_sec * (attempt + 1))
                             continue
                         else:
-                            result["error_message"] = f"Max retries exceeded, last status: {response.status_code}"
+                            result["error_message"] = (
+                                f"Max retries exceeded, last status: {response.status_code}"
+                            )
                             logger.error(f"Max retries exceeded for {method} {url}")
                             break
 
                     # 成功
                     result["success"] = True
-                    logger.info(f"Successfully executed {method} {url} - Status: {response.status_code}")
+                    logger.info(
+                        f"Successfully executed {method} {url} - Status: {response.status_code}"
+                    )
                     return result
 
                 except Exception as e:
@@ -140,15 +156,27 @@ def execute_http_job(
     # 実行履歴記録終了
     if execution_id and actual_job_id:
         try:
-            status = "completed" if execution_result and execution_result["success"] else "failed"
+            status = (
+                "completed"
+                if execution_result and execution_result["success"]
+                else "failed"
+            )
             execution_repository.update_execution(
                 execution_id=execution_id,
                 status=status,
                 result=execution_result,
-                error_message=execution_result.get("error_message") if execution_result else "Unknown error",
-                http_status_code=execution_result.get("status_code") if execution_result else None,
-                response_size=execution_result.get("response_size") if execution_result else None,
+                error_message=execution_result.get("error_message")
+                if execution_result
+                else "Unknown error",
+                http_status_code=execution_result.get("status_code")
+                if execution_result
+                else None,
+                response_size=execution_result.get("response_size")
+                if execution_result
+                else None,
             )
-            logger.info(f"Updated execution record: {execution_id} with status {status}")
+            logger.info(
+                f"Updated execution record: {execution_id} with status {status}"
+            )
         except Exception as e:
             logger.error(f"Failed to update execution record: {e}")

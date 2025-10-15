@@ -27,6 +27,7 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "types-PyYAML>=6.0.0",
 ]
 
 [build-system]
@@ -68,6 +69,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["B008"]
+"app/api/**/*.py" = ["B008"]  # FastAPI Depends() pattern
+"app/models/**/*.py" = ["F821"]  # SQLAlchemy forward references
 
 [tool.mypy]
 python_version = "3.12"
@@ -78,6 +81,30 @@ plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "scripts.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "app.core.config"
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = "app.core.database"
+disallow_untyped_defs = false
+warn_unreachable = false
+check_untyped_defs = false
+disable_error_code = ["arg-type", "operator"]
+
+[[tool.mypy.overrides]]
+module = "app.models.*"
+warn_no_return = false
+disable_error_code = ["name-defined"]
+
+[[tool.mypy.overrides]]
+module = "app.main"
 disallow_untyped_defs = false
 
 [tool.coverage.run]

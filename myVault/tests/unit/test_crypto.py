@@ -48,7 +48,7 @@ def test_decrypt_invalid_tag_fails() -> None:
     # Should fail
     try:
         crypto.decrypt(ciphertext, iv, invalid_tag)
-        assert False, "Should have raised ValueError"
+        raise AssertionError("Should have raised ValueError")
     except ValueError:
         pass
 
@@ -66,6 +66,6 @@ def test_decrypt_invalid_ciphertext_fails() -> None:
     # Should fail
     try:
         crypto.decrypt(invalid_ciphertext, iv, tag)
-        assert False, "Should have raised ValueError"
+        raise AssertionError("Should have raised ValueError")
     except ValueError:
         pass
