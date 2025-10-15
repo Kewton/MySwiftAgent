@@ -4,11 +4,28 @@
 
 Expert Agent Service provides REST API endpoints for AI agent execution, utility functions, and Google Drive file operations.
 
-## Base URL
+## Base URL and Root Path
 
+**Development Server:**
 ```
-http://localhost:8000
+http://localhost:8104
 ```
+
+**FastAPI Root Path:**
+```
+/aiagent-api
+```
+
+**Complete Base URL (for external access):**
+```
+http://localhost:8104/aiagent-api
+```
+
+**Important:** All endpoint paths shown in this document are relative to the FastAPI `root_path` (`/aiagent-api`). When accessing from external services (e.g., GraphAI workflows, curl commands), prepend `/aiagent-api` to the endpoint path.
+
+**Example:**
+- **Endpoint**: `/v1/utility/tts_and_upload_drive`
+- **Full URL**: `http://localhost:8104/aiagent-api/v1/utility/tts_and_upload_drive`
 
 ## Authentication
 
@@ -386,7 +403,9 @@ curl -X POST http://localhost:8000/v1/utility/text_to_speech_drive \
 
 ### Convert Text to Speech and Upload
 
-**POST** `/api/v1/utility/tts_and_upload_drive`
+**POST** `/v1/utility/tts_and_upload_drive`
+
+**Full URL:** `http://localhost:8104/aiagent-api/v1/utility/tts_and_upload_drive`
 
 Converts text to speech (MP3) and uploads the audio file to Google Drive.
 
@@ -396,16 +415,29 @@ Converts text to speech (MP3) and uploads the audio file to Google Drive.
 |-------|------|----------|-------------|
 | `user_input` | string | Yes | 音声合成するテキストメッセージ |
 | `test_mode` | boolean | No | テストモード（デフォルト: false） |
-| `test_response` | string | No | テストモード時のレスポンス |
+| `test_response` | dict/str | No | テストモード時のレスポンス |
 
 #### Request Example
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/utility/tts_and_upload_drive \
+curl -X POST http://localhost:8104/aiagent-api/v1/utility/tts_and_upload_drive \
   -H "Content-Type: application/json" \
   -d '{
     "user_input": "こんにちは、これはテスト音声です。"
   }'
+```
+
+#### GraphAI Workflow Example
+
+```yaml
+generate_podcast:
+  agent: fetchAgent
+  params:
+    url: http://localhost:8104/aiagent-api/v1/utility/tts_and_upload_drive
+    headers:
+      Content-Type: application/json
+    body:
+      user_input: :summarize_email
 ```
 
 #### Success Response (200 OK)
