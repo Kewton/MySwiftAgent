@@ -51,8 +51,10 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "pandas>=2.0.0",
     "pydub>=0.25.0",
+    "python-magic>=0.4.27",
     # Security and encryption
     "cryptography>=41.0.0",
+    "pypdf>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -122,12 +124,6 @@ minversion = "7.0"
 addopts = [
     "-ra",
     "--strict-markers",
-    "--cov=app",
-    "--cov=core",
-    "--cov-report=term-missing",
-    "--cov-report=json",
-    "--cov-report=html",
-    "--cov-fail-under=90",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

@@ -1,0 +1,28 @@
+version: 0.5
+nodes:
+  # Test environment variable resolution
+  source:
+    value: "test input"
+    update: :source
+
+  # Test EXPERTAGENT_BASE_URL placeholder
+  test_expertagent_url:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/health"
+      method: "GET"
+
+  # Test MYVAULT_BASE_URL placeholder
+  test_myvault_url:
+    agent: fetchAgent
+    inputs:
+      url: "${MYVAULT_BASE_URL}/health"
+      method: "GET"
+
+  # Result aggregation
+  result:
+    agent: copyAgent
+    inputs:
+      expertagent_status: :test_expertagent_url
+      myvault_status: :test_myvault_url
+    isResult: true

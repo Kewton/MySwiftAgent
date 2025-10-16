@@ -58,9 +58,7 @@ class AuthService:
 
         return x_service
 
-    def check_rbac_permission(
-        self, service: str, action: str, resource: str
-    ) -> bool:
+    def check_rbac_permission(self, service: str, action: str, resource: str) -> bool:
         """
         Check if service has permission to perform action on resource using RBAC.
 

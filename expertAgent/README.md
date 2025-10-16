@@ -5,14 +5,15 @@
 ## Features
 
 - ⚡ Fast and lightweight FastAPI server
-- 🧠 LangGraph-based AI agents (sample, utility, explorer, action, playwright, wikipedia)
+- 🧠 LangGraph-based AI agents (sample, utility, explorer, action, playwright, wikipedia, file_reader)
 - 🔧 MCP (Model Context Protocol) servers and tools
 - 🎭 **Playwright MCP integration** for web automation and scraping
 - 📚 **Wikipedia MCP integration** for knowledge retrieval and research
+- 📄 **File Reader MCP integration** for multi-format file processing (PDF/Image/Audio/Text/CSV)
 - 🔐 **MyVault integration** for centralized secret management with cache
 - 🌐 Multiple AI provider support (OpenAI, Google Gemini, Anthropic, Ollama)
 - 🔒 CORS-enabled for cross-origin requests
-- 🧪 Comprehensive testing with pytest (30 MyVault tests included)
+- 🧪 Comprehensive testing with pytest (44 File Reader tests + 30 MyVault tests)
 - 🐳 Docker-ready with uv package manager
 - 📊 Health check endpoint for monitoring
 - 🎯 Type-safe with Pydantic models
@@ -39,12 +40,17 @@ expertAgent/
 │           ├── explorer_agent.py
 │           ├── jsonOutput_agent.py
 │           ├── action_agent.py
-│           ├── playwright_agent.py  # 🆕 Playwright web automation
-│           └── wikipedia_agent.py   # 🆕 Wikipedia knowledge retrieval
+│           ├── playwright_agent.py  # 🎭 Playwright web automation
+│           ├── wikipedia_agent.py   # 📚 Wikipedia knowledge retrieval
+│           └── file_reader_agent.py # 📄 File processing
 ├── mymcp/                 # MCP servers and tools
 │   ├── stdioall.py               # MCP server
 │   ├── stdio_explorer.py         # Explorer MCP
+│   ├── stdio_file_reader.py      # 📄 File Reader MCP (FastMCP)
 │   ├── tool/                     # General tools
+│   │   ├── file_reader_utils.py      # 📄 File Reader utilities
+│   │   ├── file_reader_sources.py    # 📄 URL/Drive/Local file download
+│   │   └── file_reader_processors.py # 📄 PDF/Image/Audio/Text/CSV processing
 │   ├── specializedtool/          # Specialized tools
 │   └── googleapis/               # Google API tools
 │       └── googleapi_services.py # 🔐 Google API service builder
@@ -254,6 +260,7 @@ result = await playwrightagent(
 - Chromium browser pre-installed in Docker
 - Integrated with LangGraph ReAct agent pattern
 - Configurable max iterations (default: 5)
+- **User-Agent configured** to avoid bot detection (resolves 403 Forbidden issues on some sites)
 - **Docker requirement**: Needs `shm_size: 2gb` for browser operation (configured in docker-compose.yml)
 
 **Development Setup:**
@@ -342,6 +349,120 @@ pip install wikipedia-mcp
 # Test Wikipedia MCP locally
 wikipedia-mcp --language ja
 ```
+
+### File Reader MCP Integration
+
+📄 **File Reader Agent** provides multi-format file processing capabilities using FastMCP server.
+
+**Capabilities:**
+- 📑 PDF text extraction (full page content, no summarization)
+- 🖼️ Image analysis and OCR (OpenAI Vision API)
+- 🎵 Audio transcription (OpenAI Whisper API)
+- 📝 Text/Markdown file reading
+- 📊 CSV file parsing
+- 🌐 Web URL downloads (HTTP/HTTPS)
+- ☁️ Google Drive integration (OAuth2)
+- 💻 Local file system access (secure)
+
+**Usage Example:**
+
+```python
+from aiagent.langgraph.utilityaiagents.file_reader_agent import filereaderagent
+
+# PDF text extraction
+result = await filereaderagent(
+    "下記ファイルのテキストを全て抽出してください。\nhttps://example.com/document.pdf",
+    "gpt-4o-mini"
+)
+
+# Image OCR (IMPORTANT: must specify "image file" or "image")
+result = await filereaderagent(
+    "下記画像ファイルのテキストを抽出してください。\nhttps://drive.google.com/file/d/FILE_ID/view",
+    "gpt-4o"
+)
+
+# Audio transcription
+result = await filereaderagent(
+    "下記音声ファイルを文字起こししてください。\nhttps://example.com/audio.mp3",
+    "gpt-4o-mini"
+)
+```
+
+**API Example:**
+
+```bash
+# PDF full text extraction
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/file_reader" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "下記ファイルのテキストを全て抽出してください。\nhttps://drive.google.com/file/d/FILE_ID/view"
+    }'
+
+# Image OCR (note: must specify "image file")
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/file_reader" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "下記画像ファイルのテキストを抽出してください。\nhttps://example.com/screenshot.png"
+    }'
+
+# Local file reading
+curl -X POST "http://127.0.0.1:8103/aiagent-api/v1/aiagent/utility/file_reader" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_input": "下記ファイルの内容を表示してください。\n/tmp/document.pdf"
+    }'
+```
+
+**Technical Details:**
+- **MCP Server**: FastMCP with stdio transport
+- **PDF Processing**: PyPDF2 for text extraction (all pages, no summarization)
+- **Image Processing**: Base64 encoding + OpenAI Vision API (gpt-4o)
+- **Audio Processing**: OpenAI Whisper API (whisper-1)
+- **File Sources**:
+  - HTTP/HTTPS URLs (timeout: 30s)
+  - Google Drive (OAuth2 via MyVault)
+  - Local files (secure path validation)
+- **Security**:
+  - Max file size: 50MB (default)
+  - Path traversal protection
+  - Allowed directories: `/tmp`, `/var/tmp`, `~/Downloads`, `~/Documents`
+  - Auto cleanup of temporary files
+- **Test Coverage**: 44 unit tests, 85.5% coverage
+
+**Important Usage Notes:**
+
+⚠️ **For Image Files**: Always specify "image file" or "image content" in your instruction
+- ❌ Wrong: "下記ファイルのテキストを抽出してください" (will be rejected as "not PDF")
+- ✅ Correct: "下記**画像ファイル**のテキストを抽出してください"
+- ✅ Correct: "下記**画像の内容**を説明してください"
+
+**Supported File Formats:**
+
+| Format | MIME Type | Tool Used | Output |
+|--------|-----------|-----------|--------|
+| PDF | `application/pdf` | PyPDF2 | Full text (all pages) |
+| PNG/JPG | `image/png`, `image/jpeg` | Vision API | OCR or description |
+| TXT/MD | `text/plain`, `text/markdown` | Direct read | Full content |
+| CSV | `text/csv` | csv.reader | Formatted text |
+| MP3/MP4/WAV | `audio/*`, `video/mp4` | Whisper API | Transcription |
+
+**Development Setup:**
+
+File Reader requires OpenAI API keys in MyVault:
+
+```bash
+# Required MyVault secrets
+OPENAI_API_KEY=sk-...  # For Vision and Whisper APIs
+
+# For Google Drive support
+GOOGLE_CREDENTIALS_JSON={...}  # OAuth2 credentials
+GOOGLE_TOKEN_JSON={...}  # OAuth2 tokens
+```
+
+**Documentation:**
+- Full usage guide: `docs/file-reader-usage-guide.md`
+- Implementation plan: `docs/file-reader-implementation-plan.md`
+- Progress log: `docs/file-reader-progress.md`
 
 ### Environment Variables
 

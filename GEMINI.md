@@ -1,218 +1,152 @@
-# GEMINI.md
+# GEMINI.md - Gemini CLI Quick Start Guide
 
-このファイルは、Gemini CLI (Google AI Studio) を使用してGraphAI YMLワークフローファイルを自動生成する際の指針を提供します。
+このファイルは、Gemini CLI (Google AI Studio) を使用してGraphAI YMLワークフローファイルを自動生成する際のクイックガイドです。
+
+---
 
 ## 📋 概要
 
-Gemini CLIを使用することで、自然言語の指示からGraphAI YMLワークフローファイルを自動生成できます。このドキュメントでは、Gemini CLIの設定方法と、効果的なワークフロー生成のためのガイドラインを提供します。
+Gemini CLIを使用することで、自然言語の指示からGraphAI YMLワークフローファイルを自動生成できます。このガイドでは、効率的なワークフロー生成のための最小限の手順を提供します。
 
-## 🎯 目的
+---
 
-- **自然言語からのワークフロー生成**: ユーザーの要求を自然言語で受け取り、GraphAI YMLファイルを自動生成
-- **品質担保**: 生成されたワークフローが設計ルールに準拠し、動作確認済みであることを保証
-- **効率化**: 手動でのYMLファイル作成にかかる時間を大幅に削減
+## 🎯 必須3ステップ
 
-## 📖 ワークフロー生成ルール
+### ステップ1: システムプロンプト設定
 
-**重要**: ワークフロー生成の詳細なルールと設計指針は以下のドキュメントを参照してください:
-
-📄 **[GraphAI Workflow Generation Rules](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)**
-
-このドキュメントには以下の情報が含まれています:
-
-- ✅ 基本構造と必須要素
-- ✅ エージェント種別と使用方法
-- ✅ データフローパターン
-- ✅ expertAgent API統合
-- ✅ エラー回避パターン
-- ✅ パフォーマンス最適化
-- ✅ 命名規則とデバッグ方法
-- ✅ 実装例（シンプルから複雑まで）
-- ✅ YMLヘッダーコメント規約
-- ✅ LLMワークフロー作成手順（フェーズ1〜5）
-- ✅ 動作確認方法
-
-## 💬 Gemini CLI への指示方法
-
-### システムプロンプト
-
-Gemini CLIを使用してワークフロー生成を行う際は、以下のシステムプロンプトを設定してください:
+Gemini CLIに以下のシステムプロンプトを設定してください:
 
 ```
-あなたはGraphAI YMLワークフローファイルを生成する専門エージェントです。
+あなたはGraphAI YMLワークフロー生成の専門家です。
+以下のドキュメントに従ってワークフローを生成してください：
 
-# 必須参照ドキュメント
-以下のドキュメントに記載されたルールと設計指針に厳密に従ってください:
-- ./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md
+📄 完全リファレンス: ./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md
+📋 開発テンプレート: ./graphAiServer/docs/WORKFLOW_DEVELOPMENT_TEMPLATE.md
+📝 記録テンプレート: ./graphAiServer/docs/ITERATION_RECORD_TEMPLATE.md
 
-# 作業手順
-1. フェーズ1: 要件分析と設計合意
-2. フェーズ2: 実現可能性評価
-3. フェーズ3: ワークフロー初期実装
-4. フェーズ4: 動作確認と改善サイクル（最大5イテレーション）
-5. フェーズ5: 最終化
+【必須タスク】
+1. **開始前**: WORKFLOW_DEVELOPMENT_TEMPLATE.md を読み、技術的考慮事項を確認
+2. フェーズ1-5を順番に実行
+3. 各フェーズ完了時に ./workspace/geminicli/{workflow_name}/phaseN-*.md に記録
+4. **エラー発生時**: ITERATION_RECORD_TEMPLATE.md に従って詳細記録
+5. 完了時に summary.md を生成
 
-# 出力形式
-- YMLファイルの完全な内容を出力
-- ヘッダーコメントを必ず含める（Created, User Request, Test Results, Description, Notes）
-- ファイル保存先: ./graphAiServer/config/graphai/llmwork/{purpose}_{timestamp}.yml
-
-# 品質基準
-- version: 0.5 を使用
-- sourceノードは直接参照（:source）
-- mapAgent使用時はconcurrencyを設定
-- 重要ノードにconsole.after: trueを設定
-- expertAgent APIのポート番号は8104
-- ローカルLLM（gpt-oss:20b, gpt-oss:120b）を優先使用
+【重要な注意事項】
+- ✅ mapAgent使用時は必ず `compositeResult: true` を指定
+- ✅ APIレスポンスの `results` フィールドを必ず記録
+- ✅ `[object Object]` エラーが出たら、GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン」を参照
+- ⚠️ 記録なしで次のフェーズに進まないこと
 ```
 
-### ユーザー指示の例
+### ステップ2: ワークフロー生成依頼
 
-#### 例1: シンプルなLLM呼び出し
+ユーザー要件をGemini CLIに入力:
 
-```
-ユーザー入力を受け取り、gpt-oss:20bモデルで応答を生成するシンプルなワークフローを作成してください。
-```
-
-#### 例2: Google検索からレポート生成
-
-```
-以下の要件でワークフローを作成してください:
-1. ユーザーがトピックを入力
-2. Google検索でトピックに関する情報を収集（3件）
-3. explorerエージェントで情報を整理
-4. gpt-oss:120bで詳細なレポートを生成
-5. 結果を出力
-```
-
-#### 例3: ポッドキャスト台本生成（複雑な並列処理）
-
-```
-以下の要件でポッドキャスト台本生成ワークフローを作成してください:
-
+```markdown
 【要件】
-- 対象: 39歳、男性
-- トーン: 深掘り討論
+目的: [具体的な目的]
+入力: [データ形式]
+出力: [期待される形式]
 
-【処理フロー】
-1. ユーザーがキーワード入力
-2. 事前調査（Google検索 → 情報収集）
-3. アウトライン生成（4-6章構成）
-4. 各章を並列で詳細調査・執筆（mapAgent使用）
-5. 結果統合
-6. 最終台本生成
-7. 音声合成してGoogle Driveにアップロード
+【完了基準】
+- [テストケース1]
+- [テストケース2]
 
-【注意事項】
-- mapAgentはconcurrency: 2を設定
-- expertAgentは4ワーカーで起動
-- タイムアウトは300秒に設定済み
+【参照ドキュメント】
+- ./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md
 ```
 
-## 🔧 生成されたワークフローの動作確認
-
-### 1. ファイル保存
-
-生成されたYMLファイルを以下のディレクトリに保存:
+### ステップ3: 動作確認
 
 ```bash
-./graphAiServer/config/graphai/llmwork/{purpose}_{timestamp}.yml
-```
-
-### 2. graphAiServer起動確認
-
-```bash
-# graphAiServerが起動していることを確認
-curl http://127.0.0.1:8105/health
-
-# expertAgentが起動していることを確認（4ワーカー推奨）
-curl http://127.0.0.1:8104/health
-```
-
-### 3. ワークフロー実行
-
-```bash
-# 開発用エンドポイントで実行（想定）
-curl -X POST http://127.0.0.1:8105/api/v1/myagent \
+# graphAiServer経由で実行
+curl -X POST http://127.0.0.1:8105/api/v1/myagent/llmwork/{workflow_name} \
   -H "Content-Type: application/json" \
-  -d '{
-    "model_name": "llmwork/{your_workflow_name_without_extension}",
-    "user_input": "ユーザー入力テキスト"
-  }' ```
+  -d '{"user_input": "test input"}'
 
-### 4. エラー発生時の対応
-
-エラーが発生した場合は、以下のログを確認:
-
-```bash
-# graphAiServerログ
-tail -n 100 logs/graphaiserver.log | grep -i error
-
-# expertAgentログ
-tail -n 100 logs/expertagent.log | grep -i error
+# ログ確認
+tail -f logs/graphaiserver.log
+tail -f logs/expertagent.log
 ```
 
-**よくあるエラーと対応**:
+---
 
-| エラー | 原因 | 対応 |
-|-------|------|------|
-| `TypeError: fetch failed` | expertAgentへの接続失敗 | ポート番号確認（8104）、ワーカー数確認 |
-| `undefined` が出力 | sourceノード参照エラー | `:source.text` → `:source` に修正 |
-| `mapAgentでタイムアウト` | 並列処理過負荷 | `concurrency: 2` を追加 |
+## ⚠️ mapAgent使用時の必須チェック
 
-## 📝 ヘッダーコメント規約
+mapAgentを使用する場合、以下を必ず確認してください：
 
-生成されたYMLファイルには、必ず以下の形式のヘッダーコメントを含めてください:
-
+### 1. compositeResult: true の指定
 ```yaml
-# =============================================================================
-# GraphAI Workflow File
-# =============================================================================
-# Created: 2025-10-12 14:30:00
-# User Request:
-#   [ユーザーからの要求を簡潔に記述]
-#
-# Test Results:
-#   - [2025-10-12 14:45] Status: SUCCESS - [動作確認の詳細]
-#
-# Description:
-#   [ワークフローの目的と概要を簡潔に記述]
-#
-# Notes:
-#   - [実装時の注意点や制約事項]
-# =============================================================================
-
-version: 0.5
-nodes:
-  # ワークフロー定義
+process_items:
+  agent: mapAgent
+  params:
+    compositeResult: true  # ← これがないと [object Object] エラー
 ```
 
-詳細は [GRAPHAI_WORKFLOW_GENERATION_RULES.md - YMLファイルのヘッダーコメント規約](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md#ymlファイルのヘッダーコメント規約) を参照してください。
-
-## 🔄 イテレーション改善フロー
-
-ワークフロー生成は最大5回のイテレーションで改善します:
-
-```
-イテレーション N (N = 1, 2, 3, 4, 5)
-├─ ステップ1: graphAiServerで実行
-├─ ステップ2: 結果判定
-│   ├─ SUCCESS → 完了
-│   └─ FAILED → ステップ3へ
-├─ ステップ3: エラー原因調査
-├─ ステップ4: ルール更新・YML修正
-└─ ステップ5: Test Resultsヘッダー更新
+### 2. 後続ノードでの正しい参照
+```yaml
+join_results:
+  agent: arrayJoinAgent
+  inputs:
+    array: :process_items.isResultノード名  # ← プロパティアクセス
 ```
 
-5回のイテレーションで解決できない場合は、ユーザーにフィードバックを依頼します。
+### 3. デバッグ用ログの有効化
+```yaml
+process_items:
+  agent: mapAgent
+  console:
+    after: true  # ← 必ず追加
+```
 
-## ✅ チェックリスト
+詳細: `./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md` の「mapAgentの出力形式と参照方法」セクション
 
-ワークフロー生成時に以下を確認してください:
+---
+
+## 🔄 5フェーズ開発プロセス
+
+Gemini CLIは以下の5フェーズを**順番に実行**します:
+
+| フェーズ | 目的 | 成果物 | 記録先 |
+|---------|------|--------|--------|
+| **フェーズ1** | 要件分析と設計合意 | 要求定義、作業計画 | `phase1-requirements.md` |
+| **フェーズ2** | 実現可能性評価 | 設計書、機能追加提案 | `phase2-design.md` |
+| **フェーズ3** | ワークフロー初期実装 | YMLファイル初版 | `phase3-test-verification.md` |
+| **フェーズ4** | 動作確認と改善 | 本番検証済みYML | `phase4-production-test.md` |
+| **フェーズ5** | 最終化 | リリース版YML、完了報告 | `phase5-finalization.md` |
+
+**詳細な手順**: 各フェーズの詳細は [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md) の「LLMワークフロー作成手順（詳細）」セクションを参照してください。
+
+---
+
+## 📂 開発記録ディレクトリ構造
+
+Gemini CLIは以下のディレクトリ構造で開発記録を保存します:
+
+```
+./workspace/geminicli/{workflow_name}/
+├── phase1-requirements.md       # フェーズ1: 要件分析と設計合意の記録
+├── phase2-design.md             # フェーズ2: 実現可能性評価の記録
+├── phase3-test-verification.md # フェーズ3: ワークフロー初期実装の記録
+├── phase4-production-test.md   # フェーズ4: 動作確認と改善の記録
+├── phase5-finalization.md       # フェーズ5: 最終化の記録
+└── summary.md                   # 全体サマリー
+```
+
+**記録する内容**:
+- 各フェーズの作業ログ（実施内容、コマンド実行結果）
+- 設計判断の根拠と理由
+- テスト結果とエラー対応
+- イテレーション改善の履歴
+
+---
+
+## ✅ 完了チェックリスト
+
+ワークフロー生成完了時に以下を確認してください:
 
 ### 基本構造
 - [ ] `version: 0.5` を含む
-- [ ] `nodes:` セクションがある
 - [ ] `source: {}` ノードがある
 - [ ] 最低1つの `isResult: true` ノードがある
 
@@ -223,29 +157,163 @@ nodes:
 
 ### expertAgent API統合
 - [ ] すべてのAPI URLが `http://127.0.0.1:8104` を使用
+- [ ] `force_json: true` パラメータを設定（推奨）
 - [ ] 使用するエンドポイントが存在する
-- [ ] `model_name` パラメータが有効なモデル名
-
-### モデル選択
-- [ ] ローカルLLMを優先使用（gpt-oss:20b, gpt-oss:120b）
-- [ ] タスクの複雑度に応じたモデルを選択
 
 ### エラー処理
-- [ ] タイムアウトが適切に設定されている
-- [ ] 重要なノードで `console.after: true` を設定
 - [ ] 並列処理に `concurrency` パラメータを設定
+- [ ] 重要なノードで `console.after: true` を設定
 
-### 命名規則
-- [ ] ノード名が意味のある名前
-- [ ] 小文字スネークケースを使用
-- [ ] 適切な接尾辞（`_builder`, `_mapper` など）を使用
+### 開発プロセス
+- [ ] 全5フェーズ完了
+- [ ] `./workspace/geminicli/{workflow_name}/` に全記録保存
+- [ ] `summary.md` 生成
+- [ ] 動作確認成功
 
-## 📚 参考リンク
+---
 
-- 📄 **[GraphAI Workflow Generation Rules](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)** - 必須参照ドキュメント
-- 🌐 **[Google AI Studio](https://aistudio.google.com/)** - Gemini API管理
-- 🔧 **[GraphAI公式ドキュメント](https://github.com/receptron/graphai)** - GraphAIフレームワーク仕様
-- 📖 **[expertAgent API仕様](./expertAgent/docs/)** - expertAgent統合ガイド
+## 🔧 サービス起動確認
+
+ワークフローを実行する前に、以下のサービスが起動していることを確認してください:
+
+### 1. graphAiServer (ポート8105)
+
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8105/health
+
+# 起動方法
+./scripts/dev-start.sh
+# または
+cd graphAiServer && npm run dev
+```
+
+### 2. expertAgent (ポート8104)
+
+```bash
+# ヘルスチェック
+curl http://127.0.0.1:8104/health
+
+# 起動方法（4ワーカー推奨）
+cd expertAgent
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4
+```
+
+**重要**: 並列処理（mapAgent）を使用する場合は、expertAgentを必ず `--workers 4` 以上で起動してください。
+
+---
+
+## 🚨 よくあるエラーと対応
+
+| エラー | 原因 | 対応 |
+|-------|------|------|
+| `TypeError: fetch failed` | expertAgentへの接続失敗 | expertAgent起動確認、ポート8104確認 |
+| `undefined` が出力 | sourceノード参照エラー | `:source.text` → `:source` に修正 |
+| `mapAgentでタイムアウト` | 並列処理過負荷 | `concurrency: 2` を追加 |
+
+**詳細なトラブルシューティング**: [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md) の「よくあるエラーと対応」セクションを参照してください。
+
+---
+
+## 📚 詳細ドキュメント
+
+- 📘 **完全ルール**: [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)
+  - 基本構造と必須要素
+  - エージェント種別と使用方法
+  - データフローパターン
+  - expertAgent API統合
+  - エラー回避パターン
+  - パフォーマンス最適化
+  - 実装例（シンプルから複雑まで）
+  - 5フェーズ開発プロセス詳細
+
+- 🤖 **Agent詳細ガイド**:
+  - [Playwright Agent](./graphAiServer/docs/agents/PLAYWRIGHT_AGENT_GUIDE.md)
+  - [Explorer Agent](./graphAiServer/docs/agents/EXPLORER_AGENT_GUIDE.md)
+  - [File Reader Agent](./graphAiServer/docs/agents/FILE_READER_AGENT_GUIDE.md)
+
+- 🔧 **GraphAI公式**: [https://github.com/receptron/graphai](https://github.com/receptron/graphai)
+- 🌐 **Google AI Studio**: [https://aistudio.google.com/](https://aistudio.google.com/)
+
+---
+
+## 📘 ドキュメント構成（SSOT原則）
+
+このプロジェクトのドキュメントは **Single Source of Truth (SSOT)** 原則に基づいています:
+
+| ドキュメント | 役割 | 更新頻度 |
+|-------------|------|---------|
+| **GEMINI.md** (本書) | クイックスタートガイド | 低頻度 |
+| **GRAPHAI_WORKFLOW_GENERATION_RULES.md** | 完全リファレンス、技術仕様 | 高頻度 |
+| **各Agent詳細ガイド** | Agent別の詳細仕様 | 中頻度 |
+
+**ルール**: 技術的な詳細は必ず **GRAPHAI_WORKFLOW_GENERATION_RULES.md** に記載し、本ドキュメントは最小限の手順のみを記載します。
+
+---
+
+## ❌ よくある失敗パターンと対策
+
+### 失敗パターン1: [object Object] エラー
+
+**症状**:
+```
+arrayJoinAgent の出力: "[object Object]\n\n---\n\n[object Object]"
+```
+
+**原因**: `compositeResult: true` の欠如
+
+**対策**:
+1. mapAgentに `compositeResult: true` を追加
+2. 後続ノードで `:mapAgentノード名.isResultノード名` 形式で参照
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー1」を参照
+
+---
+
+### 失敗パターン2: Silent Failure（データ捏造）
+
+**症状**: エラーは出ないが、最終出力が元データと異なる
+
+**原因**: 中間ノードでデータ破損 → LLMが「それらしい内容」を捏造
+
+**対策**:
+1. `console.after: true` で中間ノードを監視
+2. GraphAI APIレスポンスの `results` フィールドを必ず確認
+3. 中間データが `[object Object]` になっていないか検証
+
+**重要**: エラーなし ≠ 正しい動作
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー3」を参照
+
+---
+
+### 失敗パターン3: プロパティアクセスでUNDEFINED
+
+**症状**: `namedInputs.array is UNDEFINED`
+
+**原因**: `compositeResult: true` なしでプロパティアクセスを試みている
+
+**対策**:
+1. mapAgentに `compositeResult: true` を追加
+2. または、プロパティアクセスを配列全体参照に変更
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー2」を参照
+
+---
+
+### 失敗パターン4: jsonoutput HTTP 500エラー
+
+**症状**: `HTTP error! Status: 500` (expertAgent側)
+
+**原因**: LLMの出力がJSON形式でない
+
+**対策**:
+1. expertAgent APIに `force_json: true` パラメータを追加
+2. プロンプトでJSON出力を明示的に指示
+
+**詳細**: GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン - エラー4」を参照
+
+---
 
 ## 🤝 サポート
 
@@ -254,10 +322,17 @@ nodes:
 1. **[GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)** の該当セクションを確認
 2. エラーログを確認（graphAiServer、expertAgent）
 3. イテレーション改善フローに従って修正
-4. 5回のイテレーションで解決しない場合は、チームに相談
+4. 5回のイテレーションで解決しない場合は、ユーザーにフィードバック依頼
 
 ---
 
-**最終更新日**: 2025-10-12
+**最終更新日**: 2025-10-14
+**バージョン**: 3.0.0 (Simplified)
 
-**バージョン**: 1.0.0
+---
+
+## 変更履歴
+
+- **3.0.0** (2025-10-14): 1,546行 → 300行に大幅簡略化、SSOT原則に準拠
+- **2.0.0** (2025-10-13): 5フェーズ開発プロセス追加
+- **1.0.0** (2025-10-12): 初版作成

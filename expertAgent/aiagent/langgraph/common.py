@@ -459,6 +459,7 @@ async def make_playwright_graph(
 
     # Playwright MCP client setup with headless mode and no-sandbox for Docker
     # Explicitly specify chromium browser for ARM64 compatibility
+    # User-Agent setting to avoid bot detection (resolves 403 Forbidden issues)
     mcp_client = MultiServerMCPClient(
         {
             "playwright": {
@@ -470,6 +471,8 @@ async def make_playwright_graph(
                     "--no-sandbox",
                     "--browser",
                     "chromium",
+                    "--user-agent",
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
                 ],
                 "transport": "stdio",
             }

@@ -1,7 +1,7 @@
 """Test background worker functionality."""
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -133,7 +133,7 @@ class TestJobExecutor:
             # Should schedule retry since attempt < max_attempts
             assert sample_job.status == JobStatus.QUEUED
             assert sample_job.attempt == 2
-            assert sample_job.next_attempt_at > datetime.utcnow()
+            assert sample_job.next_attempt_at > datetime.now(UTC)
 
     @pytest.mark.asyncio
     async def test_execute_job_exception_no_more_retries(

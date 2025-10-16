@@ -48,10 +48,24 @@ class TestStandardAiAgentSchemas:
         assert resp.type == "test"
 
     def test_expert_ai_agent_response_json(self):
-        """Test ExpertAiAgentResponseJson model."""
+        """Test ExpertAiAgentResponseJson model with dict."""
         resp = ExpertAiAgentResponseJson(result={"key": "value"}, type="json")
         assert resp.result == {"key": "value"}
         assert resp.type == "json"
+
+    def test_expert_ai_agent_response_json_with_list(self):
+        """Test ExpertAiAgentResponseJson model with list (JSON array)."""
+        resp = ExpertAiAgentResponseJson(
+            result=["url1", "url2", "url3"], type="jsonOutput"
+        )
+        assert resp.result == ["url1", "url2", "url3"]
+        assert resp.type == "jsonOutput"
+
+    def test_expert_ai_agent_response_json_with_empty_list(self):
+        """Test ExpertAiAgentResponseJson model with empty list."""
+        resp = ExpertAiAgentResponseJson(result=[], type="jsonOutput")
+        assert resp.result == []
+        assert resp.type == "jsonOutput"
 
 
 class TestUtilitySchemas:

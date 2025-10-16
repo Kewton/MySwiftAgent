@@ -80,6 +80,94 @@ def send_email(to_email: str, subject: str, body: str) -> str:
         return error_msg  # エラーメッセージ
 
 
+def send_email_v2(
+    to_emails: str | list[str], subject: str, body: str, project: str | None = None
+) -> dict:
+    """
+    指定された宛先にメールを送信し、構造化データを返します（Utility API用）。
+
+    Args:
+        to_emails: 送信先のメールアドレス（単一または複数）。
+        subject: メールの件名。
+        body: メールの本文。
+        project: MyVaultプロジェクト名（オプション）。
+
+    Returns:
+        dict: Gmail API送信結果（id, threadId, labelIds等）
+
+    Raises:
+        RefreshError: 認証トークンのリフレッシュに失敗した場合
+        HttpError: Gmail APIリクエストでエラーが発生した場合
+        Exception: その他の予期せぬエラーが発生した場合
+    """
+    # 宛先をリスト化（単一の場合も扱いやすくする）
+    if isinstance(to_emails, str):
+        to_list = [to_emails]
+    else:
+        to_list = to_emails
+
+    if not to_list:
+        raise ValueError("送信先のメールアドレスが指定されていません。")
+
+    # 複数宛先をカンマ区切りで連結
+    to_email_str = ", ".join(to_list)
+
+    logger.info(f"Sending email to '{to_email_str}' with subject '{subject}'")
+
+    try:
+        service = get_googleapis_service(SERVICE_NAME, project=project)
+        if not service:
+            raise RuntimeError(
+                f"{SERVICE_NAME} API サービスを取得できませんでした。認証を確認してください。"
+            )
+
+        # MIMEメッセージを作成
+        message = MIMEMultipart()
+        message["To"] = to_email_str
+        message["From"] = "me"  # Gmail APIが認証ユーザーのアドレスを自動設定
+        message["Subject"] = subject
+
+        # 本文中の \n を改行に変換
+        body_processed = body.replace("\\n", "\n")
+
+        # メール本文を設定（プレーンテキスト、UTF-8）
+        msg_body = MIMEText(body_processed, "plain", "utf-8")
+        message.attach(msg_body)
+
+        # メッセージをエンコード
+        raw_msg = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+        message_body = {"raw": raw_msg}
+
+        # メールを送信（send API呼び出し）
+        sent_message = (
+            service.users().messages().send(userId="me", body=message_body).execute()
+        )
+
+        logger.info(
+            f"Email sent successfully. Message ID: {sent_message.get('id')}, Thread ID: {sent_message.get('threadId')}"
+        )
+
+        # 構造化データを返却
+        return {
+            "id": sent_message.get("id", ""),
+            "threadId": sent_message.get("threadId", ""),
+            "labelIds": sent_message.get("labelIds", ["SENT"]),
+        }
+
+    except RefreshError as e:
+        logger.error(f"Token refresh failed: {e}", exc_info=True)
+        raise
+    except HttpError as e:
+        error_details = (
+            f"ステータスコード: {e.resp.status}, 内容: {e.content.decode('utf-8')}"
+        )
+        logger.error(f"Gmail API request error: {error_details}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during email sending: {e}", exc_info=True)
+        raise
+
+
 def send_email_old(to_email, subject, body):
     try:
         logger.info("Starting email send (old implementation)")

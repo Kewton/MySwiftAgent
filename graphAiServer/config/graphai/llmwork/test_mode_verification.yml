@@ -1,0 +1,102 @@
+# =============================================================================
+# GraphAI Workflow File - Test Mode Verification
+# =============================================================================
+# Created: 2025-10-13
+# User Request:
+#   Test mode機能の動作検証用ワークフロー
+#   1つのエンドポイント（mylllm）でtest_modeとtest_responseの動作を確認
+#
+# Test Results:
+#   - [YYYY-MM-DD HH:MM] Status: PENDING - 初回実行前
+#
+# Description:
+#   test_mode機能の動作検証を行うための簡易ワークフロー。
+#   mylllmエンドポイントに対して、test_mode=trueとtest_responseを指定し、
+#   実際のLLM呼び出しなしにレスポンス構造を確認する。
+# =============================================================================
+
+version: 0.5
+nodes:
+  source: {}
+
+  # テストケース1: test_response に文字列を指定
+  test_string_response:
+    agent: fetchAgent
+    console:
+      before: test_string_response start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :source
+        model_name: gpt-oss:20b
+        test_mode: true
+        test_response: "これはテストレスポンス（文字列）です。LLM呼び出しは実行されていません。"
+
+  # テストケース2: test_response に辞書（dict）を指定
+  test_dict_response:
+    agent: fetchAgent
+    console:
+      before: test_dict_response start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :source
+        model_name: gpt-oss:20b
+        test_mode: true
+        test_response:
+          text: "これはテストレスポンス（辞書）のtextフィールドです"
+          result: "これはresultフィールドです"
+          custom_field: "カスタムフィールドも追加できます"
+          usage:
+            prompt_tokens: 10
+            completion_tokens: 20
+            total_tokens: 30
+
+  # テストケース3: test_mode=true、test_response=null（デフォルトレスポンス）
+  test_default_response:
+    agent: fetchAgent
+    console:
+      before: test_default_response start
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :source
+        model_name: gpt-oss:20b
+        test_mode: true
+
+  # 結果を統合して出力
+  output_builder:
+    agent: stringTemplateAgent
+    inputs:
+      test1_result: :test_string_response.text
+      test2_result: :test_dict_response.text
+      test2_custom: :test_dict_response.custom_field
+      test3_result: :test_default_response.text
+    params:
+      template: |-
+        # Test Mode Verification Results
+
+        ## Test Case 1: String Response
+        ${test1_result}
+
+        ## Test Case 2: Dict Response
+        - text field: ${test2_result}
+        - custom_field: ${test2_custom}
+
+        ## Test Case 3: Default Response (no test_response)
+        ${test3_result}
+
+        ## Conclusion
+        All test cases executed successfully!
+
+  output:
+    agent: copyAgent
+    inputs:
+      text: :output_builder
+    isResult: true

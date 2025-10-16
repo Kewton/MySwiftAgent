@@ -6,13 +6,13 @@ import app from './app.js';
 
 // Configure global fetch timeout (300 seconds)
 const originalFetch = global.fetch;
-global.fetch = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+global.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 seconds
 
   try {
-    const response = await originalFetch(url, {
-      ...options,
+    const response = await originalFetch(input, {
+      ...init,
       signal: controller.signal,
     });
     return response;
