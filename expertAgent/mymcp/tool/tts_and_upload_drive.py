@@ -149,17 +149,34 @@ def tts_and_upload_drive(input_message, file_name):
             )
             delete_file(str(md_file_path))
 
-            db = SpreadsheetDB(SPREADSHEET_ID)
-            new_products = [
-                [
-                    uploaded_file_id,
-                    drive_filename,
-                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    web_view_link,
-                    get_google_drive_file_links(_id)["webViewLink"],
-                ]
-            ]
-            db.append_rows(SHEET_NAME, new_products)
+            # Google Sheets記録（オプション機能）
+            if SPREADSHEET_ID:
+                try:
+                    logger.info(
+                        f"Recording podcast info to Google Sheets (ID: {SPREADSHEET_ID})"
+                    )
+                    db = SpreadsheetDB(SPREADSHEET_ID)
+                    new_products = [
+                        [
+                            uploaded_file_id,
+                            drive_filename,
+                            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            web_view_link,
+                            get_google_drive_file_links(_id)["webViewLink"],
+                        ]
+                    ]
+                    db.append_rows(SHEET_NAME, new_products)
+                    logger.info("Successfully recorded podcast info to Google Sheets")
+                except Exception as e:
+                    # Sheets記録失敗は警告に留める（メイン処理ではないため）
+                    logger.warning(
+                        f"Failed to record podcast info to Google Sheets: {e}. "
+                        f"Main process (MP3 upload) was successful."
+                    )
+            else:
+                logger.info(
+                    "Skipping Google Sheets recording (SPREADSHEET_ID not configured)"
+                )
             # ---------------
 
             logger.info(

@@ -60,10 +60,10 @@ class TestHomeHelloWorld:
 class TestExecMyllm:
     """Test exec_myllm endpoint."""
 
-    @patch("app.api.v1.agent_endpoints.chatOllama")
-    def test_exec_myllm_with_system_message(self, mock_chat):
+    @patch("app.api.v1.agent_endpoints.execLlmApi")
+    def test_exec_myllm_with_system_message(self, mock_llm):
         """Test exec_myllm with system message."""
-        mock_chat.return_value = "Test response"
+        mock_llm.return_value = "Test response"
         request = ExpertAiAgentRequest(
             user_input="Hello", system_imput="You are helpful", model_name="llama2"
         )
@@ -73,24 +73,24 @@ class TestExecMyllm:
         assert result.result == "Test response"
         assert result.text == "Test response"
         assert result.type == "exec_myllm"
-        mock_chat.assert_called_once()
+        mock_llm.assert_called_once()
 
-    @patch("app.api.v1.agent_endpoints.chatOllama")
-    def test_exec_myllm_without_system_message(self, mock_chat):
+    @patch("app.api.v1.agent_endpoints.execLlmApi")
+    def test_exec_myllm_without_system_message(self, mock_llm):
         """Test exec_myllm without system message."""
-        mock_chat.return_value = "Test response"
+        mock_llm.return_value = "Test response"
         request = ExpertAiAgentRequest(user_input="Hello")
 
         result = exec_myllm(request)
 
         assert result.result == "Test response"
         assert result.text == "Test response"
-        mock_chat.assert_called_once()
+        mock_llm.assert_called_once()
 
-    @patch("app.api.v1.agent_endpoints.chatOllama")
-    def test_exec_myllm_removes_think_tags(self, mock_chat):
+    @patch("app.api.v1.agent_endpoints.execLlmApi")
+    def test_exec_myllm_removes_think_tags(self, mock_llm):
         """Test that exec_myllm removes think tags from response."""
-        mock_chat.return_value = "Response <think>internal</think> text"
+        mock_llm.return_value = "Response <think>internal</think> text"
         request = ExpertAiAgentRequest(user_input="Hello")
 
         result = exec_myllm(request)

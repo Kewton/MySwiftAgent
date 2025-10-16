@@ -20,7 +20,7 @@ from app.schemas.standardAiAgent import (
 )
 from app.utils.json_converter import force_to_json_response, to_parse_json
 from core.test_mode_handler import handle_test_mode
-from mymcp.utils.chatollama import chatOllama
+from mymcp.utils.execllm import execLlmApi
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +74,13 @@ def exec_myllm(request: ExpertAiAgentRequest):
     logger.info(f"Messages for LLM: {_messages}")
 
     model_name = request.model_name if request.model_name is not None else "gpt-4o-mini"
-    # Convert ChatMessage objects to dictionaries for JSON serialization
-    messages_dict = [msg.model_dump() for msg in _messages]
-    result = chatOllama(messages_dict, model_name)
+
+    # Use execLlmApi to support Gemini, GPT, and Ollama models
+    result = execLlmApi(model_name, _messages)
+
+    if result is None:
+        result = "Error occurred"
+
     cleaned_result = remove_think_tags(result)
 
     print(f"result: {cleaned_result}")
