@@ -1,0 +1,113 @@
+# Input Schema:
+# {
+#   "user_input": {
+#     "url": "https://japancredit.go.jp/about/mrv/",
+#     "drive_folder_url": "https://drive.google.com/drive/folders/1Xrv6nJPuMB92s2DGcvZo_lH2H4cd_OsQ?usp=drive_link"
+#   }
+# }
+
+version: 0.5
+nodes:
+  source: {}
+
+  # 1. Google DriveフォルダIDをURLから抽出
+  extract_folder_id:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/mylllm"
+      method: POST
+      body:
+        user_input: "Extract Google Drive folder ID from this URL: ${drive_folder_url}. Return only the ID."
+        model_name: gpt-4o-mini
+        drive_folder_url: :source.drive_folder_url
+    console:
+      after: true
+
+  # 2. WebページからPDFリンクを抽出
+  extract_pdf_links:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/playwright"
+      method: POST
+      body:
+        user_input: |
+          以下のURLからPDFファイルのリンクを抽出してください。
+          URL: ${target_url}
+          ファイル拡張子: ${file_extension}
+        target_url: :source.url
+        file_extension: pdf
+        model_name: gpt-4o-mini
+    console:
+      after: true
+
+  # NEW NODE: Parse the output of extract_pdf_links to get a JSON array of URLs
+  parse_pdf_urls:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+      method: POST
+      body:
+        user_input: "From the following text, extract all PDF URLs and return them as a JSON array. Text: ${text_with_pdf_urls}"
+        text_with_pdf_urls: :extract_pdf_links.result
+        model_name: gpt-4o-mini
+        json_schema:
+          type: array
+          items:
+            type: string
+    console:
+      after: true
+
+  # 3. 各PDFファイルをGoogle Driveにアップロード (mapAgentで並列処理)
+  upload_pdfs:
+    agent: mapAgent
+    inputs:
+      rows: :parse_pdf_urls.result # Now it should be a JSON array
+    params:
+      compositeResult: true
+      concurrency: 2 # 並列処理数を制限
+    console:
+      after: true
+    graph:
+      nodes:
+        upload_single_pdf:
+          agent: fetchAgent
+          inputs:
+            url: "${EXPERTAGENT_BASE_URL}/v1/utility/drive/upload"
+            method: POST
+            body:
+              url: :row # mapAgentの各要素 (:row) がPDFのURL
+              drive_folder_id: :extract_folder_id.result # 抽出したフォルダIDを使用
+              create_file: false # URLからのアップロードなのでファイル作成は不要
+            model_name: gpt-4o-mini # Utility APIだが、LLMの指示解釈のためモデル指定
+          console:
+            after: true
+          isResult: true # mapAgentの出力としてこのノードの結果を使用
+
+  # 4. アップロード結果を集約
+  join_upload_results:
+    agent: arrayJoinAgent
+    inputs:
+      array: :upload_pdfs.upload_single_pdf # mapAgentのisResultノード名を参照
+    params:
+      separator: "\n" # 各結果を改行で結合
+    console:
+      after: true
+
+  # 5. メール通知
+  send_email:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/v1/utility/gmail/send"
+      method: POST
+      body:
+        to: "user@example.com" # TODO: ユーザーのメールアドレスに置き換えるか、Input Schemaに追加
+        subject: "Google DriveへのPDFアップロードレポート"
+        body: |-
+          以下のPDFファイルがGoogle Driveにアップロードされました:
+          ----------------------------------------------------
+          :join_upload_results.text
+          ----------------------------------------------------
+        model_name: gpt-4o-mini # Utility APIだが、LLMの指示解釈のためモデル指定
+    console:
+      after: true
+    isResult: true # 最終出力ノード

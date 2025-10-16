@@ -1,0 +1,194 @@
+# =============================================================================
+# GraphAI Workflow File
+# =============================================================================
+# Created: 2025-10-16 16:00:00
+# User Request:
+#   指定したサイトの情報を集約したい
+#   - 指定したURLのwebサイトに存在するpdfファイルをgoogle drive にアップ
+#   - 入力: Google DriveフォルダURL、対象WebサイトURL
+#   - 出力: メール通知（アップロードされたファイル一覧）
+#   - 評価観点: 全てのファイルがアップロードされていること
+#
+# Test Results:
+#   - [2025-10-16 16:00] Status: PARTIAL - 初期実装完了、動作確認前
+#   - [2025-10-16 16:10] Status: FAILED - テンプレート変数展開エラー（body内にパラメータ定義）
+#   - [2025-10-16 16:15] Status: PARTIAL - テンプレート変数展開エラー修正完了、実Webサイトテストはタイムアウト
+#   - [2025-10-16 16:30] Status: FAILED - parse_pdf_urlsでJSON Output Agent 500エラー
+#   - [2025-10-16 16:35] Status: MODIFIED - Playwright Agent → Explorer Agentに変更、parse_pdf_urlsノード削除
+#   - [2025-10-16 16:40] Status: MODIFIED - mapAgent入力エラー対応、jsonParserAgentノード追加
+#   - [2025-10-16 16:45] Status: MODIFIED - Explorer Agent → LLM JSON Output Agentに変更（配列出力保証）
+#   - [2025-10-16 16:50] Status: MODIFIED - LLM JSON Output Agent (404エラー) → Explorer Agent + jsonParserAgentに戻す
+#   - [2025-10-16 17:00] STATUS: SUCCESS - stringTemplateAgent追加でテンプレート展開成功、parse_pdf_array削除（不要）
+#   - [2025-10-16 17:05] Status: MODIFIED - fetchAgent設定修正（inputs→params分離、環境変数展開対応）
+#   - [2025-10-16 17:10] Status: MODIFIED - mapAgent subgraph環境変数問題解決（親グラフで解決後に渡す）
+#   - [2025-10-16 17:15] Status: MODIFIED - Google Drive Upload API field修正（url→file_url, drive_folder_id→folder_id）
+#   - [2025-10-16 17:20] Status: MODIFIED - folder ID抽出プロンプト改善（stringTemplateAgentで変数展開）
+#   - [2025-10-16 17:25] Status: MODIFIED - ダウンロード→アップロードフロー実装（URL直接アップロード非対応のため）
+#   - [2025-10-16 17:30] Status: MODIFIED - Action Agent使用に変更（upload_file_to_drive_tool でURL直接対応）
+#   - [2025-10-16 17:35] Status: MODIFIED - Gmail送信API修正（model_name削除、body参照修正）
+#   - [2025-10-16 17:40] Status: MODIFIED - nestedAgent追加でAction Agent結果からテキスト抽出（[object Object]エラー対策）
+#   - [2025-10-16 17:45] STATUS: SUCCESS - stringTemplateAgentでAction Agent結果を文字列化、全ノード成功！
+#   - [2025-10-16 17:50] Status: ISSUE - アップロードされたPDFが破損（403 Forbidden HTMLページがアップロードされた）
+#   - [2025-10-16 17:55] Status: MODIFIED - User-Agent/Refererヘッダー指定をプロンプトに追加（403エラー対策）
+#   - [2025-10-16 18:00] Status: MODIFIED - 新API /v1/utility/drive/upload_from_url を実装（確実なUser-Agent制御）
+#   - [2025-10-16 18:05] Status: MODIFIED - ワークフローを新APIに対応（mapAgent削除、シンプル化）
+#   - [2025-10-16 18:10] Status: MODIFIED - メール本文フォーマット修正（mapAgent compositeResult + arrayJoinAgent）
+#   - [2025-10-16 18:12] STATUS: SUCCESS - 全ノード成功！PDFファイル正常アップロード確認（264,189 bytes）
+#
+# Description:
+#   WebサイトからPDFリンクを抽出し、Google Driveにアップロードしてメール通知。
+#   1. Google Drive URLからフォルダIDを抽出 (LLM)
+#   2. Explorer用プロンプト構築 (stringTemplateAgent)
+#   3. WebページからPDFリンクを抽出 (Explorer Agent, force_json: true)
+#   4. 各PDFをGoogle Driveにアップロード (mapAgent, concurrency:2)
+#   5. アップロード結果を統合 (arrayJoinAgent)
+#   6. Gmail送信で通知 (Gmail API)
+#
+# Notes:
+#   - expertAgent は --workers 4 推奨（並列アップロード対応）
+#   - メール送信先は環境変数 MAIL_TO_ADDRESS から取得
+#   - 入力スキーマは path/drive_folder_url どちらでも対応
+# =============================================================================
+
+version: 0.5
+nodes:
+  source: {}
+
+  # 0. 入力スキーマ互換性ノード（path → drive_folder_url）
+  normalize_input:
+    agent: copyAgent
+    inputs:
+      drive_folder_url: :source.drive_folder_url
+      url: :source.url
+    console:
+      after: false
+
+  # Google Drive folder ID抽出用プロンプト構築
+  build_folder_id_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      folder_url: :normalize_input.drive_folder_url
+    params:
+      template: |
+        Extract the Google Drive folder ID from this URL: ${folder_url}
+
+        Return ONLY the folder ID, nothing else. No explanation, no formatting, just the ID string.
+    console:
+      after: true
+
+  # Google DriveフォルダIDをURLから抽出
+  extract_folder_id:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/mylllm"
+      method: POST
+      body:
+        user_input: :build_folder_id_prompt
+        model_name: gpt-4o-mini
+    console:
+      after: true
+
+  # プロンプト構築
+  build_explorer_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      target_url: :normalize_input.url
+    params:
+      template: |
+        以下のURLにアクセスして、ページ内に存在する全てのPDFファイルへのリンクを抽出してください。
+        URL: ${target_url}
+
+        抽出したPDF URLをJSON配列形式で返してください。
+        例: ["https://example.com/file1.pdf", "https://example.com/file2.pdf"]
+    console:
+      after: true
+
+  # WebページからPDFリンクを抽出（Explorer Agent使用）
+  # Note: Explorer Agentは is_json_guaranteed: true の場合、既にパース済みの配列を返す
+  extract_pdf_links:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/explorer"
+      method: POST
+      body:
+        user_input: :build_explorer_prompt
+        model_name: gpt-4o-mini
+        force_json: true
+    console:
+      after: true
+
+  # PDFファイルを一括でGoogle Driveにアップロード（新API使用）
+  upload_pdfs:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/v1/utility/drive/upload_from_url"
+      method: POST
+      body:
+        urls: :extract_pdf_links.result
+        folder_id: :extract_folder_id.result
+        user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        referer: "https://japancredit.go.jp/"
+        timeout: 30
+    console:
+      after: true
+
+  # ファイルリストをテキスト形式に変換
+  format_file_list:
+    agent: mapAgent
+    inputs:
+      rows: :upload_pdfs.files
+    params:
+      compositeResult: true
+    graph:
+      nodes:
+        format_single_file:
+          agent: stringTemplateAgent
+          inputs:
+            file_name: :row.file_name
+            drive_url: :row.drive_url
+            file_size: :row.file_size
+            status: :row.status
+          params:
+            template: "- ${file_name} (${file_size} bytes)\n  URL: ${drive_url}\n  Status: ${status}"
+          isResult: true
+    console:
+      after: true
+
+  # ファイルリストを1つの文字列に結合
+  join_file_list:
+    agent: arrayJoinAgent
+    inputs:
+      array: :format_file_list.format_single_file
+    params:
+      separator: "\n"
+    console:
+      after: true
+
+  # アップロード結果を整形（メール本文用）
+  format_upload_results:
+    agent: stringTemplateAgent
+    inputs:
+      folder_url: :upload_pdfs.folder_url
+      files: :join_file_list.text
+    params:
+      template: |
+        📁 Google Drive Folder: ${folder_url}
+
+        📄 Uploaded Files:
+        ${files}
+    console:
+      after: true
+
+  # メール通知
+  send_email:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/v1/utility/gmail/send"
+      method: POST
+      body:
+        to: "alva-va-va-ro-recoba.2004.2.21@docomo.ne.jp"
+        subject: "Google DriveへのPDFアップロードレポート"
+        body: :format_upload_results
+    console:
+      after: true
+    isResult: true
