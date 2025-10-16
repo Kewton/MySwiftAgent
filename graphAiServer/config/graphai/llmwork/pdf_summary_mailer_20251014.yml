@@ -1,0 +1,191 @@
+
+# LLM Workflow: PDF Summary Mailer
+#
+# Version: 2.0.0
+# Date: 2025-10-14
+#
+# Description:
+# This workflow automates the process of finding all PDF files on a specified website,
+# summarizing their content, and sending the summaries in an email.
+# It is designed for periodic information gathering.
+#
+# Author: Gemini
+#
+# Test Results:
+# - 2025-10-14 (Iteration 7): SUCCESS
+#
+# Notes:
+# - The mapAgent 'summarize_pdfs' uses 'compositeResult: true'. This causes its output
+#   to be an object: { "format_summary": [...] }, where 'format_summary' is the name
+#   of the node with 'isResult: true' in the subgraph.
+# - The subsequent 'join_summaries' node must access the array inside this object
+#   using the syntax ':summarize_pdfs.format_summary'.
+#
+# Nodes:
+#   - source: Receives user input (URL and keyword) as a JSON string.
+#   - parse_input: Parses the JSON string from the source into a structured object.
+#   - find_pdf_links: Crawls the URL to find PDF links matching the keyword.
+#   - summarize_pdfs: A map agent that processes each PDF in parallel.
+#     - read_pdf: Reads the content of a single PDF file.
+#     - summarize_content: Summarizes the extracted text.
+#     - format_summary: Formats the URL and its summary.
+#   - join_summaries: Joins all the individual summaries into a single text block.
+#   - create_email_body: Generates the final email body content.
+#   - send_email: Sends the final report to a pre-configured email address.
+#
+version: 0.5
+nodes:
+  source: {}
+
+  parse_input_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      source: :source
+    params:
+      template: |
+        Please parse the following JSON string and return it as a valid JSON object.
+        Do not add any commentary, just return the JSON object.
+        Input:
+        ${source}
+
+  parse_input:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :parse_input_prompt
+        model_name: "gpt-oss:20b"
+
+  find_pdf_links_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      url: :parse_input.result.url
+      keyword: :parse_input.result.keyword
+    params:
+      template: |
+        Please crawl the website at the URL `${url}` and find all links to PDF files.
+        The links or the surrounding text must be related to the keyword: `${keyword}`.
+        Please return the result as a JSON object with a key "pdf_urls" containing a list of the absolute URLs of the PDF files.
+
+  find_pdf_links:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer
+      method: POST
+      body:
+        user_input: :find_pdf_links_prompt
+        model_name: "gpt-4o-mini" # Recommended for agent integration
+
+  summarize_pdfs:
+    agent: mapAgent
+    console:
+      after: true
+    params:
+      concurrency: 2 # Limit concurrency to avoid overloading the agent
+      compositeResult: true # Added based on feedback
+    inputs:
+      rows: :find_pdf_links.result.pdf_urls
+    graph:
+      nodes:
+        read_pdf:
+          agent: fetchAgent
+          inputs:
+            url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/file_reader
+            method: POST
+            body:
+              user_input: "Please extract all text from the PDF file at the following URL: ${row}"
+              model_name: "gpt-4o-mini"
+
+        summarize_content_prompt:
+          agent: stringTemplateAgent
+          inputs:
+            content: :read_pdf.result
+          params:
+            template: |
+              Please summarize the following text in 300-500 characters.
+              The summary should be clear and easy to understand.
+
+              Text:
+              ${content}
+
+        summarize_content:
+          agent: fetchAgent
+          inputs:
+            url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+            method: POST
+            body:
+              user_input: :summarize_content_prompt
+              model_name: "gpt-oss:120b"
+
+        format_summary:
+          agent: stringTemplateAgent
+          inputs:
+            pdf_url: :row
+            summary: :summarize_content.result
+          params:
+            template: |
+              PDF: ${pdf_url}
+              Summary: ${summary}
+          isResult: true
+
+  join_summaries:
+    agent: arrayJoinAgent
+    inputs:
+      array: :summarize_pdfs.format_summary
+    params:
+      separator: "\n\n---\n\n"
+
+  create_email_body_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      url: :parse_input.result.url
+      keyword: :parse_input.result.keyword
+      summaries: :join_summaries.text
+    params:
+      template: |
+        Please generate a subject and a body for an email report.
+
+        Source URL: ${url}
+        Keyword: ${keyword}
+
+        Summaries:
+        ${summaries}
+
+  create_email_body:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+      method: POST
+      body:
+        user_input: :create_email_body_prompt
+        model_name: "gpt-oss:20b"
+
+  send_email_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      content: :create_email_body.result
+    params:
+      template: |
+        Please send an email with the following content.
+        The recipient is pre-configured.
+
+        ${content}
+
+  send_email:
+    agent: fetchAgent
+    console:
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+      method: POST
+      body:
+        user_input: :send_email_prompt
+        model_name: "gpt-4o-mini" # Recommended for agent integration
+    isResult: true

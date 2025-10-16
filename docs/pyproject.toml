@@ -1,6 +1,6 @@
 [project]
 name = "docs"
-version = "0.3.0"
+version = "0.3.1"
 description = "Documentation for MySwiftAgent"
 authors = [
     {name = "MySwiftAgent Team", email = "noreply@example.com"},

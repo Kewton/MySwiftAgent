@@ -1,0 +1,104 @@
+version: 0.5
+nodes:
+  # テスト用の入力データ
+  source: {}
+
+  test_content:
+    value: |-
+        # GraphAI コンテンツアップロード機能テスト
+
+        このファイルは、expertAgentの新機能である「コンテンツからファイル作成→Google Driveアップロード」機能のテストです。
+
+        ## テスト日時
+        2025-10-15
+
+        ## テスト内容
+        - graphAiServerワークフローからexpertAgentのMCPツールを呼び出し
+        - メモリ上のテキストコンテンツから直接Google Driveにアップロード
+        - サブディレクトリへの自動配置
+
+        ## 期待結果
+        - ファイルが正常にアップロードされること
+        - Google DriveのリンクURLが返却されること
+        - 一時ファイルが自動削除されること
+
+        ✅ このテストが成功すれば、graphAiServerワークフロー内でLLMが生成したコンテンツを
+        　直接Google Driveにアップロードできることが確認できます！
+
+  # expertAgentのactionエージェントを使用してアップロード
+  upload_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      user_input: :source
+      content: :test_content
+    console:
+      before: upload_prompt start
+    params:
+      template: |-
+        以下のテキストコンテンツをGoogle Driveにアップロードしてください。
+
+        ユーザー入力: ${user_input}
+
+        - ファイル名: graphai_test_upload.txt
+        - ファイルパス: /tmp/graphai_test_upload.txt
+        - サブディレクトリ: graphai_tests/content_upload
+        - コンテンツ:
+        ---
+        ${content}
+        ---
+
+        アップロード後、リンクURLを返却してください。
+
+        # RESPONSE FORMAT (JSON):
+        {
+          "status": "success",
+          "file_name": "...",
+          "web_view_link": "...",
+          "folder_path": "..."
+        }
+
+        /no_think
+
+  # expertAgentのactionエージェントに処理を依頼
+  action:
+    agent: fetchAgent
+    console:
+      before: action start (uploading content to Google Drive)
+      after: true
+    inputs:
+      url: http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/action
+      method: POST
+      body:
+        user_input: :upload_prompt
+        model_name: gpt-oss:20b
+
+  # 結果を整形して出力
+  result_formatter:
+    agent: stringTemplateAgent
+    inputs:
+      result: :action.result
+    console:
+      before: result_formatter start
+    params:
+      template: |-
+        ============================================================
+        🎉 GraphAI コンテンツアップロード機能テスト結果
+        ============================================================
+
+        ${result}
+
+        ============================================================
+        ✅ テスト完了
+        ============================================================
+
+  # 最終出力
+  output:
+    agent: copyAgent
+    console:
+      before: output start
+      after: true
+    params:
+      namedKey: text
+    inputs:
+      text: :result_formatter
+    isResult: true

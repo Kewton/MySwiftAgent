@@ -92,8 +92,8 @@ class Settings(BaseSettings):
         if not v:
             raise ValueError(
                 "MSA_MASTER_KEY environment variable is required.\n"
-                "Generate one with: python -c \"import secrets, base64; "
-                'print(\'base64:\' + base64.b64encode(secrets.token_bytes(32)).decode())"'
+                'Generate one with: python -c "import secrets, base64; '
+                "print('base64:' + base64.b64encode(secrets.token_bytes(32)).decode())\""
             )
 
         if not v.startswith("base64:"):

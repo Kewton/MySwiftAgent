@@ -45,6 +45,8 @@ export MYVAULT_BASE_URL="http://localhost:${MYVAULT_PORT}"
 export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
 export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
 
+# Note: GraphAI workflow environment variables are automatically available from above exports
+
 # Service directories
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
 MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"

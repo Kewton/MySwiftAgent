@@ -1,6 +1,6 @@
 """Job API endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, func, or_, select
@@ -42,7 +42,7 @@ async def create_job(
         scheduled_at=job_data.scheduled_at,
         ttl_seconds=job_data.ttl_seconds,
         tags=job_data.tags,
-        next_attempt_at=job_data.scheduled_at or datetime.utcnow(),
+        next_attempt_at=job_data.scheduled_at or datetime.now(UTC),
     )
 
     db.add(job)
@@ -106,7 +106,7 @@ async def cancel_job(
         )
 
     job.status = JobStatus.CANCELED
-    job.finished_at = datetime.utcnow()
+    job.finished_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(job)
@@ -135,7 +135,7 @@ async def retry_job(
     job.attempt = 0
     job.started_at = None
     job.finished_at = None
-    job.next_attempt_at = datetime.utcnow()
+    job.next_attempt_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(job)

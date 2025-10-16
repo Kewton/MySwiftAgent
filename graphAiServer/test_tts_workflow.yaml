@@ -1,0 +1,45 @@
+version: 0.5
+nodes:
+  # Pattern 1: TTS with Base64 response
+  tts_base64:
+    agent: fetchAgent
+    inputs:
+      url: http://127.0.0.1:8104/v1/utility/text_to_speech
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        text: "こんにちは。これはText-to-Speech APIのテストです。GraphAI Serverから実行しています。"
+        model: tts-1
+        voice: alloy
+    console:
+      before: true
+      after: true
+
+  # Pattern 2: TTS with Google Drive upload
+  tts_drive:
+    agent: fetchAgent
+    inputs:
+      url: http://127.0.0.1:8104/v1/utility/text_to_speech_drive
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        text: "こんにちは。これはDrive Upload付きTTS APIのテストです。GraphAI Serverから実行しています。"
+        drive_folder_url: "https://drive.google.com/drive/folders/1Xrv6nJPuMB92s2DGcvZo_lH2H4cd_OsQ"
+        file_name: "test_tts_graphai"
+        sub_directory: "tts_tests"
+        model: tts-1
+        voice: alloy
+    console:
+      before: true
+      after: true
+
+  # Verify results
+  verify:
+    agent: copyAgent
+    inputs:
+      base64_result: :tts_base64
+      drive_result: :tts_drive
+    console:
+      after: true

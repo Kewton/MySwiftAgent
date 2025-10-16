@@ -1,6 +1,9 @@
 import io
+import mimetypes
 import os
+import re
 import time
+from datetime import datetime
 
 import pandas as pd
 from googleapiclient.errors import HttpError
@@ -427,6 +430,153 @@ class SpreadsheetDB:
         except Exception as e:
             print(f"範囲のクリア中に予期せぬエラーが発生しました ({target_range}): {e}")
             return None
+
+
+def extract_folder_id_from_url(drive_url: str) -> str:
+    """GoogleDrive URL からフォルダIDを抽出する
+
+    Args:
+        drive_url: GoogleDriveフォルダのURL
+                  例: https://drive.google.com/drive/folders/1a2b3c4d5e
+
+    Returns:
+        str: フォルダID
+
+    Raises:
+        ValueError: URLが不正な形式の場合
+    """
+    folder_url_pattern = r"https://drive\.google\.com/drive/folders/([a-zA-Z0-9_-]+)"
+    match = re.search(folder_url_pattern, drive_url)
+    if not match:
+        raise ValueError(f"Invalid Google Drive folder URL: {drive_url}")
+    return match.group(1)
+
+
+def get_mime_type(file_path: str) -> str:
+    """ファイルパスからMIMEタイプを自動判定する
+
+    Args:
+        file_path: ファイルパス
+
+    Returns:
+        str: MIMEタイプ (例: 'application/pdf', 'audio/mpeg')
+             判定できない場合は 'application/octet-stream'
+    """
+    mime_type, _ = mimetypes.guess_type(file_path)
+    return mime_type or "application/octet-stream"
+
+
+def check_file_exists_in_folder(folder_id: str, file_name: str) -> bool:
+    """指定フォルダ内に同名ファイルが存在するかチェックする
+
+    Args:
+        folder_id: GoogleDriveフォルダID
+        file_name: チェックするファイル名
+
+    Returns:
+        bool: ファイルが存在する場合True、存在しない場合False
+    """
+    service = get_googleapis_service(SERVICE_NAME)
+    query = f"'{folder_id}' in parents and name='{file_name}' and trashed=false"
+
+    try:
+        results = service.files().list(q=query, fields="files(id, name)").execute()
+        files = results.get("files", [])
+        return len(files) > 0
+    except Exception as e:
+        print(f"Error checking file existence: {e}")
+        return False
+
+
+def generate_unique_filename(original_name: str, folder_id: str) -> str:
+    """重複回避用のユニークなファイル名を生成する
+
+    同名ファイルが存在する場合、以下の形式でリネームする:
+    filename_001_20251015_143022.ext
+            └─ 連番 ─┘ └───── 日時 ─────┘
+
+    Args:
+        original_name: 元のファイル名
+        folder_id: アップロード先のフォルダID
+
+    Returns:
+        str: ユニークなファイル名
+
+    Raises:
+        RuntimeError: 1000回試行しても重複が解消されない場合
+    """
+    # ファイルが存在しない場合はそのまま返す
+    if not check_file_exists_in_folder(folder_id, original_name):
+        return original_name
+
+    name, ext = os.path.splitext(original_name)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    counter = 1
+    max_retries = 1000
+
+    while counter <= max_retries:
+        new_name = f"{name}_{counter:03d}_{timestamp}{ext}"
+        if not check_file_exists_in_folder(folder_id, new_name):
+            return new_name
+        counter += 1
+
+    raise RuntimeError(
+        f"Failed to generate unique filename after {max_retries} attempts"
+    )
+
+
+def create_subfolder_under_parent(parent_folder_id: str, subdirectory_path: str) -> str:
+    """親フォルダID配下にサブディレクトリパスを作成する
+
+    Args:
+        parent_folder_id: 親フォルダのGoogleDrive ID
+        subdirectory_path: 作成するサブディレクトリパス（例: "reports/2025"）
+
+    Returns:
+        str: 最終的に作成されたフォルダのID
+
+    Raises:
+        ValueError: subdirectory_pathが空文字列の場合
+        RuntimeError: フォルダ作成に失敗した場合
+    """
+    if not subdirectory_path:
+        raise ValueError("subdirectory_path cannot be empty")
+
+    service = get_googleapis_service(SERVICE_NAME)
+    current_parent_id = parent_folder_id
+
+    # パスを分割（例: "reports/2025" → ["reports", "2025"]）
+    folder_names = subdirectory_path.strip("/").split("/")
+
+    for folder_name in folder_names:
+        # 現在の親フォルダ配下に同名フォルダが存在するかチェック
+        query = f"'{current_parent_id}' in parents and name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+
+        try:
+            results = service.files().list(q=query, fields="files(id, name)").execute()
+            files = results.get("files", [])
+
+            if files:
+                # 既存フォルダのIDを使用
+                current_parent_id = files[0]["id"]
+            else:
+                # 新規フォルダを作成
+                file_metadata = {
+                    "name": folder_name,
+                    "mimeType": "application/vnd.google-apps.folder",
+                    "parents": [current_parent_id],
+                }
+                folder = (
+                    service.files().create(body=file_metadata, fields="id").execute()
+                )
+                current_parent_id = folder.get("id")
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to create subfolder '{folder_name}': {e}"
+            ) from e
+
+    return current_parent_id
 
 
 def get_folder_id(folder_name):

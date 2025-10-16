@@ -1,0 +1,124 @@
+# GraphAI Workflow: PDF Summary Mailer
+# Version: 0.5
+# Description: 指定したWebサイトからPDFファイルを抽出し、Google Driveにアップロード後、メールで通知します。
+# Author: Gemini CLI
+# Date: 2025-10-16
+#
+# Input Schema:
+# {
+#   "user_input": {
+#     "path": "https://drive.google.com/drive/folders/1Xrv6nJPuMB92s2DGcvZo_lH2H4cd_OsQ?usp=drive_link",
+#     "url": "https://japancredit.go.jp/about/mrv/"
+#   }
+# }
+#
+# Test Results:
+# - Initial test with provided input: PENDING
+#
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: HTMLをMarkdownに変換
+  html_to_markdown:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/explorer"
+      method: "POST"
+      body:
+        user_input: "URLからMarkdownを取得: ${source.url}"
+        model_name: "gpt-4o-mini"
+    console:
+      after: true
+
+  # Step 2: 正規表現でPDF URLを抽出
+  extract_pdf_urls:
+    agent: pythonAgent
+    inputs:
+      markdown: :html_to_markdown.result
+    params:
+      code: |
+        import re
+        # Markdown形式: [text](url) からPDF URLを抽出
+        # 絶対パスでないURLを補完する処理も考慮
+        base_url = inputs["source.url"]
+        pdf_links = re.findall(r'\[.*?\]\((https?://[^\)]+\.pdf)\)', markdown)
+        # 相対パスのPDFリンクを絶対パスに変換する処理を追加
+        relative_pdf_links = re.findall(r'\[.*?\]\((?!https?://)([^\)]+\.pdf)\)', markdown)
+        for rel_link in relative_pdf_links:
+            # base_urlがディレクトリの場合とファイルの場合を考慮
+            if base_url.endswith('/'):
+                pdf_links.append(base_url + rel_link[0])
+            else:
+                pdf_links.append(base_url.rsplit('/', 1)[0] + '/' + rel_link[0])
+
+        # 重複削除
+        return list(set(pdf_links))
+    console:
+      after: true
+
+  # Step 3: mapAgentで並列アップロード
+  upload_pdfs_to_drive:
+    agent: mapAgent
+    inputs:
+      rows: :extract_pdf_urls
+    params:
+      compositeResult: true
+      concurrency: 2 # 並列処理の負荷軽減のため
+    graph:
+      nodes:
+        upload:
+          agent: fetchAgent
+          inputs:
+            url: "${EXPERTAGENT_BASE_URL}/v1/utility/drive/upload_pdf" # 仮のAPIエンドポイント
+            method: "POST"
+            body:
+              file_url: ":row"
+              drive_folder_url: "${source.path}"
+          console:
+            after: true
+          isResult: true
+    console:
+      after: true
+
+  # Step 4: メールコンテンツの生成
+  generate_email_content:
+    agent: stringTemplateAgent
+    inputs:
+      uploaded_files: :upload_pdfs_to_drive.upload
+      target_url: :source.url
+    params:
+      template: |
+        以下のWebサイトからPDFファイルを抽出し、Google Driveにアップロードしました。
+
+        対象Webサイト: ${target_url}
+
+        アップロードされたファイル:
+        {% for file in uploaded_files %}
+        - ファイル名: {{ file.file_name }}
+          Google Driveリンク: {{ file.web_view_link }}
+        {% endfor %}
+
+        ご確認をお願いいたします。
+    console:
+      after: true
+
+  # Step 5: メール通知の送信
+  send_email_notification:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/v1/utility/gmail/send"
+      method: "POST"
+      body:
+        to: "{{ user_email_address }}" # TODO: 適切なメールアドレスに置き換える (ユーザーが設定する想定)
+        subject: "WebサイトからのPDFファイルアップロード完了通知"
+        body: :generate_email_content.text
+    console:
+      after: true
+
+  # Final Output
+  output:
+    agent: copyAgent
+    inputs:
+      text: :send_email_notification.message_id # メール送信のメッセージIDを最終結果とする
+    isResult: true
