@@ -53,6 +53,74 @@ const agents_2 = Object.fromEntries(
 );
 
 /**
+ * YAMLデータ内のURL環境変数プレースホルダーを置換
+ *
+ * 対応プレースホルダー:
+ * - ${EXPERTAGENT_BASE_URL} → process.env.EXPERTAGENT_BASE_URL または http://localhost:8104
+ * - ${GRAPHAISERVER_BASE_URL} → process.env.GRAPHAISERVER_BASE_URL または http://localhost:8105
+ * - ${MYVAULT_BASE_URL} → process.env.MYVAULT_BASE_URL または http://localhost:8103
+ * - ${JOBQUEUE_BASE_URL} → process.env.JOBQUEUE_BASE_URL または http://localhost:8101
+ * - ${MYSCHEDULER_BASE_URL} → process.env.MYSCHEDULER_BASE_URL または http://localhost:8102
+ *
+ * 環境による自動切り替え:
+ * - quick-start.sh: localhost:810x
+ * - dev-start.sh: localhost:800x
+ * - docker-compose: {service}:8000
+ */
+function resolveEnvVariables(graph_data: GraphData): void {
+  // 環境変数のデフォルト値（quick-start.sh環境を想定）
+  const replacements: Record<string, string> = {
+    '${EXPERTAGENT_BASE_URL}': process.env.EXPERTAGENT_BASE_URL || 'http://localhost:8104',
+    '${GRAPHAISERVER_BASE_URL}': process.env.GRAPHAISERVER_BASE_URL || 'http://localhost:8105',
+    '${MYVAULT_BASE_URL}': process.env.MYVAULT_BASE_URL || 'http://localhost:8103',
+    '${JOBQUEUE_BASE_URL}': process.env.JOBQUEUE_BASE_URL || 'http://localhost:8101',
+    '${MYSCHEDULER_BASE_URL}': process.env.MYSCHEDULER_BASE_URL || 'http://localhost:8102',
+  };
+
+  for (const [nodeId, nodeConfig] of Object.entries(graph_data.nodes) as [string, GraphNodeConfig][]) {
+    // inputs.url の置換
+    if (nodeConfig.inputs?.url && typeof nodeConfig.inputs.url === 'string') {
+      let url = nodeConfig.inputs.url;
+      let wasReplaced = false;
+
+      for (const [placeholder, value] of Object.entries(replacements)) {
+        if (url.includes(placeholder)) {
+          url = url.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+          wasReplaced = true;
+        }
+      }
+
+      if (wasReplaced) {
+        nodeConfig.inputs.url = url;
+        console.log(`✓ Resolved environment variable in node '${nodeId}': ${url}`);
+      }
+    }
+
+    // params内の文字列プロパティも置換（必要に応じて）
+    if (nodeConfig.params && typeof nodeConfig.params === 'object') {
+      for (const [paramKey, paramValue] of Object.entries(nodeConfig.params)) {
+        if (typeof paramValue === 'string') {
+          let value = paramValue;
+          let wasReplaced = false;
+
+          for (const [placeholder, replacement] of Object.entries(replacements)) {
+            if (value.includes(placeholder)) {
+              value = value.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
+              wasReplaced = true;
+            }
+          }
+
+          if (wasReplaced) {
+            nodeConfig.params[paramKey] = value;
+            console.log(`✓ Resolved environment variable in node '${nodeId}' param '${paramKey}': ${value}`);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
  * YAMLデータ内のagentパラメータにシークレットを注入
  *
  * 対応agent:
@@ -112,7 +180,10 @@ export const runGraphAI = async (user_input: string, model_name: string, project
   // ① リクエスト毎に新しいgraph_dataオブジェクトを生成（並行リクエスト対応）
   const graph_data = readGraphaiData(modelpath);
 
-  // ② このリクエスト専用のgraph_dataにシークレットを注入
+  // ② 環境変数プレースホルダーを置換（quick-start/dev-start/docker-compose 対応）
+  resolveEnvVariables(graph_data);
+
+  // ③ このリクエスト専用のgraph_dataにシークレットを注入
   await injectSecretsToGraphData(graph_data, project);
 
   console.log("Graph data:", graph_data);
@@ -121,6 +192,12 @@ export const runGraphAI = async (user_input: string, model_name: string, project
   // ③ このリクエスト専用のGraphAIインスタンスを生成
   const graph = new GraphAI(graph_data, agents_2);
   graph.injectValue("source", user_input);
+
+  // デバッグ: sourceノードに注入されたデータの型と内容を出力
+  console.log("=== Source Node Injection ===");
+  console.log("user_input type:", typeof user_input);
+  console.log("user_input value:", JSON.stringify(user_input, null, 2));
+  console.log("=============================");
 
   let results: Record<string, unknown> = {};
   let runError: Error | null = null;
@@ -216,13 +293,23 @@ export const testGraphAI = async (project?: string): Promise<GraphAIResponse> =>
 
   const graph_data = readGraphaiData(MODEL_BASE_PATH + "test.yml");
 
+  // 環境変数プレースホルダーを置換
+  resolveEnvVariables(graph_data);
+
   await injectSecretsToGraphData(graph_data, project);
 
   console.log("Graph data:", graph_data);
   console.log(JSON.stringify(graph_data, null, 2));
 
   const graph = new GraphAI(graph_data, agents_2);
-  graph.injectValue("source", "ドラゴンボールの作者をメールで送信してね");
+  const testInput = "ドラゴンボールの作者をメールで送信してね";
+  graph.injectValue("source", testInput);
+
+  // デバッグ: sourceノードに注入されたデータの型と内容を出力
+  console.log("=== Source Node Injection (Test) ===");
+  console.log("user_input type:", typeof testInput);
+  console.log("user_input value:", JSON.stringify(testInput, null, 2));
+  console.log("====================================");
 
   let results: Record<string, unknown> = {};
   let runError: Error | null = null;

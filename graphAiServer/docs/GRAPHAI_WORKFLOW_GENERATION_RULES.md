@@ -2,6 +2,12 @@
 
 このドキュメントは、GraphAI YMLワークフローファイルを自動生成する際のルールと設計指針をまとめています。
 
+## ⚠️ 重要: 利用可能Agentの確認
+
+**ワークフロー作成前に必ず確認**: [利用可能Agent一覧](./AVAILABLE_AGENTS.md)
+
+このプロジェクトで実際に使用可能なAgentのみを使用してください。ドキュメントに記載されていても、実際の環境に存在しないAgentがあります。
+
 ## 目次
 
 1. [基本構造](#基本構造)
@@ -10,7 +16,11 @@
 4. [データフローパターン](#データフローパターン)
 5. [Agent選択指針](#agent選択指針)
 6. [モデル選択指針](#モデル選択指針)
-7. [expertAgent API統合](#expertagent-api統合)
+7. [環境変数プレースホルダー](#環境変数プレースホルダー)
+   - [利用可能な環境変数](#利用可能な環境変数)
+   - [使用例](#使用例)
+   - [環境別の自動切り替え](#環境別の自動切り替え)
+8. [expertAgent API統合](#expertagent-api統合)
    - [1. Utility API（Direct API）](#1-utility-apidirect-api---推奨)
      - [Gmail検索API](#11-gmail検索api)
      - [Gmail送信API](#12-gmail送信api)
@@ -80,18 +90,92 @@ nodes:
   source: {}
 ```
 
-**重要**: `source` は実行時に文字列が直接注入される。プロパティアクセスは不要。
+**重要**: `source`ノードには、APIリクエストの`user_input`がそのままの型で注入されます。
 
-**正しい参照**:
-```yaml
-inputs:
-  keywords: :source  # ✅ 正しい
+**📖 詳細仕様**: [GraphAI Input Schema](./GRAPHAI_INPUT_SCHEMA.md) を必ず参照してください。
+
+#### sourceノードへのデータ注入仕様
+
+GraphAI APIの`user_input`は**2つの形式**で送信可能です：
+
+**1️⃣ オブジェクト形式（推奨）**:
+```json
+{
+  "user_input": {
+    "url": "https://example.com",
+    "count": 10
+  }
+}
 ```
 
-**誤った参照**:
+この場合、`source`はオブジェクトとして注入され、プロパティに直接アクセス可能：
 ```yaml
+nodes:
+  source: {}
+
+  use_properties:
+    agent: stringTemplateAgent
+    inputs:
+      url: :source.url      # ✅ "https://example.com"
+      count: :source.count  # ✅ 10
+    params:
+      template: "URL: ${url}, Count: ${count}"
+```
+
+**2️⃣ 文字列形式（非推奨）**:
+```json
+{
+  "user_input": "東京の天気を教えて"
+}
+```
+
+この場合、`source`は文字列として注入される：
+```yaml
+nodes:
+  source: {}
+
+  use_string:
+    agent: geminiAgent
+    inputs:
+      prompt: :source  # ✅ "東京の天気を教えて"
+    params:
+      model: gemini-2.0-flash-exp
+```
+
+**ベストプラクティス**:
+- ✅ **オブジェクト形式を使用**することを強く推奨
+- ✅ プロパティ名を明確にする（`q`ではなく`query`など）
+- ✅ YMLファイルのコメントにInput Schemaを記載
+- ❌ JSON文字列形式は避ける（`jsonParserAgent`が必要になり複雑化）
+
+**よくあるエラー**:
+
+誤: 文字列を`:source.property`で参照
+```yaml
+# user_input = "単純な文字列"
+
 inputs:
-  keywords: :source.text  # ❌ 間違い（undefinedになる）
+  url: :source.url  # ❌ undefinedになる
+```
+
+誤: オブジェクトを`jsonParserAgent`でパース
+```yaml
+# user_input = { "url": "..." }
+
+parse:
+  agent: jsonParserAgent
+  inputs:
+    json: :source  # ❌ "Unexpected end of JSON input"エラー
+```
+
+正: オブジェクトなら直接参照、文字列ならそのまま使用
+```yaml
+# user_input = { "url": "..." }
+
+use_url:
+  agent: stringTemplateAgent
+  inputs:
+    url: :source.url  # ✅ 正しい
 ```
 
 ### 2. outputノード
@@ -112,10 +196,19 @@ output:
 
 ## エージェント種別
 
+**📋 完全なAgent一覧**: [AVAILABLE_AGENTS.md](./AVAILABLE_AGENTS.md) を参照してください。
+
+以下は代表的なAgentの使用例です。
+
 ### fetchAgent
 
 外部API（expertAgent含む）を呼び出すエージェント。expertAgentだけでなく、**任意の外部APIも呼び出し可能**です。
 
+#### ✅ 正しい構造（推奨）
+
+**重要**: `url`, `method`, `body`は**すべて`inputs`ブロック内**に配置してください。
+
+**基本形**:
 ```yaml
 node_name:
   agent: fetchAgent
@@ -124,15 +217,142 @@ node_name:
     method: POST  # GET, POST, PUT, DELETEなど
     body:
       user_input: :previous_node
-      model_name: gpt-oss:20b
-  timeout: 30  # オプション: タイムアウト（秒）
-  retry: 0     # オプション: リトライ回数
+      model_name: gpt-4o-mini
+  console:
+    after: true  # デバッグ時に推奨
 ```
 
-**外部API利用時の注意**:
-- インターフェース（リクエスト/レスポンス形式）を明確に定義すること
-- タイムアウト値を適切に設定すること
-- エラーハンドリングを考慮すること
+**ポイント**:
+- ✅ `url`, `method`, `body`を**inputsブロック内**に配置
+- ✅ `params`ブロックは使用しない（fetchAgentでは不要）
+- ✅ `body`内で他ノードの値を参照可能（`:previous_node`など）
+
+#### 動的URLの場合
+
+前段のノードから取得したURLを使用する場合：
+
+```yaml
+call_dynamic_api:
+  agent: fetchAgent
+  inputs:
+    url: :previous_node.api_url  # ✅ 動的にURLを参照
+    method: POST
+    body:
+      user_input: :source
+      model_name: gpt-4o-mini
+```
+
+#### 固定URLの場合
+
+URLが固定値の場合：
+
+```yaml
+call_fixed_api:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/mylllm  # ✅ 固定値を直接指定
+    method: POST
+    body:
+      user_input: :source
+      model_name: gpt-4o-mini
+```
+
+#### テンプレート文字列を使う場合
+
+bodyプロパティでテンプレート変数を使用する場合：
+
+```yaml
+call_with_template:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/aiagent-api/v1/mylllm
+    method: POST
+    body:
+      user_input: |-
+        以下のURLを処理してください：
+        URL: ${target_url}
+        処理内容: ${action}
+      model_name: gpt-4o-mini
+      target_url: :source.url      # ✅ body内で参照可能
+      action: :source.action       # ✅ body内で参照可能
+```
+
+#### ❌ 誤った構造（よくあるエラー）
+
+**エラーパターン1: inputsとparamsでurlが競合**
+
+```yaml
+# ❌ 間違い
+node_name:
+  agent: fetchAgent
+  inputs:
+    url: :source.url          # ❌ inputsにurl
+  params:
+    url: http://127.0.0.1:8104/api/endpoint  # ❌ paramsにもurl（競合！）
+    method: POST
+    body:
+      user_input: :url        # ❌ :urlは未定義（inputsのurlと混同）
+```
+
+**問題点**:
+- `inputs.url`と`params.url`が競合し、GraphAIがどちらを使うべきか判断できない
+- `body`内の`:url`参照が未定義（inputsブロック内の`url`はbody内では直接参照不可）
+- 結果: APIリクエストが失敗、または予期しない動作
+
+**エラーパターン2: paramsブロックにurl/method/bodyを配置**
+
+```yaml
+# ❌ 間違い
+node_name:
+  agent: fetchAgent
+  params:                     # ❌ fetchAgentではparamsは使用しない
+    url: http://...
+    method: POST
+    body:
+      user_input: :source
+```
+
+**問題点**:
+- fetchAgentは`params`ブロックを認識しない
+- `inputs`ブロックを使用する必要がある
+
+**正しい修正例**:
+
+```yaml
+# ✅ 正しい
+node_name:
+  agent: fetchAgent
+  inputs:                     # ✅ すべてinputsブロック内
+    url: http://127.0.0.1:8104/api/endpoint
+    method: POST
+    body:
+      user_input: :source.url  # ✅ sourceから直接参照
+      model_name: gpt-4o-mini
+```
+
+#### オプションパラメータ
+
+```yaml
+node_name:
+  agent: fetchAgent
+  inputs:
+    url: http://127.0.0.1:8104/api/endpoint
+    method: POST
+    body:
+      user_input: :source
+  timeout: 30   # オプション: タイムアウト（秒）デフォルト30秒
+  retry: 0      # オプション: リトライ回数、デフォルト0
+  console:
+    before: true  # オプション: 実行前のログ出力
+    after: true   # オプション: 実行後のログ出力（推奨）
+```
+
+#### 外部API利用時の注意
+
+- ✅ **インターフェース定義**: リクエスト/レスポンス形式を明確に定義すること
+- ✅ **タイムアウト設定**: 適切なタイムアウト値を設定すること（デフォルト30秒）
+- ✅ **エラーハンドリング**: APIエラー時の動作を考慮すること
+- ✅ **デバッグログ**: `console.after: true`でレスポンスを確認すること
 
 ### anthropicAgent
 
@@ -855,15 +1075,134 @@ pdf_processor:
 
 ---
 
-## expertAgent API統合
+## 環境変数プレースホルダー
 
-### 重要: ポート番号
+**🚨 重要**: ワークフロー内でexpertAgent等のサービスを呼び出す際は、**必ず環境変数プレースホルダーを使用**してください。
 
-**expertAgentポート**: `8104`
+### なぜ環境変数プレースホルダーが必要か
+
+MySwiftAgentは複数の実行環境をサポートしており、各環境でポート番号が異なります：
+
+| 環境 | expertagent | graphaiserver | myvault |
+|------|------------|--------------|---------|
+| **quick-start.sh** | `localhost:8104` | `localhost:8105` | `localhost:8103` |
+| **dev-start.sh** | `localhost:8004` | `localhost:8005` | `localhost:8003` |
+| **docker-compose** | `expertagent:8000` | `graphaiserver:8000` | `myvault:8000` |
+
+**ハードコードされたURL**は特定環境でしか動作しないため、**環境変数プレースホルダー**を使用します。
+
+### 利用可能な環境変数
+
+| プレースホルダー | quick-start.sh | dev-start.sh | docker-compose |
+|---------------|---------------|-------------|---------------|
+| `${EXPERTAGENT_BASE_URL}` | `http://localhost:8104` | `http://localhost:8004` | `http://expertagent:8000` |
+| `${GRAPHAISERVER_BASE_URL}` | `http://localhost:8105` | `http://localhost:8005` | `http://graphaiserver:8000` |
+| `${MYVAULT_BASE_URL}` | `http://localhost:8103` | `http://localhost:8003` | `http://myvault:8000` |
+| `${JOBQUEUE_BASE_URL}` | `http://localhost:8101` | `http://localhost:8001` | `http://jobqueue:8000` |
+| `${MYSCHEDULER_BASE_URL}` | `http://localhost:8102` | `http://localhost:8002` | `http://myscheduler:8000` |
+
+### 使用例
+
+#### ✅ 推奨: 環境変数プレースホルダーを使用
 
 ```yaml
-# ✅ 正しい
-url: http://127.0.0.1:8104/aiagent-api/v1/endpoint
+# Gmail検索APIの例
+search_email:
+  agent: fetchAgent
+  inputs:
+    url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/gmail/search"
+    method: "POST"
+    body:
+      keyword: :source.keyword
+      top: 1
+```
+
+**メリット**:
+- ✅ quick-start.sh / dev-start.sh / docker-compose 全環境で動作
+- ✅ ポート変更時もワークフローファイルの修正不要
+- ✅ Gemini が生成したワークフローが環境非依存
+
+#### ❌ 非推奨: ハードコードされたURL
+
+```yaml
+# quick-start.sh 専用（他環境で動作しない）
+url: "http://127.0.0.1:8104/aiagent-api/v1/utility/gmail/search"
+
+# dev-start.sh 専用（他環境で動作しない）
+url: "http://127.0.0.1:8004/aiagent-api/v1/utility/gmail/search"
+
+# docker-compose 専用（ローカル開発で動作しない）
+url: "http://expertagent:8000/aiagent-api/v1/utility/gmail/search"
+```
+
+**問題点**:
+- ❌ 特定環境でしか動作しない
+- ❌ 環境を変える度にファイル修正が必要
+- ❌ タイムアウトエラーの原因になる
+
+### 環境別の自動切り替え
+
+環境変数プレースホルダーは、GraphAI Server起動時に自動的に置換されます：
+
+```typescript
+// graphAiServer/src/services/graphai.ts (自動処理)
+// quick-start.sh環境
+"${EXPERTAGENT_BASE_URL}" → "http://localhost:8104"
+
+// dev-start.sh環境
+"${EXPERTAGENT_BASE_URL}" → "http://localhost:8004"
+
+// docker-compose環境
+"${EXPERTAGENT_BASE_URL}" → "http://expertagent:8000"
+```
+
+**通常は手動設定不要**: 各起動スクリプトが自動的に環境変数を設定します。
+
+### よくあるエラーと対処法
+
+#### エラー1: 接続タイムアウト（60秒）
+
+**症状**:
+```
+fetchAgent error: connect ETIMEDOUT
+```
+
+**原因**: 存在しないポート（8104等）にアクセスしている
+
+**解決策**: 環境変数プレースホルダーを使用
+```yaml
+# 修正前
+url: "http://127.0.0.1:8104/..."
+
+# 修正後
+url: "${EXPERTAGENT_BASE_URL}/..."
+```
+
+#### エラー2: ECONNREFUSED
+
+**症状**:
+```
+fetchAgent error: connect ECONNREFUSED 127.0.0.1:8104
+```
+
+**原因**: Docker環境で localhost を使用している
+
+**解決策**: 環境変数プレースホルダーを使用（自動的にコンテナ名に置換される）
+
+---
+
+## expertAgent API統合
+
+### 重要: URL指定ルール
+
+**expertAgent APIを呼び出す際は、必ず環境変数プレースホルダーを使用してください：**
+
+```yaml
+# ✅ 推奨
+url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/endpoint"
+
+# ❌ 非推奨（環境依存）
+url: "http://127.0.0.1:8104/aiagent-api/v1/endpoint"
 ```
 
 ### expertAgentの機能分類

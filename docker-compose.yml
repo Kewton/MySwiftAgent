@@ -203,6 +203,12 @@ services:
       - MODEL_BASE_PATH=/app/config/graphai/
       # Admin authentication
       - ADMIN_TOKEN=${GRAPHAISERVER_ADMIN_TOKEN}
+      # GraphAI workflow service URLs (container-to-container communication)
+      - EXPERTAGENT_BASE_URL=http://expertagent:8000
+      - GRAPHAISERVER_BASE_URL=http://graphaiserver:8000
+      - MYVAULT_BASE_URL=http://myvault:8000
+      - JOBQUEUE_BASE_URL=http://jobqueue:8000
+      - MYSCHEDULER_BASE_URL=http://myscheduler:8000
       # API Keys are managed in MyVault (not passed as env vars)
       # Logging
       - LOG_DIR=/app/logs
