@@ -11,7 +11,9 @@ class TemplateManager:
     """Template manager component."""
 
     def __init__(
-        self, service_name: str, storage: TemplateStorage | None = None,
+        self,
+        service_name: str,
+        storage: TemplateStorage | None = None,
     ) -> None:
         """Initialize template manager.
 
@@ -46,9 +48,14 @@ class TemplateManager:
             )
 
         with col2:
-            if st.button(
-                "🗑️ 削除", disabled=not selected_template, use_container_width=True,
-            ) and selected_template:
+            if (
+                st.button(
+                    "🗑️ 削除",
+                    disabled=not selected_template,
+                    use_container_width=True,
+                )
+                and selected_template
+            ):
                 self.storage.delete_template(self.service_name, selected_template)
                 st.success(f"テンプレート '{selected_template}' を削除しました")
                 st.rerun()
@@ -57,7 +64,8 @@ class TemplateManager:
         loaded_data = None
         if selected_template:
             loaded_data = self.storage.load_template(
-                self.service_name, selected_template,
+                self.service_name,
+                selected_template,
             )
             if loaded_data:
                 st.info(f"✅ テンプレート '{selected_template}' を読み込みました")
@@ -101,7 +109,8 @@ class TemplateManager:
 
         if selected_template:
             loaded_data = self.storage.load_template(
-                self.service_name, selected_template,
+                self.service_name,
+                selected_template,
             )
             if loaded_data:
                 st.info(f"✅ テンプレート '{selected_template}' を読み込みました")

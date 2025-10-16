@@ -171,7 +171,8 @@ def show_create_secret_dialog(project: str) -> None:
     else:
         # Show description for selected secret
         selected_def = next(
-            (s for s in available_secrets if s["name"] == selected_option), None,
+            (s for s in available_secrets if s["name"] == selected_option),
+            None,
         )
         if selected_def and selected_def.get("description"):
             st.info(f"ℹ️ {selected_def['description']}")
@@ -211,7 +212,8 @@ def show_edit_secret_dialog(secret: dict[str, Any]) -> None:
     secret_defs = st.session_state.myvault_secret_definitions
     available_secrets = secret_defs.get("secrets", [])
     selected_def = next(
-        (s for s in available_secrets if s["name"] == secret["path"]), None,
+        (s for s in available_secrets if s["name"] == secret["path"]),
+        None,
     )
 
     st.write(f"Edit secret: **{secret['project']}:{secret['path']}**")
@@ -301,7 +303,10 @@ def render_projects_section() -> None:
 
     with col3:
         if st.button(
-            "➕ New", key="new_project", type="primary", use_container_width=True,
+            "➕ New",
+            key="new_project",
+            type="primary",
+            use_container_width=True,
         ):
             show_create_project_dialog()
 
@@ -449,7 +454,10 @@ def render_secrets_section() -> None:
 
     with col4:
         if st.button(
-            "➕ New", key="new_secret", type="primary", use_container_width=True,
+            "➕ New",
+            key="new_secret",
+            type="primary",
+            use_container_width=True,
         ):
             show_create_secret_dialog(selected_project)
 
@@ -774,7 +782,8 @@ def list_google_cached_projects() -> list[str]:
 
 
 def start_google_oauth2_flow(
-    project: str, redirect_uri: str | None = None,
+    project: str,
+    redirect_uri: str | None = None,
 ) -> dict[str, Any]:
     """Start OAuth2 flow for Google authentication."""
     # Get redirect_uri dynamically from Streamlit config if not provided
@@ -802,7 +811,9 @@ def start_google_oauth2_flow(
 
 
 def complete_google_oauth2_flow(
-    state: str, code: str, project: str | None = None,
+    state: str,
+    code: str,
+    project: str | None = None,
 ) -> dict[str, Any]:
     """Complete OAuth2 flow with authorization code.
 
@@ -833,7 +844,9 @@ def get_google_token_data(project: str) -> dict[str, Any]:
 
 
 def save_google_token(
-    project: str, token_json: str, save_to_myvault: bool = False,
+    project: str,
+    token_json: str,
+    save_to_myvault: bool = False,
 ) -> None:
     """Save token.json to ExpertAgent and optionally to MyVault."""
     api_config = config.get_api_config("expertagent")
@@ -949,7 +962,9 @@ def render_google_auth_section() -> None:
 
     with col2:
         if st.button(
-            "🔄 Refresh Status", key="refresh_google_status", use_container_width=True,
+            "🔄 Refresh Status",
+            key="refresh_google_status",
+            use_container_width=True,
         ):
             st.rerun()
 
@@ -989,7 +1004,8 @@ def render_google_auth_section() -> None:
     st.markdown("### 📝 Credentials Setup")
 
     with st.expander(
-        "ℹ️ How to get Google Credentials (credentials.json)", expanded=False,
+        "ℹ️ How to get Google Credentials (credentials.json)",
+        expanded=False,
     ):
         st.markdown("""
         **Google OAuth 2.0 Credentials の取得方法:**
@@ -1102,7 +1118,9 @@ def render_google_auth_section() -> None:
 
                             # Save locally only
                             save_google_token(
-                                selected_project, token_json_edit, save_to_myvault=False,
+                                selected_project,
+                                token_json_edit,
+                                save_to_myvault=False,
                             )
                             st.success(
                                 f"✅ Token saved locally for project: {selected_project}",
@@ -1113,7 +1131,8 @@ def render_google_auth_section() -> None:
                             st.error(f"Invalid JSON format: {e!s}")
                         except Exception as e:
                             NotificationManager.handle_exception(
-                                e, "Save Token Locally",
+                                e,
+                                "Save Token Locally",
                             )
 
                 with col2:
@@ -1131,7 +1150,9 @@ def render_google_auth_section() -> None:
 
                             # Save to both local and MyVault
                             save_google_token(
-                                selected_project, token_json_edit, save_to_myvault=True,
+                                selected_project,
+                                token_json_edit,
+                                save_to_myvault=True,
                             )
                             st.success(
                                 f"✅ Token saved to MyVault for project: {selected_project}",
@@ -1144,7 +1165,8 @@ def render_google_auth_section() -> None:
                             st.error(f"Invalid JSON format: {e!s}")
                         except Exception as e:
                             NotificationManager.handle_exception(
-                                e, "Save Token to MyVault",
+                                e,
+                                "Save Token to MyVault",
                             )
 
             else:

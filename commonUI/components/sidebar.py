@@ -22,7 +22,6 @@ class SidebarManager:
             help="Choose the service to manage",
         )
 
-
     @staticmethod
     def render_api_settings(service: str) -> None:
         """Render API configuration settings."""

@@ -49,7 +49,8 @@ def render_job_creation_form() -> None:
         "api_method": st.session_state.get("jobqueue_current_api_method", "POST"),
         "api_headers": st.session_state.get("jobqueue_api_headers_outside", ""),
         "api_query_params": st.session_state.get(
-            "jobqueue_api_query_params_outside", "",
+            "jobqueue_api_query_params_outside",
+            "",
         ),
         "api_body": st.session_state.get("jobqueue_api_body_outside", ""),
         "body_type": st.session_state.get("jobqueue_body_type_outside", "JSON"),
@@ -64,28 +65,36 @@ def render_job_creation_form() -> None:
         template_key = f"jobqueue_loaded_template_{hash(str(loaded_template))}"
 
         if template_key not in st.session_state or not st.session_state.get(
-            template_key, False,
+            template_key,
+            False,
         ):
             st.session_state["jobqueue_api_url_outside"] = loaded_template.get(
-                "api_url", "",
+                "api_url",
+                "",
             )
             st.session_state["jobqueue_current_api_method"] = loaded_template.get(
-                "api_method", "POST",
+                "api_method",
+                "POST",
             )
             st.session_state["jobqueue_api_headers_outside"] = loaded_template.get(
-                "api_headers", "",
+                "api_headers",
+                "",
             )
             st.session_state["jobqueue_api_query_params_outside"] = loaded_template.get(
-                "api_query_params", "",
+                "api_query_params",
+                "",
             )
             st.session_state["jobqueue_api_body_outside"] = loaded_template.get(
-                "api_body", "",
+                "api_body",
+                "",
             )
             st.session_state["jobqueue_body_type_outside"] = loaded_template.get(
-                "body_type", "JSON",
+                "body_type",
+                "JSON",
             )
             st.session_state["jobqueue_current_body_type"] = loaded_template.get(
-                "body_type", "JSON",
+                "body_type",
+                "JSON",
             )
             st.session_state[template_key] = True
 
@@ -511,7 +520,8 @@ def create_job(job_data: dict[str, Any]) -> None:
                         ),  # Rename query_params to params
                         "body": api_config_data.get("body"),
                         "timeout_sec": job_data.get(
-                            "timeout", 30,
+                            "timeout",
+                            30,
                         ),  # Include timeout from job_data
                     }
 
@@ -549,7 +559,9 @@ def create_job(job_data: dict[str, Any]) -> None:
         error_str = str(e).lower()
         if "422" in error_str or "unprocessable" in error_str:
             if "timeout" in error_str:
-                st.error("❌ Timeout value exceeds maximum allowed (3600 seconds). Please reduce the timeout.")
+                st.error(
+                    "❌ Timeout value exceeds maximum allowed (3600 seconds). Please reduce the timeout.",
+                )
             else:
                 st.error(f"❌ Invalid request data: {e}")
                 st.info("💡 Please check all fields meet the validation requirements.")
@@ -621,7 +633,11 @@ def render_job_list() -> None:
 
     # Filter jobs - Updated to include job type filter
     filtered_jobs = filter_jobs(
-        jobs, status_filter, priority_filter, job_type_filter, search_query,
+        jobs,
+        status_filter,
+        priority_filter,
+        job_type_filter,
+        search_query,
     )
 
     if not filtered_jobs:
@@ -752,30 +768,36 @@ def render_job_detail() -> None:
 
             with col1:
                 if current_status in ["pending", "failed"] and st.button(
-                    "▶️ Start", use_container_width=True,
+                    "▶️ Start",
+                    use_container_width=True,
                 ):
                     control_job(job_id, "start")
 
             with col2:
                 if current_status == "running" and st.button(
-                    "⏸️ Pause", use_container_width=True,
+                    "⏸️ Pause",
+                    use_container_width=True,
                 ):
                     control_job(job_id, "pause")
 
             with col3:
                 if current_status in ["running", "pending"] and st.button(
-                    "⏹️ Cancel", use_container_width=True,
+                    "⏹️ Cancel",
+                    use_container_width=True,
                 ):
                     control_job(job_id, "cancel")
 
             with col4:
                 if current_status == "failed" and st.button(
-                    "🔄 Retry", use_container_width=True,
+                    "🔄 Retry",
+                    use_container_width=True,
                 ):
                     control_job(job_id, "retry")
 
-            # Job details tabs - Removed Logs tab
-            tab1, tab2, tab3 = st.tabs(["📋 Definition", "📊 Results", "⚙️ Parameters"])
+            # Job details tabs
+            tab1, tab2, tab3, tab4 = st.tabs(
+                ["📋 Definition", "📊 Results", "📜 History", "⚙️ Parameters"],
+            )
 
             with tab1:
                 st.json(job_detail, expanded=False)
@@ -829,6 +851,76 @@ def render_job_detail() -> None:
                     st.warning(f"Could not fetch results: {result_error!s}")
 
             with tab3:
+                # Fetch job result history
+                try:
+                    history_response = client.get(
+                        f"/api/v1/jobs/{job_id}/result/history"
+                    )
+
+                    total = history_response.get("total", 0)
+                    history_items = history_response.get("items", [])
+
+                    if total == 0:
+                        st.info("No execution history available yet.")
+                    else:
+                        st.subheader(
+                            f"📜 Execution History ({total} {'attempt' if total == 1 else 'attempts'})"
+                        )
+
+                        # Display each history entry
+                        for item in history_items:
+                            attempt = item.get("attempt", 1)
+                            executed_at = item.get("executed_at", "Unknown")
+                            response_status = item.get("response_status")
+                            duration_ms = item.get("duration_ms")
+                            error = item.get("error")
+
+                            # Create expander for each attempt
+                            with st.expander(
+                                f"🔹 Attempt #{attempt} - {executed_at} - "
+                                f"{'✅ Success' if error is None and response_status and response_status < 400 else '❌ Failed'}",
+                                expanded=(
+                                    attempt == history_items[0].get("attempt")
+                                ),  # Expand latest attempt
+                            ):
+                                # Summary metrics
+                                hist_col1, hist_col2 = st.columns(2)
+                                with hist_col1:
+                                    st.metric(
+                                        "Response Status",
+                                        response_status
+                                        if response_status is not None
+                                        else "N/A",
+                                    )
+                                    st.metric("Executed At", executed_at)
+                                with hist_col2:
+                                    duration_display = (
+                                        f"{duration_ms}ms"
+                                        if duration_ms is not None
+                                        else "N/A"
+                                    )
+                                    st.metric("Duration", duration_display)
+
+                                # Show error if exists
+                                if error:
+                                    st.error(f"**Error:** {error}")
+
+                                # Show response headers
+                                response_headers = item.get("response_headers")
+                                if response_headers:
+                                    st.subheader("📋 Response Headers")
+                                    st.json(response_headers)
+
+                                # Show response body
+                                response_body = item.get("response_body")
+                                if response_body:
+                                    st.subheader("📄 Response Body")
+                                    st.json(response_body)
+
+                except Exception as history_error:
+                    st.warning(f"Could not fetch history: {history_error!s}")
+
+            with tab4:
                 # Display HTTP request parameters
                 st.subheader("🌐 HTTP Request Configuration")
 
@@ -836,7 +928,9 @@ def render_job_detail() -> None:
                 req_col1, req_col2 = st.columns(2)
                 with req_col1:
                     st.text_input(
-                        "Method", value=job_detail.get("method", ""), disabled=True,
+                        "Method",
+                        value=job_detail.get("method", ""),
+                        disabled=True,
                     )
                     st.text_input(
                         "Timeout (sec)",

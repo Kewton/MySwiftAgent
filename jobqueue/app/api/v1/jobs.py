@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.merge import merge_dict_deep, merge_dict_shallow, merge_tags
 from app.models.job import Job, JobStatus
 from app.models.job_master import JobMaster
-from app.models.result import JobResult
+from app.models.result import JobResult, JobResultHistory
 from app.schemas.job import (
     JobCreate,
     JobCreateFromMaster,
@@ -19,7 +19,11 @@ from app.schemas.job import (
     JobList,
     JobResponse,
 )
-from app.schemas.result import JobResultResponse
+from app.schemas.result import (
+    JobResultHistoryItem,
+    JobResultHistoryList,
+    JobResultResponse,
+)
 
 router = APIRouter()
 
@@ -89,11 +93,38 @@ async def get_job_result(
     return JobResultResponse(
         job_id=job.id,
         status=job.status,
+        attempt=result.attempt if result else 1,
         response_status=result.response_status if result else None,
         response_headers=result.response_headers if result else None,
         response_body=result.response_body if result else None,
         error=result.error if result else None,
         duration_ms=result.duration_ms if result else None,
+    )
+
+
+@router.get("/jobs/{job_id}/result/history", response_model=JobResultHistoryList)
+async def get_job_result_history(
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> JobResultHistoryList:
+    """Get job result history (all execution attempts)."""
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Get all history entries ordered by attempt DESC (newest first)
+    history_query = (
+        select(JobResultHistory)
+        .where(JobResultHistory.job_id == job_id)
+        .order_by(desc(JobResultHistory.attempt))
+    )
+    history_result = await db.scalars(history_query)
+    history_entries = history_result.all()
+
+    return JobResultHistoryList(
+        job_id=job_id,
+        total=len(history_entries),
+        items=[JobResultHistoryItem.model_validate(entry) for entry in history_entries],
     )
 
 
@@ -137,6 +168,28 @@ async def retry_job(
             status_code=400,
             detail=f"Only failed jobs can be retried. Current status: {job.status}",
         )
+
+    # Save current result to history before retry
+    current_result = await db.scalar(
+        select(JobResult).where(JobResult.job_id == job_id)
+    )
+
+    if current_result:
+        # Create history entry from current result
+        history_entry = JobResultHistory(
+            job_id=job_id,
+            attempt=current_result.attempt,
+            response_status=current_result.response_status,
+            response_headers=current_result.response_headers,
+            response_body=current_result.response_body,
+            error=current_result.error,
+            duration_ms=current_result.duration_ms,
+            executed_at=current_result.updated_at or current_result.created_at,
+        )
+        db.add(history_entry)
+
+        # Increment attempt for next execution
+        current_result.attempt = current_result.attempt + 1
 
     # Reset job status for retry
     job.status = JobStatus.QUEUED

@@ -197,7 +197,8 @@ class TestNotificationManager:
 
         mock_st.success.assert_called_once_with("Test Operation completed (1.50s)")
         mock_st.toast.assert_called_once_with(
-            "Test Operation completed (1.50s)", icon="✅",
+            "Test Operation completed (1.50s)",
+            icon="✅",
         )
 
     @patch("components.notifications.st")
@@ -207,7 +208,8 @@ class TestNotificationManager:
         NotificationManager.connection_status("TestService", True)
 
         mock_st.success.assert_called_once_with(
-            "✅ Connected to TestService", show_toast=False,
+            "✅ Connected to TestService",
+            show_toast=False,
         )
 
     @patch("components.notifications.st")
@@ -217,5 +219,6 @@ class TestNotificationManager:
         NotificationManager.connection_status("TestService", False)
 
         mock_st.error.assert_called_once_with(
-            "❌ Cannot connect to TestService", show_toast=False,
+            "❌ Cannot connect to TestService",
+            show_toast=False,
         )
