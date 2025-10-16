@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -42,6 +42,9 @@ class JobMaster(Base):
     ttl_seconds: Mapped[int | None] = mapped_column(Integer, default=604800)
     tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
+    # Version management
+    current_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
     # Metadata
     is_active: Mapped[bool] = mapped_column(Integer, default=1)  # SQLite用
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -52,3 +55,8 @@ class JobMaster(Base):
     # Audit
     created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     updated_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Relationships
+    version_history = relationship(
+        "JobMasterVersion", back_populates="job_master", cascade="all, delete-orphan"
+    )

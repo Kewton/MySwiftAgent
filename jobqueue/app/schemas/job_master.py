@@ -94,6 +94,9 @@ class JobMasterUpdate(BaseModel):
     ttl_seconds: int | None = Field(None, ge=0)
     tags: list[str] | None = Field(None, description="Default tags")
 
+    # Version management
+    change_reason: str | None = Field(None, description="Reason for change")
+
     # Audit
     updated_by: str | None = Field(None, description="Updater user ID", max_length=255)
 
@@ -129,6 +132,9 @@ class JobMasterDetail(BaseModel):
     # Scheduling defaults
     ttl_seconds: int | None
     tags: list[str] | None
+
+    # Version management
+    current_version: int = Field(1, description="Current version number")
 
     # Metadata
     is_active: bool

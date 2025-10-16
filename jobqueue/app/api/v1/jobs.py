@@ -243,6 +243,7 @@ async def create_job_from_master(
         id=job_id,
         name=job_data.name or master.name,
         master_id=master_id,
+        master_version=master.current_version,
         method=master.method,
         url=master.url,
         headers=merged_headers,

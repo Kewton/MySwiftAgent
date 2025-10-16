@@ -82,6 +82,8 @@ class JobDetail(BaseModel):
     id: str
     name: str | None = None
     status: JobStatus
+    master_id: str | None = None
+    master_version: int | None = Field(None, description="Master version at creation")
     attempt: int
     max_attempts: int
     priority: int

@@ -40,6 +40,7 @@ class Job(Base):
 
     # Master reference
     master_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    master_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     attempt: Mapped[int] = mapped_column(Integer, default=1)
     max_attempts: Mapped[int] = mapped_column(Integer, default=1)
     priority: Mapped[int] = mapped_column(Integer, default=5)

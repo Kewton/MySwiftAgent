@@ -16,6 +16,8 @@ from app.schemas.job_master import (
     JobMasterResponse,
     JobMasterUpdate,
 )
+from app.schemas.job_master_version import JobMasterUpdateResponse
+from app.services.version_manager import VersionManager
 
 router = APIRouter()
 
@@ -46,11 +48,17 @@ async def create_job_master(
         ttl_seconds=master_data.ttl_seconds,
         tags=master_data.tags,
         is_active=True,
+        current_version=1,
         created_by=master_data.created_by,
         updated_by=master_data.created_by,
     )
 
     db.add(master)
+    await db.flush()
+
+    # Save initial version
+    await VersionManager.save_current_version(db, master, change_reason="初回作成")
+
     await db.commit()
     await db.refresh(master)
 
@@ -120,18 +128,38 @@ async def get_job_master(
     return JobMasterDetail.model_validate(result)
 
 
-@router.put("/job-masters/{master_id}", response_model=JobMasterResponse)
+@router.put("/job-masters/{master_id}", response_model=JobMasterUpdateResponse)
 async def update_job_master(
     master_id: str,
     master_data: JobMasterUpdate,
     db: AsyncSession = Depends(get_db),
-) -> JobMasterResponse:
-    """Update a job master."""
+) -> JobMasterUpdateResponse:
+    """Update a job master with automatic versioning."""
     master = await db.get(JobMaster, master_id)
     if not master:
         raise HTTPException(status_code=404, detail="Job master not found")
 
-    # Update fields if provided
+    # Prepare update data
+    update_dict = master_data.model_dump(
+        exclude_unset=True, exclude={"change_reason", "updated_by"}
+    )
+
+    # Check if versioning needed
+    should_version, reason = await VersionManager.should_create_new_version(
+        db, master, update_dict
+    )
+
+    previous_version = master.current_version
+
+    if should_version:
+        # Save current version to history
+        await VersionManager.save_current_version(
+            db, master, change_reason=master_data.change_reason
+        )
+        # Increment version
+        master.current_version += 1
+
+    # Apply updates
     if master_data.name is not None:
         master.name = master_data.name
     if master_data.description is not None:
@@ -164,8 +192,12 @@ async def update_job_master(
     await db.commit()
     await db.refresh(master)
 
-    return JobMasterResponse(
-        master_id=master.id, name=master.name, is_active=bool(master.is_active)
+    return JobMasterUpdateResponse(
+        master_id=master.id,
+        previous_version=previous_version,
+        current_version=master.current_version,
+        auto_versioned=should_version,
+        version_reason=reason,
     )
 
 
