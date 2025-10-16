@@ -8,9 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ulid import new as ulid_new
 
 from app.core.database import get_db
+from app.core.merge import merge_dict_deep, merge_dict_shallow, merge_tags
 from app.models.job import Job, JobStatus
+from app.models.job_master import JobMaster
 from app.models.result import JobResult
-from app.schemas.job import JobCreate, JobDetail, JobList, JobResponse
+from app.schemas.job import (
+    JobCreate,
+    JobCreateFromMaster,
+    JobDetail,
+    JobList,
+    JobResponse,
+)
 from app.schemas.result import JobResultResponse
 
 router = APIRouter()
@@ -137,6 +145,68 @@ async def retry_job(
     job.finished_at = None
     job.next_attempt_at = datetime.now(UTC)
 
+    await db.commit()
+    await db.refresh(job)
+
+    return JobResponse(job_id=job.id, status=job.status)
+
+
+@router.post(
+    "/jobs/from-master/{master_id}", response_model=JobResponse, status_code=201
+)
+async def create_job_from_master(
+    master_id: str,
+    job_data: JobCreateFromMaster,
+    db: AsyncSession = Depends(get_db),
+) -> JobResponse:
+    """Create a job from a master template."""
+    # Get master
+    master = await db.get(JobMaster, master_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Job master not found")
+
+    # Check if master is active
+    if not master.is_active:
+        raise HTTPException(status_code=400, detail="Job master is inactive")
+
+    # Merge parameters
+    merged_headers = merge_dict_shallow(master.headers, job_data.headers)
+    merged_params = merge_dict_shallow(master.params, job_data.params)
+    merged_body = merge_dict_deep(master.body, job_data.body)
+    merged_tags = merge_tags(master.tags, job_data.tags)
+
+    # Use override values or master defaults
+    timeout_sec = job_data.timeout_sec or master.timeout_sec
+    max_attempts = job_data.max_attempts or master.max_attempts
+    backoff_strategy = job_data.backoff_strategy or master.backoff_strategy
+    backoff_seconds = job_data.backoff_seconds or master.backoff_seconds
+    priority = job_data.priority or 5  # Default priority
+
+    # Generate ULID for job ID
+    job_id = f"j_{ulid_new()}"
+
+    # Create job instance
+    job = Job(
+        id=job_id,
+        name=job_data.name or master.name,
+        master_id=master_id,
+        method=master.method,
+        url=master.url,
+        headers=merged_headers,
+        params=merged_params,
+        body=merged_body,
+        timeout_sec=timeout_sec,
+        priority=priority,
+        max_attempts=max_attempts,
+        backoff_strategy=backoff_strategy,
+        backoff_seconds=backoff_seconds,
+        scheduled_at=job_data.scheduled_at,
+        ttl_seconds=master.ttl_seconds,
+        tags=merged_tags,
+        next_attempt_at=job_data.scheduled_at or datetime.now(UTC),
+    )
+
+    db.add(job)
     await db.commit()
     await db.refresh(job)
 

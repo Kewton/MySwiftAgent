@@ -37,6 +37,9 @@ class Job(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[JobStatus] = mapped_column(String(20), default=JobStatus.QUEUED)
+
+    # Master reference
+    master_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     attempt: Mapped[int] = mapped_column(Integer, default=1)
     max_attempts: Mapped[int] = mapped_column(Integer, default=1)
     priority: Mapped[int] = mapped_column(Integer, default=5)

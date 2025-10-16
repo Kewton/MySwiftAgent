@@ -107,3 +107,39 @@ class JobList(BaseModel):
     total: int
     page: int
     size: int
+
+
+class JobCreateFromMaster(BaseModel):
+    """Schema for creating a job from a master template."""
+
+    name: str | None = Field(None, description="Job name override", max_length=255)
+
+    # Override options (all optional)
+    headers: dict[str, str] | None = Field(
+        None, description="Additional/override headers"
+    )
+    params: dict[str, Any] | None = Field(
+        None, description="Additional/override query params"
+    )
+    body: dict[str, Any] | None = Field(
+        None, description="Override request body (deep merge)"
+    )
+    timeout_sec: int | None = Field(None, ge=1, le=3600, description="Timeout override")
+
+    # Scheduling overrides
+    priority: int | None = Field(
+        None, ge=1, le=10, description="Priority (1=highest, 10=lowest)"
+    )
+    scheduled_at: datetime | None = Field(None, description="Schedule execution time")
+
+    # Retry overrides
+    max_attempts: int | None = Field(
+        None, ge=1, le=10, description="Max retry attempts"
+    )
+    backoff_strategy: BackoffStrategy | None = Field(
+        None, description="Backoff strategy for retries"
+    )
+    backoff_seconds: float | None = Field(None, ge=0.1, description="Backoff time")
+
+    # Additional tags (merged with master tags)
+    tags: list[str] | None = Field(None, description="Additional tags")

@@ -66,6 +66,7 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         # Import all models to ensure they are registered
         from app.models.job import Job  # noqa: F401
+        from app.models.job_master import JobMaster  # noqa: F401
         from app.models.result import JobResult  # noqa: F401
 
         await conn.run_sync(Base.metadata.create_all)
