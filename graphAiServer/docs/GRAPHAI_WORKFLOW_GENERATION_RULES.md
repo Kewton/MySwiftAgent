@@ -829,21 +829,153 @@ nodes:
 news_extractor:
   agent: fetchAgent
   params:
-    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/explorer"
+    url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/explorer"
     method: "POST"
     body:
       user_input: "下記サイトの記事本文をMarkdown形式で抽出してください。\nhttps://example.com/news/article-123"
-      model_name: "gpt-4o-mini"
+      model_name: "gemini-2.5-flash"
 
 # ⚠️ 非推奨: Playwright Agent（精度が低い）
 news_extractor_playwright:
   agent: fetchAgent
   params:
-    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/playwright"
     method: "POST"
     body:
       user_input: "下記サイトから記事のタイトルと本文を抽出してください。\nhttps://example.com/news/article-123"
-      model_name: "gpt-4o-mini"
+      model_name: "gemini-2.5-flash"
+```
+
+#### Explorer Agentのhtml2markdown機能
+
+**getMarkdown_tool** を使用してHTMLをMarkdown形式に変換します。
+
+**特徴**:
+- ✅ **リンク保持**: `[テキスト](URL)` 形式でリンク構造を保持
+- ✅ **不要要素削除**: script, style, nav, header, footer を自動削除
+- ✅ **高速**: LLM推論不要で3-5秒で完了
+- ✅ **決定的**: 同じURLから常に同じMarkdown生成
+
+**使用例: HTMLをMarkdownに変換**
+
+```yaml
+get_markdown:
+  agent: fetchAgent
+  inputs:
+    url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/explorer"
+    method: "POST"
+    body:
+      user_input: "次のURLからMarkdownを取得: https://example.com/page.html"
+      model_name: "gemini-2.5-flash"
+```
+
+**使用例: PDF URL抽出の完全な例**
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      url: "https://japancredit.go.jp/about/mrv/"
+
+  # ステップ1: HTMLをMarkdownに変換
+  html_to_markdown:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/explorer"
+      method: "POST"
+      body:
+        user_input: "URLからMarkdownを取得: ${source.url}"
+        model_name: "gemini-2.5-flash"
+
+  # ステップ2: PDF URLをLLM抽出（正規表現でも可）
+  extract_pdf_urls:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+      method: "POST"
+      body:
+        user_input: |
+          次のMarkdownテキストからPDF URLを全て抽出してJSON配列で出力してください。
+
+          Markdown:
+          ${html_to_markdown.result}
+
+          出力形式: ["https://example.com/file1.pdf", "https://example.com/file2.pdf"]
+        model_name: "gemini-2.5-flash"
+
+  # ステップ3: mapAgentで並列アップロード
+  upload_to_drive:
+    agent: mapAgent
+    inputs:
+      rows: :extract_pdf_urls
+    graph:
+      nodes:
+        upload:
+          agent: fetchAgent
+          inputs:
+            url: "${EXPERTAGENT_BASE_URL}/v1/drive/upload"
+            method: "POST"
+            body:
+              file_url: ":row"
+              folder_id: "google_drive_folder_id_here"
+          isResult: true
+    params:
+      compositeResult: true
+```
+
+**正規表現を使った高速抽出（推奨）**
+
+LLMを使わずに正規表現でPDF URLを抽出する方が高速で確実です：
+
+```yaml
+version: 0.5
+nodes:
+  source:
+    value:
+      url: "https://japancredit.go.jp/about/mrv/"
+
+  # ステップ1: HTMLをMarkdownに変換
+  html_to_markdown:
+    agent: fetchAgent
+    inputs:
+      url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/explorer"
+      method: "POST"
+      body:
+        user_input: "URLからMarkdownを取得: ${source.url}"
+        model_name: "gemini-2.5-flash"
+
+  # ステップ2: 正規表現でPDF URLを抽出（LLM不要、高速）
+  extract_pdf_urls:
+    agent: pythonAgent
+    inputs:
+      markdown: :html_to_markdown.result
+    params:
+      code: |
+        import re
+        # Markdown形式: [text](url) からPDF URLを抽出
+        pdf_links = re.findall(r'\[.*?\]\((https?://[^\)]+\.pdf)\)', markdown)
+        # 重複削除
+        return list(set(pdf_links))
+
+  # ステップ3: mapAgentで並列アップロード
+  upload_to_drive:
+    agent: mapAgent
+    inputs:
+      rows: :extract_pdf_urls
+    graph:
+      nodes:
+        upload:
+          agent: fetchAgent
+          inputs:
+            url: "${EXPERTAGENT_BASE_URL}/v1/drive/upload"
+            method: "POST"
+            body:
+              file_url: ":row"
+              folder_id: "google_drive_folder_id_here"
+          isResult: true
+    params:
+      compositeResult: true
 ```
 
 ### ファイル処理: File Reader Agent
@@ -1047,15 +1179,37 @@ summarizer:
 
 #### 例2: Playwright Agentでのスクレイピング
 
+**⚠️ 重要**: Playwright Agentは **LLMベースの自然言語出力** を行うため、以下のタスクには**不適切**です：
+
+### ❌ Playwright Agent を使うべきでないケース
+
+- ❌ PDF URLリストの抽出
+- ❌ ニュース記事の本文取得
+- ❌ 商品価格の一覧取得
+- ❌ テーブルデータの抽出
+- ❌ JSON形式での構造化データ出力
+
+**理由**: Playwright は **LLMベースの自然言語出力** を行うため、構造化データ抽出に不向き。
+
+### ✅ Playwright Agent を使うべきケース
+
+- ✅ ログインフォームへの入力・送信
+- ✅ JavaScriptレンダリング後の動的コンテンツ取得
+- ✅ スクリーンショット撮影
+- ✅ ファイルダウンロード（直接URL指定不可の場合）
+- ✅ ページ内のボタンクリック操作
+
+**使用例（適切なケース）**:
+
 ```yaml
-# ⚠️ 必須: gpt-4o-mini を使用
+# ✅ 推奨: フォーム操作やスクリーンショット取得
 web_scraper:
   agent: fetchAgent
   params:
-    url: "http://127.0.0.1:8104/aiagent-api/v1/aiagent/utility/playwright"
+    url: "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/playwright"
     method: "POST"
     body:
-      user_input: "下記サイトからタイトルを抽出してください。\nhttps://example.com"
+      user_input: "下記サイトのスクリーンショットを取得してください。\nhttps://example.com"
       model_name: "gpt-4o-mini"  # Agent統合時は必須
 ```
 
@@ -2839,10 +2993,20 @@ AIエージェントがYMLファイルを自動生成する際、以下のルー
 | **JSON形式の出力** | `/utility/jsonoutput` | 構造化データ生成に特化 |
 | **情報収集** | `/utility/explorer` | 複雑な調査・レポート作成 |
 | **Web検索** | `/utility/google_search` | 最新情報の取得 |
-| **Webスクレイピング** | `/utility/playwright` | 動的サイトの情報取得 |
+| **静的Webページ情報抽出** | `/utility/explorer` | **HTML→Markdown変換、リンク抽出、テキスト抽出** |
+| **動的ブラウザ操作** | `/utility/playwright` | フォーム入力、JavaScript実行、スクリーンショット |
 | **百科事典情報** | `/utility/wikipedia` | 基礎知識の調査 |
 | **アクション実行** | `/utility/action` | メール送信、ファイル操作 |
 | **音声合成** | `/utility/tts_and_upload_drive` | ポッドキャスト作成 |
+
+### ⚠️ 重要: Web情報抽出はExplorer Agentを使用
+
+**90%以上のケースでExplorer Agentが適切です。**
+
+- ✅ **Explorer Agent**: HTML→Markdown変換、PDF/画像URLリスト抽出、記事本文取得
+- ❌ **Playwright Agent**: ログイン操作、動的コンテンツの待機、スクリーンショット
+
+**判断基準**: URLからテキスト・リンクを抽出したい → **Explorer Agent**
 
 ### 5. モデル選択の検証
 
