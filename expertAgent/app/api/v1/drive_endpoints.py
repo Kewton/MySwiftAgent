@@ -210,7 +210,7 @@ async def download_file_from_url(
             raise HTTPException(
                 status_code=408, detail=f"Timeout downloading file from {url}"
             ) from e
-        except Exception as e:
+        except httpx.RequestError as e:
             logger.exception(f"Error downloading {url}")
             raise HTTPException(
                 status_code=500, detail=f"Failed to download file from {url}: {str(e)}"
@@ -266,6 +266,11 @@ async def upload_single_file(
             return DriveFileUploadResult(
                 source_url=url,
                 status="failed",
+                drive_url=None,
+                file_id=None,
+                file_name=None,
+                file_size=None,
+                mime_type=None,
                 error=f"Upload failed: {error_msg}",
             )
 
@@ -278,6 +283,7 @@ async def upload_single_file(
             file_name=result["file_name"],
             file_size=len(content),
             mime_type=content_type,
+            error=None,
         )
 
     except HTTPException as e:
@@ -285,6 +291,11 @@ async def upload_single_file(
         return DriveFileUploadResult(
             source_url=url,
             status="failed",
+            drive_url=None,
+            file_id=None,
+            file_name=None,
+            file_size=None,
+            mime_type=None,
             error=e.detail,
         )
     except Exception as e:
@@ -292,6 +303,11 @@ async def upload_single_file(
         return DriveFileUploadResult(
             source_url=url,
             status="failed",
+            drive_url=None,
+            file_id=None,
+            file_name=None,
+            file_size=None,
+            mime_type=None,
             error=f"Unexpected error: {str(e)}",
         )
     finally:
@@ -362,6 +378,7 @@ async def upload_files_from_urls(
                     file_name=url.split("/")[-1],
                     file_size=1000,
                     mime_type="application/pdf",
+                    error=None,
                 )
                 for i, url in enumerate(request.urls)
             ]
