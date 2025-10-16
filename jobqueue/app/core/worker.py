@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -40,11 +40,11 @@ class JobExecutor:
 
         # Ensure started_at is set (defensive programming for tests/manual execution)
         if job.started_at is None:
-            job.started_at = datetime.utcnow()
+            job.started_at = datetime.now(UTC)
 
         logger.info(f"[EXECUTE_JOB] Job {job.id} started at {job.started_at}")
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
         error_message = None
 
         try:
@@ -98,12 +98,12 @@ class JobExecutor:
                 # Update job status
                 if response.is_success:
                     job.status = JobStatus.SUCCEEDED
-                    job.finished_at = datetime.utcnow()
+                    job.finished_at = datetime.now(UTC)
                     logger.info(f"Job {job.id} completed successfully")
                 else:
                     # HTTP error - consider this a failure
                     job.status = JobStatus.FAILED
-                    job.finished_at = datetime.utcnow()
+                    job.finished_at = datetime.now(UTC)
                     error_message = f"HTTP {response.status_code}: {response.text}"
                     logger.warning(
                         f"Job {job.id} failed with HTTP {response.status_code}"
@@ -121,7 +121,7 @@ class JobExecutor:
                 await self._schedule_retry(job)
             else:
                 job.status = JobStatus.FAILED
-                job.finished_at = datetime.utcnow()
+                job.finished_at = datetime.now(UTC)
 
         await self.session.commit()
 
@@ -135,7 +135,7 @@ class JobExecutor:
         error: str | None = None,
     ) -> None:
         """Store or update job result safely using upsert pattern."""
-        duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        duration_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
         # Try to get existing result first
         result = await self.session.scalar(
@@ -149,7 +149,7 @@ class JobExecutor:
             result.response_body = response_body
             result.error = error
             result.duration_ms = duration_ms
-            result.updated_at = datetime.utcnow()
+            result.updated_at = datetime.now(UTC)
         else:
             # Create new result
             try:
@@ -177,7 +177,7 @@ class JobExecutor:
                         result.response_body = response_body
                         result.error = error
                         result.duration_ms = duration_ms
-                        result.updated_at = datetime.utcnow()
+                        result.updated_at = datetime.now(UTC)
                 else:
                     raise  # Re-raise if not a constraint violation
 
@@ -187,7 +187,7 @@ class JobExecutor:
 
         # Calculate backoff delay
         backoff_delay = self._calculate_backoff(job)
-        job.next_attempt_at = datetime.utcnow() + timedelta(seconds=backoff_delay)
+        job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=backoff_delay)
         job.status = JobStatus.QUEUED
 
         logger.info(
@@ -289,7 +289,7 @@ class WorkerManager:
         This method ensures that only one worker can claim a job, even with
         multiple concurrent workers, by using an atomic UPDATE operation.
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Find candidate job ID (not the full job object)
         candidate_id = await session.scalar(

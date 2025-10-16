@@ -119,10 +119,12 @@ class JobService:
                     method = job.args[1]
 
                 # ジョブ名を取得（APSchedulerのname属性またはjob_idをフォールバック）
-                job_name = getattr(job, 'name', job.id)
+                job_name = getattr(job, "name", job.id)
 
                 # データベースから実際の実行回数を取得
-                execution_count = execution_repository.get_execution_count_by_job_id(job.id)
+                execution_count = execution_repository.get_execution_count_by_job_id(
+                    job.id
+                )
 
                 jobs.append(
                     JobInfo(
@@ -187,6 +189,7 @@ class JobService:
 
             # ジョブを即座に実行（既存のスケジュールを維持）
             from datetime import datetime
+
             self.scheduler.modify_job(job_id, next_run_time=datetime.now())
             logger.info(f"Job {job_id} triggered successfully")
             return JobResponse(job_id=job_id, status="triggered")
@@ -206,7 +209,7 @@ class JobService:
             status = "running"
             try:
                 # ジョブが一時停止されているかチェック
-                if hasattr(job, 'paused') and job.paused:
+                if hasattr(job, "paused") and job.paused:
                     status = "paused"
                 elif job.next_run_time is None:
                     status = "completed"
@@ -224,21 +227,30 @@ class JobService:
             trigger_type = str(job.trigger.__class__.__name__).lower()
             if "cron" in trigger_type:
                 trigger_info["type"] = "cron"
-                if hasattr(job.trigger, 'fields'):
+                if hasattr(job.trigger, "fields"):
                     cron_fields = {}
-                    for field in ['year', 'month', 'day', 'week', 'day_of_week', 'hour', 'minute', 'second']:
+                    for field in [
+                        "year",
+                        "month",
+                        "day",
+                        "week",
+                        "day_of_week",
+                        "hour",
+                        "minute",
+                        "second",
+                    ]:
                         if hasattr(job.trigger.fields, field):
                             field_obj = getattr(job.trigger.fields, field)
                             cron_fields[field] = str(field_obj)
                     trigger_info["cron"] = cron_fields  # type: ignore
             elif "interval" in trigger_type:
                 trigger_info["type"] = "interval"
-                if hasattr(job.trigger, 'interval'):
+                if hasattr(job.trigger, "interval"):
                     interval_seconds = job.trigger.interval.total_seconds()
                     trigger_info["interval_seconds"] = interval_seconds
             elif "date" in trigger_type:
                 trigger_info["type"] = "date"
-                if hasattr(job.trigger, 'run_date'):
+                if hasattr(job.trigger, "run_date"):
                     trigger_info["run_date"] = job.trigger.run_date.isoformat()
 
             # ジョブの引数からHTTP設定を取得 (execute_http_job用)
@@ -268,12 +280,14 @@ class JobService:
             # 実行履歴を取得
             executions = []
             try:
-                executions = execution_repository.get_executions_by_job_id(job.id, limit=50)
+                executions = execution_repository.get_executions_by_job_id(
+                    job.id, limit=50
+                )
             except Exception as e:
                 logger.warning(f"Failed to get execution history for job {job.id}: {e}")
 
             # ジョブ名を取得（APSchedulerのname属性またはjob_idをフォールバック）
-            job_name = getattr(job, 'name', job.id)
+            job_name = getattr(job, "name", job.id)
 
             # データベースから実際の実行回数を取得
             execution_count = execution_repository.get_execution_count_by_job_id(job.id)
@@ -281,7 +295,11 @@ class JobService:
             return JobDetail(
                 job_id=job.id,
                 name=job_name,  # APSchedulerのname属性を使用
-                func=str(job.func.__name__ if hasattr(job, 'func') and job.func else 'execute_http_job'),
+                func=str(
+                    job.func.__name__
+                    if hasattr(job, "func") and job.func
+                    else "execute_http_job"
+                ),
                 status=status,
                 trigger=str(job.trigger),
                 next_run_time=next_run_time,

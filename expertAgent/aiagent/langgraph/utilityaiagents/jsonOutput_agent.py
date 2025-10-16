@@ -99,8 +99,8 @@ def toParseJson(outline_json):
         parsed_json = parser.parse(outline_json)
     except Exception as e:
         print(f"Error parsing JSON with JsonOutputParser: {e}")
-        # --- (または、正規表現を使用する場合) ---
-        match = re.search(r"```json\s*(\{.*?\})\s*```", outline_json, re.DOTALL)
+        # --- JSON配列とオブジェクトの両方に対応 ---
+        match = re.search(r"```json\s*(\[.*?\]|\{.*?\})\s*```", outline_json, re.DOTALL)
         if match:
             json_content = match.group(1)
             try:

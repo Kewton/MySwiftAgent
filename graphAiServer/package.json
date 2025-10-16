@@ -1,6 +1,6 @@
 {
   "name": "graph-ai-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Graph AI Server for MySwiftAgent",
   "main": "dist/index.js",

@@ -1,0 +1,78 @@
+# version: 1.0.0
+#
+# llmwork: gmail_newsletter_podcast
+#
+# description: This workflow searches for a newsletter in Gmail using a keyword, summarizes it, converts it to an MP3 podcast, uploads it to Google Drive, and sends a notification email.
+#
+# author: Gemini
+#
+# date: 2025-10-16
+#
+# input: JSON string with "keyword" and "path" (Google Drive folder URL)
+#
+# output: Result of the email notification.
+#
+# Test Results:
+# - 2025-10-16: Initial implementation. Failed due to various URL and payload issues.
+# - 2025-10-16: Successfully executed after correcting the endpoint URL and payload structure.
+#
+# Notes:
+# - The email recipient for the notification is hardcoded in the expertAgent settings.
+# - The Google Drive upload location is the default one for the tts_and_upload_drive service and cannot be specified in this workflow.
+
+version: 0.5
+nodes:
+  source: {}
+
+  # 1. Search for the latest email in Gmail
+  search_email:
+    agent: fetchAgent
+    inputs:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/utility/gmail/search"
+      method: "POST"
+      body:
+        keyword: :source.keyword
+        top: 1
+        include_summary: false
+    console:
+      after: true
+
+  # 2. Extract first email from array
+  extract_first_email:
+    agent: popAgent
+    inputs:
+      array: :search_email.emails
+    console:
+      after: true
+
+  # 3. Build the summarization prompt
+  summarize_prompt_builder:
+    agent: stringTemplateAgent
+    inputs:
+      content: :extract_first_email.item.body_text
+    params:
+      template: "Please summarize the following email content:\n\n${content}"
+
+  # 4. Summarize the email body
+  summarize_email:
+    agent: fetchAgent
+    inputs:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/mylllm"
+      method: "POST"
+      body:
+        user_input: :summarize_prompt_builder
+        model_name: "gemini-2.5-flash"
+    console:
+      after: true
+
+  # 5. Generate podcast and upload to Google Drive
+  generate_podcast:
+    agent: fetchAgent
+    inputs:
+      url: "http://127.0.0.1:8104/aiagent-api/v1/utility/tts_and_upload_drive"
+      method: "POST"
+      body:
+        user_input: :summarize_email.result
+    console:
+      after: true
+    isResult: true

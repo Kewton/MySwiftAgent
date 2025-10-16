@@ -44,14 +44,11 @@ class HTTPService:
                         url,
                         json=body,
                         timeout=timeout_sec,
-                        headers=headers or {}
+                        headers=headers or {},
                     )
                 else:
                     response = await self.client.request(
-                        method.upper(),
-                        url,
-                        timeout=timeout_sec,
-                        headers=headers or {}
+                        method.upper(), url, timeout=timeout_sec, headers=headers or {}
                     )
 
                 # 4xxエラーはリトライしない

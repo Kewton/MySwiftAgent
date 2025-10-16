@@ -86,7 +86,7 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=app --cov-report=term-missing --cov-report=xml"
+addopts = ""
 
 [tool.coverage.run]
 source = ["app"]

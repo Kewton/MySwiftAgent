@@ -7,6 +7,7 @@ from app.schemas.utilitySchemas import (
     UtilityResponse,
 )
 from core.config import settings
+from core.test_mode_handler import handle_test_mode
 from mymcp.googleapis.gmail.send import send_email
 from mymcp.tool.google_search_by_serper import (
     get_overview_by_google_serper,
@@ -31,6 +32,13 @@ async def tts_and_upload_drive_api(request: UtilityRequest):
         str: アップロード結果を示すメッセージまたはファイルURリンク
     """
     try:
+        # Test mode check using common handler
+        test_result = handle_test_mode(
+            request.test_mode, request.test_response, "tts_and_upload_drive"
+        )
+        if test_result is not None:
+            return test_result
+
         # タイトル生成
         title = generate_subject_from_text(request.user_input, max_length=40)
 
@@ -67,6 +75,13 @@ async def tts_and_upload_drive_api(request: UtilityRequest):
 async def google_search_by_serper_api(request: SearchUtilityRequest):
     print(f"request: {request}")
     try:
+        # Test mode check using common handler
+        test_result = handle_test_mode(
+            request.test_mode, request.test_response, "google_search"
+        )
+        if test_result is not None:
+            return test_result
+
         if request.num is None:
             result = await google_search_by_serper_list(request.queries)
         else:
@@ -84,6 +99,13 @@ async def google_search_by_serper_api(request: SearchUtilityRequest):
 async def get_overview_by_google_serper_api(request: SearchUtilityRequest):
     print(f"request: {request}")
     try:
+        # Test mode check using common handler
+        test_result = handle_test_mode(
+            request.test_mode, request.test_response, "google_search_overview"
+        )
+        if test_result is not None:
+            return test_result
+
         if request.num is None:
             result = await get_overview_by_google_serper(request.queries)
         else:

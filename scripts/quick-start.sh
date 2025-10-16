@@ -60,6 +60,9 @@ export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}/api"
 # CommonUI specific URLs
 export JOBQUEUE_BASE_URL="http://localhost:${JOBQUEUE_PORT}"
 
+# GraphAI workflow environment variables (for fetchAgent URL resolution)
+export GRAPHAISERVER_BASE_URL_NO_API="http://localhost:${GRAPHAISERVER_PORT}"
+
 echo -e "${BLUE}Using local ports${NC}: JobQueue=${JOBQUEUE_PORT}, MyScheduler=${MYSCHEDULER_PORT}, MyVault=${MYVAULT_PORT}, ExpertAgent=${EXPERTAGENT_PORT}, GraphAiServer=${GRAPHAISERVER_PORT}, CommonUI=${COMMONUI_PORT}"
 echo -e "${GREEN}✓ Service URLs configured automatically${NC}"
 
