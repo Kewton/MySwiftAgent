@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from ulid import new as ulid_new
 
 from app.core.database import get_db
@@ -53,6 +54,7 @@ async def create_job(
         headers=job_data.headers,
         params=job_data.params,
         body=job_data.body,
+        input_data=job_data.input_data,
         timeout_sec=job_data.timeout_sec,
         priority=job_data.priority,
         max_attempts=job_data.max_attempts,
@@ -65,6 +67,63 @@ async def create_job(
     )
 
     db.add(job)
+    await db.flush()
+
+    # Create tasks if provided
+    if job_data.tasks:
+        for task_data in job_data.tasks:
+            # Get task master
+            task_master = await db.get(TaskMaster, task_data.master_id)
+            if not task_master:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Task master {task_data.master_id} not found",
+                )
+
+            if not task_master.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Task master {task_data.master_id} is inactive",
+                )
+
+            # Validate input data against interface schemas
+            if task_data.input_data:
+                # Get task master interfaces with eager loading of interface_master
+                interface_associations = await db.scalars(
+                    select(TaskMasterInterface)
+                    .where(TaskMasterInterface.task_master_id == task_master.id)
+                    .options(selectinload(TaskMasterInterface.interface_master))
+                )
+                for assoc in interface_associations.all():
+                    if assoc.required and assoc.interface_master.input_schema:
+                        try:
+                            InterfaceValidator.validate_input(
+                                task_data.input_data,
+                                assoc.interface_master.input_schema,
+                            )
+                        except InterfaceValidationError as e:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Task {task_data.sequence} input validation failed: {'; '.join(e.errors)}",
+                            ) from e
+
+            # Generate ULID for task ID
+            task_id = f"t_{ulid_new()}"
+
+            # Create task instance
+            task = Task(
+                id=task_id,
+                job_id=job_id,
+                master_id=task_master.id,
+                master_version=task_master.current_version,
+                order=task_data.sequence,
+                status=TaskStatus.QUEUED,
+                input_data=task_data.input_data,
+                attempt=0,
+            )
+
+            db.add(task)
+
     await db.commit()
     await db.refresh(job)
 
@@ -289,11 +348,11 @@ async def create_job_from_master(
 
             # Validate input data against interface schemas
             if task_data.input_data:
-                # Get task master interfaces
+                # Get task master interfaces with eager loading of interface_master
                 interface_associations = await db.scalars(
-                    select(TaskMasterInterface).where(
-                        TaskMasterInterface.task_master_id == task_master.id
-                    )
+                    select(TaskMasterInterface)
+                    .where(TaskMasterInterface.task_master_id == task_master.id)
+                    .options(selectinload(TaskMasterInterface.interface_master))
                 )
                 for assoc in interface_associations.all():
                     if assoc.required and assoc.interface_master.input_schema:

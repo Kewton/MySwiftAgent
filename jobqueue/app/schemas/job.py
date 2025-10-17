@@ -41,6 +41,10 @@ class JobCreate(BaseModel):
         default=604800, ge=0, description="Time to live in seconds (default: 7 days)"
     )
     tags: list[str] | None = Field(None, description="Job tags")
+    input_data: dict[str, Any] | None = Field(None, description="Job input data")
+    tasks: list["JobTaskCreate"] | None = Field(
+        None, description="Tasks to create with this job"
+    )
 
     @field_validator("timeout_sec")
     @classmethod
@@ -115,7 +119,7 @@ class JobTaskCreate(BaseModel):
     """Schema for creating a task within a job."""
 
     master_id: str = Field(..., description="Task master ID")
-    order: int = Field(..., ge=1, description="Execution order")
+    sequence: int = Field(..., ge=0, description="Execution sequence (0-based)")
     input_data: dict[str, Any] | None = Field(
         None, description="Input data for the task"
     )

@@ -54,6 +54,7 @@ class Job(Base):
     headers: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     params: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     body: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    input_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     timeout_sec: Mapped[int] = mapped_column(Integer, default=30)
 
     # Retry configuration

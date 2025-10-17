@@ -57,24 +57,24 @@ class TestGoogleSearchBySerper:
     @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")
     async def test_google_search_without_num(self, mock_search):
         """Test Google search without num parameter."""
-        mock_search.return_value = "Search results"
+        mock_search.return_value = {"data": "Search results"}
         request = SearchUtilityRequest(queries=["test query", "another query"])
 
         result = await google_search_by_serper_api(request)
 
-        assert result.result == "Search results"
+        assert result.result == {"data": "Search results"}
         mock_search.assert_called_once_with(["test query", "another query"])
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")
     async def test_google_search_with_num(self, mock_search):
         """Test Google search with num parameter."""
-        mock_search.return_value = "Search results"
+        mock_search.return_value = {"data": "Search results"}
         request = SearchUtilityRequest(queries=["test query"], num=10)
 
         result = await google_search_by_serper_api(request)
 
-        assert result.result == "Search results"
+        assert result.result == {"data": "Search results"}
         mock_search.assert_called_once_with(["test query"], 10)
 
     @pytest.mark.asyncio
@@ -98,24 +98,24 @@ class TestGetOverviewByGoogleSerper:
     @patch("app.api.v1.utility_endpoints.get_overview_by_google_serper")
     async def test_overview_without_num(self, mock_overview):
         """Test overview without num parameter."""
-        mock_overview.return_value = "Overview results"
+        mock_overview.return_value = {"data": "Overview results"}
         request = SearchUtilityRequest(queries=["test query"])
 
         result = await get_overview_by_google_serper_api(request)
 
-        assert result.result == "Overview results"
+        assert result.result == {"data": "Overview results"}
         mock_overview.assert_called_once_with(["test query"])
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.get_overview_by_google_serper")
     async def test_overview_with_num(self, mock_overview):
         """Test overview with num parameter."""
-        mock_overview.return_value = "Overview results"
+        mock_overview.return_value = {"data": "Overview results"}
         request = SearchUtilityRequest(queries=["test query"], num=5)
 
         result = await get_overview_by_google_serper_api(request)
 
-        assert result.result == "Overview results"
+        assert result.result == {"data": "Overview results"}
         mock_overview.assert_called_once_with(["test query"], 5)
 
     @pytest.mark.asyncio

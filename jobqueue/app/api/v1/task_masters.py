@@ -46,11 +46,6 @@ async def create_task_master(
     )
 
     db.add(master)
-    await db.flush()
-
-    # Save initial version
-    await TaskVersionManager.save_current_version(db, master, change_reason="初回作成")
-
     await db.commit()
     await db.refresh(master)
 

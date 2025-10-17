@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
@@ -108,9 +109,9 @@ class JobExecutor:
                 # Validate input data against interfaces
                 if task.input_data:
                     interfaces = await self.session.scalars(
-                        select(TaskMasterInterface).where(
-                            TaskMasterInterface.task_master_id == task_master.id
-                        )
+                        select(TaskMasterInterface)
+                        .where(TaskMasterInterface.task_master_id == task_master.id)
+                        .options(selectinload(TaskMasterInterface.interface_master))
                     )
                     for assoc in interfaces.all():
                         if assoc.required and assoc.interface_master.input_schema:
@@ -149,9 +150,9 @@ class JobExecutor:
                     # Validate output data against interfaces
                     if output_data:
                         interfaces = await self.session.scalars(
-                            select(TaskMasterInterface).where(
-                                TaskMasterInterface.task_master_id == task_master.id
-                            )
+                            select(TaskMasterInterface)
+                            .where(TaskMasterInterface.task_master_id == task_master.id)
+                            .options(selectinload(TaskMasterInterface.interface_master))
                         )
                         for assoc in interfaces.all():
                             if assoc.required and assoc.interface_master.output_schema:

@@ -72,6 +72,18 @@ class TaskVersionManager:
         """
         Save current master configuration as a version.
         """
+        # Check if this version already exists
+        existing_version = await db.scalar(
+            select(TaskMasterVersion).where(
+                TaskMasterVersion.master_id == master.id,
+                TaskMasterVersion.version == master.current_version,
+            )
+        )
+        
+        if existing_version:
+            # Version already saved, return existing record
+            return existing_version
+        
         version_entry = TaskMasterVersion(
             master_id=master.id,
             version=master.current_version,
