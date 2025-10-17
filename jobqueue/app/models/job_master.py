@@ -1,7 +1,7 @@
 """Job Master database model."""
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -9,6 +9,10 @@ from sqlalchemy.sql import func
 
 from app.core.database import Base
 from app.models.job import BackoffStrategy
+
+if TYPE_CHECKING:
+    from app.models.job_master_interface import JobMasterInterface
+    from app.models.job_master_version import JobMasterVersion
 
 
 class JobMaster(Base):
@@ -57,6 +61,9 @@ class JobMaster(Base):
     updated_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
-    version_history = relationship(
+    version_history: Mapped[list["JobMasterVersion"]] = relationship(
         "JobMasterVersion", back_populates="job_master", cascade="all, delete-orphan"
+    )
+    interfaces: Mapped[list["JobMasterInterface"]] = relationship(
+        "JobMasterInterface", back_populates="job_master", cascade="all, delete-orphan"
     )

@@ -14,6 +14,14 @@ from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
 from app.models.job import BackoffStrategy, Job, JobStatus
 from app.models.result import JobResult
+from app.models.task import Task, TaskStatus
+from app.models.task_master import TaskMaster
+from app.models.task_master_interface import TaskMasterInterface
+from app.services.interface_validator import (
+    InterfaceValidationError,
+    InterfaceValidator,
+)
+from app.services.template_resolver import TemplateResolver, TemplateResolverError
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +52,180 @@ class JobExecutor:
 
         logger.info(f"[EXECUTE_JOB] Job {job.id} started at {job.started_at}")
 
+        # Check if job has tasks
+        tasks_result = await self.session.scalars(
+            select(Task).where(Task.job_id == job.id).order_by(Task.order)
+        )
+        tasks = list(tasks_result.all())
+
+        if tasks:
+            # Execute tasks in order
+            logger.info(
+                f"[EXECUTE_JOB] Job {job.id} has {len(tasks)} tasks, executing in order"
+            )
+            await self._execute_tasks(job, tasks)
+        else:
+            # Execute job directly (legacy behavior)
+            logger.info(f"[EXECUTE_JOB] Job {job.id} has no tasks, executing directly")
+            await self._execute_single_job(job)
+
+    async def _execute_tasks(self, job: Job, tasks: list[Task]) -> None:
+        """Execute tasks in order."""
+        for task in tasks:
+            logger.info(f"[TASK] Executing task {task.id} (order={task.order})")
+
+            # Update task status
+            task.status = TaskStatus.RUNNING
+            task.started_at = datetime.now(UTC)
+            await self.session.commit()
+
+            start_time = datetime.now(UTC)
+
+            try:
+                # Get task master for configuration
+                task_master = await self.session.get(TaskMaster, task.master_id)
+                if not task_master:
+                    raise Exception(f"Task master {task.master_id} not found")
+
+                # Resolve template variables in body_template
+                resolved_body: dict[str, Any] | None = task_master.body_template
+                if resolved_body and TemplateResolver.has_template_variables(
+                    resolved_body
+                ):
+                    logger.info(
+                        f"[TASK] Resolving template variables for task {task.id}"
+                    )
+                    try:
+                        result = TemplateResolver.resolve_template(resolved_body, tasks)
+                        # Template resolver can return str/list/None, but we expect dict
+                        if isinstance(result, dict):
+                            resolved_body = result
+                        else:
+                            resolved_body = None
+                    except TemplateResolverError as e:
+                        raise Exception(f"Template resolution failed: {e}") from e
+
+                # Validate input data against interfaces
+                if task.input_data:
+                    interfaces = await self.session.scalars(
+                        select(TaskMasterInterface).where(
+                            TaskMasterInterface.task_master_id == task_master.id
+                        )
+                    )
+                    for assoc in interfaces.all():
+                        if assoc.required and assoc.interface_master.input_schema:
+                            try:
+                                InterfaceValidator.validate_input(
+                                    task.input_data,
+                                    assoc.interface_master.input_schema,
+                                )
+                            except InterfaceValidationError as e:
+                                raise Exception(
+                                    f"Input validation failed: {'; '.join(e.errors)}"
+                                ) from e
+
+                # Execute HTTP request
+                async with httpx.AsyncClient() as client:
+                    logger.info(
+                        f"[TASK] Sending {task_master.method} request to {task_master.url}"
+                    )
+                    response = await client.request(
+                        method=task_master.method,
+                        url=task_master.url,
+                        headers=task_master.headers or {},
+                        json=resolved_body,
+                        timeout=task_master.timeout_sec,
+                    )
+                    logger.info(f"[TASK] Response status: {response.status_code}")
+
+                    # Parse response
+                    output_data = None
+                    if response.content:
+                        try:
+                            output_data = response.json()
+                        except json.JSONDecodeError:
+                            output_data = {"text": response.text}
+
+                    # Validate output data against interfaces
+                    if output_data:
+                        interfaces = await self.session.scalars(
+                            select(TaskMasterInterface).where(
+                                TaskMasterInterface.task_master_id == task_master.id
+                            )
+                        )
+                        for assoc in interfaces.all():
+                            if assoc.required and assoc.interface_master.output_schema:
+                                try:
+                                    InterfaceValidator.validate_output(
+                                        output_data,
+                                        assoc.interface_master.output_schema,
+                                    )
+                                except InterfaceValidationError as e:
+                                    raise Exception(
+                                        f"Output validation failed: {'; '.join(e.errors)}"
+                                    ) from e
+
+                    # Store output
+                    task.output_data = output_data
+                    task.status = (
+                        TaskStatus.SUCCEEDED
+                        if response.is_success
+                        else TaskStatus.FAILED
+                    )
+                    task.finished_at = datetime.now(UTC)
+                    task.duration_ms = int(
+                        (task.finished_at - start_time).total_seconds() * 1000
+                    )
+
+                    if not response.is_success:
+                        task.error = f"HTTP {response.status_code}: {response.text}"
+                        logger.warning(
+                            f"[TASK] Task {task.id} failed with HTTP {response.status_code}"
+                        )
+                        # Task failed, skip remaining tasks
+                        await self._skip_remaining_tasks(tasks, task.order)
+                        job.status = JobStatus.FAILED
+                        job.finished_at = datetime.now(UTC)
+                        await self.session.commit()
+                        return
+
+                    logger.info(f"[TASK] Task {task.id} completed successfully")
+                    await self.session.commit()
+
+            except Exception as e:
+                error_message = str(e)
+                logger.error(
+                    f"[TASK] Task {task.id} failed with exception: {error_message}"
+                )
+                task.status = TaskStatus.FAILED
+                task.error = error_message
+                task.finished_at = datetime.now(UTC)
+                task.duration_ms = int(
+                    (datetime.now(UTC) - start_time).total_seconds() * 1000
+                )
+
+                # Skip remaining tasks
+                await self._skip_remaining_tasks(tasks, task.order)
+                job.status = JobStatus.FAILED
+                job.finished_at = datetime.now(UTC)
+                await self.session.commit()
+                return
+
+        # All tasks succeeded
+        job.status = JobStatus.SUCCEEDED
+        job.finished_at = datetime.now(UTC)
+        logger.info(f"[EXECUTE_JOB] All tasks completed successfully for job {job.id}")
+        await self.session.commit()
+
+    async def _skip_remaining_tasks(self, tasks: list[Task], failed_order: int) -> None:
+        """Mark all tasks after the failed task as SKIPPED."""
+        for task in tasks:
+            if task.order > failed_order and task.status == TaskStatus.QUEUED:
+                task.status = TaskStatus.SKIPPED
+                logger.info(f"[TASK] Skipping task {task.id} (order={task.order})")
+
+    async def _execute_single_job(self, job: Job) -> None:
+        """Execute a job without tasks (legacy behavior)."""
         start_time = datetime.now(UTC)
         error_message = None
 

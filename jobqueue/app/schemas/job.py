@@ -111,6 +111,16 @@ class JobList(BaseModel):
     size: int
 
 
+class JobTaskCreate(BaseModel):
+    """Schema for creating a task within a job."""
+
+    master_id: str = Field(..., description="Task master ID")
+    order: int = Field(..., ge=1, description="Execution order")
+    input_data: dict[str, Any] | None = Field(
+        None, description="Input data for the task"
+    )
+
+
 class JobCreateFromMaster(BaseModel):
     """Schema for creating a job from a master template."""
 
@@ -145,3 +155,8 @@ class JobCreateFromMaster(BaseModel):
 
     # Additional tags (merged with master tags)
     tags: list[str] | None = Field(None, description="Additional tags")
+
+    # Tasks to create with the job
+    tasks: list[JobTaskCreate] | None = Field(
+        None, description="Tasks to create with this job"
+    )

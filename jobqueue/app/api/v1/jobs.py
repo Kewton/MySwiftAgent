@@ -12,6 +12,9 @@ from app.core.merge import merge_dict_deep, merge_dict_shallow, merge_tags
 from app.models.job import Job, JobStatus
 from app.models.job_master import JobMaster
 from app.models.result import JobResult, JobResultHistory
+from app.models.task import Task, TaskStatus
+from app.models.task_master import TaskMaster
+from app.models.task_master_interface import TaskMasterInterface
 from app.schemas.job import (
     JobCreate,
     JobCreateFromMaster,
@@ -23,6 +26,10 @@ from app.schemas.result import (
     JobResultHistoryItem,
     JobResultHistoryList,
     JobResultResponse,
+)
+from app.services.interface_validator import (
+    InterfaceValidationError,
+    InterfaceValidator,
 )
 
 router = APIRouter()
@@ -261,6 +268,63 @@ async def create_job_from_master(
     )
 
     db.add(job)
+    await db.flush()
+
+    # Create tasks if provided
+    if job_data.tasks:
+        for task_data in job_data.tasks:
+            # Get task master
+            task_master = await db.get(TaskMaster, task_data.master_id)
+            if not task_master:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Task master {task_data.master_id} not found",
+                )
+
+            if not task_master.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Task master {task_data.master_id} is inactive",
+                )
+
+            # Validate input data against interface schemas
+            if task_data.input_data:
+                # Get task master interfaces
+                interface_associations = await db.scalars(
+                    select(TaskMasterInterface).where(
+                        TaskMasterInterface.task_master_id == task_master.id
+                    )
+                )
+                for assoc in interface_associations.all():
+                    if assoc.required and assoc.interface_master.input_schema:
+                        try:
+                            InterfaceValidator.validate_input(
+                                task_data.input_data,
+                                assoc.interface_master.input_schema,
+                            )
+                        except InterfaceValidationError as e:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Task {task_data.order} input validation failed: {'; '.join(e.errors)}",
+                            ) from e
+
+            # Generate ULID for task ID
+            task_id = f"t_{ulid_new()}"
+
+            # Create task instance
+            task = Task(
+                id=task_id,
+                job_id=job_id,
+                master_id=task_master.id,
+                master_version=task_master.current_version,
+                order=task_data.order,
+                status=TaskStatus.QUEUED,
+                input_data=task_data.input_data,
+                attempt=0,
+            )
+
+            db.add(task)
+
     await db.commit()
     await db.refresh(job)
 

@@ -2,13 +2,16 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.task import Task
 
 
 class JobStatus(str, Enum):
@@ -69,3 +72,8 @@ class Job(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Relationships
+    tasks: Mapped[list["Task"]] = relationship(
+        "Task", back_populates="job", cascade="all, delete-orphan"
+    )
