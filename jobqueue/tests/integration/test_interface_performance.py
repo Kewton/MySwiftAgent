@@ -15,7 +15,6 @@ from ulid import new as ulid_new
 
 from app.models.interface_master import InterfaceMaster
 from app.models.task_master import TaskMaster
-from tests.utils.interface_mock import InterfaceMockGenerator
 
 
 class TestInterfacePerformance:
@@ -61,9 +60,7 @@ class TestInterfacePerformance:
                                                     "street": {"type": "string"},
                                                     "city": {"type": "string"},
                                                     "country": {"type": "string"},
-                                                    "postal_code": {
-                                                        "type": "string"
-                                                    },
+                                                    "postal_code": {"type": "string"},
                                                 },
                                             },
                                             "preferences": {
@@ -77,9 +74,7 @@ class TestInterfacePerformance:
                                                             "email": {
                                                                 "type": "boolean"
                                                             },
-                                                            "push": {
-                                                                "type": "boolean"
-                                                            },
+                                                            "push": {"type": "boolean"},
                                                         },
                                                     },
                                                 },
@@ -146,9 +141,6 @@ class TestInterfacePerformance:
         db_session.add(tm)
         await db_session.commit()
 
-        # Generate complex mock data
-        mock_data = InterfaceMockGenerator.generate_mock_data(complex_schema)
-
         # Measure validation time (single validation)
         start_time = time.time()
 
@@ -170,9 +162,9 @@ class TestInterfacePerformance:
         assert job_data["status"] == "queued"
 
         # Performance assertion: Complex schema validation should complete < 100ms
-        assert (
-            validation_time_ms < 100
-        ), f"Validation took {validation_time_ms:.2f}ms (expected < 100ms)"
+        assert validation_time_ms < 100, (
+            f"Validation took {validation_time_ms:.2f}ms (expected < 100ms)"
+        )
 
         print(
             f"\n✓ Complex schema validation: {validation_time_ms:.2f}ms (threshold: 100ms)"
@@ -231,7 +223,7 @@ class TestInterfacePerformance:
             response = await client.post(
                 "/api/v1/jobs",
                 json={
-                    "name": f"Bulk Test Job {i+1}",
+                    "name": f"Bulk Test Job {i + 1}",
                     "method": "GET",
                     "url": "https://httpbin.org/get",
                     "tasks": [{"master_id": tm_id, "sequence": 0}],
@@ -248,19 +240,19 @@ class TestInterfacePerformance:
         throughput = num_jobs / total_time_sec
 
         # Performance assertions
-        assert (
-            avg_time_ms < 50
-        ), f"Average validation time {avg_time_ms:.2f}ms (expected < 50ms)"
-        assert (
-            throughput > 50
-        ), f"Throughput {throughput:.2f} jobs/sec (expected > 50 jobs/sec)"
+        assert avg_time_ms < 50, (
+            f"Average validation time {avg_time_ms:.2f}ms (expected < 50ms)"
+        )
+        assert throughput > 50, (
+            f"Throughput {throughput:.2f} jobs/sec (expected > 50 jobs/sec)"
+        )
 
-        print(f"\n✓ Bulk validation performance:")
+        print("\n✓ Bulk validation performance:")
         print(f"  - Total jobs: {num_jobs}")
         print(f"  - Total time: {total_time_sec:.2f}s")
         print(f"  - Average time: {avg_time_ms:.2f}ms/job")
         print(f"  - Throughput: {throughput:.2f} jobs/sec")
-        print(f"  - Thresholds: <50ms/job, >50 jobs/sec")
+        print("  - Thresholds: <50ms/job, >50 jobs/sec")
 
         # Verify all jobs created successfully
         assert len(job_ids) == num_jobs

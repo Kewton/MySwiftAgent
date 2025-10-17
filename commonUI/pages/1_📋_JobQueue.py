@@ -12,8 +12,10 @@ import pandas as pd
 import streamlit as st
 
 from components.http_client import HTTPClient
+from components.interface_compatibility_checker import InterfaceCompatibilityChecker
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
+from components.task_selector import TaskSelector
 from core.config import config
 
 # Page configuration
@@ -32,6 +34,10 @@ def initialize_session_state() -> None:
         st.session_state.jobqueue_selected_job = None
     if "jobqueue_auto_refresh" not in st.session_state:
         st.session_state.jobqueue_auto_refresh = False
+    if "jobqueue_task_masters" not in st.session_state:
+        st.session_state.jobqueue_task_masters = []
+    if "jobqueue_interface_masters" not in st.session_state:
+        st.session_state.jobqueue_interface_masters = {}
 
 
 def render_job_creation_form() -> None:
@@ -237,6 +243,28 @@ def render_job_creation_form() -> None:
     else:
         st.session_state["jobqueue_current_api_body"] = ""
         st.session_state["jobqueue_current_body_type"] = "JSON"
+
+    st.divider()
+
+    # Task Selection Section (Interface Validation Phase 1)
+    st.subheader("📋 Task Selection (Optional)")
+    st.caption(
+        "Select TaskMasters to execute in sequence. "
+        "Interface compatibility will be validated automatically.",
+    )
+
+    # Render TaskSelector component
+    selected_tasks = TaskSelector.render_task_selector(
+        available_tasks=st.session_state.jobqueue_task_masters,
+        key_prefix="jobqueue",
+    )
+
+    # Render inline compatibility check if tasks are selected
+    if selected_tasks and len(selected_tasks) >= 2:
+        InterfaceCompatibilityChecker.render_inline_compatibility_check(
+            selected_tasks=selected_tasks,
+            interfaces=st.session_state.jobqueue_interface_masters,
+        )
 
     st.divider()
 
@@ -446,6 +474,23 @@ def render_job_creation_form() -> None:
                     "parameters": job_params,
                     "tags": job_tags,
                 }
+
+                # Add selected tasks if any (Interface Validation Phase 1)
+                selected_tasks = TaskSelector.get_selected_tasks("jobqueue")
+                if selected_tasks:
+                    # Transform selected tasks to tasks array format for API
+                    job_data["tasks"] = [
+                        {
+                            "master_id": task["master_id"],
+                            "sequence": task["sequence"],
+                        }
+                        for task in selected_tasks
+                    ]
+                    # Enable interface validation
+                    job_data["validate_interfaces"] = True
+                    st.info(
+                        f"📋 {len(selected_tasks)} task(s) will be executed in sequence",
+                    )
 
                 create_job(job_data)
 
@@ -854,7 +899,7 @@ def render_job_detail() -> None:
                 # Fetch job result history
                 try:
                     history_response = client.get(
-                        f"/api/v1/jobs/{job_id}/result/history"
+                        f"/api/v1/jobs/{job_id}/result/history",
                     )
 
                     total = history_response.get("total", 0)
@@ -864,7 +909,7 @@ def render_job_detail() -> None:
                         st.info("No execution history available yet.")
                     else:
                         st.subheader(
-                            f"📜 Execution History ({total} {'attempt' if total == 1 else 'attempts'})"
+                            f"📜 Execution History ({total} {'attempt' if total == 1 else 'attempts'})",
                         )
 
                         # Display each history entry
@@ -1038,6 +1083,40 @@ def load_jobs() -> None:
         st.session_state.jobqueue_jobs = []
 
 
+def load_task_masters() -> None:
+    """Load TaskMasters from API."""
+    try:
+        api_config = config.get_api_config("JobQueue")
+        with HTTPClient(api_config, "JobQueue") as client:
+            response = client.get("/api/v1/task-masters", params={"is_active": True})
+            task_masters = response.get("items", [])
+            st.session_state.jobqueue_task_masters = task_masters
+
+    except Exception as e:
+        NotificationManager.handle_exception(e, "Load TaskMasters")
+        st.session_state.jobqueue_task_masters = []
+
+
+def load_interface_masters() -> None:
+    """Load InterfaceMasters from API."""
+    try:
+        api_config = config.get_api_config("JobQueue")
+        with HTTPClient(api_config, "JobQueue") as client:
+            response = client.get(
+                "/api/v1/interface-masters",
+                params={"is_active": True},
+            )
+            interfaces = response.get("items", [])
+            # Convert to dict keyed by interface_id for efficient lookup
+            st.session_state.jobqueue_interface_masters = {
+                interface["id"]: interface for interface in interfaces
+            }
+
+    except Exception as e:
+        NotificationManager.handle_exception(e, "Load InterfaceMasters")
+        st.session_state.jobqueue_interface_masters = {}
+
+
 def main() -> None:
     """Main JobQueue page function."""
     # Initialize session state
@@ -1059,6 +1138,13 @@ def main() -> None:
     # Load initial data
     if not st.session_state.jobqueue_jobs:
         load_jobs()
+
+    # Load TaskMasters and InterfaceMasters for task selection
+    if not st.session_state.jobqueue_task_masters:
+        load_task_masters()
+
+    if not st.session_state.jobqueue_interface_masters:
+        load_interface_masters()
 
     # Main content tabs
     tab1, tab2 = st.tabs(["🆕 Create Job", "📋 Job List"])
