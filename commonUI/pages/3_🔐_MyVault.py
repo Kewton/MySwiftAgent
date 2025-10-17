@@ -15,7 +15,7 @@ import yaml
 from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
-from core.config import config
+from core.config import ExpertAgentConfig, GraphAiServerConfig, config
 
 logger = logging.getLogger(__name__)
 
@@ -593,6 +593,9 @@ def reload_expertagent_cache(project: str | None = None) -> None:
             return  # ExpertAgent not configured, skip reload
 
         api_config = config.get_api_config("expertagent")
+        if not isinstance(api_config, ExpertAgentConfig):
+            return  # Not ExpertAgentConfig, skip reload
+
         logger.debug("==================================")
         logger.debug("reload_expertagent_cache called")
         logger.debug(f"api_config: {api_config}")
@@ -625,6 +628,9 @@ def reload_graphaiserver_cache(project: str | None = None) -> None:
             return  # GraphAiServer not configured, skip reload
 
         api_config = config.get_api_config("graphaiserver")
+        if not isinstance(api_config, GraphAiServerConfig):
+            return  # Not GraphAiServerConfig, skip reload
+
         logger.debug("==================================")
         logger.debug("reload_graphaiserver_cache called")
         logger.debug(f"api_config: {api_config}")

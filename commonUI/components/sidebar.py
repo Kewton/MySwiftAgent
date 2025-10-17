@@ -4,7 +4,7 @@ import streamlit as st
 
 from components.http_client import HTTPClient
 from components.notifications import NotificationManager
-from core.config import config
+from core.config import APIConfig, config
 
 
 class SidebarManager:
@@ -37,15 +37,16 @@ class SidebarManager:
             help="API base URL (configured via environment)",
         )
 
-        # Masked token display
-        masked_token = config.mask_token(api_config.token)
-        st.sidebar.text_input(
-            "API Token",
-            value=masked_token,
-            disabled=True,
-            type="password",
-            help="API authentication token (configured via environment)",
-        )
+        # Masked token display (only for APIConfig)
+        if isinstance(api_config, APIConfig):
+            masked_token = config.mask_token(api_config.token)
+            st.sidebar.text_input(
+                "API Token",
+                value=masked_token,
+                disabled=True,
+                type="password",
+                help="API authentication token (configured via environment)",
+            )
 
         # Connection status check
         if st.sidebar.button(f"Test {service} Connection"):
