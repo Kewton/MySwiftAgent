@@ -233,3 +233,179 @@ class TestInterfaceValidator:
         with pytest.raises(InterfaceValidationError) as exc_info:
             InterfaceValidator.validate_data(data, schema, "test")
         assert "test validation failed" in str(exc_info.value)
+
+    # New tests for Phase 1.1 implementation
+    def test_validate_json_schema_v7_success(self) -> None:
+        """Test successful JSON Schema V7 validation."""
+        valid_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer", "minimum": 0},
+            },
+            "required": ["name"],
+        }
+        # Should not raise
+        InterfaceValidator.validate_json_schema_v7(valid_schema)
+
+    def test_validate_json_schema_v7_invalid_type(self) -> None:
+        """Test JSON Schema V7 validation with invalid type."""
+        invalid_schema = {
+            "type": "invalid_type",  # Not a valid JSON Schema type
+            "properties": {"name": {"type": "string"}},
+        }
+        with pytest.raises(InterfaceValidationError) as exc_info:
+            InterfaceValidator.validate_json_schema_v7(invalid_schema)
+        assert "Invalid JSON Schema V7" in str(exc_info.value)
+
+    def test_validate_json_schema_v7_invalid_format(self) -> None:
+        """Test JSON Schema V7 validation with malformed schema."""
+        invalid_schema = {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": "not_a_number",  # Should be integer
+                }
+            },
+        }
+        with pytest.raises(InterfaceValidationError) as exc_info:
+            InterfaceValidator.validate_json_schema_v7(invalid_schema)
+        assert "Invalid JSON Schema V7" in str(exc_info.value)
+
+    def test_check_output_contains_input_properties_success(self) -> None:
+        """Test successful compatibility check (考慮①)."""
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+                "address": {"type": "string"},  # Extra property is OK
+            },
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+            },
+            "required": ["name"],
+        }
+
+        is_compatible, missing = (
+            InterfaceValidator.check_output_contains_input_properties(
+                output_schema, input_schema
+            )
+        )
+
+        assert is_compatible is True
+        assert len(missing) == 0
+
+    def test_check_output_contains_input_properties_missing_required(self) -> None:
+        """Test compatibility check fails when required property is missing."""
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "age": {"type": "integer"},
+            },
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+            },
+            "required": ["name"],  # 'name' is required but not in output
+        }
+
+        is_compatible, missing = (
+            InterfaceValidator.check_output_contains_input_properties(
+                output_schema, input_schema
+            )
+        )
+
+        assert is_compatible is False
+        assert len(missing) > 0
+        assert any("name" in msg for msg in missing)
+
+    def test_check_output_contains_input_properties_type_mismatch(self) -> None:
+        """Test compatibility check fails on type mismatch."""
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "string"},  # Wrong type
+            },
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},  # Expects integer
+            },
+            "required": ["age"],
+        }
+
+        is_compatible, missing = (
+            InterfaceValidator.check_output_contains_input_properties(
+                output_schema, input_schema
+            )
+        )
+
+        assert is_compatible is False
+        assert len(missing) > 0
+        assert any("age" in msg and "type mismatch" in msg for msg in missing)
+
+    def test_check_output_contains_input_properties_optional_fields_ok(self) -> None:
+        """Test compatibility check succeeds when optional fields are missing (考慮①)."""
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+            },
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},  # Optional (not in required)
+            },
+            "required": ["name"],
+        }
+
+        is_compatible, missing = (
+            InterfaceValidator.check_output_contains_input_properties(
+                output_schema, input_schema
+            )
+        )
+
+        # Should be compatible because 'age' is not required
+        assert is_compatible is True
+        assert len(missing) == 0
+
+    def test_check_output_contains_input_properties_array_types(self) -> None:
+        """Test compatibility check with array type definitions."""
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "value": {"type": ["string", "integer"]},  # Union type
+            },
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "value": {"type": "string"},
+            },
+            "required": ["value"],
+        }
+
+        is_compatible, missing = (
+            InterfaceValidator.check_output_contains_input_properties(
+                output_schema, input_schema
+            )
+        )
+
+        # Output accepts string or integer, input expects string -> compatible
+        assert is_compatible is True
+        assert len(missing) == 0

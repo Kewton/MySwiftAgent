@@ -107,3 +107,136 @@ class InterfaceValidator:
             return
 
         InterfaceValidator.validate_data(output_data, output_schema, "Output")
+
+    @staticmethod
+    def validate_json_schema_v7(schema: dict[str, Any]) -> None:
+        """
+        Validate that the schema conforms to JSON Schema V7 specification.
+
+        This method checks if a JSON Schema itself is valid according to
+        JSON Schema Draft 7 specification before using it for data validation.
+
+        Args:
+            schema: JSON Schema to validate
+
+        Raises:
+            InterfaceValidationError: If schema is invalid
+
+        Example:
+            >>> validator = InterfaceValidator()
+            >>> schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+            >>> validator.validate_json_schema_v7(schema)  # No error
+            >>> bad_schema = {"type": "invalid_type"}
+            >>> validator.validate_json_schema_v7(bad_schema)  # Raises error
+        """
+        try:
+            Draft7Validator.check_schema(schema)
+            logger.debug("JSON Schema V7 validation succeeded")
+        except jsonschema.SchemaError as e:
+            logger.error(f"Invalid JSON Schema V7: {e}")
+            raise InterfaceValidationError(
+                "Invalid JSON Schema V7",
+                [f"Schema error: {e.message}"],
+            ) from e
+
+    @staticmethod
+    def check_output_contains_input_properties(
+        output_schema: dict[str, Any],
+        input_schema: dict[str, Any],
+    ) -> tuple[bool, list[str]]:
+        """
+        Check if output schema contains all required input properties.
+
+        This implements a flexible compatibility check where the output schema
+        must contain at least the properties required by the input schema,
+        but can have additional properties (考慮①対応).
+
+        Args:
+            output_schema: Output JSON Schema from Task A
+            input_schema: Input JSON Schema for Task B
+
+        Returns:
+            Tuple of (is_compatible, missing_properties)
+            - is_compatible: True if output contains all required input properties
+            - missing_properties: List of missing or incompatible property descriptions
+
+        Example:
+            >>> output = {
+            ...     "type": "object",
+            ...     "properties": {
+            ...         "name": {"type": "string"},
+            ...         "age": {"type": "integer"},
+            ...         "extra": {"type": "string"}
+            ...     }
+            ... }
+            >>> input = {
+            ...     "type": "object",
+            ...     "properties": {"name": {"type": "string"}},
+            ...     "required": ["name"]
+            ... }
+            >>> is_compat, missing = check_output_contains_input_properties(output, input)
+            >>> assert is_compat == True  # Output contains required "name"
+        """
+        output_props = output_schema.get("properties", {})
+        input_props = input_schema.get("properties", {})
+        input_required = set(input_schema.get("required", []))
+
+        missing_properties = []
+
+        # Check required properties exist in output
+        for req_prop in input_required:
+            if req_prop not in output_props:
+                missing_properties.append(
+                    f"Required property '{req_prop}' not found in output schema"
+                )
+
+        # Check property types for common properties
+        for prop_name, input_prop_def in input_props.items():
+            if prop_name in output_props:
+                output_prop_def = output_props[prop_name]
+                input_type = input_prop_def.get("type")
+                output_type = output_prop_def.get("type")
+
+                # Type compatibility check
+                if input_type and output_type:
+                    if isinstance(input_type, str) and isinstance(output_type, str):
+                        if input_type != output_type:
+                            missing_properties.append(
+                                f"Property '{prop_name}' type mismatch: "
+                                f"output={output_type}, input={input_type}"
+                            )
+                    elif isinstance(input_type, list) and isinstance(output_type, list):
+                        # Check if there's any common type
+                        if not set(input_type) & set(output_type):
+                            missing_properties.append(
+                                f"Property '{prop_name}' type mismatch: "
+                                f"output types {output_type} do not overlap with input types {input_type}"
+                            )
+                    elif isinstance(input_type, str) and isinstance(output_type, list):
+                        if input_type not in output_type:
+                            missing_properties.append(
+                                f"Property '{prop_name}' type mismatch: "
+                                f"input type '{input_type}' not in output types {output_type}"
+                            )
+                    elif isinstance(input_type, list) and isinstance(output_type, str):
+                        if output_type not in input_type:
+                            missing_properties.append(
+                                f"Property '{prop_name}' type mismatch: "
+                                f"output type '{output_type}' not in input types {input_type}"
+                            )
+            elif prop_name in input_required:
+                # Already checked above, but double-check for clarity
+                if (
+                    f"Required property '{prop_name}' not found in output schema"
+                    not in missing_properties
+                ):
+                    missing_properties.append(
+                        f"Required property '{prop_name}' not found in output schema"
+                    )
+
+        is_compatible = len(missing_properties) == 0
+        logger.debug(
+            f"Interface compatibility check: compatible={is_compatible}, "
+            f"missing={missing_properties}"
+        )
+        return is_compatible, missing_properties

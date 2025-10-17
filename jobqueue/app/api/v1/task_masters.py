@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ulid import new as ulid_new
 
 from app.core.database import get_db
+from app.models.interface_master import InterfaceMaster
 from app.models.task_master import TaskMaster
 from app.schemas.task_master import (
     TaskMasterCreate,
@@ -25,7 +26,37 @@ async def create_task_master(
     master_data: TaskMasterCreate,
     db: AsyncSession = Depends(get_db),
 ) -> TaskMasterResponse:
-    """Create a new task master."""
+    """Create a new task master with interface validation."""
+    # Validate input interface exists if provided
+    if master_data.input_interface_id:
+        input_interface = await db.get(InterfaceMaster, master_data.input_interface_id)
+        if not input_interface:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Input interface not found: {master_data.input_interface_id}",
+            )
+        if not input_interface.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Input interface is not active: {master_data.input_interface_id}",
+            )
+
+    # Validate output interface exists if provided
+    if master_data.output_interface_id:
+        output_interface = await db.get(
+            InterfaceMaster, master_data.output_interface_id
+        )
+        if not output_interface:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Output interface not found: {master_data.output_interface_id}",
+            )
+        if not output_interface.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Output interface is not active: {master_data.output_interface_id}",
+            )
+
     # Generate ULID for master ID
     master_id = f"tm_{ulid_new()}"
 
@@ -39,6 +70,8 @@ async def create_task_master(
         headers=master_data.headers,
         body_template=master_data.body_template,
         timeout_sec=master_data.timeout_sec,
+        input_interface_id=master_data.input_interface_id,
+        output_interface_id=master_data.output_interface_id,
         is_active=True,
         current_version=1,
         created_by=master_data.created_by,
@@ -115,10 +148,44 @@ async def update_task_master(
     master_data: TaskMasterUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> TaskMasterUpdateResponse:
-    """Update a task master with automatic versioning."""
+    """Update a task master with automatic versioning and interface validation."""
     master = await db.get(TaskMaster, master_id)
     if not master:
         raise HTTPException(status_code=404, detail="Task master not found")
+
+    # Validate input interface if being updated
+    if master_data.input_interface_id is not None:
+        if master_data.input_interface_id:
+            input_interface = await db.get(
+                InterfaceMaster, master_data.input_interface_id
+            )
+            if not input_interface:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Input interface not found: {master_data.input_interface_id}",
+                )
+            if not input_interface.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Input interface is not active: {master_data.input_interface_id}",
+                )
+
+    # Validate output interface if being updated
+    if master_data.output_interface_id is not None:
+        if master_data.output_interface_id:
+            output_interface = await db.get(
+                InterfaceMaster, master_data.output_interface_id
+            )
+            if not output_interface:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Output interface not found: {master_data.output_interface_id}",
+                )
+            if not output_interface.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Output interface is not active: {master_data.output_interface_id}",
+                )
 
     # Prepare update data
     update_dict = master_data.model_dump(
@@ -155,6 +222,10 @@ async def update_task_master(
         master.body_template = master_data.body_template
     if master_data.timeout_sec is not None:
         master.timeout_sec = master_data.timeout_sec
+    if master_data.input_interface_id is not None:
+        master.input_interface_id = master_data.input_interface_id
+    if master_data.output_interface_id is not None:
+        master.output_interface_id = master_data.output_interface_id
     if master_data.updated_by is not None:
         master.updated_by = master_data.updated_by
 

@@ -45,6 +45,10 @@ class JobCreate(BaseModel):
     tasks: list["JobTaskCreate"] | None = Field(
         None, description="Tasks to create with this job"
     )
+    validate_interfaces: bool = Field(
+        default=True,
+        description="Whether to validate interface compatibility between tasks",
+    )
 
     @field_validator("timeout_sec")
     @classmethod
@@ -163,4 +167,8 @@ class JobCreateFromMaster(BaseModel):
     # Tasks to create with the job
     tasks: list[JobTaskCreate] | None = Field(
         None, description="Tasks to create with this job"
+    )
+    validate_interfaces: bool = Field(
+        default=True,
+        description="Whether to validate interface compatibility between tasks",
     )

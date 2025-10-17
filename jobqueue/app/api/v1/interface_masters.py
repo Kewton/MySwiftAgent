@@ -18,6 +18,10 @@ from app.schemas.interface_master import (
     InterfaceMasterResponse,
     InterfaceMasterUpdate,
 )
+from app.services.interface_validator import (
+    InterfaceValidationError,
+    InterfaceValidator,
+)
 
 router = APIRouter()
 
@@ -29,7 +33,27 @@ async def create_interface_master(
     interface_data: InterfaceMasterCreate,
     db: AsyncSession = Depends(get_db),
 ) -> InterfaceMasterResponse:
-    """Create a new interface master."""
+    """Create a new interface master with JSON Schema V7 validation."""
+    # Validate input schema if provided
+    if interface_data.input_schema:
+        try:
+            InterfaceValidator.validate_json_schema_v7(interface_data.input_schema)
+        except InterfaceValidationError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid input_schema: {'; '.join(e.errors)}",
+            ) from e
+
+    # Validate output schema if provided
+    if interface_data.output_schema:
+        try:
+            InterfaceValidator.validate_json_schema_v7(interface_data.output_schema)
+        except InterfaceValidationError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid output_schema: {'; '.join(e.errors)}",
+            ) from e
+
     # Generate ULID for interface ID
     interface_id = f"if_{ulid_new()}"
 
@@ -114,10 +138,30 @@ async def update_interface_master(
     interface_data: InterfaceMasterUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> InterfaceMasterResponse:
-    """Update an interface master."""
+    """Update an interface master with JSON Schema V7 validation."""
     interface = await db.get(InterfaceMaster, interface_id)
     if not interface:
         raise HTTPException(status_code=404, detail="Interface master not found")
+
+    # Validate input schema if provided
+    if interface_data.input_schema is not None:
+        try:
+            InterfaceValidator.validate_json_schema_v7(interface_data.input_schema)
+        except InterfaceValidationError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid input_schema: {'; '.join(e.errors)}",
+            ) from e
+
+    # Validate output schema if provided
+    if interface_data.output_schema is not None:
+        try:
+            InterfaceValidator.validate_json_schema_v7(interface_data.output_schema)
+        except InterfaceValidationError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid output_schema: {'; '.join(e.errors)}",
+            ) from e
 
     # Apply updates
     if interface_data.name is not None:

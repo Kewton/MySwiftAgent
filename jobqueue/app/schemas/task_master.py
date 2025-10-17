@@ -20,6 +20,16 @@ class TaskMasterCreate(BaseModel):
         None, description="Request body template"
     )
     timeout_sec: int = Field(30, ge=1, le=3600, description="Timeout in seconds")
+    input_interface_id: str | None = Field(
+        None,
+        description="Input interface ID (if_XXXXX format)",
+        pattern="^if_[0-9A-HJKMNP-TV-Z]{26}$",
+    )
+    output_interface_id: str | None = Field(
+        None,
+        description="Output interface ID (if_XXXXX format)",
+        pattern="^if_[0-9A-HJKMNP-TV-Z]{26}$",
+    )
     created_by: str | None = Field(None, max_length=100, description="Creator")
 
 
@@ -40,6 +50,16 @@ class TaskMasterUpdate(BaseModel):
     )
     timeout_sec: int | None = Field(
         None, ge=1, le=3600, description="Timeout in seconds"
+    )
+    input_interface_id: str | None = Field(
+        None,
+        description="Input interface ID (if_XXXXX format)",
+        pattern="^if_[0-9A-HJKMNP-TV-Z]{26}$",
+    )
+    output_interface_id: str | None = Field(
+        None,
+        description="Output interface ID (if_XXXXX format)",
+        pattern="^if_[0-9A-HJKMNP-TV-Z]{26}$",
     )
     change_reason: str | None = Field(None, description="Reason for change")
     updated_by: str | None = Field(None, max_length=100, description="Updater")
@@ -64,6 +84,8 @@ class TaskMasterDetail(BaseModel):
     headers: dict[str, Any] | None
     body_template: dict[str, Any] | None
     timeout_sec: int
+    input_interface_id: str | None
+    output_interface_id: str | None
     current_version: int
     is_active: bool
     created_at: datetime

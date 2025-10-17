@@ -53,6 +53,27 @@ class JobExecutor:
 
         logger.info(f"[EXECUTE_JOB] Job {job.id} started at {job.started_at}")
 
+        # Check interface validation results (Phase 2.2.3)
+        if job.tags:
+            for tag in job.tags:
+                if isinstance(tag, dict) and tag.get("type") == "interface_validation":
+                    if not tag.get("is_valid", True):
+                        # Validation failed - block execution
+                        error_msg = (
+                            f"Job execution blocked due to failed interface validation. "
+                            f"Errors: {'; '.join(tag.get('errors', []))}"
+                        )
+                        logger.error(f"[EXECUTE_JOB] {error_msg}")
+                        job.status = JobStatus.FAILED
+                        job.finished_at = datetime.now(UTC)
+                        await self.session.commit()
+                        raise ValueError(error_msg)
+                    else:
+                        logger.info(
+                            f"[EXECUTE_JOB] Job {job.id} passed interface validation check"
+                        )
+                    break  # Only check first validation tag
+
         # Check if job has tasks
         tasks_result = await self.session.scalars(
             select(Task).where(Task.job_id == job.id).order_by(Task.order)

@@ -28,6 +28,8 @@ class TaskMaster(Base):
     headers: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     body_template: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     timeout_sec: Mapped[int] = mapped_column(Integer, default=30)
+    input_interface_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    output_interface_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     current_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
