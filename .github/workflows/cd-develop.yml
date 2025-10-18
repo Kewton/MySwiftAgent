@@ -285,7 +285,8 @@ jobs:
         working-directory: ./${{ matrix.project }}
         run: |
           echo "🔒 Running security analysis for ${{ matrix.project }}"
-          uv run ruff check . --select=S --ignore=S104
+          # Use pyproject.toml configuration which already ignores test-related security rules
+          uv run ruff check .
 
       - name: Import analysis
         working-directory: ./${{ matrix.project }}
