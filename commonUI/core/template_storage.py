@@ -112,7 +112,7 @@ class TemplateStorage:
 
         try:
             with file_path.open(encoding="utf-8") as f:
-                return cast(dict[str, Any], json.load(f))
+                return cast("dict[str, Any]", json.load(f))
         except json.JSONDecodeError:
             return {}
 

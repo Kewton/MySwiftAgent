@@ -55,7 +55,7 @@ def load_secret_definitions() -> dict[str, Any]:
 
         if yaml_path.exists():
             with open(yaml_path) as f:
-                return cast(dict[str, Any], yaml.safe_load(f))
+                return cast("dict[str, Any]", yaml.safe_load(f))
         return {"secrets": []}
     except Exception as e:
         st.error(f"Failed to load secret definitions: {e!s}")
@@ -783,7 +783,7 @@ def list_google_cached_projects() -> list[str]:
     with HTTPClient(api_config, "ExpertAgent") as client:
         response = client.get("/v1/google-auth/list-projects")
         return (
-            cast(list[str], response.get("projects", []))
+            cast("list[str]", response.get("projects", []))
             if isinstance(response, dict)
             else []
         )
