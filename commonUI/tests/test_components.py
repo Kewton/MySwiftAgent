@@ -210,7 +210,6 @@ class TestNotificationManager:
 
         mock_st.success.assert_called_once_with(
             "✅ Connected to TestService",
-            show_toast=False,
         )
 
     @patch("components.notifications.st")
@@ -221,7 +220,6 @@ class TestNotificationManager:
 
         mock_st.error.assert_called_once_with(
             "❌ Cannot connect to TestService",
-            show_toast=False,
         )
 
 
