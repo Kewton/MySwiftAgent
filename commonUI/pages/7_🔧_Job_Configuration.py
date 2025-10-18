@@ -1,7 +1,7 @@
 """
-Workflow Builder Page
+Job Configuration Page
 
-Streamlit page for building and managing JobMaster workflows.
+Streamlit page for configuring and managing JobMaster task workflows.
 """
 
 import pandas as pd  # type: ignore[import-untyped]
@@ -14,7 +14,7 @@ from core.config import config
 
 # Page configuration
 st.set_page_config(
-    page_title="Workflow Builder - CommonUI",
+    page_title="Job Configuration - CommonUI",
     page_icon="🔧",
     layout="wide",
 )
@@ -464,7 +464,7 @@ def render_publish_panel() -> None:
 
 
 def main() -> None:
-    """Main Workflow Builder page function."""
+    """Main Job Configuration page function."""
     # Initialize session state
     initialize_session_state()
 
@@ -472,8 +472,8 @@ def main() -> None:
     SidebarManager.render_complete_sidebar()
 
     # Page header
-    st.title("🔧 Workflow Builder")
-    st.caption("Build and manage JobMaster workflows with task orchestration")
+    st.title("🔧 Job Configuration")
+    st.caption("Configure and validate JobMaster task workflows with interface compatibility checking")
 
     # Check if service is configured
     if not config.is_service_configured("JobQueue"):
