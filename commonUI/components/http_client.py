@@ -2,7 +2,7 @@
 
 import contextlib
 import logging
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import streamlit as st
@@ -69,7 +69,7 @@ class HTTPClient:
         """Handle HTTP response and raise appropriate exceptions."""
         try:
             if response.status_code in [200, 201]:  # Accept both 200 OK and 201 Created
-                return response.json()
+                return cast("dict[str, Any]", response.json())
             if response.status_code == 204:  # No Content (e.g., successful DELETE)
                 return {"message": "Success"}
             if response.status_code == 401:
@@ -79,7 +79,8 @@ class HTTPClient:
                 raise RateLimitError(int(retry_after) if retry_after else None)
             if response.status_code >= 500:
                 raise ServiceUnavailableError(
-                    self.service_name, self.api_config.base_url,
+                    self.service_name,
+                    self.api_config.base_url,
                 )
             error_data = {}
             with contextlib.suppress(Exception):
@@ -101,7 +102,10 @@ class HTTPClient:
             )
 
     def _request_with_retry(
-        self, method: str, url: str, **kwargs: Any,
+        self,
+        method: str,
+        url: str,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Make HTTP request with automatic retry for 5xx errors."""
         max_retries = 3
@@ -128,25 +132,33 @@ class HTTPClient:
         raise ServiceUnavailableError(self.service_name, self.api_config.base_url)
 
     def get(
-        self, endpoint: str, params: dict[str, Any] | None = None,
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Make GET request."""
         return self._request_with_retry("GET", endpoint, params=params)
 
     def post(
-        self, endpoint: str, json_data: dict[str, Any] | None = None,
+        self,
+        endpoint: str,
+        json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Make POST request."""
         return self._request_with_retry("POST", endpoint, json=json_data)
 
     def put(
-        self, endpoint: str, json_data: dict[str, Any] | None = None,
+        self,
+        endpoint: str,
+        json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Make PUT request."""
         return self._request_with_retry("PUT", endpoint, json=json_data)
 
     def patch(
-        self, endpoint: str, json_data: dict[str, Any] | None = None,
+        self,
+        endpoint: str,
+        json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Make PATCH request."""
         return self._request_with_retry("PATCH", endpoint, json=json_data)

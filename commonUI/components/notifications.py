@@ -113,9 +113,11 @@ class NotificationManager:
         """Display connection status for a service."""
         if is_connected:
             NotificationManager.success(
-                f"✅ Connected to {service_name}", show_toast=False,
+                f"✅ Connected to {service_name}",
+                show_toast=False,
             )
         else:
             NotificationManager.error(
-                f"❌ Cannot connect to {service_name}", show_toast=False,
+                f"❌ Cannot connect to {service_name}",
+                show_toast=False,
             )

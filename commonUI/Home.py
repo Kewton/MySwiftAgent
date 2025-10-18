@@ -68,8 +68,8 @@ def render_welcome_section() -> None:
     with col2:
         st.metric(
             label="🔄 Services",
-            value="2 Available",
-            help="JobQueue and MyScheduler management",
+            value="3 Available",
+            help="JobQueue, MyScheduler, and Job Masters management",
         )
 
     with col3:
@@ -97,6 +97,7 @@ def render_service_overview() -> None:
             - 🔄 View execution results
             - ⏹️ Cancel running jobs
             - 🔍 Search and filter job history
+            - 🗂️ Manage job master templates
             """)
 
         if config.is_service_configured("JobQueue"):
@@ -104,8 +105,13 @@ def render_service_overview() -> None:
         else:
             st.error("❌ Not configured")
 
-        if st.button("Open JobQueue", key="btn_jobqueue", use_container_width=True):
-            st.switch_page("pages/1_📋_JobQueue.py")
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("Open JobQueue", key="btn_jobqueue", use_container_width=True):
+                st.switch_page("pages/1_📋_JobQueue.py")
+        with col_btn2:
+            if st.button("Job Masters", key="btn_jobmasters", use_container_width=True):
+                st.switch_page("pages/4_🗂️_JobMasters.py")
 
     with col2, st.container(border=True):
         st.subheader("⏰ MyScheduler")
@@ -126,7 +132,9 @@ def render_service_overview() -> None:
             st.error("❌ Not configured")
 
         if st.button(
-            "Open MyScheduler", key="btn_myscheduler", use_container_width=True,
+            "Open MyScheduler",
+            key="btn_myscheduler",
+            use_container_width=True,
         ):
             st.switch_page("pages/2_⏰_MyScheduler.py")
 
@@ -228,7 +236,8 @@ def main() -> None:
                         "project": None,  # expertAgent will use stored value
                     }
                     response = client.post(
-                        "/v1/google-auth/oauth2-callback", callback_data,
+                        "/v1/google-auth/oauth2-callback",
+                        callback_data,
                     )
                     project = response.get("project", "default_project")
 

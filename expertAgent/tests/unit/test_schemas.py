@@ -95,5 +95,5 @@ class TestUtilitySchemas:
 
     def test_search_utility_response(self):
         """Test SearchUtilityResponse model."""
-        resp = SearchUtilityResponse(result="search result")
-        assert resp.result == "search result"
+        resp = SearchUtilityResponse(result={"data": "search result"})
+        assert resp.result == {"data": "search result"}

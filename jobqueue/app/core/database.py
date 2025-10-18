@@ -65,8 +65,16 @@ async def init_db() -> None:
     """Initialize database tables."""
     async with engine.begin() as conn:
         # Import all models to ensure they are registered
+        from app.models.interface_master import InterfaceMaster  # noqa: F401
         from app.models.job import Job  # noqa: F401
-        from app.models.result import JobResult  # noqa: F401
+        from app.models.job_master import JobMaster  # noqa: F401
+        from app.models.job_master_interface import JobMasterInterface  # noqa: F401
+        from app.models.job_master_version import JobMasterVersion  # noqa: F401
+        from app.models.result import JobResult, JobResultHistory  # noqa: F401
+        from app.models.task import Task  # noqa: F401
+        from app.models.task_master import TaskMaster  # noqa: F401
+        from app.models.task_master_interface import TaskMasterInterface  # noqa: F401
+        from app.models.task_master_version import TaskMasterVersion  # noqa: F401
 
         await conn.run_sync(Base.metadata.create_all)
         logger.info("Database initialized")

@@ -41,6 +41,14 @@ class JobCreate(BaseModel):
         default=604800, ge=0, description="Time to live in seconds (default: 7 days)"
     )
     tags: list[str] | None = Field(None, description="Job tags")
+    input_data: dict[str, Any] | None = Field(None, description="Job input data")
+    tasks: list["JobTaskCreate"] | None = Field(
+        None, description="Tasks to create with this job"
+    )
+    validate_interfaces: bool = Field(
+        default=True,
+        description="Whether to validate interface compatibility between tasks",
+    )
 
     @field_validator("timeout_sec")
     @classmethod
@@ -82,6 +90,8 @@ class JobDetail(BaseModel):
     id: str
     name: str | None = None
     status: JobStatus
+    master_id: str | None = None
+    master_version: int | None = Field(None, description="Master version at creation")
     attempt: int
     max_attempts: int
     priority: int
@@ -107,3 +117,58 @@ class JobList(BaseModel):
     total: int
     page: int
     size: int
+
+
+class JobTaskCreate(BaseModel):
+    """Schema for creating a task within a job."""
+
+    master_id: str = Field(..., description="Task master ID")
+    sequence: int = Field(..., ge=0, description="Execution sequence (0-based)")
+    input_data: dict[str, Any] | None = Field(
+        None, description="Input data for the task"
+    )
+
+
+class JobCreateFromMaster(BaseModel):
+    """Schema for creating a job from a master template."""
+
+    name: str | None = Field(None, description="Job name override", max_length=255)
+
+    # Override options (all optional)
+    headers: dict[str, str] | None = Field(
+        None, description="Additional/override headers"
+    )
+    params: dict[str, Any] | None = Field(
+        None, description="Additional/override query params"
+    )
+    body: dict[str, Any] | None = Field(
+        None, description="Override request body (deep merge)"
+    )
+    timeout_sec: int | None = Field(None, ge=1, le=3600, description="Timeout override")
+
+    # Scheduling overrides
+    priority: int | None = Field(
+        None, ge=1, le=10, description="Priority (1=highest, 10=lowest)"
+    )
+    scheduled_at: datetime | None = Field(None, description="Schedule execution time")
+
+    # Retry overrides
+    max_attempts: int | None = Field(
+        None, ge=1, le=10, description="Max retry attempts"
+    )
+    backoff_strategy: BackoffStrategy | None = Field(
+        None, description="Backoff strategy for retries"
+    )
+    backoff_seconds: float | None = Field(None, ge=0.1, description="Backoff time")
+
+    # Additional tags (merged with master tags)
+    tags: list[str] | None = Field(None, description="Additional tags")
+
+    # Tasks to create with the job
+    tasks: list[JobTaskCreate] | None = Field(
+        None, description="Tasks to create with this job"
+    )
+    validate_interfaces: bool = Field(
+        default=True,
+        description="Whether to validate interface compatibility between tasks",
+    )
