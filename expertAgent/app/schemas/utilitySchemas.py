@@ -24,4 +24,4 @@ class SearchUtilityRequest(BaseModel):
 
 
 class SearchUtilityResponse(BaseModel):
-    result: str
+    result: dict

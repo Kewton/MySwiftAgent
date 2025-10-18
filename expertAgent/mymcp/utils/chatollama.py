@@ -96,7 +96,7 @@ def chatOllama(
         logger.info(
             f"Large model detected ({resolved_model}), using extended timeout: {timeout}s"
         )
-    elif any(size in resolved_model.lower() for size in ["27b", "30b"]):
+    elif any(size in resolved_model.lower() for size in ["20b", "27b", "30b"]):
         timeout = 180  # 3分
         logger.info(
             f"Medium model detected ({resolved_model}), using timeout: {timeout}s"

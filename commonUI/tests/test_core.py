@@ -38,11 +38,13 @@ class TestConfig:
 
         # Test JobQueue config
         jobqueue_config = config.get_api_config("jobqueue")
+        assert isinstance(jobqueue_config, APIConfig)
         assert jobqueue_config.base_url == "http://localhost:8001"
         assert jobqueue_config.token == "test-jobqueue-token"
 
         # Test MyScheduler config
         myscheduler_config = config.get_api_config("myscheduler")
+        assert isinstance(myscheduler_config, APIConfig)
         assert myscheduler_config.base_url == "http://localhost:8002"
         assert myscheduler_config.token == "test-myscheduler-token"
 
@@ -149,6 +151,7 @@ class TestConfig:
             config = Config()
 
             jobqueue_config = config.get_api_config("jobqueue")
+            assert isinstance(jobqueue_config, APIConfig)
             # Should use secrets, not environment
             assert jobqueue_config.base_url == "http://secrets:8001"
             assert jobqueue_config.token == "secret-token"

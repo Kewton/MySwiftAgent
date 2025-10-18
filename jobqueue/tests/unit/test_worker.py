@@ -21,6 +21,10 @@ class TestJobExecutor:
         session.commit = AsyncMock()
         session.scalar = AsyncMock()
         session.add = MagicMock()
+        # Mock scalars for task queries (returns empty list)
+        mock_scalars_result = MagicMock()
+        mock_scalars_result.all.return_value = []
+        session.scalars = AsyncMock(return_value=mock_scalars_result)
         return session
 
     @pytest.fixture

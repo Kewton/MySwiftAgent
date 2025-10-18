@@ -63,24 +63,30 @@ def render_scheduler_creation_form() -> None:
         template_key = f"myscheduler_loaded_template_{hash(str(loaded_template))}"
 
         if template_key not in st.session_state or not st.session_state.get(
-            template_key, False,
+            template_key,
+            False,
         ):
             st.session_state["api_url_outside"] = loaded_template.get("api_url", "")
             st.session_state["current_api_method"] = loaded_template.get(
-                "api_method", "POST",
+                "api_method",
+                "POST",
             )
             st.session_state["api_headers_outside"] = loaded_template.get(
-                "api_headers", "",
+                "api_headers",
+                "",
             )
             st.session_state["api_query_params_outside"] = loaded_template.get(
-                "api_query_params", "",
+                "api_query_params",
+                "",
             )
             st.session_state["api_body_outside"] = loaded_template.get("api_body", "")
             st.session_state["body_type_outside"] = loaded_template.get(
-                "body_type", "JSON",
+                "body_type",
+                "JSON",
             )
             st.session_state["current_body_type"] = loaded_template.get(
-                "body_type", "JSON",
+                "body_type",
+                "JSON",
             )
             st.session_state[template_key] = True
 
@@ -723,7 +729,8 @@ def get_schedule_config_from_session(schedule_type: str) -> dict | None:
             value = st.session_state.get("schedule_interval_value", 5)
             unit = st.session_state.get("schedule_interval_unit", "minutes")
             start_date = st.session_state.get(
-                "schedule_start_date", datetime.now().date(),
+                "schedule_start_date",
+                datetime.now().date(),
             )
 
             return {
@@ -920,7 +927,11 @@ def render_scheduler_job_list() -> None:
 
     # Filter jobs
     filtered_jobs = filter_scheduled_jobs(
-        jobs, status_filter, trigger_filter, method_filter, search_query,
+        jobs,
+        status_filter,
+        trigger_filter,
+        method_filter,
+        search_query,
     )
 
     # Show job statistics
@@ -971,13 +982,16 @@ def render_scheduler_job_list() -> None:
         try:
             # Use format='ISO8601' to properly parse ISO8601 formatted datetime strings
             df["next_run_time"] = pd.to_datetime(
-                df["next_run_time"], format="ISO8601", errors="coerce",
+                df["next_run_time"],
+                format="ISO8601",
+                errors="coerce",
             ).dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             # Fallback: try to parse without format specification
             try:
                 df["next_run_time"] = pd.to_datetime(
-                    df["next_run_time"], errors="coerce",
+                    df["next_run_time"],
+                    errors="coerce",
                 ).dt.strftime("%Y-%m-%d %H:%M:%S")
             except Exception:
                 # If all parsing fails, keep original values
@@ -1165,19 +1179,25 @@ def render_scheduler_job_detail() -> None:
 
             with col1:
                 if current_status == "paused" and st.button(
-                    "▶️ Resume", key=f"resume_{job_id}", use_container_width=True,
+                    "▶️ Resume",
+                    key=f"resume_{job_id}",
+                    use_container_width=True,
                 ):
                     control_scheduled_job(job_id, "resume")
 
             with col2:
                 if current_status == "running" and st.button(
-                    "⏸️ Pause", key=f"pause_{job_id}", use_container_width=True,
+                    "⏸️ Pause",
+                    key=f"pause_{job_id}",
+                    use_container_width=True,
                 ):
                     control_scheduled_job(job_id, "pause")
 
             with col3:
                 if st.button(
-                    "🔄 Trigger Now", key=f"trigger_{job_id}", use_container_width=True,
+                    "🔄 Trigger Now",
+                    key=f"trigger_{job_id}",
+                    use_container_width=True,
                 ):
                     control_scheduled_job(job_id, "trigger")
 
