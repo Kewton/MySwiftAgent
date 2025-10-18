@@ -28,7 +28,7 @@ class SerperSearchResult(BaseModel):
     result: List[Union[dict, str]] = Field(..., description="")
 
 
-async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
+async def google_search_by_serper_list(queries: List[str], num: int = 3) -> dict:
     """Google Searchを用いて情報を取得し、結果を返す。
 
     Serper APIを使用してGoogle Searchを実行し、
@@ -39,7 +39,7 @@ async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
         num (int): 各クエリに対する検索結果の取得数。
 
     Returns:
-        str: SerperSearchResultモデルをJSON文字列化したもの。
+        dict: SerperSearchResultモデルの辞書形式。
     """
     logger.info("Google Search_by_serper_listを実行します")
     # 変更点: 各オーガニック検索結果と元のクエリをタプルで保持するリスト
@@ -95,10 +95,10 @@ async def google_search_by_serper_list(queries: List[str], num: int = 3) -> str:
         result=results,
     )
 
-    return result_model.model_dump_json()
+    return result_model.model_dump()
 
 
-async def get_overview_by_google_serper(queries: List[str], num: int = 3) -> str:
+async def get_overview_by_google_serper(queries: List[str], num: int = 3) -> dict:
     """Google Searchを用いて情報を取得し、結果を返す。
 
     Serper APIを使用してGoogle Searchを実行し、
@@ -109,7 +109,7 @@ async def get_overview_by_google_serper(queries: List[str], num: int = 3) -> str
         num (int): 各クエリに対する検索結果の取得数。
 
     Returns:
-        SerperSearchResult: 検索結果を含むpydanticモデル。
+        dict: 検索結果を含む辞書。
             - text (str): Gemini APIから返されたテキスト。
             - result (List[dict]): 検索結果から抽出したナレッジのリスト
     """
@@ -158,7 +158,7 @@ async def get_overview_by_google_serper(queries: List[str], num: int = 3) -> str
         text="ok",
         result=_serperresults,
     )
-    return result_model.model_dump_json()
+    return result_model.model_dump()
 
 
 def get_entry_summary(_organic: dict, _original_query: str):
@@ -238,7 +238,7 @@ def get_entry_summary(_organic: dict, _original_query: str):
         logger.debug("Snippets: %s", snippets)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            _model_name = "mlx-community"
+            _model_name = "gpt-oss:20b"
             futures_extraction = [
                 executor.submit(
                     extract_knowledge_from_text,

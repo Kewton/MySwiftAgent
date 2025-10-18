@@ -1,6 +1,6 @@
 [project]
 name = "jobqueue"
-version = "0.2.0"
+version = "0.3.0"
 description = "FastAPI-based HTTP API job queue with async execution and persistence"
 authors = [
     {name = "MySwiftAgent", email = "agent@example.com"},
@@ -17,6 +17,7 @@ dependencies = [
     "ulid-py>=1.1.0",
     "python-json-logger>=2.0.7",
     "greenlet>=3.0.0",
+    "jsonschema>=4.25.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"
@@ -99,4 +100,9 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
+]
+
+[dependency-groups]
+dev = [
+    "types-jsonschema>=4.25.1.20251009",
 ]

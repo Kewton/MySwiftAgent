@@ -24,7 +24,8 @@ class APIError(CommonUIError):
     ) -> None:
         """Initialize API exception with status code and response data."""
         super().__init__(
-            message, {"status_code": status_code, "response_data": response_data},
+            message,
+            {"status_code": status_code, "response_data": response_data},
         )
         self.status_code = status_code
         self.response_data = response_data or {}
@@ -60,7 +61,9 @@ class AuthenticationError(APIError):
         """Initialize authentication exception."""
         message = f"Authentication failed for service '{service_name}'"
         super().__init__(
-            message, status_code=401, response_data={"service": service_name},
+            message,
+            status_code=401,
+            response_data={"service": service_name},
         )
         self.service_name = service_name
 
@@ -74,6 +77,8 @@ class RateLimitError(APIError):
         if retry_after:
             message += f", retry after {retry_after} seconds"
         super().__init__(
-            message, status_code=429, response_data={"retry_after": retry_after},
+            message,
+            status_code=429,
+            response_data={"retry_after": retry_after},
         )
         self.retry_after = retry_after

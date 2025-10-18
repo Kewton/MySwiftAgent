@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 class TemplateStorage:
@@ -26,7 +26,8 @@ class TemplateStorage:
         if storage_dir is None:
             # Auto-detect environment
             if os.getenv("JOBQUEUE_API_URL") and "jobqueue:8000" in os.getenv(
-                "JOBQUEUE_API_URL", "",
+                "JOBQUEUE_API_URL",
+                "",
             ):
                 # Running in docker-compose (internal service URLs)
                 storage_dir = "/app/data/templates"
@@ -78,7 +79,9 @@ class TemplateStorage:
             json.dump(templates, f, indent=2, ensure_ascii=False)
 
     def load_template(
-        self, service_name: str, template_name: str,
+        self,
+        service_name: str,
+        template_name: str,
     ) -> dict[str, Any] | None:
         """Load a specific template.
 
@@ -109,7 +112,7 @@ class TemplateStorage:
 
         try:
             with file_path.open(encoding="utf-8") as f:
-                return json.load(f)
+                return cast("dict[str, Any]", json.load(f))
         except json.JSONDecodeError:
             return {}
 

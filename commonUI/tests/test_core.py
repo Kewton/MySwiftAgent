@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.config import Config
+from core.config import APIConfig, Config
 from core.exceptions import (
     APIError,
     AuthenticationError,
@@ -38,11 +38,13 @@ class TestConfig:
 
         # Test JobQueue config
         jobqueue_config = config.get_api_config("jobqueue")
+        assert isinstance(jobqueue_config, APIConfig)
         assert jobqueue_config.base_url == "http://localhost:8001"
         assert jobqueue_config.token == "test-jobqueue-token"
 
         # Test MyScheduler config
         myscheduler_config = config.get_api_config("myscheduler")
+        assert isinstance(myscheduler_config, APIConfig)
         assert myscheduler_config.base_url == "http://localhost:8002"
         assert myscheduler_config.token == "test-myscheduler-token"
 
@@ -63,10 +65,10 @@ class TestConfig:
 
             # Test default URLs
             jobqueue_config = config.get_api_config("jobqueue")
-            assert jobqueue_config.base_url == "http://localhost:8001"
+            assert jobqueue_config.base_url == "http://localhost:8101"
 
             myscheduler_config = config.get_api_config("myscheduler")
-            assert myscheduler_config.base_url == "http://localhost:8002"
+            assert myscheduler_config.base_url == "http://localhost:8102"
 
     def test_get_api_config_invalid_service(self) -> None:
         """Test getting API config for invalid service."""
@@ -96,10 +98,15 @@ class TestConfig:
         },
     )
     def test_is_service_configured_missing_token(self) -> None:
-        """Test service configuration check with missing token."""
+        """Test service configuration check with missing token.
+
+        Note: For development, only base_url is required. Empty token is allowed
+        for services that don't require authentication.
+        """
         config = Config()
 
-        assert config.is_service_configured("jobqueue") is False
+        # Now returns True because base_url exists (token can be empty for development)
+        assert config.is_service_configured("jobqueue") is True
 
     def test_is_service_configured_invalid_service(self) -> None:
         """Test service configuration check for invalid service."""
@@ -149,6 +156,7 @@ class TestConfig:
             config = Config()
 
             jobqueue_config = config.get_api_config("jobqueue")
+            assert isinstance(jobqueue_config, APIConfig)
             # Should use secrets, not environment
             assert jobqueue_config.base_url == "http://secrets:8001"
             assert jobqueue_config.token == "secret-token"

@@ -56,6 +56,13 @@ async def test_db():
 
 
 @pytest_asyncio.fixture
+async def db_session(test_db):
+    """Create database session for direct model testing."""
+    async for session in test_db():
+        yield session
+
+
+@pytest_asyncio.fixture
 async def client(test_db):
     """Create test client."""
     app = create_app()
