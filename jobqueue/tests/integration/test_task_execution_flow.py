@@ -60,15 +60,16 @@ class TestTaskExecutionFlow:
 
         # Create job with tasks
         payload = {
-            "master_id": "jm_test",
             "priority": 5,
-            "tags": {"test": "true"},
+            "tags": ["test"],
             "tasks": [
-                {"master_id": "tm1", "order": 1, "input_data": {"param": "value1"}},
-                {"master_id": "tm2", "order": 2, "input_data": {"param": "value2"}},
+                {"master_id": "tm1", "sequence": 1, "input_data": {"param": "value1"}},
+                {"master_id": "tm2", "sequence": 2, "input_data": {"param": "value2"}},
             ],
         }
-        response = await client.post("/api/v1/jobs/from-master", json=payload)
+        response = await client.post(
+            "/api/v1/jobs/from-master/jm_test", json=payload
+        )
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert "job_id" in data
@@ -265,6 +266,7 @@ class TestTaskExecutionFlow:
         mock_failure.status_code = 500
         mock_failure.is_success = False
         mock_failure.text = "Internal Server Error"
+        mock_failure.json.return_value = {"error": "Internal Server Error"}
 
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = mock_client_class.return_value.__aenter__.return_value
@@ -336,13 +338,18 @@ class TestTaskExecutionFlow:
 
         # Create job with valid task input
         payload = {
-            "master_id": "jm_valid",
             "priority": 5,
             "tasks": [
-                {"master_id": "tm_valid", "order": 1, "input_data": {"user_id": "123"}}
+                {
+                    "master_id": "tm_valid",
+                    "sequence": 1,
+                    "input_data": {"user_id": "123"},
+                }
             ],
         }
-        response = await client.post("/api/v1/jobs/from-master", json=payload)
+        response = await client.post(
+            "/api/v1/jobs/from-master/jm_valid", json=payload
+        )
         assert response.status_code == status.HTTP_201_CREATED
 
     @pytest.mark.asyncio
@@ -392,11 +399,12 @@ class TestTaskExecutionFlow:
 
         # Create job with invalid task input (missing user_id)
         payload = {
-            "master_id": "jm_invalid",
             "priority": 5,
-            "tasks": [{"master_id": "tm_invalid", "order": 1, "input_data": {}}],
+            "tasks": [{"master_id": "tm_invalid", "sequence": 1, "input_data": {}}],
         }
-        response = await client.post("/api/v1/jobs/from-master", json=payload)
+        response = await client.post(
+            "/api/v1/jobs/from-master/jm_invalid", json=payload
+        )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "validation failed" in response.json()["detail"].lower()
 

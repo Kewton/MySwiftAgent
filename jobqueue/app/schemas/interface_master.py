@@ -77,6 +77,7 @@ class InterfaceAssociationResponse(BaseModel):
     """Interface association response schema."""
 
     id: int
+    task_master_id: str
     interface_id: str
     required: bool
     created_at: datetime
