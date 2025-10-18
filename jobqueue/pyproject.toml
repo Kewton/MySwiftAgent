@@ -1,6 +1,6 @@
 [project]
 name = "jobqueue"
-version = "0.2.0"
+version = "0.3.0"
 description = "FastAPI-based HTTP API job queue with async execution and persistence"
 authors = [
     {name = "MySwiftAgent", email = "agent@example.com"},
