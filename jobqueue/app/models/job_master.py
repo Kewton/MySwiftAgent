@@ -12,6 +12,7 @@ from app.models.job import BackoffStrategy
 
 if TYPE_CHECKING:
     from app.models.job_master_interface import JobMasterInterface
+    from app.models.job_master_task import JobMasterTask
     from app.models.job_master_version import JobMasterVersion
 
 
@@ -49,6 +50,14 @@ class JobMaster(Base):
     # Version management
     current_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
+    # Workflow interface configuration (Phase 3)
+    input_interface_id: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="Expected input interface for workflow"
+    )
+    output_interface_id: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="Expected output interface for workflow"
+    )
+
     # Metadata
     is_active: Mapped[bool] = mapped_column(Integer, default=1)  # SQLite用
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -66,4 +75,10 @@ class JobMaster(Base):
     )
     interfaces: Mapped[list["JobMasterInterface"]] = relationship(
         "JobMasterInterface", back_populates="job_master", cascade="all, delete-orphan"
+    )
+    task_associations: Mapped[list["JobMasterTask"]] = relationship(
+        "JobMasterTask",
+        back_populates="job_master",
+        cascade="all, delete-orphan",
+        order_by="JobMasterTask.order",
     )

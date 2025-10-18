@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class JobInterfaceValidationResult:
     """Result of Job interface validation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize validation result."""
         self.is_valid: bool = True
         self.errors: list[str] = []
@@ -202,8 +202,10 @@ class JobInterfaceValidator:
                 continue
 
             # Perform containment-based compatibility check (考慮①)
-            output_schema = task_a["output_interface"].output_schema
-            input_schema = task_b["input_interface"].input_schema
+            task_a_output: InterfaceMaster = task_a["output_interface"]  # type: ignore[assignment]
+            task_b_input: InterfaceMaster = task_b["input_interface"]  # type: ignore[assignment]
+            output_schema = task_a_output.output_schema
+            input_schema = task_b_input.input_schema
 
             if not output_schema or not input_schema:
                 result.warnings.append(

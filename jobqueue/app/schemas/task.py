@@ -56,3 +56,27 @@ class TaskRetryResponse(BaseModel):
     task_id: str
     status: str
     message: str
+
+
+class TaskListAll(BaseModel):
+    """Task list response schema for all tasks with pagination."""
+
+    tasks: list[TaskDetail]
+    total: int
+    page: int
+    size: int
+
+
+class TaskStats(BaseModel):
+    """Task execution statistics schema."""
+
+    total_tasks: int
+    queued_tasks: int
+    running_tasks: int
+    succeeded_tasks: int
+    failed_tasks: int
+    skipped_tasks: int
+    success_rate: float = Field(..., description="Success rate as percentage")
+    average_duration_ms: float | None = Field(
+        None, description="Average execution duration in milliseconds"
+    )

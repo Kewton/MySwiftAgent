@@ -196,7 +196,7 @@ def render_list_masters_tab() -> None:
     # Refresh button
     col1, col2 = st.columns([1, 4])
     with col1:
-        if st.button("🔄 Refresh", use_container_width=True):
+        if st.button("🔄 Refresh", key="refresh_list", width="stretch"):
             load_masters()
 
     # Display masters
@@ -238,7 +238,7 @@ def render_list_masters_tab() -> None:
     # Display as interactive table
     event = st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         on_select="rerun",
         selection_mode="single-row",
@@ -323,13 +323,14 @@ def render_master_detail() -> None:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        if st.button("✏️ Edit", use_container_width=True):
+        if st.button("✏️ Edit", key="edit_master", width="stretch"):
             st.session_state.edit_mode = True
 
     with col2:
         if master_detail.get("is_active") and st.button(
             "🗑️ Delete",
-            use_container_width=True,
+            key="delete_master",
+            width="stretch",
         ):
             if st.session_state.get("confirm_delete") == master_id:
                 delete_master(master_id)
@@ -339,11 +340,11 @@ def render_master_detail() -> None:
                 st.warning("⚠️ Click Delete again to confirm")
 
     with col3:
-        if st.button("▶️ Create Job", use_container_width=True):
+        if st.button("▶️ Create Job", key="create_job", width="stretch"):
             st.session_state.show_job_creation = True
 
     with col4:
-        if st.button("🔄 Refresh", use_container_width=True):
+        if st.button("🔄 Refresh", key="refresh_detail", width="stretch"):
             load_master_detail(master_id)
 
     # Show edit form if in edit mode
@@ -402,7 +403,7 @@ def render_master_detail() -> None:
                             for j in jobs[:20]  # Limit to 20 most recent
                         ],
                     )
-                    st.dataframe(jobs_df, use_container_width=True, hide_index=True)
+                    st.dataframe(jobs_df, width="stretch", hide_index=True)
                 else:
                     st.info("No jobs have been created from this master yet.")
 
@@ -576,7 +577,7 @@ def render_job_from_master_form(master_data: dict[str, Any]) -> None:
         submitted = st.form_submit_button(
             "🚀 Create Job from Master",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
 
         if submitted:

@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, func, or_, select
@@ -149,7 +150,7 @@ async def create_job(
         # Add validation tag to Job.tags
         if job.tags is None:
             job.tags = []
-        job.tags.append(validation_tag)
+        job.tags.append(validation_tag)  # type: ignore[arg-type]
 
         # Log validation result (warning only, Job creation continues)
         if not validation_result.is_valid:
@@ -399,7 +400,7 @@ async def create_job_from_master(
                         except InterfaceValidationError as e:
                             raise HTTPException(
                                 status_code=400,
-                                detail=f"Task {task_data.order} input validation failed: {'; '.join(e.errors)}",
+                                detail=f"Task {task_data.sequence} input validation failed: {'; '.join(e.errors)}",
                             ) from e
 
             # Generate ULID for task ID
@@ -411,7 +412,7 @@ async def create_job_from_master(
                 job_id=job_id,
                 master_id=task_master.id,
                 master_version=task_master.current_version,
-                order=task_data.order,
+                order=task_data.sequence,
                 status=TaskStatus.QUEUED,
                 input_data=task_data.input_data,
                 attempt=0,
@@ -442,7 +443,7 @@ async def create_job_from_master(
         # Add validation tag to Job.tags
         if job.tags is None:
             job.tags = []
-        job.tags.append(validation_tag)
+        job.tags.append(validation_tag)  # type: ignore[arg-type]
 
         # Log validation result (warning only, Job creation continues)
         if not validation_result.is_valid:
@@ -508,7 +509,7 @@ async def list_jobs(
 async def validate_job_interfaces(
     job_id: str,
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     Validate interface compatibility between consecutive Tasks in a Job.
 

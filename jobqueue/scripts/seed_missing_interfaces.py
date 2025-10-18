@@ -118,7 +118,7 @@ TASK_MASTER_ASSOCIATIONS = {
 }
 
 
-async def seed_missing_interfaces():
+async def seed_missing_interfaces() -> None:
     """Register missing interfaces and associate with TaskMasters."""
     async with AsyncSessionLocal() as db:
         print("🚀 Starting interface seeding process...")
@@ -195,11 +195,13 @@ async def seed_missing_interfaces():
             result = await db.scalars(
                 select(TaskMaster).where(TaskMaster.name == task_name)
             )
-            task_master = result.first()
-            if not task_master:
+            task_master_result = result.first()
+            if not task_master_result:
                 print(f"  ⚠️  WARNING: TaskMaster '{task_name}' not found - skipping")
                 continue
 
+            # Type narrowing for MyPy
+            task_master: TaskMaster = task_master_result  # type: ignore[assignment]
             print(f"\n  📌 Processing TaskMaster: {task_name} (ID: {task_master.id})")
 
             # Update input_interface_id
@@ -248,8 +250,10 @@ async def seed_missing_interfaces():
 
         # Step 4: Verify all TaskMasters have interfaces
         print("🔍 Step 4: Verifying TaskMaster interface associations...")
-        result = await db.scalars(select(TaskMaster).where(TaskMaster.is_active))
-        all_masters = result.all()
+        task_masters_result = await db.scalars(
+            select(TaskMaster).where(TaskMaster.is_active)
+        )
+        all_masters: list[TaskMaster] = list(task_masters_result.all())
 
         missing_associations = []
         for master in all_masters:

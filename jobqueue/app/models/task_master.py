@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.job_master_task import JobMasterTask
     from app.models.task import Task
     from app.models.task_master_interface import TaskMasterInterface
     from app.models.task_master_version import TaskMasterVersion
@@ -48,6 +49,11 @@ class TaskMaster(Base):
     )
     interfaces: Mapped[list["TaskMasterInterface"]] = relationship(
         "TaskMasterInterface",
+        back_populates="task_master",
+        cascade="all, delete-orphan",
+    )
+    job_associations: Mapped[list["JobMasterTask"]] = relationship(
+        "JobMasterTask",
         back_populates="task_master",
         cascade="all, delete-orphan",
     )

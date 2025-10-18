@@ -7,7 +7,9 @@ from ulid import new as ulid_new
 
 from app.core.database import get_db
 from app.models.interface_master import InterfaceMaster
+from app.models.task import Task
 from app.models.task_master import TaskMaster
+from app.schemas.task import TaskDetail, TaskListAll
 from app.schemas.task_master import (
     TaskMasterCreate,
     TaskMasterDetail,
@@ -259,4 +261,39 @@ async def delete_task_master(
 
     return TaskMasterResponse(
         master_id=master.id, name=master.name, current_version=master.current_version
+    )
+
+
+@router.get("/task-masters/{master_id}/tasks", response_model=TaskListAll)
+async def list_task_master_tasks(
+    master_id: str,
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Page size"),
+    db: AsyncSession = Depends(get_db),
+) -> TaskListAll:
+    """Get all tasks created from a specific task master."""
+    # Check if master exists
+    master = await db.get(TaskMaster, master_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Task master not found")
+
+    # Build query
+    query = select(Task).where(Task.master_id == master_id)
+
+    # Get total count
+    count_query = select(func.count(Task.id)).where(Task.master_id == master_id)
+    total = await db.scalar(count_query)
+
+    # Apply pagination and ordering
+    tasks_query = (
+        query.order_by(desc(Task.created_at)).offset((page - 1) * size).limit(size)
+    )
+    tasks_result = await db.scalars(tasks_query)
+    tasks_list = tasks_result.all()
+
+    return TaskListAll(
+        tasks=[TaskDetail.model_validate(task) for task in tasks_list],
+        total=total or 0,
+        page=page,
+        size=size,
     )

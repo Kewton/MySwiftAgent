@@ -1,23 +1,30 @@
 """Job Master API endpoints."""
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ulid import new as ulid_new
 
 from app.core.database import get_db
-from app.models.job import Job
+from app.models.job import Job, JobStatus
 from app.models.job_master import JobMaster
+from app.models.task import Task, TaskStatus
+from app.models.task_master import TaskMaster
 from app.schemas.job import JobDetail, JobList
 from app.schemas.job_master import (
     JobMasterCreate,
     JobMasterDetail,
     JobMasterList,
     JobMasterResponse,
+    JobMasterStats,
     JobMasterUpdate,
+    TaskMasterStats,
 )
 from app.schemas.job_master_version import JobMasterUpdateResponse
 from app.services.version_manager import VersionManager
+from app.services.workflow_validator import WorkflowValidationError, WorkflowValidator
 
 router = APIRouter()
 
@@ -254,4 +261,207 @@ async def list_jobs_from_master(
         total=total or 0,
         page=page,
         size=size,
+    )
+
+
+@router.get("/job-masters/{master_id}/stats", response_model=JobMasterStats)
+async def get_job_master_stats(
+    master_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> JobMasterStats:
+    """Get JobMaster execution statistics.
+
+    Returns real-time statistics for:
+    - Overall Job execution metrics (total, success, failure, canceled counts)
+    - Success rate percentage
+    - Task-level statistics with success rates and average duration
+
+    All statistics are calculated in real-time from the database.
+    """
+    # Check if master exists
+    master = await db.get(JobMaster, master_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Job master not found")
+
+    # Get Job statistics (real-time aggregation)
+    job_stats_query = select(
+        func.count(Job.id).label("total_executions"),
+        func.sum(case((Job.status == JobStatus.SUCCEEDED, 1), else_=0)).label(
+            "success_count"
+        ),
+        func.sum(case((Job.status == JobStatus.FAILED, 1), else_=0)).label(
+            "failure_count"
+        ),
+        func.sum(case((Job.status == JobStatus.CANCELED, 1), else_=0)).label(
+            "canceled_count"
+        ),
+        func.max(Job.finished_at).label("last_executed_at"),
+    ).where(Job.master_id == master_id)
+
+    job_stats = await db.execute(job_stats_query)
+    stats_row = job_stats.first()
+
+    # Get Task-level statistics
+    # NOTE: In Phase 3, when job_master_tasks table is created,
+    #       this query will be updated to use that table for proper ordering
+    task_stats_query = (
+        select(
+            TaskMaster.id,
+            TaskMaster.name,
+            Task.order,
+            func.count(Task.id).label("total_executions"),
+            func.sum(case((Task.status == TaskStatus.SUCCEEDED, 1), else_=0)).label(
+                "success_count"
+            ),
+            func.sum(case((Task.status == TaskStatus.FAILED, 1), else_=0)).label(
+                "failure_count"
+            ),
+            func.avg(Task.duration_ms).label("avg_duration_ms"),
+        )
+        .join(Task, TaskMaster.id == Task.master_id)
+        .join(Job, Job.id == Task.job_id)
+        .where(Job.master_id == master_id)
+        .group_by(TaskMaster.id, TaskMaster.name, Task.order)
+        .order_by(Task.order)
+    )
+
+    task_stats_result = await db.execute(task_stats_query)
+    task_stats = task_stats_result.all()
+
+    # Calculate success rate
+    total = stats_row.total_executions or 0
+    success_rate = (stats_row.success_count / total * 100) if total > 0 else 0.0
+
+    return JobMasterStats(
+        master_id=master.id,
+        name=master.name,
+        total_executions=total,
+        success_count=stats_row.success_count or 0,
+        failure_count=stats_row.failure_count or 0,
+        canceled_count=stats_row.canceled_count or 0,
+        success_rate=round(success_rate, 2),
+        last_executed_at=stats_row.last_executed_at,
+        task_stats=[
+            TaskMasterStats(
+                task_master_id=ts.id,
+                task_name=ts.name,
+                order=ts.order,
+                total_executions=ts.total_executions or 0,
+                success_count=ts.success_count or 0,
+                failure_count=ts.failure_count or 0,
+                success_rate=round(
+                    (ts.success_count / ts.total_executions * 100),
+                    2,
+                )
+                if ts.total_executions > 0
+                else 0.0,
+                avg_duration_ms=round(ts.avg_duration_ms, 2)
+                if ts.avg_duration_ms
+                else None,
+            )
+            for ts in task_stats
+        ],
+    )
+
+
+@router.get("/job-masters/{master_id}/validate-workflow")
+async def validate_workflow(
+    master_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Validate workflow interface compatibility.
+
+    Returns a detailed validation report including:
+    - is_valid: Whether the workflow passes all validation checks
+    - errors: List of validation errors
+    - warnings: List of validation warnings
+    - task_chain: Visualization of task interfaces in execution order
+
+    This endpoint is useful for debugging interface mismatches before
+    attempting to publish a workflow version.
+
+    Args:
+        master_id: JobMaster ID
+        db: Database session
+
+    Returns:
+        Validation report dict
+
+    Raises:
+        HTTPException 404: JobMaster not found
+    """
+    # Check if master exists
+    master = await db.get(JobMaster, master_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Job master not found")
+
+    # Get validation report
+    report = await WorkflowValidator.get_workflow_validation_report(db, master)
+
+    return report
+
+
+@router.post("/job-masters/{master_id}/publish-version")
+async def publish_workflow_version(
+    master_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> JobMasterUpdateResponse:
+    """Publish a new workflow version with interface validation.
+
+    This endpoint performs the following steps:
+    1. Validates workflow interface compatibility
+    2. Saves current version to history
+    3. Increments version number
+    4. Returns new version details
+
+    If interface validation fails, the version will not be published and
+    an HTTP 400 error will be returned with details about the validation error.
+
+    Args:
+        master_id: JobMaster ID
+        db: Database session
+
+    Returns:
+        JobMasterUpdateResponse with new version details
+
+    Raises:
+        HTTPException 404: JobMaster not found
+        HTTPException 400: Workflow validation failed
+    """
+    # Check if master exists
+    master = await db.get(JobMaster, master_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Job master not found")
+
+    # Validate workflow interfaces
+    try:
+        await WorkflowValidator.validate_workflow_interfaces(db, master)
+    except WorkflowValidationError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Workflow validation failed",
+                "message": e.message,
+                "details": e.details,
+            },
+        ) from e
+
+    # Save current version to history
+    previous_version = master.current_version
+    await VersionManager.save_current_version(
+        db, master, change_reason="Workflow version published with interface validation"
+    )
+
+    # Increment version
+    master.current_version += 1
+
+    await db.commit()
+    await db.refresh(master)
+
+    return JobMasterUpdateResponse(
+        master_id=master.id,
+        previous_version=previous_version,
+        current_version=master.current_version,
+        auto_versioned=True,
+        version_reason="Workflow version published (interface validated)",
     )

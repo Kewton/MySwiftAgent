@@ -153,3 +153,36 @@ class JobMasterList(BaseModel):
     total: int
     page: int
     size: int
+
+
+class TaskMasterStats(BaseModel):
+    """Task master statistics within a job master."""
+
+    task_master_id: str = Field(..., description="TaskMaster ID")
+    task_name: str = Field(..., description="TaskMaster name")
+    order: int = Field(..., description="Execution order within Job")
+    total_executions: int = Field(..., description="Total number of executions")
+    success_count: int = Field(..., description="Number of successful executions")
+    failure_count: int = Field(..., description="Number of failed executions")
+    success_rate: float = Field(..., description="Success rate as percentage (0-100)")
+    avg_duration_ms: float | None = Field(
+        None, description="Average duration in milliseconds"
+    )
+
+
+class JobMasterStats(BaseModel):
+    """Job master execution statistics."""
+
+    master_id: str = Field(..., description="JobMaster ID")
+    name: str = Field(..., description="JobMaster name")
+    total_executions: int = Field(..., description="Total number of Job executions")
+    success_count: int = Field(..., description="Number of successful Job executions")
+    failure_count: int = Field(..., description="Number of failed Job executions")
+    canceled_count: int = Field(..., description="Number of canceled Job executions")
+    success_rate: float = Field(..., description="Success rate as percentage (0-100)")
+    last_executed_at: datetime | None = Field(
+        None, description="Last execution timestamp"
+    )
+    task_stats: list[TaskMasterStats] = Field(
+        default_factory=list, description="Task-level statistics"
+    )
