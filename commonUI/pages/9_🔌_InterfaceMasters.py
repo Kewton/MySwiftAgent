@@ -29,7 +29,7 @@ SCHEMA_TEMPLATES = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {},
-        "required": []
+        "required": [],
     },
     "Simple Object": {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -38,7 +38,7 @@ SCHEMA_TEMPLATES = {
             "id": {"type": "string"},
             "name": {"type": "string"},
         },
-        "required": ["id", "name"]
+        "required": ["id", "name"],
     },
     "Company Search": {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -46,9 +46,9 @@ SCHEMA_TEMPLATES = {
         "properties": {
             "company_name": {"type": "string"},
             "country": {"type": "string"},
-            "industry": {"type": "string"}
+            "industry": {"type": "string"},
         },
-        "required": ["company_name"]
+        "required": ["company_name"],
     },
     "API Response": {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -56,9 +56,9 @@ SCHEMA_TEMPLATES = {
         "properties": {
             "status": {"type": "string", "enum": ["success", "error"]},
             "data": {"type": "object"},
-            "message": {"type": "string"}
+            "message": {"type": "string"},
         },
-        "required": ["status"]
+        "required": ["status"],
     },
 }
 
@@ -168,7 +168,9 @@ def load_interface_detail(interface_id: str) -> None:
         st.session_state.interface_detail = None
 
 
-def validate_json_schema(schema_str: str) -> tuple[bool, str | None, dict[str, Any] | None]:
+def validate_json_schema(
+    schema_str: str,
+) -> tuple[bool, str | None, dict[str, Any] | None]:
     """Validate JSON Schema syntax.
 
     Returns:
@@ -206,7 +208,7 @@ def render_schema_editor(
     st.write(f"**{label}**")
 
     # Template selector
-    template_options = ["Custom"] + list(SCHEMA_TEMPLATES.keys())
+    template_options = ["Custom", *SCHEMA_TEMPLATES.keys()]
     selected_template = st.selectbox(
         "Template",
         options=template_options,
@@ -245,7 +247,9 @@ def render_schema_editor(
     return (schema_text, is_valid, error_message)
 
 
-def render_interface_master_form(mode: str = "create", initial_data: dict[str, Any] | None = None) -> dict[str, Any] | None:
+def render_interface_master_form(
+    mode: str = "create", initial_data: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """Render InterfaceMaster creation/edit form.
 
     Args:
@@ -394,7 +398,9 @@ def render_list_interface_masters_tab() -> None:
     # Display interface masters
     interface_masters = st.session_state.interface_masters_list
     if not interface_masters:
-        st.info("No InterfaceMasters found. Create your first InterfaceMaster using the Create tab.")
+        st.info(
+            "No InterfaceMasters found. Create your first InterfaceMaster using the Create tab.",
+        )
         return
 
     # Filter interface masters
@@ -479,9 +485,7 @@ def filter_interface_masters(
         filtered = [m for m in filtered if m.get("output_schema")]
     elif schema_filter == "Has Both":
         filtered = [
-            m
-            for m in filtered
-            if m.get("input_schema") and m.get("output_schema")
+            m for m in filtered if m.get("input_schema") and m.get("output_schema")
         ]
 
     # Search filter
@@ -507,7 +511,9 @@ def render_interface_detail() -> None:
     if not interface_detail:
         return
 
-    st.subheader(f"📄 InterfaceMaster Details - {interface_detail.get('name', interface_id)}")
+    st.subheader(
+        f"📄 InterfaceMaster Details - {interface_detail.get('name', interface_id)}",
+    )
 
     # Action buttons
     col1, col2, col3 = st.columns(3)
@@ -592,7 +598,7 @@ def render_interface_detail() -> None:
             api_config = config.get_api_config("JobQueue")
             with HTTPClient(api_config, "JobQueue") as client:
                 response = client.get(
-                    f"/api/v1/interface-masters/{interface_id}/task-masters"
+                    f"/api/v1/interface-masters/{interface_id}/task-masters",
                 )
                 task_masters = response.get("task_masters", [])
 
@@ -605,7 +611,7 @@ def render_interface_detail() -> None:
                                 "Method": tm.get("method", ""),
                             }
                             for tm in task_masters
-                        ]
+                        ],
                     )
                     st.dataframe(task_df, use_container_width=True, hide_index=True)
                 else:
@@ -619,7 +625,9 @@ def render_interface_detail() -> None:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric("Is Active", "✅ Yes" if interface_detail.get("is_active") else "❌ No")
+            st.metric(
+                "Is Active", "✅ Yes" if interface_detail.get("is_active") else "❌ No",
+            )
             st.metric("Created At", interface_detail.get("created_at", "N/A"))
 
         with col2:

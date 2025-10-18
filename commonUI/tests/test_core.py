@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.config import Config
+from core.config import APIConfig, Config
 from core.exceptions import (
     APIError,
     AuthenticationError,

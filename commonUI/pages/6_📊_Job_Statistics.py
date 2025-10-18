@@ -60,12 +60,11 @@ def get_success_rate_color(success_rate: float) -> str:
     """Get color based on success rate."""
     if success_rate >= 95:
         return "green"
-    elif success_rate >= 80:
+    if success_rate >= 80:
         return "normal"
-    elif success_rate >= 50:
+    if success_rate >= 50:
         return "orange"
-    else:
-        return "red"
+    return "red"
 
 
 def render_job_master_selector() -> None:
@@ -87,7 +86,7 @@ def render_job_master_selector() -> None:
     master_options = {f"{m['name']} ({m['id']})": m["id"] for m in active_masters}
 
     # Add "Select..." option
-    options_list = ["Select a JobMaster..."] + list(master_options.keys())
+    options_list = ["Select a JobMaster...", *master_options.keys()]
 
     # Get current selection index
     current_index = 0
@@ -182,13 +181,13 @@ def render_overall_statistics() -> None:
         color = get_success_rate_color(success_rate)
 
         if color == "green":
-            st.success(f"🎉 Excellent success rate!")
+            st.success("🎉 Excellent success rate!")
         elif color == "normal":
-            st.info(f"✅ Good success rate")
+            st.info("✅ Good success rate")
         elif color == "orange":
-            st.warning(f"⚠️ Moderate success rate - consider improvements")
+            st.warning("⚠️ Moderate success rate - consider improvements")
         else:
-            st.error(f"❌ Low success rate - needs immediate attention")
+            st.error("❌ Low success rate - needs immediate attention")
 
         st.progress(normalized_rate, text=f"{success_rate:.1f}% Success Rate")
 
@@ -256,7 +255,7 @@ def render_task_statistics() -> None:
                 "Success Rate": f"{success_rate:.2f}%",
                 "Status": status_emoji,
                 "Avg Duration": duration_str,
-            }
+            },
         )
 
     df = pd.DataFrame(task_data)
@@ -280,7 +279,7 @@ def render_task_statistics() -> None:
 
     # Legend
     st.caption(
-        "Status: ✅ Excellent (≥95%) | 🟢 Good (≥80%) | 🟡 Moderate (≥50%) | 🔴 Needs Attention (<50%)"
+        "Status: ✅ Excellent (≥95%) | 🟢 Good (≥80%) | 🟡 Moderate (≥50%) | 🔴 Needs Attention (<50%)",
     )
 
 
@@ -299,7 +298,7 @@ def main() -> None:
     # Check if service is configured
     if not config.is_service_configured("JobQueue"):
         st.error(
-            "❌ JobQueue is not configured. Please check your environment settings."
+            "❌ JobQueue is not configured. Please check your environment settings.",
         )
         st.stop()
 
@@ -308,7 +307,7 @@ def main() -> None:
         load_job_masters()
 
     # Refresh button
-    col1, col2 = st.columns([1, 5])
+    col1, _ = st.columns([1, 5])
     with col1:
         if st.button("🔄 Refresh", key="refresh_stats", width="stretch"):
             load_job_masters()
@@ -322,10 +321,7 @@ def main() -> None:
     render_job_master_selector()
 
     # Show statistics if master is selected
-    if (
-        st.session_state.selected_stats_master_id
-        and st.session_state.master_stats
-    ):
+    if st.session_state.selected_stats_master_id and st.session_state.master_stats:
         st.divider()
         render_overall_statistics()
 

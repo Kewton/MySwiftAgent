@@ -87,7 +87,9 @@ def load_validation_report(master_id: str) -> None:
 
 
 def add_task_to_workflow(
-    master_id: str, task_master_id: str, order: int
+    master_id: str,
+    task_master_id: str,
+    order: int,
 ) -> bool:
     """Add a task to the workflow."""
     try:
@@ -148,7 +150,7 @@ def publish_workflow_version(master_id: str) -> bool:
         with HTTPClient(api_config, "JobQueue") as client:
             response = client.post(f"/api/v1/job-masters/{master_id}/publish-version")
             NotificationManager.success(
-                f"Workflow version published! Version: {response.get('current_version')}"
+                f"Workflow version published! Version: {response.get('current_version')}",
             )
         return True
 
@@ -173,10 +175,12 @@ def render_job_master_selector() -> None:
         return
 
     # Create dropdown options
-    master_options = {f"{m['name']} ({m['id']}[:8]...)": m["id"] for m in active_masters}
+    master_options = {
+        f"{m['name']} ({m['id']}[:8]...)": m["id"] for m in active_masters
+    }
 
     # Add "Select..." option
-    options_list = ["Select a JobMaster..."] + list(master_options.keys())
+    options_list = ["Select a JobMaster...", *master_options.keys()]
 
     # Get current selection index
     current_index = 0
@@ -225,7 +229,7 @@ def render_workflow_tasks() -> None:
                 "Task ID": task.get("task_master_id", "")[:16] + "...",
                 "Required": "✓" if task.get("is_required") else "✗",
                 "Retry on Failure": "✓" if task.get("retry_on_failure") else "✗",
-            }
+            },
         )
 
     df = pd.DataFrame(task_data)
@@ -267,8 +271,12 @@ def render_workflow_tasks() -> None:
                         task["task_master_id"],
                         order - 1,
                     ):
-                        load_workflow_tasks(st.session_state.selected_workflow_master_id)
-                        load_validation_report(st.session_state.selected_workflow_master_id)
+                        load_workflow_tasks(
+                            st.session_state.selected_workflow_master_id,
+                        )
+                        load_validation_report(
+                            st.session_state.selected_workflow_master_id,
+                        )
                         st.rerun()
 
     with col2:
@@ -288,8 +296,12 @@ def render_workflow_tasks() -> None:
                         task["task_master_id"],
                         order + 1,
                     ):
-                        load_workflow_tasks(st.session_state.selected_workflow_master_id)
-                        load_validation_report(st.session_state.selected_workflow_master_id)
+                        load_workflow_tasks(
+                            st.session_state.selected_workflow_master_id,
+                        )
+                        load_validation_report(
+                            st.session_state.selected_workflow_master_id,
+                        )
                         st.rerun()
 
     with col3:
@@ -339,11 +351,13 @@ def render_add_task_panel() -> None:
         return
 
     # Task selection
-    task_options = {f"{t['name']} ({t['id'][:16]}...)": t["id"] for t in available_to_add}
+    task_options = {
+        f"{t['name']} ({t['id'][:16]}...)": t["id"] for t in available_to_add
+    }
 
     selected_task = st.selectbox(
         "Select TaskMaster to add",
-        options=[""] + list(task_options.keys()),
+        options=["", *task_options.keys()],
         key="add_task_selector",
     )
 
@@ -352,7 +366,9 @@ def render_add_task_panel() -> None:
 
         # Display task details
         task_detail = next(t for t in available_to_add if t["id"] == task_id)
-        st.caption(f"**Description**: {task_detail.get('description', 'No description')}")
+        st.caption(
+            f"**Description**: {task_detail.get('description', 'No description')}",
+        )
 
         # Add button
         if st.button("➕ Add to Workflow", key="add_task_btn", width="stretch"):
@@ -396,7 +412,9 @@ def render_validation_panel() -> None:
         st.divider()
         st.caption("**Validation Errors**")
         for error in errors:
-            with st.expander(f"🔴 {error.get('message', 'Unknown error')}", expanded=True):
+            with st.expander(
+                f"🔴 {error.get('message', 'Unknown error')}", expanded=True,
+            ):
                 st.json(error.get("details", {}))
 
     # Display warnings
@@ -419,9 +437,15 @@ def render_validation_panel() -> None:
                 {
                     "Order": task.get("order", 0),
                     "Task": task.get("task_name", ""),
-                    "Input Interface": task.get("input_interface_id", "None")[:20] + "..." if task.get("input_interface_id") else "None",
-                    "Output Interface": task.get("output_interface_id", "None")[:20] + "..." if task.get("output_interface_id") else "None",
-                }
+                    "Input Interface": task.get("input_interface_id", "None")[:20]
+                    + "..."
+                    if task.get("input_interface_id")
+                    else "None",
+                    "Output Interface": task.get("output_interface_id", "None")[:20]
+                    + "..."
+                    if task.get("output_interface_id")
+                    else "None",
+                },
             )
 
         df = pd.DataFrame(chain_data)
@@ -449,15 +473,19 @@ def render_publish_panel() -> None:
 
     is_valid = report.get("is_valid", False)
     if not is_valid:
-        st.error("❌ Cannot publish: Workflow validation failed. Please fix errors first.")
+        st.error(
+            "❌ Cannot publish: Workflow validation failed. Please fix errors first.",
+        )
         return
 
     st.success("✅ Workflow is ready to publish!")
     st.caption(
-        "Publishing will create a new version and validate interface compatibility."
+        "Publishing will create a new version and validate interface compatibility.",
     )
 
-    if st.button("🚀 Publish Version", key="publish_btn", width="stretch", type="primary"):
+    if st.button(
+        "🚀 Publish Version", key="publish_btn", width="stretch", type="primary",
+    ):
         if publish_workflow_version(st.session_state.selected_workflow_master_id):
             load_validation_report(st.session_state.selected_workflow_master_id)
             st.rerun()
@@ -473,12 +501,14 @@ def main() -> None:
 
     # Page header
     st.title("🔧 Job Configuration")
-    st.caption("Configure and validate JobMaster task workflows with interface compatibility checking")
+    st.caption(
+        "Configure and validate JobMaster task workflows with interface compatibility checking",
+    )
 
     # Check if service is configured
     if not config.is_service_configured("JobQueue"):
         st.error(
-            "❌ JobQueue is not configured. Please check your environment settings."
+            "❌ JobQueue is not configured. Please check your environment settings.",
         )
         st.stop()
 
@@ -489,7 +519,7 @@ def main() -> None:
         load_task_masters()
 
     # Refresh button
-    col1, col2 = st.columns([1, 5])
+    col1, _ = st.columns([1, 5])
     with col1:
         if st.button("🔄 Refresh", key="refresh_all", width="stretch"):
             load_job_masters()

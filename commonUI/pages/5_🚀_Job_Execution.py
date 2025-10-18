@@ -45,7 +45,9 @@ def load_job_masters() -> None:
     try:
         api_config = config.get_api_config("JobQueue")
         with HTTPClient(api_config, "JobQueue") as client:
-            response = client.get("/api/v1/job-masters", params={"page": 1, "size": 100})
+            response = client.get(
+                "/api/v1/job-masters", params={"page": 1, "size": 100},
+            )
             job_masters = response.get("masters", [])
             st.session_state.job_exec_job_masters = job_masters
 
@@ -95,7 +97,9 @@ def retry_task(task_id: str) -> None:
             response = client.post(f"/api/v1/tasks/{task_id}/retry")
 
             NotificationManager.operation_completed("Task retry")
-            NotificationManager.success(f"Task retry initiated: {response.get('message')}")
+            NotificationManager.success(
+                f"Task retry initiated: {response.get('message')}",
+            )
 
             # Reload tasks
             if st.session_state.job_exec_selected_job_id:
@@ -124,12 +128,12 @@ def get_status_icon(status: str) -> str:
 def get_status_color(status: str) -> str:
     """Get status color for display."""
     status_colors = {
-        "queued": "#FFA500",      # Orange
-        "running": "#1E90FF",     # Blue
-        "succeeded": "#28A745",   # Green
-        "failed": "#DC3545",      # Red
-        "skipped": "#6C757D",     # Gray
-        "canceled": "#6C757D",    # Gray
+        "queued": "#FFA500",  # Orange
+        "running": "#1E90FF",  # Blue
+        "succeeded": "#28A745",  # Green
+        "failed": "#DC3545",  # Red
+        "skipped": "#6C757D",  # Gray
+        "canceled": "#6C757D",  # Gray
     }
     return status_colors.get(status.lower(), "#000000")
 
@@ -150,8 +154,7 @@ def render_job_master_selector() -> None:
 
     # Create options for selectbox
     master_options = {
-        f"{master['name']} ({master['id']})": master["id"]
-        for master in job_masters
+        f"{master['name']} ({master['id']})": master["id"] for master in job_masters
     }
 
     # Get current selection index
@@ -231,7 +234,9 @@ def render_job_list() -> None:
     # Filter jobs
     filtered_jobs = jobs
     if status_filter != "All":
-        filtered_jobs = [job for job in filtered_jobs if job.get("status") == status_filter]
+        filtered_jobs = [
+            job for job in filtered_jobs if job.get("status") == status_filter
+        ]
 
     if search_query:
         query_lower = search_query.lower()
@@ -271,7 +276,7 @@ def render_job_list() -> None:
                 "progress": progress,
                 "created_at": created_at,
                 "duration": duration,
-            }
+            },
         )
 
     # Convert to DataFrame
@@ -333,7 +338,10 @@ def render_job_detail() -> None:
 
             with col3:
                 started_at = job_detail.get("started_at")
-                st.metric("Started At", format_datetime(started_at) if started_at else "Not started")
+                st.metric(
+                    "Started At",
+                    format_datetime(started_at) if started_at else "Not started",
+                )
 
             with col4:
                 finished_at = job_detail.get("finished_at")
@@ -359,13 +367,15 @@ def render_job_detail() -> None:
                 task_data.append(
                     {
                         "Order": task.get("order", 0),
-                        "Task Name": task.get("master_id", "Unknown")[:20],  # Truncate long IDs
+                        "Task Name": task.get("master_id", "Unknown")[
+                            :20
+                        ],  # Truncate long IDs
                         "Status": f"{status_icon} {task_status.upper()}",
                         "Duration": format_duration_ms(task.get("duration_ms")),
                         "Attempt": task.get("attempt", 0),
                         "task_id": task.get("id"),  # Hidden column for actions
                         "full_status": task_status,  # Hidden column for styling
-                    }
+                    },
                 )
 
             # Create DataFrame
@@ -398,13 +408,21 @@ def render_job_detail() -> None:
                     with task_col1:
                         st.write("**Task ID:**", task.get("id", "N/A"))
                         st.write("**Master ID:**", task.get("master_id", "N/A"))
-                        st.write("**Master Version:**", task.get("master_version", "N/A"))
+                        st.write(
+                            "**Master Version:**", task.get("master_version", "N/A"),
+                        )
                         st.write("**Attempt:**", task.get("attempt", 0))
 
                     with task_col2:
-                        st.write("**Started At:**", format_datetime(task.get("started_at")))
-                        st.write("**Finished At:**", format_datetime(task.get("finished_at")))
-                        st.write("**Duration:**", format_duration_ms(task.get("duration_ms")))
+                        st.write(
+                            "**Started At:**", format_datetime(task.get("started_at")),
+                        )
+                        st.write(
+                            "**Finished At:**", format_datetime(task.get("finished_at")),
+                        )
+                        st.write(
+                            "**Duration:**", format_duration_ms(task.get("duration_ms")),
+                        )
 
                     # Input Data
                     st.write("**▼ Input Data**")
@@ -430,7 +448,7 @@ def render_job_detail() -> None:
                     # Retry button for failed tasks
                     if is_failed:
                         if st.button(
-                            f"🔄 Retry from this Task",
+                            "🔄 Retry from this Task",
                             key=f"retry_{task.get('id')}",
                             use_container_width=True,
                         ):

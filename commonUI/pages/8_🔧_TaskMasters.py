@@ -5,7 +5,6 @@ Streamlit page for managing TaskMasters including creation, editing,
 deletion, and interface association management.
 """
 
-import json
 from typing import Any
 
 import pandas as pd  # type: ignore[import-untyped]
@@ -144,7 +143,9 @@ def load_task_master_detail(task_id: str) -> None:
         st.session_state.task_master_detail = None
 
 
-def render_task_master_form(mode: str = "create", initial_data: dict[str, Any] | None = None) -> dict[str, Any] | None:
+def render_task_master_form(
+    mode: str = "create", initial_data: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """Render TaskMaster creation/edit form.
 
     Args:
@@ -187,7 +188,7 @@ def render_task_master_form(mode: str = "create", initial_data: dict[str, Any] |
                 "HTTP Method *",
                 options=["GET", "POST", "PUT", "DELETE", "PATCH"],
                 index=["GET", "POST", "PUT", "DELETE", "PATCH"].index(
-                    initial_data.get("method", "POST")
+                    initial_data.get("method", "POST"),
                 ),
                 help="HTTP request method",
             )
@@ -235,7 +236,7 @@ def render_task_master_form(mode: str = "create", initial_data: dict[str, Any] |
         # Create options for interface dropdowns
         interface_options = {
             "None": None,
-            **{f"{iface['name']} ({iface['id']})": iface["id"] for iface in interfaces}
+            **{f"{iface['name']} ({iface['id']})": iface["id"] for iface in interfaces},
         }
 
         col1, col2 = st.columns(2)
@@ -245,7 +246,7 @@ def render_task_master_form(mode: str = "create", initial_data: dict[str, Any] |
             current_input_id = initial_data.get("input_interface_id")
             input_idx = 0
             if current_input_id:
-                for i, (name, iface_id) in enumerate(interface_options.items()):
+                for i, (_name, iface_id) in enumerate(interface_options.items()):
                     if iface_id == current_input_id:
                         input_idx = i
                         break
@@ -263,7 +264,7 @@ def render_task_master_form(mode: str = "create", initial_data: dict[str, Any] |
             current_output_id = initial_data.get("output_interface_id")
             output_idx = 0
             if current_output_id:
-                for i, (name, iface_id) in enumerate(interface_options.items()):
+                for i, (_name, iface_id) in enumerate(interface_options.items()):
                     if iface_id == current_output_id:
                         output_idx = i
                         break
@@ -378,7 +379,9 @@ def render_list_task_masters_tab() -> None:
     # Display task masters
     task_masters = st.session_state.task_masters_list
     if not task_masters:
-        st.info("No TaskMasters found. Create your first TaskMaster using the Create tab.")
+        st.info(
+            "No TaskMasters found. Create your first TaskMaster using the Create tab.",
+        )
         return
 
     # Filter task masters
@@ -571,9 +574,13 @@ def render_task_master_detail() -> None:
                 try:
                     api_config = config.get_api_config("JobQueue")
                     with HTTPClient(api_config, "JobQueue") as client:
-                        input_interface = client.get(f"/api/v1/interface-masters/{input_id}")
+                        input_interface = client.get(
+                            f"/api/v1/interface-masters/{input_id}",
+                        )
                         st.write(f"**Name:** {input_interface.get('name')}")
-                        st.write(f"**Description:** {input_interface.get('description', 'N/A')}")
+                        st.write(
+                            f"**Description:** {input_interface.get('description', 'N/A')}",
+                        )
 
                         with st.expander("View Input Schema"):
                             st.json(input_interface.get("input_schema", {}))
@@ -590,9 +597,13 @@ def render_task_master_detail() -> None:
                 try:
                     api_config = config.get_api_config("JobQueue")
                     with HTTPClient(api_config, "JobQueue") as client:
-                        output_interface = client.get(f"/api/v1/interface-masters/{output_id}")
+                        output_interface = client.get(
+                            f"/api/v1/interface-masters/{output_id}",
+                        )
                         st.write(f"**Name:** {output_interface.get('name')}")
-                        st.write(f"**Description:** {output_interface.get('description', 'N/A')}")
+                        st.write(
+                            f"**Description:** {output_interface.get('description', 'N/A')}",
+                        )
 
                         with st.expander("View Output Schema"):
                             st.json(output_interface.get("output_schema", {}))
@@ -614,7 +625,9 @@ def render_task_master_detail() -> None:
         with col2:
             st.metric("Retry Delay", f"{task_detail.get('retry_delay_sec', 0)}s")
             st.metric("Current Version", task_detail.get("current_version", 1))
-            st.metric("Is Active", "✅ Yes" if task_detail.get("is_active") else "❌ No")
+            st.metric(
+                "Is Active", "✅ Yes" if task_detail.get("is_active") else "❌ No",
+            )
 
 
 def main() -> None:
