@@ -67,9 +67,7 @@ class TestTaskExecutionFlow:
                 {"master_id": "tm2", "sequence": 2, "input_data": {"param": "value2"}},
             ],
         }
-        response = await client.post(
-            "/api/v1/jobs/from-master/jm_test", json=payload
-        )
+        response = await client.post("/api/v1/jobs/from-master/jm_test", json=payload)
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert "job_id" in data
@@ -347,9 +345,7 @@ class TestTaskExecutionFlow:
                 }
             ],
         }
-        response = await client.post(
-            "/api/v1/jobs/from-master/jm_valid", json=payload
-        )
+        response = await client.post("/api/v1/jobs/from-master/jm_valid", json=payload)
         assert response.status_code == status.HTTP_201_CREATED
 
     @pytest.mark.asyncio
