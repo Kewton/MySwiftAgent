@@ -726,8 +726,8 @@ def render_job_list() -> None:
     )
 
     # Handle row selection
-    if event.selection.rows:
-        selected_idx = event.selection.rows[0]
+    if hasattr(event, "selection") and event.selection.rows:  # type: ignore[attr-defined]
+        selected_idx = event.selection.rows[0]  # type: ignore[attr-defined]
         selected_job = filtered_jobs[selected_idx]
         st.session_state.jobqueue_selected_job = selected_job[
             "id"

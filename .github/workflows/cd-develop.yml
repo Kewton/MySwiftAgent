@@ -104,11 +104,25 @@ jobs:
 
       - name: Run type checking
         working-directory: ./${{ matrix.project }}
-        run: uv run mypy app/
+        run: |
+          if [[ "${{ matrix.project }}" == "commonUI" ]]; then
+            echo "Running mypy for commonUI (Streamlit app)"
+            uv run mypy .
+          else
+            echo "Running mypy for FastAPI project"
+            uv run mypy app/
+          fi
 
       - name: Run tests with coverage
         working-directory: ./${{ matrix.project }}
-        run: uv run pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
+        run: |
+          if [[ "${{ matrix.project }}" == "commonUI" ]]; then
+            echo "Running tests for commonUI (Streamlit app)"
+            uv run pytest tests/ -v --cov=components --cov=core --cov-report=xml --cov-report=term
+          else
+            echo "Running tests for FastAPI project"
+            uv run pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
+          fi
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -154,10 +168,16 @@ jobs:
         working-directory: ./${{ matrix.project }}
         run: |
           echo "🧪 Running integration tests for ${{ matrix.project }}"
-          # Integration tests focus on API endpoints and integration flows
-          # Coverage measured only for API layer (app/) as core logic is covered by unit tests
-          # Lower coverage threshold (50%) as detailed unit tests cover internal logic (90%+)
-          uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term --cov-fail-under=50
+          if [[ "${{ matrix.project }}" == "commonUI" ]]; then
+            # Integration tests for Streamlit app
+            # Coverage measured for components and core modules
+            uv run pytest tests/integration/ -v --cov=components --cov=core --cov-report=xml --cov-report=term --cov-fail-under=50
+          else
+            # Integration tests focus on API endpoints and integration flows
+            # Coverage measured only for API layer (app/) as core logic is covered by unit tests
+            # Lower coverage threshold (50%) as detailed unit tests cover internal logic (90%+)
+            uv run pytest tests/integration/ -v --cov=app --cov-report=xml --cov-report=term --cov-fail-under=50
+          fi
 
   build-check:
     name: Build Verification

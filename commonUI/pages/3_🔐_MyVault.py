@@ -6,7 +6,7 @@ Streamlit page for managing secrets and projects in MyVault service.
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import streamlit as st
@@ -55,7 +55,7 @@ def load_secret_definitions() -> dict[str, Any]:
 
         if yaml_path.exists():
             with open(yaml_path) as f:
-                return yaml.safe_load(f)
+                return cast(dict[str, Any], yaml.safe_load(f))
         return {"secrets": []}
     except Exception as e:
         st.error(f"Failed to load secret definitions: {e!s}")
@@ -322,7 +322,6 @@ def render_projects_section() -> None:
     # Display as interactive table
     event = st.dataframe(
         df,
-        width=None,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -338,8 +337,8 @@ def render_projects_section() -> None:
     )
 
     # Handle row selection
-    if event.selection.rows:
-        selected_idx = event.selection.rows[0]
+    if hasattr(event, "selection") and event.selection.rows:  # type: ignore[attr-defined]
+        selected_idx = event.selection.rows[0]  # type: ignore[attr-defined]
         selected_project = projects[selected_idx]
         st.session_state.myvault_selected_project = selected_project["name"]
 
@@ -483,7 +482,6 @@ def render_secrets_section() -> None:
     # Display as interactive table
     event = st.dataframe(
         df,
-        width=None,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -499,8 +497,8 @@ def render_secrets_section() -> None:
     )
 
     # Handle row selection
-    if event.selection.rows:
-        selected_idx = event.selection.rows[0]
+    if hasattr(event, "selection") and event.selection.rows:  # type: ignore[attr-defined]
+        selected_idx = event.selection.rows[0]  # type: ignore[attr-defined]
         selected_secret = project_secrets[selected_idx]
 
         # Show action buttons
@@ -784,7 +782,11 @@ def list_google_cached_projects() -> list[str]:
     api_config = config.get_api_config("expertagent")
     with HTTPClient(api_config, "ExpertAgent") as client:
         response = client.get("/v1/google-auth/list-projects")
-        return response.get("projects", []) if isinstance(response, dict) else []
+        return (
+            cast(list[str], response.get("projects", []))
+            if isinstance(response, dict)
+            else []
+        )
 
 
 def start_google_oauth2_flow(

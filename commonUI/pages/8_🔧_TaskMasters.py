@@ -494,11 +494,13 @@ def format_interfaces(task_master: dict[str, Any]) -> str:
     """Format interface information for display."""
     parts = []
 
-    if task_master.get("input_interface_id"):
-        parts.append(f"In: {task_master.get('input_interface_id')[:12]}...")
+    input_id = task_master.get("input_interface_id")
+    if input_id:
+        parts.append(f"In: {input_id[:12]}...")
 
-    if task_master.get("output_interface_id"):
-        parts.append(f"Out: {task_master.get('output_interface_id')[:12]}...")
+    output_id = task_master.get("output_interface_id")
+    if output_id:
+        parts.append(f"Out: {output_id[:12]}...")
 
     return " | ".join(parts) if parts else "No interfaces"
 

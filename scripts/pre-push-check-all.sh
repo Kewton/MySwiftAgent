@@ -19,7 +19,7 @@ FAILED=0
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
 # Python projects to check
-PYTHON_PROJECTS=("expertAgent" "jobqueue" "myscheduler" "myVault")
+PYTHON_PROJECTS=("expertAgent" "jobqueue" "myscheduler" "myVault" "commonUI")
 
 echo "🔍 Running pre-push quality checks for all projects..."
 echo ""
@@ -78,7 +78,12 @@ for project in "${PYTHON_PROJECTS[@]}"; do
         # Get coverage threshold from pyproject.toml or skip if not set
         COVERAGE_THRESHOLD=$(grep "cov-fail-under" pyproject.toml 2>/dev/null | head -1 | sed 's/.*cov-fail-under=\([0-9]*\).*/\1/')
         if [ -n "$COVERAGE_THRESHOLD" ]; then
-            run_check "$project" "Test coverage (≥${COVERAGE_THRESHOLD}%)" "uv run pytest tests/ --cov=app --cov=core --cov-fail-under=$COVERAGE_THRESHOLD -q 2>/dev/null || uv run pytest tests/ --cov=app --cov-fail-under=$COVERAGE_THRESHOLD -q"
+            # Different coverage targets for different projects
+            if [ "$project" == "commonUI" ]; then
+                run_check "$project" "Test coverage (≥${COVERAGE_THRESHOLD}%)" "uv run pytest tests/ --cov=components --cov=core --cov-fail-under=$COVERAGE_THRESHOLD -q"
+            else
+                run_check "$project" "Test coverage (≥${COVERAGE_THRESHOLD}%)" "uv run pytest tests/ --cov=app --cov=core --cov-fail-under=$COVERAGE_THRESHOLD -q 2>/dev/null || uv run pytest tests/ --cov=app --cov-fail-under=$COVERAGE_THRESHOLD -q"
+            fi
         else
             echo -e "${YELLOW}⚠${NC} [$project] Coverage threshold not set, skipping coverage check"
         fi

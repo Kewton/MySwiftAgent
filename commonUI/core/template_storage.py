@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 class TemplateStorage:
@@ -112,7 +112,7 @@ class TemplateStorage:
 
         try:
             with file_path.open(encoding="utf-8") as f:
-                return json.load(f)
+                return cast(dict[str, Any], json.load(f))
         except json.JSONDecodeError:
             return {}
 

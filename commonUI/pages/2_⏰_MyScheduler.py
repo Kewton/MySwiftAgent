@@ -538,7 +538,7 @@ def render_scheduler_creation_form() -> None:
                     "max_instances": max_instances,
                     "misfire_grace_time": misfire_grace_time,
                     "coalesce": coalesce,
-                    **schedule_config["params"],
+                    **schedule_config["params"],  # type: ignore[dict-item]
                 }
 
                 create_scheduled_job(job_data)
@@ -1035,8 +1035,8 @@ def render_scheduler_job_list() -> None:
     )
 
     # Handle row selection with safe key access
-    if event.selection.rows:
-        selected_idx = event.selection.rows[0]
+    if hasattr(event, "selection") and event.selection.rows:  # type: ignore[attr-defined]
+        selected_idx = event.selection.rows[0]  # type: ignore[attr-defined]
         selected_job = filtered_jobs[
             selected_idx
         ]  # Use original filtered data, not display_jobs
