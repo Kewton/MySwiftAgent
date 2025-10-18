@@ -95,7 +95,7 @@ def add_task_to_workflow(
         with HTTPClient(api_config, "JobQueue") as client:
             client.post(
                 f"/api/v1/job-masters/{master_id}/tasks",
-                json={
+                json_data={
                     "task_master_id": task_master_id,
                     "order": order,
                     "is_required": True,
@@ -131,7 +131,7 @@ def update_task_order(master_id: str, task_master_id: str, new_order: int) -> bo
         with HTTPClient(api_config, "JobQueue") as client:
             client.put(
                 f"/api/v1/job-masters/{master_id}/tasks/{task_master_id}",
-                json={"order": new_order},
+                json_data={"order": new_order},
             )
         NotificationManager.success("Task order updated successfully")
         return True
