@@ -15,6 +15,7 @@ from app.api.v1 import (
     drive_endpoints,
     gmail_utility_endpoints,
     google_auth_endpoints,
+    job_generator_endpoints,
     tts_endpoints,
     utility_endpoints,
 )
@@ -131,6 +132,9 @@ app.include_router(utility_endpoints.router, prefix="/v1")
 app.include_router(gmail_utility_endpoints.router, prefix="/v1")
 app.include_router(drive_endpoints.router, prefix="/v1", tags=["Drive Utilities"])
 app.include_router(tts_endpoints.router, prefix="/v1", tags=["TTS Utilities"])
+app.include_router(
+    job_generator_endpoints.router, prefix="/v1", tags=["Job Generator"]
+)
 app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
 

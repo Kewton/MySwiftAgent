@@ -18,7 +18,7 @@ The agent uses conditional routing to handle:
 """
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 from langgraph.graph import END, StateGraph
 
@@ -195,7 +195,7 @@ def validation_router(
             return "END"
 
 
-def create_job_task_generator_agent() -> StateGraph:
+def create_job_task_generator_agent() -> Any:
     """Create Job/Task Auto-Generation Agent using LangGraph.
 
     This function creates a LangGraph StateGraph with the following workflow:

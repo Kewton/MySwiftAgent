@@ -1,0 +1,160 @@
+"""API endpoints for Job/Task Auto-Generation."""
+
+import logging
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+
+from aiagent.langgraph.jobTaskGeneratorAgents import (
+    create_initial_state,
+    create_job_task_generator_agent,
+)
+from app.schemas.job_generator import JobGeneratorRequest, JobGeneratorResponse
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+@router.post(
+    "/job-generator",
+    response_model=JobGeneratorResponse,
+    summary="Job/Task Auto-Generation",
+    description="Automatically generate Job and Tasks from natural language requirements using LangGraph agent",
+    tags=["Job Generator"],
+)
+async def generate_job_and_tasks(
+    request: JobGeneratorRequest,
+) -> JobGeneratorResponse:
+    """Generate Job and Tasks from natural language requirements.
+
+    This endpoint uses a LangGraph agent to:
+    1. Analyze user requirements and decompose into tasks
+    2. Evaluate task quality and feasibility
+    3. Define JSON Schema interfaces
+    4. Create TaskMasters, JobMaster, and JobMasterTask associations
+    5. Validate workflow interfaces
+    6. Register executable Job
+
+    Args:
+        request: Job generation request with user requirement
+
+    Returns:
+        Job generation response with job_id, status, and detailed results
+
+    Raises:
+        HTTPException: If job generation fails critically
+    """
+    logger.info(
+        f"Job generation request received: {request.user_requirement[:100]}..."
+    )
+
+    try:
+        # Create initial state
+        initial_state = create_initial_state(
+            user_requirement=request.user_requirement,
+        )
+
+        # Override max retry count if specified
+        if request.max_retry != 5:
+            logger.info(f"Using custom max_retry: {request.max_retry}")
+            # Note: MAX_RETRY_COUNT is defined in agent.py (5 by default)
+            # This would require agent modification to support dynamic retry count
+            # For now, we log the request but use the default value
+
+        # Create and invoke LangGraph agent
+        logger.info("Creating Job/Task Generator Agent")
+        agent = create_job_task_generator_agent()
+
+        logger.info("Invoking LangGraph agent")
+        final_state = await agent.ainvoke(initial_state)
+
+        logger.info("LangGraph agent execution completed")
+        logger.debug(f"Final state keys: {final_state.keys()}")
+
+        # Extract results from final state
+        return _build_response_from_state(final_state)
+
+    except Exception as e:
+        logger.error(f"Job generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Job generation failed: {str(e)}",
+        ) from e
+
+
+def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
+    """Build JobGeneratorResponse from final LangGraph state.
+
+    Args:
+        state: Final state from LangGraph agent execution
+
+    Returns:
+        JobGeneratorResponse with extracted information
+    """
+    # Check for error in state
+    error_message = state.get("error_message")
+
+    # Extract job information
+    job_id = state.get("job_id")
+    job_master_id = state.get("job_master_id")
+
+    # Extract task breakdown
+    task_breakdown = state.get("task_breakdown")
+
+    # Extract evaluation result
+    evaluation_result = state.get("evaluation_result")
+
+    # Extract infeasible tasks and proposals from evaluation_result
+    infeasible_tasks: list[dict[str, Any]] = []
+    alternative_proposals: list[dict[str, Any]] = []
+    api_extension_proposals: list[dict[str, Any]] = []
+
+    if evaluation_result:
+        infeasible_tasks = evaluation_result.get("infeasible_tasks", [])
+        alternative_proposals = evaluation_result.get("alternative_proposals", [])
+        api_extension_proposals = evaluation_result.get(
+            "api_extension_proposals", []
+        )
+
+    # Extract validation errors
+    validation_result = state.get("validation_result")
+    validation_errors: list[str] = []
+    if validation_result and not validation_result.get("is_valid", True):
+        validation_errors = validation_result.get("errors", [])
+
+    # Determine status
+    if error_message:
+        status = "failed"
+        logger.warning(f"Job generation failed: {error_message}")
+    elif job_id:
+        if infeasible_tasks or api_extension_proposals:
+            status = "partial_success"
+            logger.info(
+                f"Job generation partially successful (Job ID: {job_id}) "
+                f"with {len(infeasible_tasks)} infeasible tasks"
+            )
+        else:
+            status = "success"
+            logger.info(f"Job generation successful (Job ID: {job_id})")
+    else:
+        # No job_id and no error_message means workflow ended before job_registration
+        status = "failed"
+        if not error_message:
+            error_message = (
+                "Job generation did not complete. "
+                "Check validation_errors or infeasible_tasks for details."
+            )
+
+    return JobGeneratorResponse(
+        status=status,
+        job_id=job_id,
+        job_master_id=job_master_id,
+        task_breakdown=task_breakdown,
+        evaluation_result=evaluation_result,
+        infeasible_tasks=infeasible_tasks,
+        alternative_proposals=alternative_proposals,
+        api_extension_proposals=api_extension_proposals,
+        validation_errors=validation_errors,
+        error_message=error_message,
+    )
