@@ -747,3 +747,7 @@ cat myVault/.env | grep MYVAULT_TOKEN_EXPERTAGENT
 
 **管理者**: MySwiftAgentコアチーム
 **質問**: メインリポジトリでissueを開く
+
+---
+
+最終更新: 2025-10-19
