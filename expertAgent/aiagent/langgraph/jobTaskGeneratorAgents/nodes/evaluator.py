@@ -11,7 +11,6 @@ API extensions when necessary.
 """
 
 import logging
-from typing import cast
 
 from langchain_anthropic import ChatAnthropic
 
@@ -104,13 +103,9 @@ async def evaluator_node(
 
         # Log infeasible tasks and proposals
         if response.infeasible_tasks:
-            logger.warning(
-                f"Found {len(response.infeasible_tasks)} infeasible tasks:"
-            )
+            logger.warning(f"Found {len(response.infeasible_tasks)} infeasible tasks:")
             for task in response.infeasible_tasks:
-                logger.warning(
-                    f"  - {task.task_name} ({task.task_id}): {task.reason}"
-                )
+                logger.warning(f"  - {task.task_name} ({task.task_id}): {task.reason}")
 
         if response.alternative_proposals:
             logger.info(

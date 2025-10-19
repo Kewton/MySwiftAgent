@@ -40,9 +40,7 @@ MAX_RETRY_COUNT = 5
 
 def evaluator_router(
     state: JobTaskGeneratorState,
-) -> Literal[
-    "interface_definition", "requirement_analysis", "master_creation", "END"
-]:
+) -> Literal["interface_definition", "requirement_analysis", "master_creation", "END"]:
     """Route after evaluator node based on evaluation result.
 
     Routing logic:
@@ -107,9 +105,7 @@ def evaluator_router(
                 )
                 return "requirement_analysis"
             else:
-                logger.error(
-                    f"Task breakdown invalid, max retries reached → END"
-                )
+                logger.error("Task breakdown invalid, max retries reached → END")
                 return "END"
 
     elif evaluator_stage == "after_interface_definition":
@@ -123,9 +119,7 @@ def evaluator_router(
                 )
                 return "interface_definition"
             else:
-                logger.error(
-                    f"Interface definition invalid, max retries reached → END"
-                )
+                logger.error("Interface definition invalid, max retries reached → END")
                 return "END"
 
     else:

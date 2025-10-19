@@ -122,6 +122,7 @@ def _load_graphai_agents() -> list[GraphAIAgent]:
 # Loaded from YAML at module load time (cached)
 GRAPHAI_AGENTS = _load_graphai_agents()
 
+
 def _load_expert_agent_apis() -> list[ExpertAgentAPI]:
     """Load expertAgent APIs from YAML configuration.
 
@@ -281,12 +282,8 @@ def get_all_capabilities_summary() -> dict:
             "by_category": {
                 "llm": len(list_agents_by_category("llm")),
                 "http": len(list_agents_by_category("http")),
-                "data_transform": len(
-                    list_agents_by_category("data_transform")
-                ),
-                "control_flow": len(
-                    list_agents_by_category("control_flow")
-                ),
+                "data_transform": len(list_agents_by_category("data_transform")),
+                "control_flow": len(list_agents_by_category("control_flow")),
             },
         },
         "expert_agent_apis": {
@@ -299,15 +296,9 @@ def get_all_capabilities_summary() -> dict:
         "infeasible_tasks": {
             "total": len(INFEASIBLE_TASKS),
             "by_priority": {
-                "high": len(
-                    [t for t in INFEASIBLE_TASKS if t.priority == "high"]
-                ),
-                "medium": len(
-                    [t for t in INFEASIBLE_TASKS if t.priority == "medium"]
-                ),
-                "low": len(
-                    [t for t in INFEASIBLE_TASKS if t.priority == "low"]
-                ),
+                "high": len([t for t in INFEASIBLE_TASKS if t.priority == "high"]),
+                "medium": len([t for t in INFEASIBLE_TASKS if t.priority == "medium"]),
+                "low": len([t for t in INFEASIBLE_TASKS if t.priority == "low"]),
             },
         },
     }

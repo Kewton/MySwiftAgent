@@ -116,7 +116,9 @@ async def master_creation_node(
         # Step 2: Create JobMaster
         job_name = f"Job: {user_requirement[:50]}"  # Truncate to 50 chars
         job_description = f"Auto-generated job from requirement: {user_requirement}"
-        job_url = "http://localhost:8105/api/v1/graphai/execute"  # GraphAI execution endpoint
+        job_url = (
+            "http://localhost:8105/api/v1/graphai/execute"  # GraphAI execution endpoint
+        )
 
         logger.info(f"Creating JobMaster: {job_name}")
 
@@ -132,13 +134,12 @@ async def master_creation_node(
         logger.info(f"JobMaster created: {job_master_id}")
 
         # Step 3: Create JobMasterTask associations (CRITICAL!)
-        logger.info(f"Creating JobMasterTask associations for {len(task_masters)} tasks")
+        logger.info(
+            f"Creating JobMasterTask associations for {len(task_masters)} tasks"
+        )
 
         # Sort tasks by their order (based on priority or dependency)
-        sorted_tasks = sorted(
-            task_masters.items(),
-            key=lambda x: x[1]["order"]
-        )
+        sorted_tasks = sorted(task_masters.items(), key=lambda x: x[1]["order"])
 
         for order, (task_id, task_info) in enumerate(sorted_tasks):
             task_master_id = task_info["task_master_id"]
@@ -165,7 +166,9 @@ async def master_creation_node(
         return {
             **state,
             "job_master_id": job_master_id,
-            "task_master_ids": [info["task_master_id"] for info in task_masters.values()],
+            "task_master_ids": [
+                info["task_master_id"] for info in task_masters.values()
+            ],
             "retry_count": 0,
         }
 

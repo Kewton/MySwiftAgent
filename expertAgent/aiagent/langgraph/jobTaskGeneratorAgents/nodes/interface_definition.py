@@ -91,9 +91,7 @@ async def interface_definition_node(
             task_id = interface_def.task_id
             interface_name = interface_def.interface_name
 
-            logger.info(
-                f"Processing interface for task {task_id}: {interface_name}"
-            )
+            logger.info(f"Processing interface for task {task_id}: {interface_name}")
 
             # Find or create InterfaceMaster
             interface_master = await matcher.find_or_create_interface_master(
@@ -119,7 +117,9 @@ async def interface_definition_node(
             **state,
             "interface_definitions": interface_masters,
             "evaluator_stage": "after_interface_definition",
-            "retry_count": state.get("retry_count", 0) + 1 if state.get("retry_count", 0) > 0 else 0,
+            "retry_count": state.get("retry_count", 0) + 1
+            if state.get("retry_count", 0) > 0
+            else 0,
         }
 
     except Exception as e:

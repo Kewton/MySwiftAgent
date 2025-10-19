@@ -45,9 +45,7 @@ async def generate_job_and_tasks(
     Raises:
         HTTPException: If job generation fails critically
     """
-    logger.info(
-        f"Job generation request received: {request.user_requirement[:100]}..."
-    )
+    logger.info(f"Job generation request received: {request.user_requirement[:100]}...")
 
     try:
         # Create initial state
@@ -113,9 +111,7 @@ def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
     if evaluation_result:
         infeasible_tasks = evaluation_result.get("infeasible_tasks", [])
         alternative_proposals = evaluation_result.get("alternative_proposals", [])
-        api_extension_proposals = evaluation_result.get(
-            "api_extension_proposals", []
-        )
+        api_extension_proposals = evaluation_result.get("api_extension_proposals", [])
 
     # Extract validation errors
     validation_result = state.get("validation_result")

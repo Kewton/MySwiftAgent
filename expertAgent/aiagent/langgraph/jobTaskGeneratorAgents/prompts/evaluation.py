@@ -7,7 +7,6 @@ according to 6 principles:
 6. Feasibility (implementable with GraphAI + expertAgent Direct API)
 """
 
-import os
 from pathlib import Path
 
 import yaml
@@ -224,6 +223,7 @@ def _build_infeasible_tasks_table() -> str:
         )
 
     return "\n".join(lines)
+
 
 def _build_evaluation_system_prompt() -> str:
     """Build evaluation system prompt with dynamic capability lists.

@@ -18,7 +18,9 @@ import httpx
 class JobqueueAPIError(Exception):
     """Exception raised when jobqueue API returns an error."""
 
-    def __init__(self, status_code: int, message: str, response_body: dict | None = None):
+    def __init__(
+        self, status_code: int, message: str, response_body: dict | None = None
+    ):
         self.status_code = status_code
         self.message = message
         self.response_body = response_body
@@ -210,7 +212,11 @@ class JobqueueClient:
         )
 
     async def list_task_masters(
-        self, name: str | None = None, url: str | None = None, page: int = 1, size: int = 100
+        self,
+        name: str | None = None,
+        url: str | None = None,
+        page: int = 1,
+        size: int = 100,
     ) -> dict:
         """List TaskMasters with pagination.
 

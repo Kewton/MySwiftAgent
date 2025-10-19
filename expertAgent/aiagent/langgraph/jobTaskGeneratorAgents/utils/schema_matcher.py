@@ -26,9 +26,7 @@ class SchemaMatcher:
         """
         self.client = client
 
-    async def find_interface_master_by_name(
-        self, name: str
-    ) -> dict[str, Any] | None:
+    async def find_interface_master_by_name(self, name: str) -> dict[str, Any] | None:
         """Find InterfaceMaster by exact name match.
 
         Args:

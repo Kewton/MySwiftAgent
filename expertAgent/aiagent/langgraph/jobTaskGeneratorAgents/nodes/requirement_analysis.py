@@ -9,7 +9,6 @@ requirements into executable tasks following 4 principles:
 """
 
 import logging
-from typing import cast
 
 from langchain_anthropic import ChatAnthropic
 
@@ -70,7 +69,9 @@ async def requirement_analysis_node(
             "task_breakdown": [task.model_dump() for task in response.tasks],
             "overall_summary": response.overall_summary,
             "evaluator_stage": "after_task_breakdown",
-            "retry_count": state.get("retry_count", 0) + 1 if state.get("retry_count", 0) > 0 else 0,
+            "retry_count": state.get("retry_count", 0) + 1
+            if state.get("retry_count", 0) > 0
+            else 0,
         }
 
     except Exception as e:

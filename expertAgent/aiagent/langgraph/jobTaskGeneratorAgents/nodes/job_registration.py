@@ -53,7 +53,9 @@ async def job_registration_node(
         workflow_tasks = await client.list_workflow_tasks(job_master_id)
 
         if not workflow_tasks:
-            logger.warning("No workflow tasks found, creating Job without tasks parameter")
+            logger.warning(
+                "No workflow tasks found, creating Job without tasks parameter"
+            )
             workflow_tasks = []
 
         logger.info(f"Found {len(workflow_tasks)} tasks in workflow")
