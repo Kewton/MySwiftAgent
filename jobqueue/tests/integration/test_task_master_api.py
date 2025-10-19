@@ -108,6 +108,32 @@ class TestTaskMasterAPI:
             updated_by="test",
         )
         db_session.add(master)
+
+        # Create a task using this master (to trigger versioning logic)
+        from app.models.job import Job, JobStatus
+        from app.models.task import Task, TaskStatus
+
+        job = Job(
+            id="j_test",
+            name="Test Job",
+            master_id="jm_test",
+            method="GET",
+            url="https://api.example.com",
+            status=JobStatus.QUEUED,
+            priority=5,
+            timeout_sec=30,
+        )
+        task = Task(
+            id="t_test",
+            job_id="j_test",
+            master_id="tm_update_test",
+            master_version=1,
+            order=1,
+            status=TaskStatus.QUEUED,
+            attempt=0,
+        )
+        db_session.add(job)
+        db_session.add(task)
         await db_session.commit()
 
         # Update critical field (URL) - should trigger versioning
