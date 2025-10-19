@@ -144,7 +144,8 @@ def load_task_master_detail(task_id: str) -> None:
 
 
 def render_task_master_form(
-    mode: str = "create", initial_data: dict[str, Any] | None = None,
+    mode: str = "create",
+    initial_data: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Render TaskMaster creation/edit form.
 
@@ -628,7 +629,8 @@ def render_task_master_detail() -> None:
             st.metric("Retry Delay", f"{task_detail.get('retry_delay_sec', 0)}s")
             st.metric("Current Version", task_detail.get("current_version", 1))
             st.metric(
-                "Is Active", "✅ Yes" if task_detail.get("is_active") else "❌ No",
+                "Is Active",
+                "✅ Yes" if task_detail.get("is_active") else "❌ No",
             )
 
 
