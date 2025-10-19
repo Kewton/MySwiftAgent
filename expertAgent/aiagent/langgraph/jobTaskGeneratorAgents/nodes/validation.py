@@ -94,7 +94,7 @@ async def validation_node(
 
         # Initialize LLM (claude-haiku-4-5)
         model = ChatAnthropic(
-            model="claude-3-5-haiku-20241022",  # claude-haiku-4-5
+            model="claude-haiku-4-5",
             temperature=0.0,
         )
 

@@ -124,8 +124,11 @@ MYVAULT_ENABLED=false
 
 **説明**:
 - JobQueue URLは起動スクリプトが自動設定（`JOBQUEUE_API_URL`）
-- ローカル開発: `http://localhost:8101`
-- Docker: `http://jobqueue:8000`
+  - ローカル開発: `http://localhost:8101`
+  - Docker: `http://jobqueue:8000`
+- ExpertAgent URLは起動スクリプトが自動設定（`EXPERTAGENT_BASE_URL`）
+  - ローカル開発: `http://localhost:8104`
+  - Docker: `http://expertagent:8000`
 
 ---
 
@@ -201,6 +204,10 @@ MAIL_TO=
 **重要**:
 - API Keys（OpenAI, Anthropic, Google等）は**MyVaultで管理**するため、.envには記載しません。
 - Google APIs認証情報（`GOOGLE_CREDENTIALS_JSON`, `GOOGLE_TOKEN_JSON`）も**MyVaultで管理**します（JSONファイルの中身を文字列として保存）
+- `EXPERTAGENT_BASE_URL`は起動スクリプトが自動設定するため、.envには記載不要です。
+  - Job/Task自動生成エージェントがTaskMaster作成時に使用
+  - ローカル開発: `http://localhost:8104`
+  - Docker: `http://expertagent:8000`
 
 ---
 
@@ -330,6 +337,9 @@ export MYSCHEDULER_PORT=8102
 # サービスURLを自動設定
 export MYVAULT_BASE_URL=http://localhost:8103
 export JOBQUEUE_API_URL=http://localhost:8101
+export MYSCHEDULER_BASE_URL=http://localhost:8102
+export EXPERTAGENT_BASE_URL=http://localhost:8104
+export GRAPHAISERVER_BASE_URL=http://localhost:8105
 # ...
 ```
 

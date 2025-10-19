@@ -5,6 +5,7 @@ JobMaster, and critically, JobMasterTask associations to link tasks to the workf
 """
 
 import logging
+import os
 from typing import Any
 
 from ..state import JobTaskGeneratorState
@@ -86,9 +87,12 @@ async def master_creation_node(
             input_interface_id = interface_master_id
             output_interface_id = interface_master_id
 
-            # Create dummy URL (in real implementation, this would be determined by expertAgent API)
-            # For now, use a placeholder that can be updated later
-            task_url = f"http://localhost:8104/api/v1/tasks/{task_id}"
+            # Get expertAgent base URL from environment variable
+            # Falls back to http://localhost:8104 if not set
+            expertagent_base_url = os.getenv(
+                "EXPERTAGENT_BASE_URL", "http://localhost:8104"
+            )
+            task_url = f"{expertagent_base_url}/api/v1/tasks/{task_id}"
 
             # Find or create TaskMaster
             task_master = await matcher.find_or_create_task_master(
