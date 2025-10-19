@@ -7,7 +7,27 @@ according to 6 principles:
 6. Feasibility (implementable with GraphAI + expertAgent Direct API)
 """
 
+import os
+from pathlib import Path
+
+import yaml
 from pydantic import BaseModel, Field
+
+
+def _load_yaml_config(filename: str) -> dict:
+    """Load YAML configuration file from utils/config directory.
+
+    Args:
+        filename: YAML filename in utils/config/ directory
+
+    Returns:
+        Parsed YAML data
+    """
+    # Navigate to utils/config from prompts directory
+    config_dir = Path(__file__).parent.parent / "utils" / "config"
+    config_path = config_dir / filename
+    with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 class InfeasibleTask(BaseModel):
@@ -93,74 +113,129 @@ class EvaluationResult(BaseModel):
     )
 
 
-# GraphAI Standard Agents capability list
-GRAPHAI_CAPABILITIES = """
-### GraphAI 標準Agent一覧
+def _build_graphai_capabilities() -> str:
+    """Build GraphAI capabilities section from YAML config.
 
-#### 🤖 LLM Agents
-- `anthropicAgent`: Claude API直接呼び出し (ANTHROPIC_API_KEY必要)
-- `geminiAgent`: Gemini API直接呼び出し (GOOGLE_API_KEY必要)
+    Returns:
+        Formatted GraphAI capabilities string
+    """
+    config = _load_yaml_config("graphai_capabilities.yaml")
+    lines = ["### GraphAI 標準Agent一覧", ""]
 
-#### 📡 HTTP/Fetch Agents
-- `fetchAgent`: 汎用HTTP APIクライアント（expertAgent呼び出しに使用）
+    # LLM Agents
+    llm_agents = config.get("llm_agents", [])
+    if llm_agents:
+        lines.append("#### 🤖 LLM Agents")
+        for agent in llm_agents:
+            api_key = (
+                f" ({agent['api_key_name']}必要)"
+                if agent.get("requires_api_key")
+                else ""
+            )
+            lines.append(f"- `{agent['name']}`: {agent['description']}{api_key}")
+        lines.append("")
 
-#### 🔄 データ変換 Agents
-- `arrayJoinAgent`: 配列を文字列に結合
-- `copyAgent`: 値をコピー
-- `stringTemplateAgent`: テンプレート文字列生成
-- `popAgent`: 配列の最後の要素を取得
-- `pushAgent`: 配列に要素を追加
-- `shiftAgent`: 配列の最初の要素を取得
-- `mapAgent`: 配列の各要素に関数を適用
-- `filterAgent`: 配列をフィルタリング
-- `sortByAgent`: 配列をソート
+    # HTTP Agents
+    http_agents = config.get("http_agents", [])
+    if http_agents:
+        lines.append("#### 📡 HTTP/Fetch Agents")
+        for agent in http_agents:
+            lines.append(f"- `{agent['name']}`: {agent['description']}")
+        lines.append("")
 
-#### 🔀 制御フロー Agents
-- `nestedAgent`: 入力に対してグラフ全体を実行（ループ処理）
-- `mergeNodeIdAgent`: 複数ノードの結果をマージ
-- `bypassAgent`: 入力をそのまま出力
-"""
+    # Data Transform Agents
+    data_transform_agents = config.get("data_transform_agents", [])
+    if data_transform_agents:
+        lines.append("#### 🔄 データ変換 Agents")
+        for agent in data_transform_agents:
+            lines.append(f"- `{agent['name']}`: {agent['description']}")
+        lines.append("")
 
-# expertAgent Direct API capability list
-EXPERT_AGENT_CAPABILITIES = """
-### expertAgent Direct API一覧
+    # Control Flow Agents
+    control_flow_agents = config.get("control_flow_agents", [])
+    if control_flow_agents:
+        lines.append("#### 🔀 制御フロー Agents")
+        for agent in control_flow_agents:
+            lines.append(f"- `{agent['name']}`: {agent['description']}")
 
-#### Utility API (Direct API)
-| API | エンドポイント | 用途 | 使用例 |
-|-----|-------------|------|-------|
-| Gmail検索 | `/v1/utility/gmail_search` | Gmail検索 | キーワード検索、日付範囲指定 |
-| Gmail送信 | `/v1/utility/gmail_send` | メール送信 | 宛先、件名、本文を指定 |
-| Google検索 | `/v1/utility/google_search` | Web検索 | キーワード検索 |
-| Google Drive Upload | `/v1/drive/upload` | ファイルアップロード | PDF、画像、テキストファイル |
-| Text-to-Speech | `/v1/utility/tts` | 音声合成 | テキストを音声ファイルに変換 |
+    return "\n".join(lines)
 
-#### AI Agent API (Direct API)
-| Agent | エンドポイント | 用途 | 使用例 |
-|-------|-------------|------|-------|
-| Explorer Agent | `/v1/myagent/explorer` | ファイルシステム探索 | ディレクトリ構造の取得 |
-| Action Agent | `/v1/myagent/action` | 汎用アクション実行 | 複数API組み合わせ |
-| File Reader Agent | `/v1/myagent/file_reader` | ファイル読み取り | テキスト、PDF、画像の読み取り |
-| Playwright Agent | `/v1/myagent/playwright` | ブラウザ自動化 | Web scraping、フォーム操作 |
-| JSON Output Agent | `/v1/myagent/json_output` | 構造化出力 | 自然言語→JSON変換 |
-"""
 
-# Common infeasible tasks and alternatives
-INFEASIBLE_TASKS_TABLE = """
-### 実現困難なタスクと代替案
+def _build_expert_agent_capabilities() -> str:
+    """Build expertAgent capabilities section from YAML config.
 
-| 実現困難なタスク | 理由 | 代替案 | API機能追加が必要か |
-|---------------|------|-------|------------------|
-| **Slack通知** | Slack APIなし | Gmail送信で代替 | 低優先度で提案可能 |
-| **Discord通知** | Discord APIなし | Gmail送信で代替 | 低優先度で提案可能 |
-| **SMS送信** | SMS APIなし | Gmail送信で代替 | 中優先度で提案可能 |
-| **Trello操作** | Trello APIなし | Google DriveでCSV管理 | 低優先度で提案可能 |
-| **Notion操作** | Notion APIなし | Google DriveでMarkdown管理 | 中優先度で提案可能 |
-| **データベース直接操作** | DB接続APIなし | File Reader/Writer + CSV | 高優先度で提案可能 |
-| **SSH接続** | SSH APIなし | 実装困難 | 高優先度で提案可能 |
-| **ファイル削除** | 削除APIなし | 実装困難 | 中優先度で提案可能 |
-"""
+    Returns:
+        Formatted expertAgent capabilities string
+    """
+    config = _load_yaml_config("expert_agent_capabilities.yaml")
+    lines = ["### expertAgent Direct API一覧", ""]
 
-EVALUATION_SYSTEM_PROMPT = f"""あなたはワークフロー品質評価の専門家です。
+    # Utility APIs
+    utility_apis = config.get("utility_apis", [])
+    if utility_apis:
+        lines.append("#### Utility API (Direct API)")
+        lines.append("| API | エンドポイント | 用途 | 使用例 |")
+        lines.append("|-----|-------------|------|-------|")
+        for api in utility_apis:
+            use_cases = "、".join(api.get("use_cases", []))
+            lines.append(
+                f"| {api['name']} | `{api['endpoint']}` | "
+                f"{api['description']} | {use_cases} |"
+            )
+        lines.append("")
+
+    # AI Agent APIs
+    ai_agent_apis = config.get("ai_agent_apis", [])
+    if ai_agent_apis:
+        lines.append("#### AI Agent API (Direct API)")
+        lines.append("| Agent | エンドポイント | 用途 | 使用例 |")
+        lines.append("|-------|-------------|------|-------|")
+        for api in ai_agent_apis:
+            use_cases = "、".join(api.get("use_cases", []))
+            lines.append(
+                f"| {api['name']} | `{api['endpoint']}` | "
+                f"{api['description']} | {use_cases} |"
+            )
+
+    return "\n".join(lines)
+
+
+def _build_infeasible_tasks_table() -> str:
+    """Build infeasible tasks table from YAML config.
+
+    Returns:
+        Formatted infeasible tasks table string
+    """
+    config = _load_yaml_config("infeasible_tasks.yaml")
+    tasks = config.get("infeasible_tasks", [])
+
+    lines = [
+        "### 実現困難なタスクと代替案",
+        "",
+        "| 実現困難なタスク | 理由 | 代替案 | API機能追加が必要か |",
+        "|---------------|------|-------|------------------|",
+    ]
+
+    for task in tasks:
+        priority_label = f"{task['priority']}優先度で提案可能"
+        lines.append(
+            f"| **{task['task_type']}** | {task['reason']} | "
+            f"{task['alternative_api']} | {priority_label} |"
+        )
+
+    return "\n".join(lines)
+
+def _build_evaluation_system_prompt() -> str:
+    """Build evaluation system prompt with dynamic capability lists.
+
+    Returns:
+        Formatted evaluation system prompt
+    """
+    graphai_capabilities = _build_graphai_capabilities()
+    expert_agent_capabilities = _build_expert_agent_capabilities()
+    infeasible_tasks_table = _build_infeasible_tasks_table()
+
+    return f"""あなたはワークフロー品質評価の専門家です。
 タスク分割結果を6つの観点で評価します。
 
 ## 評価観点
@@ -197,11 +272,11 @@ EVALUATION_SYSTEM_PROMPT = f"""あなたはワークフロー品質評価の専�
 
 ## 利用可能な機能
 
-{GRAPHAI_CAPABILITIES}
+{graphai_capabilities}
 
-{EXPERT_AGENT_CAPABILITIES}
+{expert_agent_capabilities}
 
-{INFEASIBLE_TASKS_TABLE}
+{infeasible_tasks_table}
 
 ## 実現可能性評価の手順
 
@@ -277,6 +352,10 @@ JSON形式で以下の構造で出力してください：
   - 代替案がない → is_valid: false (API機能追加が必要)
 - いずれかのスコアが7点未満 → is_valid: false
 """
+
+
+# Build prompt at module load time (cached)
+EVALUATION_SYSTEM_PROMPT = _build_evaluation_system_prompt()
 
 
 def create_evaluation_prompt(

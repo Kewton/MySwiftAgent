@@ -1,0 +1,60 @@
+# GraphAI standard agent capabilities
+# This file is used for feasibility evaluation in the evaluator_node
+
+llm_agents:
+  - name: "anthropicAgent"
+    description: "Claude API直接呼び出し"
+    requires_api_key: true
+    api_key_name: "ANTHROPIC_API_KEY"
+
+  - name: "openAIAgent"
+    description: "OpenAI API直接呼び出し"
+    requires_api_key: true
+    api_key_name: "OPENAI_API_KEY"
+
+  - name: "geminiAgent"
+    description: "Gemini API直接呼び出し"
+    requires_api_key: true
+    api_key_name: "GOOGLE_API_KEY"
+
+http_agents:
+  - name: "fetchAgent"
+    description: "汎用HTTP APIクライアント（expertAgent呼び出しに使用）"
+
+data_transform_agents:
+  - name: "arrayJoinAgent"
+    description: "配列を文字列に結合"
+
+  - name: "copyAgent"
+    description: "値をコピー"
+
+  - name: "stringTemplateAgent"
+    description: "テンプレート文字列生成"
+
+  - name: "popAgent"
+    description: "配列の最後の要素を取得"
+
+  - name: "pushAgent"
+    description: "配列に要素を追加"
+
+  - name: "shiftAgent"
+    description: "配列の最初の要素を取得"
+
+  - name: "mapAgent"
+    description: "配列の各要素に関数を適用"
+
+  - name: "filterAgent"
+    description: "配列をフィルタリング"
+
+  - name: "sortByAgent"
+    description: "配列をソート"
+
+control_flow_agents:
+  - name: "nestedAgent"
+    description: "入力に対してグラフ全体を実行（ループ処理）"
+
+  - name: "mergeNodeIdAgent"
+    description: "複数ノードの結果をマージ"
+
+  - name: "bypassAgent"
+    description: "入力をそのまま出力"

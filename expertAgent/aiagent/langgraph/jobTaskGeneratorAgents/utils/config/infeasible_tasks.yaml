@@ -1,0 +1,51 @@
+# Infeasible tasks and their alternatives
+# This file is used for feasibility evaluation in the evaluator_node
+
+infeasible_tasks:
+  - task_type: "Slack通知"
+    reason: "Slack APIなし"
+    alternative_api: "Gmail送信で代替"
+    priority: "low"
+    notes: "Gmail送信で十分代替可能"
+
+  - task_type: "Discord通知"
+    reason: "Discord APIなし"
+    alternative_api: "Gmail送信で代替"
+    priority: "low"
+    notes: "Gmail送信で十分代替可能"
+
+  - task_type: "SMS送信"
+    reason: "SMS APIなし"
+    alternative_api: "Gmail送信で代替"
+    priority: "medium"
+    notes: "メール送信で代替可能だが、SMS特有の用途がある場合は中優先度"
+
+  - task_type: "Trello操作"
+    reason: "Trello APIなし"
+    alternative_api: "Google DriveでCSV管理"
+    priority: "low"
+    notes: "タスク管理はCSVで代替可能"
+
+  - task_type: "Notion操作"
+    reason: "Notion APIなし"
+    alternative_api: "Google DriveでMarkdown管理"
+    priority: "medium"
+    notes: "ドキュメント管理はMarkdownで代替可能"
+
+  - task_type: "データベース直接操作"
+    reason: "DB接続APIなし"
+    alternative_api: "File Reader/Writer + CSV"
+    priority: "high"
+    notes: "データ永続化が必要な場合は高優先度"
+
+  - task_type: "SSH接続"
+    reason: "SSH APIなし"
+    alternative_api: "実装困難"
+    priority: "high"
+    notes: "リモート操作が必要な場合は高優先度"
+
+  - task_type: "ファイル削除"
+    reason: "削除APIなし"
+    alternative_api: "実装困難"
+    priority: "medium"
+    notes: "ファイル管理が必要な場合は中優先度"
