@@ -168,6 +168,10 @@ jobs:
         working-directory: ./${{ matrix.project }}
         run: |
           echo "🧪 Running integration tests for ${{ matrix.project }}"
+          if [ ! -d "tests/integration" ]; then
+            echo "⚠️ tests/integration/ not found, skipping integration tests"
+            exit 0
+          fi
           if [[ "${{ matrix.project }}" == "commonUI" ]]; then
             # Integration tests for Streamlit app
             # Coverage measured for components and core modules

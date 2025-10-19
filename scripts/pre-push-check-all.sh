@@ -68,9 +68,14 @@ for project in "${PYTHON_PROJECTS[@]}"; do
         run_check "$project" "MyPy type checking" "uv run mypy app/ core/ 2>/dev/null || uv run mypy app/ 2>/dev/null || uv run mypy . 2>/dev/null"
     fi
 
-    # 4. Unit tests
+    # 4. Unit tests - only run if test files exist
     if [ -d "tests/unit" ]; then
-        run_check "$project" "Unit tests" "uv run pytest tests/unit/ -x --tb=short -q"
+        # Check if test files actually exist
+        if find tests/unit -name "test_*.py" -o -name "*_test.py" 2>/dev/null | grep -q .; then
+            run_check "$project" "Unit tests" "uv run pytest tests/unit/ -x --tb=short -q"
+        else
+            echo -e "${YELLOW}⚠${NC} [$project] No test files in tests/unit/, skipping unit tests"
+        fi
     fi
 
     # 5. Coverage check

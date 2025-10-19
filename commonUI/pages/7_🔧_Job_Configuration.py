@@ -413,7 +413,8 @@ def render_validation_panel() -> None:
         st.caption("**Validation Errors**")
         for error in errors:
             with st.expander(
-                f"🔴 {error.get('message', 'Unknown error')}", expanded=True,
+                f"🔴 {error.get('message', 'Unknown error')}",
+                expanded=True,
             ):
                 st.json(error.get("details", {}))
 
@@ -484,7 +485,10 @@ def render_publish_panel() -> None:
     )
 
     if st.button(
-        "🚀 Publish Version", key="publish_btn", width="stretch", type="primary",
+        "🚀 Publish Version",
+        key="publish_btn",
+        width="stretch",
+        type="primary",
     ):
         if publish_workflow_version(st.session_state.selected_workflow_master_id):
             load_validation_report(st.session_state.selected_workflow_master_id)

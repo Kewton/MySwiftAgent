@@ -248,7 +248,8 @@ def render_schema_editor(
 
 
 def render_interface_master_form(
-    mode: str = "create", initial_data: dict[str, Any] | None = None,
+    mode: str = "create",
+    initial_data: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Render InterfaceMaster creation/edit form.
 
@@ -626,7 +627,8 @@ def render_interface_detail() -> None:
 
         with col1:
             st.metric(
-                "Is Active", "✅ Yes" if interface_detail.get("is_active") else "❌ No",
+                "Is Active",
+                "✅ Yes" if interface_detail.get("is_active") else "❌ No",
             )
             st.metric("Created At", interface_detail.get("created_at", "N/A"))
 

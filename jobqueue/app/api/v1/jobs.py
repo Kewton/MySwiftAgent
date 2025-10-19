@@ -90,25 +90,28 @@ async def create_job(
                 )
 
             # Validate input data against interface schemas
-            if task_data.input_data:
-                # Get task master interfaces with eager loading of interface_master
-                interface_associations = await db.scalars(
-                    select(TaskMasterInterface)
-                    .where(TaskMasterInterface.task_master_id == task_master.id)
-                    .options(selectinload(TaskMasterInterface.interface_master))
-                )
-                for assoc in interface_associations.all():
-                    if assoc.required and assoc.interface_master.input_schema:
-                        try:
-                            InterfaceValidator.validate_input(
-                                task_data.input_data,
-                                assoc.interface_master.input_schema,
-                            )
-                        except InterfaceValidationError as e:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Task {task_data.sequence} input validation failed: {'; '.join(e.errors)}",
-                            ) from e
+            # Get task master interfaces with eager loading of interface_master
+            interface_associations = await db.scalars(
+                select(TaskMasterInterface)
+                .where(TaskMasterInterface.task_master_id == task_master.id)
+                .options(selectinload(TaskMasterInterface.interface_master))
+            )
+            for assoc in interface_associations.all():
+                if assoc.required and assoc.interface_master.input_schema:
+                    # Validate even if input_data is empty (required fields should be checked)
+                    input_data_to_validate = (
+                        task_data.input_data if task_data.input_data is not None else {}
+                    )
+                    try:
+                        InterfaceValidator.validate_input(
+                            input_data_to_validate,
+                            assoc.interface_master.input_schema,
+                        )
+                    except InterfaceValidationError as e:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Task {task_data.sequence} input validation failed: {'; '.join(e.errors)}",
+                        ) from e
 
             # Generate ULID for task ID
             task_id = f"t_{ulid_new()}"
@@ -383,25 +386,28 @@ async def create_job_from_master(
                 )
 
             # Validate input data against interface schemas
-            if task_data.input_data:
-                # Get task master interfaces with eager loading of interface_master
-                interface_associations = await db.scalars(
-                    select(TaskMasterInterface)
-                    .where(TaskMasterInterface.task_master_id == task_master.id)
-                    .options(selectinload(TaskMasterInterface.interface_master))
-                )
-                for assoc in interface_associations.all():
-                    if assoc.required and assoc.interface_master.input_schema:
-                        try:
-                            InterfaceValidator.validate_input(
-                                task_data.input_data,
-                                assoc.interface_master.input_schema,
-                            )
-                        except InterfaceValidationError as e:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Task {task_data.sequence} input validation failed: {'; '.join(e.errors)}",
-                            ) from e
+            # Get task master interfaces with eager loading of interface_master
+            interface_associations = await db.scalars(
+                select(TaskMasterInterface)
+                .where(TaskMasterInterface.task_master_id == task_master.id)
+                .options(selectinload(TaskMasterInterface.interface_master))
+            )
+            for assoc in interface_associations.all():
+                if assoc.required and assoc.interface_master.input_schema:
+                    # Validate even if input_data is empty (required fields should be checked)
+                    input_data_to_validate = (
+                        task_data.input_data if task_data.input_data is not None else {}
+                    )
+                    try:
+                        InterfaceValidator.validate_input(
+                            input_data_to_validate,
+                            assoc.interface_master.input_schema,
+                        )
+                    except InterfaceValidationError as e:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Task {task_data.sequence} input validation failed: {'; '.join(e.errors)}",
+                        ) from e
 
             # Generate ULID for task ID
             task_id = f"t_{ulid_new()}"

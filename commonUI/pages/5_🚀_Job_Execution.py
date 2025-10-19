@@ -46,7 +46,8 @@ def load_job_masters() -> None:
         api_config = config.get_api_config("JobQueue")
         with HTTPClient(api_config, "JobQueue") as client:
             response = client.get(
-                "/api/v1/job-masters", params={"page": 1, "size": 100},
+                "/api/v1/job-masters",
+                params={"page": 1, "size": 100},
             )
             job_masters = response.get("masters", [])
             st.session_state.job_exec_job_masters = job_masters
@@ -409,19 +410,23 @@ def render_job_detail() -> None:
                         st.write("**Task ID:**", task.get("id", "N/A"))
                         st.write("**Master ID:**", task.get("master_id", "N/A"))
                         st.write(
-                            "**Master Version:**", task.get("master_version", "N/A"),
+                            "**Master Version:**",
+                            task.get("master_version", "N/A"),
                         )
                         st.write("**Attempt:**", task.get("attempt", 0))
 
                     with task_col2:
                         st.write(
-                            "**Started At:**", format_datetime(task.get("started_at")),
+                            "**Started At:**",
+                            format_datetime(task.get("started_at")),
                         )
                         st.write(
-                            "**Finished At:**", format_datetime(task.get("finished_at")),
+                            "**Finished At:**",
+                            format_datetime(task.get("finished_at")),
                         )
                         st.write(
-                            "**Duration:**", format_duration_ms(task.get("duration_ms")),
+                            "**Duration:**",
+                            format_duration_ms(task.get("duration_ms")),
                         )
 
                     # Input Data
