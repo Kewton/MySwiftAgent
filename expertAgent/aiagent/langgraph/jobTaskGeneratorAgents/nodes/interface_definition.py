@@ -118,7 +118,8 @@ async def interface_definition_node(
         return {
             **state,
             "interface_definitions": interface_masters,
-            "retry_count": 0,
+            "evaluator_stage": "after_interface_definition",
+            "retry_count": state.get("retry_count", 0) + 1 if state.get("retry_count", 0) > 0 else 0,
         }
 
     except Exception as e:

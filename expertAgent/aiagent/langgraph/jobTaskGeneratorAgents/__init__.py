@@ -20,6 +20,9 @@ The agent follows 4 principles for task decomposition:
 Plus feasibility evaluation against GraphAI + expertAgent Direct API capabilities.
 """
 
+from aiagent.langgraph.jobTaskGeneratorAgents.agent import (
+    create_job_task_generator_agent,
+)
 from aiagent.langgraph.jobTaskGeneratorAgents.state import (
     JobTaskGeneratorState,
     create_initial_state,
@@ -28,4 +31,5 @@ from aiagent.langgraph.jobTaskGeneratorAgents.state import (
 __all__ = [
     "JobTaskGeneratorState",
     "create_initial_state",
+    "create_job_task_generator_agent",
 ]

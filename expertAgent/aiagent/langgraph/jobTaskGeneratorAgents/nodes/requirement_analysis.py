@@ -69,7 +69,8 @@ async def requirement_analysis_node(
             **state,
             "task_breakdown": [task.model_dump() for task in response.tasks],
             "overall_summary": response.overall_summary,
-            "retry_count": 0,
+            "evaluator_stage": "after_task_breakdown",
+            "retry_count": state.get("retry_count", 0) + 1 if state.get("retry_count", 0) > 0 else 0,
         }
 
     except Exception as e:
