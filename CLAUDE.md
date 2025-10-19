@@ -14,6 +14,24 @@
 - 🎯 **Personalized**：ユーザーの目的に合わせたカスタマイズ
 - 🔄 **Workflow-oriented**：LLMを軸にした柔軟なワークフロー設計
 
+---
+
+## 🚨 重要な参照ドキュメント
+
+開発を開始する前に、以下のドキュメントが該当するか確認してください：
+
+| 状況 | 参照ドキュメント | 必須度 |
+|------|----------------|--------|
+| **新プロジェクトを追加する** | [NEW_PROJECT_SETUP.md](./docs/procedures/NEW_PROJECT_SETUP.md) | 🔴 必須 |
+| **GraphAI ワークフローを開発する** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | 🔴 必須 |
+| **アーキテクチャを理解する** | [architecture-overview.md](./docs/design/architecture-overview.md) | 🟡 推奨 |
+| **環境変数を設定する** | [environment-variables.md](./docs/design/environment-variables.md) | 🟡 推奨 |
+| **myVault連携を実装する** | [myvault-integration.md](./docs/design/myvault-integration.md) | 🟡 推奨 |
+
+**重要**: 該当するドキュメントは作業開始前に必ず全文を読み、作業計画書 (`work-plan.md`) に参照を明記してください。
+
+---
+
 # 開発ルール
 
 ## 🌿 ブランチ構成
@@ -351,518 +369,50 @@ AI生成 → 静的解析 → テスト作成 → 🏷️ PRラベル付与 → 
 
 # 📦 新プロジェクト追加時の手順
 
-MySwiftAgentはマルチプロジェクト対応のモノレポ構成を採用しており、新しいマイクロサービス・プロジェクトの追加は以下の手順で行います。
+新しいマイクロサービス・プロジェクトを追加する際は、以下のドキュメントを**必ず**参照してください。
 
-**対応言語**: Python、TypeScript/Node.js
+## 📖 必須参照ドキュメント
 
-## 📋 追加手順チェックリスト
+**[新プロジェクトセットアップ手順書 (NEW_PROJECT_SETUP.md)](./docs/procedures/NEW_PROJECT_SETUP.md)**
 
-### 1. **プロジェクト基盤の作成**
+このドキュメントには以下の内容が含まれています：
 
-#### Python プロジェクトの場合
+- ✅ Python/TypeScript プロジェクトの基盤作成手順
+- ✅ CI/CD設定への追加方法
+- ✅ Docker対応・API実装・テスト環境の設定
+- ✅ 初回リリース実行手順
+- ✅ 品質チェック項目
 
-```bash
-# 新プロジェクトディレクトリ作成
-mkdir {project_name}
-cd {project_name}
+## ⚠️ 重要な注意事項
 
-# 必須ファイルの作成
-touch pyproject.toml
-touch Dockerfile
-mkdir -p app tests/unit tests/integration
-```
+### **新プロジェクト追加時の必須条件**
 
-**必須ファイル構成:**
-```
-{project_name}/
-├── pyproject.toml          # プロジェクト設定・依存関係・バージョン
-├── Dockerfile              # コンテナイメージ定義
-├── app/                    # アプリケーションコード
-│   ├── main.py            # FastAPIエントリーポイント
-│   └── core/              # コア機能
-├── tests/                  # テストコード
-│   ├── unit/              # 単体テスト
-│   ├── integration/       # 結合テスト
-│   └── conftest.py        # テスト設定
-└── README.md              # プロジェクト固有ドキュメント
-```
+1. **実装開始前に必ず `NEW_PROJECT_SETUP.md` を読むこと**
+   - すべての手順を理解してから作業開始
 
-#### TypeScript プロジェクトの場合
+2. **作業計画書に手順書の参照を明記すること**
+   - `./dev-reports/{branch_path}/work-plan.md` に以下を記載：
+   ```markdown
+   ## 📚 参考ドキュメント
+   - [新プロジェクトセットアップ手順書](../../docs/procedures/NEW_PROJECT_SETUP.md)
+   ```
 
-```bash
-# 新プロジェクトディレクトリ作成
-mkdir {project_name}
-cd {project_name}
+3. **制約条件チェック時に手順書の遵守を確認すること**
+   - 各Phase完了時に手順書の項目を確認
 
-# 必須ファイルの作成
-npm init -y
-touch tsconfig.json
-touch Dockerfile
-mkdir -p src tests
-```
+### **ブランチ命名規則との連動**
 
-**必須ファイル構成:**
-```
-{project_name}/
-├── package.json           # プロジェクト設定・依存関係・バージョン
-├── package-lock.json      # 依存関係ロックファイル
-├── tsconfig.json          # TypeScript設定
-├── Dockerfile             # コンテナイメージ定義
-├── src/                   # ソースコード
-│   ├── index.ts          # アプリケーションエントリーポイント
-│   └── app.ts            # Express/Fastifyアプリケーション
-├── tests/                 # テストコード
-│   ├── unit/             # 単体テスト
-│   └── integration/      # 結合テスト
-├── dist/                  # ビルド出力（.gitignore対象）
-└── README.md             # プロジェクト固有ドキュメント
-```
+新プロジェクト追加時は、以下のブランチ命名規則を推奨：
 
-### 2. **バージョン管理ファイルの設定**
+- **Python プロジェクト**: `feature/new-project-{project_name}-python`
+- **TypeScript プロジェクト**: `feature/new-project-{project_name}-typescript`
+- **例**: `feature/new-project-myservice-python`
 
-#### Python: pyproject.toml の設定
+このブランチ命名により、Claude Codeが自動的に手順書を参照します。
 
-```toml
-[project]
-name = "{project_name}"
-version = "0.1.0"  # 初回リリース用バージョン
-description = "プロジェクトの説明"
-authors = [
-    {name = "Your Name", email = "your.email@example.com"},
-]
-dependencies = [
-    "fastapi>=0.100.0",
-    "uvicorn>=0.23.0",
-    # その他の依存関係
-]
+---
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
-]
-
-[tool.ruff]
-target-version = "py312"
-line-length = 88
-
-[tool.mypy]
-python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
-```
-
-#### TypeScript: package.json の設定
-
-```json
-{
-  "name": "{project_name}",
-  "version": "0.1.0",
-  "description": "プロジェクトの説明",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "test": "jest",
-    "lint": "eslint src/**/*.ts",
-    "type-check": "tsc --noEmit"
-  },
-  "keywords": [],
-  "author": "Your Name <your.email@example.com>",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.18.0"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.0",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "jest": "^29.0.0",
-    "ts-jest": "^29.0.0",
-    "ts-node": "^10.0.0",
-    "typescript": "^5.0.0"
-  }
-}
-```
-
-**tsconfig.json の設定:**
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "commonjs",
-    "lib": ["ES2022"],
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
-}
-```
-
-### 3. **CI/CD設定への追加**
-
-#### 3.1 multi-release.yml ワークフローの更新
-
-**🎉 自動言語検出対応**
-
-`multi-release.yml` は **Python と TypeScript の両方に自動対応** しています。以下の検出ロジックで動作します：
-
-- **Python プロジェクト**: `pyproject.toml` の存在で検出
-- **TypeScript プロジェクト**: `package.json` の存在で検出
-
-**変更が必要な箇所:**
-
-プロジェクト検出リストに新プロジェクトを追加（行395付近）:
-
-```yaml
-# Multi-project format: release/multi/vYYYY.MM.DD or vX.Y.Z
-if [[ $BRANCH_NAME =~ ^release/multi/v(.+)$ ]]; then
-  # Detect changed projects from git diff
-  CHANGED_PROJECTS=""
-  for project in myscheduler jobqueue docs commonUI {project_name}; do  # ← 新プロジェクト追加
-    # Check if project has version file (pyproject.toml or package.json)
-    if ([[ -f "$project/pyproject.toml" ]] || [[ -f "$project/package.json" ]]) && git diff HEAD~1 HEAD --name-only | grep -q "^$project/"; then
-```
-
-**バージョン管理ファイル対応:**
-- **Python**: `pyproject.toml` の `version = "X.Y.Z"` 行を自動更新
-- **TypeScript**: `package.json` の `"version": "X.Y.Z"` フィールドを jq で自動更新
-
-**テスト・ビルドコマンド自動切替:**
-| 言語 | Linting | Type Check | Tests | Build |
-|------|---------|-----------|-------|-------|
-| **Python** | `uv run ruff check .` | `uv run mypy app/` | `uv run pytest` | `uv build` |
-| **TypeScript** | `npm run lint` | `npm run type-check` または `npx tsc --noEmit` | `npm test` | `npm run build` |
-
-#### 3.2 他のワークフローファイルの更新確認
-
-以下のワークフローが新プロジェクトに対応するか確認・更新：
-- `ci-feature.yml`
-- `cd-develop.yml`
-- `ci-main.yml`
-
-### 4. **Dockerfileの作成**
-
-#### Python プロジェクト用 Dockerfile
-
-```dockerfile
-FROM python:3.12-slim
-
-WORKDIR /app
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
-
-# Install dependencies
-RUN uv sync --no-dev
-
-# Copy application code
-COPY app/ ./app/
-
-# Health check endpoint
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
-
-EXPOSE 8000
-
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-#### TypeScript プロジェクト用 Dockerfile（Multi-stage build）
-
-```dockerfile
-# Build stage
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Copy dependency files
-COPY package*.json ./
-COPY tsconfig.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY src/ ./src/
-
-# Build TypeScript
-RUN npm run build
-
-# Production stage
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Copy only production dependencies
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy built application
-COPY --from=builder /app/dist ./dist
-
-# Health check endpoint
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
-
-EXPOSE 8000
-
-CMD ["node", "dist/index.js"]
-```
-
-### 5. **基本APIエンドポイントの実装**
-
-#### Python (FastAPI) 実装例
-
-**`app/main.py`**:
-```python
-from fastapi import FastAPI
-
-app = FastAPI(
-    title="{project_name}",
-    version="0.1.0",
-    description="プロジェクトの説明"
-)
-
-@app.get("/health")
-async def health_check():
-    """ヘルスチェックエンドポイント（CI/CDで使用）"""
-    return {"status": "healthy", "service": "{project_name}"}
-
-@app.get("/")
-async def root():
-    """ルートエンドポイント"""
-    return {"message": "Welcome to {project_name}"}
-
-@app.get("/api/v1/")
-async def api_root():
-    """API v1 ルート"""
-    return {"version": "1.0", "service": "{project_name}"}
-```
-
-#### TypeScript (Express) 実装例
-
-**`src/app.ts`**:
-```typescript
-import express, { Request, Response } from 'express';
-
-const app = express();
-
-app.use(express.json());
-
-// Health check endpoint (required for CI/CD)
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'healthy', service: '{project_name}' });
-});
-
-// Root endpoint
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to {project_name}' });
-});
-
-// API v1 root
-app.get('/api/v1/', (req: Request, res: Response) => {
-  res.json({ version: '1.0', service: '{project_name}' });
-});
-
-export default app;
-```
-
-**`src/index.ts`**:
-```typescript
-import app from './app';
-
-const PORT = process.env.PORT || 8000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-});
-```
-
-### 6. **テスト環境の設定**
-
-#### Python テストの設定
-
-**`tests/conftest.py`**:
-```python
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-
-@pytest.fixture
-def client():
-    return TestClient(app)
-```
-
-**`tests/integration/test_api.py`**:
-```python
-def test_health_check(client):
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "healthy", "service": "{project_name}"}
-
-def test_root_endpoint(client):
-    response = client.get("/")
-    assert response.status_code == 200
-```
-
-#### TypeScript テストの設定
-
-**`tests/integration/app.test.ts`**:
-```typescript
-import request from 'supertest';
-import app from '../../src/app';
-
-describe('API Endpoints', () => {
-  describe('GET /health', () => {
-    it('should return health status', async () => {
-      const response = await request(app).get('/health');
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        status: 'healthy',
-        service: '{project_name}'
-      });
-    });
-  });
-
-  describe('GET /', () => {
-    it('should return welcome message', async () => {
-      const response = await request(app).get('/');
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBeDefined();
-    });
-  });
-});
-```
-
-**jest.config.js**:
-```javascript
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts'],
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts'
-  ]
-};
-```
-
-**必須追加パッケージ:**
-```bash
-npm install --save-dev supertest @types/supertest jest ts-jest
-```
-
-### 7. **初回リリースの実行**
-
-#### Python プロジェクトの場合
-
-```bash
-# 1. 開発ブランチから作業開始
-git checkout develop
-git pull origin develop
-
-# 2. 新プロジェクト用feature/vibe ブランチ作成
-git checkout -b feature/{project_name}-initial-setup
-
-# 3. ファイル追加・コミット
-git add {project_name}/
-git commit -m "feat({project_name}): add initial Python project structure
-
-- Add pyproject.toml with basic dependencies
-- Add FastAPI application with health check
-- Add Docker configuration
-- Add test structure and basic tests
-- Add CI/CD integration
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-
-# 4. プッシュしてPR作成
-git push origin feature/{project_name}-initial-setup
-
-# 5. developブランチへのPR作成（featureラベル付与）
-gh pr create \
-  --title "🎉 Add new Python project: {project_name}" \
-  --body "初回Pythonプロジェクト追加..." \
-  --base develop \
-  --label feature
-```
-
-#### TypeScript プロジェクトの場合
-
-```bash
-# 1. 開発ブランチから作業開始
-git checkout develop
-git pull origin develop
-
-# 2. 新プロジェクト用feature/vibe ブランチ作成
-git checkout -b feature/{project_name}-initial-setup
-
-# 3. ファイル追加・コミット
-git add {project_name}/
-git commit -m "feat({project_name}): add initial TypeScript project structure
-
-- Add package.json with basic dependencies
-- Add Express application with health check
-- Add TypeScript configuration
-- Add Docker configuration (multi-stage build)
-- Add test structure with Jest and Supertest
-- Add CI/CD integration
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-
-# 4. プッシュしてPR作成
-git push origin feature/{project_name}-initial-setup
-
-# 5. developブランチへのPR作成（featureラベル付与）
-gh pr create \
-  --title "🎉 Add new TypeScript project: {project_name}" \
-  --body "初回TypeScriptプロジェクト追加..." \
-  --base develop \
-  --label feature
-```
-
-### 8. **リリースワークフローの実行**
-
-```bash
-# developマージ後、リリースワークフロー実行
-gh workflow run multi-release.yml \
-  -f projects={project_name} \
-  -f release_type=minor \
-  -f custom_version="0.1.0"
-
-# または手動でリリースブランチ作成
-git checkout develop
-git pull origin develop
-git checkout -b release/{project_name}/v0.1.0
-git push origin release/{project_name}/v0.1.0
-```
-
-## 📊 マルチプロジェクト対応状況
-
-### 現在のプロジェクト一覧
+## 📊 現在のプロジェクト一覧
 
 | プロジェクト | 目的 | 技術スタック | リリース状況 |
 |-------------|------|-------------|-------------|
@@ -870,110 +420,9 @@ git push origin release/{project_name}/v0.1.0
 | `jobqueue` | ジョブキュー管理 | FastAPI + Redis/PostgreSQL | 🚀 初回リリース準備中 |
 | `docs` | プロジェクトドキュメント | Markdown + 静的サイトジェネレータ | 📝 軽量ワークフロー対応 |
 
-### プロジェクト追加時のCI/CD更新箇所
+---
 
-- **`.github/workflows/multi-release.yml`**: workflow_dispatch inputsとジョブ条件
-- **`.github/workflows/ci-feature.yml`**: フィーチャーブランチ用品質チェック（docs/** パス除外設定済み）
-- **`.github/workflows/cd-develop.yml`**: 開発統合用テスト（docs/** パス除外設定済み）
-- **`.github/workflows/ci-main.yml`**: 本番品質チェック（docs/** パス除外設定済み）
-- **`.github/workflows/hotfix.yml`**: 緊急修正ワークフロー（docs変更時は軽量実行）
-- **`.github/workflows/docs.yml`**: **🆕 ドキュメント専用軽量ワークフロー**
-- **`.github/DEPLOYMENT.md`**: プロジェクト一覧表とリリース手順
-
-### 📝 ドキュメントプロジェクト専用の最適化
-
-**docs プロジェクト** は他のアプリケーションプロジェクトと異なり、以下の最適化が実装されています：
-
-#### **軽量ワークフロー分離**
-- **専用ワークフロー**: `.github/workflows/docs.yml`
-- **処理内容**: Markdownlinting、構造検証、静的サイト生成のみ
-- **除外処理**: Docker、Python依存関係、セキュリティスキャンは実行しない
-
-#### **パス除外設定**
-他の重いワークフローから `docs/**` パスを除外：
-```yaml
-paths:
-  - 'myscheduler/**'
-  - 'jobqueue/**'
-  - '.github/workflows/**'
-  # docs changes are handled by separate docs workflow
-  - '!docs/**'
-```
-
-#### **バージョン管理対応**
-- **リリースブランチ**: `release/docs/vX.Y.Z` 形式をサポート
-- **pyproject.toml**: 存在しない場合は軽量版を自動生成
-- **専用バリデーション**: multi-release.ymlでdocs専用の軽量チェックを実行
-
-## 🔧 新プロジェクト追加後の品質チェック
-
-### Python プロジェクトの品質チェック
-
-```bash
-# 新プロジェクトのローカル検証
-cd {project_name}
-
-# 1. 依存関係インストール
-uv sync --extra dev
-
-# 2. 品質チェック実行
-uv run ruff check .
-uv run ruff format . --check
-uv run mypy app/
-
-# 3. テスト実行
-uv run pytest tests/unit/ -v
-uv run pytest tests/integration/ -v
-
-# 4. アプリケーション起動テスト
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-# 5. ヘルスチェック
-curl -f http://localhost:8000/health
-```
-
-### TypeScript プロジェクトの品質チェック
-
-```bash
-# 新プロジェクトのローカル検証
-cd {project_name}
-
-# 1. 依存関係インストール
-npm ci
-
-# 2. 品質チェック実行
-npm run lint
-npm run type-check
-
-# 3. テスト実行
-npm test
-
-# 4. ビルド検証
-npm run build
-
-# 5. アプリケーション起動テスト
-npm start &
-sleep 5
-
-# 6. ヘルスチェック
-curl -f http://localhost:8000/health
-
-# 7. プロセス停止
-pkill -f "node dist/index.js"
-```
-
-## ⚠️ 注意事項
-
-1. **リリースブランチ命名**: 必ず `release/{project_name}/vX.Y.Z` 形式を使用
-2. **初回バージョン**: 新プロジェクトは `0.1.0` から開始することを推奨
-3. **CI/CD設定**: validate-releaseジョブのプロジェクトリスト（行395付近）への新プロジェクト追加が必須
-4. **依存関係管理**:
-   - **Python**: `uv`を使用し、`pyproject.toml`で一元管理
-   - **TypeScript**: `npm`を使用し、`package.json`で一元管理
-5. **Docker対応**: リリースフローではDockerイメージビルド・テストが必須
-6. **API規約**: ヘルスチェック（`/health`）とルートエンドポイント（`/`、`/api/v1/`）は実装必須（両言語共通）
-7. **必須npmスクリプト（TypeScript）**: `build`, `test`, `lint`, `type-check` は package.json に定義必須
-8. **バージョンファイル**: Python は `pyproject.toml`、TypeScript は `package.json` にバージョン記載必須
+**詳細は必ず [NEW_PROJECT_SETUP.md](./docs/procedures/NEW_PROJECT_SETUP.md) を参照してください。**
 ---
 
 # 🛡️ GitHub Actions エラー再発防止策
@@ -1197,6 +646,7 @@ git push
 - [ ] アーキテクチャは、 ./docs/design/architecture-overview.md に従うこと
 - [ ] システムで管理すべきパラメータは環境変数で管理するものとし、使用方法は、 ./docs/design/environment-variables.md に従うこと
 - [ ] ユーザーが管理すべきパラメータはmyVaultで管理するものとし、使用方法は、./docs/design/myvault-integration.md に従うこと
+- [ ] 新プロジェクト追加時は `./docs/procedures/NEW_PROJECT_SETUP.md` を必ず参照すること
 - [ ] コミットする前に、./scripts/pre-push-check-all.sh を実行し全プロジェクトの品質チェックに合格することを確認すること（単一プロジェクトのみ変更した場合は ./scripts/pre-push-check.sh でも可）
 - [ ] ユーザーからの依頼に対し下記方針で作業を進めること
   1. 対策案を提示する
@@ -1207,113 +657,455 @@ git push
 
 # 📝 作業ドキュメント管理
 
-## GraphAI ワークフロー開発時の参照ドキュメント
-
-GraphAI ワークフローを開発する際は、以下のドキュメントを必ず参照してください：
-
-### 必須ドキュメント
-1. **GRAPHAI_WORKFLOW_GENERATION_RULES.md**
-   - パス: `./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md`
-   - 内容: GraphAI の完全リファレンス
-   - 特に重要: 「mapAgentの出力形式と参照方法」セクション（Lines 189-303）
-
-2. **WORKFLOW_DEVELOPMENT_TEMPLATE.md**
-   - パス: `./graphAiServer/docs/WORKFLOW_DEVELOPMENT_TEMPLATE.md`
-   - 内容: ワークフロー開発の標準テンプレート
-   - 使用タイミング: 開発開始前に必ず読む
-
-3. **ITERATION_RECORD_TEMPLATE.md**
-   - パス: `./graphAiServer/docs/ITERATION_RECORD_TEMPLATE.md`
-   - 内容: イテレーション記録の標準フォーマット
-   - 使用タイミング: テスト・デバッグ時
-
-### 重要な注意事項
-
-#### mapAgent使用時
-- ✅ 必ず `compositeResult: true` を指定
-- ✅ 後続ノードでは `:mapAgentノード名.isResultノード名` で参照
-- ✅ `console.after: true` を追加してログを有効化
-
-#### デバッグ時
-- ✅ GraphAI APIレスポンスの `results` フィールドを必ず確認
-- ✅ `[object Object]` エラーが出たら、GRAPHAI_WORKFLOW_GENERATION_RULES.md の「よくあるエラーパターン」（Lines 2798-3020）を参照
-- ⚠️ YML実装が正しくても、実行結果が異なる可能性があるため、APIレスポンスを信頼
-
-#### Silent Failure に注意
-- LLMは破損データを受け取っても「それらしい出力」を生成する
-- 中間ノードの出力を必ず検証
-- エラーなし ≠ 正しい動作
-
----
-
 ## Claude Code 作業記録ルール
 
-Claude Codeによる開発作業では、以下のドキュメントを `./workspace/claudecode/` ディレクトリにMarkdown形式で保存します。
+Claude Codeによる開発作業では、以下のドキュメントを `./dev-reports/{branch_path}/` ディレクトリにMarkdown形式で保存します。
 
-### **必須ドキュメント**
+**ディレクトリ命名規則**: ブランチ名の階層構造を保持
+- 例: `feature/issue/104` → `./dev-reports/feature/issue/104/`
+- スラッシュで区切られた階層をそのままディレクトリ階層として作成
 
-| ドキュメント名 | 内容 | 更新タイミング |
-|-------------|------|-------------|
-| `{feature}-implementation-plan.md` | 要求・要件・外部仕様・設計方針・テスト計画 | 実装開始前 |
-| `{feature}-progress.md` | 途中経過・実装ログ・課題・決定事項 | 各フェーズ完了時 |
-| `{feature}-test-results.md` | テスト結果・カバレッジレポート・検証結果 | テスト実行後 |
+### **必須ドキュメント一覧**
+
+| ドキュメント名 | 内容 | 作成タイミング | 制約条件チェック |
+|-------------|------|-------------|----------------|
+| `design-policy.md` | 設計方針・アーキテクチャ判断・技術選定 | 実装開始前 | ✅ 必須 |
+| `work-plan.md` | 作業計画・Phase分解・スケジュール | 設計承認後 | ✅ 必須 |
+| `phase-{N}-progress.md` | Phase毎の作業内容・課題・決定事項 | 各Phase完了時 | ✅ 必須 |
+| `final-report.md` | 作業報告・テスト結果・納品物一覧 | 全作業完了時 | ✅ 必須 |
 
 ### **ドキュメント構成例**
 
 ```
-workspace/
-└── claudecode/
-    ├── file-reader-implementation-plan.md    # 実装計画書
-    ├── file-reader-progress.md               # 進捗記録
-    ├── file-reader-test-results.md           # テスト結果
-    └── README.md                              # ディレクトリ説明
+dev-reports/
+└── feature/
+    └── issue/
+        └── 104/
+            ├── design-policy.md          # 設計方針
+            ├── work-plan.md              # 作業計画
+            ├── phase-1-progress.md       # Phase 1 作業状況
+            ├── phase-2-progress.md       # Phase 2 作業状況
+            ├── phase-3-progress.md       # Phase 3 作業状況
+            └── final-report.md           # 最終作業報告
 ```
 
-### **記録対象の情報**
+---
 
-#### **実装計画書 (`*-implementation-plan.md`)**
-- ビジネス要求
-- 機能要件・非機能要件
-- 外部仕様（APIエンドポイント、インターフェース）
-- 設計方針（アーキテクチャ、ディレクトリ構成）
-- テスト計画（テストデータ、シナリオ）
-- 実装スケジュール
+## 🔍 制約条件チェックルール
 
-#### **進捗記録 (`*-progress.md`)**
-- 各フェーズの実装内容
-- 発生した課題と解決策
-- 設計変更の理由と内容
-- レビューコメントと対応
-- 技術的な決定事項
+### **チェック実施タイミング**
 
-#### **テスト結果 (`*-test-results.md`)**
-- 単体テスト結果
-- 統合テスト結果
-- カバレッジレポート
-- パフォーマンステスト結果
-- 不具合リストと修正状況
+以下のタイミングで**必ず**制約条件チェックを実施すること：
 
-### **運用ルール**
+1. **設計方針検討完了時** (`design-policy.md` 作成時)
+2. **作業計画立案完了時** (`work-plan.md` 作成時)
+3. **各Phase完了時** (`phase-{N}-progress.md` 作成時)
+4. **全作業完了時** (`final-report.md` 作成時)
 
-1. **実装開始前に必ず計画書を作成**
-   - ユーザーの承認を得てから実装開始
+### **チェック対象の制約条件**
 
-2. **各フェーズ完了時に進捗記録を更新**
-   - 実装内容、課題、決定事項を記録
+#### **1. コード品質原則**
+- [ ] **SOLID原則** の遵守
+  - Single Responsibility Principle (単一責任原則)
+  - Open-Closed Principle (開放/閉鎖原則)
+  - Liskov Substitution Principle (リスコフの置換原則)
+  - Interface Segregation Principle (インターフェース分離の原則)
+  - Dependency Inversion Principle (依存性逆転の原則)
+- [ ] **KISS原則** (Keep It Simple, Stupid)
+- [ ] **YAGNI原則** (You Aren't Gonna Need It)
+- [ ] **DRY原則** (Don't Repeat Yourself)
 
-3. **テスト実行後に結果を記録**
-   - カバレッジ、失敗ケース、修正内容を記録
+#### **2. アーキテクチャガイドライン**
+- [ ] `./docs/design/architecture-overview.md` に準拠
+- [ ] レイヤー分離の原則遵守
+- [ ] 依存関係の方向性確認
 
-4. **ドキュメントは常に最新状態を維持**
-   - 設計変更時は速やかに更新
+#### **3. 設定管理ルール**
+- [ ] システムパラメータは環境変数で管理（`./docs/design/environment-variables.md` 参照）
+- [ ] ユーザーパラメータはmyVaultで管理（`./docs/design/myvault-integration.md` 参照）
 
-5. **PRマージ時にドキュメントも含める**
-   - 作業記録をリポジトリに残す
+#### **4. 品質担保方針**
+- [ ] 単体テストカバレッジ **90%以上**
+- [ ] 結合テストカバレッジ **50%以上**
+- [ ] Ruff linting エラーゼロ
+- [ ] MyPy type checking エラーゼロ
 
-### **メリット**
+#### **5. CI/CD準拠**
+- [ ] PRラベルの適切な付与（`feature`, `fix`, `breaking`）
+- [ ] コミットメッセージ規約遵守
+- [ ] `./scripts/pre-push-check-all.sh` 合格
 
-- ✅ **トレーサビリティ**: 設計判断の根拠を追跡可能
-- ✅ **再現性**: 同様の作業を再現しやすい
-- ✅ **レビュー性**: レビュアーが背景を理解しやすい
-- ✅ **ナレッジ共有**: チーム全体で知見を共有
-- ✅ **AI学習**: Claude Codeが過去の作業から学習可能
+### **チェック実施方法**
+
+各ドキュメント作成時に、以下のセクションを必ず含めること：
+
+```markdown
+## ✅ 制約条件チェック結果
+
+### コード品質原則
+- [x] SOLID原則: 遵守 / 各クラスは単一責任
+- [x] KISS原則: 遵守 / シンプルな実装
+- [x] YAGNI原則: 遵守 / 必要最小限の機能のみ
+- [x] DRY原則: 遵守 / 共通処理はユーティリティ化
+
+### アーキテクチャガイドライン
+- [x] architecture-overview.md: 準拠 / レイヤー分離を維持
+- [ ] **要検討**: 新規エージェントの配置場所
+
+### 設定管理ルール
+- [x] 環境変数: 遵守 / DATABASE_URLを使用
+- [x] myVault: 遵守 / APIキーはmyVaultで管理
+
+### 品質担保方針
+- [x] 単体テストカバレッジ: 92% (目標90%以上)
+- [x] 結合テストカバレッジ: 55% (目標50%以上)
+- [x] Ruff linting: エラーゼロ
+- [x] MyPy type checking: エラーゼロ
+
+### CI/CD準拠
+- [x] PRラベル: feature ラベルを付与予定
+- [x] コミットメッセージ: 規約に準拠
+- [x] pre-push-check-all.sh: 実行予定
+
+### 参照ドキュメント遵守
+- [x] 新プロジェクト追加時: NEW_PROJECT_SETUP.md 遵守
+- [x] GraphAI ワークフロー開発時: GRAPHAI_WORKFLOW_GENERATION_RULES.md 遵守
+
+### 違反・要検討項目
+なし
+```
+
+---
+
+## 🔄 制約条件変更提案フロー
+
+制約条件違反が不可避な場合、以下の手順で対応すること：
+
+### **Step 1: 違反内容の明確化**
+
+ドキュメント内に以下の形式で記載：
+
+```markdown
+## ⚠️ 制約条件違反の検出
+
+### 違反項目
+- 品質担保方針 > 単体テストカバレッジ 90%以上
+
+### 違反理由
+- 外部API連携部分のモック化が困難
+- 実機テストが必要なため、単体テストカバレッジが78%にとどまる
+
+### 影響範囲
+- expertAgent プロジェクトのみ
+- 結合テストで実機検証を実施するため、品質リスクは限定的
+```
+
+### **Step 2: 変更方針の提案**
+
+```markdown
+## 💡 制約条件変更方針の提案
+
+### 提案内容
+**CLAUDE.md の品質担保方針を以下のように変更**:
+
+**変更前**:
+- 単体テストカバレッジ **90%以上** (すべてのプロジェクト)
+
+**変更後**:
+- 単体テストカバレッジ **90%以上** (原則)
+- **例外**: 外部API連携が主体のプロジェクトは **80%以上** を許容
+  - 条件: 結合テストで実機検証を実施すること
+  - 対象プロジェクト: expertAgent, jobqueue等
+
+### 変更理由
+- 外部API依存が強いプロジェクトでは、モック化コストが高い
+- 結合テストで実機検証を行うことで、品質を担保可能
+- 過度な単体テストは保守コストを増加させる（YAGNI原則）
+
+### 代替案
+1. **提案方針を採用** (推奨)
+2. モックライブラリ導入で90%を達成（コスト増）
+3. 現状維持で例外として承認を得る
+```
+
+### **Step 3: ユーザー承認**
+
+```markdown
+## 📋 ユーザー承認待ち
+
+以下の選択肢から選んでください：
+
+1. ✅ **変更方針を承認** → CLAUDE.md を更新
+2. ❌ **代替案2を採用** → モックライブラリ導入
+3. ⏸️ **現状維持** → 今回のみ例外として承認
+```
+
+### **Step 4: CLAUDE.md の更新**
+
+承認後、以下の手順でCLAUDE.mdを更新：
+
+1. CLAUDE.md の該当セクションを修正
+2. 変更履歴を `dev-reports/{branch_path}/constraint-changes.md` に記録
+3. PRのコミットメッセージに変更理由を明記
+
+---
+
+## 📋 ドキュメントテンプレート
+
+### **1. design-policy.md**
+
+```markdown
+# 設計方針: {機能名}
+
+**作成日**: YYYY-MM-DD
+**ブランチ**: {branch_name}
+**担当**: Claude Code
+
+---
+
+## 📋 要求・要件
+
+### ビジネス要求
+- [ユーザーの要求を記載]
+
+### 機能要件
+- [機能要件を箇条書き]
+
+### 非機能要件
+- パフォーマンス: [目標値]
+- セキュリティ: [要件]
+- 可用性: [目標値]
+
+---
+
+## 🏗️ アーキテクチャ設計
+
+### システム構成
+[アーキテクチャ図・説明]
+
+### 技術選定
+| 技術要素 | 選定技術 | 選定理由 |
+|---------|---------|---------|
+| フレームワーク | FastAPI | 非同期処理・高速性能 |
+| データベース | PostgreSQL | トランザクション制御 |
+
+### ディレクトリ構成
+```
+project/
+├── app/
+│   ├── api/       # APIエンドポイント
+│   ├── core/      # ビジネスロジック
+│   └── models/    # データモデル
+└── tests/
+```
+
+---
+
+## ✅ 制約条件チェック結果
+[上記のチェックリスト形式で記載]
+
+---
+
+## 📝 設計上の決定事項
+1. [決定事項1]
+2. [決定事項2]
+```
+
+### **2. work-plan.md**
+
+```markdown
+# 作業計画: {機能名}
+
+**作成日**: YYYY-MM-DD
+**予定工数**: X人日
+**完了予定**: YYYY-MM-DD
+
+---
+
+## 📚 参考ドキュメント
+
+**必須参照** (該当する場合):
+- [ ] [新プロジェクトセットアップ手順書](../../docs/procedures/NEW_PROJECT_SETUP.md)
+- [ ] [GraphAI ワークフロー生成ルール](../../graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)
+
+**推奨参照**:
+- [ ] [アーキテクチャ概要](../../docs/design/architecture-overview.md)
+- [ ] [環境変数管理](../../docs/design/environment-variables.md)
+- [ ] [myVault連携](../../docs/design/myvault-integration.md)
+
+---
+
+## 📊 Phase分解
+
+**注**: Phase数はプロジェクト規模に応じて調整可能
+
+### Phase 1: 基盤実装 (X日)
+- [ ] データベーススキーマ設計
+- [ ] モデル実装
+- [ ] 単体テスト作成
+
+### Phase 2: API実装 (X日)
+- [ ] エンドポイント実装
+- [ ] バリデーション実装
+- [ ] 結合テスト作成
+
+### Phase 3: 品質担保 (X日)
+- [ ] カバレッジ確認
+- [ ] パフォーマンステスト
+- [ ] ドキュメント作成
+
+---
+
+## ✅ 制約条件チェック結果
+[チェックリスト]
+
+---
+
+## 📅 スケジュール
+| Phase | 開始予定 | 完了予定 | 状態 |
+|-------|---------|---------|------|
+| Phase 1 | MM/DD | MM/DD | 予定 |
+| Phase 2 | MM/DD | MM/DD | 予定 |
+| Phase 3 | MM/DD | MM/DD | 予定 |
+```
+
+### **3. phase-{N}-progress.md**
+
+```markdown
+# Phase {N} 作業状況: {機能名}
+
+**Phase名**: {Phase名}
+**作業日**: YYYY-MM-DD
+**所要時間**: X時間
+
+---
+
+## 📝 実装内容
+[実装した内容を詳細に記載]
+
+---
+
+## 🐛 発生した課題
+| 課題 | 原因 | 解決策 | 状態 |
+|------|------|-------|------|
+| [課題1] | [原因] | [解決策] | 解決済 |
+
+---
+
+## 💡 技術的決定事項
+1. [決定事項1]
+2. [決定事項2]
+
+---
+
+## ✅ 制約条件チェック結果
+[チェックリスト]
+
+---
+
+## 📊 進捗状況
+- Phase {N} タスク完了率: XX%
+- 全体進捗: XX%
+```
+
+### **4. final-report.md**
+
+```markdown
+# 最終作業報告: {機能名}
+
+**完了日**: YYYY-MM-DD
+**総工数**: X人日
+**ブランチ**: {branch_name}
+**PR**: #XXX
+
+---
+
+## ✅ 納品物一覧
+- [ ] ソースコード ({project_name}/app/)
+- [ ] 単体テスト (tests/unit/)
+- [ ] 結合テスト (tests/integration/)
+- [ ] ドキュメント (./dev-reports/)
+
+---
+
+## 📊 品質指標
+| 指標 | 目標 | 実績 | 判定 |
+|------|------|------|------|
+| 単体テストカバレッジ | 90%以上 | XX% | ✅/❌ |
+| 結合テストカバレッジ | 50%以上 | XX% | ✅/❌ |
+| Ruff linting | エラーゼロ | XX件 | ✅/❌ |
+| MyPy type checking | エラーゼロ | XX件 | ✅/❌ |
+
+---
+
+## 🎯 目標達成度
+- [x] 機能要件: すべて実装完了
+- [x] 非機能要件: パフォーマンス目標達成
+- [x] 品質担保: カバレッジ目標達成
+
+---
+
+## ✅ 制約条件チェック結果 (最終)
+[最終チェックリスト]
+
+---
+
+## 📚 参考資料
+- [参考にしたドキュメント・記事]
+```
+
+---
+
+## 🚀 運用フロー
+
+### **実装開始時**
+```bash
+# 1. ブランチ作成
+git checkout -b feature/issue/104
+
+# 2. ドキュメントディレクトリ作成
+mkdir -p ./dev-reports/feature/issue/104
+
+# 3. 設計方針ドキュメント作成
+# → design-policy.md を作成し、制約条件チェック実施
+
+# 4. ユーザー承認後、作業計画ドキュメント作成
+# → work-plan.md を作成し、制約条件チェック実施
+```
+
+### **Phase作業時**
+```bash
+# 各Phase完了時
+# → phase-{N}-progress.md を作成し、制約条件チェック実施
+```
+
+### **作業完了時**
+```bash
+# 全作業完了後
+# → final-report.md を作成し、制約条件チェック実施
+# → PR作成時にdev-reports/をコミットに含める
+```
+
+---
+
+## 💡 メリット
+
+### **トレーサビリティ向上**
+- ✅ ブランチ階層構造で作業履歴を管理
+- ✅ 設計判断の根拠を追跡可能
+- ✅ Phase毎の進捗を可視化
+
+### **品質担保の強化**
+- ✅ 各工程で制約条件チェックを強制
+- ✅ 違反の早期発見・早期対応
+- ✅ 制約条件変更の透明性確保
+
+### **レビュー性の向上**
+- ✅ レビュアーが設計意図を理解しやすい
+- ✅ Phase毎の作業内容が明確
+- ✅ 最終報告で品質指標を確認可能
+
+### **ナレッジ共有**
+- ✅ チーム全体で作業パターンを共有
+- ✅ 過去の判断事例を参照可能
+- ✅ AI学習による品質向上
