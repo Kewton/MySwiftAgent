@@ -53,9 +53,13 @@ async def generate_job_and_tasks(
         # Load ANTHROPIC_API_KEY from myVault and set as environment variable
         # This is required for ChatAnthropic to work properly
         try:
-            anthropic_api_key = secrets_manager.get_secret("ANTHROPIC_API_KEY", project=None)
+            anthropic_api_key = secrets_manager.get_secret(
+                "ANTHROPIC_API_KEY", project=None
+            )
             os.environ["ANTHROPIC_API_KEY"] = anthropic_api_key
-            logger.info(f"ANTHROPIC_API_KEY loaded from myVault (prefix: {anthropic_api_key[:20]}..., length: {len(anthropic_api_key)})")
+            logger.info(
+                f"ANTHROPIC_API_KEY loaded from myVault (prefix: {anthropic_api_key[:20]}..., length: {len(anthropic_api_key)})"
+            )
         except ValueError as e:
             logger.error(f"Failed to load ANTHROPIC_API_KEY from myVault: {e}")
             raise HTTPException(
@@ -81,9 +85,7 @@ async def generate_job_and_tasks(
 
         logger.info("Invoking LangGraph agent")
         # Phase 8: Set recursion_limit to 50 (default is 25)
-        final_state = await agent.ainvoke(
-            initial_state, config={"recursion_limit": 50}
-        )
+        final_state = await agent.ainvoke(initial_state, config={"recursion_limit": 50})
 
         logger.info("LangGraph agent execution completed")
         logger.debug(f"Final state keys: {final_state.keys()}")

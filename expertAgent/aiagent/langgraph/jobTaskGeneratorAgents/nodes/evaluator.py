@@ -138,8 +138,12 @@ async def evaluator_node(
             feedback_parts.append("## 品質スコア")
             feedback_parts.append(f"- 階層的分解: {response.hierarchical_score}/10")
             feedback_parts.append(f"- 依存関係の明確性: {response.dependency_score}/10")
-            feedback_parts.append(f"- 具体性と実行可能性: {response.specificity_score}/10")
-            feedback_parts.append(f"- モジュール性と再利用性: {response.modularity_score}/10")
+            feedback_parts.append(
+                f"- 具体性と実行可能性: {response.specificity_score}/10"
+            )
+            feedback_parts.append(
+                f"- モジュール性と再利用性: {response.modularity_score}/10"
+            )
             feedback_parts.append(f"- 全体的一貫性: {response.consistency_score}/10")
 
             # Add improvement suggestions

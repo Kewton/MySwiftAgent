@@ -88,7 +88,10 @@ class TestBuildResponseFromState:
         assert result.infeasible_tasks[0]["task_name"] == "Slack Notification"
         assert len(result.alternative_proposals) == 1
         assert result.alternative_proposals[0]["alternative"] == "Gmail Notification"
-        assert result.error_message is None
+        # Phase 1 improvement: partial_success provides user-friendly feedback in error_message
+        assert result.error_message is not None
+        assert "Job successfully created" in result.error_message
+        assert "infeasible" in result.error_message.lower()
 
     def test_partial_success_with_api_proposals(self):
         """Test partial success with API extension proposals."""
@@ -146,10 +149,10 @@ class TestBuildResponseFromState:
 
         assert result.status == "failed"
         assert result.job_id is None
-        assert (
-            result.error_message
-            == "Job generation did not complete. Check validation_errors or infeasible_tasks for details."
-        )
+        # Phase 1 improvement: failed state provides user-friendly feedback in error_message
+        assert result.error_message is not None
+        assert "Job generation did not complete successfully" in result.error_message
+        assert "retry" in result.error_message.lower()
 
     def test_validation_errors_case(self):
         """Test case with validation errors."""
@@ -181,10 +184,10 @@ class TestBuildResponseFromState:
 
         assert result.status == "failed"
         assert result.job_id is None
-        assert (
-            result.error_message
-            == "Job generation did not complete. Check validation_errors or infeasible_tasks for details."
-        )
+        # Phase 1 improvement: failed state provides user-friendly feedback in error_message
+        assert result.error_message is not None
+        assert "Job generation did not complete successfully" in result.error_message
+        assert "retry" in result.error_message.lower()
 
 
 class TestGenerateJobAndTasks:

@@ -186,7 +186,9 @@ async def interface_definition_node(
             )
 
             # Enhanced error handling: Log response and validate structure
-            logger.debug(f"InterfaceMaster response for task {task_id}: {interface_master}")
+            logger.debug(
+                f"InterfaceMaster response for task {task_id}: {interface_master}"
+            )
 
             # Defensive programming: Check if 'id' field exists
             if "id" not in interface_master:
