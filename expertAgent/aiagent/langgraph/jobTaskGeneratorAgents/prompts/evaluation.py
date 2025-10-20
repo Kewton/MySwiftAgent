@@ -138,6 +138,37 @@ class EvaluationResult(BaseModel):
                 return [v] if v.strip() else []
         return v
 
+    @field_validator(
+        "infeasible_tasks",
+        "alternative_proposals",
+        "api_extension_proposals",
+        mode="before",
+    )
+    @classmethod
+    def parse_json_array_field(cls, v, info):
+        """Convert string representation of JSON array to actual list of objects.
+
+        This handles cases where LLM returns a JSON array as a string
+        instead of an actual list of objects.
+
+        Args:
+            v: Value to validate (can be list or string)
+            info: Field validation info
+
+        Returns:
+            list: Parsed list or original list
+        """
+        if isinstance(v, str):
+            # Try to parse as JSON array
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                # If JSON parse fails, return empty list
+                return []
+        return v
+
 
 def _build_graphai_capabilities() -> str:
     """Build GraphAI capabilities section from YAML config.
