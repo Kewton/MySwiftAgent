@@ -23,6 +23,71 @@ from ..utils.schema_matcher import SchemaMatcher
 logger = logging.getLogger(__name__)
 
 
+def fix_regex_over_escaping(schema: dict[str, Any]) -> dict[str, Any]:
+    """Fix over-escaped regex patterns in JSON Schema.
+
+    This function fixes common over-escaping issues in JSON Schema patterns:
+    - Quadruple backslash (\\\\) → Double backslash (\\)
+    - Sextuple backslash (\\\\\\) → Double backslash (\\)
+
+    LLMs sometimes generate over-escaped regex patterns when creating JSON Schema.
+    For example, they might generate "\\\\d{4}" instead of "\\d{4}".
+    This causes JSON Schema V7 validation to fail with "is not a 'regex'" error.
+
+    Args:
+        schema: JSON Schema dictionary (input_schema or output_schema)
+
+    Returns:
+        Fixed JSON Schema dictionary with corrected regex patterns
+
+    Examples:
+        >>> schema = {"pattern": "^\\\\\\\\d{4}$"}
+        >>> fix_regex_over_escaping(schema)
+        {"pattern": "^\\\\d{4}$"}
+
+        >>> schema = {"properties": {"name": {"pattern": "^[\\\\\\\\p{L}]+$"}}}
+        >>> fix_regex_over_escaping(schema)
+        {"properties": {"name": {"pattern": "^[\\\\p{L}]+$"}}}
+    """
+
+    def fix_pattern_value(value: str) -> str:
+        """Fix a single pattern string by reducing over-escaping."""
+        original = value
+
+        # Fix quadruple backslash → double backslash
+        # Examples: \\\\d → \\d, \\\\p{L} → \\p{L}, \\\\s → \\s
+        fixed = value.replace("\\\\\\\\", "\\\\")
+
+        # Fix sextuple backslash → double backslash (rare but possible)
+        fixed = fixed.replace("\\\\\\\\\\\\", "\\\\")
+
+        if original != fixed:
+            logger.debug(
+                f"Fixed over-escaped regex pattern:\n"
+                f"  Before: {original}\n"
+                f"  After:  {fixed}"
+            )
+
+        return fixed
+
+    def traverse_and_fix(obj: Any) -> Any:
+        """Recursively traverse and fix all pattern fields in the schema."""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if key == "pattern" and isinstance(value, str):
+                    # Fix the pattern string
+                    obj[key] = fix_pattern_value(value)
+                else:
+                    # Recursively process nested objects
+                    obj[key] = traverse_and_fix(value)
+        elif isinstance(obj, list):
+            return [traverse_and_fix(item) for item in obj]
+
+        return obj
+
+    return traverse_and_fix(schema)
+
+
 async def interface_definition_node(
     state: JobTaskGeneratorState,
 ) -> JobTaskGeneratorState:
@@ -84,12 +149,19 @@ async def interface_definition_node(
             f"Interfaces: {[iface.interface_name for iface in response.interfaces]}"
         )
 
+        # Fix over-escaped regex patterns in schemas (Phase 3-A)
+        logger.info("Applying regex over-escaping fix to interface schemas")
+        for iface in response.interfaces:
+            # Fix regex patterns in input and output schemas
+            iface.input_schema = fix_regex_over_escaping(iface.input_schema)
+            iface.output_schema = fix_regex_over_escaping(iface.output_schema)
+
         # Log detailed response for debugging (enhanced logging)
         for iface in response.interfaces:
             logger.debug(
                 f"Interface {iface.task_id} ({iface.interface_name}):\n"
-                f"  Input Schema: {iface.input_schema}\n"
-                f"  Output Schema: {iface.output_schema}"
+                f"  Input Schema (after fix): {iface.input_schema}\n"
+                f"  Output Schema (after fix): {iface.output_schema}"
             )
 
         # Initialize jobqueue client and schema matcher
