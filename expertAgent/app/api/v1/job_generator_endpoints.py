@@ -1,6 +1,7 @@
 """API endpoints for Job/Task Auto-Generation."""
 
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -10,6 +11,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents import (
     create_job_task_generator_agent,
 )
 from app.schemas.job_generator import JobGeneratorRequest, JobGeneratorResponse
+from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,19 @@ async def generate_job_and_tasks(
     logger.info(f"Job generation request received: {request.user_requirement[:100]}...")
 
     try:
+        # Load ANTHROPIC_API_KEY from myVault and set as environment variable
+        # This is required for ChatAnthropic to work properly
+        try:
+            anthropic_api_key = secrets_manager.get_secret("ANTHROPIC_API_KEY", project=None)
+            os.environ["ANTHROPIC_API_KEY"] = anthropic_api_key
+            logger.info(f"ANTHROPIC_API_KEY loaded from myVault (prefix: {anthropic_api_key[:20]}..., length: {len(anthropic_api_key)})")
+        except ValueError as e:
+            logger.error(f"Failed to load ANTHROPIC_API_KEY from myVault: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="ANTHROPIC_API_KEY not configured in myVault. Please add it via CommonUI.",
+            ) from e
+
         # Create initial state
         initial_state = create_initial_state(
             user_requirement=request.user_requirement,

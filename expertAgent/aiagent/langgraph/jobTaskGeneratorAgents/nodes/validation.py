@@ -96,6 +96,7 @@ async def validation_node(
         model = ChatAnthropic(
             model="claude-haiku-4-5",
             temperature=0.0,
+            max_tokens=4096,  # Increased from default 1024 to handle complex validations
         )
 
         # Create structured output model

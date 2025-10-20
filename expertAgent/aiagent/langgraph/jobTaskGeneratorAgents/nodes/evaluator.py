@@ -68,6 +68,7 @@ async def evaluator_node(
     model = ChatAnthropic(
         model="claude-haiku-4-5",
         temperature=0.0,
+        max_tokens=4096,  # Increased from default 1024 to handle complex evaluations
     )
 
     # Create structured output model
