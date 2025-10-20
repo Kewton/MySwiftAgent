@@ -9,6 +9,7 @@ requirements into executable tasks following 4 principles:
 """
 
 import logging
+import os
 
 from langchain_anthropic import ChatAnthropic
 
@@ -16,6 +17,7 @@ from ..prompts.task_breakdown import (
     TASK_BREAKDOWN_SYSTEM_PROMPT,
     TaskBreakdownResponse,
     create_task_breakdown_prompt,
+    create_task_breakdown_prompt_with_feedback,
 )
 from ..state import JobTaskGeneratorState
 
@@ -36,20 +38,33 @@ async def requirement_analysis_node(
     logger.info("Starting requirement analysis node")
 
     user_requirement = state["user_requirement"]
+    evaluation_feedback = state.get("evaluation_feedback")
+
     logger.debug(f"User requirement: {user_requirement}")
+    if evaluation_feedback:
+        logger.info("Evaluation feedback detected - using feedback-enhanced prompt")
+        logger.debug(f"Feedback: {evaluation_feedback}")
 
     # Initialize LLM (claude-haiku-4-5)
+    max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
     model = ChatAnthropic(
         model="claude-haiku-4-5",
         temperature=0.0,
-        max_tokens=4096,  # Increased from default 1024 to handle complex task breakdowns
+        max_tokens=max_tokens,
     )
+    logger.debug(f"Using max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(TaskBreakdownResponse)
 
-    # Create prompt
-    user_prompt = create_task_breakdown_prompt(user_requirement)
+    # Create prompt (with feedback if available)
+    if evaluation_feedback:
+        user_prompt = create_task_breakdown_prompt_with_feedback(
+            user_requirement, evaluation_feedback
+        )
+    else:
+        user_prompt = create_task_breakdown_prompt(user_requirement)
+
     logger.debug(f"Created task breakdown prompt (length: {len(user_prompt)})")
 
     try:

@@ -6,6 +6,7 @@ InterfaceMasters in jobqueue.
 """
 
 import logging
+import os
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
@@ -51,12 +52,14 @@ async def interface_definition_node(
 
     logger.debug(f"Task breakdown count: {len(task_breakdown)}")
 
-    # Initialize LLM (claude-haiku-4-5)
+    # Initialize LLM (claude-haiku-4-5) - Faster execution with improved error handling
+    max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
     model = ChatAnthropic(
         model="claude-haiku-4-5",
         temperature=0.0,
-        max_tokens=4096,  # Increased from default 1024 to handle complex interface definitions
+        max_tokens=max_tokens,
     )
+    logger.debug(f"Using model=claude-haiku-4-5, max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(InterfaceSchemaResponse)
@@ -81,6 +84,14 @@ async def interface_definition_node(
             f"Interfaces: {[iface.interface_name for iface in response.interfaces]}"
         )
 
+        # Log detailed response for debugging (enhanced logging)
+        for iface in response.interfaces:
+            logger.debug(
+                f"Interface {iface.task_id} ({iface.interface_name}):\n"
+                f"  Input Schema: {iface.input_schema}\n"
+                f"  Output Schema: {iface.output_schema}"
+            )
+
         # Initialize jobqueue client and schema matcher
         client = JobqueueClient()
         matcher = SchemaMatcher(client)
@@ -101,6 +112,20 @@ async def interface_definition_node(
                 input_schema=interface_def.input_schema,
                 output_schema=interface_def.output_schema,
             )
+
+            # Enhanced error handling: Log response and validate structure
+            logger.debug(f"InterfaceMaster response for task {task_id}: {interface_master}")
+
+            # Defensive programming: Check if 'id' field exists
+            if "id" not in interface_master:
+                error_msg = (
+                    f"InterfaceMaster response missing 'id' field for task {task_id}.\n"
+                    f"Interface name: {interface_name}\n"
+                    f"Response content: {interface_master}\n"
+                    f"Response keys: {list(interface_master.keys()) if isinstance(interface_master, dict) else 'Not a dict'}"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
 
             interface_masters[task_id] = {
                 "interface_master_id": interface_master["id"],

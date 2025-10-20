@@ -6,6 +6,7 @@ if validation errors are detected.
 """
 
 import logging
+import os
 
 from langchain_anthropic import ChatAnthropic
 
@@ -93,11 +94,13 @@ async def validation_node(
         interface_list = list(interface_definitions.values())
 
         # Initialize LLM (claude-haiku-4-5)
+        max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
         model = ChatAnthropic(
             model="claude-haiku-4-5",
             temperature=0.0,
-            max_tokens=4096,  # Increased from default 1024 to handle complex validations
+            max_tokens=max_tokens,
         )
+        logger.debug(f"Using max_tokens={max_tokens}")
 
         # Create structured output model
         structured_model = model.with_structured_output(ValidationFixResponse)

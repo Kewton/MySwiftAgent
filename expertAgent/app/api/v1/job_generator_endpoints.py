@@ -134,7 +134,7 @@ def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
     if validation_result and not validation_result.get("is_valid", True):
         validation_errors = validation_result.get("errors", [])
 
-    # Determine status
+    # Determine status and generate user-friendly feedback
     if error_message:
         status = "failed"
         logger.warning(f"Job generation failed: {error_message}")
@@ -145,6 +145,44 @@ def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
                 f"Job generation partially successful (Job ID: {job_id}) "
                 f"with {len(infeasible_tasks)} infeasible tasks"
             )
+
+            # Generate user-friendly feedback for partial success
+            feedback_parts = [
+                f"Job successfully created (ID: {job_id}), but some tasks may require manual review:"
+            ]
+
+            if infeasible_tasks:
+                feedback_parts.append(
+                    f"\n{len(infeasible_tasks)} task(s) marked as potentially infeasible:"
+                )
+                for task in infeasible_tasks[:3]:  # Show first 3 tasks
+                    task_name = task.get("task_name", "Unknown")
+                    reason = task.get("reason", "No reason provided")
+                    feedback_parts.append(f"  - {task_name}: {reason}")
+                if len(infeasible_tasks) > 3:
+                    feedback_parts.append(
+                        f"  ... and {len(infeasible_tasks) - 3} more. See 'infeasible_tasks' for full list."
+                    )
+
+            if alternative_proposals:
+                feedback_parts.append(
+                    f"\n{len(alternative_proposals)} alternative proposal(s) available:"
+                )
+                for proposal in alternative_proposals[:3]:  # Show first 3 proposals
+                    task_id = proposal.get("task_id", "unknown")
+                    api = proposal.get("api_to_use", "unknown API")
+                    feedback_parts.append(f"  - Task {task_id}: Consider using {api}")
+                if len(alternative_proposals) > 3:
+                    feedback_parts.append(
+                        f"  ... and {len(alternative_proposals) - 3} more. See 'alternative_proposals' for details."
+                    )
+
+            if api_extension_proposals:
+                feedback_parts.append(
+                    f"\n{len(api_extension_proposals)} API extension(s) proposed for future improvement."
+                )
+
+            error_message = "\n".join(feedback_parts)
         else:
             status = "success"
             logger.info(f"Job generation successful (Job ID: {job_id})")
@@ -152,10 +190,36 @@ def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
         # No job_id and no error_message means workflow ended before job_registration
         status = "failed"
         if not error_message:
-            error_message = (
-                "Job generation did not complete. "
-                "Check validation_errors or infeasible_tasks for details."
-            )
+            feedback_parts = ["Job generation did not complete successfully."]
+
+            if infeasible_tasks:
+                feedback_parts.append(
+                    f"\nEvaluation detected {len(infeasible_tasks)} infeasible task(s):"
+                )
+                for task in infeasible_tasks[:3]:
+                    task_name = task.get("task_name", "Unknown")
+                    reason = task.get("reason", "No reason provided")
+                    feedback_parts.append(f"  - {task_name}: {reason}")
+
+            if alternative_proposals:
+                feedback_parts.append(
+                    f"\n{len(alternative_proposals)} alternative solution(s) proposed. "
+                    "Consider revising requirements based on 'alternative_proposals'."
+                )
+
+            if validation_errors:
+                feedback_parts.append(
+                    f"\nValidation errors detected: {len(validation_errors)} error(s). "
+                    "See 'validation_errors' for details."
+                )
+
+            if not infeasible_tasks and not validation_errors:
+                feedback_parts.append(
+                    "\nPlease check evaluation result and retry count. "
+                    "Workflow may have exceeded maximum retry attempts."
+                )
+
+            error_message = "\n".join(feedback_parts)
 
     return JobGeneratorResponse(
         status=status,

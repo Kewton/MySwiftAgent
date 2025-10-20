@@ -140,3 +140,42 @@ def create_task_breakdown_prompt(user_requirement: str) -> str:
 
 JSON形式で出力してください。
 """
+
+
+def create_task_breakdown_prompt_with_feedback(
+    user_requirement: str,
+    evaluation_feedback: str,
+) -> str:
+    """Create task breakdown prompt with evaluation feedback for retry.
+
+    Args:
+        user_requirement: Natural language description of workflow
+        evaluation_feedback: Feedback from evaluator about previous attempt
+
+    Returns:
+        Formatted prompt string for LLM with feedback context
+    """
+    return f"""# ユーザー要求
+
+{user_requirement}
+
+# 前回のタスク分解に対する評価フィードバック
+
+前回のタスク分解には以下の問題が検出されました。これらの問題を解決した新しいタスク分解を生成してください。
+
+{evaluation_feedback}
+
+# 指示
+
+上記のユーザー要求を、4原則に従って実行可能なタスクに分解してください。
+**重要**: 前回の評価フィードバックで指摘された問題を必ず解決してください。
+
+- 各タスクは独立して実行可能であること
+- タスク間の依存関係を明確にすること
+- 具体的な入力と出力を定義すること
+- 全体として1つの完結したワークフローを構成すること
+- **実現不可能なタスク（infeasible tasks）を含めないこと**
+- **提案された代替案（alternative proposals）を考慮すること**
+
+JSON形式で出力してください。
+"""

@@ -11,6 +11,7 @@ API extensions when necessary.
 """
 
 import logging
+import os
 
 from langchain_anthropic import ChatAnthropic
 
@@ -65,11 +66,13 @@ async def evaluator_node(
         }
 
     # Initialize LLM (claude-haiku-4-5)
+    max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
     model = ChatAnthropic(
         model="claude-haiku-4-5",
         temperature=0.0,
-        max_tokens=4096,  # Increased from default 1024 to handle complex evaluations
+        max_tokens=max_tokens,
     )
+    logger.debug(f"Using max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(EvaluationResult)
@@ -126,10 +129,49 @@ async def evaluator_node(
                     f"  - {proposal.proposed_api_name} ({proposal.priority} priority)"
                 )
 
+        # Generate evaluation feedback for retry improvement
+        evaluation_feedback = None
+        if not response.is_valid:
+            feedback_parts = []
+
+            # Add quality scores feedback
+            feedback_parts.append("## 品質スコア")
+            feedback_parts.append(f"- 階層的分解: {response.hierarchical_score}/10")
+            feedback_parts.append(f"- 依存関係の明確性: {response.dependency_score}/10")
+            feedback_parts.append(f"- 具体性と実行可能性: {response.specificity_score}/10")
+            feedback_parts.append(f"- モジュール性と再利用性: {response.modularity_score}/10")
+            feedback_parts.append(f"- 全体的一貫性: {response.consistency_score}/10")
+
+            # Add improvement suggestions
+            if response.improvement_suggestions:
+                feedback_parts.append("\n## 改善提案")
+                for suggestion in response.improvement_suggestions:
+                    feedback_parts.append(f"- {suggestion}")
+
+            # Add infeasible tasks information
+            if response.infeasible_tasks:
+                feedback_parts.append("\n## 実現不可能なタスク")
+                for task in response.infeasible_tasks:
+                    feedback_parts.append(
+                        f"- {task.task_name} ({task.task_id}): {task.reason}"
+                    )
+
+            # Add alternative proposals
+            if response.alternative_proposals:
+                feedback_parts.append("\n## 代替案の提案")
+                for proposal in response.alternative_proposals:
+                    feedback_parts.append(
+                        f"- {proposal.task_id}: {proposal.api_to_use}を使用 - {proposal.implementation_note}"
+                    )
+
+            evaluation_feedback = "\n".join(feedback_parts)
+            logger.debug(f"Generated evaluation feedback:\n{evaluation_feedback}")
+
         # Update state
         return {
             **state,
             "evaluation_result": response.model_dump(),
+            "evaluation_feedback": evaluation_feedback,
             "retry_count": 0,
         }
 

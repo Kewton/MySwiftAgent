@@ -6,11 +6,14 @@ for each task in JSON Schema format, compatible with jobqueue InterfaceMaster.
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InterfaceSchemaDefinition(BaseModel):
     """Interface schema for a single task."""
+
+    # Allow extra fields (e.g., 'id') that LLM might generate
+    model_config = ConfigDict(extra="allow")
 
     task_id: str = Field(description="Task ID to define interface for")
     interface_name: str = Field(
@@ -79,7 +82,7 @@ INTERFACE_SCHEMA_SYSTEM_PROMPT = """あなたはAPI設計の専門家です。
     "date_from": {
       "type": "string",
       "description": "検索開始日 (YYYY-MM-DD形式)",
-      "pattern": "^\\\\d{4}-\\\\d{2}-\\\\d{2}$"
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
     }
   },
   "required": ["query"],
@@ -213,6 +216,12 @@ JSON形式で以下の構造で出力してください：
 2. **タスク間の整合性**: 前のタスクのoutput_schemaと次のタスクのinput_schemaが一致
 3. **エラーハンドリング**: すべての出力スキーマに `success` と `error_message` を含める
 4. **additionalProperties**: 予期しないフィールドを防ぐため `false` に設定
+5. **Regex pattern記述の注意**:
+   - JSON文字列内では1回エスケープ: `"pattern": "^\\d{4}-\\d{2}-\\d{2}$"`
+   - ❌ 間違い: `"pattern": "^\\\\d{4}..."` (4重エスケープ)
+   - ✅ 正しい: `"pattern": "^\\d{4}..."` (2重エスケープ)
+   - ✅ 正しい: `"pattern": "^[a-zA-Z0-9_]+$"` (通常の文字クラス)
+   - ✅ 正しい: `"pattern": "^[\\p{L}\\p{N}\\s\\-\\.\\(\\)&]+$"` (Unicode property escapes)
 """
 
 

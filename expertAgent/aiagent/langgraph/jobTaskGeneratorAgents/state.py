@@ -36,6 +36,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
         evaluation_result: Evaluation result against 6 principles
         evaluation_retry_count: Current evaluation retry count
         evaluation_errors: List of evaluation errors
+        evaluation_feedback: Feedback from evaluator for retry improvement
 
         # Validation & retry fields
         validation_result: Workflow validation result from jobqueue
@@ -70,6 +71,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
     evaluation_result: dict[str, Any] | None
     evaluation_retry_count: int
     evaluation_errors: list[str]
+    evaluation_feedback: str | None
 
     # ===== Validation & Retry =====
     validation_result: dict[str, Any] | None
@@ -115,6 +117,7 @@ def create_initial_state(
         "evaluation_result": None,
         "evaluation_retry_count": 0,
         "evaluation_errors": [],
+        "evaluation_feedback": None,
         # Validation & Retry
         "validation_result": None,
         "retry_count": 0,

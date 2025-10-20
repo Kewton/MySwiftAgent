@@ -7,10 +7,11 @@ according to 6 principles:
 6. Feasibility (implementable with GraphAI + expertAgent Direct API)
 """
 
+import json
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def _load_yaml_config(filename: str) -> dict:
@@ -110,6 +111,32 @@ class EvaluationResult(BaseModel):
     improvement_suggestions: list[str] = Field(
         default_factory=list, description="Suggestions for improvement"
     )
+
+    @field_validator("issues", "improvement_suggestions", mode="before")
+    @classmethod
+    def parse_string_to_list(cls, v):
+        """Convert string representation of list to actual list.
+
+        This handles cases where LLM returns a JSON array as a string
+        instead of an actual list, e.g., '["item1", "item2"]' instead of ["item1", "item2"].
+
+        Args:
+            v: Value to validate (can be list or string)
+
+        Returns:
+            list[str]: Parsed list or original list
+        """
+        if isinstance(v, str):
+            # Try to parse as JSON array
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    # Ensure all elements are strings
+                    return [str(item) for item in parsed]
+            except (json.JSONDecodeError, ValueError):
+                # If JSON parse fails, treat as single-item list
+                return [v] if v.strip() else []
+        return v
 
 
 def _build_graphai_capabilities() -> str:
