@@ -86,6 +86,20 @@ def evaluator_router(
         f"stage={evaluator_stage}, retry_count={retry_count}"
     )
 
+    # Phase 8: Check for empty results (tasks=[] or interfaces=[])
+    if evaluator_stage == "after_task_breakdown":
+        task_breakdown_result = state.get("task_breakdown_result", {})
+        tasks = task_breakdown_result.get("tasks", [])
+        if not tasks:
+            logger.error("Task breakdown returned empty tasks list → END")
+            return "END"
+    elif evaluator_stage == "after_interface_definition":
+        interface_definition_result = state.get("interface_definition_result", {})
+        interfaces = interface_definition_result.get("interfaces", [])
+        if not interfaces:
+            logger.error("Interface definition returned empty interfaces list → END")
+            return "END"
+
     # Log infeasible tasks if any
     infeasible_tasks = evaluation_result.get("infeasible_tasks", [])
     if infeasible_tasks:
@@ -267,7 +281,7 @@ def create_job_task_generator_agent() -> Any:
     # job_registration → END
     workflow.add_edge("job_registration", END)
 
-    # Compile graph
+    # Compile graph (Phase 8: recursion_limit is set via RunnableConfig at runtime)
     graph = workflow.compile()
 
     logger.info("Job/Task Generator Agent created successfully")
