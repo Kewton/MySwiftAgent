@@ -326,7 +326,17 @@ def _build_evaluation_system_prompt() -> str:
 - ユーザー要求を満たしているか
 
 ### 6. 実現可能性
-- **重要**: 各タスクがGraphAI標準Agent + expertAgent Direct APIで実現可能かを評価
+- **重要**: 各タスクが以下のいずれかで実現可能かを評価
+  1. GraphAI標準Agent
+  2. expertAgent Direct API
+  3. **LLMベース実装**（データ分析、テキスト処理、構造化出力）← Phase 9拡張
+  4. **Playwright Agent実装**（限定的: URL操作・基本的なページ操作のみ）← Phase 9拡張
+  5. **外部API連携**（fetchAgentによるREST API呼び出し、要API key登録）← Phase 9拡張
+  6. 上記の組み合わせによる複合ワークフロー
+
+**注意**: Playwright Agentは現状挙動が不安定なため、
+「指定URLへのアクセス + 基本操作 + URL取得」程度の限定的な用途のみ実装可能と判定。
+複雑なデータ収集やフォーム送信は実現困難と判定。
 
 ## 利用可能な機能
 
@@ -341,14 +351,22 @@ def _build_evaluation_system_prompt() -> str:
 1. **各タスクの実装方法を検討**
    - GraphAI標準Agentで実装可能か？
    - expertAgent Direct APIで実装可能か？
+   - **LLMベース実装で実装可能か？**（anthropicAgent/openAIAgentによるテキスト処理・データ分析）
+   - **Playwright Agentで実装可能か？**（限定的: URL操作のみ）
+   - **外部API連携で実装可能か？**（fetchAgent + user API key）
    - 複数APIの組み合わせで実装可能か？
 
 2. **実現困難なタスクの検出**
    - 上記の機能リストに該当するAPIがない
    - 複数APIを組み合わせても実装困難
+   - **LLMでも実装困難**（リアルタイム性必須、物理デバイス操作等）
+   - **Playwright Agentで実装困難**（複雑なデータ収集、フォーム送信）
 
 3. **代替案の検討** (優先度順)
    - 既存APIでの代替方法を提案
+   - **LLMベース代替案**: データ分析・テキスト処理は anthropicAgent で実装
+   - **fetchAgent + FileReader Agent代替案**: Playwright不使用のデータ取得
+   - **外部API連携代替案**: fetchAgent + user API key（Slack、Notion等）
    - 例: Slack通知 → Gmail送信で代替
 
 4. **API機能追加の提案** (代替不可の場合)
@@ -356,7 +374,53 @@ def _build_evaluation_system_prompt() -> str:
    - 優先度を判定 (high/medium/low)
    - high: ビジネス価値が高く、代替手段がない
    - medium: 有用だが、代替手段が存在する
-   - low: Nice-to-have、既存機能で十分対応可能
+   - low: Nice-to-have、既存機能で十分対応可能（例: Slack API key登録で実装可能）
+
+## LLMベース実装の評価基準（Phase 9）
+
+LLMで実装可能なタスク：
+- 📊 **データ分析**: 財務データ解釈、統計分析、トレンド分析
+- 📝 **テキスト処理**: 要約、分類、抽出、翻訳、感情分析
+- 🔧 **構造化出力**: JSON/Markdown/HTML生成、表作成
+- 💡 **自然言語理解**: 意図推定、エンティティ抽出
+- 💻 **コード生成**: Python/JavaScript等のコード生成
+
+評価例：
+- ✅ "売上データを分析してトレンドをまとめる" → anthropicAgent で実装可能
+- ✅ "ニュース記事を要約する" → anthropicAgent で実装可能
+- ✅ "データをMarkdown表に変換" → anthropicAgent で実装可能
+- ❌ "株価をリアルタイムで監視する" → リアルタイム性が必要で実装困難
+
+## Playwright Agent実装の評価基準（Phase 9、制限的）
+
+⚠️ **重要**: Playwright Agentは現状挙動が不安定なため、限定的な用途のみ実装可能と判定
+
+Playwright Agentで実装可能なタスク：
+- 🌐 **URL操作**: 指定URLへのアクセス
+- 🔘 **基本的なページ操作**: クリック、入力等の単純な操作
+- 🔗 **URL取得**: 操作後のURLを取得
+
+Playwright Agentで実装困難なタスク（代替案を提案）：
+- ❌ **複雑なデータ収集**: 大量データのスクレイピング → fetchAgent + FileReader Agentで代替
+- ❌ **フォーム送信**: Webフォームの入力・送信 → fetchAgent (POST request) で代替
+- ❌ **認証が必要なサイト**: ログインが必要な会員サイトのデータ取得 → 実装困難
+
+評価例：
+- ⚠️ "企業IRページから財務データを取得" → Google検索 + fetchAgent + FileReader Agentで実装可能（Playwright不使用）
+- ✅ "特定URLにアクセスしてリンク先URLを取得" → Playwright Agentで実装可能
+- ❌ "ニュース記事を大量に収集" → fetchAgent + anthropicAgentで代替推奨
+
+## 外部API連携の評価基準（Phase 9）
+
+fetchAgentで実装可能なタスク（要API key登録）：
+- 📱 **通知サービス**: Slack、Discord、SMS（ユーザーがAPI key登録済み）
+- 📊 **プロジェクト管理**: Notion、Trello（ユーザーがAPI key登録済み）
+- 🔍 **専門API**: 天気、地図、翻訳等の外部サービス
+
+評価例：
+- ✅ "Slack通知を送信" → fetchAgent + Slack API (要API key) で実装可能
+- ✅ "Notionにデータを保存" → fetchAgent + Notion API (要API key) で実装可能
+- ⚠️ "API keyが未登録の場合" → 実現困難だが、代替案として「myVaultにAPI key登録」を提案
 
 ## 評価結果の出力
 

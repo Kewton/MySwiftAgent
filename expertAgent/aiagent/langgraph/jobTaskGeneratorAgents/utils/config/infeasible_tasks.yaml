@@ -1,51 +1,36 @@
 # Infeasible tasks and their alternatives
 # This file is used for feasibility evaluation in the evaluator_node
 
+# ===== Phase 9: 厳格化された実現困難タスク =====
+# 削除: Slack通知、Discord通知、Notion操作、Trello操作
+# → fetchAgent + API keyで実装可能
+#
+# 削除: データベース直接操作
+# → jobqueue API経由で実装可能
+#
+# 残存: 真に実現困難なタスクのみ
+
 infeasible_tasks:
-  - task_type: "Slack通知"
-    reason: "Slack APIなし"
-    alternative_api: "Gmail送信で代替"
-    priority: "low"
-    notes: "Gmail送信で十分代替可能"
+  - task_type: "物理デバイス操作"
+    reason: "印刷、スキャン、USB接続デバイス制御"
+    alternative_api: "実装不可"
+    priority: "N/A"
+    notes: "ハードウェア制約により実装不可"
 
-  - task_type: "Discord通知"
-    reason: "Discord APIなし"
-    alternative_api: "Gmail送信で代替"
-    priority: "low"
-    notes: "Gmail送信で十分代替可能"
-
-  - task_type: "SMS送信"
-    reason: "SMS APIなし"
-    alternative_api: "Gmail送信で代替"
+  - task_type: "ファイルシステム直接操作"
+    reason: "expertAgent管轄外のファイル削除・移動"
+    alternative_api: "Google Drive経由での管理"
     priority: "medium"
-    notes: "メール送信で代替可能だが、SMS特有の用途がある場合は中優先度"
+    notes: "Driveアップロード→リンク共有で代替可能"
 
-  - task_type: "Trello操作"
-    reason: "Trello APIなし"
-    alternative_api: "Google DriveでCSV管理"
-    priority: "low"
-    notes: "タスク管理はCSVで代替可能"
-
-  - task_type: "Notion操作"
-    reason: "Notion APIなし"
-    alternative_api: "Google DriveでMarkdown管理"
-    priority: "medium"
-    notes: "ドキュメント管理はMarkdownで代替可能"
-
-  - task_type: "データベース直接操作"
-    reason: "DB接続APIなし"
-    alternative_api: "File Reader/Writer + CSV"
+  - task_type: "SSH/リモートサーバー操作"
+    reason: "リモートコマンド実行機能なし"
+    alternative_api: "実装不可（セキュリティリスク）"
     priority: "high"
-    notes: "データ永続化が必要な場合は高優先度"
+    notes: "将来的なAPI拡張候補"
 
-  - task_type: "SSH接続"
-    reason: "SSH APIなし"
-    alternative_api: "実装困難"
-    priority: "high"
-    notes: "リモート操作が必要な場合は高優先度"
-
-  - task_type: "ファイル削除"
-    reason: "削除APIなし"
-    alternative_api: "実装困難"
-    priority: "medium"
-    notes: "ファイル管理が必要な場合は中優先度"
+  - task_type: "リアルタイム高頻度処理"
+    reason: "HFT、リアルタイム動画処理等"
+    alternative_api: "バッチ処理で代替"
+    priority: "low"
+    notes: "用途に応じて代替可能"
