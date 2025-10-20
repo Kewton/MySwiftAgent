@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from app.models.job import BackoffStrategy
 
@@ -102,11 +102,24 @@ class JobMasterUpdate(BaseModel):
 
 
 class JobMasterResponse(BaseModel):
-    """Schema for job master creation/update response."""
+    """Schema for job master creation/update response.
+
+    Note: Both 'id' and 'master_id' are provided for API consistency.
+    - 'id': Standard field name for consistency with detail/list responses
+    - 'master_id': Legacy field name for backward compatibility
+    """
 
     master_id: str = Field(..., description="Unique master identifier")
+    id: str | None = Field(None, description="Job master ID (same as master_id)")
     name: str
     is_active: bool
+
+    @model_validator(mode="after")
+    def set_id_from_master_id(self) -> "JobMasterResponse":
+        """Ensure 'id' field is set from 'master_id' for consistency."""
+        if self.id is None:
+            self.id = self.master_id
+        return self
 
 
 class JobMasterDetail(BaseModel):

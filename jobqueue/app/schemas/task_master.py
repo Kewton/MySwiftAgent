@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 
 class TaskMasterCreate(BaseModel):
@@ -66,11 +66,24 @@ class TaskMasterUpdate(BaseModel):
 
 
 class TaskMasterResponse(BaseModel):
-    """Task master response schema."""
+    """Task master response schema.
+
+    Note: Both 'id' and 'master_id' are provided for API consistency.
+    - 'id': Standard field name for consistency with detail/list responses
+    - 'master_id': Legacy field name for backward compatibility
+    """
 
     master_id: str
+    id: str | None = Field(None, description="Task master ID (same as master_id)")
     name: str
     current_version: int
+
+    @model_validator(mode="after")
+    def set_id_from_master_id(self) -> "TaskMasterResponse":
+        """Ensure 'id' field is set from 'master_id' for consistency."""
+        if self.id is None:
+            self.id = self.master_id
+        return self
 
 
 class TaskMasterDetail(BaseModel):

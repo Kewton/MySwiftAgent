@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class InterfaceMasterCreate(BaseModel):
@@ -36,10 +36,23 @@ class InterfaceMasterUpdate(BaseModel):
 
 
 class InterfaceMasterResponse(BaseModel):
-    """Interface master response schema."""
+    """Interface master response schema.
+
+    Note: Both 'id' and 'interface_id' are provided for API consistency.
+    - 'id': Standard field name for consistency with detail/list responses
+    - 'interface_id': Legacy field name for backward compatibility
+    """
 
     interface_id: str
+    id: str | None = Field(None, description="Interface ID (same as interface_id)")
     name: str
+
+    @model_validator(mode="after")
+    def set_id_from_interface_id(self) -> "InterfaceMasterResponse":
+        """Ensure 'id' field is set from 'interface_id' for consistency."""
+        if self.id is None:
+            self.id = self.interface_id
+        return self
 
 
 class InterfaceMasterDetail(BaseModel):
