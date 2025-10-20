@@ -351,7 +351,7 @@ def _build_evaluation_system_prompt() -> str:
 1. **各タスクの実装方法を検討**
    - GraphAI標準Agentで実装可能か？
    - expertAgent Direct APIで実装可能か？
-   - **LLMベース実装で実装可能か？**（anthropicAgent/openAIAgentによるテキスト処理・データ分析）
+   - **LLMベース実装で実装可能か？**（geminiAgent (推奨)/anthropicAgent/openAIAgentによるテキスト処理・データ分析）
    - **Playwright Agentで実装可能か？**（限定的: URL操作のみ）
    - **外部API連携で実装可能か？**（fetchAgent + user API key）
    - 複数APIの組み合わせで実装可能か？
@@ -364,7 +364,7 @@ def _build_evaluation_system_prompt() -> str:
 
 3. **代替案の検討** (優先度順)
    - 既存APIでの代替方法を提案
-   - **LLMベース代替案**: データ分析・テキスト処理は anthropicAgent で実装
+   - **LLMベース代替案**: データ分析・テキスト処理は geminiAgent で実装 (推奨: コスト効率◎)
    - **fetchAgent + FileReader Agent代替案**: Playwright不使用のデータ取得
    - **外部API連携代替案**: fetchAgent + user API key（Slack、Notion等）
    - 例: Slack通知 → Gmail送信で代替
@@ -386,9 +386,9 @@ LLMで実装可能なタスク：
 - 💻 **コード生成**: Python/JavaScript等のコード生成
 
 評価例：
-- ✅ "売上データを分析してトレンドをまとめる" → anthropicAgent で実装可能
-- ✅ "ニュース記事を要約する" → anthropicAgent で実装可能
-- ✅ "データをMarkdown表に変換" → anthropicAgent で実装可能
+- ✅ "売上データを分析してトレンドをまとめる" → geminiAgent で実装可能 (推奨)
+- ✅ "ニュース記事を要約する" → geminiAgent で実装可能 (推奨)
+- ✅ "データをMarkdown表に変換" → geminiAgent で実装可能 (推奨)
 - ❌ "株価をリアルタイムで監視する" → リアルタイム性が必要で実装困難
 
 ## Playwright Agent実装の評価基準（Phase 9、制限的）

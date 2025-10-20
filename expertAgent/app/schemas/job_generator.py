@@ -84,6 +84,10 @@ class JobGeneratorResponse(BaseModel):
         default_factory=list,
         description="List of API extension proposals for unsupported features",
     )
+    requirement_relaxation_suggestions: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of requirement relaxation suggestions for infeasible tasks",
+    )
 
     # Validation
     validation_errors: list[str] = Field(
