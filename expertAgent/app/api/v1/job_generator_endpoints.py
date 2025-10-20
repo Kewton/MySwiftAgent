@@ -334,6 +334,21 @@ def _extract_available_capabilities(
         "external_services": set(),
     }
 
+    # Phase 10-D Fix: Add default capabilities from graphai_capabilities.yaml
+    # Since task_breakdown doesn't include "agents" field, we provide default capabilities
+    # that are always available in the system
+    capabilities["llm_based"].add("geminiAgent")  # Phase 10-A: Default recommended agent
+    capabilities["llm_based"].add("anthropicAgent")
+    capabilities["llm_based"].add("openAIAgent")
+    capabilities["llm_based"].add("テキスト処理")
+    capabilities["llm_based"].add("データ分析")
+    capabilities["llm_based"].add("構造化出力")
+    capabilities["api_integration"].add("fetchAgent")
+    capabilities["api_integration"].add("外部API呼び出し")
+    capabilities["data_transform"].add("stringTemplateAgent")
+    capabilities["data_transform"].add("mapAgent")
+    capabilities["data_transform"].add("arrayJoinAgent")
+
     for task in feasible_tasks:
         # Extract agents from task
         agents = task.get("agents", [])
