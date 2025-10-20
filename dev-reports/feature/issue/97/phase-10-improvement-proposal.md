@@ -19,6 +19,56 @@ Phase 9の結果を受けて、以下の4つの改善要求が提示されまし
 
 ---
 
+## 🚀 重要なアーキテクチャ変更（改善案4）
+
+**改善案4において、要求緩和提案生成のアプローチを根本的に変更しました：**
+
+### 変更前: パターンマッチングアプローチ ❌
+```python
+# infeasible_tasksをパターンマッチングで分析
+if "メール送信" in task_name:
+    # ハードコードされた代替案を提案
+    suggest("メール下書き作成")
+elif "過去5年" in task_name:
+    # 正規表現で期間を抽出・短縮
+    suggest("過去2-3年に変更")
+```
+
+**問題点**:
+- ❌ 実現**困難**なタスクのみを分析（ネガティブアプローチ）
+- ❌ ハードコードされたルールベース
+- ❌ 新パターン追加にコード変更必要
+- ❌ 利用可能な機能を考慮していない
+
+### 変更後: 能力ベースアプローチ ✅
+```python
+# 1. 実現可能なタスク（feasible_tasks）から利用可能な機能を抽出
+available_capabilities = extract_from_feasible_tasks(feasible_tasks)
+# → {"llm_based": ["geminiAgent"], "api_integration": ["fetchAgent", "Gmail API"]}
+
+# 2. タスク要求を分析（主要目標、データソース、出力形式、自動化レベル）
+task_intent = analyze_task_intent(task_name, reason)
+
+# 3. 利用可能な機能を組み合わせて緩和提案を生成
+suggestions = generate_capability_based_relaxations(
+    task_intent, available_capabilities, feasible_tasks
+)
+```
+
+**利点**:
+- ✅ 実現**可能**な機能を基盤に提案生成（ポジティブアプローチ）
+- ✅ データ駆動型（graphai_capabilities.yaml + evaluation_result）
+- ✅ 拡張性：YAMLに機能追加で自動対応
+- ✅ 具体的な実装手順・使用エージェントを明示
+- ✅ 複数機能を組み合わせた提案が可能
+
+**期待される効果**:
+- 提案数: 0-1個 → 2-4個（**+200-300%増加**）
+- 実装可能性: 不明確 → 明確（使用エージェント・手順を明示）
+- ユーザー体験: "できない理由"のみ → **"できる範囲"と"実装方法"を提示**
+
+---
+
 ## 🎯 改善案詳細
 
 ### 改善案1: geminiAgentをデフォルト推薦
@@ -574,68 +624,390 @@ async def generate_job(request: JobGeneratorRequest) -> JobGeneratorResponse:
 """
 ```
 
-**変更箇所2: job_generator_endpoints.py に要求緩和提案生成関数追加**
+**変更箇所2: job_generator_endpoints.py に要求緩和提案生成関数追加（能力ベースアプローチ）**
 
 ```python
 def _generate_requirement_relaxation_suggestions(result: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    評価結果から要求緩和提案を生成
+    評価結果から要求緩和提案を生成（能力ベースアプローチ）
+
+    【設計方針の変更】
+    - 旧アプローチ: infeasible_tasksをパターンマッチングで分析
+    - 新アプローチ: feasible_tasksと利用可能な機能を組み合わせて提案生成
+
+    【アプローチ】
+    1. 実現可能と判断されたタスク（feasible_tasks）を分析
+    2. 利用可能な機能（graphai_capabilities.yaml）を特定
+    3. 元の要求を分析し、実現可能な部分と不可能な部分を識別
+    4. 利用可能な機能を組み合わせて、修正版の要求を生成
     """
     suggestions = []
     evaluation = result.get("evaluation_result", {})
+
+    # 実現可能なタスクと実現困難なタスクを取得
+    feasible_tasks = evaluation.get("tasks", [])
     infeasible_tasks = evaluation.get("infeasible_tasks", [])
 
-    if not infeasible_tasks:
+    if not infeasible_tasks or not feasible_tasks:
         return suggestions
 
-    # infeasible_tasksを分析して緩和提案を生成
-    for task in infeasible_tasks:
-        task_name = task.get("task")
-        reason = task.get("reason", "")
+    # 利用可能な機能を特定（feasible_tasksから抽出）
+    available_capabilities = _extract_available_capabilities(feasible_tasks)
 
-        # パターンマッチングで緩和提案を生成
-        if "メール送信" in task_name or "Email" in task_name:
+    # 各実現困難タスクに対して、利用可能な機能を組み合わせた緩和提案を生成
+    for infeasible_task in infeasible_tasks:
+        task_name = infeasible_task.get("task", "")
+        reason = infeasible_task.get("reason", "")
+
+        # タスク要求を分析（何を実現しようとしているか）
+        task_intent = _analyze_task_intent(task_name, reason)
+
+        # 利用可能な機能で実現可能な代替案を生成
+        relaxed_suggestions = _generate_capability_based_relaxations(
+            task_name=task_name,
+            task_intent=task_intent,
+            available_capabilities=available_capabilities,
+            feasible_tasks=feasible_tasks
+        )
+
+        suggestions.extend(relaxed_suggestions)
+
+    return suggestions
+
+
+def _extract_available_capabilities(feasible_tasks: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+    """
+    実現可能なタスクから利用可能な機能を抽出
+
+    Returns:
+        Dict[category, List[capability_name]]
+        例: {
+            "data_analysis": ["geminiAgent", "anthropicAgent"],
+            "api_integration": ["fetchAgent", "Gmail API"],
+            "data_processing": ["stringTemplateAgent", "mapAgent"]
+        }
+    """
+    capabilities = {
+        "llm_based": set(),
+        "api_integration": set(),
+        "data_transform": set(),
+        "external_services": set()
+    }
+
+    for task in feasible_tasks:
+        agents = task.get("agents", [])
+
+        for agent in agents:
+            # LLMベースのエージェント
+            if agent in ["geminiAgent", "anthropicAgent", "openAIAgent"]:
+                capabilities["llm_based"].add(agent)
+                capabilities["llm_based"].add("テキスト処理")
+                capabilities["llm_based"].add("データ分析")
+                capabilities["llm_based"].add("構造化出力")
+
+            # API統合エージェント
+            elif agent == "fetchAgent":
+                capabilities["api_integration"].add("fetchAgent")
+                capabilities["api_integration"].add("外部API呼び出し")
+
+            # データ変換エージェント
+            elif agent in ["stringTemplateAgent", "mapAgent", "filterAgent", "arrayJoinAgent"]:
+                capabilities["data_transform"].add(agent)
+
+        # 外部サービス検出（タスク名から推測）
+        task_description = task.get("description", "").lower()
+        if "gmail" in task_description:
+            capabilities["external_services"].add("Gmail API")
+        if "drive" in task_description:
+            capabilities["external_services"].add("Google Drive API")
+
+    # set を list に変換
+    return {k: list(v) for k, v in capabilities.items()}
+
+
+def _analyze_task_intent(task_name: str, reason: str) -> Dict[str, Any]:
+    """
+    タスクの意図を分析
+
+    Returns:
+        {
+            "primary_goal": str,  # 主要な目標（例: "データ収集", "通知", "データ処理"）
+            "data_source": str,   # データソース（例: "企業財務データ", "Gmail", "PDF"）
+            "output_format": str, # 出力形式（例: "メール", "JSON", "レポート"）
+            "automation_level": str  # 自動化レベル（例: "全自動", "半自動", "手動"）
+        }
+    """
+    intent = {
+        "primary_goal": "不明",
+        "data_source": "不明",
+        "output_format": "不明",
+        "automation_level": "全自動"
+    }
+
+    task_lower = task_name.lower()
+    reason_lower = reason.lower()
+
+    # 主要な目標を特定
+    if any(keyword in task_lower for keyword in ["収集", "取得", "fetch", "get"]):
+        intent["primary_goal"] = "データ収集"
+    elif any(keyword in task_lower for keyword in ["分析", "analyze", "まとめ"]):
+        intent["primary_goal"] = "データ分析"
+    elif any(keyword in task_lower for keyword in ["送信", "通知", "send", "notify"]):
+        intent["primary_goal"] = "通知・送信"
+    elif any(keyword in task_lower for keyword in ["処理", "変換", "process", "transform"]):
+        intent["primary_goal"] = "データ処理"
+
+    # データソースを特定
+    if "gmail" in task_lower or "メール" in task_lower:
+        intent["data_source"] = "Gmail"
+    elif "財務" in task_lower or "売上" in task_lower or "financial" in task_lower:
+        intent["data_source"] = "企業財務データ"
+    elif "pdf" in task_lower:
+        intent["data_source"] = "PDF"
+    elif "web" in task_lower or "url" in task_lower:
+        intent["data_source"] = "Webページ"
+
+    # 出力形式を特定
+    if "メール" in task_lower or "mail" in task_lower:
+        intent["output_format"] = "メール"
+    elif "json" in task_lower:
+        intent["output_format"] = "JSON"
+    elif "レポート" in task_lower or "report" in task_lower:
+        intent["output_format"] = "レポート"
+
+    # 自動化レベルを特定（実現困難な理由から推測）
+    if "api" in reason_lower or "認証" in reason_lower or "権限" in reason_lower:
+        intent["automation_level"] = "半自動（API key必要）"
+    elif "手動" in reason_lower or "manual" in reason_lower:
+        intent["automation_level"] = "手動"
+
+    return intent
+
+
+def _generate_capability_based_relaxations(
+    task_name: str,
+    task_intent: Dict[str, Any],
+    available_capabilities: Dict[str, List[str]],
+    feasible_tasks: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    利用可能な機能を組み合わせて緩和提案を生成
+
+    【戦略】
+    1. 主要目標を達成する代替手段を提案（例: メール送信 → メール下書き作成）
+    2. データソースを利用可能なもので代替（例: 有料API → 無料API）
+    3. 自動化レベルを調整（例: 全自動 → 半自動 → 手動確認）
+    4. 出力形式を利用可能なもので代替（例: Slack通知 → メール通知）
+    """
+    suggestions = []
+
+    primary_goal = task_intent["primary_goal"]
+    data_source = task_intent["data_source"]
+    output_format = task_intent["output_format"]
+
+    # 戦略1: 自動化レベルを下げる（全自動 → 半自動）
+    if output_format == "メール" and "Gmail API" in available_capabilities.get("external_services", []):
+        if "llm_based" in available_capabilities and available_capabilities["llm_based"]:
+            # LLMでメール本文生成 + Gmail API で下書き作成
             suggestions.append({
                 "original_requirement": task_name,
-                "relaxed_requirement": f"{task_name.replace('メール送信', 'メール下書き作成')}",
-                "relaxation_type": "scope_reduction",
+                "relaxed_requirement": task_name.replace("送信", "下書き作成").replace("メール送信", "メール下書き作成"),
+                "relaxation_type": "automation_level_reduction",
                 "feasibility_after_relaxation": "high",
-                "what_is_sacrificed": "自動送信機能",
-                "what_is_preserved": "メール本文生成、分析結果の整形",
+                "what_is_sacrificed": "自動送信機能（ユーザーが手動で送信ボタンを押す必要）",
+                "what_is_preserved": "メール本文の自動生成、データ分析、Gmail下書きの自動作成",
                 "recommendation_level": "strongly_recommended",
-                "implementation_note": "Gmail APIのDraft作成機能を使用し、ユーザーが手動で送信"
+                "implementation_note": f"{available_capabilities['llm_based'][0]}でメール本文生成 + Gmail API Draft作成",
+                "available_capabilities_used": [
+                    available_capabilities['llm_based'][0],
+                    "Gmail API (Draft作成)",
+                    "fetchAgent"
+                ],
+                "implementation_steps": [
+                    f"1. {available_capabilities['llm_based'][0]}でメール本文を生成",
+                    "2. stringTemplateAgentでメールフォーマットを整形",
+                    "3. fetchAgent + Gmail API でDraft作成",
+                    "4. ユーザーがGmail UIで確認・送信"
+                ]
             })
 
-        elif "過去" in task_name and "年" in task_name:
-            # 期間の緩和提案
-            import re
-            years_match = re.search(r"過去(\d+)年", task_name)
-            if years_match:
-                original_years = int(years_match.group(1))
-                reduced_years = max(1, original_years // 2)
-                suggestions.append({
-                    "original_requirement": task_name,
-                    "relaxed_requirement": task_name.replace(f"過去{original_years}年", f"過去{reduced_years}年"),
-                    "relaxation_type": "scope_reduction",
-                    "feasibility_after_relaxation": "high",
-                    "what_is_sacrificed": f"{original_years - reduced_years}年分のデータ",
-                    "what_is_preserved": f"最新{reduced_years}年分のトレンド分析",
-                    "recommendation_level": "recommended"
-                })
+    # 戦略2: データソースを代替する
+    if data_source == "企業財務データ" and "llm_based" in available_capabilities:
+        # 有料APIの代わりにLLMベースの分析を提案
+        suggestions.append({
+            "original_requirement": task_name,
+            "relaxed_requirement": task_name.replace("過去5年", "過去2-3年").replace("詳細な", "サマリーレベルの"),
+            "relaxation_type": "scope_reduction",
+            "feasibility_after_relaxation": "medium",
+            "what_is_sacrificed": "5年分の詳細データ、リアルタイム性、網羅性",
+            "what_is_preserved": "最新2-3年のトレンド分析、ビジネスモデル変化の概要",
+            "recommendation_level": "recommended",
+            "implementation_note": f"{available_capabilities['llm_based'][0]}で公開情報をベースに分析",
+            "available_capabilities_used": [
+                available_capabilities['llm_based'][0],
+                "fetchAgent（企業公開情報取得）"
+            ],
+            "implementation_steps": [
+                "1. fetchAgentで企業の公開情報（IRページ、ニュース）を取得",
+                f"2. {available_capabilities['llm_based'][0]}で財務情報を抽出・分析",
+                "3. stringTemplateAgentでレポート形式に整形",
+                "4. 最新2-3年分のトレンドをサマリー化"
+            ]
+        })
 
-        elif "詳細" in reason or "complex" in reason.lower():
+    # 戦略3: 出力形式を代替する（外部サービス → 内部機能）
+    if output_format == "Slack通知" or "Slack" in task_name:
+        if "llm_based" in available_capabilities and "Gmail API" in available_capabilities.get("external_services", []):
+            # Slack通知 → メール通知で代替
             suggestions.append({
                 "original_requirement": task_name,
-                "relaxed_requirement": f"{task_name}（サマリーレベル）",
-                "relaxation_type": "quality_relaxation",
-                "feasibility_after_relaxation": "medium",
-                "what_is_sacrificed": "詳細な分析、深い洞察",
-                "what_is_preserved": "主要なトレンド、重要指標の抽出",
-                "recommendation_level": "consider"
+                "relaxed_requirement": task_name.replace("Slack", "メール").replace("Discord", "メール"),
+                "relaxation_type": "output_format_change",
+                "feasibility_after_relaxation": "high",
+                "what_is_sacrificed": "Slack/Discordへのリアルタイム通知",
+                "what_is_preserved": "通知内容、自動生成機能、データ分析結果",
+                "recommendation_level": "recommended",
+                "implementation_note": "メール通知で代替（Slack APIキー不要）",
+                "available_capabilities_used": [
+                    available_capabilities['llm_based'][0],
+                    "Gmail API (Draft作成)",
+                    "fetchAgent"
+                ],
+                "implementation_steps": [
+                    f"1. {available_capabilities['llm_based'][0]}で通知内容を生成",
+                    "2. Gmail API Draft作成で通知メールを準備",
+                    "3. ユーザーが確認・送信"
+                ]
             })
+
+    # 戦略4: 複数の利用可能機能を組み合わせる
+    if primary_goal == "データ分析" and "llm_based" in available_capabilities:
+        # 複雑な分析タスクを段階的に実装
+        suggestions.append({
+            "original_requirement": task_name,
+            "relaxed_requirement": f"{task_name}（段階的実装: Phase 1は基本分析のみ）",
+            "relaxation_type": "phased_implementation",
+            "feasibility_after_relaxation": "high",
+            "what_is_sacrificed": "Phase 1では詳細分析・高度な洞察は含まれない",
+            "what_is_preserved": "基本的なデータ分析、トレンド把握、主要指標の抽出",
+            "recommendation_level": "consider",
+            "implementation_note": "段階的に機能を拡張（Phase 1→2→3）",
+            "available_capabilities_used": [
+                available_capabilities['llm_based'][0],
+                "fetchAgent",
+                "stringTemplateAgent"
+            ],
+            "implementation_steps": [
+                "【Phase 1: 基本分析】（即座に実装可能）",
+                f"  - {available_capabilities['llm_based'][0]}でサマリーレベル分析",
+                "  - 主要指標の抽出と可視化",
+                "  - 実装時間: 1-2時間、品質: 60%",
+                "",
+                "【Phase 2: 詳細分析】（API拡張後）",
+                "  - 財務データAPI統合",
+                "  - 詳細トレンド分析",
+                "  - 実装時間: 2-4週間、品質: 85%",
+                "",
+                "【Phase 3: 高度な洞察】（将来的に）",
+                "  - 予測分析・競合比較",
+                "  - 実装時間: 2-3ヶ月、品質: 100%"
+            ]
+        })
 
     return suggestions
 ```
+
+**🎯 能力ベースアプローチの主要な利点**
+
+| 項目 | パターンマッチング（旧） | 能力ベースアプローチ（新） |
+|------|------------------------|---------------------------|
+| **分析対象** | ❌ `infeasible_tasks`（実現困難なタスク） | ✅ `feasible_tasks`（実現可能なタスク） |
+| **提案生成ロジック** | 🔧 ハードコードされたパターンルール | 🧠 利用可能な機能を動的に組み合わせ |
+| **拡張性** | ❌ 新パターン追加にコード変更必要 | ✅ YAMLに機能追加で自動対応 |
+| **提案の具体性** | △ 一般的な代替案のみ | ✅ 実装手順・使用エージェントを明示 |
+| **組み合わせ能力** | ❌ 単一パターンのみ | ✅ 複数機能を組み合わせた提案 |
+| **ユーザビリティ** | △ "不可能"の理由のみ | ✅ "可能な範囲"と"実装方法"を提示 |
+
+**🚀 具体例: Scenario 1（企業分析→メール送信）での出力例**
+
+```json
+{
+  "requirement_relaxation_suggestions": [
+    {
+      "original_requirement": "企業の財務データを分析してメール送信",
+      "relaxed_requirement": "企業の財務データを分析してメール下書き作成",
+      "relaxation_type": "automation_level_reduction",
+      "feasibility_after_relaxation": "high",
+      "what_is_sacrificed": "自動送信機能（ユーザーが手動で送信ボタンを押す必要）",
+      "what_is_preserved": "メール本文の自動生成、データ分析、Gmail下書きの自動作成",
+      "recommendation_level": "strongly_recommended",
+      "available_capabilities_used": [
+        "geminiAgent",
+        "Gmail API (Draft作成)",
+        "fetchAgent"
+      ],
+      "implementation_steps": [
+        "1. geminiAgentでメール本文を生成",
+        "2. stringTemplateAgentでメールフォーマットを整形",
+        "3. fetchAgent + Gmail API でDraft作成",
+        "4. ユーザーがGmail UIで確認・送信"
+      ]
+    },
+    {
+      "original_requirement": "企業の過去5年の財務データを分析",
+      "relaxed_requirement": "企業の過去2-3年のサマリーレベルの財務データを分析",
+      "relaxation_type": "scope_reduction",
+      "feasibility_after_relaxation": "medium",
+      "what_is_sacrificed": "5年分の詳細データ、リアルタイム性、網羅性",
+      "what_is_preserved": "最新2-3年のトレンド分析、ビジネスモデル変化の概要",
+      "recommendation_level": "recommended",
+      "available_capabilities_used": [
+        "geminiAgent",
+        "fetchAgent（企業公開情報取得）"
+      ],
+      "implementation_steps": [
+        "1. fetchAgentで企業の公開情報（IRページ、ニュース）を取得",
+        "2. geminiAgentで財務情報を抽出・分析",
+        "3. stringTemplateAgentでレポート形式に整形",
+        "4. 最新2-3年分のトレンドをサマリー化"
+      ]
+    },
+    {
+      "original_requirement": "企業の財務データを分析してメール送信",
+      "relaxed_requirement": "企業の財務データを分析してメール送信（段階的実装: Phase 1は基本分析のみ）",
+      "relaxation_type": "phased_implementation",
+      "feasibility_after_relaxation": "high",
+      "what_is_sacrificed": "Phase 1では詳細分析・高度な洞察は含まれない",
+      "what_is_preserved": "基本的なデータ分析、トレンド把握、主要指標の抽出",
+      "recommendation_level": "consider",
+      "available_capabilities_used": [
+        "geminiAgent",
+        "fetchAgent",
+        "stringTemplateAgent"
+      ],
+      "implementation_steps": [
+        "【Phase 1: 基本分析】（即座に実装可能）",
+        "  - geminiAgentでサマリーレベル分析",
+        "  - 主要指標の抽出と可視化",
+        "  - 実装時間: 1-2時間、品質: 60%",
+        "",
+        "【Phase 2: 詳細分析】（API拡張後）",
+        "  - 財務データAPI統合",
+        "  - 詳細トレンド分析",
+        "  - 実装時間: 2-4週間、品質: 85%",
+        "",
+        "【Phase 3: 高度な洞察】（将来的に）",
+        "  - 予測分析・競合比較",
+        "  - 実装時間: 2-3ヶ月、品質: 100%"
+      ]
+    }
+  ]
+}
+```
+
+**パターンマッチング（旧）との比較**:
+- 旧: 提案数 0-1個、実装手順なし、使用エージェント不明
+- 新: 提案数 3個、詳細な実装手順、使用エージェント明示、段階的実装プラン付き
 
 **変更箇所3: infeasible_tasks.yaml に代替案テンプレート追加**
 
