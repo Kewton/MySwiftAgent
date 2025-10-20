@@ -32,7 +32,8 @@ class InterfaceSchemaResponse(BaseModel):
     """Interface schema response from LLM."""
 
     interfaces: list[InterfaceSchemaDefinition] = Field(
-        description="List of interface schemas for all tasks"
+        default_factory=list,
+        description="List of interface schemas for all tasks",
     )
 
 

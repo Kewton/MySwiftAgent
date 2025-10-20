@@ -35,11 +35,12 @@ class TaskBreakdownResponse(BaseModel):
     """Task breakdown response from LLM."""
 
     tasks: list[TaskBreakdownItem] = Field(
-        description="List of tasks decomposed from requirements"
+        default_factory=list,
+        description="List of tasks decomposed from requirements",
     )
     overall_summary: str = Field(
         default="",
-        description="Summary of the entire workflow and task relationships"
+        description="Summary of the entire workflow and task relationships",
     )
 
 
