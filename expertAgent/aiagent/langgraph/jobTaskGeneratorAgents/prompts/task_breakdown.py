@@ -38,6 +38,7 @@ class TaskBreakdownResponse(BaseModel):
         description="List of tasks decomposed from requirements"
     )
     overall_summary: str = Field(
+        default="",
         description="Summary of the entire workflow and task relationships"
     )
 
