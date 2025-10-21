@@ -20,6 +20,56 @@ router = APIRouter()
 TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates" / "marp"
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), autoescape=True)
 
+# Relaxation type Japanese labels mapping
+RELAXATION_TYPE_LABELS_JA = {
+    "data_source_substitution": "データソース代替案",
+    "intermediate_step_skip": "中間処理の簡略化",
+    "output_format_change": "出力形式の変更",
+    "scope_reduction": "対象範囲の縮小",
+    "automation_level_reduction": "自動化レベルの調整",
+    "phased_implementation": "段階的実装",
+    "requirement_relaxation": "要求仕様の緩和",
+}
+
+
+def _get_relaxation_type_label(relaxation_type: str) -> str:
+    """Get Japanese label for relaxation type.
+
+    Args:
+        relaxation_type: Relaxation type key
+
+    Returns:
+        Japanese label (or original key if not found)
+    """
+    return RELAXATION_TYPE_LABELS_JA.get(relaxation_type, relaxation_type)
+
+
+def _group_suggestions_by_task(
+    suggestions: list[dict[str, Any]], tasks: list[dict[str, Any]]
+) -> dict[str, list[dict[str, Any]]]:
+    """Group requirement relaxation suggestions by task.
+
+    Args:
+        suggestions: List of requirement relaxation suggestions
+        tasks: List of tasks from task_breakdown
+
+    Returns:
+        Dictionary mapping task names to matching suggestions
+    """
+    task_suggestions: dict[str, list[dict[str, Any]]] = {}
+
+    for task in tasks:
+        task_name = task.get("task_name", "")
+        # Match suggestions where task_name appears in original_requirement
+        matching_suggestions = [
+            s
+            for s in suggestions
+            if task_name and task_name in s.get("original_requirement", "")
+        ]
+        task_suggestions[task_name] = matching_suggestions
+
+    return task_suggestions
+
 
 def _load_job_result(request: MarpReportRequest) -> dict[str, Any]:
     """Load job result from request data or file path.
@@ -64,16 +114,42 @@ def _extract_template_data(job_result: dict[str, Any]) -> dict[str, Any]:
     suggestions = job_result.get("requirement_relaxation_suggestions", [])
     infeasible_tasks = job_result.get("infeasible_tasks", [])
 
+    # Extract tasks from task_breakdown (handle both dict and list formats)
+    task_breakdown = job_result.get("task_breakdown", [])
+    if isinstance(task_breakdown, dict):
+        tasks = task_breakdown.get("tasks", [])
+    elif isinstance(task_breakdown, list):
+        tasks = task_breakdown
+    else:
+        tasks = []
+
+    # Add Japanese labels to suggestions
+    for suggestion in suggestions:
+        original_type = suggestion.get("relaxation_type", "")
+        suggestion["relaxation_type_ja"] = _get_relaxation_type_label(original_type)
+
+    # Group suggestions by task
+    task_suggestions_map = _group_suggestions_by_task(suggestions, tasks)
+
     # Calculate execution time if available (from error_message if present)
     execution_time = None
     # You can add logic here to parse execution time from state if needed
 
+    # Extract user requirement from error_message (if present)
+    error_message = job_result.get("error_message") or ""
+    if error_message:
+        user_requirement = (
+            error_message.split("\n")[0]
+            .replace("Job generation did not complete successfully.", "")
+            .strip()
+        )
+    else:
+        # Default message for success cases
+        user_requirement = "Job/Task 生成が正常に完了しました"
+
     return {
         "theme": "default",  # Will be overridden by request.theme
-        "user_requirement": job_result.get("error_message", "")
-        .split("\n")[0]
-        .replace("Job generation did not complete successfully.", "")
-        .strip(),
+        "user_requirement": user_requirement,
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "status": job_result.get("status", "unknown"),
         "infeasible_tasks_count": len(infeasible_tasks),
@@ -82,27 +158,39 @@ def _extract_template_data(job_result: dict[str, Any]) -> dict[str, Any]:
         "suggestions": suggestions,
         "job_id": job_result.get("job_id"),
         "include_implementation_steps": True,  # Will be overridden by request
+        "tasks": tasks,  # Task list for display
+        "tasks_count": len(tasks),  # Task count
+        "task_suggestions_map": task_suggestions_map,  # Map tasks to suggestions
     }
 
 
 def _count_slides(
     suggestions_count: int,
     include_implementation_steps: bool,  # noqa: ARG001
+    tasks_count: int = 0,
 ) -> int:
     """Calculate total number of slides.
 
     Args:
         suggestions_count: Number of requirement relaxation suggestions
         include_implementation_steps: Whether implementation steps are included
+        tasks_count: Number of tasks
 
     Returns:
         Total number of slides
     """
+    import math
+
     # Slide 1: Title
     # Slide 2: Summary
-    # Slides 3+: Suggestions (3 slides per suggestion)
+    # Slides 3+: Task list (5 tasks per slide)
+    # Slides N+: Suggestions (3 slides per suggestion)
     # Last slide: Conclusion
-    return 3 + (suggestions_count * 3)
+
+    task_slides = math.ceil(tasks_count / 5) if tasks_count > 0 else 0
+    suggestion_slides = suggestions_count * 3
+
+    return 3 + task_slides + suggestion_slides
 
 
 @router.post("/marp-report", response_model=MarpReportResponse)
@@ -139,8 +227,11 @@ async def generate_marp_report(request: MarpReportRequest) -> MarpReportResponse
 
         # Calculate metrics
         suggestions_count = template_data["suggestions_count"]
+        tasks_count = template_data["tasks_count"]
         slide_count = _count_slides(
-            suggestions_count, request.include_implementation_steps
+            suggestions_count,
+            request.include_implementation_steps,
+            tasks_count,
         )
         generation_time_ms = (time.time() - start_time) * 1000
 

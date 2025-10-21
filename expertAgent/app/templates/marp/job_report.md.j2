@@ -34,10 +34,37 @@ paginate: true
 
 ---
 
+{% if tasks_count > 0 %}
+{% for task in tasks %}
+{% if loop.index0 % 5 == 0 %}
+
+<!-- Slide Task-{{ (loop.index0 // 5) + 1 }}: タスク一覧 -->
+# 📋 生成されたタスク一覧 ({{ (loop.index0 // 5) + 1 }}/{{ ((tasks_count - 1) // 5) + 1 }})
+
+{% endif %}
+## {{ loop.index }}. {{ task.task_name }}
+
+**説明**: {{ task.description }}
+**優先度**: {{ task.priority }}
+
+{% if status == 'failed' and task.task_name in task_suggestions_map and task_suggestions_map[task.task_name]|length > 0 %}
+💡 **対策提案**: {{ task_suggestions_map[task.task_name]|length }}件
+{% for suggestion in task_suggestions_map[task.task_name][:2] %}
+  - {{ suggestion.relaxation_type_ja }}: {{ suggestion.relaxed_requirement[:50] }}...
+{% endfor %}
+{% endif %}
+
+{% if loop.index % 5 == 0 or loop.last %}
+
+---
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% if suggestions_count > 0 %}
 {% for suggestion in suggestions %}
 <!-- Slide {{ loop.index + 2 }}: 提案{{ loop.index }} -->
-# 💡 提案 {{ loop.index }}: {{ suggestion.relaxation_type }}
+# 💡 提案 {{ loop.index }}: {{ suggestion.relaxation_type_ja }}
 
 ## 元の要求
 {{ suggestion.original_requirement }}
