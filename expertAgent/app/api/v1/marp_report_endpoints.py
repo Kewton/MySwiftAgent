@@ -59,7 +59,8 @@ def _group_suggestions_by_task(
     task_suggestions: dict[str, list[dict[str, Any]]] = {}
 
     for task in tasks:
-        task_name = task.get("task_name", "")
+        # Support both 'name' and 'task_name' field names
+        task_name = task.get("name") or task.get("task_name", "")
         # Match suggestions where task_name appears in original_requirement
         matching_suggestions = [
             s
@@ -138,11 +139,22 @@ def _extract_template_data(job_result: dict[str, Any]) -> dict[str, Any]:
     # Extract user requirement from error_message (if present)
     error_message = job_result.get("error_message") or ""
     if error_message:
-        user_requirement = (
-            error_message.split("\n")[0]
-            .replace("Job generation did not complete successfully.", "")
-            .strip()
-        )
+        # Try to extract from first line
+        first_line = error_message.split("\n")[0]
+        user_requirement = first_line.replace(
+            "Job generation did not complete successfully.", ""
+        ).strip()
+
+        # If empty, generate from infeasible_tasks summary
+        if not user_requirement and infeasible_tasks:
+            task_names = [task.get("task_name", "") for task in infeasible_tasks[:3]]
+            user_requirement = (
+                f"以下のタスクを含むジョブ生成要求: {', '.join(task_names)}"
+                + ("等" if len(infeasible_tasks) > 3 else "")
+            )
+        # If still empty, use generic message
+        if not user_requirement:
+            user_requirement = "ジョブ/タスクの自動生成要求"
     else:
         # Default message for success cases
         user_requirement = "Job/Task 生成が正常に完了しました"

@@ -4,13 +4,33 @@ theme: {{ theme }}
 paginate: true
 ---
 
+<style>
+section.task-list {
+  font-size: 0.9em;
+}
+section.task-list h2 {
+  font-size: 1.2em;
+  margin-bottom: 0.3em;
+}
+section.task-list table {
+  font-size: 0.95em;
+  line-height: 1.3;
+}
+section.task-list th {
+  background-color: #f0f0f0;
+}
+</style>
+
 <!-- Slide 1: タイトル -->
 # Job/Task 生成レポート
 
-**ユーザー要求**: {{ user_requirement }}
+## ユーザー要求
+{{ user_requirement }}
+
+---
 
 **実行日時**: {{ timestamp }}
-**ステータス**: {{ status }}
+**ステータス**: `{{ status }}`
 
 ---
 
@@ -35,29 +55,35 @@ paginate: true
 ---
 
 {% if tasks_count > 0 %}
-{% for task in tasks %}
+{% for task in tasks -%}
 {% if loop.index0 % 5 == 0 %}
 
+<!-- _class: task-list -->
 <!-- Slide Task-{{ (loop.index0 // 5) + 1 }}: タスク一覧 -->
 # 📋 生成されたタスク一覧 ({{ (loop.index0 // 5) + 1 }}/{{ ((tasks_count - 1) // 5) + 1 }})
 
+{% if status == 'failed' %}
+**⚠️ 注意**: 実現不可能なタスクが含まれている可能性があります
 {% endif %}
-## {{ loop.index }}. {{ task.task_name }}
 
-**説明**: {{ task.description }}
-**優先度**: {{ task.priority }}
+| # | タスクID | タスク名 | 説明 | 優先度 | 依存 |
+|---|---------|---------|------|-------|------|
+{% endif -%}
+| {{ loop.index }} | `{{ task.task_id }}` | {{ task.name or task.task_name }} | {{ task.description[:80] }}{% if task.description|length > 80 %}...{% endif %} | {{ task.priority }} | {% if task.dependencies and task.dependencies|length > 0 %}{{ task.dependencies|join(', ') }}{% else %}-{% endif %} |
+{% if loop.index % 5 == 0 or loop.last %}
 
-{% if status == 'failed' and task.task_name in task_suggestions_map and task_suggestions_map[task.task_name]|length > 0 %}
-💡 **対策提案**: {{ task_suggestions_map[task.task_name]|length }}件
-{% for suggestion in task_suggestions_map[task.task_name][:2] %}
-  - {{ suggestion.relaxation_type_ja }}: {{ suggestion.relaxed_requirement[:50] }}...
+{% if status == 'failed' %}
+**💡 対策提案が必要なタスク:**
+{% for t in tasks[(loop.index0 // 5) * 5:loop.index] %}
+{% set task_name = t.name or t.task_name %}
+{% if task_name in task_suggestions_map and task_suggestions_map[task_name]|length > 0 %}
+- **{{ task_name }}**: {{ task_suggestions_map[task_name]|length }}件の提案 ({% for suggestion in task_suggestions_map[task_name][:2] %}{{ suggestion.relaxation_type_ja }}{% if not loop.last %}, {% endif %}{% endfor %})
+{% endif %}
 {% endfor %}
 {% endif %}
 
-{% if loop.index % 5 == 0 or loop.last %}
-
 ---
-{% endif %}
+{% endif -%}
 {% endfor %}
 {% endif %}
 
