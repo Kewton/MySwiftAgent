@@ -68,7 +68,9 @@ class TestMarpReportAPI:
         assert "marp: true" in marp_content
         assert "theme: default" in marp_content
         assert "Job/Task 生成レポート" in marp_content
-        assert "automation_level_reduction" in marp_content
+        assert (
+            "自動化レベルの調整" in marp_content
+        )  # Japanese label for automation_level_reduction
         assert "Send Slack message automatically" in marp_content
 
     def test_generate_report_with_file_path(self, client: TestClient, tmp_path: Path):
