@@ -1,10 +1,13 @@
 """API endpoints for Job/Task Auto-Generation."""
 
+import json
 import logging
 import os
 from typing import Any
 
+import anthropic
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field, field_validator
 
 from aiagent.langgraph.jobTaskGeneratorAgents import (
     create_initial_state,
@@ -14,6 +17,47 @@ from app.schemas.job_generator import JobGeneratorRequest, JobGeneratorResponse
 from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
+
+
+# ===== Phase 11: LLM-based Requirement Relaxation Suggestion =====
+class RequirementRelaxationSuggestion(BaseModel):
+    """要求緩和提案のスキーマ (Phase 11)"""
+
+    original_requirement: str = Field(..., description="元の要求内容", min_length=1)
+    relaxed_requirement: str = Field(..., description="緩和後の要求内容", min_length=1)
+    relaxation_type: str = Field(
+        ...,
+        description="緩和タイプ",
+        pattern="^(automation_level_reduction|scope_reduction|intermediate_step_skip|output_format_change|data_source_substitution|phased_implementation|api_auth_preconfiguration|file_operation_simplification|web_operation_to_llm)$",
+    )
+    feasibility_after_relaxation: str = Field(
+        ...,
+        description="緩和後の実現可能性",
+        pattern="^(high|medium|low|medium-high)$",
+    )
+    what_is_sacrificed: str = Field(..., description="犠牲になるもの", min_length=1)
+    what_is_preserved: str = Field(..., description="維持されるもの", min_length=1)
+    recommendation_level: str = Field(
+        ...,
+        description="推奨レベル",
+        pattern="^(strongly_recommended|recommended|consider)$",
+    )
+    implementation_note: str = Field(..., description="実装時の注意点", min_length=1)
+    available_capabilities_used: list[str] = Field(
+        default_factory=list, description="使用する機能リスト"
+    )
+    implementation_steps: list[str] = Field(
+        default_factory=list, description="実装ステップ"
+    )
+
+    @field_validator("implementation_steps")
+    @classmethod
+    def validate_implementation_steps(cls, v: list[str]) -> list[str]:
+        """実装ステップが最低3つあることを検証"""
+        if len(v) < 3:
+            raise ValueError("implementation_steps must contain at least 3 steps")
+        return v
+
 
 router = APIRouter()
 
@@ -268,6 +312,7 @@ def _generate_requirement_relaxation_suggestions(
     Returns:
         List of requirement relaxation suggestions
     """
+    logger.info("[DEBUG] _generate_requirement_relaxation_suggestions() called")
     suggestions: list[dict[str, Any]] = []
     evaluation_result = state.get("evaluation_result") or {}
 
@@ -282,30 +327,54 @@ def _generate_requirement_relaxation_suggestions(
         feasible_tasks = []
     infeasible_tasks = evaluation_result.get("infeasible_tasks", [])
 
-    if not infeasible_tasks or not feasible_tasks:
+    logger.info(
+        f"[DEBUG] infeasible_tasks count: {len(infeasible_tasks)}, "
+        f"feasible_tasks count: {len(feasible_tasks)}"
+    )
+
+    # Phase 11: LLM-based approach doesn't strictly require feasible_tasks
+    # If there are infeasible tasks, generate suggestions even without feasible_tasks
+    if not infeasible_tasks:
+        logger.info("[DEBUG] No infeasible_tasks found, returning empty suggestions")
         return suggestions
+
+    logger.info(f"[DEBUG] Processing {len(infeasible_tasks)} infeasible tasks")
 
     # Extract available capabilities from feasible tasks
     available_capabilities = _extract_available_capabilities(feasible_tasks)
+    logger.info(f"[DEBUG] Extracted capabilities: {available_capabilities}")
 
     # Generate relaxation suggestions for each infeasible task
-    for infeasible_task in infeasible_tasks:
+    for i, infeasible_task in enumerate(infeasible_tasks, 1):
         task_name = infeasible_task.get("task_name", "")
         reason = infeasible_task.get("reason", "")
 
+        logger.info(
+            f"[DEBUG] Processing infeasible task {i}/{len(infeasible_tasks)}: "
+            f"'{task_name}'"
+        )
+
         # Analyze task intent (what the task is trying to achieve)
         task_intent = _analyze_task_intent(task_name, reason)
+        logger.info(f"[DEBUG] Task intent: {task_intent}")
 
-        # Generate capability-based relaxations
-        relaxed_suggestions = _generate_capability_based_relaxations(
+        # Phase 11: Generate LLM-based relaxations
+        logger.info(
+            f"[DEBUG] Calling _generate_llm_based_relaxation_suggestions() "
+            f"for task: '{task_name}'"
+        )
+        relaxed_suggestions = _generate_llm_based_relaxation_suggestions(
             task_name=task_name,
+            reason=reason,
             task_intent=task_intent,
             available_capabilities=available_capabilities,
             feasible_tasks=feasible_tasks,
         )
 
+        logger.info(f"[DEBUG] Received {len(relaxed_suggestions)} suggestions from LLM")
         suggestions.extend(relaxed_suggestions)
 
+    logger.info(f"[DEBUG] Total suggestions generated: {len(suggestions)}")
     return suggestions
 
 
@@ -337,7 +406,9 @@ def _extract_available_capabilities(
     # Phase 10-D Fix: Add default capabilities from graphai_capabilities.yaml
     # Since task_breakdown doesn't include "agents" field, we provide default capabilities
     # that are always available in the system
-    capabilities["llm_based"].add("geminiAgent")  # Phase 10-A: Default recommended agent
+    capabilities["llm_based"].add(
+        "geminiAgent"
+    )  # Phase 10-A: Default recommended agent
     capabilities["llm_based"].add("anthropicAgent")
     capabilities["llm_based"].add("openAIAgent")
     capabilities["llm_based"].add("テキスト処理")
@@ -467,167 +538,201 @@ def _analyze_task_intent(task_name: str, reason: str) -> dict[str, Any]:
     return intent
 
 
-def _generate_capability_based_relaxations(
+# ===== Phase 11: LLM-based Requirement Relaxation Suggestion =====
+def _call_anthropic_for_relaxation_suggestions(
     task_name: str,
+    reason: str,
     task_intent: dict[str, Any],
     available_capabilities: dict[str, list[str]],
     feasible_tasks: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """
-    利用可能な機能を組み合わせて緩和提案を生成
-
-    【戦略】
-    1. 主要目標を達成する代替手段を提案（例: メール送信 → メール下書き作成）
-    2. データソースを利用可能なもので代替（例: 有料API → 無料API）
-    3. 自動化レベルを調整（例: 全自動 → 半自動 → 手動確認）
-    4. 出力形式を利用可能なもので代替（例: Slack通知 → メール通知）
+    Claude Haiku 4.5を使用して要求緩和提案を動的に生成（Phase 11）
 
     Args:
-        task_name: Task name
-        task_intent: Task intent analysis result
-        available_capabilities: Available capabilities extracted from feasible tasks
-        feasible_tasks: List of feasible tasks
+        task_name: 実現不可能なタスク名
+        reason: 実現不可能な理由
+        task_intent: タスク意図分析結果
+        available_capabilities: 利用可能な機能一覧
+        feasible_tasks: 実現可能なタスク一覧
 
     Returns:
-        List of requirement relaxation suggestions
+        LLMが生成した要求緩和提案のリスト
     """
-    suggestions = []
+    # Get Anthropic API key from secrets_manager
+    try:
+        api_key = secrets_manager.get_secret("ANTHROPIC_API_KEY", project=None)
+    except Exception as e:
+        logger.warning(
+            f"Failed to get ANTHROPIC_API_KEY from secrets_manager: {e}. "
+            "Requirement relaxation suggestions will not be generated."
+        )
+        return []
 
-    primary_goal = task_intent["primary_goal"]
-    data_source = task_intent["data_source"]
-    output_format = task_intent["output_format"]
+    # Construct prompt for Claude Haiku 4.5
+    prompt = f"""あなたは、実現不可能なタスクに対して要求緩和提案を生成する専門家です。
 
-    # Strategy 1: Reduce automation level (fully automatic → semi-automatic)
-    if output_format == "メール" and "Gmail API" in available_capabilities.get(
-        "external_services", []
-    ):
-        if available_capabilities.get("llm_based"):
-            # LLM generates email body + Gmail API creates draft
-            llm_agent = available_capabilities["llm_based"][0]
-            suggestions.append(
-                {
-                    "original_requirement": task_name,
-                    "relaxed_requirement": task_name.replace(
-                        "送信", "下書き作成"
-                    ).replace("メール送信", "メール下書き作成"),
-                    "relaxation_type": "automation_level_reduction",
-                    "feasibility_after_relaxation": "high",
-                    "what_is_sacrificed": "自動送信機能（ユーザーが手動で送信ボタンを押す必要）",
-                    "what_is_preserved": "メール本文の自動生成、データ分析、Gmail下書きの自動作成",
-                    "recommendation_level": "strongly_recommended",
-                    "implementation_note": f"{llm_agent}でメール本文生成 + Gmail API Draft作成",
-                    "available_capabilities_used": [
-                        llm_agent,
-                        "Gmail API (Draft作成)",
-                        "fetchAgent",
-                    ],
-                    "implementation_steps": [
-                        f"1. {llm_agent}でメール本文を生成",
-                        "2. stringTemplateAgentでメールフォーマットを整形",
-                        "3. fetchAgent + Gmail API でDraft作成",
-                        "4. ユーザーがGmail UIで確認・送信",
-                    ],
-                }
-            )
+# 実現不可能なタスク
+タスク名: {task_name}
+実現不可能な理由: {reason}
 
-    # Strategy 2: Substitute data source
-    if data_source == "企業財務データ" and available_capabilities.get("llm_based"):
-        # Use LLM-based analysis instead of paid API
-        llm_agent = available_capabilities["llm_based"][0]
-        suggestions.append(
-            {
-                "original_requirement": task_name,
-                "relaxed_requirement": task_name.replace(
-                    "過去5年", "過去2-3年"
-                ).replace("詳細な", "サマリーレベルの"),
-                "relaxation_type": "scope_reduction",
-                "feasibility_after_relaxation": "medium",
-                "what_is_sacrificed": "5年分の詳細データ、リアルタイム性、網羅性",
-                "what_is_preserved": "最新2-3年のトレンド分析、ビジネスモデル変化の概要",
-                "recommendation_level": "recommended",
-                "implementation_note": f"{llm_agent}で公開情報をベースに分析",
-                "available_capabilities_used": [
-                    llm_agent,
-                    "fetchAgent（企業公開情報取得）",
-                ],
-                "implementation_steps": [
-                    "1. fetchAgentで企業の公開情報（IRページ、ニュース）を取得",
-                    f"2. {llm_agent}で財務情報を抽出・分析",
-                    "3. stringTemplateAgentでレポート形式に整形",
-                    "4. 最新2-3年分のトレンドをサマリー化",
-                ],
-            }
+# タスク意図分析
+{json.dumps(task_intent, ensure_ascii=False, indent=2)}
+
+# 利用可能な機能
+{json.dumps(available_capabilities, ensure_ascii=False, indent=2)}
+
+# 実現可能なタスク例（参考）
+{json.dumps(feasible_tasks[:3] if len(feasible_tasks) > 3 else feasible_tasks, ensure_ascii=False, indent=2)}
+
+---
+
+# あなたのタスク
+上記の情報を基に、**3-6件の具体的な要求緩和提案**を生成してください。
+
+## 提案生成のガイドライン
+1. **利用可能な機能を最大限活用**: available_capabilitiesに含まれる機能を組み合わせて提案
+2. **段階的な緩和**: 自動化レベル、スコープ、出力形式などを段階的に緩和
+3. **実現可能性を重視**: 緩和後は必ず実現可能であること（feasibility_after_relaxation: high or medium-high）
+4. **ユーザー視点**: what_is_sacrificed（犠牲）とwhat_is_preserved（維持）を明確に
+5. **実装可能性**: implementation_stepsは具体的で実行可能なステップ（最低3ステップ）
+
+## 緩和タイプ（relaxation_type）の候補
+- automation_level_reduction: 自動化レベルを下げる（例: 自動送信 → 下書き作成）
+- scope_reduction: スコープを縮小（例: 5年分 → 2-3年分）
+- intermediate_step_skip: 中間ステップをスキップ（例: 詳細分析 → サマリー分析）
+- output_format_change: 出力形式を変更（例: Slack → Email）
+- data_source_substitution: データソースを代替（例: 有料API → LLM分析）
+- phased_implementation: 段階的実装（例: Phase 1: 基本機能のみ）
+- api_auth_preconfiguration: API認証の事前設定を要求（例: Gmail API事前設定）
+- file_operation_simplification: ファイル操作の簡略化（例: ローカルのみ対応）
+- web_operation_to_llm: Web操作をLLMベースに変更（例: スクレイピング → LLM要約）
+
+## 必須出力形式（JSON配列、**日本語で記述**）
+```json
+[
+  {{
+    "original_requirement": "元のタスク名（日本語）",
+    "relaxed_requirement": "緩和後のタスク名（日本語）",
+    "relaxation_type": "緩和タイプ（上記から選択）",
+    "feasibility_after_relaxation": "high",
+    "what_is_sacrificed": "犠牲になるもの（日本語で詳細に）",
+    "what_is_preserved": "維持されるもの（日本語で詳細に）",
+    "recommendation_level": "strongly_recommended",
+    "implementation_note": "実装時の注意点（日本語）",
+    "available_capabilities_used": ["geminiAgent", "fetchAgent", "Gmail API"],
+    "implementation_steps": [
+      "1. 具体的なステップ1（日本語）",
+      "2. 具体的なステップ2（日本語）",
+      "3. 具体的なステップ3（日本語）"
+    ]
+  }}
+]
+```
+
+**重要**: JSON配列のみを出力してください。説明文は不要です。"""
+
+    # Call Claude Haiku 4.5 API
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=2048,
+            temperature=0.7,
+            messages=[{"role": "user", "content": prompt}],
         )
 
-    # Strategy 3: Replace output format (external service → internal functionality)
-    if output_format in ["Slack通知", "Discord通知"] or any(
-        service in task_name for service in ["Slack", "Discord"]
-    ):
-        if available_capabilities.get(
-            "llm_based"
-        ) and "Gmail API" in available_capabilities.get("external_services", []):
-            # Replace Slack/Discord notification with email notification
-            llm_agent = available_capabilities["llm_based"][0]
-            suggestions.append(
-                {
-                    "original_requirement": task_name,
-                    "relaxed_requirement": task_name.replace("Slack", "メール").replace(
-                        "Discord", "メール"
-                    ),
-                    "relaxation_type": "output_format_change",
-                    "feasibility_after_relaxation": "high",
-                    "what_is_sacrificed": "Slack/Discordへのリアルタイム通知",
-                    "what_is_preserved": "通知内容、自動生成機能、データ分析結果",
-                    "recommendation_level": "recommended",
-                    "implementation_note": "メール通知で代替（Slack APIキー不要）",
-                    "available_capabilities_used": [
-                        llm_agent,
-                        "Gmail API (Draft作成)",
-                        "fetchAgent",
-                    ],
-                    "implementation_steps": [
-                        f"1. {llm_agent}で通知内容を生成",
-                        "2. Gmail API Draft作成で通知メールを準備",
-                        "3. ユーザーが確認・送信",
-                    ],
-                }
-            )
+        # Parse JSON response
+        # Anthropic API v2 returns TextBlock objects in content array
+        response_text = ""
+        for content_block in response.content:
+            if hasattr(content_block, "text"):
+                response_text += content_block.text
+        response_text = response_text.strip()
 
-    # Strategy 4: Combine multiple available capabilities (phased implementation)
-    if primary_goal == "データ分析" and available_capabilities.get("llm_based"):
-        # Propose phased implementation for complex analysis tasks
-        llm_agent = available_capabilities["llm_based"][0]
-        suggestions.append(
-            {
-                "original_requirement": task_name,
-                "relaxed_requirement": f"{task_name}（段階的実装: Phase 1は基本分析のみ）",
-                "relaxation_type": "phased_implementation",
-                "feasibility_after_relaxation": "high",
-                "what_is_sacrificed": "Phase 1では詳細分析・高度な洞察は含まれない",
-                "what_is_preserved": "基本的なデータ分析、トレンド把握、主要指標の抽出",
-                "recommendation_level": "consider",
-                "implementation_note": "段階的に機能を拡張（Phase 1→2→3）",
-                "available_capabilities_used": [
-                    llm_agent,
-                    "fetchAgent",
-                    "stringTemplateAgent",
-                ],
-                "implementation_steps": [
-                    "【Phase 1: 基本分析】（即座に実装可能）",
-                    f"  - {llm_agent}でサマリーレベル分析",
-                    "  - 主要指標の抽出と可視化",
-                    "  - 実装時間: 1-2時間、品質: 60%",
-                    "",
-                    "【Phase 2: 詳細分析】（API拡張後）",
-                    "  - 財務データAPI統合",
-                    "  - 詳細トレンド分析",
-                    "  - 実装時間: 2-4週間、品質: 85%",
-                    "",
-                    "【Phase 3: 高度な洞察】（将来的に）",
-                    "  - 予測分析・競合比較",
-                    "  - 実装時間: 2-3ヶ月、品質: 100%",
-                ],
-            }
+        # Remove markdown code block if present
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+
+        suggestions = json.loads(response_text)
+
+        # Validate each suggestion with Pydantic
+        validated_suggestions = []
+        for suggestion in suggestions:
+            try:
+                validated = RequirementRelaxationSuggestion(**suggestion)
+                validated_suggestions.append(validated.model_dump())
+            except Exception as validation_error:
+                logger.warning(
+                    f"Failed to validate suggestion: {validation_error}. "
+                    f"Suggestion: {suggestion}"
+                )
+                continue
+
+        logger.info(
+            f"Generated {len(validated_suggestions)} validated relaxation suggestions "
+            f"for task '{task_name}' using Claude Haiku 4.5"
         )
+        return validated_suggestions
 
+    except json.JSONDecodeError as e:
+        logger.error(
+            f"Failed to parse JSON response from Claude API: {e}. "
+            f"Response text: {response_text[:200]}"
+        )
+        return []
+    except Exception as e:
+        logger.error(
+            f"Failed to call Claude API for relaxation suggestions: {e}",
+            exc_info=True,
+        )
+        return []
+
+
+def _generate_llm_based_relaxation_suggestions(
+    task_name: str,
+    reason: str,
+    task_intent: dict[str, Any],
+    available_capabilities: dict[str, list[str]],
+    feasible_tasks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """
+    LLMベースの要求緩和提案生成（Phase 11メイン関数）
+
+    Args:
+        task_name: 実現不可能なタスク名
+        reason: 実現不可能な理由
+        task_intent: タスク意図分析結果
+        available_capabilities: 利用可能な機能一覧
+        feasible_tasks: 実現可能なタスク一覧
+
+    Returns:
+        LLMが生成した要求緩和提案のリスト
+    """
+    logger.info(f"Generating LLM-based relaxation suggestions for task: '{task_name}'")
+
+    suggestions = _call_anthropic_for_relaxation_suggestions(
+        task_name=task_name,
+        reason=reason,
+        task_intent=task_intent,
+        available_capabilities=available_capabilities,
+        feasible_tasks=feasible_tasks,
+    )
+
+    if not suggestions:
+        logger.warning(
+            f"No relaxation suggestions generated for task '{task_name}'. "
+            "Returning empty list."
+        )
+        return []
+
+    logger.info(
+        f"Successfully generated {len(suggestions)} relaxation suggestions "
+        f"for task '{task_name}'"
+    )
     return suggestions
