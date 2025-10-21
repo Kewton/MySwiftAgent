@@ -85,7 +85,10 @@ async def create_task_master(
     await db.refresh(master)
 
     return TaskMasterResponse(
-        master_id=master.id, name=master.name, current_version=master.current_version
+        master_id=master.id,
+        id=master.id,
+        name=master.name,
+        current_version=master.current_version,
     )
 
 
@@ -260,7 +263,10 @@ async def delete_task_master(
     await db.refresh(master)
 
     return TaskMasterResponse(
-        master_id=master.id, name=master.name, current_version=master.current_version
+        master_id=master.id,
+        id=master.id,
+        name=master.name,
+        current_version=master.current_version,
     )
 
 

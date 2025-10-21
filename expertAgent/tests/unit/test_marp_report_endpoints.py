@@ -269,7 +269,9 @@ class TestGenerateMarpReport:
         assert result.generation_time_ms > 0
         assert "marp: true" in result.marp_markdown
         assert "Job/Task 生成レポート" in result.marp_markdown
-        assert "automation_level_reduction" in result.marp_markdown
+        assert (
+            "自動化レベルの調整" in result.marp_markdown
+        )  # Japanese label for automation_level_reduction
 
     @pytest.mark.asyncio
     async def test_generate_report_with_dict_input(self):

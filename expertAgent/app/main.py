@@ -2,6 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -118,16 +119,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """
     # Sanitize errors to ensure JSON serializability
     # Convert any non-serializable objects (like ValueError) to strings
-    sanitized_errors = []
+    sanitized_errors: list[dict[str, Any]] = []
     for error in exc.errors():
-        sanitized_error = {}
+        sanitized_error: dict[str, Any] = {}
         for key, value in error.items():
             if isinstance(value, Exception):
                 # Convert exception objects to their string representation
                 sanitized_error[key] = str(value)
             elif key == "ctx" and isinstance(value, dict):
                 # Sanitize the ctx dict which may contain exception objects
-                sanitized_ctx = {}
+                sanitized_ctx: dict[str, Any] = {}
                 for ctx_key, ctx_value in value.items():
                     if isinstance(ctx_value, Exception):
                         sanitized_ctx[ctx_key] = str(ctx_value)

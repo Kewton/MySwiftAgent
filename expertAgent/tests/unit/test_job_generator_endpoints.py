@@ -196,10 +196,14 @@ class TestGenerateJobAndTasks:
     @pytest.mark.asyncio
     @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
     @patch("app.api.v1.job_generator_endpoints.create_initial_state")
+    @patch("app.api.v1.job_generator_endpoints.secrets_manager.get_secret")
     async def test_generate_job_and_tasks_success(
-        self, mock_create_state, mock_create_agent
+        self, mock_get_secret, mock_create_state, mock_create_agent
     ):
         """Test successful job generation."""
+        # Mock secrets manager
+        mock_get_secret.return_value = "test-anthropic-api-key"
+
         # Mock initial state
         mock_create_state.return_value = {
             "user_requirement": "Upload PDF and send email"
@@ -248,10 +252,14 @@ class TestGenerateJobAndTasks:
     @pytest.mark.asyncio
     @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
     @patch("app.api.v1.job_generator_endpoints.create_initial_state")
+    @patch("app.api.v1.job_generator_endpoints.secrets_manager.get_secret")
     async def test_generate_job_and_tasks_failure(
-        self, mock_create_state, mock_create_agent
+        self, mock_get_secret, mock_create_state, mock_create_agent
     ):
         """Test job generation failure."""
+        # Mock secrets manager
+        mock_get_secret.return_value = "test-anthropic-api-key"
+
         # Mock initial state
         mock_create_state.return_value = {"user_requirement": "Invalid requirement"}
 
@@ -276,10 +284,14 @@ class TestGenerateJobAndTasks:
     @pytest.mark.asyncio
     @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
     @patch("app.api.v1.job_generator_endpoints.create_initial_state")
+    @patch("app.api.v1.job_generator_endpoints.secrets_manager.get_secret")
     async def test_generate_job_and_tasks_partial_success(
-        self, mock_create_state, mock_create_agent
+        self, mock_get_secret, mock_create_state, mock_create_agent
     ):
         """Test partial success with infeasible tasks."""
+        # Mock secrets manager
+        mock_get_secret.return_value = "test-anthropic-api-key"
+
         # Mock initial state
         mock_create_state.return_value = {
             "user_requirement": "Upload PDF and send Slack notification"

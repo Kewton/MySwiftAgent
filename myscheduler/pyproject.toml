@@ -106,6 +106,10 @@ python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+markers = [
+    "production: marks tests as production-ready tests",
+    "critical: marks tests as critical functionality tests",
+]
 
 [tool.coverage.run]
 source = ["app"]
