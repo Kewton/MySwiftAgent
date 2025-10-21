@@ -20,6 +20,7 @@ from app.api.v1 import (
     marp_report_endpoints,
     tts_endpoints,
     utility_endpoints,
+    workflow_generator_endpoints,
 )
 from app.middleware import MethodValidatorMiddleware, ResponseValidatorMiddleware
 from core.logger import setup_logging
@@ -158,6 +159,9 @@ app.include_router(drive_endpoints.router, prefix="/v1", tags=["Drive Utilities"
 app.include_router(tts_endpoints.router, prefix="/v1", tags=["TTS Utilities"])
 app.include_router(job_generator_endpoints.router, prefix="/v1", tags=["Job Generator"])
 app.include_router(marp_report_endpoints.router, prefix="/v1", tags=["Marp Report"])
+app.include_router(
+    workflow_generator_endpoints.router, prefix="/v1", tags=["Workflow Generator"]
+)
 app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
 
