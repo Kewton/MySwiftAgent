@@ -1,11 +1,22 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
 import { runGraphAI, testGraphAI, GraphAIResponse } from './services/graphai.js';
 import { secretsManager } from './services/secretsManager.js';
 import { settings } from './config/settings.js';
+import type {
+  WorkflowRegisterRequest,
+  WorkflowRegisterResponse,
+  WorkflowValidationError,
+} from './types/workflow.js';
 
 const app = express();
+
+// Configuration: Workflow directory path (resolve from process.cwd())
+const WORKFLOW_DIR = path.resolve(process.cwd(), 'config/graphai');
 
 // Middleware
 app.use(helmet());
@@ -157,6 +168,127 @@ app.post('/api/v1/myagent', async (req: Request, res: Response) => {
       },
       ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
     });
+  }
+});
+
+// Workflow registration endpoint
+app.post('/api/v1/workflows/register', async (req: Request, res: Response) => {
+  const { workflow_name, yaml_content, overwrite = false } = req.body as WorkflowRegisterRequest;
+
+  // Validate request body
+  if (!workflow_name || !yaml_content) {
+    const response: WorkflowRegisterResponse = {
+      status: 'error',
+      error_message: 'Both workflow_name and yaml_content are required',
+    };
+    return res.status(400).json(response);
+  }
+
+  // Validate workflow_name (must be a valid filename)
+  const filenameRegex = /^[a-zA-Z0-9_-]+$/;
+  if (!filenameRegex.test(workflow_name)) {
+    const response: WorkflowRegisterResponse = {
+      status: 'error',
+      error_message: 'workflow_name must contain only alphanumeric characters, underscores, and hyphens',
+    };
+    return res.status(400).json(response);
+  }
+
+  // Path traversal security validation
+  if (workflow_name.includes('..') || workflow_name.includes('/') || workflow_name.includes('\\')) {
+    const response: WorkflowRegisterResponse = {
+      status: 'error',
+      error_message: 'Invalid workflow_name parameter',
+    };
+    return res.status(400).json(response);
+  }
+
+  const validation_errors: WorkflowValidationError[] = [];
+
+  try {
+    // Step 1: Validate YAML syntax
+    try {
+      yaml.load(yaml_content);
+    } catch (error) {
+      const yamlError = error as Error & { mark?: { line: number; column: number } };
+      validation_errors.push({
+        type: 'yaml_syntax',
+        message: yamlError.message,
+        line: yamlError.mark?.line,
+        column: yamlError.mark?.column,
+      });
+
+      const response: WorkflowRegisterResponse = {
+        status: 'error',
+        error_message: 'YAML syntax validation failed',
+        validation_errors,
+      };
+      return res.status(400).json(response);
+    }
+
+    // Step 2: Check if workflow directory exists
+    if (!fs.existsSync(WORKFLOW_DIR)) {
+      try {
+        fs.mkdirSync(WORKFLOW_DIR, { recursive: true });
+        console.log(`Created workflow directory: ${WORKFLOW_DIR}`);
+      } catch (error) {
+        validation_errors.push({
+          type: 'file_system',
+          message: `Failed to create workflow directory: ${error}`,
+        });
+
+        const response: WorkflowRegisterResponse = {
+          status: 'error',
+          error_message: 'Failed to create workflow directory',
+          validation_errors,
+        };
+        return res.status(500).json(response);
+      }
+    }
+
+    // Step 3: Check if file already exists (if overwrite is false)
+    const file_path = path.join(WORKFLOW_DIR, `${workflow_name}.yml`);
+    if (fs.existsSync(file_path) && !overwrite) {
+      const response: WorkflowRegisterResponse = {
+        status: 'error',
+        error_message: `Workflow '${workflow_name}' already exists. Set overwrite=true to replace it.`,
+      };
+      return res.status(409).json(response);
+    }
+
+    // Step 4: Write YAML content to file
+    try {
+      fs.writeFileSync(file_path, yaml_content, 'utf8');
+      console.log(`✓ Workflow registered: ${file_path}`);
+
+      const response: WorkflowRegisterResponse = {
+        status: 'success',
+        file_path,
+        workflow_name,
+      };
+      return res.status(200).json(response);
+    } catch (error) {
+      validation_errors.push({
+        type: 'file_system',
+        message: `Failed to write workflow file: ${error}`,
+      });
+
+      const response: WorkflowRegisterResponse = {
+        status: 'error',
+        error_message: 'Failed to write workflow file',
+        validation_errors,
+      };
+      return res.status(500).json(response);
+    }
+  } catch (error) {
+    console.error('Unexpected error during workflow registration:', error);
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const response: WorkflowRegisterResponse = {
+      status: 'error',
+      error_message: `Internal server error: ${errorMessage}`,
+    };
+    return res.status(500).json(response);
   }
 });
 
