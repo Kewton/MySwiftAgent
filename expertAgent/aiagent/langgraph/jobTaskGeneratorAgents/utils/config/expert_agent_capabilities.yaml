@@ -1,0 +1,70 @@
+# expertAgent Direct API capabilities
+# This file is used for feasibility evaluation in the evaluator_node
+
+utility_apis:
+  - name: "Gmail検索"
+    endpoint: "/v1/utility/gmail_search"
+    description: "Gmail検索"
+    use_cases:
+      - "キーワード検索"
+      - "日付範囲指定"
+
+  - name: "Gmail送信"
+    endpoint: "/v1/utility/gmail_send"
+    description: "メール送信"
+    use_cases:
+      - "宛先、件名、本文を指定"
+
+  - name: "Google検索"
+    endpoint: "/v1/utility/google_search"
+    description: "Web検索"
+    use_cases:
+      - "キーワード検索"
+
+  - name: "Google Drive Upload"
+    endpoint: "/v1/drive/upload"
+    description: "ファイルアップロード"
+    use_cases:
+      - "PDF"
+      - "画像"
+      - "テキストファイル"
+
+  - name: "Text-to-Speech"
+    endpoint: "/v1/utility/tts"
+    description: "音声合成"
+    use_cases:
+      - "テキストを音声ファイルに変換"
+
+ai_agent_apis:
+  - name: "Explorer Agent"
+    endpoint: "/v1/myagent/explorer"
+    description: "ファイルシステム探索"
+    use_cases:
+      - "ディレクトリ構造の取得"
+
+  - name: "Action Agent"
+    endpoint: "/v1/myagent/action"
+    description: "汎用アクション実行"
+    use_cases:
+      - "複数API組み合わせ"
+
+  - name: "File Reader Agent"
+    endpoint: "/v1/myagent/file_reader"
+    description: "ファイル読み取り"
+    use_cases:
+      - "テキスト"
+      - "PDF"
+      - "画像の読み取り"
+
+  - name: "Playwright Agent"
+    endpoint: "/v1/myagent/playwright"
+    description: "ブラウザ自動化"
+    use_cases:
+      - "Web scraping"
+      - "フォーム操作"
+
+  - name: "JSON Output Agent"
+    endpoint: "/v1/myagent/json_output"
+    description: "構造化出力"
+    use_cases:
+      - "自然言語→JSON変換"

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     )  # Optional override for default project
     SECRETS_CACHE_TTL: int = Field(default=300)  # 5 minutes cache TTL
 
+    # ExpertAgent Base URL (for Job/Task Generator)
+    EXPERTAGENT_BASE_URL: str = Field(default="http://localhost:8104")
+
     # Google APIs Configuration
     GOOGLE_APIS_DEFAULT_PROJECT: str = Field(
         default="default_project"

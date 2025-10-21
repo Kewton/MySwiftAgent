@@ -71,7 +71,9 @@ async def create_interface_master(
     await db.commit()
     await db.refresh(interface)
 
-    return InterfaceMasterResponse(interface_id=interface.id, name=interface.name)
+    return InterfaceMasterResponse(
+        interface_id=interface.id, id=interface.id, name=interface.name
+    )
 
 
 @router.get("/interface-masters", response_model=InterfaceMasterList)
@@ -178,7 +180,9 @@ async def update_interface_master(
     await db.commit()
     await db.refresh(interface)
 
-    return InterfaceMasterResponse(interface_id=interface.id, name=interface.name)
+    return InterfaceMasterResponse(
+        interface_id=interface.id, id=interface.id, name=interface.name
+    )
 
 
 @router.delete(
@@ -199,7 +203,9 @@ async def delete_interface_master(
     await db.commit()
     await db.refresh(interface)
 
-    return InterfaceMasterResponse(interface_id=interface.id, name=interface.name)
+    return InterfaceMasterResponse(
+        interface_id=interface.id, id=interface.id, name=interface.name
+    )
 
 
 @router.post(

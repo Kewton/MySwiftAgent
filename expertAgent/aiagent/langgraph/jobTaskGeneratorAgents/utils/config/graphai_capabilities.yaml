@@ -1,0 +1,137 @@
+# GraphAI standard agent capabilities
+# This file is used for feasibility evaluation in the evaluator_node
+
+# ===== Phase 10: LLM Agent Recommendation =====
+# geminiAgent is recommended as the default LLM agent
+# Reason: Best balance of cost-efficiency and performance
+llm_agents:
+  - name: "geminiAgent"
+    description: "Gemini API直接呼び出し（推奨: コスト効率と性能のバランス◎）"
+    requires_api_key: true
+    api_key_name: "GOOGLE_API_KEY"
+    recommendation: "default"  # Phase 10: デフォルト推奨
+    cost_efficiency: "high"
+    performance: "high"
+
+  - name: "anthropicAgent"
+    description: "Claude API直接呼び出し（高品質な出力）"
+    requires_api_key: true
+    api_key_name: "ANTHROPIC_API_KEY"
+    recommendation: "alternative"
+    cost_efficiency: "medium"
+    performance: "very_high"
+
+  - name: "openAIAgent"
+    description: "OpenAI API直接呼び出し（汎用性が高い）"
+    requires_api_key: true
+    api_key_name: "OPENAI_API_KEY"
+    recommendation: "alternative"
+    cost_efficiency: "medium"
+    performance: "high"
+
+http_agents:
+  - name: "fetchAgent"
+    description: "汎用HTTP APIクライアント（expertAgent呼び出しに使用）"
+
+data_transform_agents:
+  - name: "arrayJoinAgent"
+    description: "配列を文字列に結合"
+
+  - name: "copyAgent"
+    description: "値をコピー"
+
+  - name: "stringTemplateAgent"
+    description: "テンプレート文字列生成"
+
+  - name: "popAgent"
+    description: "配列の最後の要素を取得"
+
+  - name: "pushAgent"
+    description: "配列に要素を追加"
+
+  - name: "shiftAgent"
+    description: "配列の最初の要素を取得"
+
+  - name: "mapAgent"
+    description: "配列の各要素に関数を適用"
+
+  - name: "filterAgent"
+    description: "配列をフィルタリング"
+
+  - name: "sortByAgent"
+    description: "配列をソート"
+
+control_flow_agents:
+  - name: "nestedAgent"
+    description: "入力に対してグラフ全体を実行（ループ処理）"
+
+  - name: "mergeNodeIdAgent"
+    description: "複数ノードの結果をマージ"
+
+  - name: "bypassAgent"
+    description: "入力をそのまま出力"
+
+# ===== Phase 9: Extended Capabilities =====
+extended_capabilities:
+  llm_based_implementation:
+    - capability: "データ分析"
+      description: "財務データ、統計データの解釈・要約"
+      agents: ["geminiAgent", "anthropicAgent", "openAIAgent"]  # Phase 10: geminiAgent推奨
+      recommended_agent: "geminiAgent"
+      examples:
+        - "売上データを分析してトレンドをまとめる"
+        - "財務レポートから重要指標を抽出"
+
+    - capability: "テキスト処理"
+      description: "要約、分類、抽出、変換、翻訳"
+      agents: ["geminiAgent", "anthropicAgent", "openAIAgent"]  # Phase 10: geminiAgent推奨
+      recommended_agent: "geminiAgent"
+      examples:
+        - "ニュース記事を要約"
+        - "テキストを分類・カテゴライズ"
+
+    - capability: "構造化出力"
+      description: "JSON、Markdown、HTML、CSV生成"
+      agents: ["geminiAgent", "anthropicAgent", "openAIAgent", "JSON Output Agent"]  # Phase 10: geminiAgent推奨
+      recommended_agent: "geminiAgent"
+      examples:
+        - "データをMarkdown表に変換"
+        - "HTMLグラフを生成"
+
+    - capability: "コード生成"
+      description: "Python、JavaScript等のコード生成"
+      agents: ["geminiAgent", "anthropicAgent", "openAIAgent"]  # Phase 10: geminiAgent推奨
+      recommended_agent: "geminiAgent"
+      examples:
+        - "PDF結合のPythonスクリプトを生成"
+        - "データ処理のJavaScriptコードを生成"
+
+  playwright_limited_implementation:
+    - capability: "URL操作"
+      description: "指定URLへのアクセスと基本的なページ操作"
+      agents: ["Playwright Agent"]
+      note: "⚠️ 現状挙動が不安定なため限定的な用途のみ"
+      examples:
+        - "特定URLにアクセス"
+        - "ページ内のリンクをクリック"
+
+    - capability: "操作結果のURL取得"
+      description: "ページ操作後のURLを取得"
+      agents: ["Playwright Agent"]
+      examples:
+        - "遷移先のURLを取得"
+
+    - capability: "NOT SUPPORTED: 複雑なデータ収集"
+      description: "大量データのスクレイピング、フォーム送信は非対応"
+      note: "代わりにfetchAgent + FileReader Agentを推奨"
+      alternative: "fetchAgent + FileReader Agent"
+
+  external_api_implementation:
+    - capability: "任意のREST API呼び出し"
+      description: "fetchAgentによる外部API連携（ユーザーがAPI key登録済みの場合）"
+      agents: ["fetchAgent"]
+      note: "Slack、Discord、Notion等の外部サービスもAPI key登録で利用可能"
+      examples:
+        - "Slack通知を送信 (要Slack API key)"
+        - "Notionにデータを保存 (要Notion API key)"
+        - "外部天気APIからデータ取得"

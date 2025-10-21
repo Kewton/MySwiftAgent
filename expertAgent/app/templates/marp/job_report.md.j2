@@ -1,0 +1,162 @@
+---
+marp: true
+theme: {{ theme }}
+paginate: true
+---
+
+<style>
+section.task-list {
+  font-size: 0.9em;
+}
+section.task-list h2 {
+  font-size: 1.2em;
+  margin-bottom: 0.3em;
+}
+section.task-list table {
+  font-size: 0.95em;
+  line-height: 1.3;
+}
+section.task-list th {
+  background-color: #f0f0f0;
+}
+</style>
+
+<!-- Slide 1: タイトル -->
+# Job/Task 生成レポート
+
+## ユーザー要求
+{{ user_requirement }}
+
+---
+
+**実行日時**: {{ timestamp }}
+**ステータス**: `{{ status }}`
+
+---
+
+<!-- Slide 2: 概要 -->
+# 📊 実行結果サマリー
+
+| 項目 | 結果 |
+|------|------|
+| ステータス | **{{ status }}** |
+| 実現不可能タスク | {{ infeasible_tasks_count }}件 |
+| 要求緩和提案 | {{ suggestions_count }}件 |
+{% if execution_time %}
+| 実行時間 | {{ execution_time }}秒 |
+{% endif %}
+
+{% if status == "failed" %}
+**⚠️ 実現不可能なタスクが検出されました**
+
+要求緩和提案を参考に、要求を見直してください。
+{% endif %}
+
+---
+
+{% if tasks_count > 0 %}
+{% for task in tasks -%}
+{% if loop.index0 % 5 == 0 %}
+
+<!-- _class: task-list -->
+<!-- Slide Task-{{ (loop.index0 // 5) + 1 }}: タスク一覧 -->
+# 📋 生成されたタスク一覧 ({{ (loop.index0 // 5) + 1 }}/{{ ((tasks_count - 1) // 5) + 1 }})
+
+{% if status == 'failed' %}
+**⚠️ 注意**: 実現不可能なタスクが含まれている可能性があります
+{% endif %}
+
+| # | タスクID | タスク名 | 説明 | 優先度 | 依存 |
+|---|---------|---------|------|-------|------|
+{% endif -%}
+| {{ loop.index }} | `{{ task.task_id }}` | {{ task.name or task.task_name }} | {{ task.description[:80] }}{% if task.description|length > 80 %}...{% endif %} | {{ task.priority }} | {% if task.dependencies and task.dependencies|length > 0 %}{{ task.dependencies|join(', ') }}{% else %}-{% endif %} |
+{% if loop.index % 5 == 0 or loop.last %}
+
+{% if status == 'failed' %}
+**💡 対策提案が必要なタスク:**
+{% for t in tasks[(loop.index0 // 5) * 5:loop.index] %}
+{% set task_name = t.name or t.task_name %}
+{% if task_name in task_suggestions_map and task_suggestions_map[task_name]|length > 0 %}
+- **{{ task_name }}**: {{ task_suggestions_map[task_name]|length }}件の提案 ({% for suggestion in task_suggestions_map[task_name][:2] %}{{ suggestion.relaxation_type_ja }}{% if not loop.last %}, {% endif %}{% endfor %})
+{% endif %}
+{% endfor %}
+{% endif %}
+
+---
+{% endif -%}
+{% endfor %}
+{% endif %}
+
+{% if suggestions_count > 0 %}
+{% for suggestion in suggestions %}
+<!-- Slide {{ loop.index + 2 }}: 提案{{ loop.index }} -->
+# 💡 提案 {{ loop.index }}: {{ suggestion.relaxation_type_ja }}
+
+## 元の要求
+{{ suggestion.original_requirement }}
+
+## 緩和後の要求
+{{ suggestion.relaxed_requirement }}
+
+---
+
+# 💡 提案 {{ loop.index }} (続き)
+
+## 実現可能性
+**{{ suggestion.feasibility_after_relaxation }}** (推奨レベル: **{{ suggestion.recommendation_level }}**)
+
+## 犠牲にするもの
+{{ suggestion.what_is_sacrificed }}
+
+## 維持されるもの
+{{ suggestion.what_is_preserved }}
+
+---
+
+# 💡 提案 {{ loop.index }} (実装ガイド)
+
+## 実装時の注意点
+{{ suggestion.implementation_note }}
+
+## 使用する機能
+{% for capability in suggestion.available_capabilities_used %}
+- {{ capability }}
+{% endfor %}
+
+{% if include_implementation_steps and suggestion.implementation_steps %}
+## 実装ステップ
+{% for step in suggestion.implementation_steps %}
+{{ step }}
+{% endfor %}
+{% endif %}
+
+---
+
+{% endfor %}
+{% endif %}
+
+<!-- 最終スライド: まとめ -->
+# 📝 まとめ
+
+{% if suggestions_count > 0 %}
+## Phase 11 の成果
+- **{{ suggestions_count }}件** の詳細な要求緩和提案を生成
+- LLM (Claude 3 Haiku) による高品質な提案
+- 実装ステップまで含む実用的なガイダンス
+
+## 次のステップ
+1. 提案を検討し、最適な緩和案を選択
+2. 緩和した要求で再度 Job Generator を実行
+3. ジョブマスターへの登録を完了
+{% else %}
+## 次のステップ
+- ジョブマスターへの登録が完了しています
+- Job ID: {{ job_id }}
+{% endif %}
+
+---
+
+<!-- 生成情報 -->
+**🤖 Generated with Claude Code**
+**Report Type**: Job/Task Auto-Generation Marp Report
+**Generated at**: {{ timestamp }}

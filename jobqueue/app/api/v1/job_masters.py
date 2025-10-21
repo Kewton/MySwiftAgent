@@ -70,7 +70,10 @@ async def create_job_master(
     await db.refresh(master)
 
     return JobMasterResponse(
-        master_id=master.id, name=master.name, is_active=bool(master.is_active)
+        master_id=master.id,
+        id=master.id,
+        name=master.name,
+        is_active=bool(master.is_active),
     )
 
 
@@ -225,7 +228,10 @@ async def delete_job_master(
     await db.refresh(master)
 
     return JobMasterResponse(
-        master_id=master.id, name=master.name, is_active=bool(master.is_active)
+        master_id=master.id,
+        id=master.id,
+        name=master.name,
+        is_active=bool(master.is_active),
     )
 
 

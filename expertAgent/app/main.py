@@ -2,6 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -15,6 +16,8 @@ from app.api.v1 import (
     drive_endpoints,
     gmail_utility_endpoints,
     google_auth_endpoints,
+    job_generator_endpoints,
+    marp_report_endpoints,
     tts_endpoints,
     utility_endpoints,
 )
@@ -114,11 +117,33 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
     Pydantic バリデーションエラーを JSON 形式で返却します。
     """
+    # Sanitize errors to ensure JSON serializability
+    # Convert any non-serializable objects (like ValueError) to strings
+    sanitized_errors: list[dict[str, Any]] = []
+    for error in exc.errors():
+        sanitized_error: dict[str, Any] = {}
+        for key, value in error.items():
+            if isinstance(value, Exception):
+                # Convert exception objects to their string representation
+                sanitized_error[key] = str(value)
+            elif key == "ctx" and isinstance(value, dict):
+                # Sanitize the ctx dict which may contain exception objects
+                sanitized_ctx: dict[str, Any] = {}
+                for ctx_key, ctx_value in value.items():
+                    if isinstance(ctx_value, Exception):
+                        sanitized_ctx[ctx_key] = str(ctx_value)
+                    else:
+                        sanitized_ctx[ctx_key] = ctx_value
+                sanitized_error[key] = sanitized_ctx
+            else:
+                sanitized_error[key] = value
+        sanitized_errors.append(sanitized_error)
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "detail": "Validation error",
-            "errors": exc.errors(),
+            "errors": sanitized_errors,
             "is_json_guaranteed": True,
             "middleware_layer": "validation_exception_handler",
         },
@@ -131,6 +156,8 @@ app.include_router(utility_endpoints.router, prefix="/v1")
 app.include_router(gmail_utility_endpoints.router, prefix="/v1")
 app.include_router(drive_endpoints.router, prefix="/v1", tags=["Drive Utilities"])
 app.include_router(tts_endpoints.router, prefix="/v1", tags=["TTS Utilities"])
+app.include_router(job_generator_endpoints.router, prefix="/v1", tags=["Job Generator"])
+app.include_router(marp_report_endpoints.router, prefix="/v1", tags=["Marp Report"])
 app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
 

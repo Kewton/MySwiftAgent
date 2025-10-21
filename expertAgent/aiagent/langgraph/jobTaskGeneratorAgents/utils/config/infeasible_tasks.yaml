@@ -1,0 +1,36 @@
+# Infeasible tasks and their alternatives
+# This file is used for feasibility evaluation in the evaluator_node
+
+# ===== Phase 9: 厳格化された実現困難タスク =====
+# 削除: Slack通知、Discord通知、Notion操作、Trello操作
+# → fetchAgent + API keyで実装可能
+#
+# 削除: データベース直接操作
+# → jobqueue API経由で実装可能
+#
+# 残存: 真に実現困難なタスクのみ
+
+infeasible_tasks:
+  - task_type: "物理デバイス操作"
+    reason: "印刷、スキャン、USB接続デバイス制御"
+    alternative_api: "実装不可"
+    priority: "N/A"
+    notes: "ハードウェア制約により実装不可"
+
+  - task_type: "ファイルシステム直接操作"
+    reason: "expertAgent管轄外のファイル削除・移動"
+    alternative_api: "Google Drive経由での管理"
+    priority: "medium"
+    notes: "Driveアップロード→リンク共有で代替可能"
+
+  - task_type: "SSH/リモートサーバー操作"
+    reason: "リモートコマンド実行機能なし"
+    alternative_api: "実装不可（セキュリティリスク）"
+    priority: "high"
+    notes: "将来的なAPI拡張候補"
+
+  - task_type: "リアルタイム高頻度処理"
+    reason: "HFT、リアルタイム動画処理等"
+    alternative_api: "バッチ処理で代替"
+    priority: "low"
+    notes: "用途に応じて代替可能"
