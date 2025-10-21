@@ -1,0 +1,109 @@
+---
+marp: true
+theme: {{ theme }}
+paginate: true
+---
+
+<!-- Slide 1: タイトル -->
+# Job/Task 生成レポート
+
+**ユーザー要求**: {{ user_requirement }}
+
+**実行日時**: {{ timestamp }}
+**ステータス**: {{ status }}
+
+---
+
+<!-- Slide 2: 概要 -->
+# 📊 実行結果サマリー
+
+| 項目 | 結果 |
+|------|------|
+| ステータス | **{{ status }}** |
+| 実現不可能タスク | {{ infeasible_tasks_count }}件 |
+| 要求緩和提案 | {{ suggestions_count }}件 |
+{% if execution_time %}
+| 実行時間 | {{ execution_time }}秒 |
+{% endif %}
+
+{% if status == "failed" %}
+**⚠️ 実現不可能なタスクが検出されました**
+
+要求緩和提案を参考に、要求を見直してください。
+{% endif %}
+
+---
+
+{% if suggestions_count > 0 %}
+{% for suggestion in suggestions %}
+<!-- Slide {{ loop.index + 2 }}: 提案{{ loop.index }} -->
+# 💡 提案 {{ loop.index }}: {{ suggestion.relaxation_type }}
+
+## 元の要求
+{{ suggestion.original_requirement }}
+
+## 緩和後の要求
+{{ suggestion.relaxed_requirement }}
+
+---
+
+# 💡 提案 {{ loop.index }} (続き)
+
+## 実現可能性
+**{{ suggestion.feasibility_after_relaxation }}** (推奨レベル: **{{ suggestion.recommendation_level }}**)
+
+## 犠牲にするもの
+{{ suggestion.what_is_sacrificed }}
+
+## 維持されるもの
+{{ suggestion.what_is_preserved }}
+
+---
+
+# 💡 提案 {{ loop.index }} (実装ガイド)
+
+## 実装時の注意点
+{{ suggestion.implementation_note }}
+
+## 使用する機能
+{% for capability in suggestion.available_capabilities_used %}
+- {{ capability }}
+{% endfor %}
+
+{% if include_implementation_steps and suggestion.implementation_steps %}
+## 実装ステップ
+{% for step in suggestion.implementation_steps %}
+{{ step }}
+{% endfor %}
+{% endif %}
+
+---
+
+{% endfor %}
+{% endif %}
+
+<!-- 最終スライド: まとめ -->
+# 📝 まとめ
+
+{% if suggestions_count > 0 %}
+## Phase 11 の成果
+- **{{ suggestions_count }}件** の詳細な要求緩和提案を生成
+- LLM (Claude 3 Haiku) による高品質な提案
+- 実装ステップまで含む実用的なガイダンス
+
+## 次のステップ
+1. 提案を検討し、最適な緩和案を選択
+2. 緩和した要求で再度 Job Generator を実行
+3. ジョブマスターへの登録を完了
+{% else %}
+## 次のステップ
+- ジョブマスターへの登録が完了しています
+- Job ID: {{ job_id }}
+{% endif %}
+
+---
+
+<!-- 生成情報 -->
+**🤖 Generated with Claude Code**
+**Report Type**: Job/Task Auto-Generation Marp Report
+**Generated at**: {{ timestamp }}
