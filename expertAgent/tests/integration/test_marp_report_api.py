@@ -226,9 +226,7 @@ class TestMarpReportAPI:
             data = response.json()
             assert f"theme: {theme}" in data["marp_markdown"]
 
-    def test_generate_report_implementation_steps_toggle(
-        self, client: TestClient
-    ):
+    def test_generate_report_implementation_steps_toggle(self, client: TestClient):
         """Test include_implementation_steps parameter."""
         base_request = {
             "job_result": {

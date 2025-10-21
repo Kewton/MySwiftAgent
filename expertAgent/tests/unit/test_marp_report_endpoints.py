@@ -101,7 +101,9 @@ class TestExtractTemplateData:
         assert result["infeasible_tasks_count"] == 1
         assert result["suggestions_count"] == 1
         assert len(result["suggestions"]) == 1
-        assert result["suggestions"][0]["relaxation_type"] == "automation_level_reduction"
+        assert (
+            result["suggestions"][0]["relaxation_type"] == "automation_level_reduction"
+        )
         assert result["theme"] == "default"
         assert result["include_implementation_steps"] is True
         assert "timestamp" in result
@@ -260,7 +262,9 @@ class TestGenerateMarpReport:
         result = await generate_marp_report(request)
 
         assert isinstance(result, MarpReportResponse)
-        assert result.slide_count == 6  # Title + Summary + (1 suggestion * 3) + Conclusion
+        assert (
+            result.slide_count == 6
+        )  # Title + Summary + (1 suggestion * 3) + Conclusion
         assert result.suggestions_count == 1
         assert result.generation_time_ms > 0
         assert "marp: true" in result.marp_markdown
