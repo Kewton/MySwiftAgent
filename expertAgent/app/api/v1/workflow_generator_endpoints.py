@@ -8,6 +8,9 @@ from fastapi import APIRouter, HTTPException, status
 from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
     JobqueueAPIError,
 )
+from aiagent.langgraph.workflowGeneratorAgents import (
+    generate_workflow as generate_workflow_with_agent,
+)
 from aiagent.langgraph.workflowGeneratorAgents.utils.task_data_fetcher import (
     TaskDataFetcher,
 )
@@ -63,24 +66,10 @@ async def generate_workflow(
             )
             task_data_list = [task_data]
 
-        # TODO: Phase 3 - Integrate LangGraph Agent for workflow generation
-        # For now, return stub response with task data
+        # Phase 3: Integrate LangGraph Agent for workflow generation
         workflows: list[WorkflowResult] = []
         for task_data in task_data_list:
-            # Generate workflow name from task name
-            workflow_name = task_data["name"].lower().replace(" ", "_")
-
-            # Create stub YAML content
-            yaml_content = f"""# Stub workflow for task: {task_data["name"]}
-# TODO: LangGraph Agent will generate this in Phase 3
-version: 0.5
-nodes:
-  stub_node:
-    value: "This is a stub workflow"
-"""
-
-            # Create WorkflowResult
-            # task_master_id can be string or int from jobqueue API
+            # Convert task_master_id to int
             task_master_id_value = task_data["task_master_id"]
             if isinstance(task_master_id_value, str):
                 # Extract numeric part if it's a string like "task_1" or just "123"
@@ -95,13 +84,42 @@ nodes:
             else:
                 task_master_id_int = int(task_master_id_value)
 
+            # Generate workflow using LangGraph Agent
+            final_state = await generate_workflow_with_agent(
+                task_master_id=task_master_id_int,
+                task_data=task_data,
+                max_retry=3,
+            )
+
+            # Extract workflow result from final state
+            workflow_status = final_state.get("status", "unknown")
+            is_valid = final_state.get("is_valid", False)
+            error_message = final_state.get("error_message")
+            yaml_content = final_state.get("yaml_content", "")
+            workflow_name = final_state.get(
+                "workflow_name", task_data["name"].lower().replace(" ", "_")
+            )
+            retry_count = final_state.get("retry_count", 0)
+            validation_result = final_state.get("validation_result")
+
+            # Determine workflow result status
+            if is_valid:
+                result_status = "success"
+            elif workflow_status == "max_retries_exceeded":
+                result_status = "failed"
+                error_message = f"Max retries exceeded ({retry_count} attempts)"
+            else:
+                result_status = "failed"
+
             workflow_result = WorkflowResult(
                 task_master_id=task_master_id_int,
                 task_name=task_data["name"],
                 workflow_name=workflow_name,
                 yaml_content=yaml_content,
-                status="success",
-                retry_count=0,
+                status=result_status,
+                retry_count=retry_count,
+                error_message=error_message,
+                validation_result=validation_result,
             )
             workflows.append(workflow_result)
 
