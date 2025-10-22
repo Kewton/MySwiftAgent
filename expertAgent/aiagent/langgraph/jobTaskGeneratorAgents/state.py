@@ -59,7 +59,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
     task_masters: list[dict[str, Any]]
     task_master_ids: list[str]
     job_master: dict[str, Any]
-    job_master_id: str | None
+    job_master_id: int | None
 
     # ===== Feasibility Analysis =====
     feasibility_analysis: dict[str, Any] | None
@@ -72,6 +72,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
     evaluation_retry_count: int
     evaluation_errors: list[str]
     evaluation_feedback: str | None
+    evaluator_stage: str  # "after_task_breakdown" or "after_interface_definition"
 
     # ===== Validation & Retry =====
     validation_result: dict[str, Any] | None
@@ -118,6 +119,7 @@ def create_initial_state(
         "evaluation_retry_count": 0,
         "evaluation_errors": [],
         "evaluation_feedback": None,
+        "evaluator_stage": "after_task_breakdown",
         # Validation & Retry
         "validation_result": None,
         "retry_count": 0,

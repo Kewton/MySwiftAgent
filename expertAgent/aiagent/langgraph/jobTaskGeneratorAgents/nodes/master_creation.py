@@ -93,6 +93,7 @@ async def master_creation_node(
             task_url = f"{settings.EXPERTAGENT_BASE_URL}/api/v1/tasks/{task_id}"
 
             # Find or create TaskMaster
+            logger.debug(f"Calling find_or_create_task_master for task {task_id}")
             task_master = await matcher.find_or_create_task_master(
                 name=task_name,
                 description=task["description"],
@@ -102,6 +103,19 @@ async def master_creation_node(
                 output_interface_id=output_interface_id,
                 timeout_sec=60,
             )
+
+            logger.debug(f"TaskMaster response for task {task_id}: {task_master}")
+
+            # Validate response has 'id' field
+            if "id" not in task_master:
+                error_msg = (
+                    f"TaskMaster response missing 'id' field for task {task_id}.\n"
+                    f"Task name: {task_name}\n"
+                    f"Response content: {task_master}\n"
+                    f"Response keys: {list(task_master.keys()) if isinstance(task_master, dict) else 'Not a dict'}"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
 
             task_masters[task_id] = {
                 "task_master_id": task_master["id"],
@@ -130,8 +144,21 @@ async def master_creation_node(
             timeout_sec=300,  # 5 minutes
         )
 
+        logger.debug(f"JobMaster response: {job_master}")
+
+        # Validate response has 'id' field
+        if "id" not in job_master:
+            error_msg = (
+                f"JobMaster response missing 'id' field.\n"
+                f"Job name: {job_name}\n"
+                f"Response content: {job_master}\n"
+                f"Response keys: {list(job_master.keys()) if isinstance(job_master, dict) else 'Not a dict'}"
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
         job_master_id = job_master["id"]
-        logger.info(f"JobMaster created: {job_master_id}")
+        logger.info(f"JobMaster created successfully: {job_master_id}")
 
         # Step 3: Create JobMasterTask associations (CRITICAL!)
         logger.info(
@@ -150,6 +177,10 @@ async def master_creation_node(
             )
 
             # Add TaskMaster to JobMaster workflow
+            logger.debug(
+                f"Calling add_task_to_workflow for task {task_id} "
+                f"(job_master_id={job_master_id}, task_master_id={task_master_id}, order={order})"
+            )
             job_master_task = await client.add_task_to_workflow(
                 job_master_id=job_master_id,
                 task_master_id=task_master_id,
@@ -158,12 +189,34 @@ async def master_creation_node(
                 max_retries=3,
             )
 
+            logger.debug(f"JobMasterTask response for task {task_id}: {job_master_task}")
+
+            # Validate response has required fields
+            # JobMasterTask may not have 'id', but should have task_master_id and job_master_id
+            required_fields = ["task_master_id", "job_master_id"]
+            missing_fields = [f for f in required_fields if f not in job_master_task]
+
+            if missing_fields:
+                error_msg = (
+                    f"JobMasterTask response missing required fields {missing_fields} for task {task_id}.\n"
+                    f"Response content: {job_master_task}\n"
+                    f"Response keys: {list(job_master_task.keys()) if isinstance(job_master_task, dict) else 'Not a dict'}"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+            # Use task_master_id + order as identifier since JobMasterTask may not have separate 'id'
+            task_identifier = f"{job_master_task['task_master_id']}@order{order}"
             logger.info(
-                f"JobMasterTask created: {job_master_task['id']} (order={order})"
+                f"JobMasterTask created: {task_identifier} (task_master_id={job_master_task['task_master_id']}, order={order})"
             )
 
         # Update state
-        return {
+        logger.info("Master creation completed successfully")
+        logger.info(f"Setting job_master_id={job_master_id} (type: {type(job_master_id).__name__})")
+        logger.info(f"Setting task_master_ids count: {len(task_masters)}")
+
+        updated_state = {
             **state,
             "job_master_id": job_master_id,
             "task_master_ids": [
@@ -171,10 +224,14 @@ async def master_creation_node(
             ],
             "retry_count": 0,
         }
+        logger.debug(f"Updated state job_master_id: {updated_state.get('job_master_id')}")
+        return updated_state
 
     except Exception as e:
         logger.error(f"Failed to create masters: {e}", exc_info=True)
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception args: {e.args}")
         return {
             **state,
-            "error_message": f"Master creation failed: {str(e)}",
+            "error_message": f"Master creation failed: {type(e).__name__}: {str(e)}",
         }

@@ -42,15 +42,18 @@ async def job_registration_node(
             "error_message": "JobMaster ID is required for job registration",
         }
 
-    logger.debug(f"Registering Job for JobMaster: {job_master_id}")
+    logger.debug(f"Registering Job for JobMaster: {job_master_id} (type: {type(job_master_id).__name__})")
 
     try:
         # Initialize jobqueue client
         client = JobqueueClient()
 
+        # Convert int to str for API calls
+        job_master_id_str = str(job_master_id)
+
         # Get JobMasterTasks to understand task execution order
-        logger.info(f"Retrieving JobMasterTasks for JobMaster {job_master_id}")
-        workflow_tasks = await client.list_workflow_tasks(job_master_id)
+        logger.info(f"Retrieving JobMasterTasks for JobMaster {job_master_id_str}")
+        workflow_tasks = await client.list_workflow_tasks(job_master_id_str)
 
         if not workflow_tasks:
             logger.warning(
@@ -72,7 +75,7 @@ async def job_registration_node(
         logger.info(f"Creating Job: {job_name}")
 
         job = await client.create_job(
-            master_id=job_master_id,
+            master_id=job_master_id_str,
             name=job_name,
             tasks=tasks,
             priority=priority,

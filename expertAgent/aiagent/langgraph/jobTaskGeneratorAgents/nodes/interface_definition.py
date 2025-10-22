@@ -127,7 +127,12 @@ async def interface_definition_node(
     logger.debug(f"Using model=claude-haiku-4-5, max_tokens={max_tokens}")
 
     # Create structured output model
-    structured_model = model.with_structured_output(InterfaceSchemaResponse)
+    # Set include_raw=True to debug any parsing errors
+    structured_model = model.with_structured_output(
+        InterfaceSchemaResponse,
+        method="json_mode",  # Use JSON mode instead of function calling
+        include_raw=False
+    )
 
     # Create prompt
     user_prompt = create_interface_schema_prompt(task_breakdown)
@@ -140,7 +145,39 @@ async def interface_definition_node(
             {"role": "user", "content": user_prompt},
         ]
         logger.info("Invoking LLM for interface schema definition")
-        response = await structured_model.ainvoke(messages)
+
+        # First get the raw response to see what the LLM is actually returning
+        raw_model = ChatAnthropic(
+            model="claude-haiku-4-5",
+            temperature=0.0,
+            max_tokens=max_tokens,
+        )
+        raw_response = await raw_model.ainvoke(messages)
+        raw_content = str(raw_response.content)
+
+        # Save raw response to file for debugging
+        with open('/tmp/interface_definition_raw_response.txt', 'w', encoding='utf-8') as f:
+            f.write(raw_content)
+
+        # Manual parsing to handle markdown-wrapped JSON
+        import json
+        import re
+
+        # Strip markdown code blocks if present
+        content_stripped = raw_content.strip()
+        if content_stripped.startswith("```json"):
+            # Remove ```json at start and ``` at end
+            content_stripped = re.sub(r'^```json\s*', '', content_stripped)
+            content_stripped = re.sub(r'\s*```$', '', content_stripped)
+
+        # Parse JSON manually
+        try:
+            json_data = json.loads(content_stripped)
+            response = InterfaceSchemaResponse(**json_data)
+        except Exception as parse_error:
+            logger.debug(f"Manual parsing failed: {parse_error}, falling back to structured output")
+            # Fallback to structured output
+            response = await structured_model.ainvoke(messages)
 
         logger.info(
             f"Interface schema definition completed: {len(response.interfaces)} interfaces"
@@ -213,13 +250,14 @@ async def interface_definition_node(
             )
 
         # Update state
+        # Do NOT modify retry_count here - validation_node manages retry logic
         return {
             **state,
             "interface_definitions": interface_masters,
             "evaluator_stage": "after_interface_definition",
-            "retry_count": state.get("retry_count", 0) + 1
-            if state.get("retry_count", 0) > 0
-            else 0,
+            # Note: retry_count is NOT reset here to prevent infinite loop
+            # validation_node increments retry_count on failure
+            # validation success (is_valid=True) should be the only place to reset
         }
 
     except Exception as e:

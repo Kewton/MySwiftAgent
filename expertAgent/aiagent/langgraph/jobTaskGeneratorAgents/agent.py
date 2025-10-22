@@ -88,16 +88,22 @@ def evaluator_router(
 
     # Phase 8: Check for empty results (tasks=[] or interfaces=[])
     if evaluator_stage == "after_task_breakdown":
-        task_breakdown_result = state.get("task_breakdown_result", {})
-        tasks = task_breakdown_result.get("tasks", [])
-        if not tasks:
+        task_breakdown = state.get("task_breakdown", [])
+        logger.debug(
+            f"task_breakdown state check: type={type(task_breakdown)}, "
+            f"count={len(task_breakdown) if task_breakdown else 0}"
+        )
+        if not task_breakdown:
             logger.error("Task breakdown returned empty tasks list → END")
             return "END"
     elif evaluator_stage == "after_interface_definition":
-        interface_definition_result = state.get("interface_definition_result", {})
-        interfaces = interface_definition_result.get("interfaces", [])
-        if not interfaces:
-            logger.error("Interface definition returned empty interfaces list → END")
+        interface_definitions: dict | list = state.get("interface_definitions", {})
+        logger.debug(
+            f"interface_definitions state check: type={type(interface_definitions)}, "
+            f"count={len(interface_definitions) if interface_definitions else 0}"
+        )
+        if not interface_definitions:
+            logger.error("Interface definition returned empty interfaces → END")
             return "END"
 
     # Log infeasible tasks if any
@@ -110,29 +116,35 @@ def evaluator_router(
     # Route based on evaluator stage
     if evaluator_stage == "after_task_breakdown":
         if is_valid:
+            print("[DEBUG] Task breakdown valid → interface_definition", flush=True)
             logger.info("Task breakdown valid → interface_definition")
             return "interface_definition"
         else:
             if retry_count < MAX_RETRY_COUNT:
+                print(f"[DEBUG] Task breakdown invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → requirement_analysis", flush=True)
                 logger.warning(
                     f"Task breakdown invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → requirement_analysis"
                 )
                 return "requirement_analysis"
             else:
+                print("[DEBUG] Task breakdown invalid, max retries reached → END", flush=True)
                 logger.error("Task breakdown invalid, max retries reached → END")
                 return "END"
 
     elif evaluator_stage == "after_interface_definition":
         if is_valid:
+            print("[DEBUG] Interface definition valid → master_creation", flush=True)
             logger.info("Interface definition valid → master_creation")
             return "master_creation"
         else:
             if retry_count < MAX_RETRY_COUNT:
+                print(f"[DEBUG] Interface definition invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → interface_definition", flush=True)
                 logger.warning(
                     f"Interface definition invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → interface_definition"
                 )
                 return "interface_definition"
             else:
+                print("[DEBUG] Interface definition invalid, max retries reached → END", flush=True)
                 logger.error("Interface definition invalid, max retries reached → END")
                 return "END"
 

@@ -40,23 +40,32 @@ async def validation_node(
     """
     logger.info("Starting validation node")
 
+    # Check if previous node set an error
+    existing_error = state.get("error_message")
+    if existing_error:
+        logger.error(f"Previous node error detected: {existing_error}")
+        logger.error("Skipping validation due to previous error")
+        return state  # Preserve existing error message
+
     job_master_id = state.get("job_master_id")
     if not job_master_id:
         logger.error("JobMaster ID is missing")
+        logger.error("This indicates master_creation_node failed to set job_master_id")
         return {
             **state,
-            "error_message": "JobMaster ID is required for validation",
+            "error_message": "JobMaster ID is required for validation. Likely cause: master_creation_node failed.",
         }
 
-    logger.debug(f"Validating JobMaster: {job_master_id}")
+    logger.debug(f"Validating JobMaster: {job_master_id} (type: {type(job_master_id).__name__})")
 
     try:
         # Initialize jobqueue client
         client = JobqueueClient()
 
-        # Call validation API
-        logger.info(f"Calling validation API for JobMaster {job_master_id}")
-        validation_result = await client.validate_workflow(job_master_id)
+        # Call validation API (convert int to str for API call)
+        job_master_id_str = str(job_master_id)
+        logger.info(f"Calling validation API for JobMaster {job_master_id_str}")
+        validation_result = await client.validate_workflow(job_master_id_str)
 
         is_valid = validation_result.get("is_valid", False)
         errors = validation_result.get("errors", [])
@@ -133,6 +142,8 @@ async def validation_node(
             )
 
         # Return validation result with fix proposals
+        # Increment retry_count on validation failure to prevent infinite loop
+        current_retry = state.get("retry_count", 0)
         return {
             **state,
             "validation_result": {
@@ -141,7 +152,7 @@ async def validation_node(
                 "warnings": warnings,
                 "fix_proposals": fix_response.model_dump(),
             },
-            "retry_count": state.get("retry_count", 0),
+            "retry_count": current_retry + 1,  # Increment retry count on failure
         }
 
     except Exception as e:
