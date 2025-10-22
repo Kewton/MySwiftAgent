@@ -53,6 +53,17 @@ class Settings(BaseSettings):
     # Admin Configuration
     ADMIN_TOKEN: str = Field(default="")  # For reload secrets endpoint
 
+    # Job/Task Generator Configuration (Issue #111)
+    JOB_GENERATOR_MAX_TOKENS: int = Field(default=32768)
+    JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL: str = Field(
+        default="claude-haiku-4-5"
+    )
+    JOB_GENERATOR_EVALUATOR_MODEL: str = Field(default="claude-haiku-4-5")
+    JOB_GENERATOR_INTERFACE_DEFINITION_MODEL: str = Field(
+        default="claude-haiku-4-5"
+    )
+    JOB_GENERATOR_VALIDATION_MODEL: str = Field(default="claude-haiku-4-5")
+
 
 # インスタンス生成
 settings = Settings()

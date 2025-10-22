@@ -11,8 +11,6 @@ requirements into executable tasks following 4 principles:
 import logging
 import os
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.task_breakdown import (
     TASK_BREAKDOWN_SYSTEM_PROMPT,
     TaskBreakdownResponse,
@@ -20,6 +18,7 @@ from ..prompts.task_breakdown import (
     create_task_breakdown_prompt_with_feedback,
 )
 from ..state import JobTaskGeneratorState
+from ..utils.llm_factory import create_llm_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +44,17 @@ async def requirement_analysis_node(
         logger.info("Evaluation feedback detected - using feedback-enhanced prompt")
         logger.debug(f"Feedback: {evaluation_feedback}")
 
-    # Initialize LLM (claude-haiku-4-5)
+    # Initialize LLM with fallback mechanism (Issue #111)
     max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-    model = ChatAnthropic(
-        model="claude-haiku-4-5",
+    model_name = os.getenv(
+        "JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL", "claude-haiku-4-5"
+    )
+    model, perf_tracker, cost_tracker = create_llm_with_fallback(
+        model_name=model_name,
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using max_tokens={max_tokens}")
+    logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(TaskBreakdownResponse)

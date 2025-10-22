@@ -9,8 +9,6 @@ import logging
 import os
 from typing import Any
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.interface_schema import (
     INTERFACE_SCHEMA_SYSTEM_PROMPT,
     InterfaceSchemaResponse,
@@ -18,6 +16,7 @@ from ..prompts.interface_schema import (
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
+from ..utils.llm_factory import create_llm_with_fallback
 from ..utils.schema_matcher import SchemaMatcher
 
 logger = logging.getLogger(__name__)
@@ -117,14 +116,17 @@ async def interface_definition_node(
 
     logger.debug(f"Task breakdown count: {len(task_breakdown)}")
 
-    # Initialize LLM (claude-haiku-4-5) - Faster execution with improved error handling
+    # Initialize LLM with fallback mechanism (Issue #111)
     max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-    model = ChatAnthropic(
-        model="claude-haiku-4-5",
+    model_name = os.getenv(
+        "JOB_GENERATOR_INTERFACE_DEFINITION_MODEL", "claude-haiku-4-5"
+    )
+    model, perf_tracker, cost_tracker = create_llm_with_fallback(
+        model_name=model_name,
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using model=claude-haiku-4-5, max_tokens={max_tokens}")
+    logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(InterfaceSchemaResponse)

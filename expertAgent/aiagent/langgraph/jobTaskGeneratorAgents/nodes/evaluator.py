@@ -13,14 +13,13 @@ API extensions when necessary.
 import logging
 import os
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.evaluation import (
     EVALUATION_SYSTEM_PROMPT,
     EvaluationResult,
     create_evaluation_prompt,
 )
 from ..state import JobTaskGeneratorState
+from ..utils.llm_factory import create_llm_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -65,14 +64,15 @@ async def evaluator_node(
             "error_message": "Task breakdown is required for evaluation",
         }
 
-    # Initialize LLM (claude-haiku-4-5)
+    # Initialize LLM with fallback mechanism (Issue #111)
     max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-    model = ChatAnthropic(
-        model="claude-haiku-4-5",
+    model_name = os.getenv("JOB_GENERATOR_EVALUATOR_MODEL", "claude-haiku-4-5")
+    model, perf_tracker, cost_tracker = create_llm_with_fallback(
+        model_name=model_name,
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using max_tokens={max_tokens}")
+    logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(EvaluationResult)
