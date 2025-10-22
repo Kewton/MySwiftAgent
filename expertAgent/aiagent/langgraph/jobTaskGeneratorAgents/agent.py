@@ -121,13 +121,19 @@ def evaluator_router(
             return "interface_definition"
         else:
             if retry_count < MAX_RETRY_COUNT:
-                print(f"[DEBUG] Task breakdown invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → requirement_analysis", flush=True)
+                print(
+                    f"[DEBUG] Task breakdown invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → requirement_analysis",
+                    flush=True,
+                )
                 logger.warning(
                     f"Task breakdown invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → requirement_analysis"
                 )
                 return "requirement_analysis"
             else:
-                print("[DEBUG] Task breakdown invalid, max retries reached → END", flush=True)
+                print(
+                    "[DEBUG] Task breakdown invalid, max retries reached → END",
+                    flush=True,
+                )
                 logger.error("Task breakdown invalid, max retries reached → END")
                 return "END"
 
@@ -138,13 +144,19 @@ def evaluator_router(
             return "master_creation"
         else:
             if retry_count < MAX_RETRY_COUNT:
-                print(f"[DEBUG] Interface definition invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → interface_definition", flush=True)
+                print(
+                    f"[DEBUG] Interface definition invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → interface_definition",
+                    flush=True,
+                )
                 logger.warning(
                     f"Interface definition invalid, retry {retry_count + 1}/{MAX_RETRY_COUNT} → interface_definition"
                 )
                 return "interface_definition"
             else:
-                print("[DEBUG] Interface definition invalid, max retries reached → END", flush=True)
+                print(
+                    "[DEBUG] Interface definition invalid, max retries reached → END",
+                    flush=True,
+                )
                 logger.error("Interface definition invalid, max retries reached → END")
                 return "END"
 
@@ -215,6 +227,41 @@ def validation_router(
             return "END"
 
 
+def interface_router(
+    state: JobTaskGeneratorState,
+) -> Literal["evaluator", "validation"]:
+    """Route after interface_definition based on evaluator_stage.
+
+    Routing logic:
+    1. If evaluator_stage is "retry_after_validation":
+       → validation (retry validation directly, skip evaluator/master_creation)
+    2. Otherwise:
+       → evaluator (normal flow, re-evaluate interfaces)
+
+    This prevents infinite loop by allowing direct retry from validation failure
+    without going through evaluator → master_creation → validation again.
+
+    Args:
+        state: Current job task generator state
+
+    Returns:
+        Next node name: "evaluator" or "validation"
+    """
+    logger.info("Interface router: determining next node")
+
+    evaluator_stage = state.get("evaluator_stage")
+    logger.debug(f"evaluator_stage: {evaluator_stage}")
+
+    if evaluator_stage == "retry_after_validation":
+        logger.info(
+            "Retry after validation → validation (direct, skip evaluator/master_creation)"
+        )
+        return "validation"
+    else:
+        logger.info("Interface definition complete → evaluator (normal flow)")
+        return "evaluator"
+
+
 def create_job_task_generator_agent() -> Any:
     """Create Job/Task Auto-Generation Agent using LangGraph.
 
@@ -273,8 +320,18 @@ def create_job_task_generator_agent() -> Any:
         },
     )
 
-    # interface_definition → evaluator (re-evaluate)
-    workflow.add_edge("interface_definition", "evaluator")
+    # interface_definition → (conditional) evaluator / validation
+    # Phase 11: Fix infinite loop by adding conditional routing
+    #   - If evaluator_stage == "retry_after_validation" → validation (direct retry)
+    #   - Otherwise → evaluator (normal re-evaluation)
+    workflow.add_conditional_edges(
+        "interface_definition",
+        interface_router,
+        {
+            "evaluator": "evaluator",
+            "validation": "validation",
+        },
+    )
 
     # master_creation → validation
     workflow.add_edge("master_creation", "validation")

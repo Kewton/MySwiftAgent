@@ -56,7 +56,9 @@ async def validation_node(
             "error_message": "JobMaster ID is required for validation. Likely cause: master_creation_node failed.",
         }
 
-    logger.debug(f"Validating JobMaster: {job_master_id} (type: {type(job_master_id).__name__})")
+    logger.debug(
+        f"Validating JobMaster: {job_master_id} (type: {type(job_master_id).__name__})"
+    )
 
     try:
         # Initialize jobqueue client
@@ -153,6 +155,7 @@ async def validation_node(
                 "fix_proposals": fix_response.model_dump(),
             },
             "retry_count": current_retry + 1,  # Increment retry count on failure
+            "evaluator_stage": "retry_after_validation",  # Phase 11: Trigger conditional routing
         }
 
     except Exception as e:

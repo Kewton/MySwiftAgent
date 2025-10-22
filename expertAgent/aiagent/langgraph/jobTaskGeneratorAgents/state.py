@@ -4,7 +4,7 @@ This module defines the state structure for the LangGraph-based agent that
 automatically generates jobqueue Jobs and Tasks from natural language requirements.
 """
 
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 
 class JobTaskGeneratorState(TypedDict, total=False):
@@ -72,7 +72,11 @@ class JobTaskGeneratorState(TypedDict, total=False):
     evaluation_retry_count: int
     evaluation_errors: list[str]
     evaluation_feedback: str | None
-    evaluator_stage: str  # "after_task_breakdown" or "after_interface_definition"
+    evaluator_stage: Literal[
+        "after_task_breakdown",
+        "after_interface_definition",
+        "retry_after_validation",  # Phase 11: Infinite loop fix
+    ]
 
     # ===== Validation & Retry =====
     validation_result: dict[str, Any] | None

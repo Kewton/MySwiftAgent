@@ -2,6 +2,7 @@
 
 from aiagent.langgraph.jobTaskGeneratorAgents.agent import (
     evaluator_router,
+    interface_router,
     validation_router,
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.state import JobTaskGeneratorState
@@ -318,3 +319,100 @@ class TestValidationRouter:
 
         result = validation_router(state)
         assert result == "interface_definition"
+
+
+class TestInterfaceRouter:
+    """Test interface_router function for Phase 11 infinite loop fix."""
+
+    def test_retry_after_validation_routes_to_validation(self):
+        """Test that retry_after_validation routes directly to validation (skip evaluator/master_creation)."""
+        state: JobTaskGeneratorState = {
+            "user_requirement": "test",
+            "max_retry": 5,
+            "task_breakdown": [],
+            "interface_definitions": [],
+            "task_masters": [],
+            "task_master_ids": [],
+            "job_master": {},
+            "job_master_id": None,
+            "feasibility_analysis": None,
+            "infeasible_tasks": [],
+            "alternative_proposals": [],
+            "api_extension_proposals": [],
+            "evaluation_result": None,
+            "evaluation_retry_count": 0,
+            "evaluation_errors": [],
+            "evaluation_feedback": None,
+            "evaluator_stage": "retry_after_validation",  # Trigger retry path
+            "validation_result": None,
+            "retry_count": 1,
+            "validation_errors": [],
+            "job_id": None,
+            "status": "initialized",
+            "error_message": None,
+        }
+
+        result = interface_router(state)
+        assert result == "validation"
+
+    def test_after_interface_definition_routes_to_evaluator(self):
+        """Test that normal flow (after_interface_definition) routes to evaluator."""
+        state: JobTaskGeneratorState = {
+            "user_requirement": "test",
+            "max_retry": 5,
+            "task_breakdown": [],
+            "interface_definitions": [],
+            "task_masters": [],
+            "task_master_ids": [],
+            "job_master": {},
+            "job_master_id": None,
+            "feasibility_analysis": None,
+            "infeasible_tasks": [],
+            "alternative_proposals": [],
+            "api_extension_proposals": [],
+            "evaluation_result": None,
+            "evaluation_retry_count": 0,
+            "evaluation_errors": [],
+            "evaluation_feedback": None,
+            "evaluator_stage": "after_interface_definition",  # Normal flow
+            "validation_result": None,
+            "retry_count": 0,
+            "validation_errors": [],
+            "job_id": None,
+            "status": "initialized",
+            "error_message": None,
+        }
+
+        result = interface_router(state)
+        assert result == "evaluator"
+
+    def test_after_task_breakdown_routes_to_evaluator(self):
+        """Test that after_task_breakdown stage also routes to evaluator (normal flow)."""
+        state: JobTaskGeneratorState = {
+            "user_requirement": "test",
+            "max_retry": 5,
+            "task_breakdown": [],
+            "interface_definitions": [],
+            "task_masters": [],
+            "task_master_ids": [],
+            "job_master": {},
+            "job_master_id": None,
+            "feasibility_analysis": None,
+            "infeasible_tasks": [],
+            "alternative_proposals": [],
+            "api_extension_proposals": [],
+            "evaluation_result": None,
+            "evaluation_retry_count": 0,
+            "evaluation_errors": [],
+            "evaluation_feedback": None,
+            "evaluator_stage": "after_task_breakdown",  # Edge case
+            "validation_result": None,
+            "retry_count": 0,
+            "validation_errors": [],
+            "job_id": None,
+            "status": "initialized",
+            "error_message": None,
+        }
+
+        result = interface_router(state)
+        assert result == "evaluator"
