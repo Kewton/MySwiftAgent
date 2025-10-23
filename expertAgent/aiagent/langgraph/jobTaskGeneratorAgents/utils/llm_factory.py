@@ -26,6 +26,8 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
+from core.secrets import secrets_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,10 +121,21 @@ def create_llm(
             f"Creating ChatGoogleGenerativeAI instance: model={model_name}, "
             f"temperature={temperature}, max_tokens={max_tokens}"
         )
-        return ChatGoogleGenerativeAI(
+
+        # Retrieve API key from MyVault
+        try:
+            google_api_key = secrets_manager.get_secret("GOOGLE_API_KEY", project=None)
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize Gemini model '{model_name}': {e}. "
+                f"Please ensure GOOGLE_API_KEY is set in MyVault for default project"
+            ) from e
+
+        return ChatGoogleGenerativeAI(  # type: ignore[call-arg]
             model=model_name,
             temperature=temperature,
             max_tokens=max_tokens,
+            google_api_key=google_api_key,
         )
 
     # Unsupported model
@@ -303,9 +316,7 @@ class ModelCostTracker:
 
         return total
 
-    def add_call(
-        self, model_name: str, input_tokens: int, output_tokens: int
-    ) -> float:
+    def add_call(self, model_name: str, input_tokens: int, output_tokens: int) -> float:
         """Add API call cost to running total.
 
         Args:
@@ -437,9 +448,7 @@ def create_llm_with_fallback(
             return llm, perf_tracker, cost_tracker
 
         except Exception as e:
-            logger.warning(
-                f"Failed to create LLM: model={model}, error={str(e)[:100]}"
-            )
+            logger.warning(f"Failed to create LLM: model={model}, error={str(e)[:100]}")
             if attempt == len(models_to_try) - 1:
                 # All models failed
                 error_msg = (
