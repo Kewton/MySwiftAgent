@@ -47,14 +47,21 @@ async def evaluator_node(
     Returns:
         Updated state with evaluation results
     """
+    logger.info("=" * 80)
     logger.info("Starting evaluator node")
+    logger.info("=" * 80)
 
     user_requirement = state["user_requirement"]
     task_breakdown = state.get("task_breakdown", [])
+    interface_definitions = state.get("interface_definitions", [])
     evaluator_stage = state.get("evaluator_stage", "after_task_breakdown")
+    retry_count = state.get("retry_count", 0)
 
-    logger.debug(f"Evaluator stage: {evaluator_stage}")
-    logger.debug(f"Task breakdown count: {len(task_breakdown)}")
+    logger.info(f"📍 Evaluator stage: {evaluator_stage}")
+    logger.info(f"📊 Task breakdown count: {len(task_breakdown)}")
+    logger.info(f"📋 Interface definitions count: {len(interface_definitions)}")
+    logger.info(f"🔄 Retry count: {retry_count}")
+    logger.debug(f"State keys present: {list(state.keys())}")
 
     if not task_breakdown:
         logger.error("Task breakdown is empty")
@@ -172,6 +179,13 @@ async def evaluator_node(
             logger.debug(f"Generated evaluation feedback:\n{evaluation_feedback}")
 
         # Update state
+        logger.info("=" * 80)
+        logger.info("✅ Evaluator node completed successfully")
+        logger.info(f"📊 Returning evaluation result: is_valid={response.is_valid}")
+        logger.info(f"🔄 Retry count reset to: 0")
+        logger.info(f"📍 Evaluator stage unchanged: {evaluator_stage}")
+        logger.info("=" * 80)
+
         return {
             **state,
             "evaluation_result": response.model_dump(),

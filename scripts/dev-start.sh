@@ -650,8 +650,8 @@ clean_temp_files() {
     stop_service "MyScheduler" "$MYSCHEDULER_PID"
     stop_service "JobQueue" "$JOBQUEUE_PID"
 
-    # Clean logs
-    rm -f "$LOG_DIR"/*.log 2>/dev/null || true
+    # Clean logs (disabled to preserve logs for debugging)
+    # rm -f "$LOG_DIR"/*.log 2>/dev/null || true
 
     # Clean PID files
     rm -f "$PID_DIR"/*.pid 2>/dev/null || true

@@ -215,13 +215,24 @@ async def interface_definition_node(
             )
 
         # Update state
+        current_stage = state.get("evaluator_stage", "after_task_breakdown")
+        new_stage = "after_interface_definition"
+        current_retry = state.get("retry_count", 0)
+        new_retry = current_retry + 1 if current_retry > 0 else 0
+
+        logger.info("=" * 80)
+        logger.info("✅ Interface definition node completed successfully")
+        logger.info(f"📋 Created {len(interface_masters)} interface definitions")
+        logger.info(f"🔄 Stage transition: {current_stage} → {new_stage}")
+        logger.info(f"🔄 Retry count: {current_retry} → {new_retry}")
+        logger.info("⚠️  CRITICAL: Returning state with evaluator_stage='after_interface_definition'")
+        logger.info("=" * 80)
+
         return {
             **state,
             "interface_definitions": interface_masters,
-            "evaluator_stage": "after_interface_definition",
-            "retry_count": state.get("retry_count", 0) + 1
-            if state.get("retry_count", 0) > 0
-            else 0,
+            "evaluator_stage": new_stage,
+            "retry_count": new_retry,
         }
 
     except Exception as e:
