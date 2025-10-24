@@ -13,6 +13,7 @@ import os
 
 from ..prompts.task_breakdown import (
     TASK_BREAKDOWN_SYSTEM_PROMPT,
+    TaskBreakdownItem,
     TaskBreakdownResponse,
     create_task_breakdown_prompt,
     create_task_breakdown_prompt_with_feedback,
@@ -21,6 +22,46 @@ from ..state import JobTaskGeneratorState
 from ..utils.llm_factory import create_llm_with_fallback
 
 logger = logging.getLogger(__name__)
+
+# Priority constraint constants (Issue #111)
+MIN_PRIORITY = 1
+MAX_PRIORITY = 10
+
+
+def _clip_task_priorities(
+    tasks: list[TaskBreakdownItem],
+    min_priority: int = MIN_PRIORITY,
+    max_priority: int = MAX_PRIORITY,
+) -> list[TaskBreakdownItem]:
+    """Clip task priorities to valid range.
+
+    This is a safety mechanism to ensure LLM-generated priorities stay within
+    the valid range [min_priority, max_priority]. LLMs may occasionally violate
+    Pydantic constraints in the prompt.
+
+    Args:
+        tasks: List of TaskBreakdownItem from LLM response
+        min_priority: Minimum valid priority (default: 1)
+        max_priority: Maximum valid priority (default: 10)
+
+    Returns:
+        Tasks with clipped priorities
+    """
+    for task in tasks:
+        original_priority = task.priority
+        if task.priority < min_priority:
+            task.priority = min_priority
+            logger.warning(
+                f"Task {task.task_id} priority {original_priority} < {min_priority}, "
+                f"clipped to {min_priority}"
+            )
+        elif task.priority > max_priority:
+            task.priority = max_priority
+            logger.warning(
+                f"Task {task.task_id} priority {original_priority} > {max_priority}, "
+                f"clipped to {max_priority}"
+            )
+    return tasks
 
 
 async def requirement_analysis_node(
@@ -80,6 +121,10 @@ async def requirement_analysis_node(
 
         logger.info(f"Task breakdown completed: {len(response.tasks)} tasks")
         logger.debug(f"Tasks: {[task.name for task in response.tasks]}")
+
+        # Post-processing: Clip priorities to valid range (Issue #111)
+        # This prevents validation errors when LLM violates priority constraints
+        response.tasks = _clip_task_priorities(response.tasks)
 
         # Update state
         return {

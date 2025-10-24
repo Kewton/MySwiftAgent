@@ -589,3 +589,64 @@ class TestInterfaceDefinitionNode:
         ]
         # After fix_regex_over_escaping, pattern should have double backslash (\\d)
         assert "\\d" in date_pattern
+
+    @pytest.mark.asyncio
+    async def test_interface_schema_definition_json_schema_generation(self):
+        """Test that InterfaceSchemaDefinition generates JSON Schema with additionalProperties: false.
+
+        Priority: High
+        This is a regression test for OpenAI API compatibility (Issue #111).
+        OpenAI's structured output API requires additionalProperties to be false.
+        """
+        # Generate JSON Schema from Pydantic model
+        schema = InterfaceSchemaDefinition.model_json_schema()
+
+        # Verify top-level additionalProperties is false
+        assert schema.get("additionalProperties") is False, (
+            "InterfaceSchemaDefinition must have additionalProperties: false for OpenAI API compatibility"
+        )
+
+        # Verify required fields are present
+        assert "properties" in schema
+        assert "required" in schema
+        assert set(schema["required"]) == {
+            "task_id",
+            "interface_name",
+            "description",
+            "input_schema",
+            "output_schema",
+        }
+
+        # Verify field types
+        assert schema["properties"]["task_id"]["type"] == "string"
+        assert schema["properties"]["interface_name"]["type"] == "string"
+        assert schema["properties"]["description"]["type"] == "string"
+        # input_schema and output_schema should be type: object (dict[str, Any])
+        assert schema["properties"]["input_schema"]["type"] == "object"
+        assert schema["properties"]["output_schema"]["type"] == "object"
+
+    @pytest.mark.asyncio
+    async def test_interface_schema_response_json_schema_generation(self):
+        """Test that InterfaceSchemaResponse generates valid JSON Schema.
+
+        Priority: Medium
+        This ensures the wrapper model also produces OpenAI-compatible schemas.
+        """
+        # Generate JSON Schema from Pydantic model
+        schema = InterfaceSchemaResponse.model_json_schema()
+
+        # Verify schema structure
+        assert "properties" in schema
+        assert "interfaces" in schema["properties"]
+
+        # Verify interfaces is an array
+        assert schema["properties"]["interfaces"]["type"] == "array"
+        assert "items" in schema["properties"]["interfaces"]
+
+        # Verify items reference InterfaceSchemaDefinition
+        # The $ref will point to definitions section
+        items_schema = schema["properties"]["interfaces"]["items"]
+        if "$ref" in items_schema:
+            # Check that the reference exists in $defs
+            ref_name = items_schema["$ref"].split("/")[-1]
+            assert ref_name in schema.get("$defs", {})

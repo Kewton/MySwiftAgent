@@ -64,15 +64,24 @@ def create_mock_jobqueue_client(
     # Master creation methods
     # create_job_master returns dict with "id" key
     mock_client.create_job_master = AsyncMock(
-        return_value={"id": master_response.get("job_master_id", "jm_test123"), "name": "TestJobMaster"}
+        return_value={
+            "id": master_response.get("job_master_id", "jm_test123"),
+            "name": "TestJobMaster",
+        }
         if master_response
         else {"id": "jm_test123", "name": "TestJobMaster"}
     )
     # create_task_master and create_interface_master return dicts as well
-    mock_client.create_task_master = AsyncMock(return_value={"id": "tm_test456", "name": "TestTaskMaster"})
-    mock_client.create_interface_master = AsyncMock(return_value={"id": "im_test789", "name": "TestInterface"})
+    mock_client.create_task_master = AsyncMock(
+        return_value={"id": "tm_test456", "name": "TestTaskMaster"}
+    )
+    mock_client.create_interface_master = AsyncMock(
+        return_value={"id": "im_test789", "name": "TestInterface"}
+    )
     # add_task_to_workflow
-    mock_client.add_task_to_workflow = AsyncMock(return_value={"id": "jmt_test789", "workflow_id": "jm_test123"})
+    mock_client.add_task_to_workflow = AsyncMock(
+        return_value={"id": "jmt_test789", "workflow_id": "jm_test123"}
+    )
 
     # Validation methods
     if validation_response is None:
@@ -80,13 +89,17 @@ def create_mock_jobqueue_client(
     mock_client.validate_workflow = AsyncMock(return_value=validation_response)
 
     # Job registration methods
-    mock_client.list_workflow_tasks = AsyncMock(return_value=[
-        {"id": "jmt_001", "order": 0, "task_master_id": "tm_test456"},
-        {"id": "jmt_002", "order": 1, "task_master_id": "tm_test457"},
-    ])
+    mock_client.list_workflow_tasks = AsyncMock(
+        return_value=[
+            {"id": "jmt_001", "order": 0, "task_master_id": "tm_test456"},
+            {"id": "jmt_002", "order": 1, "task_master_id": "tm_test457"},
+        ]
+    )
     mock_client.create_job = AsyncMock(
         return_value={
-            "id": job_response.get("job_id", "job_uuid_test") if job_response else "job_uuid_test",
+            "id": job_response.get("job_id", "job_uuid_test")
+            if job_response
+            else "job_uuid_test",
             "name": "Test Job",
             "master_id": "jm_test123",
         }
@@ -208,7 +221,10 @@ def create_evaluation_result_failure() -> EvaluationResult:
         infeasible_tasks=[],
         alternative_proposals=[],
         api_extension_proposals=[],
-        issues=["Task dependencies are circular", "Some tasks require unavailable capabilities"],
+        issues=[
+            "Task dependencies are circular",
+            "Some tasks require unavailable capabilities",
+        ],
         improvement_suggestions=[
             "Reorder tasks to eliminate circular dependencies",
             "Replace unavailable capabilities with alternatives",
@@ -281,10 +297,18 @@ def create_interface_schema_response() -> InterfaceSchemaResponse:
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_success_first_try(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -314,7 +338,9 @@ async def test_e2e_workflow_success_first_try(
     # requirement_analysis_node expects TaskBreakdownResponse Pydantic model
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -343,7 +369,9 @@ async def test_e2e_workflow_success_first_try(
     # interface_definition_node expects InterfaceSchemaResponse Pydantic model
     interface_schema_response = create_interface_schema_response()
     mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=interface_schema_response)
+    mock_interface_structured.ainvoke = AsyncMock(
+        return_value=interface_schema_response
+    )
     mock_interface_llm = MagicMock()
     mock_interface_llm.with_structured_output = MagicMock(
         return_value=mock_interface_structured
@@ -368,7 +396,10 @@ async def test_e2e_workflow_success_first_try(
         "retry_count": 0,
     }
 
-    with patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient", return_value=mock_validation_client):
+    with patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient",
+        return_value=mock_validation_client,
+    ):
         result = await app.ainvoke(initial_state)
 
     # Assert: Verify final state
@@ -386,7 +417,9 @@ async def test_e2e_workflow_success_first_try(
     assert mock_llm_interface.call_count == 1, "interface_definition called once"
     # validation_node only uses LLM when validation fails (for fix proposals)
     # In success case, LLM is not called
-    assert mock_llm_validation.call_count == 0, "validation LLM not called in success case"
+    assert mock_llm_validation.call_count == 0, (
+        "validation LLM not called in success case"
+    )
 
     # Assert: Verify Jobqueue call counts
     mock_jobqueue_master.return_value.create_job_master.assert_called_once()
@@ -397,10 +430,18 @@ async def test_e2e_workflow_success_first_try(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_success_with_retry(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -430,7 +471,9 @@ async def test_e2e_workflow_success_with_retry(
     # Setup: Mock LLMs with Pydantic models
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -461,7 +504,9 @@ async def test_e2e_workflow_success_with_retry(
     # Interface definition with Pydantic model
     interface_schema_response = create_interface_schema_response()
     mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=interface_schema_response)
+    mock_interface_structured.ainvoke = AsyncMock(
+        return_value=interface_schema_response
+    )
     mock_interface_llm = MagicMock()
     mock_interface_llm.with_structured_output = MagicMock(
         return_value=mock_interface_structured
@@ -486,7 +531,10 @@ async def test_e2e_workflow_success_with_retry(
         "retry_count": 0,
     }
 
-    with patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient", return_value=mock_validation_client):
+    with patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient",
+        return_value=mock_validation_client,
+    ):
         result = await app.ainvoke(initial_state)
 
     # Assert: Verify final state
@@ -494,21 +542,35 @@ async def test_e2e_workflow_success_with_retry(
     assert result.get("job_id") == "job_uuid_test", "job_id should be set"
 
     # Assert: Verify LLM call counts
-    assert mock_llm_requirement.call_count == 2, "requirement_analysis called twice (1 retry)"
-    assert mock_llm_evaluator.call_count == 3, "evaluator called 3 times (1 fail + 2 success)"
+    assert mock_llm_requirement.call_count == 2, (
+        "requirement_analysis called twice (1 retry)"
+    )
+    assert mock_llm_evaluator.call_count == 3, (
+        "evaluator called 3 times (1 fail + 2 success)"
+    )
     assert mock_llm_interface.call_count == 1, "interface_definition called once"
     # validation_node only uses LLM when validation fails (for fix proposals)
-    assert mock_llm_validation.call_count == 0, "validation LLM not called in success case"
+    assert mock_llm_validation.call_count == 0, (
+        "validation LLM not called in success case"
+    )
 
 
 @pytest.mark.asyncio
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_success_after_interface_retry(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -538,7 +600,9 @@ async def test_e2e_workflow_success_after_interface_retry(
     # Setup: Mock LLMs with Pydantic models
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -570,7 +634,9 @@ async def test_e2e_workflow_success_after_interface_retry(
     # Interface definition with Pydantic model
     interface_schema_response = create_interface_schema_response()
     mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=interface_schema_response)
+    mock_interface_structured.ainvoke = AsyncMock(
+        return_value=interface_schema_response
+    )
     mock_interface_llm = MagicMock()
     mock_interface_llm.with_structured_output = MagicMock(
         return_value=mock_interface_structured
@@ -595,7 +661,10 @@ async def test_e2e_workflow_success_after_interface_retry(
         "retry_count": 0,
     }
 
-    with patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient", return_value=mock_validation_client):
+    with patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient",
+        return_value=mock_validation_client,
+    ):
         result = await app.ainvoke(initial_state)
 
     # Assert: Verify final state
@@ -604,10 +673,16 @@ async def test_e2e_workflow_success_after_interface_retry(
 
     # Assert: Verify LLM call counts
     assert mock_llm_requirement.call_count == 1, "requirement_analysis called once"
-    assert mock_llm_evaluator.call_count == 3, "evaluator called 3 times (task success, interface fail/success)"
-    assert mock_llm_interface.call_count == 2, "interface_definition called twice (1 retry)"
+    assert mock_llm_evaluator.call_count == 3, (
+        "evaluator called 3 times (task success, interface fail/success)"
+    )
+    assert mock_llm_interface.call_count == 2, (
+        "interface_definition called twice (1 retry)"
+    )
     # validation_node only uses LLM when validation fails (for fix proposals)
-    assert mock_llm_validation.call_count == 0, "validation LLM not called in success case"
+    assert mock_llm_validation.call_count == 0, (
+        "validation LLM not called in success case"
+    )
 
 
 # ============================================================================
@@ -619,10 +694,18 @@ async def test_e2e_workflow_success_after_interface_retry(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_max_retries_reached(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -653,7 +736,9 @@ async def test_e2e_workflow_max_retries_reached(
     # Setup: Mock requirement_analysis to always return tasks
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -668,9 +753,7 @@ async def test_e2e_workflow_max_retries_reached(
     evaluation_failure = create_evaluation_result_failure()
     mock_evaluator_structured = AsyncMock()
     # evaluator called 5 times, all failures
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[evaluation_failure] * 5
-    )
+    mock_evaluator_structured.ainvoke = AsyncMock(side_effect=[evaluation_failure] * 5)
     mock_evaluator_llm = MagicMock()
     mock_evaluator_llm.with_structured_output = MagicMock(
         return_value=mock_evaluator_structured
@@ -693,9 +776,13 @@ async def test_e2e_workflow_max_retries_reached(
 
     # Assert: Verify LLM call counts
     # requirement_analysis called 6 times (initial 1 + retries 5 = 6 total)
-    assert mock_llm_requirement.call_count == 6, "requirement_analysis called 6 times (1 initial + 5 retries)"
+    assert mock_llm_requirement.call_count == 6, (
+        "requirement_analysis called 6 times (1 initial + 5 retries)"
+    )
     # evaluator called 6 times (all failures)
-    assert mock_llm_evaluator.call_count == 6, "evaluator called 6 times (1 initial + 5 retries)"
+    assert mock_llm_evaluator.call_count == 6, (
+        "evaluator called 6 times (1 initial + 5 retries)"
+    )
     # interface_definition NOT called (workflow stopped before)
     assert mock_llm_interface.call_count == 0, "interface_definition not called"
 
@@ -704,10 +791,18 @@ async def test_e2e_workflow_max_retries_reached(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_infeasible_tasks_detected(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -740,7 +835,9 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     # Setup: Mock requirement_analysis (same as test 1)
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -775,7 +872,8 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     # Return failure with infeasible_tasks 5 times, then success
     # This simulates: initial failure → retries with failures → eventual success
     mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[evaluation_with_infeasible] * 5 + [
+        side_effect=[evaluation_with_infeasible] * 5
+        + [
             evaluation_success,  # After retries, task_breakdown is valid
             evaluation_success,  # After interface_definition
         ]
@@ -789,7 +887,9 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     # Setup: Mock interface_definition
     interface_schema_response = create_interface_schema_response()
     mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=interface_schema_response)
+    mock_interface_structured.ainvoke = AsyncMock(
+        return_value=interface_schema_response
+    )
     mock_interface_llm = MagicMock()
     mock_interface_llm.with_structured_output = MagicMock(
         return_value=mock_interface_structured
@@ -812,11 +912,16 @@ async def test_e2e_workflow_infeasible_tasks_detected(
         "retry_count": 0,
     }
 
-    with patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient", return_value=mock_validation_client):
+    with patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient",
+        return_value=mock_validation_client,
+    ):
         result = await app.ainvoke(initial_state)
 
     # Assert: Verify workflow eventually succeeded
-    assert result.get("job_id") == "job_uuid_test", "job_id should be set (workflow succeeded)"
+    assert result.get("job_id") == "job_uuid_test", (
+        "job_id should be set (workflow succeeded)"
+    )
     assert result.get("job_master_id") == "jm_test123", "job_master_id should be set"
     assert result["retry_count"] == 0, "retry_count should be reset to 0 after success"
 
@@ -829,13 +934,16 @@ async def test_e2e_workflow_infeasible_tasks_detected(
         f"requirement_analysis called at least twice (initial + retries), got {mock_llm_requirement.call_count}"
     )
 
+
 # ============================================================================
 # Phase 3-3: エッジケーステスト (3 tests)
 # ============================================================================
 
 
 @pytest.mark.asyncio
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_empty_task_breakdown(
     mock_llm_requirement: MagicMock,
 ) -> None:
@@ -894,10 +1002,18 @@ async def test_e2e_workflow_empty_task_breakdown(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_empty_interface_definitions(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -924,7 +1040,9 @@ async def test_e2e_workflow_empty_interface_definitions(
     # Setup: Mock requirement_analysis (returns valid tasks)
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -967,15 +1085,23 @@ async def test_e2e_workflow_empty_interface_definitions(
     result = await app.ainvoke(initial_state)
 
     # Assert: Verify workflow terminated without creating job
-    assert "job_id" not in result, "job_id should not be set (empty interface definitions)"
+    assert "job_id" not in result, (
+        "job_id should not be set (empty interface definitions)"
+    )
     assert "job_master_id" not in result, "job_master_id should not be set"
     # interface_definitions might be a dict with empty 'interfaces' list
     interface_defs = result.get("interface_definitions")
     if isinstance(interface_defs, list):
-        assert len(interface_defs) == 0, f"interface_definitions should be empty list, got {interface_defs}"
+        assert len(interface_defs) == 0, (
+            f"interface_definitions should be empty list, got {interface_defs}"
+        )
     elif isinstance(interface_defs, dict):
-        assert interface_defs.get("interfaces", []) == [], f"interfaces should be empty, got {interface_defs}"
-    assert len(result.get("task_breakdown", [])) == 3, "task_breakdown should have 3 tasks"
+        assert interface_defs.get("interfaces", []) == [], (
+            f"interfaces should be empty, got {interface_defs}"
+        )
+    assert len(result.get("task_breakdown", [])) == 3, (
+        "task_breakdown should have 3 tasks"
+    )
 
     # Assert: Verify LLM call counts
     assert mock_llm_requirement.call_count == 1, "requirement_analysis called once"
@@ -986,8 +1112,12 @@ async def test_e2e_workflow_empty_interface_definitions(
 
 
 @pytest.mark.asyncio
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_llm_error_during_flow(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -1008,7 +1138,9 @@ async def test_e2e_workflow_llm_error_during_flow(
     # Setup: Mock requirement_analysis (returns valid tasks)
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -1041,9 +1173,10 @@ async def test_e2e_workflow_llm_error_during_flow(
 
     # Assert: Verify error handling
     assert "error_message" in result, "error_message should be set"
-    assert "LLM API timeout error" in result["error_message"] or "Evaluation failed" in result["error_message"], (
-        "error_message should contain LLM error details"
-    )
+    assert (
+        "LLM API timeout error" in result["error_message"]
+        or "Evaluation failed" in result["error_message"]
+    ), "error_message should contain LLM error details"
 
     # Assert: Verify workflow terminated without creating job
     assert "job_id" not in result, "job_id should not be set (LLM error)"
@@ -1063,10 +1196,18 @@ async def test_e2e_workflow_llm_error_during_flow(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_execution_time(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -1089,7 +1230,9 @@ async def test_e2e_workflow_execution_time(
     # Setup: Mock all LLMs (same as success test)
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -1116,7 +1259,9 @@ async def test_e2e_workflow_execution_time(
 
     interface_schema_response = create_interface_schema_response()
     mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=interface_schema_response)
+    mock_interface_structured.ainvoke = AsyncMock(
+        return_value=interface_schema_response
+    )
     mock_interface_llm = MagicMock()
     mock_interface_llm.with_structured_output = MagicMock(
         return_value=mock_interface_structured
@@ -1139,7 +1284,10 @@ async def test_e2e_workflow_execution_time(
     }
 
     start_time = time.time()
-    with patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient", return_value=mock_validation_client):
+    with patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient",
+        return_value=mock_validation_client,
+    ):
         result = await app.ainvoke(initial_state)
     end_time = time.time()
 
@@ -1163,10 +1311,18 @@ async def test_e2e_workflow_execution_time(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+)
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+)
 async def test_e2e_workflow_state_consistency(
     mock_llm_requirement: MagicMock,
     mock_llm_evaluator: MagicMock,
@@ -1190,7 +1346,9 @@ async def test_e2e_workflow_state_consistency(
     # Setup: Mock all LLMs (with one retry scenario)
     task_breakdown_response = create_task_breakdown_response()
     mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=task_breakdown_response)
+    mock_requirement_structured.ainvoke = AsyncMock(
+        return_value=task_breakdown_response
+    )
     mock_requirement_llm = MagicMock()
     mock_requirement_llm.with_structured_output = MagicMock(
         return_value=mock_requirement_structured
@@ -1220,7 +1378,9 @@ async def test_e2e_workflow_state_consistency(
 
     interface_schema_response = create_interface_schema_response()
     mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=interface_schema_response)
+    mock_interface_structured.ainvoke = AsyncMock(
+        return_value=interface_schema_response
+    )
     mock_interface_llm = MagicMock()
     mock_interface_llm.with_structured_output = MagicMock(
         return_value=mock_interface_structured
@@ -1242,7 +1402,10 @@ async def test_e2e_workflow_state_consistency(
         "retry_count": 0,
     }
 
-    with patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient", return_value=mock_validation_client):
+    with patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient",
+        return_value=mock_validation_client,
+    ):
         result = await app.ainvoke(initial_state)
 
     # Assert: Verify state consistency

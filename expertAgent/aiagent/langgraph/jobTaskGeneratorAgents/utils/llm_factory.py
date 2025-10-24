@@ -25,6 +25,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from core.secrets import secrets_manager
 
@@ -97,10 +98,23 @@ def create_llm(
             f"Creating ChatAnthropic instance: model={model_name}, "
             f"temperature={temperature}, max_tokens={max_tokens}"
         )
+
+        # Retrieve API key from MyVault
+        try:
+            anthropic_api_key = secrets_manager.get_secret(
+                "ANTHROPIC_API_KEY", project=None
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize Claude model '{model_name}': {e}. "
+                f"Please ensure ANTHROPIC_API_KEY is set in MyVault for default project"
+            ) from e
+
         return ChatAnthropic(  # type: ignore[call-arg]
             model_name=model_name,
             temperature=temperature,
             max_tokens_to_sample=max_tokens,
+            api_key=SecretStr(anthropic_api_key),
         )
 
     # Detect OpenAI GPT models
@@ -109,10 +123,21 @@ def create_llm(
             f"Creating ChatOpenAI instance: model={model_name}, "
             f"temperature={temperature}, max_tokens={max_tokens}"
         )
+
+        # Retrieve API key from MyVault
+        try:
+            openai_api_key = secrets_manager.get_secret("OPENAI_API_KEY", project=None)
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to initialize OpenAI model '{model_name}': {e}. "
+                f"Please ensure OPENAI_API_KEY is set in MyVault for default project"
+            ) from e
+
         return ChatOpenAI(
             model=model_name,
             temperature=temperature,
             max_completion_tokens=max_tokens,
+            api_key=SecretStr(openai_api_key),
         )
 
     # Detect Google Gemini models
