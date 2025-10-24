@@ -104,7 +104,9 @@ class TestJobRegistrationNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "JobMaster ID is required for job registration" in result["error_message"]
+        assert (
+            "JobMaster ID is required for job registration" in result["error_message"]
+        )
 
         # Verify JobqueueClient was NOT called (early return)
         mock_jobqueue_client.assert_not_called()

@@ -188,9 +188,7 @@ class TestRequirementAnalysisNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
     )
-    async def test_requirement_analysis_with_evaluation_feedback(
-        self, mock_create_llm
-    ):
+    async def test_requirement_analysis_with_evaluation_feedback(self, mock_create_llm):
         """Test task breakdown with evaluation feedback (retry scenario).
 
         Priority: Medium
@@ -240,9 +238,9 @@ class TestRequirementAnalysisNode:
         call_args = mock_structured.ainvoke.call_args[0][0]
         user_prompt = call_args[1]["content"]
         # Prompt contains Japanese "フィードバック" or English "feedback" (case-insensitive)
-        assert (
-            "フィードバック" in user_prompt or "feedback" in user_prompt.lower()
-        ), f"Expected feedback in prompt, but got: {user_prompt[:200]}..."
+        assert "フィードバック" in user_prompt or "feedback" in user_prompt.lower(), (
+            f"Expected feedback in prompt, but got: {user_prompt[:200]}..."
+        )
 
     @pytest.mark.asyncio
     @patch(
@@ -313,9 +311,7 @@ class TestRequirementAnalysisNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
     )
-    async def test_requirement_analysis_missing_user_requirement(
-        self, mock_create_llm
-    ):
+    async def test_requirement_analysis_missing_user_requirement(self, mock_create_llm):
         """Test error handling when user_requirement is missing.
 
         Priority: Low

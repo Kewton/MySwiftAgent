@@ -132,7 +132,9 @@ class TestMasterCreationNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Task breakdown is required for master creation" in result["error_message"]
+        assert (
+            "Task breakdown is required for master creation" in result["error_message"]
+        )
 
         # Verify JobqueueClient was NOT called (early return)
         mock_jobqueue_client.assert_not_called()
@@ -166,7 +168,10 @@ class TestMasterCreationNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Interface definitions are required for master creation" in result["error_message"]
+        assert (
+            "Interface definitions are required for master creation"
+            in result["error_message"]
+        )
 
         # Verify JobqueueClient was NOT called (early return)
         mock_jobqueue_client.assert_not_called()
@@ -214,7 +219,9 @@ class TestMasterCreationNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Interface definition not found for task task_2" in result["error_message"]
+        assert (
+            "Interface definition not found for task task_2" in result["error_message"]
+        )
 
         # Verify find_or_create_task_master was called once (for task_1) but not for task_2
         assert mock_matcher_instance.find_or_create_task_master.call_count == 1
@@ -304,14 +311,18 @@ class TestMasterCreationNode:
         # Mock add_task_to_workflow to track calls
         workflow_associations = []
 
-        async def mock_add_task(job_master_id, task_master_id, order, is_required, max_retries):
-            workflow_associations.append({
-                "job_master_id": job_master_id,
-                "task_master_id": task_master_id,
-                "order": order,
-                "is_required": is_required,
-                "max_retries": max_retries,
-            })
+        async def mock_add_task(
+            job_master_id, task_master_id, order, is_required, max_retries
+        ):
+            workflow_associations.append(
+                {
+                    "job_master_id": job_master_id,
+                    "task_master_id": task_master_id,
+                    "order": order,
+                    "is_required": is_required,
+                    "max_retries": max_retries,
+                }
+            )
             return {"id": f"jmt_{order:03d}", "order": order}
 
         mock_client_instance.add_task_to_workflow = AsyncMock(side_effect=mock_add_task)

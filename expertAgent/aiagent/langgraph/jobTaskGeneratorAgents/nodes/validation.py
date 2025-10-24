@@ -94,9 +94,7 @@ async def validation_node(
 
         # Initialize LLM with fallback mechanism (Issue #111)
         max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-        model_name = os.getenv(
-            "JOB_GENERATOR_VALIDATION_MODEL", "claude-haiku-4-5"
-        )
+        model_name = os.getenv("JOB_GENERATOR_VALIDATION_MODEL", "claude-haiku-4-5")
         model, perf_tracker, cost_tracker = create_llm_with_fallback(
             model_name=model_name,
             temperature=0.0,

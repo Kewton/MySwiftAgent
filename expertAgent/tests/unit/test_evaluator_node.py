@@ -420,9 +420,7 @@ class TestEvaluatorNode:
         # Setup mock LLM to raise exception
         mock_llm = AsyncMock()
         mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(
-            side_effect=Exception("LLM API timeout")
-        )
+        mock_structured.ainvoke = AsyncMock(side_effect=Exception("LLM API timeout"))
         mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
         mock_create_llm.return_value = (mock_llm, None, None)
 

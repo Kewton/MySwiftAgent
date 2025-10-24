@@ -130,8 +130,14 @@ class TestInterfaceDefinitionNode:
         # Verify results
         assert "interface_definitions" in result
         assert len(result["interface_definitions"]) == 2
-        assert result["interface_definitions"]["task_001"]["interface_master_id"] == "iface_001"
-        assert result["interface_definitions"]["task_002"]["interface_master_id"] == "iface_002"
+        assert (
+            result["interface_definitions"]["task_001"]["interface_master_id"]
+            == "iface_001"
+        )
+        assert (
+            result["interface_definitions"]["task_002"]["interface_master_id"]
+            == "iface_002"
+        )
 
         assert result["evaluator_stage"] == "after_interface_definition"
         assert result["retry_count"] == 0  # Should remain 0 on first success
@@ -146,9 +152,7 @@ class TestInterfaceDefinitionNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
     )
-    async def test_interface_definition_with_evaluation_feedback(
-        self, mock_create_llm
-    ):
+    async def test_interface_definition_with_evaluation_feedback(self, mock_create_llm):
         """Test interface definition with evaluation feedback (retry scenario).
 
         Priority: Medium
@@ -195,7 +199,10 @@ class TestInterfaceDefinitionNode:
         ) as mock_matcher_class:
             mock_matcher_instance = AsyncMock()
             mock_matcher_instance.find_or_create_interface_master = AsyncMock(
-                return_value={"id": "iface_001", "name": "improved_gmail_search_interface"}
+                return_value={
+                    "id": "iface_001",
+                    "name": "improved_gmail_search_interface",
+                }
             )
             mock_matcher_class.return_value = mock_matcher_instance
 
@@ -237,9 +244,7 @@ class TestInterfaceDefinitionNode:
         # Setup mock LLM to raise exception
         mock_llm = AsyncMock()
         mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(
-            side_effect=Exception("LLM API timeout")
-        )
+        mock_structured.ainvoke = AsyncMock(side_effect=Exception("LLM API timeout"))
         mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
         mock_create_llm.return_value = (mock_llm, None, None)
 
@@ -296,7 +301,10 @@ class TestInterfaceDefinitionNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Task breakdown is required for interface definition" in result["error_message"]
+        assert (
+            "Task breakdown is required for interface definition"
+            in result["error_message"]
+        )
 
         # Verify LLM was NOT called (early return)
         mock_llm.with_structured_output.assert_not_called()
@@ -576,6 +584,8 @@ class TestInterfaceDefinitionNode:
 
         # Verify regex pattern in input_schema was NOT over-escaped (should be \\d, not \\\\d)
         # fix_regex_over_escaping should have fixed any over-escaping
-        date_pattern = interface_def["input_schema"]["properties"]["date_from"]["pattern"]
+        date_pattern = interface_def["input_schema"]["properties"]["date_from"][
+            "pattern"
+        ]
         # After fix_regex_over_escaping, pattern should have double backslash (\\d)
         assert "\\d" in date_pattern

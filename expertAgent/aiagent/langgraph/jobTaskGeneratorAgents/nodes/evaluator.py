@@ -182,7 +182,7 @@ async def evaluator_node(
         logger.info("=" * 80)
         logger.info("✅ Evaluator node completed successfully")
         logger.info(f"📊 Returning evaluation result: is_valid={response.is_valid}")
-        logger.info(f"🔄 Retry count reset to: 0")
+        logger.info("🔄 Retry count reset to: 0")
         logger.info(f"📍 Evaluator stage unchanged: {evaluator_stage}")
         logger.info("=" * 80)
 

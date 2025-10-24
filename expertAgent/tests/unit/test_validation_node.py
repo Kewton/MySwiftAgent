@@ -6,8 +6,9 @@ when validation fails or exceptions occur, preventing infinite retry loops.
 Issue #111: Recursion limit bug - validation node didn't increment retry_count.
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation import validation_node
 from tests.utils.mock_helpers import create_mock_workflow_state
@@ -19,7 +20,9 @@ class TestValidationNode:
 
     @pytest.mark.asyncio
     @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient")
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+    )
     async def test_validation_success_resets_retry_count(
         self,
         mock_create_llm,
@@ -51,7 +54,9 @@ class TestValidationNode:
 
     @pytest.mark.asyncio
     @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient")
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
+    )
     async def test_validation_failure_increments_retry_count(
         self,
         mock_create_llm,

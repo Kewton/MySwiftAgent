@@ -51,8 +51,7 @@ class TestRecursionLimitProtection:
 
         # Should have stopped at MAX_RETRY_COUNT
         assert retry_count == MAX_RETRY_COUNT, (
-            f"Expected retry_count to reach {MAX_RETRY_COUNT}, "
-            f"but got {retry_count}"
+            f"Expected retry_count to reach {MAX_RETRY_COUNT}, but got {retry_count}"
         )
 
         # Should NOT have hit the safety limit
@@ -141,7 +140,7 @@ class TestRecursionLimitProtection:
 
         retry_count = 0
 
-        for stage in workflow_stages:
+        for _stage in workflow_stages:
             # Simulate each stage incrementing retry_count on failure
             retry_count += 1
 
@@ -152,8 +151,7 @@ class TestRecursionLimitProtection:
 
         # Should have stopped at or before MAX_RETRY_COUNT
         assert retry_count <= MAX_RETRY_COUNT, (
-            f"retry_count ({retry_count}) exceeded MAX_RETRY_COUNT "
-            f"({MAX_RETRY_COUNT})"
+            f"retry_count ({retry_count}) exceeded MAX_RETRY_COUNT ({MAX_RETRY_COUNT})"
         )
 
     def test_retry_count_reset_on_success(self):
@@ -171,8 +169,7 @@ class TestRecursionLimitProtection:
             retry_count = 0
 
         assert retry_count == 0, (
-            "retry_count should reset to 0 on success, "
-            f"but got {retry_count}"
+            f"retry_count should reset to 0 on success, but got {retry_count}"
         )
 
     def test_multiple_retry_cycles(self):

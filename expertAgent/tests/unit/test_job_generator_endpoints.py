@@ -22,7 +22,7 @@ class TestBuildResponseFromState:
         """Test successful job generation with no infeasible tasks."""
         state: dict[str, Any] = {
             "job_id": "550e8400-e29b-41d4-a716-446655440000",
-            "job_master_id": 123,
+            "job_master_id": "123",
             "task_breakdown": [
                 {"task_id": "task_1", "name": "PDF Upload"},
                 {"task_id": "task_2", "name": "Email Notification"},
@@ -41,7 +41,7 @@ class TestBuildResponseFromState:
 
         assert result.status == "success"
         assert result.job_id == "550e8400-e29b-41d4-a716-446655440000"
-        assert result.job_master_id == 123
+        assert result.job_master_id == "123"
         assert len(result.task_breakdown) == 2
         assert result.infeasible_tasks == []
         assert result.alternative_proposals == []
@@ -53,7 +53,7 @@ class TestBuildResponseFromState:
         """Test partial success with infeasible tasks."""
         state: dict[str, Any] = {
             "job_id": "550e8400-e29b-41d4-a716-446655440000",
-            "job_master_id": 123,
+            "job_master_id": "123",
             "task_breakdown": [
                 {"task_id": "task_1", "name": "PDF Upload"},
                 {"task_id": "task_2", "name": "Slack Notification"},
@@ -83,7 +83,7 @@ class TestBuildResponseFromState:
 
         assert result.status == "partial_success"
         assert result.job_id == "550e8400-e29b-41d4-a716-446655440000"
-        assert result.job_master_id == 123
+        assert result.job_master_id == "123"
         assert len(result.infeasible_tasks) == 1
         assert result.infeasible_tasks[0]["task_name"] == "Slack Notification"
         assert len(result.alternative_proposals) == 1
@@ -97,7 +97,7 @@ class TestBuildResponseFromState:
         """Test partial success with API extension proposals."""
         state: dict[str, Any] = {
             "job_id": "550e8400-e29b-41d4-a716-446655440000",
-            "job_master_id": 123,
+            "job_master_id": "123",
             "task_breakdown": [{"task_id": "task_1", "name": "Custom Task"}],
             "evaluation_result": {
                 "is_valid": True,
@@ -158,7 +158,7 @@ class TestBuildResponseFromState:
         """Test case with validation errors."""
         state: dict[str, Any] = {
             "job_id": None,
-            "job_master_id": 123,
+            "job_master_id": "123",
             "task_breakdown": [{"task_id": "task_1", "name": "Test"}],
             "evaluation_result": {"is_valid": True},
             "validation_result": {
@@ -214,7 +214,7 @@ class TestGenerateJobAndTasks:
         mock_agent.ainvoke = AsyncMock(
             return_value={
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
-                "job_master_id": 123,
+                "job_master_id": "123",
                 "task_breakdown": [
                     {"task_id": "task_1", "name": "PDF Upload"},
                     {"task_id": "task_2", "name": "Email Notification"},
@@ -242,7 +242,7 @@ class TestGenerateJobAndTasks:
         # Assert
         assert result.status == "success"
         assert result.job_id == "550e8400-e29b-41d4-a716-446655440000"
-        assert result.job_master_id == 123
+        assert result.job_master_id == "123"
         mock_create_state.assert_called_once_with(
             user_requirement="Upload PDF and send email"
         )
@@ -302,7 +302,7 @@ class TestGenerateJobAndTasks:
         mock_agent.ainvoke = AsyncMock(
             return_value={
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
-                "job_master_id": 123,
+                "job_master_id": "123",
                 "task_breakdown": [
                     {"task_id": "task_1", "name": "PDF Upload"},
                     {"task_id": "task_2", "name": "Slack Notification"},

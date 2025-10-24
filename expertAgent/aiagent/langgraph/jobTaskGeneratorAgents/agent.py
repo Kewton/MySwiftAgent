@@ -126,13 +126,13 @@ def evaluator_router(
         else:
             logger.warning("❌ Task breakdown invalid")
             if retry_count < MAX_RETRY_COUNT:
-                logger.warning(
-                    f"🔄 Retry {retry_count + 1}/{MAX_RETRY_COUNT}"
-                )
+                logger.warning(f"🔄 Retry {retry_count + 1}/{MAX_RETRY_COUNT}")
                 logger.warning("➡️  Routing decision: requirement_analysis (retry)")
                 return "requirement_analysis"
             else:
-                logger.error(f"🔄 Max retries reached ({retry_count}/{MAX_RETRY_COUNT})")
+                logger.error(
+                    f"🔄 Max retries reached ({retry_count}/{MAX_RETRY_COUNT})"
+                )
                 logger.error("🛑 Routing decision: END")
                 return "END"
 
@@ -145,13 +145,13 @@ def evaluator_router(
         else:
             logger.warning("❌ Interface definition invalid")
             if retry_count < MAX_RETRY_COUNT:
-                logger.warning(
-                    f"🔄 Retry {retry_count + 1}/{MAX_RETRY_COUNT}"
-                )
+                logger.warning(f"🔄 Retry {retry_count + 1}/{MAX_RETRY_COUNT}")
                 logger.warning("➡️  Routing decision: interface_definition (retry)")
                 return "interface_definition"
             else:
-                logger.error(f"🔄 Max retries reached ({retry_count}/{MAX_RETRY_COUNT})")
+                logger.error(
+                    f"🔄 Max retries reached ({retry_count}/{MAX_RETRY_COUNT})"
+                )
                 logger.error("🛑 Routing decision: END")
                 return "END"
 
