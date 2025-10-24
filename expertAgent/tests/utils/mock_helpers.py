@@ -100,7 +100,7 @@ def create_mock_task_breakdown(num_tasks: int = 3) -> list[dict[str, Any]]:
     return [
         {
             "task_id": f"task_{i}",
-            "task_name": f"Task {i}",
+            "name": f"Task {i}",  # Changed from "task_name" to "name"
             "description": f"Description for task {i}",
             "priority": "high" if i == 1 else "medium",
             "dependencies": [] if i == 1 else [f"task_{i-1}"],
