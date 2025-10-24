@@ -4,11 +4,14 @@ This module provides functions to search for existing schemas in jobqueue
 to avoid creating duplicates. Initial implementation uses exact name/URL matching.
 """
 
-from typing import Any
+import logging
+from typing import Any, cast
 
 from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
     JobqueueClient,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SchemaMatcher:
@@ -42,7 +45,7 @@ class SchemaMatcher:
                 # Return first exact match
                 for master in masters:
                     if master.get("name") == name:
-                        return master
+                        return cast(dict[str, Any], master)
             return None
         except Exception:
             # If search fails, return None (will create new)
@@ -68,7 +71,48 @@ class SchemaMatcher:
             # Then check URL exact match
             for master in masters:
                 if master.get("name") == name and master.get("url") == url:
-                    return master
+                    return cast(dict[str, Any], master)
+
+            return None
+        except Exception:
+            # If search fails, return None (will create new)
+            return None
+
+    async def find_task_master_by_name_url_and_interfaces(
+        self,
+        name: str,
+        url: str,
+        input_interface_id: str,
+        output_interface_id: str,
+    ) -> dict[str, Any] | None:
+        """Find TaskMaster by exact name, URL, and interface IDs match.
+
+        This method performs a strict search that includes interface IDs,
+        ensuring that reused TaskMasters have compatible interfaces.
+
+        Args:
+            name: Task name to search for
+            url: Task URL to search for
+            input_interface_id: Input InterfaceMaster ID to match
+            output_interface_id: Output InterfaceMaster ID to match
+
+        Returns:
+            TaskMaster dict if found, None otherwise
+        """
+        try:
+            # First try to filter by name
+            result = await self.client.list_task_masters(name=name, page=1, size=10)
+            masters = result.get("masters", [])
+
+            # Then check URL and interface IDs exact match
+            for master in masters:
+                if (
+                    master.get("name") == name
+                    and master.get("url") == url
+                    and master.get("input_interface_id") == input_interface_id
+                    and master.get("output_interface_id") == output_interface_id
+                ):
+                    return cast(dict[str, Any], master)
 
             return None
         except Exception:
@@ -128,7 +172,7 @@ class SchemaMatcher:
         """Find existing TaskMaster or create new one.
 
         This is a convenience method that searches for existing TaskMaster
-        by name and URL, and creates a new one if not found.
+        by name, URL, and interface IDs (strict matching), and creates a new one if not found.
 
         Args:
             name: Task name
@@ -145,12 +189,22 @@ class SchemaMatcher:
         Returns:
             TaskMaster (existing or newly created)
         """
-        # Try to find existing
-        existing = await self.find_task_master_by_name_and_url(name, url)
+        # Try to find existing with strict interface ID matching
+        existing = await self.find_task_master_by_name_url_and_interfaces(
+            name, url, input_interface_id, output_interface_id
+        )
         if existing:
+            logger.info(
+                f"Reusing existing TaskMaster: {existing['id']} "
+                f"(name={name}, input={input_interface_id}, output={output_interface_id})"
+            )
             return existing
 
         # Create new if not found
+        logger.info(
+            f"Creating new TaskMaster: name={name}, url={url}, "
+            f"input={input_interface_id}, output={output_interface_id}"
+        )
         return await self.client.create_task_master(
             name=name,
             description=description,
