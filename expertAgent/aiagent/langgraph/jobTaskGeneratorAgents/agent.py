@@ -72,7 +72,10 @@ def evaluator_router(
     logger.info(f"📍 Current evaluator_stage: {evaluator_stage}")
     logger.info(f"🔄 Current retry_count: {retry_count}")
     logger.info(f"📊 Evaluation result present: {evaluation_result is not None}")
-    logger.info(f"❌ Error message present: {error_message is not None}")
+    if error_message:
+        logger.warning(f"❌ Error message detected: {error_message}")
+    else:
+        logger.info("✅ No error message detected")
 
     # If error occurred, end workflow
     if error_message:

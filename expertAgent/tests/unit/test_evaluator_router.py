@@ -25,11 +25,11 @@ class TestEvaluatorRouter:
     # Error Handling Tests (3 tests)
     # ========================================================================
 
-    def test_evaluator_router_error_message_exists(self):
+    def test_evaluator_router_error_message_exists(self, caplog):
         """Test that router returns END when error_message exists.
 
         Priority: High
-        This tests error handling priority.
+        This tests error handling priority and correct log output.
         """
         state = create_mock_workflow_state(
             retry_count=0,
@@ -41,6 +41,12 @@ class TestEvaluatorRouter:
         result = evaluator_router(state)
 
         assert result == "END"
+        # Verify that warning log with ❌ is emitted when error exists
+        assert any(
+            "❌ Error message detected: Some error occurred" in record.message
+            for record in caplog.records
+            if record.levelname == "WARNING"
+        )
 
     def test_evaluator_router_missing_evaluation_result(self):
         """Test that router returns END when evaluation_result is missing.
@@ -78,7 +84,7 @@ class TestEvaluatorRouter:
     # after_task_breakdown Stage Tests (5 tests)
     # ========================================================================
 
-    def test_evaluator_router_after_task_breakdown_valid(self):
+    def test_evaluator_router_after_task_breakdown_valid(self, caplog):
         """Test routing to interface_definition when task breakdown is valid.
 
         Priority: High
@@ -94,6 +100,12 @@ class TestEvaluatorRouter:
         result = evaluator_router(state)
 
         assert result == "interface_definition"
+        # Verify that info log with ✅ is emitted when no error exists
+        assert any(
+            "✅ No error message detected" in record.message
+            for record in caplog.records
+            if record.levelname == "INFO"
+        )
 
     def test_evaluator_router_after_task_breakdown_invalid_retry(self):
         """Test routing to requirement_analysis when invalid and retry available.
