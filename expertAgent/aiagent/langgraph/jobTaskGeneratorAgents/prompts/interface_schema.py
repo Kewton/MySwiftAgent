@@ -13,8 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class InterfaceSchemaDefinition(BaseModel):
     """Interface schema for a single task."""
 
-    # Allow extra fields (e.g., 'id') that LLM might generate
-    model_config = ConfigDict(extra="allow")
+    # Forbid extra fields to ensure OpenAI API compatibility
+    # OpenAI's structured output requires additionalProperties: false
+    model_config = ConfigDict(extra="forbid")
 
     task_id: str = Field(description="Task ID to define interface for")
     interface_name: str = Field(
@@ -47,7 +48,8 @@ class InterfaceSchemaDefinition(BaseModel):
         """
         if isinstance(value, str):
             try:
-                return json.loads(value)
+                parsed: dict[str, Any] = json.loads(value)
+                return parsed
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON schema string: {e}") from e
         elif isinstance(value, dict):
