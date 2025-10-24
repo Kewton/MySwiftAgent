@@ -225,7 +225,9 @@ async def interface_definition_node(
         logger.info(f"📋 Created {len(interface_masters)} interface definitions")
         logger.info(f"🔄 Stage transition: {current_stage} → {new_stage}")
         logger.info(f"🔄 Retry count: {current_retry} → {new_retry}")
-        logger.info("⚠️  CRITICAL: Returning state with evaluator_stage='after_interface_definition'")
+        logger.info(
+            "⚠️  CRITICAL: Returning state with evaluator_stage='after_interface_definition'"
+        )
         logger.info("=" * 80)
 
         return {
@@ -237,7 +239,17 @@ async def interface_definition_node(
 
     except Exception as e:
         logger.error(f"Failed to define interfaces: {e}", exc_info=True)
+
+        # Increment retry_count to enable proper retry logic
+        current_retry = state.get("retry_count", 0)
+        new_retry = current_retry + 1
+
+        logger.warning(
+            f"🔄 Interface definition failed, retry count: {current_retry} → {new_retry}"
+        )
+
         return {
             **state,
             "error_message": f"Interface definition failed: {str(e)}",
+            "retry_count": new_retry,
         }
