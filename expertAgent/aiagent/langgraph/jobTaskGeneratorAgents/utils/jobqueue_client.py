@@ -97,7 +97,8 @@ class JobqueueClient:
                     response_body=error_body,
                 )
 
-            return response.json()
+            result: dict = response.json()
+            return result
 
     # ===== InterfaceMaster =====
 
@@ -358,7 +359,8 @@ class JobqueueClient:
         response = await self._request(
             "GET", f"/api/v1/job-masters/{job_master_id}/tasks"
         )
-        return response.get("tasks", [])
+        tasks: list[dict] = response.get("tasks", [])
+        return tasks
 
     # ===== Workflow Validation =====
 
@@ -381,18 +383,24 @@ class JobqueueClient:
         self,
         master_id: str,
         name: str,
+        method: str,
+        url: str,
         tasks: list[dict] | None = None,
         priority: int = 5,
         scheduled_at: str | None = None,
+        timeout_sec: int = 120,
     ) -> dict:
         """Create new Job.
 
         Args:
             master_id: JobMaster ID
             name: Job name
+            method: HTTP method (GET, POST, etc.)
+            url: Target URL
             tasks: Task parameters (optional, if None, will be auto-generated from JobMasterTask)
             priority: Job priority (1=highest, 10=lowest)
             scheduled_at: Scheduled execution time (ISO 8601 format, optional)
+            timeout_sec: Request timeout in seconds
 
         Returns:
             Created Job
@@ -403,9 +411,12 @@ class JobqueueClient:
             json={
                 "master_id": master_id,
                 "name": name,
+                "method": method,
+                "url": url,
                 "tasks": tasks,
                 "priority": priority,
                 "scheduled_at": scheduled_at,
+                "timeout_sec": timeout_sec,
             },
         )
 

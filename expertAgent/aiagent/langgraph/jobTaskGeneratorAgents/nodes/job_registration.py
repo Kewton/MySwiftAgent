@@ -33,6 +33,7 @@ async def job_registration_node(
     logger.info("Starting job registration node")
 
     job_master_id = state.get("job_master_id")
+    job_master = state.get("job_master")
     user_requirement = state["user_requirement"]
 
     if not job_master_id:
@@ -42,7 +43,15 @@ async def job_registration_node(
             "error_message": "JobMaster ID is required for job registration",
         }
 
+    if not job_master:
+        logger.error("JobMaster data is missing in state")
+        return {
+            **state,
+            "error_message": "JobMaster data is required for job registration",
+        }
+
     logger.debug(f"Registering Job for JobMaster: {job_master_id}")
+    logger.debug(f"JobMaster method: {job_master['method']}, url: {job_master['url']}")
 
     try:
         # Initialize jobqueue client
@@ -65,21 +74,31 @@ async def job_registration_node(
         # In a more sophisticated implementation, we would pass initial parameters here
         tasks = None
 
-        # Create Job
+        # Create Job with method and url from JobMaster
         job_name = f"Job: {user_requirement[:50]} - {datetime.now().isoformat()}"
         priority = 5  # Default priority
 
         logger.info(f"Creating Job: {job_name}")
+        logger.info(
+            f"Job parameters: method={job_master['method']}, url={job_master['url']}, "
+            f"timeout_sec={job_master.get('timeout_sec', 120)}"
+        )
 
         job = await client.create_job(
             master_id=job_master_id,
             name=job_name,
+            method=job_master["method"],
+            url=job_master["url"],
             tasks=tasks,
             priority=priority,
             scheduled_at=None,  # Execute immediately
+            timeout_sec=job_master.get("timeout_sec", 120),
         )
 
-        job_id = job["id"]
+        # JobResponse has 'job_id' field, not 'id'
+        job_id = job.get("job_id") or job.get("id")
+        if not job_id:
+            raise ValueError("Job creation response missing job_id field")
         logger.info(f"Job created successfully: {job_id}")
 
         # Return updated state with job ID

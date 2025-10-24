@@ -144,6 +144,13 @@ async def interface_definition_node(
         logger.info("Invoking LLM for interface schema definition")
         response = await structured_model.ainvoke(messages)
 
+        # Validate response
+        if response is None or not hasattr(response, "interfaces"):
+            logger.error("LLM response is None or missing 'interfaces' attribute")
+            raise ValueError(
+                "Interface definition failed: LLM returned invalid response"
+            )
+
         logger.info(
             f"Interface schema definition completed: {len(response.interfaces)} interfaces"
         )

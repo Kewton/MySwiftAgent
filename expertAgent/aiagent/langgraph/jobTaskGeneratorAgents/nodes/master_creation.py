@@ -38,7 +38,13 @@ async def master_creation_node(
     logger.info("Starting master creation node")
 
     task_breakdown = state.get("task_breakdown", [])
-    interface_definitions = state.get("interface_definitions", {})
+    # interface_definitions is expected to be a dict mapping task_id to interface data
+    interface_definitions_raw: Any = state.get("interface_definitions", {})
+    interface_definitions: dict = (
+        interface_definitions_raw
+        if isinstance(interface_definitions_raw, dict)
+        else {}
+    )
     user_requirement = state["user_requirement"]
 
     if not task_breakdown:
@@ -154,18 +160,20 @@ async def master_creation_node(
         # Step 2: Create JobMaster
         job_name = f"Job: {user_requirement[:50]}"  # Truncate to 50 chars
         job_description = f"Auto-generated job from requirement: {user_requirement}"
+        job_method = "POST"
         job_url = (
             "http://localhost:8105/api/v1/graphai/execute"  # GraphAI execution endpoint
         )
+        job_timeout_sec = 300  # 5 minutes
 
         logger.info(f"Creating JobMaster: {job_name}")
 
         job_master = await client.create_job_master(
             name=job_name,
             description=job_description,
-            method="POST",
+            method=job_method,
             url=job_url,
-            timeout_sec=300,  # 5 minutes
+            timeout_sec=job_timeout_sec,
         )
 
         job_master_id = job_master["id"]
@@ -201,9 +209,18 @@ async def master_creation_node(
                 f"JobMasterTask created: {job_master_task['id']} (order={order})"
             )
 
-        # Update state
+        # Update state with job_master data for job_registration
+        # Note: job_master API response only includes id/name/is_active,
+        # so we use the parameters we sent during creation
         return {
             **state,
+            "job_master": {
+                "id": job_master_id,
+                "name": job_name,
+                "method": job_method,
+                "url": job_url,
+                "timeout_sec": job_timeout_sec,
+            },
             "job_master_id": job_master_id,
             "task_master_ids": [
                 info["task_master_id"] for info in task_masters.values()
