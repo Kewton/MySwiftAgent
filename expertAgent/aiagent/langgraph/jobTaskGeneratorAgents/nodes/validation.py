@@ -143,7 +143,7 @@ async def validation_node(
                 "warnings": warnings,
                 "fix_proposals": fix_response.model_dump(),
             },
-            "retry_count": state.get("retry_count", 0),
+            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
         }
 
     except Exception as e:
@@ -151,4 +151,5 @@ async def validation_node(
         return {
             **state,
             "error_message": f"Validation failed: {str(e)}",
+            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
         }
