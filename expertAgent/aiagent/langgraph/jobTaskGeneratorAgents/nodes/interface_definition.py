@@ -212,8 +212,12 @@ async def interface_definition_node(
 
             interface_masters[task_id] = {
                 "interface_master_id": interface_master["id"],
-                "input_interface_id": interface_master["id"],  # Explicit input interface ID
-                "output_interface_id": interface_master["id"],  # Explicit output interface ID
+                "input_interface_id": interface_master[
+                    "id"
+                ],  # Explicit input interface ID
+                "output_interface_id": interface_master[
+                    "id"
+                ],  # Explicit output interface ID
                 "interface_name": interface_name,
                 "input_schema": interface_def.input_schema,
                 "output_schema": interface_def.output_schema,
