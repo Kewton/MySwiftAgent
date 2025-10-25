@@ -3,8 +3,8 @@
 import pytest
 
 from app.services.interface_validator import (
-    InterfaceValidator,
     InterfaceValidationError,
+    InterfaceValidator,
 )
 
 

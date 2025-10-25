@@ -221,10 +221,6 @@ class InterfaceValidator:
                     # This is a genuine schema structure error
                     raise
 
-            # Create validator with format checker to validate regex patterns
-            # This ensures Unicode property escapes are supported
-            validator = Draft7Validator(schema, format_checker=_format_checker)
-
             logger.debug("JSON Schema V7 validation succeeded")
         except jsonschema.SchemaError as e:
             logger.error(f"Invalid JSON Schema V7: {e}")
