@@ -4,14 +4,14 @@ import logging
 from typing import Any
 
 import jsonschema
-import regex
+import regex  # type: ignore[import-untyped]
 from jsonschema import Draft7Validator, FormatChecker
 
 logger = logging.getLogger(__name__)
 
 
 # ========== Custom Format Checker for Unicode Property Escapes ==========
-@FormatChecker.cls_checks("regex", raises=Exception)
+@FormatChecker.cls_checks("regex", raises=Exception)  # type: ignore[type-var]
 def check_regex_format(value: str) -> bool:
     """
     Custom format checker for 'regex' format using regex library.
