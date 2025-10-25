@@ -55,6 +55,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
 
     # ===== Intermediate =====
     task_breakdown: list[dict[str, Any]]
+    overall_summary: str  # Task breakdown summary from LLM
     interface_definitions: list[dict[str, Any]]
     task_masters: list[dict[str, Any]]
     task_master_ids: list[str]
@@ -104,6 +105,7 @@ def create_initial_state(
         "max_retry": max_retry,
         # Intermediate
         "task_breakdown": [],
+        "overall_summary": "",
         "interface_definitions": [],
         "task_masters": [],
         "task_master_ids": [],

@@ -57,6 +57,12 @@ class TestJobRegistrationNode:
             retry_count=0,
             user_requirement="Test requirement for job creation",
             job_master_id="jm_001",
+            job_master={
+                "id": "jm_001",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+                "timeout_sec": 120,
+            },
         )
 
         # Execute node
@@ -137,6 +143,11 @@ class TestJobRegistrationNode:
             retry_count=0,
             user_requirement="Empty workflow requirement",
             job_master_id="jm_002",
+            job_master={
+                "id": "jm_002",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
         )
 
         # Execute node
@@ -188,6 +199,11 @@ class TestJobRegistrationNode:
             retry_count=0,
             user_requirement="Multi-task workflow requirement",
             job_master_id="jm_003",
+            job_master={
+                "id": "jm_003",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
         )
 
         # Execute node
@@ -226,6 +242,11 @@ class TestJobRegistrationNode:
             retry_count=0,
             user_requirement="Test exception handling",
             job_master_id="jm_004",
+            job_master={
+                "id": "jm_004",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
         )
 
         # Execute node
@@ -270,6 +291,11 @@ class TestJobRegistrationNode:
             retry_count=0,
             user_requirement=long_requirement,
             job_master_id="jm_005",
+            job_master={
+                "id": "jm_005",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
         )
 
         # Execute node
@@ -293,3 +319,143 @@ class TestJobRegistrationNode:
         # Example: "Job: AAAA... - 2025-10-24T12:34:56.123456"
         assert " - " in job_name
         assert "T" in job_name  # ISO datetime includes 'T'
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient"
+    )
+    async def test_job_registration_missing_job_master_url(self, mock_jobqueue_client):
+        """Test error handling when job_master url is missing.
+
+        Priority: Medium
+        This tests validation of required JobMaster url field.
+        Issue #111: Fix expertagent.log errors - JobMaster Method.
+        """
+        # Create test state with job_master missing url
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Some requirement",
+            job_master_id="jm_001",
+            job_master={
+                "id": "jm_001",
+                "name": "Test Job",
+                "method": "POST",
+                # url is missing!
+            },
+        )
+
+        # Execute node
+        result = await job_registration_node(state)
+
+        # Verify error handling
+        assert "error_message" in result
+        assert (
+            "JobMaster url is required for job registration" in result["error_message"]
+        )
+
+        # Verify JobqueueClient was NOT called (early return)
+        mock_jobqueue_client.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient"
+    )
+    async def test_job_registration_job_id_field_variations(self, mock_jobqueue_client):
+        """Test job_id extraction from various response schemas.
+
+        Priority: Medium
+        This tests defensive access to handle both 'job_id' and 'id' fields.
+        Issue #111: Fix expertagent.log errors - Job Registration ID.
+        """
+        mock_client_instance = AsyncMock()
+        mock_client_instance.list_workflow_tasks = AsyncMock(return_value=[])
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Test requirement",
+            job_master_id="jm_001",
+            job_master={
+                "id": "jm_001",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
+        )
+
+        # Test Case 1: Response has 'job_id' field (preferred)
+        mock_client_instance.create_job = AsyncMock(
+            return_value={
+                "job_id": "job_12345678-abcd-1234-5678-123456789abc",
+                "name": "Job: Test",
+            }
+        )
+        result = await job_registration_node(state)
+        assert result["job_id"] == "job_12345678-abcd-1234-5678-123456789abc"
+
+        # Test Case 2: Response has 'id' field (fallback)
+        mock_client_instance.create_job = AsyncMock(
+            return_value={
+                "id": "job_87654321-dcba-4321-8765-987654321abc",
+                "name": "Job: Test",
+            }
+        )
+        result = await job_registration_node(state)
+        assert result["job_id"] == "job_87654321-dcba-4321-8765-987654321abc"
+
+        # Test Case 3: Response has both fields (prefer 'job_id')
+        mock_client_instance.create_job = AsyncMock(
+            return_value={
+                "job_id": "job_11111111-1111-1111-1111-111111111111",
+                "id": "job_22222222-2222-2222-2222-222222222222",
+                "name": "Job: Test",
+            }
+        )
+        result = await job_registration_node(state)
+        assert result["job_id"] == "job_11111111-1111-1111-1111-111111111111"
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient"
+    )
+    async def test_job_registration_missing_job_id_in_response(
+        self, mock_jobqueue_client
+    ):
+        """Test error handling when job creation response lacks job_id field.
+
+        Priority: Medium
+        This tests error handling for invalid API responses.
+        Issue #111: Fix expertagent.log errors - Job Registration ID.
+        """
+        # Setup mock JobqueueClient with response missing both job_id and id
+        mock_client_instance = AsyncMock()
+        mock_client_instance.list_workflow_tasks = AsyncMock(return_value=[])
+        mock_client_instance.create_job = AsyncMock(
+            return_value={
+                "name": "Job: Test",
+                "status": "created",
+                # Both job_id and id are missing!
+            }
+        )
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        # Create test state
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Test requirement",
+            job_master_id="jm_001",
+            job_master={
+                "id": "jm_001",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
+        )
+
+        # Execute node
+        result = await job_registration_node(state)
+
+        # Verify error handling
+        assert "error_message" in result
+        assert "Job registration failed" in result["error_message"]
+        assert "missing job_id field" in result["error_message"]
+        # Error message should include available keys for debugging
+        assert "Available keys" in result["error_message"]

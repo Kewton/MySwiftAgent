@@ -153,6 +153,7 @@ class TestRequirementAnalysisNode:
 
         Priority: Medium
         This tests edge case where LLM returns no tasks.
+        Issue #111: Empty task list should now be treated as error.
         """
         # Create mock LLM response with empty tasks
         mock_response = TaskBreakdownResponse(
@@ -176,13 +177,13 @@ class TestRequirementAnalysisNode:
         # Execute node
         result = await requirement_analysis_node(state)
 
-        # Verify results
-        assert "task_breakdown" in result
-        assert len(result["task_breakdown"]) == 0  # Empty list
-        assert result["overall_summary"] == mock_response.overall_summary
-        assert result["evaluator_stage"] == "after_task_breakdown"
+        # Verify error handling (changed behavior after Issue #111)
+        assert "error_message" in result
+        assert "Task breakdown failed" in result["error_message"]
+        assert "empty task list" in result["error_message"]
 
-        # This should trigger evaluator to mark as invalid and retry
+        # task_breakdown should NOT be in result (error case)
+        assert "task_breakdown" not in result
 
     @pytest.mark.asyncio
     @patch(
@@ -333,3 +334,127 @@ class TestRequirementAnalysisNode:
 
         # Verify KeyError for 'user_requirement'
         assert "user_requirement" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+    )
+    async def test_requirement_analysis_none_response(self, mock_create_llm):
+        """Test error handling when LLM returns None response.
+
+        Priority: High
+        This tests validation of LLM response structure.
+        Issue #111: Fix expertagent.log errors - Task Breakdown Null.
+        """
+        # Setup mock LLM to return None (structured output parsing failed)
+        mock_llm = AsyncMock()
+        mock_structured = AsyncMock()
+        mock_structured.ainvoke = AsyncMock(return_value=None)
+        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
+        mock_create_llm.return_value = (mock_llm, None, None)
+
+        # Create test state
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Test requirement",
+        )
+
+        # Execute node
+        result = await requirement_analysis_node(state)
+
+        # Verify error handling
+        assert "error_message" in result
+        assert "Task breakdown failed" in result["error_message"]
+        assert "LLM returned None response" in result["error_message"]
+        assert "structured output parsing failure" in result["error_message"]
+
+        # task_breakdown should not be in result
+        assert "task_breakdown" not in result
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+    )
+    async def test_requirement_analysis_none_tasks(self, mock_create_llm):
+        """Test error handling when LLM response.tasks is None.
+
+        Priority: High
+        This tests validation of tasks field in LLM response.
+        Issue #111: Fix expertagent.log errors - Task Breakdown Null.
+        """
+
+        # Create mock response with tasks=None (simulating AttributeError scenario)
+        class MockResponseWithNoneTasks:
+            tasks = None
+            overall_summary = "Some summary"
+
+        mock_response = MockResponseWithNoneTasks()
+
+        # Setup mock LLM
+        mock_llm = AsyncMock()
+        mock_structured = AsyncMock()
+        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
+        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
+        mock_create_llm.return_value = (mock_llm, None, None)
+
+        # Create test state
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Test requirement",
+        )
+
+        # Execute node
+        result = await requirement_analysis_node(state)
+
+        # Verify error handling
+        assert "error_message" in result
+        assert "Task breakdown failed" in result["error_message"]
+        assert "response missing 'tasks' field" in result["error_message"]
+        assert "structured output schema" in result["error_message"]
+
+        # task_breakdown should not be in result
+        assert "task_breakdown" not in result
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
+    )
+    async def test_requirement_analysis_empty_tasks_with_validation(
+        self, mock_create_llm
+    ):
+        """Test error handling when LLM returns empty task list (new validation).
+
+        Priority: Medium
+        This tests the new validation logic for empty task lists.
+        Issue #111: Fix expertagent.log errors - Task Breakdown Null.
+        """
+        # Create mock LLM response with empty tasks
+        mock_response = TaskBreakdownResponse(
+            tasks=[],  # Empty task list
+            overall_summary="No tasks could be decomposed",
+        )
+
+        # Setup mock LLM
+        mock_llm = AsyncMock()
+        mock_structured = AsyncMock()
+        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
+        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
+        mock_create_llm.return_value = (mock_llm, None, None)
+
+        # Create test state
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Unclear requirement",
+        )
+
+        # Execute node
+        result = await requirement_analysis_node(state)
+
+        # Verify error handling (new validation logic)
+        assert "error_message" in result
+        assert "Task breakdown failed" in result["error_message"]
+        assert "empty task list" in result["error_message"]
+        assert "too vague or ambiguous" in result["error_message"]
+
+        # task_breakdown should not be in result
+        assert "task_breakdown" not in result

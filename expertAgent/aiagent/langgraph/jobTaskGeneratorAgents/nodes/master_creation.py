@@ -41,9 +41,7 @@ async def master_creation_node(
     # interface_definitions is expected to be a dict mapping task_id to interface data
     interface_definitions_raw: Any = state.get("interface_definitions", {})
     interface_definitions: dict = (
-        interface_definitions_raw
-        if isinstance(interface_definitions_raw, dict)
-        else {}
+        interface_definitions_raw if isinstance(interface_definitions_raw, dict) else {}
     )
     user_requirement = state["user_requirement"]
 
@@ -155,7 +153,9 @@ async def master_creation_node(
 
             # Update prev_output_interface_id for next task
             prev_output_interface_id = output_interface_id
-            logger.debug(f"  Updated prev_output_interface_id: {prev_output_interface_id}")
+            logger.debug(
+                f"  Updated prev_output_interface_id: {prev_output_interface_id}"
+            )
 
         # Step 2: Create JobMaster
         job_name = f"Job: {user_requirement[:50]}"  # Truncate to 50 chars
@@ -229,8 +229,17 @@ async def master_creation_node(
         }
 
     except Exception as e:
+        # Provide detailed error information for debugging
         logger.error(f"Failed to create masters: {e}", exc_info=True)
+        logger.error(
+            f"Master creation context: "
+            f"task_breakdown_count={len(task_breakdown)}, "
+            f"interface_definitions_count={len(interface_definitions)}, "
+            f"task_masters_created={len(task_masters) if 'task_masters' in locals() else 0}, "
+            f"job_master_id={'set' if 'job_master_id' in locals() else 'not_set'}"
+        )
         return {
             **state,
-            "error_message": f"Master creation failed: {str(e)}",
+            "error_message": f"Master creation failed: {str(e)}. "
+            f"Task masters created: {len(task_masters) if 'task_masters' in locals() else 0}/{len(task_breakdown)}",
         }

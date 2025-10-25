@@ -10,6 +10,7 @@ requirements into executable tasks following 4 principles:
 
 import logging
 import os
+from typing import cast
 
 from ..prompts.task_breakdown import (
     TASK_BREAKDOWN_SYSTEM_PROMPT,
@@ -117,7 +118,33 @@ async def requirement_analysis_node(
             {"role": "user", "content": user_prompt},
         ]
         logger.info("Invoking LLM for task breakdown")
-        response = await structured_model.ainvoke(messages)
+        response = cast(
+            TaskBreakdownResponse | None, await structured_model.ainvoke(messages)
+        )
+
+        # Validate LLM response: check if tasks is not None and not empty
+        if response is None:
+            logger.error("LLM response is None - structured output parsing failed")
+            raise ValueError(
+                "Task breakdown failed: LLM returned None response. "
+                "This may indicate structured output parsing failure."
+            )
+
+        if response.tasks is None:
+            logger.error(
+                "LLM response.tasks is None - structured output missing 'tasks' field"
+            )
+            raise ValueError(
+                "Task breakdown failed: LLM response missing 'tasks' field. "
+                "This may indicate LLM did not follow the structured output schema."
+            )
+
+        if not response.tasks:
+            logger.error("LLM response.tasks is empty - no tasks generated")
+            raise ValueError(
+                "Task breakdown failed: LLM returned empty task list. "
+                "User requirement may be too vague or ambiguous."
+            )
 
         logger.info(f"Task breakdown completed: {len(response.tasks)} tasks")
         logger.debug(f"Tasks: {[task.name for task in response.tasks]}")

@@ -51,9 +51,25 @@ async def job_registration_node(
         }
 
     logger.debug(f"Registering Job for JobMaster: {job_master_id}")
-    logger.debug(f"JobMaster method: {job_master['method']}, url: {job_master['url']}")
+    logger.debug(
+        f"JobMaster method: {job_master.get('method', 'POST')}, "
+        f"url: {job_master.get('url', 'N/A')}"
+    )
 
     try:
+        # Get method and url from job_master with fallback defaults
+        # This validation must happen BEFORE any API calls
+        job_method = job_master.get("method", "POST")
+        job_url = job_master.get("url")
+        job_timeout_sec = job_master.get("timeout_sec", 120)
+
+        if not job_url:
+            logger.error("JobMaster url is missing")
+            return {
+                **state,
+                "error_message": "JobMaster url is required for job registration",
+            }
+
         # Initialize jobqueue client
         client = JobqueueClient()
 
@@ -80,25 +96,34 @@ async def job_registration_node(
 
         logger.info(f"Creating Job: {job_name}")
         logger.info(
-            f"Job parameters: method={job_master['method']}, url={job_master['url']}, "
-            f"timeout_sec={job_master.get('timeout_sec', 120)}"
+            f"Job parameters: method={job_method}, url={job_url}, "
+            f"timeout_sec={job_timeout_sec}"
         )
 
         job = await client.create_job(
             master_id=job_master_id,
             name=job_name,
-            method=job_master["method"],
-            url=job_master["url"],
+            method=job_method,
+            url=job_url,
             tasks=tasks,
             priority=priority,
             scheduled_at=None,  # Execute immediately
-            timeout_sec=job_master.get("timeout_sec", 120),
+            timeout_sec=job_timeout_sec,
         )
 
         # JobResponse has 'job_id' field, not 'id'
+        # Use defensive access to handle various response schemas
         job_id = job.get("job_id") or job.get("id")
         if not job_id:
-            raise ValueError("Job creation response missing job_id field")
+            logger.error(
+                f"Job creation response missing job_id field. "
+                f"Response keys: {list(job.keys())}, "
+                f"Response content: {job}"
+            )
+            raise ValueError(
+                f"Job creation response missing job_id field. "
+                f"Available keys: {list(job.keys())}"
+            )
         logger.info(f"Job created successfully: {job_id}")
 
         # Return updated state with job ID
