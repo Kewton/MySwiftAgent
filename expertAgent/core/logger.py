@@ -1,128 +1,73 @@
 import inspect
 import logging
 import logging.config
+import logging.handlers
 import os
-import tempfile
+import sys
 import time
 from pathlib import Path
 
 from core.config import settings
 
-# ログセットアップが実行されたかを保持するフラグ
-logging_setup_done = False
 
-
-def setup_logging(log_file_name: str = "app.log"):
+def setup_logging(log_file_name: str = "expertagent.log"):
     """ロギングをセットアップします。
 
     Args:
-        log_file_name: メインログファイル名（デフォルト: app.log）
+        log_file_name: メインログファイル名（デフォルト: expertagent.log）
                       MCPサブプロセス用には mcp_stdio.log 等を指定可能
+
+    Note:
+        マルチワーカーモード対応のため、logging.basicConfig(force=True)を使用。
+        各ワーカープロセスで確実にログ設定が適用されます。
     """
-    global logging_setup_done
-
-    # デバッグトレース
-    debug_trace_file = Path(tempfile.gettempdir()) / "mcp_stdio_debug.log"
-    try:
-        with open(debug_trace_file, "a") as f:
-            f.write(
-                f"[logger.py] setup_logging() called with log_file_name='{log_file_name}'\n"
-            )
-            f.write(
-                f"[logger.py] logging_setup_done={logging_setup_done}, PID={os.getpid()}\n"
-            )
-    except Exception as e:
-        # デバッグ出力失敗は無視（本番動作に影響させない）
-        print(f"[logger.py] Debug trace write failed: {e}", flush=True)
-
-    if logging_setup_done:
-        try:
-            with open(debug_trace_file, "a") as f:
-                f.write("[logger.py] Skipping setup (already done)\n")
-        except Exception as e:
-            # デバッグ出力失敗は無視（本番動作に影響させない）
-            print(f"[logger.py] Debug trace write failed: {e}", flush=True)
-        return  # すでに実行済みなら何もしない
-    else:
-        print("setup_logging start")
-
     log_level = settings.LOG_LEVEL
     log_dir = settings.LOG_DIR
 
     # ディレクトリが存在しない場合は作成
-    if not os.path.exists(log_dir):
-        try:
-            os.makedirs(log_dir)
-            print(f"Directory {log_dir} created.")
-        except OSError as e:
-            # ディレクトリ作成失敗時は tempfile.gettempdir() にフォールバック
-            err_msg = f"Failed to create {log_dir}: {e}. Falling back to {tempfile.gettempdir()}"
-            print(err_msg)
-            log_dir = tempfile.gettempdir()
-    else:
-        print(f"Directory {log_dir} already exists.")
+    log_dir_path = Path(log_dir)
+    log_dir_path.mkdir(parents=True, exist_ok=True)
 
     # ログファイルのパス
-    main_log_path = os.path.join(log_dir, log_file_name)
+    main_log_path = log_dir_path / log_file_name
     # エラーログは常に rotation.log を使用（ファイル名の一貫性のため）
     error_log_base = log_file_name.replace(".log", "_rotation.log")
-    error_log_path = os.path.join(log_dir, error_log_base)
+    error_log_path = log_dir_path / error_log_base
 
-    # ログ設定の定義
-    log_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "_formatter": {
-                "format": "[%(process)d-%(thread)d]-%(asctime)s-%(levelname)s-%(message)s"
-            },
-        },
-        "handlers": {
-            "rotatinghandler": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "level": log_level,
-                "formatter": "_formatter",
-                "filename": main_log_path,
-                "mode": "a",
-                "maxBytes": 1024 * 1024,
-                "backupCount": 5,
-                "encoding": "utf-8",
-            },
-            "timedrotatinghandler": {
-                "class": "logging.handlers.TimedRotatingFileHandler",
-                "level": "ERROR",
-                "formatter": "_formatter",
-                "filename": error_log_path,
-                "when": "S",  # 秒ごとのローテーション
-                "interval": 1,  # ローテーション間隔
-                "backupCount": 5,
-                "encoding": "utf-8",
-            },
-        },
-        "loggers": {
-            "": {  # root logger
-                "level": log_level,
-                "handlers": ["rotatinghandler", "timedrotatinghandler"],
-            },
-        },
-    }
+    # ログハンドラーの作成
+    stream_handler = logging.StreamHandler(sys.stdout)
+    rotating_handler = logging.handlers.RotatingFileHandler(
+        main_log_path,
+        mode="a",
+        maxBytes=1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    error_handler = logging.handlers.TimedRotatingFileHandler(
+        error_log_path,
+        when="S",
+        interval=1,
+        backupCount=5,
+        encoding="utf-8",
+    )
 
-    # ログ設定を適用
-    logging.config.dictConfig(log_config)
-    logging.info(f"Logging is set up. Log file: {main_log_path}")
+    # ERRORハンドラーはERRORレベルのみ
+    error_handler.setLevel(logging.ERROR)
 
-    # デバッグトレース
-    try:
-        with open(debug_trace_file, "a") as f:
-            f.write("[logger.py] Log config applied successfully\n")
-            f.write(f"[logger.py] Main log: {main_log_path}\n")
-            f.write(f"[logger.py] Error log: {error_log_path}\n")
-    except Exception as e:
-        # デバッグ出力失敗は無視（本番動作に影響させない）
-        print(f"[logger.py] Debug trace write failed: {e}", flush=True)
+    handlers: list[logging.Handler] = [stream_handler, rotating_handler, error_handler]
 
-    # 実行フラグをTrueに設定
-    logging_setup_done = True
+    # ログ設定を適用（マルチワーカー対応）
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format="[%(process)d-%(thread)d]-%(asctime)s-%(levelname)s-%(message)s",
+        handlers=handlers,
+        force=True,  # 既存の設定を強制的に上書き（マルチワーカー対応の鍵）
+    )
+
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"Logging configured: log_dir={log_dir}, log_level={log_level}, PID={os.getpid()}"
+    )
 
 
 def getlogger():

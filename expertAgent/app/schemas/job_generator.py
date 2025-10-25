@@ -55,10 +55,10 @@ class JobGeneratorResponse(BaseModel):
         description="Created Job ID (only on success)",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
-    job_master_id: int | None = Field(
+    job_master_id: str | None = Field(
         default=None,
-        description="Created JobMaster ID",
-        examples=[123],
+        description="Created JobMaster ID (ULID format)",
+        examples=["jm_01K89W9DBHAPWMMZVHWT2N7GX9"],
     )
 
     # Task breakdown and evaluation

@@ -81,6 +81,7 @@ class JobMasterTaskList(BaseModel):
 class JobMasterTaskResponse(BaseModel):
     """Schema for JobMasterTask operation response."""
 
+    id: str = Field(..., description="JobMasterTask ID")
     task_master_id: str = Field(..., description="TaskMaster ID")
     order: int = Field(..., description="Execution order")
     job_master_id: str = Field(..., description="JobMaster ID")

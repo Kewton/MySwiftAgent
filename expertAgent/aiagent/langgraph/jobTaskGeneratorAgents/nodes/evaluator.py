@@ -13,14 +13,13 @@ API extensions when necessary.
 import logging
 import os
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.evaluation import (
     EVALUATION_SYSTEM_PROMPT,
     EvaluationResult,
     create_evaluation_prompt,
 )
 from ..state import JobTaskGeneratorState
+from ..utils.llm_factory import create_llm_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +47,21 @@ async def evaluator_node(
     Returns:
         Updated state with evaluation results
     """
+    logger.info("=" * 80)
     logger.info("Starting evaluator node")
+    logger.info("=" * 80)
 
     user_requirement = state["user_requirement"]
     task_breakdown = state.get("task_breakdown", [])
+    interface_definitions = state.get("interface_definitions", [])
     evaluator_stage = state.get("evaluator_stage", "after_task_breakdown")
+    retry_count = state.get("retry_count", 0)
 
-    logger.debug(f"Evaluator stage: {evaluator_stage}")
-    logger.debug(f"Task breakdown count: {len(task_breakdown)}")
+    logger.info(f"📍 Evaluator stage: {evaluator_stage}")
+    logger.info(f"📊 Task breakdown count: {len(task_breakdown)}")
+    logger.info(f"📋 Interface definitions count: {len(interface_definitions)}")
+    logger.info(f"🔄 Retry count: {retry_count}")
+    logger.debug(f"State keys present: {list(state.keys())}")
 
     if not task_breakdown:
         logger.error("Task breakdown is empty")
@@ -65,14 +71,15 @@ async def evaluator_node(
             "error_message": "Task breakdown is required for evaluation",
         }
 
-    # Initialize LLM (claude-haiku-4-5)
+    # Initialize LLM with fallback mechanism (Issue #111)
     max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-    model = ChatAnthropic(
-        model="claude-haiku-4-5",
+    model_name = os.getenv("JOB_GENERATOR_EVALUATOR_MODEL", "claude-haiku-4-5")
+    model, perf_tracker, cost_tracker = create_llm_with_fallback(
+        model_name=model_name,
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using max_tokens={max_tokens}")
+    logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(EvaluationResult)
@@ -172,6 +179,13 @@ async def evaluator_node(
             logger.debug(f"Generated evaluation feedback:\n{evaluation_feedback}")
 
         # Update state
+        logger.info("=" * 80)
+        logger.info("✅ Evaluator node completed successfully")
+        logger.info(f"📊 Returning evaluation result: is_valid={response.is_valid}")
+        logger.info("🔄 Retry count reset to: 0")
+        logger.info(f"📍 Evaluator stage unchanged: {evaluator_stage}")
+        logger.info("=" * 80)
+
         return {
             **state,
             "evaluation_result": response.model_dump(),

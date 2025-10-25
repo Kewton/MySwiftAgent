@@ -4,7 +4,7 @@ This module defines the state structure for the LangGraph-based agent that
 automatically generates jobqueue Jobs and Tasks from natural language requirements.
 """
 
-from typing import Any, Literal, TypedDict
+from typing import Any, TypedDict
 
 
 class JobTaskGeneratorState(TypedDict, total=False):
@@ -55,11 +55,12 @@ class JobTaskGeneratorState(TypedDict, total=False):
 
     # ===== Intermediate =====
     task_breakdown: list[dict[str, Any]]
+    overall_summary: str  # Task breakdown summary from LLM
     interface_definitions: list[dict[str, Any]]
     task_masters: list[dict[str, Any]]
     task_master_ids: list[str]
     job_master: dict[str, Any]
-    job_master_id: int | None
+    job_master_id: str | None
 
     # ===== Feasibility Analysis =====
     feasibility_analysis: dict[str, Any] | None
@@ -72,11 +73,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
     evaluation_retry_count: int
     evaluation_errors: list[str]
     evaluation_feedback: str | None
-    evaluator_stage: Literal[
-        "after_task_breakdown",
-        "after_interface_definition",
-        "retry_after_validation",  # Phase 11: Infinite loop fix
-    ]
+    evaluator_stage: str  # "after_task_breakdown" or "after_interface_definition"
 
     # ===== Validation & Retry =====
     validation_result: dict[str, Any] | None
@@ -108,6 +105,7 @@ def create_initial_state(
         "max_retry": max_retry,
         # Intermediate
         "task_breakdown": [],
+        "overall_summary": "",
         "interface_definitions": [],
         "task_masters": [],
         "task_master_ids": [],
@@ -123,7 +121,7 @@ def create_initial_state(
         "evaluation_retry_count": 0,
         "evaluation_errors": [],
         "evaluation_feedback": None,
-        "evaluator_stage": "after_task_breakdown",
+        "evaluator_stage": "after_task_breakdown",  # Initial stage
         # Validation & Retry
         "validation_result": None,
         "retry_count": 0,

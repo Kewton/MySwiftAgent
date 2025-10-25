@@ -650,8 +650,8 @@ clean_temp_files() {
     stop_service "MyScheduler" "$MYSCHEDULER_PID"
     stop_service "JobQueue" "$JOBQUEUE_PID"
 
-    # Clean logs
-    rm -f "$LOG_DIR"/*.log 2>/dev/null || true
+    # Clean logs (disabled to preserve logs for debugging)
+    # rm -f "$LOG_DIR"/*.log 2>/dev/null || true
 
     # Clean PID files
     rm -f "$PID_DIR"/*.pid 2>/dev/null || true
@@ -758,17 +758,21 @@ main() {
             # Start JobQueue
             if [[ -z "$service_filter" || "$service_filter" == "jobqueue" ]]; then
                 install_service_deps "JobQueue" "$JOBQUEUE_DIR" || exit 1
+                # Load jobqueue-specific LOG_LEVEL from jobqueue/.env
+                local jobqueue_log_level=$(grep -E "^LOG_LEVEL=" "$JOBQUEUE_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "INFO")
                 start_service "JobQueue" "$JOBQUEUE_DIR" $JOBQUEUE_PORT "$JOBQUEUE_PID" "$JOBQUEUE_LOG" \
-                    "uv run uvicorn app.main:app --host 0.0.0.0 --port $JOBQUEUE_PORT" || exit 1
+                    "LOG_DIR='$LOG_DIR' LOG_LEVEL='$jobqueue_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $JOBQUEUE_PORT --workers 4" || exit 1
             fi
 
             # Start MyScheduler
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
                 install_service_deps "MyScheduler" "$MYSCHEDULER_DIR" || exit 1
+                # Load myscheduler-specific LOG_LEVEL from myscheduler/.env
+                local myscheduler_log_level=$(grep -E "^LOG_LEVEL=" "$MYSCHEDULER_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "INFO")
                 # Note: Most env vars are loaded from myscheduler/.env
-                # Override JOBQUEUE_API_URL to use local port
+                # Override JOBQUEUE_API_URL, LOG_DIR and LOG_LEVEL to use local port
                 start_service "MyScheduler" "$MYSCHEDULER_DIR" $MYSCHEDULER_PORT "$MYSCHEDULER_PID" "$MYSCHEDULER_LOG" \
-                    "JOBQUEUE_API_URL='http://localhost:$JOBQUEUE_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
+                    "JOBQUEUE_API_URL='http://localhost:$JOBQUEUE_PORT' LOG_DIR='$LOG_DIR' LOG_LEVEL='$myscheduler_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT" || exit 1
             fi
 
             # Start MyVault
@@ -779,22 +783,26 @@ main() {
                     print_info "MyVault: Create myVault/.env and set MSA_MASTER_KEY to enable MyVault service"
                 else
                     install_service_deps "MyVault" "$MYVAULT_DIR" || exit 1
+                    # Load myvault-specific LOG_LEVEL from myVault/.env
+                    local myvault_log_level=$(grep -E "^LOG_LEVEL=" "$MYVAULT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "INFO")
                     # Create data directory
                     mkdir -p "$MYVAULT_DIR/data"
                     # Note: Most env vars (MSA_MASTER_KEY, TOKEN_*) are loaded from myVault/.env
-                    # Only override DATABASE_URL here
+                    # Override DATABASE_URL, LOG_DIR and LOG_LEVEL here
                     start_service "MyVault" "$MYVAULT_DIR" $MYVAULT_PORT "$MYVAULT_PID" "$MYVAULT_LOG" \
-                        "DATABASE_URL='sqlite:///./data/myvault.db' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYVAULT_PORT" || print_warning "MyVault: Failed to start (check logs for details)"
+                        "DATABASE_URL='sqlite:///./data/myvault.db' LOG_DIR='$LOG_DIR' LOG_LEVEL='$myvault_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $MYVAULT_PORT" || print_warning "MyVault: Failed to start (check logs for details)"
                 fi
             fi
 
             # Start ExpertAgent
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
                 install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
+                # Load expertagent-specific LOG_LEVEL from expertAgent/.env
+                local expertagent_log_level=$(grep -E "^LOG_LEVEL=" "$EXPERTAGENT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "INFO")
                 # Note: Most env vars are loaded from expertAgent/.env
-                # Only override MYVAULT_BASE_URL and PORT here
+                # Override MYVAULT_BASE_URL, LOG_DIR, LOG_LEVEL and PORT here
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
+                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' LOG_DIR='$LOG_DIR' LOG_LEVEL='$expertagent_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
             fi
 
             # Start GraphAiServer

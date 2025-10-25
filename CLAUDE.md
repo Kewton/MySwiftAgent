@@ -339,6 +339,48 @@ GitHub Actions で以下を自動実行：
 - **リクエスト検証**: Pydantic による厳密なスキーマ検証
 - **エラーハンドリング**: 機密情報の漏洩防止
 
+### ログ設定（マルチワーカー対応）
+
+全Pythonプロジェクトは統一されたログ設定方針に従います。
+
+#### **基本方針**
+
+- ✅ **`logging.basicConfig(force=True)`を使用**: マルチワーカー環境で正常動作
+- ✅ **プロジェクト固有のログファイル名**: `{プロジェクト名}.log` で管理
+- ✅ **3種類のハンドラー**: StreamHandler（コンソール）、RotatingFileHandler（メインログ）、TimedRotatingFileHandler（エラーログ）
+- ✅ **統一フォーマット**: `[%(process)d-%(thread)d]-%(asctime)s-%(levelname)s-%(message)s`
+
+#### **ログファイル命名規則**
+
+| プロジェクト | ログファイル名 | エラーログファイル名 |
+|------------|-------------|------------------|
+| expertAgent | `expertagent.log` | `expertagent_rotation.log` |
+| jobqueue | `jobqueue.log` | `jobqueue_rotation.log` |
+| myscheduler | `myscheduler.log` | `myscheduler_rotation.log` |
+| myVault | `myvault.log` | `myvault_rotation.log` |
+
+#### **推奨ワーカー数**
+
+| プロジェクト | ワーカー数 | 理由 |
+|------------|----------|------|
+| expertAgent | 4 | LLM APIコールが多く並列処理が効果的 |
+| jobqueue | 4 | 非同期ジョブ実行で並列度を高める |
+| myscheduler | 1 | APSchedulerはシングルプロセス推奨 |
+| myVault | 1 | SQLite使用のためシングルプロセス |
+
+#### **環境変数設定**
+
+`.env`ファイルで以下を設定:
+
+```bash
+LOG_LEVEL=DEBUG  # 開発時はDEBUG、本番時はINFO
+LOG_DIR=./logs   # ログ出力ディレクトリ
+```
+
+#### **詳細ドキュメント**
+
+ログ設定の詳細は [logging-policy.md](./docs/design/logging-policy.md) を参照してください。
+
 ---
 
 # 🤖 AI開発支援・コード生成時の注意事項

@@ -10,7 +10,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 env_path = PROJECT_ROOT / ".env"
 
 if env_path.exists():
-    load_dotenv(dotenv_path=env_path, override=True)
+    # override=False: Respect environment variables set by quick-start.sh/dev-start.sh
+    # This ensures LOG_DIR from startup scripts takes precedence
+    load_dotenv(dotenv_path=env_path, override=False)
 else:
     # Fallback to auto-detection (for docker-compose where env vars are pre-set)
     load_dotenv(override=False)
@@ -20,7 +22,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field(default="")
     GOOGLE_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
-    LOG_DIR: str = Field(default="./")
+    LOG_DIR: str = Field(default="./logs")
     LOG_LEVEL: str = Field(default="INFO")
     GRAPH_AGENT_MODEL: str = Field(default="gemini-2.0-flash-exp")
     PODCAST_SCRIPT_DEFAULT_MODEL: str = Field(default="gpt-4o-mini")
@@ -52,6 +54,13 @@ class Settings(BaseSettings):
 
     # Admin Configuration
     ADMIN_TOKEN: str = Field(default="")  # For reload secrets endpoint
+
+    # Job/Task Generator Configuration (Issue #111)
+    JOB_GENERATOR_MAX_TOKENS: int = Field(default=32768)
+    JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL: str = Field(default="claude-haiku-4-5")
+    JOB_GENERATOR_EVALUATOR_MODEL: str = Field(default="claude-haiku-4-5")
+    JOB_GENERATOR_INTERFACE_DEFINITION_MODEL: str = Field(default="claude-haiku-4-5")
+    JOB_GENERATOR_VALIDATION_MODEL: str = Field(default="claude-haiku-4-5")
 
 
 # インスタンス生成

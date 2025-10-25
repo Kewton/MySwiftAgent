@@ -8,8 +8,6 @@ if validation errors are detected.
 import logging
 import os
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.validation_fix import (
     VALIDATION_FIX_SYSTEM_PROMPT,
     ValidationFixResponse,
@@ -17,6 +15,7 @@ from ..prompts.validation_fix import (
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
+from ..utils.llm_factory import create_llm_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -40,34 +39,23 @@ async def validation_node(
     """
     logger.info("Starting validation node")
 
-    # Check if previous node set an error
-    existing_error = state.get("error_message")
-    if existing_error:
-        logger.error(f"Previous node error detected: {existing_error}")
-        logger.error("Skipping validation due to previous error")
-        return state  # Preserve existing error message
-
     job_master_id = state.get("job_master_id")
     if not job_master_id:
         logger.error("JobMaster ID is missing")
-        logger.error("This indicates master_creation_node failed to set job_master_id")
         return {
             **state,
-            "error_message": "JobMaster ID is required for validation. Likely cause: master_creation_node failed.",
+            "error_message": "JobMaster ID is required for validation",
         }
 
-    logger.debug(
-        f"Validating JobMaster: {job_master_id} (type: {type(job_master_id).__name__})"
-    )
+    logger.debug(f"Validating JobMaster: {job_master_id}")
 
     try:
         # Initialize jobqueue client
         client = JobqueueClient()
 
-        # Call validation API (convert int to str for API call)
-        job_master_id_str = str(job_master_id)
-        logger.info(f"Calling validation API for JobMaster {job_master_id_str}")
-        validation_result = await client.validate_workflow(job_master_id_str)
+        # Call validation API
+        logger.info(f"Calling validation API for JobMaster {job_master_id}")
+        validation_result = await client.validate_workflow(job_master_id)
 
         is_valid = validation_result.get("is_valid", False)
         errors = validation_result.get("errors", [])
@@ -104,14 +92,15 @@ async def validation_node(
         interface_definitions = state.get("interface_definitions", {})
         interface_list = list(interface_definitions.values())
 
-        # Initialize LLM (claude-haiku-4-5)
+        # Initialize LLM with fallback mechanism (Issue #111)
         max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-        model = ChatAnthropic(
-            model="claude-haiku-4-5",
+        model_name = os.getenv("JOB_GENERATOR_VALIDATION_MODEL", "claude-haiku-4-5")
+        model, perf_tracker, cost_tracker = create_llm_with_fallback(
+            model_name=model_name,
             temperature=0.0,
             max_tokens=max_tokens,
         )
-        logger.debug(f"Using max_tokens={max_tokens}")
+        logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
         # Create structured output model
         structured_model = model.with_structured_output(ValidationFixResponse)
@@ -144,8 +133,6 @@ async def validation_node(
             )
 
         # Return validation result with fix proposals
-        # Increment retry_count on validation failure to prevent infinite loop
-        current_retry = state.get("retry_count", 0)
         return {
             **state,
             "validation_result": {
@@ -154,8 +141,7 @@ async def validation_node(
                 "warnings": warnings,
                 "fix_proposals": fix_response.model_dump(),
             },
-            "retry_count": current_retry + 1,  # Increment retry count on failure
-            "evaluator_stage": "retry_after_validation",  # Phase 11: Trigger conditional routing
+            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
         }
 
     except Exception as e:
@@ -163,4 +149,5 @@ async def validation_node(
         return {
             **state,
             "error_message": f"Validation failed: {str(e)}",
+            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
         }
