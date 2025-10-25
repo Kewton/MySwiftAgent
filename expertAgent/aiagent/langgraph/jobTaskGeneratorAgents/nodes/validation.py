@@ -8,8 +8,6 @@ if validation errors are detected.
 import logging
 import os
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.validation_fix import (
     VALIDATION_FIX_SYSTEM_PROMPT,
     ValidationFixResponse,
@@ -17,6 +15,7 @@ from ..prompts.validation_fix import (
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
+from ..utils.llm_factory import create_llm_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +92,15 @@ async def validation_node(
         interface_definitions = state.get("interface_definitions", {})
         interface_list = list(interface_definitions.values())
 
-        # Initialize LLM (claude-haiku-4-5)
+        # Initialize LLM with fallback mechanism (Issue #111)
         max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-        model = ChatAnthropic(
-            model="claude-haiku-4-5",
+        model_name = os.getenv("JOB_GENERATOR_VALIDATION_MODEL", "claude-haiku-4-5")
+        model, perf_tracker, cost_tracker = create_llm_with_fallback(
+            model_name=model_name,
             temperature=0.0,
             max_tokens=max_tokens,
         )
-        logger.debug(f"Using max_tokens={max_tokens}")
+        logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
         # Create structured output model
         structured_model = model.with_structured_output(ValidationFixResponse)
@@ -141,7 +141,7 @@ async def validation_node(
                 "warnings": warnings,
                 "fix_proposals": fix_response.model_dump(),
             },
-            "retry_count": state.get("retry_count", 0),
+            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
         }
 
     except Exception as e:
@@ -149,4 +149,5 @@ async def validation_node(
         return {
             **state,
             "error_message": f"Validation failed: {str(e)}",
+            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
         }

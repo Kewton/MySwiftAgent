@@ -128,8 +128,10 @@ async def generate_job_and_tasks(
         agent = create_job_task_generator_agent()
 
         logger.info("Invoking LangGraph agent")
-        # Phase 8: Set recursion_limit to 50 (default is 25)
-        final_state = await agent.ainvoke(initial_state, config={"recursion_limit": 50})
+        # Phase 8: Set recursion_limit to 100 (increased due to multiple LLM calls and evaluations)
+        final_state = await agent.ainvoke(
+            initial_state, config={"recursion_limit": 100}
+        )
 
         logger.info("LangGraph agent execution completed")
         logger.debug(f"Final state keys: {final_state.keys()}")

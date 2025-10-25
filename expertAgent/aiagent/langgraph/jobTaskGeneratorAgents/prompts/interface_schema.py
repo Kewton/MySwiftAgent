@@ -4,16 +4,18 @@ This module provides prompts and schemas for defining input/output interfaces
 for each task in JSON Schema format, compatible with jobqueue InterfaceMaster.
 """
 
+import json
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class InterfaceSchemaDefinition(BaseModel):
     """Interface schema for a single task."""
 
-    # Allow extra fields (e.g., 'id') that LLM might generate
-    model_config = ConfigDict(extra="allow")
+    # Forbid extra fields to ensure OpenAI API compatibility
+    # OpenAI's structured output requires additionalProperties: false
+    model_config = ConfigDict(extra="forbid")
 
     task_id: str = Field(description="Task ID to define interface for")
     interface_name: str = Field(
@@ -26,6 +28,36 @@ class InterfaceSchemaDefinition(BaseModel):
     output_schema: dict[str, Any] = Field(
         description="JSON Schema for output (must be valid JSON Schema)"
     )
+
+    @field_validator("input_schema", "output_schema", mode="before")
+    @classmethod
+    def parse_json_schema(cls, value: Any) -> dict[str, Any]:
+        """Parse JSON string to dict if needed.
+
+        Gemini's structured output may return nested dicts as JSON strings.
+        This validator handles both dict and str inputs.
+
+        Args:
+            value: Input value (dict or JSON string)
+
+        Returns:
+            Parsed dictionary
+
+        Raises:
+            ValueError: If value is invalid JSON string or wrong type
+        """
+        if isinstance(value, str):
+            try:
+                parsed: dict[str, Any] = json.loads(value)
+                return parsed
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON schema string: {e}") from e
+        elif isinstance(value, dict):
+            return value
+        else:
+            raise ValueError(
+                f"Expected dict or JSON string, got {type(value).__name__}"
+            )
 
 
 class InterfaceSchemaResponse(BaseModel):

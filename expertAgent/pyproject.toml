@@ -133,7 +133,11 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 markers = [
-    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "unit: Unit tests (no LLM API calls, always run)",
+    "integration: Integration tests (mocked LLM responses, always run)",
+    "e2e: End-to-end tests (real LLM API calls, optional)",
+    "llm_required: Tests requiring real LLM API (skip if API key unavailable)",
+    "slow: Slow tests (E2E, real API calls)",
 ]
 
 [tool.coverage.run]

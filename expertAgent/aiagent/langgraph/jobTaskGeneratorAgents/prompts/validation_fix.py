@@ -4,9 +4,10 @@ This module provides prompts and schemas for fixing interface validation errors
 reported by jobqueue WorkflowValidator.
 """
 
+import json
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class InterfaceFixProposal(BaseModel):
@@ -19,6 +20,35 @@ class InterfaceFixProposal(BaseModel):
     current_schema: dict[str, Any] = Field(description="Current interface schema")
     fixed_schema: dict[str, Any] = Field(description="Fixed interface schema")
     fix_explanation: str = Field(description="Explanation of the fix")
+
+    @field_validator("current_schema", "fixed_schema", mode="before")
+    @classmethod
+    def parse_json_schema(cls, value: Any) -> dict[str, Any]:
+        """Parse JSON string to dict if needed.
+
+        Gemini's structured output may return nested dicts as JSON strings.
+        This validator handles both dict and str inputs.
+
+        Args:
+            value: Input value (dict or JSON string)
+
+        Returns:
+            Parsed dictionary
+
+        Raises:
+            ValueError: If value is invalid JSON string or wrong type
+        """
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON schema string: {e}") from e
+        elif isinstance(value, dict):
+            return value
+        else:
+            raise ValueError(
+                f"Expected dict or JSON string, got {type(value).__name__}"
+            )
 
 
 class ValidationFixResponse(BaseModel):

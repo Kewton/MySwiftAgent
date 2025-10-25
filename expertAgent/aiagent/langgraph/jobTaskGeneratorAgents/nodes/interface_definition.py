@@ -9,8 +9,6 @@ import logging
 import os
 from typing import Any
 
-from langchain_anthropic import ChatAnthropic
-
 from ..prompts.interface_schema import (
     INTERFACE_SCHEMA_SYSTEM_PROMPT,
     InterfaceSchemaResponse,
@@ -18,6 +16,7 @@ from ..prompts.interface_schema import (
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
+from ..utils.llm_factory import create_llm_with_fallback
 from ..utils.schema_matcher import SchemaMatcher
 
 logger = logging.getLogger(__name__)
@@ -117,14 +116,17 @@ async def interface_definition_node(
 
     logger.debug(f"Task breakdown count: {len(task_breakdown)}")
 
-    # Initialize LLM (claude-haiku-4-5) - Faster execution with improved error handling
+    # Initialize LLM with fallback mechanism (Issue #111)
     max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-    model = ChatAnthropic(
-        model="claude-haiku-4-5",
+    model_name = os.getenv(
+        "JOB_GENERATOR_INTERFACE_DEFINITION_MODEL", "claude-haiku-4-5"
+    )
+    model, perf_tracker, cost_tracker = create_llm_with_fallback(
+        model_name=model_name,
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using model=claude-haiku-4-5, max_tokens={max_tokens}")
+    logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
 
     # Create structured output model
     structured_model = model.with_structured_output(InterfaceSchemaResponse)
@@ -141,6 +143,13 @@ async def interface_definition_node(
         ]
         logger.info("Invoking LLM for interface schema definition")
         response = await structured_model.ainvoke(messages)
+
+        # Validate response
+        if response is None or not hasattr(response, "interfaces"):
+            logger.error("LLM response is None or missing 'interfaces' attribute")
+            raise ValueError(
+                "Interface definition failed: LLM returned invalid response"
+            )
 
         logger.info(
             f"Interface schema definition completed: {len(response.interfaces)} interfaces"
@@ -203,6 +212,12 @@ async def interface_definition_node(
 
             interface_masters[task_id] = {
                 "interface_master_id": interface_master["id"],
+                "input_interface_id": interface_master[
+                    "id"
+                ],  # Explicit input interface ID
+                "output_interface_id": interface_master[
+                    "id"
+                ],  # Explicit output interface ID
                 "interface_name": interface_name,
                 "input_schema": interface_def.input_schema,
                 "output_schema": interface_def.output_schema,
@@ -211,20 +226,48 @@ async def interface_definition_node(
             logger.info(
                 f"Interface for task {task_id}: {interface_master['id']} ({interface_name})"
             )
+            logger.debug(
+                f"Interface definition for task {task_id}:\n"
+                f"  input_interface_id: {interface_master['id']}\n"
+                f"  output_interface_id: {interface_master['id']}"
+            )
 
         # Update state
+        current_stage = state.get("evaluator_stage", "after_task_breakdown")
+        new_stage = "after_interface_definition"
+        current_retry = state.get("retry_count", 0)
+        new_retry = current_retry + 1 if current_retry > 0 else 0
+
+        logger.info("=" * 80)
+        logger.info("✅ Interface definition node completed successfully")
+        logger.info(f"📋 Created {len(interface_masters)} interface definitions")
+        logger.info(f"🔄 Stage transition: {current_stage} → {new_stage}")
+        logger.info(f"🔄 Retry count: {current_retry} → {new_retry}")
+        logger.info(
+            "⚠️  CRITICAL: Returning state with evaluator_stage='after_interface_definition'"
+        )
+        logger.info("=" * 80)
+
         return {
             **state,
             "interface_definitions": interface_masters,
-            "evaluator_stage": "after_interface_definition",
-            "retry_count": state.get("retry_count", 0) + 1
-            if state.get("retry_count", 0) > 0
-            else 0,
+            "evaluator_stage": new_stage,
+            "retry_count": new_retry,
         }
 
     except Exception as e:
         logger.error(f"Failed to define interfaces: {e}", exc_info=True)
+
+        # Increment retry_count to enable proper retry logic
+        current_retry = state.get("retry_count", 0)
+        new_retry = current_retry + 1
+
+        logger.warning(
+            f"🔄 Interface definition failed, retry count: {current_retry} → {new_retry}"
+        )
+
         return {
             **state,
             "error_message": f"Interface definition failed: {str(e)}",
+            "retry_count": new_retry,
         }

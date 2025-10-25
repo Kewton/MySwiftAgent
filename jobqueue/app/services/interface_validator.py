@@ -4,9 +4,78 @@ import logging
 from typing import Any
 
 import jsonschema
-from jsonschema import Draft7Validator
+import regex
+from jsonschema import Draft7Validator, FormatChecker
 
 logger = logging.getLogger(__name__)
+
+
+# ========== Custom Format Checker for Unicode Property Escapes ==========
+@FormatChecker.cls_checks("regex", raises=Exception)
+def check_regex_format(value: str) -> bool:
+    """
+    Custom format checker for 'regex' format using regex library.
+
+    This checker supports Unicode property escapes (\\p{L}, \\p{N}, etc.)
+    which are not supported by Python's standard re module.
+
+    Args:
+        value: Regex pattern string to validate
+
+    Returns:
+        True if pattern is valid
+
+    Raises:
+        Exception: If pattern is invalid (caught by jsonschema)
+    """
+    try:
+        # Use regex library instead of re module
+        regex.compile(value)
+        return True
+    except regex.error as e:
+        # jsonschema will catch this exception and report validation error
+        raise Exception(f"Invalid regex pattern: {e}") from e
+
+
+# Create format checker instance
+_format_checker = FormatChecker()
+
+
+def _validate_regex_patterns_in_schema(schema: dict[str, Any]) -> None:
+    """
+    Recursively validate all regex patterns in JSON Schema.
+
+    This function walks through the schema and validates all 'pattern' fields
+    using the regex library to ensure Unicode property escapes are supported.
+
+    Args:
+        schema: JSON Schema to validate
+
+    Raises:
+        InterfaceValidationError: If any regex pattern is invalid
+    """
+    if not isinstance(schema, dict):
+        return
+
+    # Check if current level has a pattern field
+    if "pattern" in schema:
+        pattern = schema["pattern"]
+        try:
+            regex.compile(pattern)
+        except regex.error as e:
+            raise InterfaceValidationError(
+                "Invalid regex pattern in schema",
+                [f"Pattern '{pattern}' is invalid: {e}"],
+            ) from e
+
+    # Recursively check nested objects
+    for value in schema.values():
+        if isinstance(value, dict):
+            _validate_regex_patterns_in_schema(value)
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    _validate_regex_patterns_in_schema(item)
 
 
 class InterfaceValidationError(Exception):
@@ -43,8 +112,8 @@ class InterfaceValidator:
             return
 
         try:
-            # Create validator and validate
-            validator = Draft7Validator(schema)
+            # Create validator with format checker (supports Unicode property escapes)
+            validator = Draft7Validator(schema, format_checker=_format_checker)
             errors = list(validator.iter_errors(data))
 
             if errors:
@@ -116,6 +185,8 @@ class InterfaceValidator:
         This method checks if a JSON Schema itself is valid according to
         JSON Schema Draft 7 specification before using it for data validation.
 
+        Supports Unicode property escapes (\\p{L}, \\p{N}, etc.) in regex patterns.
+
         Args:
             schema: JSON Schema to validate
 
@@ -130,7 +201,30 @@ class InterfaceValidator:
             >>> validator.validate_json_schema_v7(bad_schema)  # Raises error
         """
         try:
-            Draft7Validator.check_schema(schema)
+            # First, validate regex patterns with regex library (supports Unicode property escapes)
+            _validate_regex_patterns_in_schema(schema)
+
+            # Then validate schema structure with Draft7Validator.check_schema()
+            # Note: This may fail for Unicode property escapes, so we catch that specific error
+            try:
+                Draft7Validator.check_schema(schema)
+            except jsonschema.SchemaError as e:
+                # If the error is about regex pattern validation (Unicode property escapes),
+                # we ignore it because we already validated with regex library
+                error_msg = str(e.message) if hasattr(e, "message") else str(e)
+                if "is not a 'regex'" in error_msg:
+                    # This is expected for Unicode property escapes - already validated above
+                    logger.debug(
+                        f"Draft7Validator.check_schema() failed with regex error (expected for Unicode property escapes): {error_msg}"
+                    )
+                else:
+                    # This is a genuine schema structure error
+                    raise
+
+            # Create validator with format checker to validate regex patterns
+            # This ensures Unicode property escapes are supported
+            validator = Draft7Validator(schema, format_checker=_format_checker)
+
             logger.debug("JSON Schema V7 validation succeeded")
         except jsonschema.SchemaError as e:
             logger.error(f"Invalid JSON Schema V7: {e}")

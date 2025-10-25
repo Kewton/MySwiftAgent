@@ -33,6 +33,7 @@ async def job_registration_node(
     logger.info("Starting job registration node")
 
     job_master_id = state.get("job_master_id")
+    job_master = state.get("job_master")
     user_requirement = state["user_requirement"]
 
     if not job_master_id:
@@ -42,9 +43,33 @@ async def job_registration_node(
             "error_message": "JobMaster ID is required for job registration",
         }
 
+    if not job_master:
+        logger.error("JobMaster data is missing in state")
+        return {
+            **state,
+            "error_message": "JobMaster data is required for job registration",
+        }
+
     logger.debug(f"Registering Job for JobMaster: {job_master_id}")
+    logger.debug(
+        f"JobMaster method: {job_master.get('method', 'POST')}, "
+        f"url: {job_master.get('url', 'N/A')}"
+    )
 
     try:
+        # Get method and url from job_master with fallback defaults
+        # This validation must happen BEFORE any API calls
+        job_method = job_master.get("method", "POST")
+        job_url = job_master.get("url")
+        job_timeout_sec = job_master.get("timeout_sec", 120)
+
+        if not job_url:
+            logger.error("JobMaster url is missing")
+            return {
+                **state,
+                "error_message": "JobMaster url is required for job registration",
+            }
+
         # Initialize jobqueue client
         client = JobqueueClient()
 
@@ -65,21 +90,40 @@ async def job_registration_node(
         # In a more sophisticated implementation, we would pass initial parameters here
         tasks = None
 
-        # Create Job
+        # Create Job with method and url from JobMaster
         job_name = f"Job: {user_requirement[:50]} - {datetime.now().isoformat()}"
         priority = 5  # Default priority
 
         logger.info(f"Creating Job: {job_name}")
+        logger.info(
+            f"Job parameters: method={job_method}, url={job_url}, "
+            f"timeout_sec={job_timeout_sec}"
+        )
 
         job = await client.create_job(
             master_id=job_master_id,
             name=job_name,
+            method=job_method,
+            url=job_url,
             tasks=tasks,
             priority=priority,
             scheduled_at=None,  # Execute immediately
+            timeout_sec=job_timeout_sec,
         )
 
-        job_id = job["id"]
+        # JobResponse has 'job_id' field, not 'id'
+        # Use defensive access to handle various response schemas
+        job_id = job.get("job_id") or job.get("id")
+        if not job_id:
+            logger.error(
+                f"Job creation response missing job_id field. "
+                f"Response keys: {list(job.keys())}, "
+                f"Response content: {job}"
+            )
+            raise ValueError(
+                f"Job creation response missing job_id field. "
+                f"Available keys: {list(job.keys())}"
+            )
         logger.info(f"Job created successfully: {job_id}")
 
         # Return updated state with job ID

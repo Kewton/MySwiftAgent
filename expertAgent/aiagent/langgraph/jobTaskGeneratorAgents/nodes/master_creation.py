@@ -38,7 +38,11 @@ async def master_creation_node(
     logger.info("Starting master creation node")
 
     task_breakdown = state.get("task_breakdown", [])
-    interface_definitions = state.get("interface_definitions", {})
+    # interface_definitions is expected to be a dict mapping task_id to interface data
+    interface_definitions_raw: Any = state.get("interface_definitions", {})
+    interface_definitions: dict = (
+        interface_definitions_raw if isinstance(interface_definitions_raw, dict) else {}
+    )
     user_requirement = state["user_requirement"]
 
     if not task_breakdown:
@@ -63,14 +67,25 @@ async def master_creation_node(
         client = JobqueueClient()
         matcher = SchemaMatcher(client)
 
-        # Step 1: Create TaskMasters
+        # Step 1: Create TaskMasters with interface chaining
         task_masters: dict[str, dict[str, Any]] = {}
 
-        for task in task_breakdown:
+        # Sort tasks by priority to establish execution order
+        sorted_tasks = sorted(task_breakdown, key=lambda t: t.get("priority", 5))
+        logger.info(
+            f"Sorted {len(sorted_tasks)} tasks by priority for interface chaining"
+        )
+
+        # Initialize prev_output_interface_id for chaining
+        prev_output_interface_id: str | None = None
+
+        for order, task in enumerate(sorted_tasks):
             task_id = task["task_id"]
             task_name = task["name"]
 
-            logger.info(f"Creating TaskMaster for task {task_id}: {task_name}")
+            logger.info(
+                f"Creating TaskMaster for task {task_id}: {task_name} (order={order})"
+            )
 
             # Get interface definitions
             if task_id not in interface_definitions:
@@ -81,18 +96,38 @@ async def master_creation_node(
                 }
 
             interface_def = interface_definitions[task_id]
-            interface_master_id = interface_def["interface_master_id"]
 
-            # For now, use the same interface for input and output
-            # In a more sophisticated implementation, we would create separate interfaces
-            input_interface_id = interface_master_id
-            output_interface_id = interface_master_id
+            # Get interface IDs with fallback to interface_master_id (backward compatibility)
+            interface_master_id = interface_def["interface_master_id"]
+            interface_input_id = interface_def.get(
+                "input_interface_id", interface_master_id
+            )
+            interface_output_id = interface_def.get(
+                "output_interface_id", interface_master_id
+            )
+
+            # Implement task chaining logic
+            if order == 0:
+                # First task: use its own input/output interface IDs
+                input_interface_id = interface_input_id
+                output_interface_id = interface_output_id
+                logger.info(
+                    f"  First task: input={input_interface_id}, output={output_interface_id}"
+                )
+            else:
+                # Subsequent tasks: chain from previous task's output
+                input_interface_id = prev_output_interface_id
+                output_interface_id = interface_output_id
+                logger.info(
+                    f"  Chained task: input={input_interface_id} (from prev task), "
+                    f"output={output_interface_id}"
+                )
 
             # Get expertAgent base URL from settings
             # Falls back to http://localhost:8104 if not set
             task_url = f"{settings.EXPERTAGENT_BASE_URL}/api/v1/tasks/{task_id}"
 
-            # Find or create TaskMaster
+            # Find or create TaskMaster with strict interface matching
             task_master = await matcher.find_or_create_task_master(
                 name=task_name,
                 description=task["description"],
@@ -106,28 +141,39 @@ async def master_creation_node(
             task_masters[task_id] = {
                 "task_master_id": task_master["id"],
                 "task_name": task_name,
-                "order": task.get("priority", 5),  # Use priority as order hint
+                "order": order,
+                "input_interface_id": input_interface_id,
+                "output_interface_id": output_interface_id,
             }
 
             logger.info(
-                f"TaskMaster created for task {task_id}: {task_master['id']} ({task_name})"
+                f"TaskMaster created for task {task_id}: {task_master['id']} ({task_name})\n"
+                f"  Interface chain: input={input_interface_id} → output={output_interface_id}"
+            )
+
+            # Update prev_output_interface_id for next task
+            prev_output_interface_id = output_interface_id
+            logger.debug(
+                f"  Updated prev_output_interface_id: {prev_output_interface_id}"
             )
 
         # Step 2: Create JobMaster
         job_name = f"Job: {user_requirement[:50]}"  # Truncate to 50 chars
         job_description = f"Auto-generated job from requirement: {user_requirement}"
+        job_method = "POST"
         job_url = (
             "http://localhost:8105/api/v1/graphai/execute"  # GraphAI execution endpoint
         )
+        job_timeout_sec = 300  # 5 minutes
 
         logger.info(f"Creating JobMaster: {job_name}")
 
         job_master = await client.create_job_master(
             name=job_name,
             description=job_description,
-            method="POST",
+            method=job_method,
             url=job_url,
-            timeout_sec=300,  # 5 minutes
+            timeout_sec=job_timeout_sec,
         )
 
         job_master_id = job_master["id"]
@@ -138,12 +184,13 @@ async def master_creation_node(
             f"Creating JobMasterTask associations for {len(task_masters)} tasks"
         )
 
-        # Sort tasks by their order (based on priority or dependency)
-        sorted_tasks = sorted(task_masters.items(), key=lambda x: x[1]["order"])
+        # Sort tasks by their order (already determined in Step 1)
+        sorted_task_items = sorted(task_masters.items(), key=lambda x: x[1]["order"])
 
-        for order, (task_id, task_info) in enumerate(sorted_tasks):
+        for task_id, task_info in sorted_task_items:
             task_master_id = task_info["task_master_id"]
             task_name = task_info["task_name"]
+            order = task_info["order"]
 
             logger.info(
                 f"Adding task {task_id} ({task_name}) to workflow at order {order}"
@@ -162,9 +209,18 @@ async def master_creation_node(
                 f"JobMasterTask created: {job_master_task['id']} (order={order})"
             )
 
-        # Update state
+        # Update state with job_master data for job_registration
+        # Note: job_master API response only includes id/name/is_active,
+        # so we use the parameters we sent during creation
         return {
             **state,
+            "job_master": {
+                "id": job_master_id,
+                "name": job_name,
+                "method": job_method,
+                "url": job_url,
+                "timeout_sec": job_timeout_sec,
+            },
             "job_master_id": job_master_id,
             "task_master_ids": [
                 info["task_master_id"] for info in task_masters.values()
@@ -173,8 +229,17 @@ async def master_creation_node(
         }
 
     except Exception as e:
+        # Provide detailed error information for debugging
         logger.error(f"Failed to create masters: {e}", exc_info=True)
+        logger.error(
+            f"Master creation context: "
+            f"task_breakdown_count={len(task_breakdown)}, "
+            f"interface_definitions_count={len(interface_definitions)}, "
+            f"task_masters_created={len(task_masters) if 'task_masters' in locals() else 0}, "
+            f"job_master_id={'set' if 'job_master_id' in locals() else 'not_set'}"
+        )
         return {
             **state,
-            "error_message": f"Master creation failed: {str(e)}",
+            "error_message": f"Master creation failed: {str(e)}. "
+            f"Task masters created: {len(task_masters) if 'task_masters' in locals() else 0}/{len(task_breakdown)}",
         }

@@ -1,70 +1,292 @@
-# expertAgent Direct API capabilities
+# expertAgent API capabilities
 # This file is used for feasibility evaluation in the evaluator_node
+# Updated: 2025-10-25
+
+# ====================
+# Utility Direct APIs
+# ====================
+# These are high-speed, direct APIs without LLM reasoning
 
 utility_apis:
+  # Gmail APIs
   - name: "Gmail検索"
-    endpoint: "/v1/utility/gmail_search"
-    description: "Gmail検索"
+    endpoint: "/v1/utility/gmail/search"
+    description: "Gmail検索（高速・AIフレンドリー）"
     use_cases:
       - "キーワード検索"
-      - "日付範囲指定"
+      - "日付範囲指定（date_after, date_before）"
+      - "未読メール検索（unread_only）"
+      - "添付ファイル付きメール検索（has_attachment）"
+    performance: "5秒で完了（Utility Agentの36倍高速）"
 
   - name: "Gmail送信"
-    endpoint: "/v1/utility/gmail_send"
-    description: "メール送信"
+    endpoint: "/v1/utility/gmail/send"
+    description: "メール送信（高速・Direct API）"
     use_cases:
-      - "宛先、件名、本文を指定"
+      - "宛先、件名、本文を指定してメール送信"
+      - "HTML形式メール対応"
+    performance: "3-5秒で完了"
 
+  # Google Search APIs
   - name: "Google検索"
     endpoint: "/v1/utility/google_search"
-    description: "Web検索"
+    description: "Web検索（Serper API使用）"
     use_cases:
       - "キーワード検索"
+      - "複数クエリ一括検索（queries配列）"
+      - "検索結果件数指定（num）"
+    implementation: "Serper API経由でGoogle検索"
 
-  - name: "Google Drive Upload"
-    endpoint: "/v1/drive/upload"
-    description: "ファイルアップロード"
+  - name: "Google検索概要"
+    endpoint: "/v1/utility/google_search_overview"
+    description: "Web検索概要取得（Serper API使用）"
     use_cases:
-      - "PDF"
-      - "画像"
-      - "テキストファイル"
+      - "キーワード検索 + サマリー取得"
+      - "複数クエリ一括検索"
 
-  - name: "Text-to-Speech"
-    endpoint: "/v1/utility/tts"
-    description: "音声合成"
+  # Google Drive APIs
+  - name: "Google Drive Upload"
+    endpoint: "/v1/utility/drive/upload"
+    description: "ファイルアップロード（ローカルファイル/コンテンツから生成）"
+    use_cases:
+      - "ローカルファイルのアップロード"
+      - "コンテンツからファイル生成＆アップロード"
+      - "サブディレクトリ自動作成"
+      - "重複ファイル名自動回避"
+      - "大ファイル対応（Resumable Upload自動切替）"
+    supported_formats:
+      - "PDF"
+      - "画像（PNG, JPEG, GIF, etc.）"
+      - "テキストファイル（TXT, JSON, CSV, etc.）"
+      - "音声ファイル（MP3, WAV, etc.）"
+
+  - name: "Google Drive Upload from URL"
+    endpoint: "/v1/utility/drive/upload_from_url"
+    description: "URLからファイルダウンロード＆Google Driveアップロード"
+    use_cases:
+      - "Web上のファイルを直接Google Driveにアップロード"
+      - "PDFダウンロード＆アップロード"
+
+  # Text-to-Speech APIs
+  - name: "Text-to-Speech（Base64）"
+    endpoint: "/v1/utility/text_to_speech"
+    description: "音声合成（Base64エンコードで返却）"
+    use_cases:
+      - "テキストを音声ファイル（MP3）に変換"
+      - "Base64エンコードでJSON形式で返却"
+    models:
+      - "tts-1（標準品質）"
+      - "tts-1-hd（高品質）"
+    voices:
+      - "alloy"
+      - "echo"
+      - "fable"
+      - "onyx"
+      - "nova"
+      - "shimmer"
+
+  - name: "Text-to-Speech + Google Drive"
+    endpoint: "/v1/utility/text_to_speech_drive"
+    description: "音声合成 + Google Driveアップロード"
+    use_cases:
+      - "テキストを音声ファイル（MP3）に変換"
+      - "自動でGoogle Driveにアップロード"
+      - "公開リンクを返却"
+
+  - name: "TTS + Google Drive + Gmail通知"
+    endpoint: "/v1/utility/tts_and_upload_drive"
+    description: "音声合成 + アップロード + メール通知"
     use_cases:
       - "テキストを音声ファイルに変換"
+      - "Google Driveにアップロード"
+      - "完了通知をメール送信"
+
+# ====================
+# AI Agent APIs
+# ====================
+# These are LangGraph-based AI agents with LLM reasoning
 
 ai_agent_apis:
-  - name: "Explorer Agent"
-    endpoint: "/v1/myagent/explorer"
-    description: "ファイルシステム探索"
+  # Direct LLM Call
+  - name: "Direct LLM"
+    endpoint: "/v1/mylllm"
+    description: "直接LLM呼び出し（システムプロンプト指定可能）"
     use_cases:
-      - "ディレクトリ構造の取得"
+      - "カスタムシステムプロンプトでLLM実行"
+      - "複数モデル対応（GPT, Gemini, Ollama）"
+    models:
+      - "gpt-4o-mini（デフォルト）"
+      - "gpt-4o"
+      - "gemini-1.5-flash"
+      - "gemini-1.5-pro"
+      - "ollama/llama3"
 
-  - name: "Action Agent"
-    endpoint: "/v1/myagent/action"
-    description: "汎用アクション実行"
+  # LangGraph Sample Agent
+  - name: "Sample Agent"
+    endpoint: "/v1/aiagent/sample"
+    description: "LangGraph サンプルエージェント"
     use_cases:
-      - "複数API組み合わせ"
+      - "GraphAIワークフロー統合"
+      - "force_json=True で JSON保証"
+      - "max_retries でリトライ回数指定"
 
-  - name: "File Reader Agent"
-    endpoint: "/v1/myagent/file_reader"
-    description: "ファイル読み取り"
-    use_cases:
-      - "テキスト"
-      - "PDF"
-      - "画像の読み取り"
-
-  - name: "Playwright Agent"
-    endpoint: "/v1/myagent/playwright"
-    description: "ブラウザ自動化"
-    use_cases:
-      - "Web scraping"
-      - "フォーム操作"
-
+  # Utility AI Agents (endpoint: /v1/aiagent/utility/{agent_name})
   - name: "JSON Output Agent"
-    endpoint: "/v1/myagent/json_output"
-    description: "構造化出力"
+    endpoint: "/v1/aiagent/utility/jsonoutput"
+    description: "構造化JSON出力専用エージェント"
     use_cases:
       - "自然言語→JSON変換"
+      - "常にJSON形式で返却"
+      - "force_json不要（常にJSON）"
+
+  - name: "Explorer Agent"
+    endpoint: "/v1/aiagent/utility/explorer"
+    description: "ファイルシステム探索エージェント"
+    use_cases:
+      - "ディレクトリ構造の取得"
+      - "ファイル検索"
+      - "ファイルリスト作成"
+    mcp_tools:
+      - "read_file"
+      - "write_file"
+      - "create_directory"
+      - "list_directory"
+      - "directory_tree"
+
+  - name: "Action Agent"
+    endpoint: "/v1/aiagent/utility/action"
+    description: "汎用アクション実行エージェント"
+    use_cases:
+      - "複数API組み合わせ"
+      - "複雑なタスク実行"
+    mcp_tools:
+      - "read_file"
+      - "write_file"
+      - "create_directory"
+      - "list_directory"
+
+  - name: "Playwright Agent"
+    endpoint: "/v1/aiagent/utility/playwright"
+    description: "ブラウザ自動化エージェント（MCP Playwright使用）"
+    use_cases:
+      - "Webスクレイピング"
+      - "フォーム操作"
+      - "ブラウザ自動化"
+      - "スクリーンショット取得"
+    mcp_tools:
+      - "browser_navigate"
+      - "browser_snapshot"
+      - "browser_click"
+      - "browser_type"
+      - "browser_evaluate"
+      - "browser_take_screenshot"
+    limitations:
+      - "不安定な動作の可能性あり"
+      - "複雑なWebページでは失敗する可能性"
+      - "推奨代替: Google検索API + fetchAgent"
+
+  - name: "Wikipedia Agent"
+    endpoint: "/v1/aiagent/utility/wikipedia"
+    description: "Wikipedia検索エージェント"
+    use_cases:
+      - "Wikipedia記事検索"
+      - "多言語対応（language指定）"
+    parameters:
+      - "language: 言語コード（ja, en, etc.）デフォルト: ja"
+
+  - name: "File Reader Agent"
+    endpoint: "/v1/aiagent/utility/file_reader"
+    description: "ファイル読み取りエージェント"
+    use_cases:
+      - "テキストファイル読み取り"
+      - "PDFファイル読み取り"
+      - "画像の読み取り・OCR"
+      - "複数ファイルの一括処理"
+    mcp_tools:
+      - "read_file"
+      - "list_directory"
+
+# ====================
+# MCP Servers (External)
+# ====================
+# MCP servers are external tools integrated via Model Context Protocol
+
+mcp_servers:
+  - name: "Playwright MCP"
+    description: "Chromium headless browser automation"
+    tools:
+      - browser_navigate
+      - browser_snapshot
+      - browser_click
+      - browser_type
+      - browser_evaluate
+      - browser_take_screenshot
+      - browser_close
+      - browser_resize
+      - browser_console_messages
+      - browser_handle_dialog
+      - browser_file_upload
+      - browser_fill_form
+      - browser_press_key
+      - browser_select_option
+      - browser_tabs
+      - browser_wait_for
+      - browser_drag
+      - browser_hover
+      - browser_network_requests
+      - browser_navigate_back
+
+  - name: "Filesystem MCP"
+    description: "File and directory operations"
+    tools:
+      - read_file
+      - write_file
+      - create_directory
+      - list_directory
+      - directory_tree
+      - move_file
+      - search_files
+      - get_file_info
+      - list_allowed_directories
+
+# ====================
+# Known Limitations
+# ====================
+# APIs that do NOT exist or have limitations
+
+missing_capabilities:
+  - name: "Google Drive Folder Create"
+    description: "Google Driveのフォルダ作成機能"
+    status: "不存在"
+    workaround: "手動でフォルダを作成するか、事前に作成済みフォルダIDを指定"
+
+  - name: "MP3 Encoder"
+    description: "RAW/WAV音声データをMP3に変換"
+    status: "不存在"
+    workaround: "TTSは直接MP3を生成するため、通常は不要。WAV/RAWが必要な場合はユーザー側で変換"
+
+  - name: "PDF Text Extraction"
+    description: "PDFからテキスト抽出（専用API）"
+    status: "File Reader Agentで対応可能"
+    workaround: "File Reader Agentを使用"
+
+# ====================
+# Best Practices
+# ====================
+# Recommended usage patterns
+
+best_practices:
+  - pattern: "Web scraping"
+    recommendation: "Playwright Agentは不安定なため、Google検索API + fetchAgent の組み合わせを推奨"
+
+  - pattern: "File upload"
+    recommendation: "大ファイル（>5MB）は自動でResumable Upload に切り替わる"
+
+  - pattern: "Email processing"
+    recommendation: "Gmail検索APIは高速（5秒）、Utility Agentは遅い（25-180秒）"
+
+  - pattern: "JSON output guarantee"
+    recommendation: "force_json=True を使用するか、JSON Output Agentを使用"
+
+  - pattern: "TTS + storage"
+    recommendation: "text_to_speech_drive を使用すると、Google Driveアップロード + リンク返却が一度に可能"

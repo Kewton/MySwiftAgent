@@ -104,6 +104,7 @@ async def add_task_to_workflow(
     await db.refresh(association)
 
     return JobMasterTaskResponse(
+        id=association.id,
         task_master_id=association.task_master_id,
         order=association.order,
         job_master_id=association.job_master_id,
@@ -236,6 +237,7 @@ async def update_workflow_task(
     await db.refresh(association)
 
     return JobMasterTaskResponse(
+        id=association.id,
         task_master_id=association.task_master_id,
         order=association.order,
         job_master_id=association.job_master_id,
@@ -280,6 +282,7 @@ async def remove_task_from_workflow(
 
     # Store response data before deletion
     response_data = JobMasterTaskResponse(
+        id=association.id,
         task_master_id=association.task_master_id,
         order=association.order,
         job_master_id=association.job_master_id,
