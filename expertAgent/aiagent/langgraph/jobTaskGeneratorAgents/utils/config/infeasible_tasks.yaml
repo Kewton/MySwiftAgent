@@ -1,36 +1,292 @@
 # Infeasible tasks and their alternatives
 # This file is used for feasibility evaluation in the evaluator_node
+# Updated: 2025-10-25
 
-# ===== Phase 9: 厳格化された実現困難タスク =====
-# 削除: Slack通知、Discord通知、Notion操作、Trello操作
-# → fetchAgent + API keyで実装可能
-#
-# 削除: データベース直接操作
-# → jobqueue API経由で実装可能
-#
-# 残存: 真に実現困難なタスクのみ
+# ====================
+# 実現困難なタスク分類
+# ====================
 
-infeasible_tasks:
+# ===== カテゴリ1: ハードウェア制約 =====
+# 物理デバイスへのアクセスが必要なタスク
+
+hardware_constraints:
   - task_type: "物理デバイス操作"
-    reason: "印刷、スキャン、USB接続デバイス制御"
+    examples:
+      - "プリンター印刷"
+      - "スキャナー制御"
+      - "USB接続デバイス制御"
+      - "外部ディスプレイ制御"
+    reason: "expertAgentはクラウド/サーバー環境で動作し、物理デバイスへのアクセス不可"
     alternative_api: "実装不可"
+    workaround: "なし（物理デバイスは手動操作が必要）"
     priority: "N/A"
-    notes: "ハードウェア制約により実装不可"
+    notes: "ハードウェア制約により根本的に実装不可"
 
-  - task_type: "ファイルシステム直接操作"
-    reason: "expertAgent管轄外のファイル削除・移動"
-    alternative_api: "Google Drive経由での管理"
-    priority: "medium"
-    notes: "Driveアップロード→リンク共有で代替可能"
+# ===== カテゴリ2: セキュリティ制約 =====
+# セキュリティリスクが高いため実装しないタスク
 
+security_constraints:
   - task_type: "SSH/リモートサーバー操作"
-    reason: "リモートコマンド実行機能なし"
+    examples:
+      - "リモートサーバーへのSSH接続"
+      - "リモートコマンド実行"
+      - "サーバー設定変更"
+    reason: "任意のリモートコマンド実行はセキュリティリスクが極めて高い"
     alternative_api: "実装不可（セキュリティリスク）"
+    workaround: "特定のAPI経由での限定的な操作のみ許可（例: GitHub API, AWS API）"
     priority: "high"
-    notes: "将来的なAPI拡張候補"
+    notes: "将来的にも汎用SSH機能は実装しない方針。特定サービスのAPIを個別に実装"
 
+  - task_type: "システムレベル操作"
+    examples:
+      - "OS再起動"
+      - "システム設定変更"
+      - "root権限が必要な操作"
+    reason: "システム全体に影響を与える操作はセキュリティリスクが高い"
+    alternative_api: "実装不可"
+    workaround: "なし"
+    priority: "N/A"
+    notes: "expertAgentは非特権ユーザーとして動作"
+
+# ===== カテゴリ3: パフォーマンス制約 =====
+# 現在のアーキテクチャでは実現困難なタスク
+
+performance_constraints:
   - task_type: "リアルタイム高頻度処理"
-    reason: "HFT、リアルタイム動画処理等"
+    examples:
+      - "高頻度トレーディング（HFT）"
+      - "リアルタイム動画処理"
+      - "ミリ秒単位のリアルタイム応答"
+      - "大量データのリアルタイムストリーミング処理"
+    reason: "LLM推論のレイテンシ（数秒）がボトルネック"
     alternative_api: "バッチ処理で代替"
+    workaround: "定期実行ジョブ（最短1分間隔）での処理"
     priority: "low"
-    notes: "用途に応じて代替可能"
+    notes: "用途に応じてバッチ処理で代替可能。リアルタイム性が不要な場合は実装可能"
+
+  - task_type: "大規模データ処理"
+    examples:
+      - "数GB以上のファイル処理"
+      - "数百万件のレコード処理"
+      - "複雑な機械学習モデルの学習"
+    reason: "メモリ制約、処理時間制約"
+    alternative_api: "分割処理、外部サービス利用"
+    workaround: "ファイル分割 + 複数ジョブでの並列処理、または専用MLサービス利用"
+    priority: "medium"
+    notes: "データサイズ・処理時間に応じて実装可能性を個別判断"
+
+# ===== カテゴリ4: API機能不足 =====
+# 現在のDirect APIに存在しない機能
+
+missing_api_features:
+  - task_type: "Google Drive フォルダ作成"
+    examples:
+      - "新しいフォルダをGoogle Driveに作成"
+      - "サブディレクトリの自動作成"
+      - "フォルダ階層の構築"
+    reason: "現在のGoogle Drive Direct API（/v1/utility/drive/upload）にはフォルダ作成機能が存在しない"
+    alternative_api: "手動でフォルダを作成するか、事前に作成済みフォルダIDを指定"
+    workaround: |
+      1. 手動でGoogle Driveにフォルダを作成
+      2. フォルダのIDまたはURLを取得
+      3. /v1/utility/drive/upload のリクエストで指定
+    priority: "high"
+    notes: "高優先度でAPI拡張候補。フォルダ作成APIが実装されれば解決"
+    api_extension_proposal:
+      endpoint: "/v1/utility/drive/create_folder"
+      description: "Google Driveのフォルダ作成API"
+      parameters:
+        - "parent_folder_id: 親フォルダID"
+        - "folder_name: 作成するフォルダ名"
+
+  - task_type: "音声ファイル形式変換"
+    examples:
+      - "RAW音声データをMP3に変換"
+      - "WAV音声データをMP3に変換"
+      - "音声ファイルのビットレート変更"
+    reason: "音声エンコード専用のAPIが存在しない"
+    alternative_api: "TTSは直接MP3を生成するため、通常は不要"
+    workaround: |
+      TTS使用時は /v1/utility/text_to_speech で直接MP3生成可能。
+      既存のRAW/WAVファイルを変換したい場合は、ユーザー側でffmpegなどを使用。
+    priority: "medium"
+    notes: "TTS APIは直接MP3を生成するため、実用上の問題は少ない"
+    api_extension_proposal:
+      endpoint: "/v1/utility/audio/encode"
+      description: "音声ファイル形式変換API"
+      parameters:
+        - "input_format: 入力形式（raw, wav）"
+        - "output_format: 出力形式（mp3, wav）"
+        - "bitrate: ビットレート（128k, 192k, 256k, 320k）"
+
+# ===== カテゴリ5: ファイルシステム制約 =====
+# expertAgent管轄外のファイルシステム操作
+
+filesystem_constraints:
+  - task_type: "expertAgent管轄外ファイル操作"
+    examples:
+      - "/Users/outside/documents/ 内のファイル削除（expertAgentの作業ディレクトリ外）"
+      - "システムファイルの変更"
+      - "expertAgentがアクセス権限を持たないディレクトリの操作"
+    reason: "Filesystem MCPはexpertAgentの作業ディレクトリ内のみアクセス可能"
+    alternative_api: "Google Drive経由での管理"
+    workaround: |
+      1. expertAgent作業ディレクトリ内でファイル操作
+      2. Google Driveにアップロードして共有
+      3. または、手動でファイルをexpertAgent作業ディレクトリにコピー
+    priority: "medium"
+    notes: |
+      expertAgent作業ディレクトリ内のファイル操作は可能：
+      - read_file, write_file, create_directory, list_directory等のMCPツールを使用可能
+      - expertAgent管轄外（/Users/outside/など）は操作不可
+
+  - task_type: "大規模ファイル操作"
+    examples:
+      - "数千ファイルの一括削除"
+      - "ディレクトリ全体の再帰的削除"
+      - "大規模なファイル移動・リネーム"
+    reason: "LLM推論を伴う操作のため、大量ファイル処理は時間がかかる"
+    alternative_api: "バッチ処理スクリプト"
+    workaround: "小規模な操作（数十ファイル程度）に限定、または複数ジョブに分割"
+    priority: "low"
+    notes: "小規模な操作は実装可能。大規模な場合はバッチスクリプト推奨"
+
+# ===== カテゴリ6: Webスクレイピング制約 =====
+# Playwright Agentの制限事項
+
+web_scraping_constraints:
+  - task_type: "複雑なWebスクレイピング"
+    examples:
+      - "JavaScript heavy なSPA（Single Page Application）のスクレイピング"
+      - "CAPTCHA認証が必要なサイト"
+      - "ログインが必要な会員制サイトの深い階層"
+      - "動的に生成されるコンテンツの取得"
+    reason: |
+      Playwright Agent（MCP Playwright）は不安定で、複雑なWebページでは失敗する可能性が高い。
+      特にJavaScript heavy なページやCAPTCHA保護サイトでは動作が不安定。
+    alternative_api: "Google検索API (/v1/utility/google_search) + fetchAgent の組み合わせ"
+    workaround: |
+      推奨アプローチ:
+      1. Google検索API でターゲットURLを取得
+      2. fetchAgent で静的HTMLを取得
+      3. LLM Agent で必要な情報を抽出
+
+      Playwright Agent使用時の注意:
+      - シンプルなページのみ対象
+      - エラー時のリトライロジックを実装
+      - タイムアウトを適切に設定
+    priority: "high"
+    notes: |
+      Playwright Agentの制限事項:
+      - 不安定な動作の可能性あり
+      - 複雑なWebページでは失敗する可能性
+      - 推奨代替: Google検索API + fetchAgent
+
+      使用可能なケース:
+      - シンプルな静的ページ
+      - 認証不要なページ
+      - JavaScript依存度が低いページ
+
+# ===== カテゴリ7: 外部サービス連携制約 =====
+# 特定の外部サービスAPIが未実装
+
+external_service_constraints:
+  - task_type: "未対応の外部サービス連携"
+    examples:
+      - "Twitter/X API連携"
+      - "LinkedIn API連携"
+      - "Salesforce API連携"
+      - "Zoom API連携"
+    reason: "特定サービス向けのDirect APIが未実装"
+    alternative_api: "fetchAgent + API key で実装可能"
+    workaround: |
+      1. 各サービスのAPI keyを取得（myVaultで管理）
+      2. fetchAgent を使用してHTTPリクエスト
+      3. LLM Agent でレスポンス処理
+
+      例（Twitter API）:
+      - fetchAgent で POST https://api.twitter.com/2/tweets
+      - Authorization ヘッダーにAPI keyを設定
+    priority: "medium"
+    notes: |
+      実装可能だが、各サービスのAPI仕様を理解する必要がある。
+      よく使われるサービスは将来的にDirect API化を検討。
+
+# ====================
+# 実現可能性の判断基準
+# ====================
+
+feasibility_criteria:
+  - category: "完全に実現可能"
+    conditions:
+      - "既存のDirect API（Utility API）で対応可能"
+      - "AI Agent（LangGraph）で対応可能"
+      - "MCP Tools（Playwright, Filesystem）で対応可能"
+    examples:
+      - "Gmail検索・送信"
+      - "Google検索"
+      - "Google Driveアップロード"
+      - "Text-to-Speech"
+      - "ファイル読み書き（expertAgent管轄内）"
+      - "Webスクレイピング（シンプルなページ）"
+
+  - category: "条件付きで実現可能"
+    conditions:
+      - "既存APIの組み合わせで実現可能"
+      - "制限事項を受け入れれば実現可能"
+      - "ワークアラウンドで対応可能"
+    examples:
+      - "Google Driveフォルダ作成（手動で事前作成）"
+      - "複雑なWebスクレイピング（Google検索API代替）"
+      - "大規模データ処理（分割処理）"
+      - "外部サービス連携（fetchAgent + API key）"
+
+  - category: "実現困難"
+    conditions:
+      - "ハードウェア制約がある"
+      - "セキュリティリスクが高い"
+      - "パフォーマンス制約を満たせない"
+      - "代替手段が存在しない"
+    examples:
+      - "物理デバイス操作"
+      - "SSH/リモートサーバー操作"
+      - "システムレベル操作"
+      - "リアルタイム高頻度処理"
+
+# ====================
+# API拡張優先度
+# ====================
+
+api_extension_priorities:
+  - priority: "high"
+    apis:
+      - "Google Drive Folder Create"
+      - "複雑なWebスクレイピング対応の強化"
+    rationale: "ユーザー要求が多く、代替手段が不便"
+
+  - priority: "medium"
+    apis:
+      - "Audio Encoder（音声形式変換）"
+      - "よく使われる外部サービスのDirect API化（Twitter, LinkedIn等）"
+    rationale: "需要はあるが、fetchAgent + API keyで対応可能"
+
+  - priority: "low"
+    apis:
+      - "バッチ処理の高速化"
+      - "大規模データ処理の最適化"
+    rationale: "既存の分割処理で対応可能"
+
+# ====================
+# 削除された実現可能タスク（Phase 9）
+# ====================
+# 以下のタスクは以前は「実現困難」とされていたが、
+# fetchAgent + API key で実装可能なため削除された
+
+removed_infeasible_tasks:
+  - "Slack通知"
+  - "Discord通知"
+  - "Notion操作"
+  - "Trello操作"
+  - "データベース直接操作（jobqueue API経由で対応可能）"
+  - "GitHub操作（GitHub API + fetchAgent で対応可能）"
+  - "Jira操作（Jira API + fetchAgent で対応可能）"
