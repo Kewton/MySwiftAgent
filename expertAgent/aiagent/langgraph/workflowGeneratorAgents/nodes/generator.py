@@ -9,8 +9,8 @@ import os
 from pathlib import Path
 
 import yaml
-from langchain_google_genai import ChatGoogleGenerativeAI
 
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import create_llm
 from ..prompts.workflow_generation import (
     WORKFLOW_GENERATION_SYSTEM_PROMPT,
     WorkflowGenerationResponse,
@@ -81,14 +81,16 @@ async def generator_node(
     logger.debug("Loading GraphAI and ExpertAgent capabilities")
     graphai_capabilities, expert_agent_capabilities = _load_capabilities()
 
-    # Initialize LLM (Gemini 2.5 Flash)
+    # Initialize LLM (Gemini 2.0 Flash) using llm_factory
+    # This automatically retrieves API key from MyVault or environment variables
     max_tokens = int(os.getenv("WORKFLOW_GENERATOR_MAX_TOKENS", "8192"))
-    model = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp",
+    model_name = os.getenv("WORKFLOW_GENERATOR_MODEL", "gemini-2.0-flash-exp")
+    model = create_llm(
+        model_name=model_name,
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using Gemini 2.0 Flash with max_tokens={max_tokens}")
+    logger.debug(f"Using {model_name} with max_tokens={max_tokens} (API key retrieved from MyVault/env)")
 
     # Create structured output model
     structured_model = model.with_structured_output(WorkflowGenerationResponse)

@@ -127,10 +127,24 @@ async def master_creation_node(
             # Falls back to http://localhost:8104 if not set
             task_url = f"{settings.EXPERTAGENT_BASE_URL}/api/v1/tasks/{task_id}"
 
+            # Build description with recommended_apis
+            base_description = task["description"]
+            recommended_apis = task.get("recommended_apis", [])
+
+            if recommended_apis:
+                apis_str = ", ".join(recommended_apis)
+                enhanced_description = f"{base_description}\n\n**推奨API**: {apis_str}"
+                logger.info(
+                    f"  Enhanced description with recommended APIs: {apis_str}"
+                )
+            else:
+                enhanced_description = base_description
+                logger.debug("  No recommended APIs specified for this task")
+
             # Find or create TaskMaster with strict interface matching
             task_master = await matcher.find_or_create_task_master(
                 name=task_name,
-                description=task["description"],
+                description=enhanced_description,
                 method="POST",
                 url=task_url,
                 input_interface_id=input_interface_id,

@@ -29,6 +29,10 @@ class TaskBreakdownItem(BaseModel):
     priority: int = Field(
         default=5, ge=1, le=10, description="Task priority (1=highest, 10=lowest)"
     )
+    recommended_apis: list[str] = Field(
+        default_factory=list,
+        description="Recommended GraphAI agents or expertAgent APIs for this task (e.g., ['geminiAgent', 'fetchAgent'])",
+    )
 
 
 class TaskBreakdownResponse(BaseModel):
@@ -69,6 +73,30 @@ TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門�
 - 他のワークフローで再利用可能な設計
 - 汎用的な命名と構造
 
+## 5. 使用想定APIの明示
+各タスクについて、実装に使用する想定APIを明示的に記述してください。
+
+### 利用可能なAPI種別
+
+**GraphAI標準エージェント**:
+- `geminiAgent`: Google Gemini APIを使用したLLM処理（推奨モデル: gemini-2.5-flash）
+- `openAIAgent`: OpenAI APIを使用したLLM処理
+- `fetchAgent`: HTTP APIコール（RESTful API呼び出し）
+- `copyAgent`: データコピー・フォーマット変換
+- `jsonParserAgent`: JSON解析（※ user_inputの解析には使用しない）
+
+**expertAgent APIs**:
+- `/api/v1/search`: 検索機能
+- `/api/v1/email`: メール送信機能
+- その他のDirect API
+
+### recommended_apis の記述ルール
+
+1. **優先順位順に記述**: 最も推奨するAPIを先頭に記載
+2. **具体的に記述**: "geminiAgent" のように具体的なエージェント名を記載
+3. **複数指定可能**: メインAPI + フォールバックAPIを指定可能
+4. **理由を説明**: descriptionに「なぜそのAPIを使うか」を記載
+
 ## ⚠️ 重要な制約
 
 ### タスク数と優先度の制約
@@ -89,21 +117,24 @@ TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門�
 ```
 task_001:
   name: "Gmail検索"
-  description: "指定されたキーワードでGmailを検索し、メール一覧を取得する"
+  description: "指定されたキーワードでGmailを検索し、メール一覧を取得する。Gmail APIを使用してHTTP経由でデータを取得。"
   dependencies: []
   expected_output: "JSON形式のメール一覧 (件名、送信者、本文抜粋を含む)"
+  recommended_apis: ["fetchAgent"]
 
 task_002:
   name: "検索結果フォーマット"
-  description: "Gmail検索結果をPDF形式にフォーマットする"
+  description: "Gmail検索結果をPDF形式にフォーマットする。LLMを使用して自然言語処理とフォーマット生成を行う。"
   dependencies: ["task_001"]
   expected_output: "PDF形式のレポートファイル"
+  recommended_apis: ["geminiAgent", "openAIAgent"]
 
 task_003:
   name: "Googleドライブアップロード"
-  description: "フォーマットされたレポートをGoogleドライブにアップロードする"
+  description: "フォーマットされたレポートをGoogleドライブにアップロードする。Google Drive APIを使用してHTTP経由でアップロード。"
   dependencies: ["task_002"]
   expected_output: "アップロード完了メッセージとファイルURL"
+  recommended_apis: ["fetchAgent"]
 ```
 
 ## 出力形式
@@ -116,10 +147,11 @@ JSON形式で以下の構造で出力してください：
     {
       "task_id": "task_001",
       "name": "タスク名",
-      "description": "詳細な説明",
+      "description": "詳細な説明（使用APIの理由を含む）",
       "dependencies": [],
       "expected_output": "期待される出力",
-      "priority": 5
+      "priority": 5,
+      "recommended_apis": ["geminiAgent", "fetchAgent"]
     }
   ],
   "overall_summary": "ワークフロー全体の概要"

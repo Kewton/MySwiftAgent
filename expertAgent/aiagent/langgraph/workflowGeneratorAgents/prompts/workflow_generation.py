@@ -4,6 +4,7 @@ This module provides prompts and schemas for generating GraphAI workflow YAML
 files from TaskMaster metadata using LLM.
 """
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -63,6 +64,16 @@ def create_workflow_generation_prompt(
     input_interface = task_data.get("input_interface", {})
     output_interface = task_data.get("output_interface", {})
 
+    # Extract recommended APIs from description
+    recommended_apis_match = re.search(
+        r"\*\*推奨API\*\*:\s*([^\n]+)", task_description
+    )
+    recommended_apis = ""
+    if recommended_apis_match:
+        recommended_apis = (
+            f"\n\n**Recommended APIs (PRIORITY)**: {recommended_apis_match.group(1)}"
+        )
+
     # Extract interface schemas
     input_schema = input_interface.get("schema", {})
     output_schema = output_interface.get("schema", {})
@@ -86,7 +97,7 @@ def create_workflow_generation_prompt(
 ## Task Metadata
 
 **Task Name**: {task_name}
-**Description**: {task_description}
+**Description**: {task_description}{recommended_apis}
 
 **Input Interface**:
 ```json
@@ -114,22 +125,46 @@ def create_workflow_generation_prompt(
    - At least one node with isResult: true
 
 2. **Required Nodes**:
-   - source: Entry point (receives user_input as object)
+   - source: {{}} - MUST be empty object; receives user_input from API request
    - output: Final result node with isResult: true
 
-3. **Input Schema Usage**:
-   - Use :source.property_name to access input properties
-   - Example: :source.email_address, :source.query
+3. **sourceNode and user_input Reference** (CRITICAL):
+   - ALWAYS define source node as: source: {{}}
+   - user_input from API request is injected into source node as-is
+   - For object-type user_input (RECOMMENDED):
+     API request: {{"user_input": {{"test": "value1", "test2": "value2"}}}}
+     Access properties with :source.property_name
+     Example: :source.test, :source.test2, :source.email_address, :source.query
+   - For string-type user_input (NOT RECOMMENDED):
+     API request: {{"user_input": "simple string"}}
+     Access directly with :source
+   - IMPORTANT: Never use jsonParserAgent to parse user_input object
 
 4. **Data Flow**:
    - Use :node_id to reference previous node output
    - Use :node_id.property for nested properties
    - Ensure output matches output_interface schema
 
-5. **Agent Selection**:
-   - Prefer fetchAgent for HTTP API calls
-   - Use LLM agents (geminiAgent, openAIAgent) for text processing
-   - Use copyAgent for final output formatting
+5. **Agent Selection** (CRITICAL):
+   - **PRIORITY**: If "Recommended APIs" are specified in task description, use them first
+   - For LLM processing:
+     * geminiAgent: Use gemini-2.5-flash as default model (REQUIRED)
+     * openAIAgent: Use gpt-4o-mini as fallback
+   - For HTTP API calls:
+     * fetchAgent: For external API calls
+     * expertAgent APIs: Use Direct API endpoints (e.g., /api/v1/search)
+   - For data formatting:
+     * copyAgent: For final output formatting and data transformation
+
+   Example - geminiAgent with gemini-2.5-flash:
+   ```yaml
+   llm_node:
+     agent: geminiAgent
+     params:
+       model: gemini-2.5-flash  # ← REQUIRED default model
+     inputs:
+       prompt: :source.query
+   ```
 
 6. **Error Handling**:
    - Always validate required inputs
@@ -138,6 +173,63 @@ def create_workflow_generation_prompt(
 7. **Naming Convention**:
    - workflow_name: snake_case (e.g., send_email_notification)
    - node_id: descriptive snake_case (e.g., fetch_user_data)
+
+8. **Example Workflow Structure**:
+
+**Example 1 - Using geminiAgent (RECOMMENDED)**:
+```yaml
+version: 0.5
+nodes:
+  source: {{}}  # REQUIRED: empty object
+
+  # LLM processing with Gemini
+  llm_analysis:
+    agent: geminiAgent
+    params:
+      model: gemini-2.5-flash  # ← Default Gemini model
+    inputs:
+      prompt: |
+        Analyze the following keyword: :source.keyword
+        Target audience: :source.target_audience
+    timeout: 30000
+
+  # JSON parsing
+  parse_result:
+    agent: jsonParserAgent
+    inputs:
+      json: :llm_analysis.text
+    timeout: 5000
+
+  # Final output
+  output:
+    agent: copyAgent
+    params:
+      namedKey: result
+    inputs:
+      result: :parse_result
+    isResult: true
+```
+
+**Example 2 - Using openAIAgent (Fallback)**:
+```yaml
+version: 0.5
+nodes:
+  source: {{}}
+  llm:
+    agent: openAIAgent
+    params:
+      model: gpt-4o-mini
+    inputs:
+      prompt: :source.test2  # Access user_input properties
+    timeout: 200000
+  output:
+    agent: copyAgent
+    params:
+      namedKey: text
+    inputs:
+      text: :llm.text
+    isResult: true
+```
 
 ## Output Requirements
 
