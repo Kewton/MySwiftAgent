@@ -11,16 +11,17 @@
 ## 目次
 
 1. [基本構造](#基本構造)
-2. [必須要素](#必須要素)
-3. [エージェント種別](#エージェント種別)
-4. [データフローパターン](#データフローパターン)
-5. [Agent選択指針](#agent選択指針)
-6. [モデル選択指針](#モデル選択指針)
-7. [環境変数プレースホルダー](#環境変数プレースホルダー)
+2. [ワークフロー実行エンドポイント](#ワークフロー実行エンドポイント)
+3. [必須要素](#必須要素)
+4. [エージェント種別](#エージェント種別)
+5. [データフローパターン](#データフローパターン)
+6. [Agent選択指針](#agent選択指針)
+7. [モデル選択指針](#モデル選択指針)
+8. [環境変数プレースホルダー](#環境変数プレースホルダー)
    - [利用可能な環境変数](#利用可能な環境変数)
    - [使用例](#使用例)
    - [環境別の自動切り替え](#環境別の自動切り替え)
-8. [expertAgent API統合](#expertagent-api統合)
+9. [expertAgent API統合](#expertagent-api統合)
    - [1. Utility API（Direct API）](#1-utility-apidirect-api---推奨)
      - [Gmail検索API](#11-gmail検索api)
      - [Gmail送信API](#12-gmail送信api)
@@ -36,16 +37,16 @@
      - [汎用LLM実行](#31-汎用llm実行)
      - [JSON Output Agent](#32-json-output-agent)
    - [4. API選択ガイド](#4-api選択ガイド)
-8. [エラー回避パターン](#エラー回避パターン)
-9. [パフォーマンスと並列処理の最適化](#パフォーマンスと並列処理の最適化)
-10. [命名規則](#命名規則)
-11. [デバッグとログ](#デバッグとログ)
-12. [実装例](#実装例)
-13. [LLMプロンプト生成時の推奨事項](#llmプロンプト生成時の推奨事項)
-14. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
-15. [まとめ](#まとめ)
-16. [よくあるエラーパターンと対策](#よくあるエラーパターンと対策)
-17. [Agent専用ガイド](./agents/)
+10. [エラー回避パターン](#エラー回避パターン)
+11. [パフォーマンスと並列処理の最適化](#パフォーマンスと並列処理の最適化)
+12. [命名規則](#命名規則)
+13. [デバッグとログ](#デバッグとログ)
+14. [実装例](#実装例)
+15. [LLMプロンプト生成時の推奨事項](#llmプロンプト生成時の推奨事項)
+16. [YMLファイルのヘッダーコメント規約](#ymlファイルのヘッダーコメント規約)
+17. [まとめ](#まとめ)
+18. [よくあるエラーパターンと対策](#よくあるエラーパターンと対策)
+19. [Agent専用ガイド](./agents/)
     - [Playwright Agent 完全ガイド](./agents/playwright-agent-guide.md)
     - [Explorer Agent 完全ガイド](./agents/explorer-agent-guide.md)
     - [File Reader Agent 完全ガイド](./agents/file-reader-agent-guide.md)
@@ -76,6 +77,43 @@ nodes:
 - `version`: GraphAIバージョン（現在は `0.5` 固定）
 - `nodes`: ノード定義オブジェクト
 - 最低1つの `isResult: true` を持つ出力ノード
+
+---
+
+## ワークフロー実行エンドポイント
+
+GraphAI Serverでワークフローを実行する際のエンドポイントURL生成ルールです。
+
+### URL生成ルール
+
+ワークフローYAMLファイルの配置場所によってエンドポイントURLが決まります。
+
+**基本構造**:
+- **ベースパス**: `./graphAiServer/config/graphai/`
+- **エンドポイント**: `/api/v1/myagent/[directory/]filename`
+
+**ルール**:
+1. **直下に配置した場合**: `/api/v1/myagent/{filename}`
+   - 例: `./graphAiServer/config/graphai/keyword_analysis.yml`
+   - URL: `POST http://localhost:8105/api/v1/myagent/keyword_analysis`
+
+2. **サブディレクトリに配置した場合**: `/api/v1/myagent/{directory}/{filename}`
+   - 例: `./graphAiServer/config/graphai/podcast/script_generation.yml`
+   - URL: `POST http://localhost:8105/api/v1/myagent/podcast/script_generation`
+
+**重要事項**:
+- ファイル名から `.yml` 拡張子は除く
+- ディレクトリ階層はそのままURLパスに反映される
+- 複数階層も可能: `category/subcategory/workflow_name`
+
+**リクエスト例**:
+```bash
+curl -X POST "http://localhost:8105/api/v1/myagent/keyword_analysis" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": {"keyword": "AI技術"}
+  }'
+```
 
 ---
 
