@@ -27,6 +27,12 @@ Quality criteria:
 - Data flow must match input/output schemas
 - Error handling must be included
 - Comments must explain each node's purpose
+
+CRITICAL REQUIREMENT:
+- When LLM prompts contain :source.field references in multi-line strings,
+  you MUST use stringTemplateAgent to build the prompt first
+- NEVER embed :source.field directly in fetchAgent user_input multi-line strings
+- This is a GraphAI technical limitation and MANDATORY
 """
 
 
@@ -65,9 +71,7 @@ def create_workflow_generation_prompt(
     output_interface = task_data.get("output_interface", {})
 
     # Extract recommended APIs from description
-    recommended_apis_match = re.search(
-        r"\*\*推奨API\*\*:\s*([^\n]+)", task_description
-    )
+    recommended_apis_match = re.search(r"\*\*推奨API\*\*:\s*([^\n]+)", task_description)
     recommended_apis = ""
     if recommended_apis_match:
         recommended_apis = (
@@ -140,6 +144,42 @@ def create_workflow_generation_prompt(
      Access directly with :source
    - IMPORTANT: Never use jsonParserAgent to parse user_input object
 
+   **Variable Reference in Multi-line Strings** (CRITICAL):
+   - When using :source.property in multi-line user_input for LLM prompts,
+     the reference will NOT be substituted automatically
+   - MUST use stringTemplateAgent to build the prompt first
+   - stringTemplateAgent syntax:
+     * inputs: Pass specific fields (e.g., keyword: :source.keyword)
+     * params.template: Use ${{variable}} syntax (e.g., ${{keyword}})
+     * DO NOT use nested access in template (e.g., ${{data.keyword}} does NOT work)
+
+   Example - WRONG (variable not substituted):
+   ```yaml
+   llm_node:
+     agent: fetchAgent
+     inputs:
+       body:
+         user_input: |
+           Keyword: :source.keyword  # ❌ Sent as literal string
+   ```
+
+   Example - CORRECT (using stringTemplateAgent):
+   ```yaml
+   build_prompt:
+     agent: stringTemplateAgent
+     inputs:
+       keyword: :source.keyword  # ✅ Pass specific field
+     params:
+       template: |-
+         Keyword: ${{keyword}}  # ✅ Use template variable
+
+   llm_node:
+     agent: fetchAgent
+     inputs:
+       body:
+         user_input: :build_prompt  # ✅ Use constructed prompt
+   ```
+
 4. **Data Flow**:
    - Use :node_id to reference previous node output
    - Use :node_id.property for nested properties
@@ -147,24 +187,30 @@ def create_workflow_generation_prompt(
 
 5. **Agent Selection** (CRITICAL):
    - **PRIORITY**: If "Recommended APIs" are specified in task description, use them first
+   - **IMPORTANT**: NEVER use GraphAI standard LLM agents (geminiAgent, openAIAgent, anthropicAgent, groqAgent, replicateAgent)
    - For LLM processing:
-     * geminiAgent: Use gemini-2.5-flash as default model (REQUIRED)
-     * openAIAgent: Use gpt-4o-mini as fallback
+     * ALWAYS use fetchAgent to call expertAgent jsonoutput API
+     * URL: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+     * Default model: gemini-2.5-flash (recommended)
+     * Fallback model: gpt-4o-mini
+     * High-quality model: claude-3-5-sonnet
+     * **MANDATORY**: When building LLM prompts with multiple source fields, use stringTemplateAgent FIRST
    - For HTTP API calls:
-     * fetchAgent: For external API calls
+     * fetchAgent: For external API calls and expertAgent jsonoutput API
+     * **CRITICAL fetchAgent structure**: url, method, and body MUST be in inputs (NOT params)
      * expertAgent APIs: Use Direct API endpoints (e.g., /api/v1/search)
    - For data formatting:
      * copyAgent: For final output formatting and data transformation
+     * stringTemplateAgent: **MANDATORY** for building prompts with :source.field references
 
-   Example - geminiAgent with gemini-2.5-flash:
-   ```yaml
-   llm_node:
-     agent: geminiAgent
-     params:
-       model: gemini-2.5-flash  # ← REQUIRED default model
-     inputs:
-       prompt: :source.query
-   ```
+   **CRITICAL RULE - fetchAgent Structure**:
+   - ❌ WRONG: url/method in params
+   - ✅ CORRECT: url/method/body in inputs
+
+   **CRITICAL RULE - Multi-line LLM Prompts**:
+   - ❌ NEVER embed :source.field directly in multi-line user_input strings
+   - ✅ ALWAYS use stringTemplateAgent to build prompts with variables
+   - This is a GraphAI limitation, not optional
 
 6. **Error Handling**:
    - Always validate required inputs
@@ -176,58 +222,123 @@ def create_workflow_generation_prompt(
 
 8. **Example Workflow Structure**:
 
-**Example 1 - Using geminiAgent (RECOMMENDED)**:
+**Example 1 - Using expertAgent jsonoutput API with Gemini (RECOMMENDED with stringTemplateAgent)**:
 ```yaml
 version: 0.5
 nodes:
   source: {{}}  # REQUIRED: empty object
 
-  # LLM processing with Gemini
-  llm_analysis:
-    agent: geminiAgent
-    params:
-      model: gemini-2.5-flash  # ← Default Gemini model
+  # Step 1: Build prompt using stringTemplateAgent
+  build_prompt:
+    agent: stringTemplateAgent
     inputs:
-      prompt: |
-        Analyze the following keyword: :source.keyword
-        Target audience: :source.target_audience
+      keyword: :source.keyword
+      target_audience: :source.target_audience
+    params:
+      template: |-
+        Analyze the following keyword: ${{keyword}}
+        Target audience: ${{target_audience}}
+
+        Provide a JSON response with analysis results.
+
+  # Step 2: LLM processing with expertAgent jsonoutput API (Gemini 2.5 Flash)
+  llm_analysis:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+        project: default
     timeout: 30000
 
-  # JSON parsing
-  parse_result:
-    agent: jsonParserAgent
+  # Step 3: Extract result from expertAgent response
+  extract_analysis:
+    agent: copyAgent
+    params:
+      namedKey: analysis
     inputs:
-      json: :llm_analysis.text
+      analysis: :llm_analysis.result
     timeout: 5000
 
-  # Final output
+  # Step 4: Final output
   output:
     agent: copyAgent
     params:
       namedKey: result
     inputs:
-      result: :parse_result
+      result: :extract_analysis.analysis
     isResult: true
 ```
 
-**Example 2 - Using openAIAgent (Fallback)**:
+**Example 2 - Simple case without stringTemplateAgent (when user_input is single field)**:
 ```yaml
 version: 0.5
 nodes:
   source: {{}}
+
+  # LLM processing (simple case: pass single field directly)
   llm:
-    agent: openAIAgent
-    params:
-      model: gpt-4o-mini
+    agent: fetchAgent
     inputs:
-      prompt: :source.test2  # Access user_input properties
-    timeout: 200000
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :source.query  # ✅ OK: single field reference
+        model_name: gpt-4o-mini
+        project: default
+    timeout: 30000
+
+  # Final output
   output:
     agent: copyAgent
     params:
       namedKey: text
     inputs:
-      text: :llm.text
+      text: :llm.result
+    isResult: true
+```
+
+**Example 3 - Complex prompt with stringTemplateAgent and Claude (High-quality)**:
+```yaml
+version: 0.5
+nodes:
+  source: {{}}
+
+  # Step 1: Build complex prompt with multiple variables
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      data: :source.data
+      context: :source.context
+    params:
+      template: |-
+        Process the following data: ${{data}}
+
+        Context: ${{context}}
+
+        Generate high-quality analysis in JSON format.
+
+  # Step 2: LLM processing with expertAgent jsonoutput API (Claude 3.5 Sonnet)
+  llm_process:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: claude-3-5-sonnet
+        project: default
+    timeout: 30000
+
+  # Step 3: Final output
+  output:
+    agent: copyAgent
+    params:
+      namedKey: result
+    inputs:
+      result: :llm_process.result
     isResult: true
 ```
 
