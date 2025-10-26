@@ -1,0 +1,50 @@
+version: 0.5
+nodes:
+  # Source node - receives user input with keyword
+  source: {}
+
+  # Step 1: Build the podcast script generation prompt using stringTemplateAgent
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      keyword: :source.keyword
+    params:
+      template: |-
+        あなたは優れたポッドキャスト台本作成の専門家です。
+        以下のキーワードに基づいて、短いポッドキャストナレーション台本を作成してください。
+
+        キーワード: ${keyword}
+
+        # 制約条件
+        - 台本は魅力的で会話調にすること
+        - 簡単な導入と要点を含めること
+        - 約200-300文字程度の短い台本にすること
+        - 情報価値のある内容にすること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "script_text": "ポッドキャスト台本をここに記述"
+        }
+
+  # Step 2: Call the expertAgent jsonoutput API via fetchAgent
+  generate_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format the final output
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        script_text: :generate_script.result.script_text
+        error_message: ""
+    isResult: true
