@@ -78,14 +78,25 @@ TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門�
 
 ### 利用可能なAPI種別
 
-**GraphAI標準エージェント**:
-- `geminiAgent`: Google Gemini APIを使用したLLM処理（推奨モデル: gemini-2.5-flash）
-- `openAIAgent`: OpenAI APIを使用したLLM処理
-- `fetchAgent`: HTTP APIコール（RESTful API呼び出し）
+**IMPORTANT**: GraphAI標準のLLMエージェント（geminiAgent, openAIAgent, anthropicAgent, groqAgent, replicateAgent）は使用禁止です。
+LLM処理には必ず expertAgent の jsonoutput API を使用してください。
+
+**LLM処理 (expertAgent jsonoutput API)**:
+- LLM処理には必ず expertAgent の jsonoutput API を使用
+- URL: `http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput`
+- fetchAgent経由で呼び出す
+- 推奨モデル:
+  * `gemini-2.5-flash`: Google Gemini 2.5 Flash（推奨、高速・高品質）
+  * `gpt-4o-mini`: OpenAI GPT-4o mini（フォールバック）
+  * `claude-3-5-sonnet`: Anthropic Claude 3.5 Sonnet（高品質）
+- JSON出力保証（マークダウン自動削除）
+
+**その他のエージェント**:
+- `fetchAgent`: HTTP APIコール（expertAgent jsonoutput API含む、RESTful API呼び出し）
 - `copyAgent`: データコピー・フォーマット変換
 - `jsonParserAgent`: JSON解析（※ user_inputの解析には使用しない）
 
-**expertAgent APIs**:
+**expertAgent Direct APIs**:
 - `/api/v1/search`: 検索機能
 - `/api/v1/email`: メール送信機能
 - その他のDirect API
@@ -124,10 +135,10 @@ task_001:
 
 task_002:
   name: "検索結果フォーマット"
-  description: "Gmail検索結果をPDF形式にフォーマットする。LLMを使用して自然言語処理とフォーマット生成を行う。"
+  description: "Gmail検索結果をPDF形式にフォーマットする。LLMを使用して自然言語処理とフォーマット生成を行う。expertAgent の jsonoutput API (http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput) を fetchAgent 経由で呼び出し、gemini-2.5-flash モデルを使用。"
   dependencies: ["task_001"]
   expected_output: "PDF形式のレポートファイル"
-  recommended_apis: ["geminiAgent", "openAIAgent"]
+  recommended_apis: ["fetchAgent (expertAgent jsonoutput API)"]
 
 task_003:
   name: "Googleドライブアップロード"
@@ -147,11 +158,11 @@ JSON形式で以下の構造で出力してください：
     {
       "task_id": "task_001",
       "name": "タスク名",
-      "description": "詳細な説明（使用APIの理由を含む）",
+      "description": "詳細な説明（使用APIの理由を含む）。LLM処理が必要な場合は、expertAgent の jsonoutput API を fetchAgent 経由で呼び出す旨を記載。",
       "dependencies": [],
       "expected_output": "期待される出力",
       "priority": 5,
-      "recommended_apis": ["geminiAgent", "fetchAgent"]
+      "recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]
     }
   ],
   "overall_summary": "ワークフロー全体の概要"
