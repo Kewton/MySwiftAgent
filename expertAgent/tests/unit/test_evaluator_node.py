@@ -101,11 +101,13 @@ class TestEvaluatorNode:
         # evaluation_feedback should be None for valid results
         assert result.get("evaluation_feedback") is None
 
-        # Verify LLM was called
-        mock_structured.ainvoke.assert_called_once()
+        # Verify invoke_structured_llm was called
+        mock_invoke_llm.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_invalid_with_low_scores(self, mock_create_llm):
         """Test evaluation with invalid task breakdown (low quality scores).
 
@@ -174,7 +176,9 @@ class TestEvaluatorNode:
         assert result["retry_count"] == 0
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_with_infeasible_tasks(self, mock_create_llm):
         """Test evaluation with infeasible tasks detected.
 
@@ -245,7 +249,9 @@ class TestEvaluatorNode:
         assert "Send SMS notification" in result["evaluation_feedback"]
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_with_alternative_proposals(self, mock_create_llm):
         """Test evaluation with alternative proposals using existing APIs.
 
@@ -315,7 +321,9 @@ class TestEvaluatorNode:
         assert "gmail_send_email" in result["evaluation_feedback"]
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_with_api_extension_proposals(self, mock_create_llm):
         """Test evaluation with API extension proposals.
 
@@ -384,7 +392,9 @@ class TestEvaluatorNode:
         )
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_empty_task_breakdown(self, mock_create_llm):
         """Test error handling when task_breakdown is empty.
 
@@ -418,7 +428,9 @@ class TestEvaluatorNode:
         mock_llm.with_structured_output.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_llm_error(self, mock_create_llm):
         """Test error handling when LLM invocation fails.
 
@@ -463,7 +475,9 @@ class TestEvaluatorNode:
         mock_structured.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
     async def test_evaluator_retry_count_reset(self, mock_create_llm):
         """Test that retry_count is always reset to 0 after evaluation.
 

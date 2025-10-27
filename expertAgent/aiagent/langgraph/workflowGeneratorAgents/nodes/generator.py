@@ -1,16 +1,14 @@
-"""Generator node for GraphAI workflow YAML generation.
-
-This module provides the generator node that creates GraphAI workflow YAML
-files from TaskMaster metadata using LLM (Gemini 2.5 Flash).
-"""
+"""Generator node for GraphAI workflow YAML generation."""
 
 import logging
-import os
 from pathlib import Path
 
 import yaml
 
-from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import create_llm
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+    StructuredLLMError,
+    invoke_structured_llm,
+)
 
 from ..prompts.workflow_generation import (
     WORKFLOW_GENERATION_SYSTEM_PROMPT,
@@ -70,7 +68,15 @@ async def generator_node(
     """
     logger.info("Starting generator node")
 
-    task_data = state["task_data"]
+    task_data = state.get("task_data")
+    if task_data is None:
+        message = "Workflow generation failed: task_data missing from state"
+        logger.error(message)
+        return {
+            **state,
+            "status": "failed",
+            "error_message": message,
+        }
     error_feedback = state.get("error_feedback")
 
     logger.debug(f"Generating workflow for task: {task_data.get('name')}")
@@ -82,64 +88,78 @@ async def generator_node(
     logger.debug("Loading GraphAI and ExpertAgent capabilities")
     graphai_capabilities, expert_agent_capabilities = _load_capabilities()
 
-    # Initialize LLM (Gemini 2.0 Flash) using llm_factory
-    # This automatically retrieves API key from MyVault or environment variables
-    max_tokens = int(os.getenv("WORKFLOW_GENERATOR_MAX_TOKENS", "8192"))
-    model_name = os.getenv("WORKFLOW_GENERATOR_MODEL", "gemini-2.0-flash-exp")
-    model = create_llm(
-        model_name=model_name,
-        temperature=0.0,
-        max_tokens=max_tokens,
-    )
-    logger.debug(
-        f"Using {model_name} with max_tokens={max_tokens} (API key retrieved from MyVault/env)"
-    )
-
-    # Create structured output model
-    structured_model = model.with_structured_output(WorkflowGenerationResponse)
-
     # Create prompt (with feedback if available)
     if error_feedback:
         user_prompt = create_workflow_generation_prompt_with_feedback(
-            task_data, graphai_capabilities, expert_agent_capabilities, error_feedback
+            task_data,
+            graphai_capabilities,
+            expert_agent_capabilities,
+            error_feedback,
         )
     else:
         user_prompt = create_workflow_generation_prompt(
             task_data, graphai_capabilities, expert_agent_capabilities
         )
 
-    logger.debug(f"Created workflow generation prompt (length: {len(user_prompt)})")
+    logger.debug(
+        "Created workflow generation prompt (length: %s)",
+        len(user_prompt),
+    )
 
     try:
-        # Invoke LLM
         messages = [
             {"role": "system", "content": WORKFLOW_GENERATION_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ]
         logger.info("Invoking LLM for workflow generation")
-        response = await structured_model.ainvoke(messages)
-        if not isinstance(response, WorkflowGenerationResponse):
-            raise TypeError(
-                f"Expected WorkflowGenerationResponse, got {type(response)}"
-            )
+        call_result = await invoke_structured_llm(
+            messages=messages,
+            response_model=WorkflowGenerationResponse,
+            context_label="workflow_generation",
+            model_env_var="WORKFLOW_GENERATOR_MODEL",
+            default_model="gemini-2.0-flash-exp",
+            max_tokens_env_var="WORKFLOW_GENERATOR_MAX_TOKENS",
+            default_max_tokens=8192,
+        )
 
-        logger.info(f"Workflow generation completed: {response.workflow_name}")
-        logger.debug(f"YAML length: {len(response.yaml_content)} characters")
-        logger.debug(f"Reasoning: {response.reasoning}")
+        response = call_result.result
 
-        # Update state
+        logger.info(
+            "Workflow generation completed: %s (model=%s)",
+            response.workflow_name,
+            call_result.model_name,
+        )
+        logger.debug("YAML length: %s characters", len(response.yaml_content))
+        logger.debug("Reasoning: %s", response.reasoning)
+        if call_result.recovered_via_json:
+            logger.info("Workflow generation succeeded via JSON fallback")
+
+        generation_attempts = state.get("generation_retry_count", 0) + 1
         return {
             **state,
             "yaml_content": response.yaml_content,
             "workflow_name": response.workflow_name,
-            "generation_retry_count": state.get("generation_retry_count", 0) + 1,
+            "generation_retry_count": generation_attempts,
+            "generation_model": call_result.model_name,
             "status": "yaml_generated",
         }
 
-    except Exception as e:
-        logger.error(f"Error during workflow generation: {e}", exc_info=True)
+    except StructuredLLMError as exc:
+        logger.error("Workflow generation failed: %s", exc)
         return {
             **state,
             "status": "failed",
-            "error_message": f"Workflow generation failed: {str(e)}",
+            "error_message": str(exc),
+        }
+
+    except Exception as err:  # pragma: no cover - defensive logging
+        logger.error(
+            "Error during workflow generation: %s",
+            err,
+            exc_info=True,
+        )
+        return {
+            **state,
+            "status": "failed",
+            "error_message": f"Workflow generation failed: {err}",
         }

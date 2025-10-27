@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
-from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import StructuredCallResult
     interface_definition_node,
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.interface_schema import (
@@ -40,7 +39,9 @@ class TestInterfaceDefinitionNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_success(
         self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
     ):
@@ -148,7 +149,9 @@ class TestInterfaceDefinitionNode:
         assert mock_matcher_instance.find_or_create_interface_master.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_with_evaluation_feedback(self, mock_create_llm):
         """Test interface definition with evaluation feedback (retry scenario).
 
@@ -229,7 +232,9 @@ class TestInterfaceDefinitionNode:
             assert result["retry_count"] == 2
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_llm_error(self, mock_create_llm):
         """Test error handling when LLM invocation fails.
 
@@ -270,7 +275,9 @@ class TestInterfaceDefinitionNode:
         mock_structured.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_empty_task_breakdown(self, mock_create_llm):
         """Test error handling when task_breakdown is empty.
 
@@ -309,7 +316,9 @@ class TestInterfaceDefinitionNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_retry_count_behavior(
         self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
     ):
@@ -393,7 +402,9 @@ class TestInterfaceDefinitionNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_missing_interface_master_id(
         self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
     ):
@@ -457,7 +468,9 @@ class TestInterfaceDefinitionNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+    )
     async def test_interface_definition_schema_validation(
         self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
     ):

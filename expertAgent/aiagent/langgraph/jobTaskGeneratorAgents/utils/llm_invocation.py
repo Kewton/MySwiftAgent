@@ -168,10 +168,12 @@ async def invoke_structured_llm(
     model_env_var: str,
     default_model: str,
     validator: Callable[[TModel], TModel] | None = None,
+    max_tokens_env_var: str = "JOB_GENERATOR_MAX_TOKENS",
+    default_max_tokens: int = 8192,
 ) -> StructuredCallResult[TModel]:
     """Invoke a chat model with structured output and JSON fallback."""
 
-    max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
+    max_tokens = int(os.getenv(max_tokens_env_var, str(default_max_tokens)))
     model_name = os.getenv(model_env_var, default_model)
 
     model, perf_tracker, _cost_tracker = create_llm_with_fallback(

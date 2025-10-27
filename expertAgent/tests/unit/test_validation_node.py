@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation import validation_node
-from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import StructuredCallResult
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.validation_fix import (
     ValidationFixResponse,
 )
@@ -24,7 +23,9 @@ class TestValidationNode:
 
     @pytest.mark.asyncio
     @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient")
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.invoke_structured_llm"
+    )
     async def test_validation_success_resets_retry_count(
         self,
         mock_create_llm,
@@ -56,7 +57,9 @@ class TestValidationNode:
 
     @pytest.mark.asyncio
     @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.JobqueueClient")
-    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.invoke_structured_llm")
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.invoke_structured_llm"
+    )
     async def test_validation_failure_increments_retry_count(
         self,
         mock_create_llm,

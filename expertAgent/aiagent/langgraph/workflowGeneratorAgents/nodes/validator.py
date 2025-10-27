@@ -14,129 +14,87 @@ from ..state import WorkflowGeneratorState
 logger = logging.getLogger(__name__)
 
 
-def _validate_yaml_syntax(yaml_content: str) -> tuple[bool, list[str]]:
-    """Validate YAML syntax.
+def _format_issue(issue: dict[str, str]) -> str:
+    detail = issue.get("detail")
+    if detail:
+        return f"[{issue['category']}] {issue['message']}: {detail}"
+    return f"[{issue['category']}] {issue['message']}"
 
-    Args:
-        yaml_content: YAML content string
 
-    Returns:
-        Tuple of (is_valid, error_messages)
-    """
-    errors = []
+def _issue(
+    category: str,
+    message: str,
+    detail: str | None = None,
+) -> dict[str, str]:
+    payload: dict[str, str] = {
+        "category": category,
+        "message": message,
+    }
+    if detail:
+        payload["detail"] = detail
+    return payload
 
+
+def _validate_yaml_syntax(yaml_content: str) -> list[dict[str, str]]:
     try:
         yaml.safe_load(yaml_content)
-        return True, []
-    except yaml.YAMLError as e:
-        errors.append(f"YAML syntax error: {str(e)}")
-        return False, errors
+        return []
+    except yaml.YAMLError as exc:
+        return [_issue("yaml", "YAML syntax error", str(exc))]
 
 
-def _validate_http_status(http_status: int | None) -> tuple[bool, list[str]]:
-    """Validate HTTP response status code.
-
-    Args:
-        http_status: HTTP status code from graphAiServer
-
-    Returns:
-        Tuple of (is_valid, error_messages)
-    """
-    errors = []
-
+def _validate_http_status(http_status: int | None) -> list[dict[str, str]]:
     if http_status is None:
-        errors.append("HTTP status is missing")
-        return False, errors
-
+        return [_issue("http", "HTTP status is missing")]
     if http_status == 200:
-        return True, []
-    elif http_status == 500:
-        errors.append("Workflow execution failed (HTTP 500)")
-        return False, errors
-    elif http_status == 400:
-        errors.append("Invalid workflow request (HTTP 400)")
-        return False, errors
-    elif http_status == 404:
-        errors.append("Workflow not found (HTTP 404)")
-        return False, errors
-    elif http_status == 504:
-        errors.append("Workflow execution timeout (HTTP 504)")
-        return False, errors
-    else:
-        errors.append(f"Unexpected HTTP status: {http_status}")
-        return False, errors
+        return []
+    if http_status == 500:
+        return [_issue("http", "Workflow execution failed", "HTTP 500")]
+    if http_status == 400:
+        return [_issue("http", "Invalid workflow request", "HTTP 400")]
+    if http_status == 404:
+        return [_issue("http", "Workflow not found", "HTTP 404")]
+    if http_status == 504:
+        return [_issue("http", "Workflow execution timeout", "HTTP 504")]
+    return [_issue("http", "Unexpected HTTP status", str(http_status))]
 
 
 def _validate_graphai_execution(
     execution_result: dict[str, Any] | None,
-) -> tuple[bool, list[str]]:
-    """Validate GraphAI execution result (errors and logs).
-
-    Args:
-        execution_result: GraphAI execution result from graphAiServer
-
-    Returns:
-        Tuple of (is_valid, error_messages)
-    """
-    errors = []
-
+) -> list[dict[str, str]]:
     if execution_result is None:
-        errors.append("Execution result is missing")
-        return False, errors
+        return [_issue("graphai", "Execution result is missing")]
 
-    # Check GraphAI errors
+    issues: list[dict[str, str]] = []
     graphai_errors = execution_result.get("errors", {})
-    if graphai_errors:
-        for node_id, error_info in graphai_errors.items():
-            error_message = error_info.get("message", "Unknown error")
-            errors.append(f"Node '{node_id}' error: {error_message}")
+    for node_id, error_info in graphai_errors.items():
+        detail = str(error_info.get("message", "Unknown error"))
+        issues.append(_issue("graphai", f"Node '{node_id}' error", detail))
 
-    # Check GraphAI logs for timed-out nodes
     graphai_logs = execution_result.get("logs", [])
     for log in graphai_logs:
         if log.get("state") == "timed-out":
             node_id = log.get("nodeId", "unknown")
-            errors.append(f"Node '{node_id}' timed out")
+            issues.append(_issue("graphai", f"Node '{node_id}' timed out"))
 
-    if errors:
-        return False, errors
-    else:
-        return True, []
+    return issues
 
 
 def _validate_output_schema(
     execution_result: dict[str, Any] | None,
     output_schema: dict[str, Any],
-) -> tuple[bool, list[str]]:
-    """Validate workflow output against output interface schema.
-
-    Args:
-        execution_result: GraphAI execution result
-        output_schema: Output interface JSON schema
-
-    Returns:
-        Tuple of (is_valid, error_messages)
-    """
-    errors = []
-
+) -> list[dict[str, str]]:
     if execution_result is None:
-        errors.append("Execution result is missing for output validation")
-        return False, errors
+        return [_issue("output", "Execution result missing for validation")]
 
-    # Extract results from GraphAI execution
     results = execution_result.get("results", {})
-
     if not results:
-        errors.append("Workflow produced no results")
-        return False, errors
+        return [_issue("output", "Workflow produced no results")]
 
-    # For now, just check if results exist
-    # TODO: Implement JSON Schema validation in the future
-    logger.debug(f"Output schema validation: results exist = {bool(results)}")
-    logger.debug(f"Expected output schema: {output_schema}")
-    logger.debug(f"Actual results keys: {list(results.keys())}")
-
-    return True, []
+    logger.debug("Output schema validation: results exist = %s", bool(results))
+    logger.debug("Expected output schema: %s", output_schema)
+    logger.debug("Actual results keys: %s", list(results.keys()))
+    return []
 
 
 async def validator_node(
@@ -158,71 +116,80 @@ async def validator_node(
     """
     logger.info("Starting validator node")
 
-    yaml_content = state["yaml_content"]
+    yaml_content = state.get("yaml_content")
     test_http_status = state.get("test_http_status")
     test_execution_result = state.get("test_execution_result")
-    task_data = state["task_data"]
+    task_data = state.get("task_data")
+
+    if yaml_content is None:
+        message = "Validation failed: yaml_content missing"
+        logger.error(message)
+        return {
+            **state,
+            "validation_result": {
+                "is_valid": False,
+                "issues": [_issue("state", message)],
+            },
+            "validation_errors": [message],
+            "is_valid": False,
+            "status": "validation_failed",
+        }
+
+    if task_data is None:
+        message = "Validation failed: task_data missing"
+        logger.error(message)
+        return {
+            **state,
+            "validation_result": {
+                "is_valid": False,
+                "issues": [_issue("state", message)],
+            },
+            "validation_errors": [message],
+            "is_valid": False,
+            "status": "validation_failed",
+        }
     output_interface = task_data.get("output_interface", {})
     output_schema = output_interface.get("schema", {})
 
-    all_errors: list[str] = []
+    validators = [
+        lambda: _validate_yaml_syntax(yaml_content),
+        lambda: _validate_http_status(test_http_status),
+        lambda: _validate_graphai_execution(test_execution_result),
+        lambda: _validate_output_schema(test_execution_result, output_schema),
+    ]
 
-    # Validation 1: YAML syntax
-    logger.debug("Validating YAML syntax")
-    yaml_valid, yaml_errors = _validate_yaml_syntax(yaml_content)
-    if not yaml_valid:
-        all_errors.extend(yaml_errors)
-        logger.error(f"YAML validation failed: {yaml_errors}")
+    issues: list[dict[str, str]] = []
+    for check in validators:
+        result = check()
+        if result:
+            issues.extend(result)
+            logger.warning(
+                "Validation issues detected: %s",
+                [_format_issue(item) for item in result],
+            )
 
-    # Validation 2: HTTP status
-    logger.debug("Validating HTTP status")
-    http_valid, http_errors = _validate_http_status(test_http_status)
-    if not http_valid:
-        all_errors.extend(http_errors)
-        logger.error(f"HTTP status validation failed: {http_errors}")
-
-    # Validation 3: GraphAI execution (errors and logs)
-    logger.debug("Validating GraphAI execution")
-    execution_valid, execution_errors = _validate_graphai_execution(
-        test_execution_result
-    )
-    if not execution_valid:
-        all_errors.extend(execution_errors)
-        logger.error(f"GraphAI execution validation failed: {execution_errors}")
-
-    # Validation 4: Output schema
-    logger.debug("Validating output schema")
-    schema_valid, schema_errors = _validate_output_schema(
-        test_execution_result, output_schema
-    )
-    if not schema_valid:
-        all_errors.extend(schema_errors)
-        logger.warning(f"Output schema validation failed: {schema_errors}")
-
-    # Determine overall validation result
-    is_valid = len(all_errors) == 0
-
-    if is_valid:
+    if not issues:
         logger.info("Validation passed: workflow is valid")
         return {
             **state,
             "validation_result": {
                 "is_valid": True,
-                "errors": [],
+                "issues": [],
             },
             "validation_errors": [],
             "is_valid": True,
             "status": "validated",
         }
     else:
-        logger.warning(f"Validation failed with {len(all_errors)} errors")
+        logger.warning("Validation failed with %s issues", len(issues))
+        formatted_errors = [_format_issue(issue) for issue in issues]
         return {
             **state,
             "validation_result": {
                 "is_valid": False,
-                "errors": all_errors,
+                "issues": issues,
             },
-            "validation_errors": all_errors,
+            "validation_errors": formatted_errors,
             "is_valid": False,
             "status": "validation_failed",
         }

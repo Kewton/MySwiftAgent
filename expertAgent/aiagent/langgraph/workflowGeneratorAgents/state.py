@@ -29,6 +29,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
         yaml_content: Generated GraphAI workflow YAML
         workflow_name: Generated workflow name (snake_case)
         generation_retry_count: Current generation retry count
+    generation_model: Model name used for latest generation attempt
 
         # Workflow Testing fields
         workflow_registered: Whether workflow was registered to graphAiServer
@@ -45,7 +46,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
         # Self-Repair fields
         retry_count: Current self-repair retry count
         error_feedback: Error feedback for LLM to fix issues
-        repair_history: List of repair attempts with errors
+    repair_history: List of repair attempts with errors and metadata
 
         # Output fields
         status: Workflow status (success, failed, max_retries_exceeded)
@@ -63,11 +64,12 @@ class WorkflowGeneratorState(TypedDict, total=False):
     yaml_content: str
     workflow_name: str
     generation_retry_count: int
+    generation_model: str | None
 
     # ===== Workflow Testing =====
     workflow_registered: bool
     workflow_file_path: str | None
-    sample_input: dict[str, Any] | str | int | float | bool | list[Any]
+    sample_input: dict[str, Any] | str | int | float | bool | list[Any] | None
     test_execution_result: dict[str, Any] | None
     test_http_status: int | None
 
@@ -94,7 +96,8 @@ def create_initial_state(
     """Create initial state with default values.
 
     Args:
-        task_master_id: TaskMaster ID (ULID string or int) to generate workflow for
+        task_master_id: TaskMaster ID (ULID string or int) to generate
+            workflow for
         task_data: TaskMaster metadata from jobqueue API
         max_retry: Maximum retry count for self-repair (default: 3)
 
@@ -110,6 +113,7 @@ def create_initial_state(
         "yaml_content": "",
         "workflow_name": "",
         "generation_retry_count": 0,
+        "generation_model": None,
         # Workflow Testing
         "workflow_registered": False,
         "workflow_file_path": None,

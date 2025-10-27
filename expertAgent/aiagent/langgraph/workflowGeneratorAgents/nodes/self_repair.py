@@ -31,6 +31,16 @@ async def self_repair_node(
     logger.info("Starting self-repair node")
 
     validation_errors = state.get("validation_errors", [])
+    validation_result = state.get("validation_result") or {}
+    issues = (
+        validation_result.get("issues") if isinstance(validation_result, dict) else []
+    )
+    if not validation_errors and isinstance(issues, list):
+        validation_errors = [
+            f"[{item.get('category', 'unknown')}] {item.get('message', '')}"
+            for item in issues
+            if isinstance(item, dict)
+        ]
     retry_count = state.get("retry_count", 0)
     workflow_name = state.get("workflow_name", "unknown")
 
@@ -38,10 +48,16 @@ async def self_repair_node(
     logger.debug(f"Current retry count: {retry_count}")
 
     # Create error feedback message for LLM
+    last_model = state.get("generation_model")
+
     error_feedback_lines = [
-        f"Workflow '{workflow_name}' failed validation with the following errors:",
+        f"Workflow '{workflow_name}' failed validation with these errors:",
         "",
     ]
+
+    if last_model:
+        error_feedback_lines.append(f"Last generation model: {last_model}")
+        error_feedback_lines.append("")
 
     for i, error in enumerate(validation_errors, 1):
         error_feedback_lines.append(f"{i}. {error}")
@@ -49,7 +65,7 @@ async def self_repair_node(
     error_feedback_lines.extend(
         [
             "",
-            "Please regenerate the workflow addressing ALL of the above errors.",
+            "Please regenerate the workflow and resolve every issue listed.",
             "Ensure:",
             "- YAML syntax is 100% correct",
             "- All agent names exist in available_agents list",
@@ -66,13 +82,19 @@ async def self_repair_node(
 
     # Record repair attempt in history
     repair_history = state.get("repair_history", [])
-    repair_history.append(
-        {
-            "retry_count": retry_count + 1,
-            "errors": validation_errors,
-            "workflow_name": workflow_name,
-        }
-    )
+    if not isinstance(repair_history, list):
+        repair_history = []
+    history_entry = {
+        "retry_count": retry_count + 1,
+        "errors": validation_errors,
+        "workflow_name": workflow_name,
+    }
+    if isinstance(issues, list):
+        history_entry["issues"] = issues
+    if last_model:
+        history_entry["generation_model"] = last_model
+
+    repair_history.append(history_entry)
 
     # Determine status based on retry count
     max_retry = state.get("max_retry", 3)
