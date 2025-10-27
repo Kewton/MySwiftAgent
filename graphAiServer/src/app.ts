@@ -173,13 +173,22 @@ app.post('/api/v1/myagent', async (req: Request, res: Response) => {
 
 // Workflow registration endpoint
 app.post('/api/v1/workflows/register', async (req: Request, res: Response) => {
-  const { workflow_name, yaml_content, overwrite = false } = req.body as WorkflowRegisterRequest;
+  const { workflow_name, yaml_content, overwrite = false, directory } = req.body as WorkflowRegisterRequest;
 
   // Validate request body
   if (!workflow_name || !yaml_content) {
     const response: WorkflowRegisterResponse = {
       status: 'error',
       error_message: 'Both workflow_name and yaml_content are required',
+    };
+    return res.status(400).json(response);
+  }
+
+  // Validate directory parameter (path traversal protection)
+  if (directory && directory.includes('..')) {
+    const response: WorkflowRegisterResponse = {
+      status: 'error',
+      error_message: 'Invalid directory parameter: ".." is not allowed for security reasons',
     };
     return res.status(400).json(response);
   }
@@ -226,11 +235,16 @@ app.post('/api/v1/workflows/register', async (req: Request, res: Response) => {
       return res.status(400).json(response);
     }
 
-    // Step 2: Check if workflow directory exists
-    if (!fs.existsSync(WORKFLOW_DIR)) {
+    // Step 2: Construct target directory path
+    const target_dir = directory
+      ? path.join(WORKFLOW_DIR, directory)
+      : WORKFLOW_DIR;
+
+    // Step 3: Check if target directory exists (create if needed)
+    if (!fs.existsSync(target_dir)) {
       try {
-        fs.mkdirSync(WORKFLOW_DIR, { recursive: true });
-        console.log(`Created workflow directory: ${WORKFLOW_DIR}`);
+        fs.mkdirSync(target_dir, { recursive: true });
+        console.log(`Created workflow directory: ${target_dir}`);
       } catch (error) {
         validation_errors.push({
           type: 'file_system',
@@ -246,8 +260,8 @@ app.post('/api/v1/workflows/register', async (req: Request, res: Response) => {
       }
     }
 
-    // Step 3: Check if file already exists (if overwrite is false)
-    const file_path = path.join(WORKFLOW_DIR, `${workflow_name}.yml`);
+    // Step 4: Check if file already exists (if overwrite is false)
+    const file_path = path.join(target_dir, `${workflow_name}.yml`);
     if (fs.existsSync(file_path) && !overwrite) {
       const response: WorkflowRegisterResponse = {
         status: 'error',
@@ -256,7 +270,7 @@ app.post('/api/v1/workflows/register', async (req: Request, res: Response) => {
       return res.status(409).json(response);
     }
 
-    // Step 4: Write YAML content to file
+    // Step 5: Write YAML content to file
     try {
       fs.writeFileSync(file_path, yaml_content, 'utf8');
       console.log(`✓ Workflow registered: ${file_path}`);
