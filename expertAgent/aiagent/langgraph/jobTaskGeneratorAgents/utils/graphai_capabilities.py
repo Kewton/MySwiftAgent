@@ -28,7 +28,8 @@ def _load_yaml_config(filename: str) -> dict:
     config_dir = Path(__file__).parent / "config"
     config_path = config_dir / filename
     with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        result = yaml.safe_load(f)
+        return result if isinstance(result, dict) else {}
 
 
 @dataclass

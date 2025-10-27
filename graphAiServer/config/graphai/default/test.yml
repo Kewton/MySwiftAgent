@@ -6,7 +6,7 @@ nodes:
     params:
       model: gpt-5-mini-2025-08-07
     inputs:
-      prompt: :source
+      prompt: :source.test2
     timeout: 200000 # milliseconds
   output:
     agent: copyAgent

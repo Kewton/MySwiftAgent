@@ -65,7 +65,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
     # ===== Workflow Testing =====
     workflow_registered: bool
     workflow_file_path: str | None
-    sample_input: dict[str, Any] | str
+    sample_input: dict[str, Any] | str | int | float | bool | list[Any]
     test_execution_result: dict[str, Any] | None
     test_http_status: int | None
 

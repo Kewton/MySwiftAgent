@@ -7,6 +7,7 @@ if validation errors are detected.
 
 import logging
 import os
+from typing import Any
 
 from ..prompts.validation_fix import (
     VALIDATION_FIX_SYSTEM_PROMPT,
@@ -89,8 +90,15 @@ async def validation_node(
         # If validation failed, generate fix proposals using LLM
         logger.info("Generating fix proposals for validation errors")
 
-        interface_definitions = state.get("interface_definitions", {})
-        interface_list = list(interface_definitions.values())
+        interface_definitions_raw = state.get("interface_definitions", {})
+        # Convert to dict if it's a list
+        if isinstance(interface_definitions_raw, list):
+            interface_definitions: dict[str, dict[str, Any]] = {
+                item["task_id"]: item for item in interface_definitions_raw
+            }
+        else:
+            interface_definitions = interface_definitions_raw
+        interface_list: list[dict[str, Any]] = list(interface_definitions.values())
 
         # Initialize LLM with fallback mechanism (Issue #111)
         max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
@@ -116,6 +124,8 @@ async def validation_node(
         ]
         logger.info("Invoking LLM for validation fix proposals")
         fix_response = await structured_model.ainvoke(messages)
+        if not isinstance(fix_response, ValidationFixResponse):
+            raise TypeError(f"Expected ValidationFixResponse, got {type(fix_response)}")
 
         logger.info(f"Fix proposals generated: can_fix={fix_response.can_fix}")
         logger.info(f"Fix summary: {fix_response.fix_summary}")

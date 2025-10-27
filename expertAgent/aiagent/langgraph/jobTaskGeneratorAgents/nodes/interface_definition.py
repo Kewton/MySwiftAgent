@@ -84,7 +84,8 @@ def fix_regex_over_escaping(schema: dict[str, Any]) -> dict[str, Any]:
 
         return obj
 
-    return traverse_and_fix(schema)
+    result = traverse_and_fix(schema)
+    return result if isinstance(result, dict) else {}
 
 
 async def interface_definition_node(

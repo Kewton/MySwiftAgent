@@ -11,6 +11,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation import validation_node
+from aiagent.langgraph.jobTaskGeneratorAgents.prompts.validation_fix import (
+    ValidationFixResponse,
+)
 from tests.utils.mock_helpers import create_mock_workflow_state
 
 
@@ -82,15 +85,11 @@ class TestValidationNode:
         mock_llm = AsyncMock()
         mock_structured = AsyncMock()
         mock_structured.ainvoke = AsyncMock(
-            return_value=AsyncMock(
+            return_value=ValidationFixResponse(
                 can_fix=True,
                 fix_summary="Fix proposal generated",
                 interface_fixes=[],
                 manual_action_required=None,
-                model_dump=lambda: {
-                    "can_fix": True,
-                    "fix_summary": "Fix proposal generated",
-                },
             )
         )
         mock_llm.with_structured_output = lambda x: mock_structured

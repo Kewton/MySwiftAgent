@@ -12,7 +12,9 @@ from ..state import WorkflowGeneratorState
 logger = logging.getLogger(__name__)
 
 
-def _generate_sample_from_schema(schema: dict[str, Any]) -> dict[str, Any] | str:
+def _generate_sample_from_schema(
+    schema: dict[str, Any],
+) -> dict[str, Any] | str | int | float | bool | list[Any]:
     """Generate sample data from JSON Schema.
 
     Args:
@@ -56,19 +58,22 @@ def _generate_sample_from_schema(schema: dict[str, Any]) -> dict[str, Any] | str
         return sample
 
     elif schema_type == "string":
-        return schema.get("example", "sample input text")
+        return str(schema.get("example", "sample input text"))
 
     elif schema_type == "integer":
-        return schema.get("example", 123)
+        return int(schema.get("example", 123))
 
     elif schema_type == "number":
-        return schema.get("example", 123.45)
+        example = schema.get("example", 123.45)
+        return float(example) if not isinstance(example, (int, float)) else example
 
     elif schema_type == "boolean":
-        return schema.get("example", True)
+        return bool(schema.get("example", True))
 
     elif schema_type == "array":
         items_schema = schema.get("items", {})
+        if not isinstance(items_schema, dict):
+            items_schema = {}
         return [_generate_sample_from_schema(items_schema)]
 
     else:

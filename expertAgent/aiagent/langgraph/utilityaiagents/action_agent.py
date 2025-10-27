@@ -14,6 +14,6 @@ async def actionagent(query: str, _modelname: str, project: str | None = None) -
         result = await graph.ainvoke({"messages": query})
         aiMessage = ""
         for message in result.get("messages", []):
-            if isinstance(message, AIMessage):
+            if isinstance(message, AIMessage) and isinstance(message.content, str):
                 aiMessage = message.content
         return aiMessage

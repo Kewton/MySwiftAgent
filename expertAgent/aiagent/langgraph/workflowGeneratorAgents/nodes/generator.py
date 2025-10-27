@@ -118,6 +118,10 @@ async def generator_node(
         ]
         logger.info("Invoking LLM for workflow generation")
         response = await structured_model.ainvoke(messages)
+        if not isinstance(response, WorkflowGenerationResponse):
+            raise TypeError(
+                f"Expected WorkflowGenerationResponse, got {type(response)}"
+            )
 
         logger.info(f"Workflow generation completed: {response.workflow_name}")
         logger.debug(f"YAML length: {len(response.yaml_content)} characters")

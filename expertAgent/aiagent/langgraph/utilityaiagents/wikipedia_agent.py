@@ -36,6 +36,6 @@ Provide comprehensive and accurate information from Wikipedia."""
         result = await graph.ainvoke({"messages": [system_msg, human_msg]})
         aiMessage = ""
         for message in result.get("messages", []):
-            if isinstance(message, AIMessage):
+            if isinstance(message, AIMessage) and isinstance(message.content, str):
                 aiMessage = message.content
         return aiMessage

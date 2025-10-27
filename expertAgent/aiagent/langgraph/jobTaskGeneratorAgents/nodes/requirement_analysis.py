@@ -47,13 +47,15 @@ def _extract_message_text(message: Any) -> str | None:
     if isinstance(message, str):
         return message
 
+    content: Any = None
     if isinstance(message, BaseMessage):
         content = message.content
+        if isinstance(content, str):
+            return content
     else:
         content = getattr(message, "content", None)
-
-    if isinstance(content, str):
-        return content
+        if isinstance(content, str):
+            return content
 
     if isinstance(content, list):
         parts: list[str] = []

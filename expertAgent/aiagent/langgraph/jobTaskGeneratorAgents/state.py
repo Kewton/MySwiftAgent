@@ -56,7 +56,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
     # ===== Intermediate =====
     task_breakdown: list[dict[str, Any]]
     overall_summary: str  # Task breakdown summary from LLM
-    interface_definitions: list[dict[str, Any]]
+    interface_definitions: list[dict[str, Any]] | dict[str, dict[str, Any]]
     task_masters: list[dict[str, Any]]
     task_master_ids: list[str]
     job_master: dict[str, Any]

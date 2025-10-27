@@ -1,34 +1,41 @@
 version: 0.5
 nodes:
-  # Source node - receives user input with keyword
+  # Input node - receives user_input with keyword
   source: {}
 
-  # Step 1: Build the podcast script generation prompt using stringTemplateAgent
+  # Step 1: Build the prompt for podcast script generation
+  # This node constructs a detailed Japanese prompt for generating natural podcast narration
   build_prompt:
     agent: stringTemplateAgent
     inputs:
       keyword: :source.keyword
     params:
       template: |-
-        あなたは優れたポッドキャスト台本作成の専門家です。
-        以下のキーワードに基づいて、短いポッドキャストナレーション台本を作成してください。
+        あなたはプロのポッドキャスト脚本ライターです。
+        以下のキーワードに基づいて、ポッドキャストとして自然に聞こえる詳細なナレーションスクリプトを生成してください。
 
         キーワード: ${keyword}
 
-        # 制約条件
-        - 台本は魅力的で会話調にすること
-        - 簡単な導入と要点を含めること
-        - 約200-300文字程度の短い台本にすること
-        - 情報価値のある内容にすること
+        # 要件
+        - スクリプトはポッドキャストのナレーションとして自然に聞こえるべき
+        - 詳細で情報量が豊富であること
         - 日本語で出力すること
-        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - 話し言葉を使用し、聞き手に親しみやすい表現にすること
+        - 導入部、本論、結論の構成を持つこと
+        - 適切な間や強調を含めること
+
+        # 制約条件
+        - スクリプトは最低1000文字以上であること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
 
         # RESPONSE_FORMAT:
         {
-          "script_text": "ポッドキャスト台本をここに記述"
+          "success": true,
+          "script_text": "生成されたポッドキャストの全文ナレーションスクリプト"
         }
 
-  # Step 2: Call the expertAgent jsonoutput API via fetchAgent
+  # Step 2: Generate podcast script using LLM via expertAgent jsonoutput API
+  # Calls the expertAgent utility endpoint with Gemini 2.5 Flash model
   generate_script:
     agent: fetchAgent
     inputs:
@@ -39,7 +46,8 @@ nodes:
         model_name: gemini-2.5-flash
     timeout: 60000
 
-  # Step 3: Format the final output
+  # Step 3: Format final output with success flag and error handling
+  # Maps the LLM response to the required output interface schema
   output:
     agent: copyAgent
     inputs:

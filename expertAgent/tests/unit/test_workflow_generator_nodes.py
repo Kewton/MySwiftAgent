@@ -16,6 +16,9 @@ from aiagent.langgraph.workflowGeneratorAgents.nodes.validator import validator_
 from aiagent.langgraph.workflowGeneratorAgents.nodes.workflow_tester import (
     workflow_tester_node,
 )
+from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+    WorkflowGenerationResponse,
+)
 from aiagent.langgraph.workflowGeneratorAgents.state import WorkflowGeneratorState
 
 
@@ -67,13 +70,14 @@ class TestGeneratorNode:
     async def test_generator_node_success(self, base_state):
         """Test successful YAML generation without feedback."""
         with patch(
-            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-        ) as mock_llm_class:
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+        ) as mock_create_llm:
             # Setup mock LLM response
-            mock_response = MagicMock()
-            mock_response.workflow_name = "send_email_notification"
-            mock_response.yaml_content = "version: 0.5\nnodes:\n  node1: {}\n"
-            mock_response.reasoning = "Generated workflow using Gmail API"
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="send_email_notification",
+                yaml_content="version: 0.5\nnodes:\n  node1: {}\n",
+                reasoning="Generated workflow using Gmail API",
+            )
 
             mock_llm = AsyncMock()
             mock_llm.ainvoke = AsyncMock(return_value=mock_response)
@@ -85,7 +89,7 @@ class TestGeneratorNode:
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm_class.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             # Execute generator node
             result = await generator_node(base_state)
@@ -106,12 +110,13 @@ class TestGeneratorNode:
         }
 
         with patch(
-            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-        ) as mock_llm_class:
-            mock_response = MagicMock()
-            mock_response.workflow_name = "send_email_notification_fixed"
-            mock_response.yaml_content = "version: 0.5\nnodes:\n  validNode: {}\n"
-            mock_response.reasoning = "Fixed: using valid agent node"
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+        ) as mock_create_llm:
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="send_email_notification_fixed",
+                yaml_content="version: 0.5\nnodes:\n  validNode: {}\n",
+                reasoning="Fixed: using valid agent node",
+            )
 
             mock_llm = AsyncMock()
             mock_llm.ainvoke = AsyncMock(return_value=mock_response)
@@ -123,7 +128,7 @@ class TestGeneratorNode:
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm_class.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             result = await generator_node(state_with_feedback)
 
@@ -134,8 +139,8 @@ class TestGeneratorNode:
     async def test_generator_node_llm_error(self, base_state):
         """Test generator node handling LLM API error."""
         with patch(
-            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-        ) as mock_llm_class:
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+        ) as mock_create_llm:
             mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(
@@ -144,7 +149,7 @@ class TestGeneratorNode:
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm_class.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             result = await generator_node(base_state)
 

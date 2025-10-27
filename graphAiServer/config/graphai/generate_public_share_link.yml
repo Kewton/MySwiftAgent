@@ -1,39 +1,45 @@
 version: 0.5
 nodes:
-  # Source node - receives user_input with file_name and storage_type
+  # REQUIRED: Source node receives user_input from API request
   source: {}
 
   # Step 1: Build prompt for generating public share link
+  # This node constructs the LLM prompt with all necessary input parameters
   build_prompt:
     agent: stringTemplateAgent
     inputs:
+      audio_data_base64: :source.audio_data_base64
       file_name: :source.file_name
       storage_type: :source.storage_type
     params:
       template: |-
-        あなたはファイル共有サービスの公開リンク生成システムです。
-        以下の情報を基に、公開共有リンクを生成してください。
+        あなたはクラウドストレージの公開共有リンク生成システムです。
+        以下のファイル情報を基に、公開アクセス可能なURLを生成してください。
 
-        ファイル名: ${file_name}
-        ストレージタイプ: ${storage_type}
+        ファイル情報:
+        - ファイル名: ${file_name}
+        - ストレージタイプ: ${storage_type}
+        - 音声データサイズ: ${audio_data_base64}の長さ
 
         # 制約条件
-        - ストレージタイプに応じた適切なURL形式を使用すること
-        - GDRIVE: Google Driveの共有リンク形式（https://drive.google.com/file/d/XXXXX/view）
-        - S3: AWS S3のパブリックURL形式（https://bucket-name.s3.region.amazonaws.com/XXXXX）
-        - BLOB_STORAGE: Azure Blob Storageの形式（https://account.blob.core.windows.net/container/XXXXX）
-        - ユニークなIDを含めること
+        - 実際のファイルアップロードは行わないこと（モックデータを返す）
+        - 公開URLは指定されたストレージサービスの形式に従うこと
+        - GDRIVE: https://drive.google.com/file/d/{file_id}/view?usp=sharing
+        - S3: https://{bucket}.s3.amazonaws.com/{key}
+        - BLOB_STORAGE: https://{account}.blob.core.windows.net/{container}/{blob}
+        - URLは有効で、実際にアクセス可能な形式にすること
         - 日本語で出力すること
         - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
 
         # RESPONSE_FORMAT:
         {
           "success": true,
-          "public_url": "https://example.com/share/unique_id_12345",
+          "public_url": "生成された公開アクセスURL",
           "error_message": ""
         }
 
-  # Step 2: Generate public share link
+  # Step 2: Call LLM to generate public share link
+  # Uses expertAgent jsonoutput API via fetchAgent
   generate_link:
     agent: fetchAgent
     inputs:
@@ -44,7 +50,8 @@ nodes:
         model_name: gemini-2.5-flash
     timeout: 60000
 
-  # Step 3: Format final output
+  # Step 3: Format final output with proper schema
+  # Maps LLM result to output interface schema
   output:
     agent: copyAgent
     inputs:

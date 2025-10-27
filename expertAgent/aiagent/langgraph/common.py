@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Sequence, TypedDict
 
 from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_ollama import ChatOllama
@@ -52,6 +53,7 @@ async def make_graph(
     if _model is None:
         _model = settings.GRAPH_AGENT_MODEL
 
+    model: BaseChatModel
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         # Get OpenAI API key from secrets_manager
         try:
@@ -231,6 +233,7 @@ async def make_utility_graph(
     if _model is None:
         _model = settings.GRAPH_AGENT_MODEL
 
+    model: BaseChatModel
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         # Get OpenAI API key from secrets_manager
         try:
@@ -423,6 +426,7 @@ async def make_playwright_graph(
     if _model is None:
         _model = settings.GRAPH_AGENT_MODEL
 
+    model: BaseChatModel
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         # Get OpenAI API key from secrets_manager
         try:
@@ -512,6 +516,7 @@ async def make_wikipedia_graph(
     if _model is None:
         _model = settings.GRAPH_AGENT_MODEL
 
+    model: BaseChatModel
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         # Get OpenAI API key from secrets_manager
         try:

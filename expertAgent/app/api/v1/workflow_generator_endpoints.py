@@ -54,15 +54,27 @@ async def generate_workflow(
         task_data_list: list[dict[str, Any]] = []
         if request.job_master_id is not None:
             # Fetch all tasks in the job
+            # Convert to int if string (for ULID support)
+            job_master_id_int = (
+                int(request.job_master_id)
+                if isinstance(request.job_master_id, str)
+                else request.job_master_id
+            )
             task_data_list = (
                 await task_data_fetcher.fetch_task_masters_by_job_master_id(
-                    request.job_master_id
+                    job_master_id_int
                 )
             )
         elif request.task_master_id is not None:
             # Fetch single task
+            # Convert to int if string (for ULID support)
+            task_master_id_int = (
+                int(request.task_master_id)
+                if isinstance(request.task_master_id, str)
+                else request.task_master_id
+            )
             task_data = await task_data_fetcher.fetch_task_master_by_id(
-                request.task_master_id
+                task_master_id_int
             )
             task_data_list = [task_data]
 

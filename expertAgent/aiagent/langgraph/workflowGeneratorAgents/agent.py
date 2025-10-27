@@ -17,7 +17,7 @@ The agent uses conditional routing to handle:
 """
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 from langgraph.graph import END, StateGraph
 
@@ -95,7 +95,7 @@ def self_repair_router(
         return "END"
 
 
-def create_workflow_generator_graph() -> StateGraph:
+def create_workflow_generator_graph() -> Any:
     """Create LangGraph workflow for GraphAI workflow generation.
 
     Returns:
@@ -172,7 +172,8 @@ async def generate_workflow(
 
     # Create and run workflow graph
     graph = create_workflow_generator_graph()
-    final_state = await graph.ainvoke(initial_state)
+    final_state_raw = await graph.ainvoke(initial_state)
+    final_state: WorkflowGeneratorState = final_state_raw  # type: ignore[assignment]
 
     logger.info(f"Workflow generation completed: status={final_state['status']}")
 

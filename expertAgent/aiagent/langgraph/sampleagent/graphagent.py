@@ -21,7 +21,7 @@ async def ainvoke_graphagent(query, project: str | None = None):
         toolMessages = []
         for message in message_list:
             print("~~~~")
-            if isinstance(message, AIMessage):
+            if isinstance(message, AIMessage) and isinstance(message.content, str):
                 aiMessage = message.content
             elif isinstance(message, HumanMessage):
                 # HumanMessageは処理不要（既にchat_historyにある）

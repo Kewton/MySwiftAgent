@@ -1,0 +1,52 @@
+version: 0.5
+nodes:
+  # Source node - receives user_input from API request
+  # Expected input: {"keyword": "string", "max_results": integer (optional, default 5)}
+  source: {}
+
+  # LLM processing node - calls expertAgent jsonoutput API via fetchAgent
+  # Generates structured report with subject and body based on keyword
+  generate_report:
+    agent: fetchAgent
+    params:
+      method: POST
+      headers:
+        Content-Type: application/json
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+    inputs:
+      body:
+        user_input: |
+          Generate a detailed analysis report for the following keyword: :source.keyword
+          
+          The report should be structured as JSON with the following format:
+          {
+            "subject": "A concise title for the report",
+            "body": "A detailed analysis in Markdown format covering key insights, findings, and recommendations"
+          }
+          
+          Ensure the subject is clear and professional, and the body provides comprehensive analysis suitable for email communication.
+        model_name: gemini-2.5-flash
+        project: default
+    timeout: 30000
+
+  # Extract and validate the report structure from LLM response
+  extract_report:
+    agent: copyAgent
+    params:
+      namedKey: report_data
+    inputs:
+      report_data: :generate_report.result
+    timeout: 5000
+
+  # Format final output to match output_interface schema
+  output:
+    agent: copyAgent
+    params:
+      namedKey: final_result
+    inputs:
+      final_result:
+        success: true
+        report: :extract_report.report_data
+        error_message: ""
+    isResult: true
+    timeout: 5000

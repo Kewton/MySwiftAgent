@@ -40,13 +40,15 @@ def _extract_message_text(message: Any) -> str | None:
     if isinstance(message, str):
         return message
 
+    content: Any = None
     if isinstance(message, BaseMessage):
         content = message.content
+        if isinstance(content, str):
+            return content
     else:
         content = getattr(message, "content", None)
-
-    if isinstance(content, str):
-        return content
+        if isinstance(content, str):
+            return content
 
     if isinstance(content, list):
         parts: list[str] = []
@@ -328,11 +330,11 @@ async def evaluator_node(
         logger.info(
             "Found %s API extension proposals:", len(response.api_extension_proposals)
         )
-        for proposal in response.api_extension_proposals:
+        for api_proposal in response.api_extension_proposals:
             logger.info(
                 "  - %s (%s priority)",
-                proposal.proposed_api_name,
-                proposal.priority,
+                api_proposal.proposed_api_name,
+                api_proposal.priority,
             )
 
     evaluation_feedback = None
