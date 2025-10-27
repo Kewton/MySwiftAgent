@@ -134,9 +134,7 @@ async def master_creation_node(
             if recommended_apis:
                 apis_str = ", ".join(recommended_apis)
                 enhanced_description = f"{base_description}\n\n**推奨API**: {apis_str}"
-                logger.info(
-                    f"  Enhanced description with recommended APIs: {apis_str}"
-                )
+                logger.info(f"  Enhanced description with recommended APIs: {apis_str}")
             else:
                 enhanced_description = base_description
                 logger.debug("  No recommended APIs specified for this task")

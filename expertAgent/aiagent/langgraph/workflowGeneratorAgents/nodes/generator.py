@@ -91,7 +91,9 @@ async def generator_node(
         temperature=0.0,
         max_tokens=max_tokens,
     )
-    logger.debug(f"Using {model_name} with max_tokens={max_tokens} (API key retrieved from MyVault/env)")
+    logger.debug(
+        f"Using {model_name} with max_tokens={max_tokens} (API key retrieved from MyVault/env)"
+    )
 
     # Create structured output model
     structured_model = model.with_structured_output(WorkflowGenerationResponse)
