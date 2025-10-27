@@ -1,0 +1,59 @@
+version: 0.5
+nodes:
+  # Input node - receives theme and structure from user_input
+  source: {}
+
+  # Step 1: Build the TTS generation prompt using stringTemplateAgent
+  # This converts the theme and structure into a prompt for LLM processing
+  build_tts_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      theme: :source.theme
+      structure: :source.structure
+    params:
+      template: |-
+        あなたは高品質なポッドキャスト音声ファイル生成システムです。
+        以下のテーマと構成情報を基に、TTS音声生成の結果を模擬的に生成してください。
+
+        ポッドキャストテーマ: ${theme}
+        セクション構成: ${structure}
+
+        # 制約条件
+        - 実際のTTS音声生成は行わないこと（モックデータを返す）
+        - 音声データはダミーのBase64エンコード文字列とすること
+        - ファイル名は現在日時を含む形式にすること（例: podcast_YYYYMMDD_HHMMSS.mp3）
+        - 音声の長さは構成セクション数に応じて計算すること（1セクション約60秒）
+        - 返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "audio_data_base64": "ダミー音声データ（Base64エンコード）",
+          "file_name": "podcast_YYYYMMDD_HHMMSS.mp3",
+          "duration_seconds": 180
+        }
+
+  # Step 2: Call expertAgent jsonoutput API to generate TTS mock data
+  # Uses Gemini 2.5 Flash for fast processing
+  generate_audio:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_tts_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with all required fields
+  # Maps the LLM result to the output interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_audio.result.success
+        audio_data_base64: :generate_audio.result.audio_data_base64
+        file_name: :generate_audio.result.file_name
+        duration_seconds: :generate_audio.result.duration_seconds
+        error_message: ""
+    isResult: true

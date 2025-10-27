@@ -1,0 +1,58 @@
+version: 0.5
+nodes:
+  # Input node - receives user_input with keyword
+  source: {}
+
+  # Step 1: Build the prompt for podcast script generation
+  # This node constructs a detailed Japanese prompt for generating natural podcast narration
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      keyword: :source.keyword
+    params:
+      template: |-
+        あなたはプロのポッドキャスト脚本ライターです。
+        以下のキーワードに基づいて、ポッドキャストとして自然に聞こえる詳細なナレーションスクリプトを生成してください。
+
+        キーワード: ${keyword}
+
+        # 要件
+        - スクリプトはポッドキャストのナレーションとして自然に聞こえるべき
+        - 詳細で情報量が豊富であること
+        - 日本語で出力すること
+        - 話し言葉を使用し、聞き手に親しみやすい表現にすること
+        - 導入部、本論、結論の構成を持つこと
+        - 適切な間や強調を含めること
+
+        # 制約条件
+        - スクリプトは最低1000文字以上であること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "script_text": "生成されたポッドキャストの全文ナレーションスクリプト"
+        }
+
+  # Step 2: Generate podcast script using LLM via expertAgent jsonoutput API
+  # Calls the expertAgent utility endpoint with Gemini 2.5 Flash model
+  generate_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with success flag and error handling
+  # Maps the LLM response to the required output interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        script_text: :generate_script.result.script_text
+        error_message: ""
+    isResult: true
