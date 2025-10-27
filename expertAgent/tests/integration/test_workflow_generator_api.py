@@ -108,7 +108,7 @@ nodes:
                     "results": {
                         "email_sender": {  # Matches node name in YAML
                             "message_id": "msg_123",
-                            "status": "sent"
+                            "status": "sent",
                         }
                     },
                     "errors": {},
@@ -138,7 +138,9 @@ nodes:
             assert len(data["workflows"]) == 1
             assert data["workflows"][0]["task_master_id"] == 456
             assert data["workflows"][0]["task_name"] == "Send email notification"
-            assert data["workflows"][0]["status"] == "success"  # Endpoint maps validated → success
+            assert (
+                data["workflows"][0]["status"] == "success"
+            )  # Endpoint maps validated → success
             assert "yaml_content" in data["workflows"][0]
 
     def test_workflow_generator_with_job_master_id(
@@ -420,7 +422,7 @@ nodes:
       method: POST
     isResult: true
 """,
-                reasoning="Using fetchAgent for Gmail API"
+                reasoning="Using fetchAgent for Gmail API",
             )
 
             mock_structured_model = MagicMock()
@@ -438,19 +440,21 @@ nodes:
             # Pre-create mock responses for proper scoping
             mock_register_response = MagicMock()
             mock_register_response.status_code = 200
-            mock_register_response.json = MagicMock(return_value={
-                "file_path": "/workflows/send_notification_email.yaml"
-            })
+            mock_register_response.json = MagicMock(
+                return_value={"file_path": "/workflows/send_notification_email.yaml"}
+            )
 
             mock_execute_response = MagicMock()
             mock_execute_response.status_code = 200
-            mock_execute_response.json = MagicMock(return_value={
-                "results": {
-                    "email_sender": {"message_id": "msg_123", "status": "sent"}
-                },
-                "errors": {},
-                "logs": [],
-            })
+            mock_execute_response.json = MagicMock(
+                return_value={
+                    "results": {
+                        "email_sender": {"message_id": "msg_123", "status": "sent"}
+                    },
+                    "errors": {},
+                    "logs": [],
+                }
+            )
 
             def mock_post_responses(*args, **kwargs):
                 """Return different responses based on URL."""
@@ -759,7 +763,7 @@ nodes:
             mock_response = WorkflowGenerationResponse(
                 workflow_name="test_workflow",
                 yaml_content="version: 0.5\nnodes:\n  node1:\n    agent: fetchAgent\n",
-                reasoning="Test"
+                reasoning="Test",
             )
 
             mock_structured_model = MagicMock()
@@ -828,7 +832,9 @@ nodes:
             assert data["failed_tasks"] == 1
 
             # First workflow succeeds
-            assert data["workflows"][0]["status"] == "success"  # Endpoint maps validated → success
+            assert (
+                data["workflows"][0]["status"] == "success"
+            )  # Endpoint maps validated → success
             assert data["workflows"][0]["task_name"] == "Successful task"
 
             # Second workflow fails

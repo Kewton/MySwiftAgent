@@ -72,6 +72,7 @@ def mock_interface_definition_dependencies():
     Related Issue: GitHub Actions CI failures due to "All connection attempts failed"
     when interface_definition node tries to connect to jobqueue API.
     """
+
     # Helper functions to create mocks (copied from test_e2e_workflow.py)
     def create_mock_jobqueue_client():
         mock_client = MagicMock()
@@ -116,11 +117,14 @@ def mock_interface_definition_dependencies():
         return mock_matcher
 
     # Apply patches for interface_definition node
-    with patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
-    ) as mock_client_class, patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.SchemaMatcher"
-    ) as mock_matcher_class:
+    with (
+        patch(
+            "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
+        ) as mock_client_class,
+        patch(
+            "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.SchemaMatcher"
+        ) as mock_matcher_class,
+    ):
         # Setup return values
         mock_client_class.return_value = create_mock_jobqueue_client()
         mock_matcher_class.return_value = create_mock_schema_matcher()

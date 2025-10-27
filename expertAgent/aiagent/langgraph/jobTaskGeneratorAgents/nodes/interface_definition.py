@@ -6,7 +6,6 @@ InterfaceMasters in jobqueue.
 """
 
 import logging
-import os
 from typing import Any
 
 from ..prompts.interface_schema import (
@@ -16,7 +15,7 @@ from ..prompts.interface_schema import (
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
-from ..utils.llm_factory import create_llm_with_fallback
+from ..utils.llm_invocation import StructuredLLMError, invoke_structured_llm
 from ..utils.schema_matcher import SchemaMatcher
 
 logger = logging.getLogger(__name__)
@@ -32,6 +31,11 @@ def fix_regex_over_escaping(schema: dict[str, Any]) -> dict[str, Any]:
     LLMs sometimes generate over-escaped regex patterns when creating JSON Schema.
     For example, they might generate "\\\\d{4}" instead of "\\d{4}".
     This causes JSON Schema V7 validation to fail with "is not a 'regex'" error.
+        LLMs sometimes generate over-escaped regex patterns when creating JSON
+        Schema.
+        For example, they might generate "\\\\d{4}" instead of "\\d{4}".
+        This causes JSON Schema V7 validation to fail with "is not a 'regex'"
+        error.
 
     Args:
         schema: JSON Schema dictionary (input_schema or output_schema)
@@ -88,6 +92,28 @@ def fix_regex_over_escaping(schema: dict[str, Any]) -> dict[str, Any]:
     return result if isinstance(result, dict) else {}
 
 
+def _validate_interface_response(
+    response: InterfaceSchemaResponse | None,
+) -> InterfaceSchemaResponse:
+    """Ensure the LLM response contains interface definitions."""
+
+    if response is None:
+        logger.error(
+            "LLM structured output returned None for interface definition",
+        )
+        raise ValueError(
+            "Interface definition failed: structured output was empty.",
+        )
+
+    if not response.interfaces:
+        logger.error("LLM structured output missing interfaces array")
+        raise ValueError(
+            "Interface definition failed: no interfaces were generated.",
+        )
+
+    return response
+
+
 async def interface_definition_node(
     state: JobTaskGeneratorState,
 ) -> JobTaskGeneratorState:
@@ -109,166 +135,99 @@ async def interface_definition_node(
 
     task_breakdown = state.get("task_breakdown", [])
     if not task_breakdown:
-        logger.error("Task breakdown is empty")
-        return {
-            **state,
-            "error_message": "Task breakdown is required for interface definition",
-        }
+        message = "Interface definition requires a task breakdown"
+        logger.error(message)
+        return {**state, "error_message": message}
 
-    logger.debug(f"Task breakdown count: {len(task_breakdown)}")
+    logger.debug("Task breakdown count: %s", len(task_breakdown))
 
-    # Initialize LLM with fallback mechanism (Issue #111)
-    max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-    model_name = os.getenv(
-        "JOB_GENERATOR_INTERFACE_DEFINITION_MODEL", "claude-haiku-4-5"
-    )
-    model, perf_tracker, cost_tracker = create_llm_with_fallback(
-        model_name=model_name,
-        temperature=0.0,
-        max_tokens=max_tokens,
-    )
-    logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
-
-    # Create structured output model
-    structured_model = model.with_structured_output(InterfaceSchemaResponse)
-
-    # Create prompt
     user_prompt = create_interface_schema_prompt(task_breakdown)
-    logger.debug(f"Created interface schema prompt (length: {len(user_prompt)})")
+    messages = [
+        {"role": "system", "content": INTERFACE_SCHEMA_SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
 
     try:
-        # Invoke LLM
-        messages = [
-            {"role": "system", "content": INTERFACE_SCHEMA_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ]
-        logger.info("Invoking LLM for interface schema definition")
-        response = await structured_model.ainvoke(messages)
-
-        # Validate response
-        if response is None or not hasattr(response, "interfaces"):
-            logger.error("LLM response is None or missing 'interfaces' attribute")
-            raise ValueError(
-                "Interface definition failed: LLM returned invalid response"
-            )
-
-        logger.info(
-            f"Interface schema definition completed: {len(response.interfaces)} interfaces"
+        call_result = await invoke_structured_llm(
+            messages=messages,
+            response_model=InterfaceSchemaResponse,
+            context_label="interface_definition",
+            model_env_var="JOB_GENERATOR_INTERFACE_DEFINITION_MODEL",
+            default_model="claude-haiku-4-5",
+            validator=_validate_interface_response,
         )
-        logger.debug(
-            f"Interfaces: {[iface.interface_name for iface in response.interfaces]}"
-        )
-
-        # Fix over-escaped regex patterns in schemas (Phase 3-A)
-        logger.info("Applying regex over-escaping fix to interface schemas")
-        for iface in response.interfaces:
-            # Fix regex patterns in input and output schemas
-            iface.input_schema = fix_regex_over_escaping(iface.input_schema)
-            iface.output_schema = fix_regex_over_escaping(iface.output_schema)
-
-        # Log detailed response for debugging (enhanced logging)
-        for iface in response.interfaces:
-            logger.debug(
-                f"Interface {iface.task_id} ({iface.interface_name}):\n"
-                f"  Input Schema (after fix): {iface.input_schema}\n"
-                f"  Output Schema (after fix): {iface.output_schema}"
-            )
-
-        # Initialize jobqueue client and schema matcher
-        client = JobqueueClient()
-        matcher = SchemaMatcher(client)
-
-        # Find or create InterfaceMasters
-        interface_masters: dict[str, dict[str, Any]] = {}
-
-        for interface_def in response.interfaces:
-            task_id = interface_def.task_id
-            interface_name = interface_def.interface_name
-
-            logger.info(f"Processing interface for task {task_id}: {interface_name}")
-
-            # Find or create InterfaceMaster
-            interface_master = await matcher.find_or_create_interface_master(
-                name=interface_name,
-                description=interface_def.description,
-                input_schema=interface_def.input_schema,
-                output_schema=interface_def.output_schema,
-            )
-
-            # Enhanced error handling: Log response and validate structure
-            logger.debug(
-                f"InterfaceMaster response for task {task_id}: {interface_master}"
-            )
-
-            # Defensive programming: Check if 'id' field exists
-            if "id" not in interface_master:
-                error_msg = (
-                    f"InterfaceMaster response missing 'id' field for task {task_id}.\n"
-                    f"Interface name: {interface_name}\n"
-                    f"Response content: {interface_master}\n"
-                    f"Response keys: {list(interface_master.keys()) if isinstance(interface_master, dict) else 'Not a dict'}"
-                )
-                logger.error(error_msg)
-                raise ValueError(error_msg)
-
-            interface_masters[task_id] = {
-                "interface_master_id": interface_master["id"],
-                "input_interface_id": interface_master[
-                    "id"
-                ],  # Explicit input interface ID
-                "output_interface_id": interface_master[
-                    "id"
-                ],  # Explicit output interface ID
-                "interface_name": interface_name,
-                "input_schema": interface_def.input_schema,
-                "output_schema": interface_def.output_schema,
-            }
-
-            logger.info(
-                f"Interface for task {task_id}: {interface_master['id']} ({interface_name})"
-            )
-            logger.debug(
-                f"Interface definition for task {task_id}:\n"
-                f"  input_interface_id: {interface_master['id']}\n"
-                f"  output_interface_id: {interface_master['id']}"
-            )
-
-        # Update state
-        current_stage = state.get("evaluator_stage", "after_task_breakdown")
-        new_stage = "after_interface_definition"
-        current_retry = state.get("retry_count", 0)
-        new_retry = current_retry + 1 if current_retry > 0 else 0
-
-        logger.info("=" * 80)
-        logger.info("✅ Interface definition node completed successfully")
-        logger.info(f"📋 Created {len(interface_masters)} interface definitions")
-        logger.info(f"🔄 Stage transition: {current_stage} → {new_stage}")
-        logger.info(f"🔄 Retry count: {current_retry} → {new_retry}")
-        logger.info(
-            "⚠️  CRITICAL: Returning state with evaluator_stage='after_interface_definition'"
-        )
-        logger.info("=" * 80)
-
+    except StructuredLLMError as exc:
+        logger.error("Interface schema generation failed: %s", exc)
+        new_retry = state.get("retry_count", 0) + 1
         return {
             **state,
-            "interface_definitions": interface_masters,
-            "evaluator_stage": new_stage,
+            "error_message": str(exc),
             "retry_count": new_retry,
         }
 
-    except Exception as e:
-        logger.error(f"Failed to define interfaces: {e}", exc_info=True)
+    response = call_result.result
+    logger.info(
+        "Generated %s interface candidates (model=%s)",
+        len(response.interfaces),
+        call_result.model_name,
+    )
+    if call_result.recovered_via_json:
+        logger.info("Interface schema generation succeeded via JSON fallback")
 
-        # Increment retry_count to enable proper retry logic
-        current_retry = state.get("retry_count", 0)
-        new_retry = current_retry + 1
+    for iface in response.interfaces:
+        iface.input_schema = fix_regex_over_escaping(iface.input_schema)
+        iface.output_schema = fix_regex_over_escaping(iface.output_schema)
 
-        logger.warning(
-            f"🔄 Interface definition failed, retry count: {current_retry} → {new_retry}"
+    client = JobqueueClient()
+    matcher = SchemaMatcher(client)
+    interface_masters: dict[str, dict[str, Any]] = {}
+
+    for interface_def in response.interfaces:
+        task_id = interface_def.task_id
+        interface_name = interface_def.interface_name
+
+        logger.info(
+            "Registering interface for task %s (%s)",
+            task_id,
+            interface_name,
         )
 
-        return {
-            **state,
-            "error_message": f"Interface definition failed: {str(e)}",
-            "retry_count": new_retry,
+        interface_master = await matcher.find_or_create_interface_master(
+            name=interface_name,
+            description=interface_def.description,
+            input_schema=interface_def.input_schema,
+            output_schema=interface_def.output_schema,
+        )
+
+        master_id = interface_master.get("id")
+        if not master_id:
+            logger.error(
+                "InterfaceMaster response missing id for task %s: %s",
+                task_id,
+                interface_master,
+            )
+            raise ValueError(f"InterfaceMaster creation failed for task {task_id}")
+
+        interface_masters[task_id] = {
+            "interface_master_id": master_id,
+            "input_interface_id": master_id,
+            "output_interface_id": master_id,
+            "interface_name": interface_name,
+            "input_schema": interface_def.input_schema,
+            "output_schema": interface_def.output_schema,
         }
+
+    current_retry = state.get("retry_count", 0)
+    updated_retry = current_retry + 1 if current_retry > 0 else 0
+
+    logger.info(
+        "Interface definition node completed with %s interfaces",
+        len(interface_masters),
+    )
+
+    return {
+        **state,
+        "interface_definitions": interface_masters,
+        "evaluator_stage": "after_interface_definition",
+        "retry_count": updated_retry,
+    }

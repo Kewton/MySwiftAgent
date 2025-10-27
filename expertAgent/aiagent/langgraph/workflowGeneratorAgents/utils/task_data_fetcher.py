@@ -39,9 +39,7 @@ class TaskDataFetcher:
         _ = await self.jobqueue_client.get_job_master(job_master_id)
 
         # 2. Fetch workflow tasks (JobMasterTask)
-        workflow_tasks = await self.jobqueue_client.list_workflow_tasks(
-            job_master_id
-        )
+        workflow_tasks = await self.jobqueue_client.list_workflow_tasks(job_master_id)
 
         # 3. Fetch each TaskMaster with InterfaceMasters
         task_data_list: list[dict[str, Any]] = []

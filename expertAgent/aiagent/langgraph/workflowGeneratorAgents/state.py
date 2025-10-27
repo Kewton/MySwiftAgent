@@ -53,7 +53,9 @@ class WorkflowGeneratorState(TypedDict, total=False):
     """
 
     # ===== Input =====
-    task_master_id: str | int  # ULID string (e.g., 'tm_01K8K13NC8PRJ3V4R35C1AP2JP') or legacy int
+    task_master_id: (
+        str | int
+    )  # ULID string (e.g., 'tm_01K8K13NC8PRJ3V4R35C1AP2JP') or legacy int
     task_data: dict[str, Any]
     max_retry: int
 

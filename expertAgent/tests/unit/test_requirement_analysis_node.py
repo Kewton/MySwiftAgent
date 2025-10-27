@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis import (
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import StructuredCallResult
     requirement_analysis_node,
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
@@ -30,9 +31,7 @@ class TestRequirementAnalysisNode:
     """Unit tests for requirement_analysis_node."""
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_success(self, mock_create_llm):
         """Test successful task breakdown with valid LLM response.
 
@@ -109,9 +108,7 @@ class TestRequirementAnalysisNode:
         assert call_args[1]["role"] == "user"
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_with_llm_error(self, mock_create_llm):
         """Test error handling when LLM invocation fails.
 
@@ -155,9 +152,7 @@ class TestRequirementAnalysisNode:
         mock_structured.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_empty_response(self, mock_create_llm):
         """Test handling of empty task list from LLM.
 
@@ -203,9 +198,7 @@ class TestRequirementAnalysisNode:
         assert "task_breakdown" not in result
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_with_evaluation_feedback(self, mock_create_llm):
         """Test task breakdown with evaluation feedback (retry scenario).
 
@@ -264,9 +257,7 @@ class TestRequirementAnalysisNode:
         )
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_retry_count_increment(self, mock_create_llm):
         """Test retry_count increment behavior on retry.
 
@@ -332,9 +323,7 @@ class TestRequirementAnalysisNode:
         )
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_missing_user_requirement(self, mock_create_llm):
         """Test error handling when user_requirement is missing.
 
@@ -362,9 +351,7 @@ class TestRequirementAnalysisNode:
         assert "missing user requirement" in result["error_message"]
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_none_response(self, mock_create_llm):
         """Test error handling when LLM returns None response.
 
@@ -404,9 +391,7 @@ class TestRequirementAnalysisNode:
         assert "task_breakdown" not in result
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_none_tasks(self, mock_create_llm):
         """Test error handling when LLM response.tasks is None.
 
@@ -454,9 +439,7 @@ class TestRequirementAnalysisNode:
         assert "task_breakdown" not in result
 
     @pytest.mark.asyncio
-    @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-    )
+    @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
     async def test_requirement_analysis_empty_tasks_with_validation(
         self, mock_create_llm
     ):
