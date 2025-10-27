@@ -1,41 +1,41 @@
 version: 0.5
 nodes:
-  # Input node - receives user_input with keyword
+  # REQUIRED: Source node receives user_input from API request
+  # Input: {"user_input": {"user_keyword": "...", "user_email": "..."}}
   source: {}
 
-  # Step 1: Build the prompt for podcast script generation
-  # This node constructs a detailed Japanese prompt for generating natural podcast narration
+  # Step 1: Build LLM prompt using stringTemplateAgent
+  # This is MANDATORY when using :source.field references in multi-line strings
+  # Extracts user_keyword and user_email from source node
   build_prompt:
     agent: stringTemplateAgent
     inputs:
-      keyword: :source.keyword
+      keyword: :source.user_keyword
+      email: :source.user_email
     params:
       template: |-
-        あなたはプロのポッドキャスト脚本ライターです。
-        以下のキーワードに基づいて、ポッドキャストとして自然に聞こえる詳細なナレーションスクリプトを生成してください。
+        あなたはポッドキャスト台本作成の専門家です。
+        以下のキーワードに基づき、自然な会話形式のポッドキャスト台本を生成してください。
 
         キーワード: ${keyword}
-
-        # 要件
-        - スクリプトはポッドキャストのナレーションとして自然に聞こえるべき
-        - 詳細で情報量が豊富であること
-        - 日本語で出力すること
-        - 話し言葉を使用し、聞き手に親しみやすい表現にすること
-        - 導入部、本論、結論の構成を持つこと
-        - 適切な間や強調を含めること
+        ユーザーメールアドレス: ${email}
 
         # 制約条件
-        - スクリプトは最低1000文字以上であること
-        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - 自然な会話形式で、2人のホスト（ホストA、ホストB）による対話形式にすること
+        - 導入部、メイン内容、まとめの3部構成にすること
+        - 各セクションは明確に区切ること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
 
         # RESPONSE_FORMAT:
         {
-          "success": true,
-          "script_text": "生成されたポッドキャストの全文ナレーションスクリプト"
+          "script_text": "生成されたポッドキャスト台本テキスト（会話形式）",
+          "duration_estimate_minutes": 推定再生時間（分）
         }
 
-  # Step 2: Generate podcast script using LLM via expertAgent jsonoutput API
-  # Calls the expertAgent utility endpoint with Gemini 2.5 Flash model
+  # Step 2: Generate podcast script using expertAgent jsonoutput API
+  # Calls fetchAgent to invoke expertAgent jsonoutput API with Gemini 2.5 Flash
+  # This is the RECOMMENDED API for this task
   generate_script:
     agent: fetchAgent
     inputs:
@@ -46,13 +46,15 @@ nodes:
         model_name: gemini-2.5-flash
     timeout: 60000
 
-  # Step 3: Format final output with success flag and error handling
-  # Maps the LLM response to the required output interface schema
+  # Step 3: Format final output
+  # Maps generated script to output interface schema
+  # Includes success flag, script_text, user_email, and error handling
   output:
     agent: copyAgent
     inputs:
       result:
         success: true
         script_text: :generate_script.result.script_text
+        user_email: :source.user_email
         error_message: ""
     isResult: true

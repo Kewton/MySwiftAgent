@@ -54,51 +54,39 @@ async def generate_workflow(
         task_data_list: list[dict[str, Any]] = []
         if request.job_master_id is not None:
             # Fetch all tasks in the job
-            # Convert to int if string (for ULID support)
-            job_master_id_int = (
-                int(request.job_master_id)
-                if isinstance(request.job_master_id, str)
+            # Convert to string if int (for backward compatibility)
+            job_master_id_str = (
+                str(request.job_master_id)
+                if isinstance(request.job_master_id, int)
                 else request.job_master_id
             )
             task_data_list = (
                 await task_data_fetcher.fetch_task_masters_by_job_master_id(
-                    job_master_id_int
+                    job_master_id_str
                 )
             )
         elif request.task_master_id is not None:
             # Fetch single task
-            # Convert to int if string (for ULID support)
-            task_master_id_int = (
-                int(request.task_master_id)
-                if isinstance(request.task_master_id, str)
+            # Convert to string if int (for backward compatibility)
+            task_master_id_str = (
+                str(request.task_master_id)
+                if isinstance(request.task_master_id, int)
                 else request.task_master_id
             )
             task_data = await task_data_fetcher.fetch_task_master_by_id(
-                task_master_id_int
+                task_master_id_str
             )
             task_data_list = [task_data]
 
         # Phase 3: Integrate LangGraph Agent for workflow generation
         workflows: list[WorkflowResult] = []
         for task_data in task_data_list:
-            # Convert task_master_id to int
+            # Get task_master_id (ULID string or int)
             task_master_id_value = task_data["task_master_id"]
-            if isinstance(task_master_id_value, str):
-                # Extract numeric part if it's a string like "task_1" or just "123"
-                import re
-
-                match = re.search(r"\d+", task_master_id_value)
-                if match:
-                    task_master_id_int = int(match.group())
-                else:
-                    # Use hash as fallback if no numeric part found
-                    task_master_id_int = hash(task_master_id_value) % (10**8)
-            else:
-                task_master_id_int = int(task_master_id_value)
 
             # Generate workflow using LangGraph Agent
             final_state = await generate_workflow_with_agent(
-                task_master_id=task_master_id_int,
+                task_master_id=task_master_id_value,
                 task_data=task_data,
                 max_retry=3,
             )
@@ -124,7 +112,7 @@ async def generate_workflow(
                 result_status = "failed"
 
             workflow_result = WorkflowResult(
-                task_master_id=task_master_id_int,
+                task_master_id=task_master_id_value,
                 task_name=task_data["name"],
                 workflow_name=workflow_name,
                 yaml_content=yaml_content,

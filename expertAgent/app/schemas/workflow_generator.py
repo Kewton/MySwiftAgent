@@ -48,10 +48,10 @@ class WorkflowResult(BaseModel):
         retry_count: Number of retries during self-repair loop
     """
 
-    task_master_id: int = Field(
+    task_master_id: str | int = Field(
         ...,
-        description="TaskMaster ID",
-        examples=[456],
+        description="TaskMaster ID (ULID string or int)",
+        examples=["tm_01K8K13NC8PRJ3V4R35C1AP2JP", 456],
     )
     task_name: str = Field(
         ...,

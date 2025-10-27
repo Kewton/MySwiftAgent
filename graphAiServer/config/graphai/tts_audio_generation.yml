@@ -1,40 +1,44 @@
 version: 0.5
 nodes:
-  # Input node - receives theme and structure from user_input
+  # REQUIRED: Source node receives user_input from API request
+  # Expected input: {"theme_definition": {...}, "user_email": "..."}
   source: {}
 
-  # Step 1: Build the TTS generation prompt using stringTemplateAgent
-  # This converts the theme and structure into a prompt for LLM processing
+  # Step 1: Build TTS generation prompt using stringTemplateAgent
+  # This constructs a prompt that will generate mock TTS audio results
+  # We use stringTemplateAgent because we need to embed :source fields in a multi-line string
   build_tts_prompt:
     agent: stringTemplateAgent
     inputs:
-      theme: :source.theme
-      structure: :source.structure
+      theme_definition: :source.theme_definition
+      user_email: :source.user_email
     params:
       template: |-
-        あなたは高品質なポッドキャスト音声ファイル生成システムです。
-        以下のテーマと構成情報を基に、TTS音声生成の結果を模擬的に生成してください。
+        あなたは高品質なTTS（Text-to-Speech）音声ファイル生成システムです。
+        以下のポッドキャスト構成要素を基に、音声ファイル生成結果を生成してください。
 
-        ポッドキャストテーマ: ${theme}
-        セクション構成: ${structure}
+        ポッドキャスト構成要素: ${theme_definition}
+        ユーザーメールアドレス: ${user_email}
 
         # 制約条件
-        - 実際のTTS音声生成は行わないこと（モックデータを返す）
-        - 音声データはダミーのBase64エンコード文字列とすること
-        - ファイル名は現在日時を含む形式にすること（例: podcast_YYYYMMDD_HHMMSS.mp3）
-        - 音声の長さは構成セクション数に応じて計算すること（1セクション約60秒）
-        - 返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - 実際のTTS音声生成APIは外部サービスを使用すること（本ワークフローではモック結果を返す）
+        - 音声ファイルはMP3形式とすること
+        - ファイルパスは一時的なローカルパス形式にすること（例：/tmp/podcast_audio_YYYYMMDD_HHMMSS.mp3）
+        - 生成成功フラグは常にtrueとすること
+        - エラーメッセージは成功時は空文字列とすること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
 
         # RESPONSE_FORMAT:
         {
           "success": true,
-          "audio_data_base64": "ダミー音声データ（Base64エンコード）",
-          "file_name": "podcast_YYYYMMDD_HHMMSS.mp3",
-          "duration_seconds": 180
+          "audio_file_path": "/tmp/podcast_audio_YYYYMMDD_HHMMSS.mp3",
+          "user_email": "user@example.com",
+          "error_message": ""
         }
 
-  # Step 2: Call expertAgent jsonoutput API to generate TTS mock data
-  # Uses Gemini 2.5 Flash for fast processing
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent to generate TTS results
+  # This simulates calling an external TTS API and returns mock audio file information
   generate_audio:
     agent: fetchAgent
     inputs:
@@ -45,15 +49,14 @@ nodes:
         model_name: gemini-2.5-flash
     timeout: 60000
 
-  # Step 3: Format final output with all required fields
-  # Maps the LLM result to the output interface schema
+  # Step 3: Format final output with required fields
+  # Direct reference pattern: extract fields from LLM result and map to output schema
   output:
     agent: copyAgent
     inputs:
       result:
         success: :generate_audio.result.success
-        audio_data_base64: :generate_audio.result.audio_data_base64
-        file_name: :generate_audio.result.file_name
-        duration_seconds: :generate_audio.result.duration_seconds
-        error_message: ""
+        audio_file_path: :generate_audio.result.audio_file_path
+        user_email: :generate_audio.result.user_email
+        error_message: :generate_audio.result.error_message
     isResult: true

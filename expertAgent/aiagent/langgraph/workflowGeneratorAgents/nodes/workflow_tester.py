@@ -75,15 +75,12 @@ async def workflow_tester_node(
             logger.info(f"Workflow registered successfully: {workflow_file_path}")
 
             # Step 2: Execute workflow with sample input
-            # Determine category from workflow_name (default: "test")
-            category = "test"
-            model_name = workflow_name
-
-            execute_url = (
-                f"{GRAPHAISERVER_BASE_URL}/api/v1/myagent/{category}/{model_name}"
-            )
+            # Use legacy endpoint format to access workflow in root directory
+            # (workflows are registered in ./config/graphai/ without subdirectory)
+            execute_url = f"{GRAPHAISERVER_BASE_URL}/api/v1/myagent"
             execute_payload = {
                 "user_input": sample_input,
+                "model_name": workflow_name,  # Direct reference to root-level workflow
             }
 
             logger.info(f"Executing workflow at {execute_url}")

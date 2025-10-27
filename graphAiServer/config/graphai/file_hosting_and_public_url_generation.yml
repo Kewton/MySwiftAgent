@@ -1,0 +1,65 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Input structure: {script_text, user_email, voice_settings}
+  source: {}
+
+  # Step 1: Build prompt for mock audio generation and file upload
+  # This node constructs a detailed prompt with all necessary input variables
+  build_upload_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      script_text: :source.script_text
+      user_email: :source.user_email
+      voice_id: :source.voice_settings.voice_id
+      language_code: :source.voice_settings.language_code
+    params:
+      template: |-
+        あなたはファイルホスティングと公開URL取得を模擬するシステムです。
+        以下の情報を基に、音声ファイルのアップロードと公開ストリーミングURL生成の結果を模擬的に生成してください。
+
+        台本テキスト: ${script_text}
+        ユーザーメール: ${user_email}
+        音声ID: ${voice_id}
+        言語コード: ${language_code}
+
+        # 制約条件
+        - 実際のTTS音声生成やファイルアップロードは行わないこと（モックデータを返す）
+        - 公開ストリーミングURLはGCS（Google Cloud Storage）またはS3形式の架空のURLにすること
+        - URLは有効なURI形式であること
+        - 成功フラグは常にtrueを返すこと
+        - エラーメッセージは空文字列とすること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "public_url": "https://storage.googleapis.com/podcast-bucket/audio_20240115_143022.mp3",
+          "user_email": "user@example.com",
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API to generate mock results
+  # This node uses fetchAgent to call the LLM-based mock generation
+  generate_upload_result:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_upload_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format and return final output
+  # This node extracts the result from the LLM response and formats it according to output_interface
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_upload_result.result.success
+        public_url: :generate_upload_result.result.public_url
+        user_email: :generate_upload_result.result.user_email
+        error_message: :generate_upload_result.result.error_message
+    isResult: true

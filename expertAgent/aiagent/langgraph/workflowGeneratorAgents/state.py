@@ -53,7 +53,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
     """
 
     # ===== Input =====
-    task_master_id: int
+    task_master_id: str | int  # ULID string (e.g., 'tm_01K8K13NC8PRJ3V4R35C1AP2JP') or legacy int
     task_data: dict[str, Any]
     max_retry: int
 
@@ -85,14 +85,14 @@ class WorkflowGeneratorState(TypedDict, total=False):
 
 
 def create_initial_state(
-    task_master_id: int,
+    task_master_id: str | int,
     task_data: dict[str, Any],
     max_retry: int = 3,
 ) -> WorkflowGeneratorState:
     """Create initial state with default values.
 
     Args:
-        task_master_id: TaskMaster ID to generate workflow for
+        task_master_id: TaskMaster ID (ULID string or int) to generate workflow for
         task_data: TaskMaster metadata from jobqueue API
         max_retry: Maximum retry count for self-repair (default: 3)
 

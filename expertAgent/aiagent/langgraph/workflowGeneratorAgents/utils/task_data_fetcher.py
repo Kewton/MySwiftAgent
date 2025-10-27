@@ -22,12 +22,12 @@ class TaskDataFetcher:
         self.jobqueue_client = jobqueue_client or JobqueueClient()
 
     async def fetch_task_masters_by_job_master_id(
-        self, job_master_id: int
+        self, job_master_id: str
     ) -> list[dict[str, Any]]:
         """Fetch all TaskMasters associated with JobMaster.
 
         Args:
-            job_master_id: JobMaster ID
+            job_master_id: JobMaster ID (ULID string format, e.g., 'jm_01K8K13NFD90PFCMB56C6EBKZQ')
 
         Returns:
             List of TaskMaster data with InterfaceMaster information
@@ -36,11 +36,11 @@ class TaskDataFetcher:
             JobqueueAPIError: If API returns error
         """
         # 1. Fetch JobMaster to verify existence
-        _ = await self.jobqueue_client.get_job_master(str(job_master_id))
+        _ = await self.jobqueue_client.get_job_master(job_master_id)
 
         # 2. Fetch workflow tasks (JobMasterTask)
         workflow_tasks = await self.jobqueue_client.list_workflow_tasks(
-            str(job_master_id)
+            job_master_id
         )
 
         # 3. Fetch each TaskMaster with InterfaceMasters
@@ -60,11 +60,11 @@ class TaskDataFetcher:
 
         return task_data_list
 
-    async def fetch_task_master_by_id(self, task_master_id: int) -> dict[str, Any]:
+    async def fetch_task_master_by_id(self, task_master_id: str) -> dict[str, Any]:
         """Fetch single TaskMaster by ID.
 
         Args:
-            task_master_id: TaskMaster ID
+            task_master_id: TaskMaster ID (ULID string format, e.g., 'tm_01K8K13NC8PRJ3V4R35C1AP2JP')
 
         Returns:
             TaskMaster data with InterfaceMaster information
@@ -72,7 +72,7 @@ class TaskDataFetcher:
         Raises:
             JobqueueAPIError: If API returns error
         """
-        return await self._fetch_task_master_with_interfaces(str(task_master_id))
+        return await self._fetch_task_master_with_interfaces(task_master_id)
 
     async def _fetch_task_master_with_interfaces(
         self, task_master_id: str

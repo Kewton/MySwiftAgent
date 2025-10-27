@@ -149,14 +149,14 @@ def create_workflow_generator_graph() -> Any:
 
 
 async def generate_workflow(
-    task_master_id: int,
+    task_master_id: str | int,
     task_data: dict,
     max_retry: int = 3,
 ) -> WorkflowGeneratorState:
     """Generate GraphAI workflow YAML from TaskMaster metadata.
 
     Args:
-        task_master_id: TaskMaster ID
+        task_master_id: TaskMaster ID (ULID string or int)
         task_data: TaskMaster metadata with interfaces
         max_retry: Maximum retry count for self-repair (default: 3)
 
