@@ -33,6 +33,7 @@ async def _register_workflow(
     client: httpx.AsyncClient,
     workflow_name: str,
     yaml_content: str,
+    task_master_id: str | int | None = None,
 ) -> tuple[bool, dict[str, Any], int, str | None]:
     register_url = f"{GRAPHAISERVER_BASE_URL}/api/v1/workflows/register"
     payload = {
@@ -40,6 +41,12 @@ async def _register_workflow(
         "yaml_content": yaml_content,
         "overwrite": True,
     }
+
+    # Add directory parameter if task_master_id is provided
+    if task_master_id:
+        payload["directory"] = f"taskmaster/{task_master_id}"
+        logger.info("Registering workflow to directory: taskmaster/%s", task_master_id)
+
     logger.info("Registering workflow to %s", register_url)
     response = await client.post(register_url, json=payload)
     body = _safe_json(response)
@@ -82,6 +89,8 @@ async def workflow_tester_node(
 
     This node:
     1. Registers YAML workflow (POST /api/v1/workflows/register)
+       - Saves to /taskmaster/{task_master_id}/ directory if task_master_id exists
+       - Otherwise saves to root config/graphai/ directory
     2. Executes workflow with sample_input (POST /api/v1/myagent)
     3. Updates state with execution results and HTTP status
 
@@ -96,6 +105,7 @@ async def workflow_tester_node(
     workflow_name = state.get("workflow_name")
     yaml_content = state.get("yaml_content")
     sample_input = state.get("sample_input")
+    task_master_id = state.get("task_master_id")
 
     if not workflow_name or not yaml_content:
         message = "Workflow testing failed: missing workflow content"
@@ -121,7 +131,9 @@ async def workflow_tester_node(
                 register_body,
                 register_status,
                 workflow_file_path,
-            ) = await _register_workflow(client, workflow_name, yaml_content)
+            ) = await _register_workflow(
+                client, workflow_name, yaml_content, task_master_id
+            )
 
             if not registered:
                 return {
