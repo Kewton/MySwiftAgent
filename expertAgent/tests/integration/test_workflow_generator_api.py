@@ -5,6 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+    WorkflowGenerationResponse,
+)
 from app.main import app
 
 
@@ -57,39 +60,63 @@ class TestWorkflowGeneratorAPI:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-            ) as mock_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+            ) as mock_create_llm,
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            # Setup LLM mock
+            # Setup LLM mock (create_llm returns a model instance)
             mock_response = MagicMock()
             mock_response.workflow_name = "send_email_notification"
-            mock_response.yaml_content = "version: 0.5\nnodes: {}\n"
+            # Define actual workflow with email_sender node
+            mock_response.yaml_content = """version: 0.5
+nodes:
+  email_sender:
+    agent: fetchAgent
+    params:
+      url: http://localhost:8104/api/v1/utility/gmail_send
+      method: POST
+    isResult: true
+"""
             mock_response.reasoning = "Test"
 
-            mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
+
+            mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             # Setup httpx mock
             mock_client = AsyncMock()
-            mock_reg = MagicMock()
-            mock_reg.status_code = 200
-            mock_reg.json.return_value = {"file_path": "/workflows/test.yaml"}
 
-            mock_exec = MagicMock()
-            mock_exec.status_code = 200
-            mock_exec.json.return_value = {
-                "results": {"output": {}},
-                "errors": {},
-                "logs": [],
-            }
+            def mock_post_responses(*args, **kwargs):
+                """Return different responses based on URL."""
+                # Registration endpoint
+                if "register" in str(args):
+                    mock_reg = MagicMock()
+                    mock_reg.status_code = 200
+                    mock_reg.json.return_value = {"file_path": "/workflows/test.yaml"}
+                    return mock_reg
 
-            mock_client.post = AsyncMock(side_effect=[mock_reg, mock_exec])
+                # Execution endpoint
+                mock_exec = MagicMock()
+                mock_exec.status_code = 200
+                # Return results with actual node name from workflow YAML
+                mock_exec.json.return_value = {
+                    "results": {
+                        "email_sender": {  # Matches node name in YAML
+                            "message_id": "msg_123",
+                            "status": "sent"
+                        }
+                    },
+                    "errors": {},
+                    "logs": [],
+                }
+                return mock_exec
+
+            mock_client.post = AsyncMock(side_effect=mock_post_responses)
             mock_context = AsyncMock()
             mock_context.__aenter__.return_value = mock_client
             mock_context.__aexit__.return_value = None
@@ -111,7 +138,7 @@ class TestWorkflowGeneratorAPI:
             assert len(data["workflows"]) == 1
             assert data["workflows"][0]["task_master_id"] == 456
             assert data["workflows"][0]["task_name"] == "Send email notification"
-            assert data["workflows"][0]["status"] == "success"
+            assert data["workflows"][0]["status"] == "success"  # Endpoint maps validated → success
             assert "yaml_content" in data["workflows"][0]
 
     def test_workflow_generator_with_job_master_id(
@@ -168,41 +195,62 @@ class TestWorkflowGeneratorAPI:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-            ) as mock_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+            ) as mock_create_llm,
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            # Setup LLM mock
+            # Setup LLM mock (create_llm returns a model instance)
             mock_response = MagicMock()
             mock_response.workflow_name = "test_workflow"
-            mock_response.yaml_content = "version: 0.5\nnodes: {}\n"
+            # Define actual workflow with task_executor node
+            mock_response.yaml_content = """version: 0.5
+nodes:
+  task_executor:
+    agent: fetchAgent
+    params:
+      url: http://localhost:8104/api/v1/test
+      method: POST
+    isResult: true
+"""
             mock_response.reasoning = "Test"
 
-            mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
+
+            mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
-            # Setup httpx mock (will be called 4 times: 2 tasks x 2 calls each)
+            # Setup httpx mock (handles multiple retries)
             mock_client = AsyncMock()
-            mock_reg = MagicMock()
-            mock_reg.status_code = 200
-            mock_reg.json.return_value = {"file_path": "/workflows/test.yaml"}
 
-            mock_exec = MagicMock()
-            mock_exec.status_code = 200
-            mock_exec.json.return_value = {
-                "results": {"output": {}},
-                "errors": {},
-                "logs": [],
-            }
+            def mock_post_responses(*args, **kwargs):
+                """Return different responses based on URL."""
+                # Registration endpoint
+                if "register" in str(args):
+                    mock_reg = MagicMock()
+                    mock_reg.status_code = 200
+                    mock_reg.json.return_value = {"file_path": "/workflows/test.yaml"}
+                    return mock_reg
 
-            mock_client.post = AsyncMock(
-                side_effect=[mock_reg, mock_exec, mock_reg, mock_exec]
-            )
+                # Execution endpoint
+                mock_exec = MagicMock()
+                mock_exec.status_code = 200
+                # Return results with actual node name
+                mock_exec.json.return_value = {
+                    "results": {
+                        "task_executor": {  # Matches node name in YAML
+                            "result": "success"
+                        }
+                    },
+                    "errors": {},
+                    "logs": [],
+                }
+                return mock_exec
+
+            mock_client.post = AsyncMock(side_effect=mock_post_responses)
             mock_context = AsyncMock()
             mock_context.__aenter__.return_value = mock_client
             mock_context.__aexit__.return_value = None
@@ -356,14 +404,14 @@ class TestWorkflowGeneratorLangGraphIntegration:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-            ) as mock_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+            ) as mock_create_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock
-            mock_response = MagicMock()
-            mock_response.workflow_name = "send_notification_email"
-            mock_response.yaml_content = """version: 0.5
+            # Setup LLM mock (create_llm returns a model instance)
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="send_notification_email",
+                yaml_content="""version: 0.5
 nodes:
   email_sender:
     agent: fetchAgent
@@ -371,41 +419,48 @@ nodes:
       url: http://localhost:8104/api/v1/utility/gmail_send
       method: POST
     isResult: true
-"""
-            mock_response.reasoning = "Using fetchAgent for Gmail API"
+""",
+                reasoning="Using fetchAgent for Gmail API"
+            )
 
-            mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
+
+            mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
-            # Setup httpx mock for graphAiServer
+            # Setup httpx mock for graphAiServer (handles multiple retries)
             mock_client = AsyncMock()
 
-            # Mock registration response
+            # Pre-create mock responses for proper scoping
             mock_register_response = MagicMock()
             mock_register_response.status_code = 200
-            mock_register_response.json.return_value = {
+            mock_register_response.json = MagicMock(return_value={
                 "file_path": "/workflows/send_notification_email.yaml"
-            }
+            })
 
-            # Mock execution response
             mock_execute_response = MagicMock()
             mock_execute_response.status_code = 200
-            mock_execute_response.json.return_value = {
+            mock_execute_response.json = MagicMock(return_value={
                 "results": {
                     "email_sender": {"message_id": "msg_123", "status": "sent"}
                 },
                 "errors": {},
                 "logs": [],
-            }
+            })
 
-            mock_client.post = AsyncMock(
-                side_effect=[mock_register_response, mock_execute_response]
-            )
+            def mock_post_responses(*args, **kwargs):
+                """Return different responses based on URL."""
+                # Registration endpoint
+                if "register" in str(args):
+                    return mock_register_response
+                # Execution endpoint
+                return mock_execute_response
+
+            mock_client.post = AsyncMock(side_effect=mock_post_responses)
 
             mock_context_manager = AsyncMock()
             mock_context_manager.__aenter__.return_value = mock_client
@@ -430,7 +485,7 @@ nodes:
             assert workflow["task_master_id"] == 789
             assert workflow["task_name"] == "Send notification email"
             assert workflow["workflow_name"] == "send_notification_email"
-            assert workflow["status"] == "success"
+            assert workflow["status"] == "success"  # Endpoint maps validated → success
             assert workflow["retry_count"] == 0
             assert "version: 0.5" in workflow["yaml_content"]
             assert "email_sender" in workflow["yaml_content"]
@@ -469,11 +524,11 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-            ) as mock_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+            ) as mock_create_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock
+            # Setup LLM mock (create_llm returns a model instance)
             mock_response = MagicMock()
             mock_response.workflow_name = "process_data"
             mock_response.yaml_content = (
@@ -481,13 +536,14 @@ nodes:
             )
             mock_response.reasoning = "Using fetchAgent"
 
-            mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
+
+            mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             # Setup httpx mock with first attempt failing, second succeeding
             mock_client = AsyncMock()
@@ -546,7 +602,7 @@ nodes:
             assert data["status"] == "success"
 
             workflow = data["workflows"][0]
-            assert workflow["status"] == "success"
+            assert workflow["status"] == "success"  # Endpoint maps validated → success
             assert workflow["retry_count"] == 1  # One retry was performed
 
     @pytest.mark.asyncio
@@ -577,23 +633,24 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-            ) as mock_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+            ) as mock_create_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock
+            # Setup LLM mock (create_llm returns a model instance)
             mock_response = MagicMock()
             mock_response.workflow_name = "invalid_task"
             mock_response.yaml_content = "version: 0.5\nnodes: {}\n"
             mock_response.reasoning = "Basic workflow"
 
-            mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
+
+            mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             # Setup httpx mock to always fail
             mock_client = AsyncMock()
@@ -694,25 +751,25 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.ChatGoogleGenerativeAI"
-            ) as mock_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
+            ) as mock_create_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock
-            mock_response = MagicMock()
-            mock_response.workflow_name = "test_workflow"
-            mock_response.yaml_content = (
-                "version: 0.5\nnodes:\n  node1:\n    agent: fetchAgent\n"
+            # Setup LLM mock (create_llm returns a model instance)
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="test_workflow",
+                yaml_content="version: 0.5\nnodes:\n  node1:\n    agent: fetchAgent\n",
+                reasoning="Test"
             )
-            mock_response.reasoning = "Test"
 
-            mock_llm_instance = MagicMock()
             mock_structured_model = MagicMock()
             mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
+
+            mock_llm_instance = MagicMock()
             mock_llm_instance.with_structured_output.return_value = (
                 mock_structured_model
             )
-            mock_llm.return_value = mock_llm_instance
+            mock_create_llm.return_value = mock_llm_instance
 
             # Setup httpx mock
             mock_client = AsyncMock()
@@ -771,7 +828,7 @@ nodes:
             assert data["failed_tasks"] == 1
 
             # First workflow succeeds
-            assert data["workflows"][0]["status"] == "success"
+            assert data["workflows"][0]["status"] == "success"  # Endpoint maps validated → success
             assert data["workflows"][0]["task_name"] == "Successful task"
 
             # Second workflow fails

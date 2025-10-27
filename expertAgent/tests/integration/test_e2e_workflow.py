@@ -990,7 +990,10 @@ async def test_e2e_workflow_empty_task_breakdown(
     # Assert: Verify workflow terminated without creating job
     assert "job_id" not in result, "job_id should not be set (empty task breakdown)"
     assert "job_master_id" not in result, "job_master_id should not be set"
-    assert result.get("task_breakdown") == [], "task_breakdown should be empty"
+    # task_breakdown may be None or empty list when LLM fails to generate tasks
+    assert result.get("task_breakdown") in (None, []), (
+        "task_breakdown should be None or empty when generation fails"
+    )
 
     # Assert: Verify LLM was called only once (requirement_analysis)
     assert mock_llm_requirement.call_count == 1, (
