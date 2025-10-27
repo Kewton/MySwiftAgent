@@ -1,0 +1,38 @@
+version: 0.5
+nodes:
+  # Input node - receives storage information from Task 4 (podcast_file_upload_v3.yml)
+  # Task 4 already provides web_view_link which is a public URL
+  source: {}
+
+  # IMPORTANT: This task is now a simple pass-through
+  #
+  # Reason: The unified API /utility/text_to_speech_drive in Task 3
+  # already returned web_view_link, which is a fully functional public URL
+  # for accessing the Google Drive file.
+  #
+  # Architecture note:
+  # - v2: Used LLM to generate mock public URL
+  # - v3: Just forwards the actual public URL from Task 3/Task 4
+  #
+  # This task is kept for workflow continuity and could be removed
+  # in future optimizations.
+
+  # Step 1: Format output with public URL
+  # Simply forwards the storage_path (web_view_link) as public_url
+  #
+  # Output schema:
+  # - success: Always true if Task 3/4 succeeded
+  # - public_url: The Google Drive web view link (public accessible URL)
+  # - file_id: Google Drive file ID
+  # - file_name: Name of the file
+  # - error_message: Empty string if successful
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        public_url: :source.storage_path
+        file_id: :source.file_id
+        file_name: :source.file_name
+        error_message: ""
+    isResult: true

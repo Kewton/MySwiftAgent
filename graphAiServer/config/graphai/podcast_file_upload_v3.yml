@@ -1,0 +1,40 @@
+version: 0.5
+nodes:
+  # Input node - receives file info from Task 3 (tts_audio_generation_v3.yml)
+  # Task 3 already uploaded the file to Google Drive via unified API
+  source: {}
+
+  # IMPORTANT: This task is now a simple pass-through
+  #
+  # Reason: The unified API /utility/text_to_speech_drive in Task 3
+  # already performed both TTS generation AND file upload in one call.
+  # Therefore, this task no longer needs to call any API.
+  #
+  # Architecture note:
+  # - v2: Used LLM to generate mock upload result
+  # - v3: Just forwards the actual upload result from Task 3
+  #
+  # This task is kept for workflow continuity and could be removed
+  # in future optimizations.
+
+  # Step 1: Format output with storage information
+  # Extracts the necessary fields for Task 5 (generate_public_share_link)
+  #
+  # Output schema:
+  # - success: Upload success flag (always true if Task 3 succeeded)
+  # - storage_path: The Google Drive web view link (public URL)
+  # - file_id: Google Drive file ID
+  # - file_name: Name of the uploaded file
+  # - file_size_mb: Size of the file in megabytes
+  # - error_message: Empty string if successful
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        storage_path: :source.web_view_link
+        file_id: :source.file_id
+        file_name: :source.file_name
+        file_size_mb: :source.file_size_mb
+        error_message: ""
+    isResult: true

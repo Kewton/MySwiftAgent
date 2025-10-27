@@ -1,0 +1,105 @@
+version: 0.5
+nodes:
+  # Input node - receives user_input from API request
+  # Expected inputs: theme, public_url, user_name, recipient_email
+  source: {}
+
+  # Step 1: Build email body prompt using stringTemplateAgent
+  # This constructs the email content with podcast theme and URL
+  build_email_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      theme: :source.theme
+      public_url: :source.public_url
+      user_name: :source.user_name
+    params:
+      template: |-
+        あなたはメール本文生成システムです。
+        以下の情報を基に、ポッドキャストリンク送信メールの本文を生成してください。
+
+        ポッドキャストテーマ: ${theme}
+        公開URL: ${public_url}
+        ユーザー名: ${user_name}
+
+        # 制約条件
+        - 日本語で丁寧なメール本文を作成すること
+        - ポッドキャストテーマとURLを含めること
+        - ユーザー名を宛名に使用すること
+        - メール本文は専門的で親切な内容にすること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "subject": "メールの件名",
+          "body": "メール本文"
+        }
+
+  # Step 2: Generate email content using LLM via expertAgent jsonoutput API
+  # Uses Gemini 2.5 Flash for fast email content generation
+  generate_email:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_email_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Send actual email using expertAgent Gmail DirectAPI
+  # IMPORTANT: This replaces the mock implementation from v2
+  # - v2: Used LLM to generate mock transaction_id (60 seconds)
+  # - v3: Uses real Gmail API to send actual email (3 seconds)
+  #
+  # Performance: 3 seconds (vs 60s for mock approach, 20-60s for Agent-based)
+  #
+  # Required authentication:
+  # - Gmail API credentials via myVault
+  # - Project name (optional, defaults to DEFAULT_PROJECT from env)
+  send_email:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/gmail/send
+      method: POST
+      body:
+        # Required: Recipient email address
+        # Note: This should come from user_input
+        to: :source.recipient_email
+
+        # Required: Email subject from LLM-generated content
+        subject: :generate_email.result.subject
+
+        # Required: Email body from LLM-generated content
+        body: :generate_email.result.body
+
+        # Optional: CC recipients (uncomment if needed)
+        # cc: :source.cc_emails
+
+        # Optional: BCC recipients (uncomment if needed)
+        # bcc: :source.bcc_emails
+
+        # Optional: Project name for myVault authentication
+        # Defaults to DEFAULT_PROJECT if not specified
+        project: :source.project
+    timeout: 10000
+
+  # Step 4: Format final output with required schema
+  # Maps the Gmail DirectAPI response to the expected output interface
+  #
+  # Output schema compatibility:
+  # - v2 output: success, transaction_id, status_message, error_message
+  # - v3 output: success, message_id, status, sent_at
+  #
+  # Note: message_id replaces transaction_id (real Gmail message ID)
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        message_id: :send_email.message_id
+        status: :send_email.status
+        sent_at: :send_email.sent_at
+        recipient: :send_email.to
+        subject: :send_email.subject
+        error_message: ""
+    isResult: true

@@ -1,0 +1,68 @@
+version: 0.5
+nodes:
+  # Input node - receives script_text from Task 2 (podcast_script_generation_v2.yml)
+  # Also receives optional parameters for TTS and Drive upload
+  source: {}
+
+  # Step 1: Call expertAgent DirectAPI for TTS + Google Drive Upload
+  # This unified API performs two operations in one call:
+  # 1. Convert script_text to speech using OpenAI TTS API
+  # 2. Upload the generated audio file to Google Drive
+  #
+  # Performance: 5-10 seconds (vs 20-180s for Agent-based approach)
+  #
+  # IMPORTANT: This replaces the mock implementation from v2
+  # - v2: Used LLM to generate mock audio data (base64)
+  # - v3: Uses real OpenAI TTS API to generate actual audio
+  generate_audio:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/text_to_speech_drive
+      method: POST
+      body:
+        # Required: The podcast script text to convert to speech
+        text: :source.script_text
+
+        # Optional: Google Drive folder URL where the audio file will be stored
+        # If not provided, uses default folder from myVault configuration
+        drive_folder_url: :source.drive_folder_url
+
+        # Optional: Subdirectory within the Drive folder
+        # Creates folder structure like: <base_folder>/podcasts/2025/
+        sub_directory: :source.sub_directory
+
+        # Optional: Output file name (without extension)
+        # If not provided, auto-generates with timestamp
+        file_name: :source.file_name
+
+        # Optional: OpenAI TTS model (default: tts-1)
+        # Options: "tts-1" (faster) or "tts-1-hd" (higher quality)
+        model: :source.model
+
+        # Optional: Voice selection (default: alloy)
+        # Options: alloy, echo, fable, onyx, nova, shimmer
+        voice: :source.voice
+    timeout: 60000
+
+  # Step 2: Format final output with all required fields
+  # Maps the DirectAPI response to the output interface schema
+  #
+  # Output schema compatibility:
+  # - v2 output: success, audio_data_base64, file_name, duration_seconds
+  # - v3 output: success, file_id, file_name, web_view_link, web_content_link, folder_path, file_size_mb
+  #
+  # Note: audio_data_base64 is removed (no longer needed, file is uploaded)
+  #       web_view_link is added (public URL for accessing the file)
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        file_id: :generate_audio.file_id
+        file_name: :generate_audio.file_name
+        web_view_link: :generate_audio.web_view_link
+        web_content_link: :generate_audio.web_content_link
+        folder_path: :generate_audio.folder_path
+        file_size_mb: :generate_audio.file_size_mb
+        error_message: ""
+    isResult: true
