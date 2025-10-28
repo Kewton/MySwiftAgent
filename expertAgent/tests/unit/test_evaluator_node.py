@@ -93,9 +93,9 @@ class TestEvaluatorNode:
         assert result["evaluation_result"]["all_tasks_feasible"] is True
         assert len(result["evaluation_result"]["infeasible_tasks"]) == 0
 
-        # Verify retry_count is reset to 0 on success
-        assert result["retry_count"] == 0, (
-            "retry_count should be reset to 0 after successful evaluation"
+        # Verify retry_count is NOT modified by evaluator (it's managed by requirement_analysis/interface_definition)
+        assert result["retry_count"] == 2, (
+            "evaluator should not modify retry_count"
         )
 
         # evaluation_feedback should be None for valid results
@@ -174,8 +174,8 @@ class TestEvaluatorNode:
         assert "品質スコア" in result["evaluation_feedback"]
         assert "改善提案" in result["evaluation_feedback"]
 
-        # Verify retry_count is reset to 0
-        assert result["retry_count"] == 0
+        # Verify retry_count is NOT modified by evaluator
+        assert result["retry_count"] == 1
 
     @pytest.mark.asyncio
     @patch(
@@ -511,7 +511,7 @@ class TestEvaluatorNode:
             model_name="test-model",
         )
 
-        # Test Case 1: retry_count=3 should be reset to 0
+        # Test Case 1: retry_count=3 should NOT be modified by evaluator
         task_breakdown = create_mock_task_breakdown(2)
         state = create_mock_workflow_state(
             retry_count=3,
@@ -520,8 +520,8 @@ class TestEvaluatorNode:
             evaluator_stage="after_task_breakdown",
         )
         result = await evaluator_node(state)
-        assert result["retry_count"] == 0, (
-            "retry_count should be reset to 0 regardless of previous value"
+        assert result["retry_count"] == 3, (
+            "evaluator should not modify retry_count"
         )
 
         # Test Case 2: retry_count=0 should remain 0

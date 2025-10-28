@@ -261,8 +261,8 @@ class TestRequirementAnalysisNode:
 
         Priority: Medium
         This tests the retry_count logic:
-        - If retry_count > 0: increment by 1
-        - If retry_count == 0: keep at 0
+        - If evaluation_feedback exists: increment retry_count
+        - If no evaluation_feedback: set retry_count to 0
         """
         # Create mock LLM response
         mock_tasks = [
@@ -293,7 +293,7 @@ class TestRequirementAnalysisNode:
             model_name="test-model",
         )
 
-        # Test Case 1: retry_count == 0 (first attempt)
+        # Test Case 1: retry_count == 0 (first attempt, no evaluation_feedback)
         state = create_mock_workflow_state(
             retry_count=0,
             user_requirement="Test requirement",
@@ -303,20 +303,22 @@ class TestRequirementAnalysisNode:
             "retry_count should remain 0 on first successful attempt"
         )
 
-        # Test Case 2: retry_count == 1 (first retry)
+        # Test Case 2: retry_count == 1 (retry with evaluation_feedback)
         state = create_mock_workflow_state(
             retry_count=1,
             user_requirement="Test requirement",
+            evaluation_feedback="Need improvements",  # This indicates a retry scenario
         )
         result = await requirement_analysis_node(state)
         assert result["retry_count"] == 2, (
             "retry_count should increment from 1 to 2 on retry"
         )
 
-        # Test Case 3: retry_count == 3 (third retry)
+        # Test Case 3: retry_count == 3 (retry with evaluation_feedback)
         state = create_mock_workflow_state(
             retry_count=3,
             user_requirement="Test requirement",
+            evaluation_feedback="Need improvements",  # This indicates a retry scenario
         )
         result = await requirement_analysis_node(state)
         assert result["retry_count"] == 4, (
