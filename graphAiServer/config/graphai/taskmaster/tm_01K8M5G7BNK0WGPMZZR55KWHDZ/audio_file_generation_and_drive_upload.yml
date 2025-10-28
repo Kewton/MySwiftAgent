@@ -1,0 +1,68 @@
+version: 0.5
+nodes:
+  # REQUIRED: Input node - receives user_input from API request
+  source: {}
+
+  # Step 1: Build prompt for TTS mock generation
+  # Since we're using the expertAgent text_to_speech_drive API via fetchAgent,
+  # we need to prepare the script content for the API call
+  build_tts_request:
+    agent: stringTemplateAgent
+    inputs:
+      keyword: :source.keyword
+    params:
+      template: |-
+        ポッドキャストのテーマ: ${keyword}
+
+        このテーマに基づいて、プロフェッショナルなポッドキャスト台本を生成してください。
+        台本は3-5分程度の音声コンテンツとして適切な長さにしてください。
+
+        # 制約条件
+        - 日本語で出力すること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - 台本は自然で聞きやすい日本語にすること
+
+        # RESPONSE_FORMAT:
+        {
+          "script_content": "生成されたポッドキャスト台本テキスト"
+        }
+
+  # Step 2: Generate script content using LLM
+  generate_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_tts_request
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Call expertAgent text_to_speech_drive API to convert script to audio and upload to Google Drive
+  # This API handles:
+  # 1. Text-to-Speech conversion (MP3 format)
+  # 2. Automatic Google Drive upload
+  # 3. Public link generation
+  call_tts_drive_api:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/text_to_speech_drive
+      method: POST
+      body:
+        text: :generate_script.result.script_content
+        file_name_prefix: podcast
+    timeout: 60000
+
+  # Step 4: Format final output with results from TTS+Drive API
+  # FIXED: Use correct field names from TTSDriveResponse schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true  # Fixed value (API call success means true)
+        file_name: :call_tts_drive_api.file_name
+        public_url: :call_tts_drive_api.web_view_link  # FIXED: was public_url
+        drive_file_id: :call_tts_drive_api.file_id  # FIXED: was drive_file_id
+        file_size_mb: :call_tts_drive_api.file_size_mb  # ADDED
+        error_message: ""  # Fixed value (errors throw exceptions)
+    isResult: true

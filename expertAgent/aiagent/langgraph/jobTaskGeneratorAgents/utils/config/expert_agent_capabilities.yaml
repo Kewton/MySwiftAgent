@@ -92,6 +92,31 @@ utility_apis:
       - "テキストを音声ファイル（MP3）に変換"
       - "自動でGoogle Driveにアップロード"
       - "公開リンクを返却"
+    output_schema:
+      file_id:
+        type: "string"
+        description: "Google Drive ファイルID"
+        required: true
+      file_name:
+        type: "string"
+        description: "アップロードされたファイル名（拡張子.mp3を含む）"
+        required: true
+      web_view_link:
+        type: "string"
+        description: "ファイル閲覧用URL（ブラウザで開く用の公開リンク）"
+        required: true
+      web_content_link:
+        type: "string"
+        description: "ファイルダウンロード用URL（直接ダウンロード用）"
+        required: false
+      folder_path:
+        type: "string"
+        description: "アップロード先フォルダパス（例: 'ルート' または 'podcasts/2025'）"
+        required: true
+      file_size_mb:
+        type: "number"
+        description: "ファイルサイズ（メガバイト単位）"
+        required: true
 
   - name: "TTS + Google Drive + Gmail通知"
     endpoint: "/v1/utility/tts_and_upload_drive"

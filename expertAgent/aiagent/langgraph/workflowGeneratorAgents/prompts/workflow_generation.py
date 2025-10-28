@@ -90,11 +90,32 @@ def create_workflow_generation_prompt(
     )
 
     # Format available APIs
-    expert_apis = expert_agent_capabilities.get("apis", [])
-    api_list = "\n".join(
-        f"  - {api['name']}: {api.get('description', 'No description')}"
-        for api in expert_apis
-    )
+    # Extract both utility_apis and ai_agent_apis from capabilities
+    utility_apis = expert_agent_capabilities.get("utility_apis", [])
+    ai_agent_apis = expert_agent_capabilities.get("ai_agent_apis", [])
+    expert_apis = utility_apis + ai_agent_apis
+
+    # Include endpoint information and output schema for better API selection
+    def format_api(api: dict[str, Any]) -> str:
+        """Format API information including output schema if available."""
+        lines = [
+            f"  - {api['name']}: {api.get('description', 'No description')}",
+            f"    Endpoint: {api.get('endpoint', 'N/A')}",
+        ]
+
+        # Add output schema if available
+        output_schema = api.get("output_schema")
+        if output_schema:
+            lines.append("    Output Schema:")
+            for field_name, field_info in output_schema.items():
+                field_type = field_info.get("type", "unknown")
+                field_desc = field_info.get("description", "")
+                required = " (required)" if field_info.get("required", False) else " (optional)"
+                lines.append(f"      - {field_name}: {field_type}{required} - {field_desc}")
+
+        return "\n".join(lines)
+
+    api_list = "\n".join(format_api(api) for api in expert_apis)
 
     prompt = f"""Generate a GraphAI workflow YAML file for the following task:
 
@@ -183,6 +204,10 @@ def create_workflow_generation_prompt(
 4. **Data Flow**:
    - Use :node_id to reference previous node output
    - Use :node_id.property for nested properties
+   - **CRITICAL**: When referencing API response fields, use EXACT field names from Output Schema
+     * If API has "web_view_link" in Output Schema, use :node.web_view_link (NOT :node.public_url)
+     * If API has "file_id" in Output Schema, use :node.file_id (NOT :node.drive_file_id)
+     * Check "Output Schema" in API list for correct field names
    - Ensure output matches output_interface schema
 
 5. **Agent Selection** (CRITICAL):
