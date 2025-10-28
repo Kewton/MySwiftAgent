@@ -28,7 +28,7 @@ class TestValidationNode:
     )
     async def test_validation_success_resets_retry_count(
         self,
-        mock_create_llm,
+        mock_invoke_llm,
         mock_client_class,
     ):
         """Test that validation success resets retry_count to 0."""
@@ -62,7 +62,7 @@ class TestValidationNode:
     )
     async def test_validation_failure_increments_retry_count(
         self,
-        mock_create_llm,
+        mock_invoke_llm,
         mock_client_class,
     ):
         """Test that validation failure increments retry_count.
@@ -81,19 +81,24 @@ class TestValidationNode:
         )
         mock_client_class.return_value = mock_client
 
-        # Mock LLM response for fix proposals
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(
-            return_value=ValidationFixResponse(
-                can_fix=True,
-                fix_summary="Fix proposal generated",
-                interface_fixes=[],
-                manual_action_required=None,
-            )
+        # Setup mock invoke_structured_llm
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
         )
-        mock_llm.with_structured_output = lambda x: mock_structured
-        mock_create_llm.return_value = (mock_llm, None, None)
+
+        mock_response = ValidationFixResponse(
+            can_fix=True,
+            fix_summary="Fix proposal generated",
+            interface_fixes=[],
+            manual_action_required=None,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         state = create_mock_workflow_state(
             retry_count=2,

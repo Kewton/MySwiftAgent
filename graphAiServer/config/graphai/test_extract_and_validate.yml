@@ -1,0 +1,47 @@
+version: 0.5
+nodes:
+  source: {}
+
+  build_extraction_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      raw_input: :source.raw_input
+    params:
+      template: |-
+        あなたはユーザー入力からポッドキャスト生成に必要な情報を抽出するシステムです。
+        以下のユーザー入力からキーワードとメールアドレスを抽出してください。
+
+        ユーザー入力: ${raw_input}
+
+        # 制約条件
+        - キーワードはポッドキャスト生成のテーマとなる1つの単語またはフレーズ
+        - メールアドレスは有効なメールアドレス形式であること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "keyword": "抽出されたキーワード",
+          "recipient_email": "user@example.com",
+          "error_message": ""
+        }
+
+  extract_parameters:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_extraction_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :extract_parameters.result.success
+        keyword: :extract_parameters.result.keyword
+        recipient_email: :extract_parameters.result.recipient_email
+        error_message: :extract_parameters.result.error_message
+    isResult: true

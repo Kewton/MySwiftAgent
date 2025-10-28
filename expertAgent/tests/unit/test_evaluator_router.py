@@ -41,11 +41,12 @@ class TestEvaluatorRouter:
         result = evaluator_router(state)
 
         assert result == "END"
-        # Verify that warning log with ❌ is emitted when error exists
+        # Verify that error log is emitted when error exists
         assert any(
-            "❌ Error message detected: Some error occurred" in record.message
+            "Stopping workflow after evaluator error" in record.message
+            and "Some error occurred" in record.message
             for record in caplog.records
-            if record.levelname == "WARNING"
+            if record.levelname == "ERROR"
         )
 
     def test_evaluator_router_missing_evaluation_result(self):
@@ -100,9 +101,9 @@ class TestEvaluatorRouter:
         result = evaluator_router(state)
 
         assert result == "interface_definition"
-        # Verify that info log with ✅ is emitted when no error exists
+        # Verify that INFO log is emitted when router is invoked
         assert any(
-            "✅ No error message detected" in record.message
+            "Evaluator router invoked" in record.message
             for record in caplog.records
             if record.levelname == "INFO"
         )

@@ -91,7 +91,7 @@ class TestTaskDataFetcher:
         assert result["output_interface"]["name"] == "EmailOutput"
 
         # Verify mock calls
-        mock_jobqueue_client.get_task_master.assert_called_once_with("456")
+        mock_jobqueue_client.get_task_master.assert_called_once_with(456)
         assert mock_jobqueue_client.get_interface_master.call_count == 2
 
     @pytest.mark.asyncio
@@ -205,8 +205,8 @@ class TestTaskDataFetcher:
         assert result[1]["order"] == 1
 
         # Verify mock calls
-        mock_jobqueue_client.get_job_master.assert_called_once_with("123")
-        mock_jobqueue_client.list_workflow_tasks.assert_called_once_with("123")
+        mock_jobqueue_client.get_job_master.assert_called_once_with(123)
+        mock_jobqueue_client.list_workflow_tasks.assert_called_once_with(123)
         assert mock_jobqueue_client.get_task_master.call_count == 2
         assert mock_jobqueue_client.get_interface_master.call_count == 4
 

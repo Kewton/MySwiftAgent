@@ -110,8 +110,14 @@ def create_workflow_generation_prompt(
             for field_name, field_info in output_schema.items():
                 field_type = field_info.get("type", "unknown")
                 field_desc = field_info.get("description", "")
-                required = " (required)" if field_info.get("required", False) else " (optional)"
-                lines.append(f"      - {field_name}: {field_type}{required} - {field_desc}")
+                required = (
+                    " (required)"
+                    if field_info.get("required", False)
+                    else " (optional)"
+                )
+                lines.append(
+                    f"      - {field_name}: {field_type}{required} - {field_desc}"
+                )
 
         return "\n".join(lines)
 

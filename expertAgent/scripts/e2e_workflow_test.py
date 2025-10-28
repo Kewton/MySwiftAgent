@@ -154,7 +154,9 @@ async def run_job_generation(scenario: TestScenario, result: E2ETestResult) -> b
 
             if response.status_code not in (200, 201):
                 result.job_generation_status = "failed"
-                result.error_message = f"Job generation failed: HTTP {response.status_code}"
+                result.error_message = (
+                    f"Job generation failed: HTTP {response.status_code}"
+                )
                 logger.error(result.error_message)
                 return False
 
@@ -174,7 +176,9 @@ async def run_job_generation(scenario: TestScenario, result: E2ETestResult) -> b
             elif status == "failed":
                 result.job_generation_status = "failed"
                 infeasible_count = len(data.get("infeasible_tasks", []))
-                result.error_message = f"Job generation failed: {infeasible_count} infeasible tasks"
+                result.error_message = (
+                    f"Job generation failed: {infeasible_count} infeasible tasks"
+                )
                 result.warnings.append(
                     f"Requirement relaxation suggestions: {len(data.get('requirement_relaxation_suggestions', []))}"
                 )
@@ -208,9 +212,9 @@ async def run_e2e_test(scenario: TestScenario) -> E2ETestResult:
         E2ETestResult with test results
     """
     result = E2ETestResult(scenario)
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"Running E2E Test: Scenario {scenario.id} - {scenario.name}")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
 
     # Step 1: Job Generation
     job_success = await run_job_generation(scenario, result)
@@ -288,14 +292,14 @@ def generate_report(results: List[E2ETestResult], output_file: str | None = None
         print(json.dumps(report, indent=2, ensure_ascii=False))
 
     # Print summary
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info("E2E Test Summary")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
     logger.info(f"Total tests: {total_tests}")
     logger.info(f"Successful: {successful_tests}")
     logger.info(f"Failed: {failed_tests}")
     logger.info(f"Success rate: {success_rate:.2f}%")
-    logger.info(f"{'='*60}\n")
+    logger.info(f"{'=' * 60}\n")
 
     for result in results:
         status_emoji = "✅" if result.overall_status == "success" else "❌"
