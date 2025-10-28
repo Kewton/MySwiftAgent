@@ -17,7 +17,7 @@ Usage:
 import logging
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, ValidationError, create_model
+from pydantic import BaseModel, Field, RootModel, ValidationError, create_model
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +89,14 @@ class WorkflowSchemaValidator:
         """
         if schema.get("type") != "object":
             logger.warning(
-                "Schema type is not 'object', using Any type for model %s", model_name
+                "Schema type is not 'object', using RootModel for model %s", model_name
             )
-            return create_model(model_name, __root__=(Any, ...))
+            # Pydantic v2: Use RootModel instead of __root__
+            class DynamicRootModel(RootModel[Any]):
+                root: Any
+
+            DynamicRootModel.__name__ = model_name
+            return DynamicRootModel  # type: ignore[return-value]
 
         properties = schema.get("properties", {})
         required_fields = set(schema.get("required", []))
@@ -163,7 +168,16 @@ class WorkflowSchemaValidator:
 
         try:
             input_model = self._get_input_model()
-            validated = input_model(**data)
+
+            # Handle RootModel vs BaseModel initialization
+            validated: BaseModel
+            if issubclass(input_model, RootModel):
+                # RootModel: pass data directly
+                validated = input_model(data)  # type: ignore[assignment]
+            else:
+                # BaseModel: unpack data as kwargs
+                validated = input_model(**data)
+
             logger.info("Input validation successful")
 
             return SchemaValidationResult(
@@ -206,7 +220,16 @@ class WorkflowSchemaValidator:
 
         try:
             output_model = self._get_output_model()
-            validated = output_model(**data)
+
+            # Handle RootModel vs BaseModel initialization
+            validated: BaseModel
+            if issubclass(output_model, RootModel):
+                # RootModel: pass data directly
+                validated = output_model(data)  # type: ignore[assignment]
+            else:
+                # BaseModel: unpack data as kwargs
+                validated = output_model(**data)
+
             logger.info("Output validation successful")
 
             return SchemaValidationResult(

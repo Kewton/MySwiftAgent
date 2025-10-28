@@ -175,6 +175,7 @@ async def validator_node(
             "validation_result": {
                 "is_valid": True,
                 "issues": [],
+                "errors": [],  # Backward compatibility
             },
             "validation_errors": [],
             "is_valid": True,
@@ -188,6 +189,7 @@ async def validator_node(
             "validation_result": {
                 "is_valid": False,
                 "issues": issues,
+                "errors": formatted_errors,  # Backward compatibility
             },
             "validation_errors": formatted_errors,
             "is_valid": False,
