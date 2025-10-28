@@ -1,6 +1,7 @@
-"""Tests for agent endpoints."""
+"""Tests for agent endpoints relying on the AiAgentService layer."""
 
-from unittest.mock import patch
+from typing import Any, cast
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
@@ -12,6 +13,7 @@ from app.api.v1.agent_endpoints import (
     myaiagents,
     remove_think_tags,
 )
+from app.exceptions import ServiceError
 from app.schemas.standardAiAgent import ExpertAiAgentRequest
 
 
@@ -51,178 +53,118 @@ class TestRemoveThinkTags:
 class TestHomeHelloWorld:
     """Test home endpoint."""
 
-    def test_home_hello_world(self):
+    @pytest.mark.asyncio
+    async def test_home_hello_world(self):
         """Test that home endpoint returns correct message."""
-        result = home_hello_world()
+        result = await home_hello_world()
         assert result == {"message": "Hello World"}
 
 
 class TestExecMyllm:
     """Test exec_myllm endpoint."""
 
-    @patch("app.api.v1.agent_endpoints.execLlmApi")
-    def test_exec_myllm_with_system_message(self, mock_llm):
-        """Test exec_myllm with system message."""
-        mock_llm.return_value = "Test response"
-        request = ExpertAiAgentRequest(
-            user_input="Hello", system_imput="You are helpful", model_name="llama2"
+    @pytest.mark.asyncio
+    async def test_exec_myllm_delegates_to_service(self):
+        """Ensure the endpoint delegates work to the service layer."""
+
+        request = ExpertAiAgentRequest(user_input="Hello")
+        service = AsyncMock()
+        expected = object()
+        service.execute_myllm.return_value = expected
+
+        result = await exec_myllm(request, service=service)
+
+        service.execute_myllm.assert_awaited_once_with(request)
+        assert result is expected
+
+    @pytest.mark.asyncio
+    async def test_exec_myllm_translates_service_error(self):
+        """ServiceError should surface as HTTP 500 with details."""
+
+        request = ExpertAiAgentRequest(user_input="Hello")
+        service = AsyncMock()
+        service.execute_myllm.side_effect = ServiceError(
+            "Execution failed",
+            context={"endpoint": "mylllm"},
         )
 
-        result = exec_myllm(request)
+        with pytest.raises(HTTPException) as exc_info:
+            await exec_myllm(request, service=service)
 
-        assert result.result == "Test response"
-        assert result.text == "Test response"
-        assert result.type == "exec_myllm"
-        mock_llm.assert_called_once()
-
-    @patch("app.api.v1.agent_endpoints.execLlmApi")
-    def test_exec_myllm_without_system_message(self, mock_llm):
-        """Test exec_myllm without system message."""
-        mock_llm.return_value = "Test response"
-        request = ExpertAiAgentRequest(user_input="Hello")
-
-        result = exec_myllm(request)
-
-        assert result.result == "Test response"
-        assert result.text == "Test response"
-        mock_llm.assert_called_once()
-
-    @patch("app.api.v1.agent_endpoints.execLlmApi")
-    def test_exec_myllm_removes_think_tags(self, mock_llm):
-        """Test that exec_myllm removes think tags from response."""
-        mock_llm.return_value = "Response <think>internal</think> text"
-        request = ExpertAiAgentRequest(user_input="Hello")
-
-        result = exec_myllm(request)
-
-        assert result.result == "Response  text"
-        assert result.text == "Response  text"
+        assert exc_info.value.status_code == 500
+        detail = cast(dict[str, Any], exc_info.value.detail)
+        assert detail["message"] == "Execution failed"
+        assert detail["context"] == {"endpoint": "mylllm"}
 
 
 class TestAiagentGraph:
     """Test aiagent_graph endpoint."""
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.ainvoke_graphagent")
-    async def test_aiagent_graph_success(self, mock_invoke):
-        """Test successful aiagent_graph execution without force_json."""
-        from app.schemas.standardAiAgent import ChatMessage
+    async def test_aiagent_graph_delegates_to_service(self):
+        """Ensure the graph endpoint delegates to the service layer."""
 
-        chat_history = [
-            ChatMessage(role="user", content="message1"),
-            ChatMessage(role="assistant", content="message2"),
-        ]
-        mock_invoke.return_value = (chat_history, "AI Response")
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
+        request = ExpertAiAgentRequest(user_input="Test query")
+        service = AsyncMock()
+        expected = object()
+        service.execute_sample_agent.return_value = expected
 
-        result = await aiagent_graph(request)
+        result = await aiagent_graph(request, service=service)
 
-        assert result.result == "AI Response"
-        assert result.type == "sample"
-        assert len(result.chathistory) == 2
-        assert result.chathistory[0].content == "message1"
-        assert result.chathistory[1].content == "message2"
+        service.execute_sample_agent.assert_awaited_once_with(request)
+        assert result is expected
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.ainvoke_graphagent")
-    async def test_aiagent_graph_error(self, mock_invoke):
-        """Test aiagent_graph error handling without force_json."""
-        mock_invoke.side_effect = Exception("Test error")
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
+    async def test_aiagent_graph_service_error(self):
+        """Service errors should propagate as HTTP 500 responses."""
+
+        request = ExpertAiAgentRequest(user_input="Test query")
+        service = AsyncMock()
+        service.execute_sample_agent.side_effect = ServiceError(
+            "sample failure",
+        )
 
         with pytest.raises(HTTPException) as exc_info:
-            await aiagent_graph(request)
+            await aiagent_graph(request, service=service)
 
         assert exc_info.value.status_code == 500
-        assert "internal server error" in exc_info.value.detail.lower()
+        detail = cast(dict[str, Any], exc_info.value.detail)
+        assert detail["message"] == "sample failure"
 
 
 class TestMyaiagents:
     """Test myaiagents endpoint."""
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.jsonOutputagent")
-    async def test_myaiagents_jsonoutput(self, mock_agent):
-        """Test myaiagents with jsonoutput agent."""
-        mock_agent.return_value = {"key": "value"}
+    async def test_myaiagents_delegates_to_service(self):
+        """Ensure utility agent endpoint defers to the service layer."""
+
         request = ExpertAiAgentRequest(user_input="Test query")
+        service = AsyncMock()
+        expected = object()
+        service.execute_utility_agent.return_value = expected
 
-        result = await myaiagents(request, "jsonoutput")
+        result = await myaiagents(request, "explorer", service=service)
 
-        assert result.result == {"key": "value"}
-        assert result.type == "jsonOutput"
-
-    @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.exploreragent")
-    async def test_myaiagents_explorer(self, mock_agent):
-        """Test myaiagents with explorer agent."""
-        mock_agent.return_value = "Explorer response <think>thought</think>"
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
-
-        result = await myaiagents(request, "explorer")
-
-        assert result.result == "Explorer response "
-        assert result.type == "explorer"
+        service.execute_utility_agent.assert_awaited_once_with(
+            agent_name="explorer",
+            request=request,
+        )
+        assert result is expected
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.actionagent")
-    async def test_myaiagents_action(self, mock_agent):
-        """Test myaiagents with action agent."""
-        mock_agent.return_value = "Action response"
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
+    async def test_myaiagents_service_error(self):
+        """Translate service errors into HTTP exceptions."""
 
-        result = await myaiagents(request, "action")
-
-        assert result.result == "Action response"
-        assert result.type == "action"
-
-    @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.playwrightagent")
-    async def test_myaiagents_playwright(self, mock_agent):
-        """Test myaiagents with playwright agent."""
-        mock_agent.return_value = "Playwright response <think>internal</think>"
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
-
-        result = await myaiagents(request, "playwright")
-
-        assert result.result == "Playwright response "
-        assert result.type == "playwright"
-
-    @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.wikipediaagent")
-    async def test_myaiagents_wikipedia(self, mock_agent):
-        """Test myaiagents with wikipedia agent."""
-        mock_agent.return_value = "Wikipedia response"
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
-
-        result = await myaiagents(request, "wikipedia")
-
-        assert result.result == "Wikipedia response"
-        assert result.type == "wikipedia"
-        mock_agent.assert_called_once()
-        # Should use default "ja" language since request doesn't have language field
-        call_args = mock_agent.call_args[0]
-        assert len(call_args) == 3
-        assert call_args[2] == "ja"
-
-    @pytest.mark.asyncio
-    async def test_myaiagents_unknown_agent(self):
-        """Test myaiagents with unknown agent name."""
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
-
-        result = await myaiagents(request, "unknown")
-
-        assert result == {"message": "No matching agent found."}
-
-    @pytest.mark.asyncio
-    @patch("app.api.v1.agent_endpoints.jsonOutputagent")
-    async def test_myaiagents_error(self, mock_agent):
-        """Test myaiagents error handling."""
-        mock_agent.side_effect = Exception("Test error")
-        request = ExpertAiAgentRequest(user_input="Test query", force_json=False)
+        request = ExpertAiAgentRequest(user_input="Test query")
+        service = AsyncMock()
+        service.execute_utility_agent.side_effect = ServiceError(
+            "utility failure",
+        )
 
         with pytest.raises(HTTPException) as exc_info:
-            await myaiagents(request, "jsonoutput")
+            await myaiagents(request, "explorer", service=service)
 
         assert exc_info.value.status_code == 500
-        assert "internal server error" in exc_info.value.detail.lower()
+        detail = cast(dict[str, Any], exc_info.value.detail)
+        assert detail["message"] == "utility failure"
