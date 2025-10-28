@@ -1,0 +1,68 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build extraction prompt using stringTemplateAgent
+  # This constructs a detailed prompt for LLM to extract and structure sales data
+  build_extraction_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      extraction_plan: :source.extraction_plan
+    params:
+      template: |-
+        あなたはデータ抽出・構造化の専門家です。
+        以下の抽出計画に基づいて、生データから売上データとビジネスモデル情報を抽出し、構造化してください。
+
+        抽出計画: ${extraction_plan}
+
+        # タスク
+        1. 過去5年間の年次売上データを抽出（年度、金額、単位、出典URL）
+        2. ビジネスモデルに関する主要な記述を統合
+        3. すべてのデータをクリーンなJSON形式に構造化
+
+        # 制約条件
+        - 売上データは必ず数値形式で返すこと
+        - 単位は「百万円」「億円」「ドル」など明確に記載すること
+        - 過去5年間のデータを優先的に抽出すること
+        - 不確実なデータは含めないこと
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "structured_sales_data": [
+            {
+              "year": 2024,
+              "sales_amount": 1000,
+              "unit": "百万円",
+              "source_url": "https://example.com"
+            }
+          ],
+          "business_model_description": "ビジネスモデルの説明テキスト",
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This processes the extraction prompt and returns structured JSON
+  extract_and_structure_data:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_extraction_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with proper schema validation
+  # Ensures output matches the required output_interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :extract_and_structure_data.result.success
+        structured_sales_data: :extract_and_structure_data.result.structured_sales_data
+        business_model_description: :extract_and_structure_data.result.business_model_description
+        error_message: :extract_and_structure_data.result.error_message
+    isResult: true

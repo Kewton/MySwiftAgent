@@ -1,0 +1,69 @@
+version: 0.5
+nodes:
+  # Input node - receives user_input with keyword
+  source: {}
+
+  # Step 1: Build TTS prompt using stringTemplateAgent
+  # This constructs the prompt for LLM to generate script content from keyword
+  build_tts_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      keyword: :source.keyword
+    params:
+      template: |-
+        あなたはポッドキャスト台本生成システムです。
+        以下のキーワードを基に、音声合成用の台本を生成してください。
+
+        キーワード: ${keyword}
+
+        # 制約条件
+        - 台本は自然な日本語で、音声合成に適した内容にすること
+        - 台本の長さは200～500文字程度にすること
+        - 専門用語は避け、一般的な表現を使用すること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "script": "生成された台本テキスト"
+        }
+
+  # Step 2: Generate script using LLM via expertAgent jsonoutput API
+  # This calls the LLM to create podcast script from keyword
+  generate_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_tts_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+    # Comment: Calls expertAgent jsonoutput API to generate podcast script
+
+  # Step 3: Call Text-to-Speech + Google Drive API
+  # This performs TTS conversion and uploads to Google Drive in one operation
+  tts_and_upload:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/text_to_speech_drive
+      method: POST
+      body:
+        text: :generate_script.result.script
+        # Note: project field omitted - uses default from environment
+    timeout: 60000
+    # Comment: Calls expertAgent Text-to-Speech + Google Drive API
+    # Returns: file_id, file_name, web_view_link, web_content_link, folder_path, file_size_mb
+
+  # Step 4: Format final output
+  # Maps API response to output interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        file_name: :tts_and_upload.file_name
+        public_link: :tts_and_upload.web_view_link
+        error_message: ""
+    isResult: true
+    # Comment: Final output node - returns success flag, file name, and public link
+    # Matches output_interface schema requirements

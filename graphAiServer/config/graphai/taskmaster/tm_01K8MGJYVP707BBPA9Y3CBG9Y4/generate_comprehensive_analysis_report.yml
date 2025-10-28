@@ -1,0 +1,76 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Input: {"business_model_description": "..."}
+  source: {}
+
+  # Step 1: Build comprehensive prompt for report generation
+  # This node constructs a detailed prompt for the LLM to generate the final report
+  # with email subject and HTML/text body based on business model description
+  build_report_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      business_model: :source.business_model_description
+    params:
+      template: |-
+        あなたは企業分析レポート生成の専門家です。
+        以下のビジネスモデル記述を基に、過去5年間の売上とビジネスモデル変化を包括的にまとめた最終レポートを生成してください。
+
+        ビジネスモデル記述:
+        ${business_model}
+
+        # 生成要件
+        - メール件名（email_subject）: 簡潔で分かりやすい件名を生成
+        - HTML形式メール本文（email_body_html）: 以下の構成で生成
+          * ヘッダー部分（企業名、分析期間など）
+          * エグゼクティブサマリー
+          * 過去5年間の売上推移分析
+          * ビジネスモデル変化の詳細分析
+          * 主要な発見と洞察
+          * 結論と推奨事項
+          * フッター部分
+        - テキスト形式メール本文（email_body_text）: HTML版をプレーンテキストに変換
+        - success: true（正常完了時）
+
+        # 制約条件
+        - 日本語で出力すること
+        - HTML形式は適切なタグ構造を使用すること（<html>, <body>, <h1>, <p>, <table>など）
+        - テキスト形式は改行とインデントで構造を表現すること
+        - 分析内容は具体的で、数値や事例を含むこと
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "email_subject": "メール件名",
+          "email_body_html": "<html>...</html>",
+          "email_body_text": "プレーンテキスト形式のメール本文",
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This node sends the constructed prompt to the LLM for report generation
+  # Using Gemini 2.5 Flash as the default model for fast processing
+  generate_report:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_report_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output
+  # This node extracts the LLM result and formats it according to the output_interface schema
+  # Direct references ensure all required fields are properly mapped
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_report.result.success
+        email_subject: :generate_report.result.email_subject
+        email_body_html: :generate_report.result.email_body_html
+        email_body_text: :generate_report.result.email_body_text
+        error_message: :generate_report.result.error_message
+    isResult: true

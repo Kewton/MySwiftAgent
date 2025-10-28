@@ -1,0 +1,72 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Expected input format:
+  # {
+  #   "url": "https://example.com",
+  #   "drive_dir": "target_directory_name",
+  #   "email": "user@example.com"
+  # }
+  source: {}
+
+  # Step 1: Build validation prompt using stringTemplateAgent
+  # This node constructs a prompt with the input parameters for LLM validation
+  build_validation_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      url: :source.url
+      drive_dir: :source.drive_dir
+      email: :source.email
+    params:
+      template: |-
+        あなたは入力パラメータの検証を行うシステムです。
+        以下の3つのパラメータを検証してください。
+
+        URL: ${url}
+        Google Driveディレクトリ名: ${drive_dir}
+        メールアドレス: ${email}
+
+        # 検証ルール
+        - URLは有効なURI形式であること（http:// または https:// で始まる）
+        - Google Driveディレクトリ名は1文字以上であること
+        - メールアドレスは有効なメール形式であること（@を含む）
+        - すべてのパラメータが空でないこと
+
+        # 制約条件
+        - 検証結果は JSON 形式で返すこと
+        - コメントやマークダウンは含めないこと
+        - 検証に失敗した場合は、失敗理由を error_message に記載すること
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "validated_params": {
+            "url": "検証済みのURL",
+            "drive_dir": "検証済みのディレクトリ名",
+            "email": "検証済みのメールアドレス"
+          },
+          "error_message": ""
+        }
+
+  # Step 2: LLM validation using expertAgent jsonoutput API
+  # Calls the JSON output agent to validate parameters
+  validate_parameters:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_validation_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format and return validation result
+  # Uses copyAgent to structure the output according to output_interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :validate_parameters.result.success
+        validated_params: :validate_parameters.result.validated_params
+        error_message: :validate_parameters.result.error_message
+    isResult: true

@@ -1,0 +1,79 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Expected input: {"ir_site_url": "https://...", "analysis_period_years": 5}
+  source: {}
+
+  # Step 1: Build Playwright instruction prompt with source parameters
+  # This node constructs the detailed instruction for Playwright Agent
+  # to scrape IR site data including sales tables and business model descriptions
+  build_playwright_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      ir_site_url: :source.ir_site_url
+      analysis_period_years: :source.analysis_period_years
+    params:
+      template: |-
+        あなたはPlaywright Agentです。以下のIRサイトからデータを収集してください。
+
+        対象URL: ${ir_site_url}
+        分析期間: 過去${analysis_period_years}年間
+
+        # 収集対象データ
+        1. 売上データ: 過去${analysis_period_years}年間の売上推移表、売上高、営業利益などの財務データ
+        2. ビジネスモデル説明: 企業のビジネスモデルに関する説明文、事業セグメント情報
+        3. その他関連データ: 経営方針、戦略、市場分析など
+
+        # 実行手順
+        1. 指定されたIRサイトにアクセス
+        2. 財務情報、決算情報、投資家向け情報などのセクションを探索
+        3. 売上データを含むテーブル、グラフ、テキストを抽出
+        4. ビジネスモデルに関する説明文を抽出
+        5. 各データの出典URL、データ種別、コンテンツ形式を記録
+
+        # 制約条件
+        - JavaScriptレンダリングが必要な場合は対応すること
+        - タイムアウトは30秒以内に設定すること
+        - 複数ページにわたる場合は、主要なページから収集すること
+        - HTMLフラグメントまたはテキスト形式で返却すること
+        - 日本語で出力すること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "raw_data_collection": [
+            {
+              "source_url": "https://...",
+              "data_type": "sales_data",
+              "content_type": "html",
+              "content": "HTMLフラグメントまたはテキスト"
+            }
+          ],
+          "error_message": ""
+        }
+
+  # Step 2: Execute Playwright Agent via expertAgent API
+  # Calls the Playwright Agent to perform web scraping on the IR site
+  # Returns collected data in structured format
+  execute_playwright:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/playwright
+      method: POST
+      body:
+        user_input: :build_playwright_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format and validate the collected data
+  # Transforms Playwright Agent output to match the required output interface schema
+  # Ensures all required fields are present and properly formatted
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :execute_playwright.result.success
+        raw_data_collection: :execute_playwright.result.raw_data_collection
+        error_message: :execute_playwright.result.error_message
+    isResult: true

@@ -1,0 +1,71 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Expected input: {"query": "newsletter", "max_results": 1}
+  source: {}
+
+  # Step 1: Build the LLM prompt for email body extraction and cleanup
+  # This node constructs a detailed prompt with the email body content
+  # Using stringTemplateAgent to properly handle multi-line prompt with variables
+  build_extraction_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      query: :source.query
+      max_results: :source.max_results
+    params:
+      template: |-
+        あなたはメール本文の抽出とクリーンアップを行うテキスト処理エキスパートです。
+        以下の情報を基に、ニュースレターメールの本文から不要な要素を除去し、純粋なテキストコンテンツを抽出してください。
+
+        検索キーワード: ${query}
+        取得件数: ${max_results}
+
+        # 実行内容
+        1. メール本文がHTMLエンコードされている場合はデコードする
+        2. Base64エンコードされている場合はデコードする
+        3. 以下の不要な要素を除去する:
+           - メール署名（---, Sent from, Best regards など）
+           - フッター情報（Copyright, All rights reserved など）
+           - ナビゲーションリンク（View in browser, Unsubscribe など）
+           - HTMLタグ（<div>, <span>, <style> など）
+           - 過度な空白行やインデント
+        4. テキストを整形し、読みやすい形式にする
+        5. 最終的に純粋なニュースレターのテキストコンテンツのみを抽出する
+
+        # 制約条件
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+        - cleaned_text フィールドには、クリーンアップされたテキストコンテンツのみを含める
+        - error_message は処理に失敗した場合のみ記入する
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "cleaned_text": "クリーンアップされたニュースレターのテキストコンテンツ",
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This node sends the constructed prompt to the LLM for processing
+  # Using gemini-2.5-flash model as recommended for text processing tasks
+  extract_and_cleanup:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_extraction_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format and return the final output
+  # This node extracts the LLM result and formats it according to output_interface schema
+  # Direct reference pattern: extract fields from LLM response
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :extract_and_cleanup.result.success
+        cleaned_text: :extract_and_cleanup.result.cleaned_text
+        error_message: :extract_and_cleanup.result.error_message
+    isResult: true

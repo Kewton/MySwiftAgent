@@ -1,0 +1,57 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build email subject using stringTemplateAgent
+  build_subject:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source.company_name
+    params:
+      template: |-
+        分析レポート: ${company_name}
+
+  # Step 2: Build email body with analysis results using stringTemplateAgent
+  build_body:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source.company_name
+      sales_trend: :source.quantitative_analysis_summary.sales_trend_description
+      anomaly: :source.quantitative_analysis_summary.anomaly_description
+      growth_rate: :source.quantitative_analysis_summary.average_growth_rate_percent
+      qualitative_summary: :source.qualitative_analysis_summary.overall_summary
+    params:
+      template: |-
+        ${company_name} の分析レポート
+
+        【定量分析結果】
+        売上トレンド: ${sales_trend}
+        異常検知: ${anomaly}
+        平均成長率: ${growth_rate}%
+
+        【定性分析結果】
+        ${qualitative_summary}
+
+        このレポートは自動生成されました。
+
+  # Step 3: Send email via Gmail API using fetchAgent
+  send_email:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/gmail/send
+      method: POST
+      body:
+        subject: :build_subject
+        body: :build_body
+    timeout: 60000
+
+  # Step 4: Format final output with error handling
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :send_email.success
+        message_id: :send_email.message_id
+        status_message: :send_email.status_message
+        error_message: :send_email.error_message
+    isResult: true

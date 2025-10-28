@@ -1,0 +1,48 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Input format: {"user_input": {"query": "newsletter", "max_results": 1}}
+  source: {}
+
+  # Step 1: Build the Gmail search request using stringTemplateAgent
+  # This constructs the proper request body for the Gmail search API
+  build_search_request:
+    agent: stringTemplateAgent
+    inputs:
+      query: :source.query
+      max_results: :source.max_results
+    params:
+      template: |-
+        {
+          "query": "${query}",
+          "max_results": ${max_results}
+        }
+    timeout: 5000
+
+  # Step 2: Call the Gmail search expertAgent API via fetchAgent
+  # This searches Gmail with the provided keyword and retrieves email details
+  search_gmail:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/gmail/search
+      method: POST
+      body:
+        query: :source.query
+        max_results: :source.max_results
+    timeout: 60000
+
+  # Step 3: Format the final output to match the output_interface schema
+  # Extracts email details from the search result and structures the response
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        email:
+          subject: :search_gmail.emails.0.subject
+          sender: :search_gmail.emails.0.sender
+          body_content: :search_gmail.emails.0.body
+          date: :search_gmail.emails.0.date
+        error_message: ""
+    isResult: true
+    timeout: 5000

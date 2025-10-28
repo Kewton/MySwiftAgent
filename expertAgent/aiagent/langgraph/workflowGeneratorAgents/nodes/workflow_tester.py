@@ -64,13 +64,22 @@ async def _execute_workflow(
     client: httpx.AsyncClient,
     workflow_name: str,
     sample_input: Any,
+    task_master_id: str | int | None = None,
 ) -> tuple[dict[str, Any], int]:
     execute_url = f"{GRAPHAISERVER_BASE_URL}/api/v1/myagent"
+
+    # Include directory path in model_name if task_master_id is provided
+    model_name = (
+        f"taskmaster/{task_master_id}/{workflow_name}"
+        if task_master_id
+        else workflow_name
+    )
+
     payload = {
         "user_input": sample_input,
-        "model_name": workflow_name,
+        "model_name": model_name,
     }
-    logger.info("Executing workflow at %s", execute_url)
+    logger.info("Executing workflow at %s with model_name: %s", execute_url, model_name)
     response = await client.post(execute_url, json=payload)
     status = response.status_code
     body = _safe_json(response)
@@ -149,6 +158,7 @@ async def workflow_tester_node(
                 client,
                 workflow_name,
                 sample_input,
+                task_master_id,
             )
 
             return {

@@ -1,0 +1,73 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build prompt for LLM to generate upload plan
+  # This prompt instructs the LLM to:
+  # 1. Extract PDF URLs from the provided website URL
+  # 2. Generate structured upload plan with drive paths and file names
+  # 3. Return JSON format matching the output schema
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      website_url: :source.url
+    params:
+      template: |-
+        あなたはPDFファイルのGoogle Driveアップロード計画を策定するシステムです。
+        以下のWebサイトから抽出されたPDFリンクに基づき、各ファイルのアップロード計画を生成してください。
+
+        対象Webサイト: ${website_url}
+
+        # タスク内容
+        1. 指定されたWebサイトから抽出可能なPDFファイルのURLリストを想定してください
+        2. 各PDFファイルに対して以下の情報を決定してください：
+           - source_url: PDFファイルのダウンロード元URL
+           - drive_path: Google Drive上のアップロード先パス（例: RootDir/SubDir/）
+           - file_name: Google Driveに保存するファイル名（拡張子.pdf含む）
+        3. ファイル名やサブディレクトリ名は、PDFの内容や用途を反映した自然な名前にしてください
+        4. drive_pathはtask_001で指定されたディレクトリ名をルートとし、PDFごとにサブディレクトリを作成してください
+
+        # 制約条件
+        - 最低3つ以上のPDFファイルのアップロード計画を生成してください
+        - ファイル名は日本語または英語で、わかりやすい名前にしてください
+        - drive_pathは階層構造を持つパス形式（例: Documents/Reports/2025/）にしてください
+        - 各ファイルのsource_urlは有効なURL形式にしてください
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "upload_plan": [
+            {
+              "source_url": "https://example.com/document1.pdf",
+              "drive_path": "RootDir/SubDir1/",
+              "file_name": "document1_2025.pdf"
+            }
+          ],
+          "count": 3,
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This generates the structured upload plan using LLM
+  generate_upload_plan:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format and return the final output
+  # Extract the result from LLM response and ensure it matches output schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_upload_plan.result.success
+        upload_plan: :generate_upload_plan.result.upload_plan
+        count: :generate_upload_plan.result.count
+        error_message: :generate_upload_plan.result.error_message
+    isResult: true
