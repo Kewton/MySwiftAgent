@@ -11,9 +11,9 @@ requirements into executable tasks following 4 principles:
 import logging
 
 from ..prompts.task_breakdown import (
-    TASK_BREAKDOWN_SYSTEM_PROMPT,
     TaskBreakdownItem,
     TaskBreakdownResponse,
+    _build_task_breakdown_system_prompt,
     create_task_breakdown_prompt,
     create_task_breakdown_prompt_with_feedback,
 )
@@ -134,8 +134,11 @@ async def requirement_analysis_node(
     else:
         user_prompt = create_task_breakdown_prompt(user_requirement)
 
+    # Build system prompt dynamically with current API capabilities
+    system_prompt = _build_task_breakdown_system_prompt()
+
     messages = [
-        {"role": "system", "content": TASK_BREAKDOWN_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
 

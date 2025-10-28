@@ -8,7 +8,62 @@ requirements into executable tasks following 4 principles:
 4. Modularity and reusability
 """
 
+from pathlib import Path
+
+import yaml
 from pydantic import BaseModel, Field
+
+
+def _load_yaml_config(filename: str) -> dict:
+    """Load YAML configuration file from utils/config directory.
+
+    Args:
+        filename: YAML filename in utils/config/ directory
+
+    Returns:
+        Parsed YAML data
+    """
+    # Navigate to utils/config from prompts directory
+    config_dir = Path(__file__).parent.parent / "utils" / "config"
+    config_path = config_dir / filename
+    with open(config_path, encoding="utf-8") as f:
+        result = yaml.safe_load(f)
+        return result if isinstance(result, dict) else {}
+
+
+def _build_expert_agent_capabilities() -> str:
+    """Build expertAgent capabilities section from YAML config.
+
+    Returns:
+        Formatted expertAgent capabilities string
+    """
+    config = _load_yaml_config("expert_agent_capabilities.yaml")
+    lines = ["**expertAgent Direct API一覧**:", ""]
+
+    # Utility APIs
+    utility_apis = config.get("utility_apis", [])
+    if utility_apis:
+        lines.append("**Utility API (Direct API)**:")
+        for api in utility_apis:
+            use_cases = "、".join(api.get("use_cases", []))
+            lines.append(
+                f"  - **{api['name']}** (`{api['endpoint']}`): "
+                f"{api['description']} - {use_cases}"
+            )
+        lines.append("")
+
+    # AI Agent APIs
+    ai_agent_apis = config.get("ai_agent_apis", [])
+    if ai_agent_apis:
+        lines.append("**AI Agent API (AI処理)**:")
+        for api in ai_agent_apis:
+            use_cases = "、".join(api.get("use_cases", []))
+            lines.append(
+                f"  - **{api['name']}** (`{api['endpoint']}`): "
+                f"{api['description']} - {use_cases}"
+            )
+
+    return "\n".join(lines)
 
 
 class TaskBreakdownItem(BaseModel):
@@ -48,7 +103,15 @@ class TaskBreakdownResponse(BaseModel):
     )
 
 
-TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門家です。
+def _build_task_breakdown_system_prompt() -> str:
+    """Build task breakdown system prompt with dynamic capability lists.
+
+    Returns:
+        Formatted task breakdown system prompt
+    """
+    expert_agent_capabilities = _build_expert_agent_capabilities()
+
+    return f"""あなたはワークフロー設計の専門家です。
 ユーザーの自然言語要求を、実行可能なタスクに分解します。
 
 以下の4原則に従ってタスク分解を行ってください：
@@ -96,10 +159,7 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 - `copyAgent`: データコピー・フォーマット変換
 - `jsonParserAgent`: JSON解析（※ user_inputの解析には使用しない）
 
-**expertAgent Direct APIs**:
-- `/api/v1/search`: 検索機能
-- `/api/v1/email`: メール送信機能
-- その他のDirect API
+{expert_agent_capabilities}
 
 ### recommended_apis の記述ルール
 
@@ -153,9 +213,9 @@ task_003:
 JSON形式で以下の構造で出力してください：
 
 ```json
-{
+{{
   "tasks": [
-    {
+    {{
       "task_id": "task_001",
       "name": "タスク名",
       "description": "詳細な説明（使用APIの理由を含む）。LLM処理が必要な場合は、expertAgent の jsonoutput API を fetchAgent 経由で呼び出す旨を記載。",
@@ -163,10 +223,10 @@ JSON形式で以下の構造で出力してください：
       "expected_output": "期待される出力",
       "priority": 5,
       "recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]
-    }
+    }}
   ],
   "overall_summary": "ワークフロー全体の概要"
-}
+}}
 ```
 
 タスクIDは必ず "task_001", "task_002", ... の形式で、ゼロパディング3桁で採番してください。
