@@ -60,15 +60,21 @@ class TestWorkflowGeneratorAPI:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
-            ) as mock_create_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+            ) as mock_invoke_llm,
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            # Setup LLM mock (create_llm returns a model instance)
-            mock_response = MagicMock()
-            mock_response.workflow_name = "send_email_notification"
-            # Define actual workflow with email_sender node
-            mock_response.yaml_content = """version: 0.5
+            # Setup LLM mock (invoke_structured_llm returns StructuredCallResult)
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
+            )
+            from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+                WorkflowGenerationResponse,
+            )
+
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="send_email_notification",
+                yaml_content="""version: 0.5
 nodes:
   email_sender:
     agent: fetchAgent
@@ -76,17 +82,16 @@ nodes:
       url: http://localhost:8104/api/v1/utility/gmail_send
       method: POST
     isResult: true
-"""
-            mock_response.reasoning = "Test"
-
-            mock_structured_model = MagicMock()
-            mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
-
-            mock_llm_instance = MagicMock()
-            mock_llm_instance.with_structured_output.return_value = (
-                mock_structured_model
+""",
+                reasoning="Test",
             )
-            mock_create_llm.return_value = mock_llm_instance
+
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
 
             # Setup httpx mock
             mock_client = AsyncMock()
@@ -197,15 +202,21 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
-            ) as mock_create_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+            ) as mock_invoke_llm,
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            # Setup LLM mock (create_llm returns a model instance)
-            mock_response = MagicMock()
-            mock_response.workflow_name = "test_workflow"
-            # Define actual workflow with task_executor node
-            mock_response.yaml_content = """version: 0.5
+            # Setup LLM mock (invoke_structured_llm returns StructuredCallResult)
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
+            )
+            from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+                WorkflowGenerationResponse,
+            )
+
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="test_workflow",
+                yaml_content="""version: 0.5
 nodes:
   task_executor:
     agent: fetchAgent
@@ -213,17 +224,16 @@ nodes:
       url: http://localhost:8104/api/v1/test
       method: POST
     isResult: true
-"""
-            mock_response.reasoning = "Test"
-
-            mock_structured_model = MagicMock()
-            mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
-
-            mock_llm_instance = MagicMock()
-            mock_llm_instance.with_structured_output.return_value = (
-                mock_structured_model
+""",
+                reasoning="Test",
             )
-            mock_create_llm.return_value = mock_llm_instance
+
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
 
             # Setup httpx mock (handles multiple retries)
             mock_client = AsyncMock()
@@ -406,11 +416,15 @@ class TestWorkflowGeneratorLangGraphIntegration:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
-            ) as mock_create_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+            ) as mock_invoke_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock (create_llm returns a model instance)
+            # Setup LLM mock (invoke_structured_llm returns StructuredCallResult)
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
+            )
+
             mock_response = WorkflowGenerationResponse(
                 workflow_name="send_notification_email",
                 yaml_content="""version: 0.5
@@ -425,14 +439,12 @@ nodes:
                 reasoning="Using fetchAgent for Gmail API",
             )
 
-            mock_structured_model = MagicMock()
-            mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
-
-            mock_llm_instance = MagicMock()
-            mock_llm_instance.with_structured_output.return_value = (
-                mock_structured_model
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
             )
-            mock_create_llm.return_value = mock_llm_instance
 
             # Setup httpx mock for graphAiServer (handles multiple retries)
             mock_client = AsyncMock()
@@ -528,26 +540,27 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
-            ) as mock_create_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+            ) as mock_invoke_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock (create_llm returns a model instance)
-            mock_response = MagicMock()
-            mock_response.workflow_name = "process_data"
-            mock_response.yaml_content = (
-                "version: 0.5\nnodes:\n  processor:\n    agent: fetchAgent\n"
+            # Setup LLM mock (invoke_structured_llm returns StructuredCallResult)
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
             )
-            mock_response.reasoning = "Using fetchAgent"
 
-            mock_structured_model = MagicMock()
-            mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
-
-            mock_llm_instance = MagicMock()
-            mock_llm_instance.with_structured_output.return_value = (
-                mock_structured_model
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="process_data",
+                yaml_content="version: 0.5\nnodes:\n  processor:\n    agent: fetchAgent\n",
+                reasoning="Using fetchAgent",
             )
-            mock_create_llm.return_value = mock_llm_instance
+
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
 
             # Setup httpx mock with first attempt failing, second succeeding
             mock_client = AsyncMock()
@@ -637,24 +650,27 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
-            ) as mock_create_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+            ) as mock_invoke_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock (create_llm returns a model instance)
-            mock_response = MagicMock()
-            mock_response.workflow_name = "invalid_task"
-            mock_response.yaml_content = "version: 0.5\nnodes: {}\n"
-            mock_response.reasoning = "Basic workflow"
-
-            mock_structured_model = MagicMock()
-            mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
-
-            mock_llm_instance = MagicMock()
-            mock_llm_instance.with_structured_output.return_value = (
-                mock_structured_model
+            # Setup LLM mock (invoke_structured_llm returns StructuredCallResult)
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
             )
-            mock_create_llm.return_value = mock_llm_instance
+
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="invalid_task",
+                yaml_content="version: 0.5\nnodes: {}\n",
+                reasoning="Basic workflow",
+            )
+
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
 
             # Setup httpx mock to always fail
             mock_client = AsyncMock()
@@ -755,25 +771,27 @@ nodes:
                 return_value=mock_task_data_fetcher,
             ),
             patch(
-                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.create_llm"
-            ) as mock_create_llm,
+                "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+            ) as mock_invoke_llm,
             patch("httpx.AsyncClient") as mock_httpx_client,
         ):
-            # Setup LLM mock (create_llm returns a model instance)
+            # Setup LLM mock (invoke_structured_llm returns StructuredCallResult)
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
+            )
+
             mock_response = WorkflowGenerationResponse(
                 workflow_name="test_workflow",
                 yaml_content="version: 0.5\nnodes:\n  node1:\n    agent: fetchAgent\n",
                 reasoning="Test",
             )
 
-            mock_structured_model = MagicMock()
-            mock_structured_model.ainvoke = AsyncMock(return_value=mock_response)
-
-            mock_llm_instance = MagicMock()
-            mock_llm_instance.with_structured_output.return_value = (
-                mock_structured_model
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
             )
-            mock_create_llm.return_value = mock_llm_instance
 
             # Setup httpx mock
             mock_client = AsyncMock()
