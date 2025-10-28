@@ -91,6 +91,7 @@ class WorkflowSchemaValidator:
             logger.warning(
                 "Schema type is not 'object', using RootModel for model %s", model_name
             )
+
             # Pydantic v2: Use RootModel instead of __root__
             class DynamicRootModel(RootModel[Any]):
                 root: Any
