@@ -7,9 +7,10 @@ Workflow:
 1. requirement_analysis → Decompose user requirements into tasks
 2. evaluator → Evaluate task quality and feasibility
 3. interface_definition → Define JSON Schema interfaces
-4. master_creation → Create TaskMasters, JobMaster, JobMasterTask
-5. validation → Validate workflow interfaces
-6. job_registration → Create executable Job
+4. schema_enrichment → Enrich interfaces with OpenAPI schemas
+5. master_creation → Create TaskMasters, JobMaster, JobMasterTask
+6. validation → Validate workflow interfaces
+7. job_registration → Create executable Job
 
 The agent uses conditional routing to handle:
 - Evaluation failures (retry or exit)
@@ -28,6 +29,7 @@ from .nodes import (
     job_registration_node,
     master_creation_node,
     requirement_analysis_node,
+    schema_enrichment_node,
     validation_node,
 )
 from .state import JobTaskGeneratorState
@@ -178,7 +180,8 @@ def create_job_task_generator_agent() -> Any:
             - interface_definition (if task breakdown valid)
             - requirement_analysis (if invalid, retry)
             - END (if max retries)
-        interface_definition → evaluator (re-evaluate interfaces)
+        interface_definition → schema_enrichment (enrich with OpenAPI schemas)
+        schema_enrichment → evaluator (re-evaluate interfaces)
         evaluator → (conditional)
             - master_creation (if interfaces valid)
             - interface_definition (if invalid, retry)
@@ -202,6 +205,7 @@ def create_job_task_generator_agent() -> Any:
     workflow.add_node("requirement_analysis", requirement_analysis_node)
     workflow.add_node("evaluator", evaluator_node)
     workflow.add_node("interface_definition", interface_definition_node)
+    workflow.add_node("schema_enrichment", schema_enrichment_node)
     workflow.add_node("master_creation", master_creation_node)
     workflow.add_node("validation", validation_node)
     workflow.add_node("job_registration", job_registration_node)
@@ -226,8 +230,11 @@ def create_job_task_generator_agent() -> Any:
         },
     )
 
-    # interface_definition → evaluator (re-evaluate)
-    workflow.add_edge("interface_definition", "evaluator")
+    # interface_definition → schema_enrichment
+    workflow.add_edge("interface_definition", "schema_enrichment")
+
+    # schema_enrichment → evaluator (re-evaluate)
+    workflow.add_edge("schema_enrichment", "evaluator")
 
     # master_creation → validation
     workflow.add_edge("master_creation", "validation")

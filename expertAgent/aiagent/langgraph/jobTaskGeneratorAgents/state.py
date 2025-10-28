@@ -22,6 +22,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
         # Intermediate processing fields
         task_breakdown: List of tasks decomposed from requirements
         interface_definitions: Mapping of task_id to interface schema bundle
+        schema_enrichment_stats: Statistics from OpenAPI schema enrichment
         task_masters: List of TaskMaster definitions
         task_master_ids: Ordered list of TaskMaster IDs (preserves execution
             order)
@@ -60,6 +61,7 @@ class JobTaskGeneratorState(TypedDict, total=False):
     task_breakdown: list[dict[str, Any]]
     overall_summary: str  # Task breakdown summary from LLM
     interface_definitions: dict[str, dict[str, Any]]
+    schema_enrichment_stats: dict[str, Any]  # Schema enrichment statistics
     task_masters: list[dict[str, Any]]
     task_master_ids: list[str]
     job_master: dict[str, Any]
@@ -111,6 +113,7 @@ def create_initial_state(
         "task_breakdown": [],
         "overall_summary": "",
         "interface_definitions": {},
+        "schema_enrichment_stats": {},
         "task_masters": [],
         "task_master_ids": [],
         "job_master": {},
