@@ -1,16 +1,19 @@
 """Workflow tester node for GraphAI workflow execution testing.
 
-This module provides the workflow tester node that registers the generated
-workflow to graphAiServer and executes it with sample input.
+This module provides the workflow tester node that:
+1. Validates workflow input/output schemas using Pydantic
+2. Registers the generated workflow to graphAiServer
+3. Executes workflow with sample input
 """
 
 import logging
 import os
-from typing import Any
+from typing import Any, Dict
 
 import httpx
 
 from ..state import WorkflowGeneratorState
+from .workflow_validator import WorkflowSchemaValidator
 
 logger = logging.getLogger(__name__)
 
@@ -94,20 +97,22 @@ async def _execute_workflow(
 async def workflow_tester_node(
     state: WorkflowGeneratorState,
 ) -> WorkflowGeneratorState:
-    """Register workflow to graphAiServer and execute with sample input.
+    """Validate and test workflow execution.
 
     This node:
-    1. Registers YAML workflow (POST /api/v1/workflows/register)
+    1. Validates input schema using Pydantic (pre-execution validation)
+    2. Registers YAML workflow (POST /api/v1/workflows/register)
        - Saves to /taskmaster/{task_master_id}/ directory if task_master_id exists
        - Otherwise saves to root config/graphai/ directory
-    2. Executes workflow with sample_input (POST /api/v1/myagent)
-    3. Updates state with execution results and HTTP status
+    3. Executes workflow with sample_input (POST /api/v1/myagent)
+    4. Validates output schema using Pydantic (post-execution validation)
+    5. Updates state with execution results and HTTP status
 
     Args:
         state: Current workflow generator state
 
     Returns:
-        Updated state with test execution results
+        Updated state with validation and test execution results
     """
     logger.info("Starting workflow tester node")
 
@@ -115,6 +120,8 @@ async def workflow_tester_node(
     yaml_content = state.get("yaml_content")
     sample_input = state.get("sample_input")
     task_master_id = state.get("task_master_id")
+    input_schema: Dict[str, Any] = state.get("input_schema", {})  # type: ignore
+    output_schema: Dict[str, Any] = state.get("output_schema", {})  # type: ignore
 
     if not workflow_name or not yaml_content:
         message = "Workflow testing failed: missing workflow content"
@@ -128,6 +135,30 @@ async def workflow_tester_node(
     if sample_input is None:
         logger.info("Sample input missing; defaulting to empty object")
         sample_input = {}
+
+    # Step 0: Pre-execution schema validation with Pydantic
+    logger.info("Starting pre-execution schema validation")
+    validator = WorkflowSchemaValidator(input_schema, output_schema)
+
+    # Ensure sample_input is a dict for validation
+    if not isinstance(sample_input, dict):
+        sample_input_dict: Dict[str, Any] = {"value": sample_input}
+        logger.warning("Sample input is not a dict, wrapping in {'value': ...}")
+    else:
+        sample_input_dict = sample_input
+
+    input_validation = validator.validate_input(sample_input_dict)
+
+    if not input_validation.is_valid:
+        logger.error("Input schema validation failed: %s", input_validation.errors)
+        return {
+            **state,
+            "validation_errors": input_validation.errors,
+            "status": "validation_failed",
+            "error_message": f"Input validation failed: {'; '.join(input_validation.errors)}",
+        }
+
+    logger.info("Pre-execution schema validation passed")
 
     logger.debug(f"Testing workflow: {workflow_name}")
     logger.debug(f"Sample input: {sample_input}")
@@ -154,6 +185,7 @@ async def workflow_tester_node(
                     "error_message": "Workflow registration failed",
                 }
 
+            # Step 2: Execute workflow
             execution_result, execution_status = await _execute_workflow(
                 client,
                 workflow_name,
@@ -161,12 +193,36 @@ async def workflow_tester_node(
                 task_master_id,
             )
 
+            # Step 3: Post-execution output validation (if execution succeeded)
+            output_validation_errors: list[str] = []
+            if (
+                execution_status == 200
+                and execution_result
+                and isinstance(execution_result, dict)
+            ):
+                logger.info("Starting post-execution output schema validation")
+                output_validation = validator.validate_output(execution_result)
+
+                if not output_validation.is_valid:
+                    logger.warning(
+                        "Output schema validation failed: %s",
+                        output_validation.errors,
+                    )
+                    output_validation_errors = output_validation.errors
+                else:
+                    logger.info("Post-execution output validation passed")
+            elif execution_status == 200 and execution_result:
+                logger.warning(
+                    "Execution result is not a dict, skipping output validation"
+                )
+
             return {
                 **state,
                 "workflow_registered": True,
                 "workflow_file_path": workflow_file_path,
                 "test_execution_result": execution_result,
                 "test_http_status": execution_status,
+                "validation_errors": output_validation_errors,
                 "status": "workflow_tested",
             }
 
