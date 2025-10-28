@@ -131,7 +131,7 @@ jobs:
       - name: Start GraphAI Server
         run: |
           cd graphAiServer
-          npm start &
+          PORT=8105 npm start &
           sleep 10
 
       - name: Wait for services to be ready
