@@ -87,9 +87,13 @@ jobs:
       - name: Set up environment variables
         run: |
           echo "LOG_LEVEL=INFO" >> $GITHUB_ENV
-          echo "DATABASE_URL=sqlite:///./data/jobqueue_test.db" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jobqueue_test" >> $GITHUB_ENV
           echo "EXPERTAGENT_BASE_URL=http://localhost:8104" >> $GITHUB_ENV
           echo "GRAPHAISERVER_BASE_URL=http://localhost:8105" >> $GITHUB_ENV
+
+          # Generate MSA_MASTER_KEY for myVault
+          MSA_KEY=$(python3 -c "import secrets, base64; print('base64:' + base64.b64encode(secrets.token_bytes(32)).decode())")
+          echo "MSA_MASTER_KEY=$MSA_KEY" >> $GITHUB_ENV
 
           # Create secrets for testing (mock credentials)
           mkdir -p expertAgent/secrets
@@ -118,6 +122,11 @@ jobs:
           cd expertAgent
           uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4 &
           sleep 15
+
+      - name: Build GraphAI Server
+        run: |
+          cd graphAiServer
+          npm run build
 
       - name: Start GraphAI Server
         run: |
