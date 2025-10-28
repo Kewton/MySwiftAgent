@@ -47,12 +47,15 @@ def _extract_api_endpoint(task_description: str) -> Optional[tuple[str, str]]:
     Examples:
         >>> _extract_api_endpoint("Call Gmail search API at /v1/utility/gmail/search")
         ('POST', '/v1/utility/gmail/search')
+        >>> _extract_api_endpoint("expertAgent の gmail/search APIを使用する")
+        ('POST', '/v1/utility/gmail/search')
     """
     # Common patterns for API endpoint references
     patterns = [
         r"(GET|POST|PUT|PATCH|DELETE)\s+(/v1/[^\s]+)",  # "POST /v1/utility/gmail/search"
-        r"API.*?(/v1/[^\s]+)",  # "Call API at /v1/utility/gmail/search"
-        r"endpoint.*?(/v1/[^\s]+)",  # "endpoint /v1/utility/gmail/search"
+        r"API[:\s]+(/v1/[^\s]+)",  # "API: /v1/utility/gmail/search"
+        r"endpoint[:\s]+(/v1/[^\s]+)",  # "endpoint: /v1/utility/gmail/search"
+        r"(/v1/[a-z_/]+)",  # Direct path reference: "/v1/utility/gmail/search"
     ]
 
     for pattern in patterns:
@@ -62,6 +65,30 @@ def _extract_api_endpoint(task_description: str) -> Optional[tuple[str, str]]:
                 return (match.group(1).upper(), match.group(2))
             else:  # Path only pattern - assume POST for utility APIs
                 return ("POST", match.group(1))
+
+    # Fallback: Map partial API names to full paths
+    # Common expertAgent API shortcuts
+    api_shortcuts = {
+        "gmail/search": "/v1/utility/gmail/search",
+        "gmail/send": "/v1/utility/gmail/send",
+        "google_search": "/v1/utility/google_search",
+        "drive/upload": "/v1/utility/drive/upload",
+        "text_to_speech": "/v1/utility/text_to_speech",
+        "text_to_speech_drive": "/v1/utility/text_to_speech_drive",
+        "jsonoutput": "/v1/aiagent/utility/jsonoutput",
+        "mylllm": "/v1/mylllm",
+    }
+
+    # Try to match partial API names
+    description_lower = task_description.lower()
+    for shortcut, full_path in api_shortcuts.items():
+        if shortcut in description_lower:
+            logger.debug(
+                "Matched partial API name '%s' to full path '%s'",
+                shortcut,
+                full_path,
+            )
+            return ("POST", full_path)
 
     return None
 
