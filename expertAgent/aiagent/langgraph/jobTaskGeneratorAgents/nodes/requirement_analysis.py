@@ -168,8 +168,12 @@ async def requirement_analysis_node(
 
     response.tasks = _clip_task_priorities(response.tasks)
 
+    # Increment retry_count if this is a retry (evaluation_feedback exists)
     retry_seed = state.get("retry_count", 0)
-    updated_retry = retry_seed + 1 if retry_seed > 0 else 0
+    if evaluation_feedback:
+        updated_retry = retry_seed + 1
+    else:
+        updated_retry = 0
 
     return {
         **state,

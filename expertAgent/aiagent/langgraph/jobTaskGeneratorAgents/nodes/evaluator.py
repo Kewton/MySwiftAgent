@@ -104,6 +104,9 @@ async def evaluator_node(
     except StructuredLLMError as exc:
         logger.error("Evaluation failed: %s", exc)
         return {**state, "error_message": str(exc)}
+    except Exception as exc:
+        logger.error("Unexpected evaluation error: %s", exc, exc_info=True)
+        return {**state, "error_message": f"Evaluation failed: {exc}"}
 
     response = call_result.result
     logger.info(
@@ -204,9 +207,9 @@ async def evaluator_node(
         evaluation_feedback = "\n".join(feedback_parts)
         logger.debug("Generated evaluation feedback:\n%s", evaluation_feedback)
 
+    # NOTE: Do not modify retry_count here - it's managed by requirement_analysis/interface_definition nodes
     return {
         **state,
         "evaluation_result": response.model_dump(),
         "evaluation_feedback": evaluation_feedback,
-        "retry_count": 0,
     }

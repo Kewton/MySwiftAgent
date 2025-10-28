@@ -141,7 +141,7 @@ nodes:
             assert data["successful_tasks"] == 1
             assert data["failed_tasks"] == 0
             assert len(data["workflows"]) == 1
-            assert data["workflows"][0]["task_master_id"] == 456
+            assert data["workflows"][0]["task_master_id"] == "456"
             assert data["workflows"][0]["task_name"] == "Send email notification"
             assert (
                 data["workflows"][0]["status"] == "success"
@@ -498,7 +498,7 @@ nodes:
             assert data["failed_tasks"] == 0
 
             workflow = data["workflows"][0]
-            assert workflow["task_master_id"] == 789
+            assert workflow["task_master_id"] == "789"
             assert workflow["task_name"] == "Send notification email"
             assert workflow["workflow_name"] == "send_notification_email"
             assert workflow["status"] == "success"  # Endpoint maps validated → success

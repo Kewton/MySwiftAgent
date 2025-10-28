@@ -735,7 +735,7 @@ async def test_e2e_workflow_max_retries_reached(
     result = await app.ainvoke(initial_state)
 
     # Assert: Verify max retries reached
-    assert result["retry_count"] == 0, "retry_count reset to 0 after final evaluation"
+    assert result["retry_count"] == 5, "retry_count should be 5 at max retries"
     assert "job_id" not in result, "job_id should not be set (workflow stopped)"
     assert "job_master_id" not in result, "job_master_id should not be set"
 

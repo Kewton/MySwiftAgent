@@ -217,8 +217,15 @@ async def interface_definition_node(
             "output_schema": interface_def.output_schema,
         }
 
+    # Increment retry_count if this is a retry (from evaluator or validation)
     current_retry = state.get("retry_count", 0)
-    updated_retry = current_retry + 1 if current_retry > 0 else 0
+    evaluation_feedback = state.get("evaluation_feedback")
+    validation_result = state.get("validation_result")
+
+    if evaluation_feedback or (validation_result and not validation_result.get("is_valid", True)):
+        updated_retry = current_retry + 1
+    else:
+        updated_retry = 0
 
     logger.info(
         "Interface definition node completed with %s interfaces",
