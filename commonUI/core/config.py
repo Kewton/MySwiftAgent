@@ -1,21 +1,56 @@
-"""Configuration management for CommonUI Streamlit application."""
+"""Configuration management for the CommonUI Streamlit application."""
+
+from __future__ import annotations
 
 import os
 from pathlib import Path
 from typing import Literal, cast
 
-import streamlit as st
+try:  # pragma: no cover - optional dependency during testing
+    import streamlit as st  # type: ignore[import-not-found]
+except ModuleNotFoundError:
+    # pragma: no cover - fallback when Streamlit absent
+    st = None  # type: ignore[assignment]
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-# Load environment variables from commonUI/.env (new policy)
-# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
-_env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    load_dotenv(_env_path, override=True)
-else:
-    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
-    load_dotenv(override=False)
+
+class SettingsProvider:
+    """Retrieve configuration values from secrets and environment variables."""
+
+    _env_loaded: bool = False
+
+    def __init__(self, env_path: Path | None = None) -> None:
+        self.env_path = env_path or Path(__file__).parent.parent / ".env"
+        self._ensure_env_loaded()
+
+    def _ensure_env_loaded(self) -> None:
+        if SettingsProvider._env_loaded:
+            return
+
+        if self.env_path.exists():
+            load_dotenv(self.env_path, override=True)
+        else:
+            load_dotenv(override=False)
+
+        SettingsProvider._env_loaded = True
+
+    def get(self, key: str, default: str = "") -> str:
+        """Fetch configuration value from Streamlit secrets or environment."""
+
+        try:
+            if st is not None and hasattr(st, "secrets") and key in st.secrets:
+                return str(st.secrets[key])
+        except Exception:  # pragma: no cover - defensive
+            pass
+
+        return os.getenv(key, default)
+
+    def reload(self) -> None:
+        """Reload environment variables from disk."""
+
+        SettingsProvider._env_loaded = False
+        self._ensure_env_loaded()
 
 
 class APIConfig(BaseModel):
@@ -50,7 +85,10 @@ class GraphAiServerConfig(BaseModel):
 class UIConfig(BaseModel):
     """UI configuration settings."""
 
-    polling_interval: int = Field(default=5, description="Polling interval in seconds")
+    polling_interval: int = Field(
+        default=5,
+        description="Polling interval in seconds",
+    )
     default_service: Literal["JobQueue", "MyScheduler", "MyVault"] = Field(
         default="JobQueue",
         description="Default service to display",
@@ -62,74 +100,75 @@ class UIConfig(BaseModel):
 
 
 class Config:
-    """Central configuration manager using environment variables and Streamlit secrets."""
+    """Central configuration manager for CommonUI services and endpoints."""
 
-    def __init__(self) -> None:
+    def __init__(self, provider: SettingsProvider | None = None) -> None:
         """Initialize configuration from environment variables and secrets."""
+        self._provider = provider or SettingsProvider()
         self._load_config()
 
     def _load_config(self) -> None:
         """Load configuration from environment and Streamlit secrets."""
-        # Try Streamlit secrets first, then environment variables
+        provider = self._provider
         default_log_dir = Path(__file__).resolve().parents[2] / "logs"
-        self.log_dir = self._get_setting("LOG_DIR", str(default_log_dir))
-        self.log_level = self._get_setting("LOG_LEVEL", "INFO")
+        self.log_dir = provider.get("LOG_DIR", str(default_log_dir))
+        self.log_level = provider.get("LOG_LEVEL", "INFO")
 
         self.jobqueue = APIConfig(
-            base_url=self._get_setting("JOBQUEUE_BASE_URL", "http://localhost:8101"),
-            token=self._get_setting("JOBQUEUE_API_TOKEN", ""),
+            base_url=provider.get(
+                "JOBQUEUE_BASE_URL",
+                "http://localhost:8101",
+            ),
+            token=provider.get("JOBQUEUE_API_TOKEN", ""),
         )
 
         self.myscheduler = APIConfig(
-            base_url=self._get_setting("MYSCHEDULER_BASE_URL", "http://localhost:8102"),
-            token=self._get_setting("MYSCHEDULER_API_TOKEN", ""),
+            base_url=provider.get(
+                "MYSCHEDULER_BASE_URL",
+                "http://localhost:8102",
+            ),
+            token=provider.get("MYSCHEDULER_API_TOKEN", ""),
         )
 
         self.myvault = MyVaultConfig(
-            base_url=self._get_setting("MYVAULT_BASE_URL", "http://localhost:8103"),
-            service_name=self._get_setting("MYVAULT_SERVICE_NAME", "commonui"),
-            service_token=self._get_setting("MYVAULT_SERVICE_TOKEN", ""),
+            base_url=provider.get("MYVAULT_BASE_URL", "http://localhost:8103"),
+            service_name=provider.get("MYVAULT_SERVICE_NAME", "commonui"),
+            service_token=provider.get("MYVAULT_SERVICE_TOKEN", ""),
         )
 
         self.expertagent = ExpertAgentConfig(
-            base_url=self._get_setting(
+            base_url=provider.get(
                 "EXPERTAGENT_BASE_URL",
                 "http://localhost:8104/aiagent-api",
             ),
-            admin_token=self._get_setting("EXPERTAGENT_ADMIN_TOKEN", ""),
+            admin_token=provider.get("EXPERTAGENT_ADMIN_TOKEN", ""),
         )
 
         self.graphaiserver = GraphAiServerConfig(
-            base_url=self._get_setting(
+            base_url=provider.get(
                 "GRAPHAISERVER_BASE_URL",
                 "http://localhost:8105/api",
             ),
-            admin_token=self._get_setting("GRAPHAISERVER_ADMIN_TOKEN", ""),
+            admin_token=provider.get("GRAPHAISERVER_ADMIN_TOKEN", ""),
         )
 
         self.ui = UIConfig(
-            polling_interval=int(self._get_setting("POLLING_INTERVAL", "5")),
+            polling_interval=int(provider.get("POLLING_INTERVAL", "5")),
             default_service=cast(
                 "Literal['JobQueue', 'MyScheduler', 'MyVault']",
-                self._get_setting("DEFAULT_SERVICE", "JobQueue"),
+                provider.get("DEFAULT_SERVICE", "JobQueue"),
             ),
             operation_mode=cast(
                 "Literal['full', 'readonly']",
-                self._get_setting("OPERATION_MODE", "full"),
+                provider.get("OPERATION_MODE", "full"),
             ),
         )
 
-    def _get_setting(self, key: str, default: str = "") -> str:
-        """Get setting from Streamlit secrets or environment variables."""
-        # Try Streamlit secrets first
-        try:
-            if hasattr(st, "secrets") and key in st.secrets:
-                return str(st.secrets[key])
-        except Exception:
-            pass
+    def reload(self) -> None:
+        """Reload configuration values from the underlying provider."""
 
-        # Fall back to environment variables
-        return os.getenv(key, default)
+        self._provider.reload()
+        self._load_config()
 
     def get_api_config(
         self,
