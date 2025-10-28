@@ -1,0 +1,200 @@
+name: E2E Workflow Generation Test
+
+on:
+  push:
+    branches:
+      - feature/issue/*
+      - develop
+    paths:
+      - 'expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/**'
+      - 'expertAgent/aiagent/langgraph/workflowGeneratorAgents/**'
+      - 'expertAgent/core/openapi_schema_collector.py'
+      - 'expertAgent/scripts/e2e_workflow_test.py'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/**'
+      - 'expertAgent/aiagent/langgraph/workflowGeneratorAgents/**'
+      - 'expertAgent/core/openapi_schema_collector.py'
+      - 'expertAgent/scripts/e2e_workflow_test.py'
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario ID to test (1-4) or "all"'
+        required: false
+        default: 'all'
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # PostgreSQL for jobqueue database
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jobqueue_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.19"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install Python dependencies
+        run: |
+          cd expertAgent
+          uv sync
+
+      - name: Install Node dependencies for GraphAI Server
+        run: |
+          cd graphAiServer
+          npm install
+
+      - name: Set up environment variables
+        run: |
+          echo "LOG_LEVEL=INFO" >> $GITHUB_ENV
+          echo "DATABASE_URL=sqlite:///./data/jobqueue_test.db" >> $GITHUB_ENV
+          echo "EXPERTAGENT_BASE_URL=http://localhost:8104" >> $GITHUB_ENV
+          echo "GRAPHAISERVER_BASE_URL=http://localhost:8105" >> $GITHUB_ENV
+
+          # Create secrets for testing (mock credentials)
+          mkdir -p expertAgent/secrets
+          echo '{"GOOGLE_API_KEY": "test-key"}' > expertAgent/secrets/test_project.json
+
+      - name: Start myVault service
+        run: |
+          cd myVault
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8103 &
+          sleep 10
+
+      - name: Start JobQueue service
+        run: |
+          cd jobqueue
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8101 --workers 4 &
+          sleep 10
+
+      - name: Start MyScheduler service
+        run: |
+          cd myscheduler
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8102 &
+          sleep 10
+
+      - name: Start ExpertAgent service
+        run: |
+          cd expertAgent
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8104 --workers 4 &
+          sleep 15
+
+      - name: Start GraphAI Server
+        run: |
+          cd graphAiServer
+          npm start &
+          sleep 10
+
+      - name: Wait for services to be ready
+        run: |
+          max_attempts=30
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -f http://localhost:8104/health && \
+               curl -f http://localhost:8105/health; then
+              echo "All services are ready"
+              break
+            fi
+            attempt=$((attempt + 1))
+            echo "Waiting for services... (attempt $attempt/$max_attempts)"
+            sleep 2
+          done
+
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Services failed to start within timeout"
+            exit 1
+          fi
+
+      - name: Run E2E Workflow Generation Tests
+        id: e2e-test
+        run: |
+          cd expertAgent
+          SCENARIO="${{ github.event.inputs.scenario || 'all' }}"
+          uv run python scripts/e2e_workflow_test.py \
+            --scenario "$SCENARIO" \
+            --output /tmp/e2e_test_results.json
+        continue-on-error: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: /tmp/e2e_test_results.json
+          retention-days: 30
+
+      - name: Parse test results and post comment
+        if: github.event_name == 'pull_request' && always()
+        run: |
+          RESULT_FILE="/tmp/e2e_test_results.json"
+
+          if [ -f "$RESULT_FILE" ]; then
+            SUCCESS_RATE=$(jq -r '.test_run.success_rate' "$RESULT_FILE")
+            TOTAL=$(jq -r '.test_run.total_tests' "$RESULT_FILE")
+            SUCCESSFUL=$(jq -r '.test_run.successful_tests' "$RESULT_FILE")
+            FAILED=$(jq -r '.test_run.failed_tests' "$RESULT_FILE")
+
+            echo "## E2E Workflow Generation Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Tests**: $TOTAL" >> $GITHUB_STEP_SUMMARY
+            echo "- **Successful**: $SUCCESSFUL ✅" >> $GITHUB_STEP_SUMMARY
+            echo "- **Failed**: $FAILED ❌" >> $GITHUB_STEP_SUMMARY
+            echo "- **Success Rate**: $SUCCESS_RATE%" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$SUCCESS_RATE" = "100.0" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "🎉 All E2E tests passed!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ Some E2E tests failed. See details in artifacts." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ Test results file not found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check test results
+        if: steps.e2e-test.outcome == 'failure'
+        run: |
+          echo "E2E tests failed"
+          exit 1
