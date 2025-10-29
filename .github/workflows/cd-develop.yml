@@ -225,24 +225,37 @@ jobs:
       - name: Test Docker image
         run: |
           PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
-          docker run --rm -d --name ${PROJECT_LOWER}-test -p 8000:8000 ${PROJECT_LOWER}:test
-          sleep 10
 
-          # ヘルスチェック
-          echo "🔍 Testing health endpoint..."
-          curl -f http://localhost:8000/health || exit 1
+          # Streamlit (commonUI) uses port 8501, FastAPI projects use port 8000
+          if [[ "${{ matrix.project }}" == "commonUI" ]]; then
+            docker run --rm -d --name ${PROJECT_LOWER}-test -p 8501:8501 ${PROJECT_LOWER}:test
+            sleep 15  # Streamlit needs more startup time
 
-          # API基本機能テスト（プロジェクトごとにカスタマイズ）
-          echo "🔍 Testing API endpoints..."
-          if [[ "${{ matrix.project }}" == "expertAgent" ]]; then
-            curl -f http://localhost:8000/ || exit 1
-            curl -f http://localhost:8000/aiagent-api/v1/ || exit 1
-          elif [[ "${{ matrix.project }}" == "myscheduler" ]]; then
-            curl -f http://localhost:8000/api/v1/jobs/ || exit 1
-          elif [[ "${{ matrix.project }}" == "jobqueue" ]]; then
-            curl -f http://localhost:8000/api/v1/jobs/ || exit 1
-          elif [[ "${{ matrix.project }}" == "commonUI" ]]; then
-            curl -f http://localhost:8000/ || exit 1
+            # Streamlit health check
+            echo "🔍 Testing Streamlit health endpoint..."
+            curl -f http://localhost:8501/_stcore/health || exit 1
+
+            # Streamlit home page
+            echo "🔍 Testing Streamlit home page..."
+            curl -f http://localhost:8501/ || exit 1
+          else
+            docker run --rm -d --name ${PROJECT_LOWER}-test -p 8000:8000 ${PROJECT_LOWER}:test
+            sleep 10
+
+            # FastAPI health check
+            echo "🔍 Testing health endpoint..."
+            curl -f http://localhost:8000/health || exit 1
+
+            # API基本機能テスト（プロジェクトごとにカスタマイズ）
+            echo "🔍 Testing API endpoints..."
+            if [[ "${{ matrix.project }}" == "expertAgent" ]]; then
+              curl -f http://localhost:8000/ || exit 1
+              curl -f http://localhost:8000/aiagent-api/v1/ || exit 1
+            elif [[ "${{ matrix.project }}" == "myscheduler" ]]; then
+              curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+            elif [[ "${{ matrix.project }}" == "jobqueue" ]]; then
+              curl -f http://localhost:8000/api/v1/jobs/ || exit 1
+            fi
           fi
 
           docker stop ${PROJECT_LOWER}-test
