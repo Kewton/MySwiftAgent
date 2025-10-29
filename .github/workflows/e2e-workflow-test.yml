@@ -51,7 +51,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           cd expertAgent
-          uv sync
+          uv sync --extra dev
 
       - name: Run E2E Workflow Generation Tests (Mocked)
         id: e2e-test
