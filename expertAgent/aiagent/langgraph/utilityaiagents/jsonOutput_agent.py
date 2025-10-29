@@ -2,6 +2,7 @@ import json
 import re
 
 from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 
@@ -24,8 +25,9 @@ async def jsonOutputagent(
         print(f"mymcp.stdio_explorer start query:{query}")
         result = await graph.ainvoke({"messages": query})
         aiMessage = ""
+        result_dict: dict = {}
         for message in result.get("messages", []):
-            if isinstance(message, AIMessage):
+            if isinstance(message, AIMessage) and isinstance(message.content, str):
                 aiMessage = message.content
                 aiMessage = remove_think_tags(aiMessage)
                 char_count = len(
@@ -33,15 +35,16 @@ async def jsonOutputagent(
                 )
                 if char_count > 0:
                     print(f"before parse_json: {aiMessage}")
-                    aiMessage = toParseJson(aiMessage)
-                    print(f"after parse_json: {aiMessage}")
-        return aiMessage
+                    result_dict = toParseJson(aiMessage)
+                    print(f"after parse_json: {result_dict}")
+        return result_dict
 
 
 async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
     if _model is None:
         _model = "gpt-4o-mini"
 
+    llm_openai: BaseChatModel
     if isChatGptAPI(_model) or isChatGPT_o(_model):
         llm_openai = ChatOpenAI(model=_model, temperature=0.3)
     elif isGemini(_model):
@@ -62,8 +65,10 @@ async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
         )
 
     # llm_openai = ChatOpenAI(model=_model, temperature=0.3)
-    outline_json = (await llm_openai.ainvoke(query)).content
-    outline_json = remove_think_tags(outline_json)
+    content = (await llm_openai.ainvoke(query)).content
+    if not isinstance(content, str):
+        raise ValueError("Expected string content from LLM")
+    outline_json = remove_think_tags(content)
     print("~~~~ outline_json [start]~~~~")
     print(outline_json)
     print("~~~~ outline_json [end]~~~~")
@@ -90,7 +95,7 @@ async def jsonOutputagent_old(query: str, _model: str = "gpt-4o-mini") -> dict:
             # JSONブロックが見つからない場合のエラーハンドリング
             raise ValueError("Failed to extract JSON block from LLM response.") from e
 
-    return parsed_json
+    return parsed_json if isinstance(parsed_json, dict) else {}
 
 
 def toParseJson(outline_json):

@@ -8,7 +8,62 @@ requirements into executable tasks following 4 principles:
 4. Modularity and reusability
 """
 
+from pathlib import Path
+
+import yaml
 from pydantic import BaseModel, Field
+
+
+def _load_yaml_config(filename: str) -> dict:
+    """Load YAML configuration file from utils/config directory.
+
+    Args:
+        filename: YAML filename in utils/config/ directory
+
+    Returns:
+        Parsed YAML data
+    """
+    # Navigate to utils/config from prompts directory
+    config_dir = Path(__file__).parent.parent / "utils" / "config"
+    config_path = config_dir / filename
+    with open(config_path, encoding="utf-8") as f:
+        result = yaml.safe_load(f)
+        return result if isinstance(result, dict) else {}
+
+
+def _build_expert_agent_capabilities() -> str:
+    """Build expertAgent capabilities section from YAML config.
+
+    Returns:
+        Formatted expertAgent capabilities string
+    """
+    config = _load_yaml_config("expert_agent_capabilities.yaml")
+    lines = ["**expertAgent Direct API一覧**:", ""]
+
+    # Utility APIs
+    utility_apis = config.get("utility_apis", [])
+    if utility_apis:
+        lines.append("**Utility API (Direct API)**:")
+        for api in utility_apis:
+            use_cases = "、".join(api.get("use_cases", []))
+            lines.append(
+                f"  - **{api['name']}** (`{api['endpoint']}`): "
+                f"{api['description']} - {use_cases}"
+            )
+        lines.append("")
+
+    # AI Agent APIs
+    ai_agent_apis = config.get("ai_agent_apis", [])
+    if ai_agent_apis:
+        lines.append("**AI Agent API (AI処理)**:")
+        for api in ai_agent_apis:
+            use_cases = "、".join(api.get("use_cases", []))
+            lines.append(
+                f"  - **{api['name']}** (`{api['endpoint']}`): "
+                f"{api['description']} - {use_cases}"
+            )
+
+    return "\n".join(lines)
 
 
 class TaskBreakdownItem(BaseModel):
@@ -29,6 +84,10 @@ class TaskBreakdownItem(BaseModel):
     priority: int = Field(
         default=5, ge=1, le=10, description="Task priority (1=highest, 10=lowest)"
     )
+    recommended_apis: list[str] = Field(
+        default_factory=list,
+        description="Recommended GraphAI agents or expertAgent APIs for this task (e.g., ['geminiAgent', 'fetchAgent'])",
+    )
 
 
 class TaskBreakdownResponse(BaseModel):
@@ -44,7 +103,15 @@ class TaskBreakdownResponse(BaseModel):
     )
 
 
-TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門家です。
+def _build_task_breakdown_system_prompt() -> str:
+    """Build task breakdown system prompt with dynamic capability lists.
+
+    Returns:
+        Formatted task breakdown system prompt
+    """
+    expert_agent_capabilities = _build_expert_agent_capabilities()
+
+    return f"""あなたはワークフロー設計の専門家です。
 ユーザーの自然言語要求を、実行可能なタスクに分解します。
 
 以下の4原則に従ってタスク分解を行ってください：
@@ -69,6 +136,38 @@ TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門�
 - 他のワークフローで再利用可能な設計
 - 汎用的な命名と構造
 
+## 5. 使用想定APIの明示
+各タスクについて、実装に使用する想定APIを明示的に記述してください。
+
+### 利用可能なAPI種別
+
+**IMPORTANT**: GraphAI標準のLLMエージェント（geminiAgent, openAIAgent, anthropicAgent, groqAgent, replicateAgent）は使用禁止です。
+LLM処理には必ず expertAgent の jsonoutput API を使用してください。
+
+**LLM処理 (expertAgent jsonoutput API)**:
+- LLM処理には必ず expertAgent の jsonoutput API を使用
+- URL: `http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput`
+- fetchAgent経由で呼び出す
+- 推奨モデル:
+  * `gemini-2.5-flash`: Google Gemini 2.5 Flash（推奨、高速・高品質）
+  * `gpt-4o-mini`: OpenAI GPT-4o mini（フォールバック）
+  * `claude-3-5-sonnet`: Anthropic Claude 3.5 Sonnet（高品質）
+- JSON出力保証（マークダウン自動削除）
+
+**その他のエージェント**:
+- `fetchAgent`: HTTP APIコール（expertAgent jsonoutput API含む、RESTful API呼び出し）
+- `copyAgent`: データコピー・フォーマット変換
+- `jsonParserAgent`: JSON解析（※ user_inputの解析には使用しない）
+
+{expert_agent_capabilities}
+
+### recommended_apis の記述ルール
+
+1. **優先順位順に記述**: 最も推奨するAPIを先頭に記載
+2. **具体的に記述**: "geminiAgent" のように具体的なエージェント名を記載
+3. **複数指定可能**: メインAPI + フォールバックAPIを指定可能
+4. **理由を説明**: descriptionに「なぜそのAPIを使うか」を記載
+
 ## ⚠️ 重要な制約
 
 ### タスク数と優先度の制約
@@ -89,21 +188,24 @@ TASK_BREAKDOWN_SYSTEM_PROMPT = """あなたはワークフロー設計の専門�
 ```
 task_001:
   name: "Gmail検索"
-  description: "指定されたキーワードでGmailを検索し、メール一覧を取得する"
+  description: "指定されたキーワードでGmailを検索し、メール一覧を取得する。Gmail APIを使用してHTTP経由でデータを取得。"
   dependencies: []
   expected_output: "JSON形式のメール一覧 (件名、送信者、本文抜粋を含む)"
+  recommended_apis: ["fetchAgent"]
 
 task_002:
   name: "検索結果フォーマット"
-  description: "Gmail検索結果をPDF形式にフォーマットする"
+  description: "Gmail検索結果をPDF形式にフォーマットする。LLMを使用して自然言語処理とフォーマット生成を行う。expertAgent の jsonoutput API (http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput) を fetchAgent 経由で呼び出し、gemini-2.5-flash モデルを使用。"
   dependencies: ["task_001"]
   expected_output: "PDF形式のレポートファイル"
+  recommended_apis: ["fetchAgent (expertAgent jsonoutput API)"]
 
 task_003:
   name: "Googleドライブアップロード"
-  description: "フォーマットされたレポートをGoogleドライブにアップロードする"
+  description: "フォーマットされたレポートをGoogleドライブにアップロードする。Google Drive APIを使用してHTTP経由でアップロード。"
   dependencies: ["task_002"]
   expected_output: "アップロード完了メッセージとファイルURL"
+  recommended_apis: ["fetchAgent"]
 ```
 
 ## 出力形式
@@ -111,19 +213,20 @@ task_003:
 JSON形式で以下の構造で出力してください：
 
 ```json
-{
+{{
   "tasks": [
-    {
+    {{
       "task_id": "task_001",
       "name": "タスク名",
-      "description": "詳細な説明",
+      "description": "詳細な説明（使用APIの理由を含む）。LLM処理が必要な場合は、expertAgent の jsonoutput API を fetchAgent 経由で呼び出す旨を記載。",
       "dependencies": [],
       "expected_output": "期待される出力",
-      "priority": 5
-    }
+      "priority": 5,
+      "recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]
+    }}
   ],
   "overall_summary": "ワークフロー全体の概要"
-}
+}}
 ```
 
 タスクIDは必ず "task_001", "task_002", ... の形式で、ゼロパディング3桁で採番してください。

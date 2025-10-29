@@ -1,0 +1,44 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build the request payload for Google Drive Upload from URL API
+  # This node constructs the proper API request structure with PDF URLs and target directory
+  build_upload_request:
+    agent: stringTemplateAgent
+    inputs:
+      pdf_urls: :source.pdf_urls
+      drive_root_dir: :source.drive_root_dir
+    params:
+      template: |-
+        {
+          "pdf_urls": ${pdf_urls},
+          "drive_root_dir": "${drive_root_dir}"
+        }
+
+  # Step 2: Call Google Drive Upload from URL API via expertAgent
+  # This API handles downloading PDFs from URLs and uploading them to Google Drive
+  # The API processes the list of URLs and returns detailed upload results
+  upload_to_drive:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/drive/upload_from_url
+      method: POST
+      body:
+        pdf_urls: :source.pdf_urls
+        drive_root_dir: :source.drive_root_dir
+    timeout: 60000
+
+  # Step 3: Format and return the final output
+  # Maps the API response to the required output interface schema
+  # Ensures all required fields are present with proper structure
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :upload_to_drive.success
+        upload_results: :upload_to_drive.upload_results
+        total_count: :upload_to_drive.total_count
+        success_count: :upload_to_drive.success_count
+        error_message: :upload_to_drive.error_message
+    isResult: true

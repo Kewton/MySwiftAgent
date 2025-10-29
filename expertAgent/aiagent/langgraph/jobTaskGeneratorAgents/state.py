@@ -1,7 +1,8 @@
 """State definition for Job/Task auto-generation agent.
 
 This module defines the state structure for the LangGraph-based agent that
-automatically generates jobqueue Jobs and Tasks from natural language requirements.
+automatically generates jobqueue Jobs and Tasks from natural language
+requirements.
 """
 
 from typing import Any, TypedDict
@@ -20,9 +21,11 @@ class JobTaskGeneratorState(TypedDict, total=False):
 
         # Intermediate processing fields
         task_breakdown: List of tasks decomposed from requirements
-        interface_definitions: List of interface schemas for each task
+        interface_definitions: Mapping of task_id to interface schema bundle
+        schema_enrichment_stats: Statistics from OpenAPI schema enrichment
         task_masters: List of TaskMaster definitions
-        task_master_ids: Ordered list of TaskMaster IDs (preserves execution order)
+        task_master_ids: Ordered list of TaskMaster IDs (preserves execution
+            order)
         job_master: JobMaster definition
         job_master_id: Registered JobMaster ID
 
@@ -45,7 +48,8 @@ class JobTaskGeneratorState(TypedDict, total=False):
 
         # Output fields
         job_id: Registered Job ID (ready for execution)
-        status: Workflow status (success, evaluation_failed, validation_failed, error)
+        status: Workflow status (success, evaluation_failed, validation_failed,
+            error)
         error_message: Error message if workflow failed
     """
 
@@ -56,7 +60,8 @@ class JobTaskGeneratorState(TypedDict, total=False):
     # ===== Intermediate =====
     task_breakdown: list[dict[str, Any]]
     overall_summary: str  # Task breakdown summary from LLM
-    interface_definitions: list[dict[str, Any]]
+    interface_definitions: dict[str, dict[str, Any]]
+    schema_enrichment_stats: dict[str, Any]  # Schema enrichment statistics
     task_masters: list[dict[str, Any]]
     task_master_ids: list[str]
     job_master: dict[str, Any]
@@ -73,7 +78,8 @@ class JobTaskGeneratorState(TypedDict, total=False):
     evaluation_retry_count: int
     evaluation_errors: list[str]
     evaluation_feedback: str | None
-    evaluator_stage: str  # "after_task_breakdown" or "after_interface_definition"
+    # "after_task_breakdown" or "after_interface_definition"
+    evaluator_stage: str
 
     # ===== Validation & Retry =====
     validation_result: dict[str, Any] | None
@@ -106,7 +112,8 @@ def create_initial_state(
         # Intermediate
         "task_breakdown": [],
         "overall_summary": "",
-        "interface_definitions": [],
+        "interface_definitions": {},
+        "schema_enrichment_stats": {},
         "task_masters": [],
         "task_master_ids": [],
         "job_master": {},

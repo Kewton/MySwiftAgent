@@ -6,7 +6,7 @@ if validation errors are detected.
 """
 
 import logging
-import os
+from typing import Any
 
 from ..prompts.validation_fix import (
     VALIDATION_FIX_SYSTEM_PROMPT,
@@ -15,7 +15,7 @@ from ..prompts.validation_fix import (
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
-from ..utils.llm_factory import create_llm_with_fallback
+from ..utils.llm_invocation import StructuredLLMError, invoke_structured_llm
 
 logger = logging.getLogger(__name__)
 
@@ -89,50 +89,71 @@ async def validation_node(
         # If validation failed, generate fix proposals using LLM
         logger.info("Generating fix proposals for validation errors")
 
-        interface_definitions = state.get("interface_definitions", {})
-        interface_list = list(interface_definitions.values())
+        interface_definitions_obj = state.get("interface_definitions", {})
+        if not isinstance(interface_definitions_obj, dict):
+            logger.warning(
+                "interface_definitions state expected dict but got %s",
+                type(interface_definitions_obj).__name__,
+            )
+            interface_definitions_obj = {}
 
-        # Initialize LLM with fallback mechanism (Issue #111)
-        max_tokens = int(os.getenv("JOB_GENERATOR_MAX_TOKENS", "8192"))
-        model_name = os.getenv("JOB_GENERATOR_VALIDATION_MODEL", "claude-haiku-4-5")
-        model, perf_tracker, cost_tracker = create_llm_with_fallback(
-            model_name=model_name,
-            temperature=0.0,
-            max_tokens=max_tokens,
-        )
-        logger.debug(f"Using model={model_name}, max_tokens={max_tokens}")
+        interface_list: list[dict[str, Any]] = list(interface_definitions_obj.values())
 
-        # Create structured output model
-        structured_model = model.with_structured_output(ValidationFixResponse)
-
-        # Create prompt
         user_prompt = create_validation_fix_prompt(errors, interface_list)
-        logger.debug(f"Created validation fix prompt (length: {len(user_prompt)})")
-
-        # Invoke LLM
         messages = [
             {"role": "system", "content": VALIDATION_FIX_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ]
-        logger.info("Invoking LLM for validation fix proposals")
-        fix_response = await structured_model.ainvoke(messages)
 
-        logger.info(f"Fix proposals generated: can_fix={fix_response.can_fix}")
-        logger.info(f"Fix summary: {fix_response.fix_summary}")
+        try:
+            call_result = await invoke_structured_llm(
+                messages=messages,
+                response_model=ValidationFixResponse,
+                context_label="validation_fix",
+                model_env_var="JOB_GENERATOR_VALIDATION_MODEL",
+                default_model="claude-haiku-4-5",
+            )
+        except StructuredLLMError as exc:
+            logger.error("Validation fix proposal generation failed: %s", exc)
+            new_retry = state.get("retry_count", 0) + 1
+            return {
+                **state,
+                "error_message": str(exc),
+                "retry_count": new_retry,
+            }
+
+        fix_response = call_result.result
+        logger.info(
+            "Fix proposals generated (model=%s can_fix=%s)",
+            call_result.model_name,
+            fix_response.can_fix,
+        )
+        if call_result.recovered_via_json:
+            logger.info("Validation fix proposals succeeded via JSON fallback")
+
+        if fix_response.fix_summary:
+            logger.debug("Fix summary: %s", fix_response.fix_summary)
 
         if fix_response.interface_fixes:
-            logger.info(f"Found {len(fix_response.interface_fixes)} interface fixes")
+            logger.info(
+                "Interface fixes suggested: %s",
+                len(fix_response.interface_fixes),
+            )
             for fix in fix_response.interface_fixes:
                 logger.info(
-                    f"  - {fix.task_id}: {fix.error_type} - {fix.fix_explanation}"
+                    "Interface fix %s (%s): %s",
+                    fix.task_id,
+                    fix.error_type,
+                    fix.fix_explanation,
                 )
 
         if fix_response.manual_action_required:
             logger.warning(
-                f"Manual action required: {fix_response.manual_action_required}"
+                "Manual action required: %s",
+                fix_response.manual_action_required,
             )
 
-        # Return validation result with fix proposals
+        new_retry = state.get("retry_count", 0) + 1
         return {
             **state,
             "validation_result": {
@@ -141,13 +162,14 @@ async def validation_node(
                 "warnings": warnings,
                 "fix_proposals": fix_response.model_dump(),
             },
-            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
+            "retry_count": new_retry,
         }
 
     except Exception as e:
         logger.error(f"Failed to validate workflow: {e}", exc_info=True)
+        new_retry = state.get("retry_count", 0) + 1
         return {
             **state,
             "error_message": f"Validation failed: {str(e)}",
-            "retry_count": state.get("retry_count", 0) + 1,  # Increment retry count
+            "retry_count": new_retry,
         }

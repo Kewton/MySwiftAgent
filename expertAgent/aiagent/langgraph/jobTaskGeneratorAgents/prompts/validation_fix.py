@@ -40,7 +40,8 @@ class InterfaceFixProposal(BaseModel):
         """
         if isinstance(value, str):
             try:
-                return json.loads(value)
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, dict) else {}
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON schema string: {e}") from e
         elif isinstance(value, dict):

@@ -1,0 +1,55 @@
+version: 0.5
+nodes:
+  # Input node - receives user_input with keyword
+  source: {}
+
+  # Step 1: Build prompt for podcast script generation using stringTemplateAgent
+  # This is MANDATORY when using :source.field in multi-line LLM prompts
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      keyword: :source.keyword
+    params:
+      template: |-
+        あなたはプロのポッドキャストスクリプトライターです。
+        以下のキーワードを基に、魅力的なポッドキャストのテーマを決定し、スクリプト（タイトルと本文）を生成してください。
+
+        キーワード: ${keyword}
+
+        # 制約条件
+        - タイトルは簡潔で、リスナーの興味を引くものにすること
+        - 本文は自然な話し言葉で、音声合成に適した形式にすること
+        - 本文は最低10文字以上、実用的な長さにすること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "title": "生成されたポッドキャストのタイトル",
+          "script": "生成されたポッドキャストの本文（音声合成用）"
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # Using gemini-2.5-flash as recommended model
+  generate_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with error handling
+  # Direct reference pattern to extract fields from LLM result
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_script.result.success
+        title: :generate_script.result.title
+        script: :generate_script.result.script
+        error_message: ""
+    isResult: true

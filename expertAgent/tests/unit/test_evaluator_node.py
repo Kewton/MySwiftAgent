@@ -13,7 +13,7 @@ These tests verify the evaluator node's behavior including:
 Issue #111: Comprehensive test coverage for all workflow nodes.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -36,9 +36,9 @@ class TestEvaluatorNode:
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_valid_task_breakdown(self, mock_create_llm):
+    async def test_evaluator_valid_task_breakdown(self, mock_invoke_llm):
         """Test evaluation with valid task breakdown (high quality scores).
 
         Priority: High
@@ -61,12 +61,17 @@ class TestEvaluatorNode:
             improvement_suggestions=[],
         )
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -88,22 +93,22 @@ class TestEvaluatorNode:
         assert result["evaluation_result"]["all_tasks_feasible"] is True
         assert len(result["evaluation_result"]["infeasible_tasks"]) == 0
 
-        # Verify retry_count is reset to 0 on success
-        assert result["retry_count"] == 0, (
-            "retry_count should be reset to 0 after successful evaluation"
+        # Verify retry_count is NOT modified by evaluator (it's managed by requirement_analysis/interface_definition)
+        assert result["retry_count"] == 2, (
+            "evaluator should not modify retry_count"
         )
 
         # evaluation_feedback should be None for valid results
         assert result.get("evaluation_feedback") is None
 
-        # Verify LLM was called
-        mock_structured.ainvoke.assert_called_once()
+        # Verify invoke_structured_llm was called
+        mock_invoke_llm.assert_called_once()
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_invalid_with_low_scores(self, mock_create_llm):
+    async def test_evaluator_invalid_with_low_scores(self, mock_invoke_llm):
         """Test evaluation with invalid task breakdown (low quality scores).
 
         Priority: High
@@ -132,12 +137,17 @@ class TestEvaluatorNode:
             ],
         )
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -164,14 +174,14 @@ class TestEvaluatorNode:
         assert "品質スコア" in result["evaluation_feedback"]
         assert "改善提案" in result["evaluation_feedback"]
 
-        # Verify retry_count is reset to 0
-        assert result["retry_count"] == 0
+        # Verify retry_count is NOT modified by evaluator
+        assert result["retry_count"] == 1
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_with_infeasible_tasks(self, mock_create_llm):
+    async def test_evaluator_with_infeasible_tasks(self, mock_invoke_llm):
         """Test evaluation with infeasible tasks detected.
 
         Priority: High
@@ -202,12 +212,17 @@ class TestEvaluatorNode:
             improvement_suggestions=["Consider using email instead of SMS"],
         )
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -239,9 +254,9 @@ class TestEvaluatorNode:
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_with_alternative_proposals(self, mock_create_llm):
+    async def test_evaluator_with_alternative_proposals(self, mock_invoke_llm):
         """Test evaluation with alternative proposals using existing APIs.
 
         Priority: Medium
@@ -272,12 +287,18 @@ class TestEvaluatorNode:
             improvement_suggestions=["Use email instead"],
         )
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -308,9 +329,9 @@ class TestEvaluatorNode:
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_with_api_extension_proposals(self, mock_create_llm):
+    async def test_evaluator_with_api_extension_proposals(self, mock_invoke_llm):
         """Test evaluation with API extension proposals.
 
         Priority: Medium
@@ -342,12 +363,18 @@ class TestEvaluatorNode:
             improvement_suggestions=["Add SMS API support"],
         )
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -376,17 +403,15 @@ class TestEvaluatorNode:
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_empty_task_breakdown(self, mock_create_llm):
+    async def test_evaluator_empty_task_breakdown(self, mock_invoke_llm):
         """Test error handling when task_breakdown is empty.
 
         Priority: Medium
         This tests edge case where no tasks are provided.
         """
-        # Setup mock LLM (won't be called due to empty check)
-        mock_llm = AsyncMock()
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Note: mock_invoke_llm won't be called due to empty check in evaluator_node
 
         # Create test state with empty task_breakdown
         state = create_mock_workflow_state(
@@ -401,28 +426,28 @@ class TestEvaluatorNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Task breakdown is required for evaluation" in result["error_message"]
+        assert "Evaluation requires a task breakdown" in result["error_message"]
         assert result["evaluation_result"] is None
 
         # Verify LLM was NOT called (early return)
-        mock_llm.with_structured_output.assert_not_called()
+        mock_invoke_llm.assert_not_called()
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_llm_error(self, mock_create_llm):
+    async def test_evaluator_llm_error(self, mock_invoke_llm):
         """Test error handling when LLM invocation fails.
 
         Priority: Medium
         This tests exception handling.
         """
-        # Setup mock LLM to raise exception
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(side_effect=Exception("LLM API timeout"))
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm to raise exception
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredLLMError,
+        )
+
+        mock_invoke_llm.side_effect = StructuredLLMError("LLM API timeout")
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -438,20 +463,19 @@ class TestEvaluatorNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Evaluation failed" in result["error_message"]
         assert "LLM API timeout" in result["error_message"]
 
         # evaluation_result should not be in result
         assert "evaluation_result" not in result
 
-        # Verify LLM was called
-        mock_structured.ainvoke.assert_called_once()
+        # Verify invoke_structured_llm was called
+        mock_invoke_llm.assert_called_once()
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
     )
-    async def test_evaluator_retry_count_reset(self, mock_create_llm):
+    async def test_evaluator_retry_count_reset(self, mock_invoke_llm):
         """Test that retry_count is always reset to 0 after evaluation.
 
         Priority: Low
@@ -474,14 +498,20 @@ class TestEvaluatorNode:
             improvement_suggestions=[],
         )
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
 
-        # Test Case 1: retry_count=3 should be reset to 0
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
+
+        # Test Case 1: retry_count=3 should NOT be modified by evaluator
         task_breakdown = create_mock_task_breakdown(2)
         state = create_mock_workflow_state(
             retry_count=3,
@@ -490,8 +520,8 @@ class TestEvaluatorNode:
             evaluator_stage="after_task_breakdown",
         )
         result = await evaluator_node(state)
-        assert result["retry_count"] == 0, (
-            "retry_count should be reset to 0 regardless of previous value"
+        assert result["retry_count"] == 3, (
+            "evaluator should not modify retry_count"
         )
 
         # Test Case 2: retry_count=0 should remain 0

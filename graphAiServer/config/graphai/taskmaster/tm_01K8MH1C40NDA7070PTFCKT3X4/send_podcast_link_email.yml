@@ -1,0 +1,60 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build email body using stringTemplateAgent
+  # This constructs the email content with podcast title and URL
+  build_email_body:
+    agent: stringTemplateAgent
+    inputs:
+      podcast_title: :source.podcast_title
+      podcast_url: :source.podcast_url
+    params:
+      template: |-
+        ポッドキャスト「${podcast_title}」をお送りします。
+
+        以下のリンクからアクセスしてください：
+        ${podcast_url}
+
+        よろしくお願いいたします。
+
+  # Step 2: Build email send request using stringTemplateAgent
+  # This constructs the complete email request with recipient, subject, and body
+  build_email_request:
+    agent: stringTemplateAgent
+    inputs:
+      recipient_email: :source.recipient_email
+      podcast_title: :source.podcast_title
+      email_body: :build_email_body
+    params:
+      template: |-
+        {
+          "to": "${recipient_email}",
+          "subject": "ポッドキャスト『${podcast_title}』のリンク",
+          "body": "${email_body}"
+        }
+
+  # Step 3: Send email via Gmail API using fetchAgent
+  # Calls the expertAgent Gmail send endpoint
+  send_email:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/gmail/send
+      method: POST
+      body:
+        to: :source.recipient_email
+        subject: "ポッドキャスト『:source.podcast_title』のリンク"
+        body: :build_email_body
+    timeout: 60000
+
+  # Step 4: Format final output
+  # Maps the Gmail API response to the required output interface
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        message_id: :send_email.message_id
+        status: SENT
+        error_message: ""
+    isResult: true

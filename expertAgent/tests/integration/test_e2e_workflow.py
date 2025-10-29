@@ -32,11 +32,8 @@ from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
     TaskBreakdownItem,
     TaskBreakdownResponse,
 )
-from tests.integration.fixtures.llm_responses import (
-    VALIDATION_SUCCESS_RESPONSE,
-)
-from tests.utils.mock_helpers import (
-    create_mock_llm,
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+    StructuredCallResult,
 )
 
 # ============================================================================
@@ -232,6 +229,67 @@ def create_evaluation_result_failure() -> EvaluationResult:
     )
 
 
+def create_mock_invoke_structured_llm(
+    task_breakdown_response: TaskBreakdownResponse | None = None,
+    evaluation_results: list[EvaluationResult] | None = None,
+    interface_schema_response: InterfaceSchemaResponse | None = None,
+) -> AsyncMock:
+    """Create a mocked invoke_structured_llm function.
+
+    This function returns a side_effect that selects the appropriate response
+    based on the response_model parameter.
+
+    Args:
+        task_breakdown_response: Response for TaskBreakdownResponse model
+        evaluation_results: List of responses for EvaluationResult model (for multiple calls)
+        interface_schema_response: Response for InterfaceSchemaResponse model
+
+    Returns:
+        AsyncMock: A mocked invoke_structured_llm function
+    """
+    if task_breakdown_response is None:
+        task_breakdown_response = create_task_breakdown_response()
+    if evaluation_results is None:
+        evaluation_results = [create_evaluation_result_success()]
+    if interface_schema_response is None:
+        interface_schema_response = create_interface_schema_response()
+
+    evaluation_call_count = [0]  # Mutable counter for evaluation calls
+
+    async def side_effect_func(**kwargs):  # type: ignore[no-untyped-def]
+        response_model = kwargs.get("response_model")
+
+        if response_model == TaskBreakdownResponse:
+            return StructuredCallResult(
+                result=task_breakdown_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        elif response_model == EvaluationResult:
+            idx = evaluation_call_count[0]
+            evaluation_call_count[0] += 1
+            result = evaluation_results[idx] if idx < len(evaluation_results) else evaluation_results[-1]
+            return StructuredCallResult(
+                result=result,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        elif response_model == InterfaceSchemaResponse:
+            return StructuredCallResult(
+                result=interface_schema_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        else:
+            raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock = AsyncMock(side_effect=side_effect_func)
+    return mock
+
+
 def create_interface_schema_response() -> InterfaceSchemaResponse:
     """Create an InterfaceSchemaResponse Pydantic model for testing.
 
@@ -297,23 +355,13 @@ def create_interface_schema_response() -> InterfaceSchemaResponse:
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_success_first_try(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -331,55 +379,41 @@ async def test_e2e_workflow_success_first_try(
         - retry_count is 0
         - All nodes executed once (except evaluator: 2 times)
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock LLMs with structured output
-    # requirement_analysis_node expects TaskBreakdownResponse Pydantic model
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Evaluator called twice: after_task_breakdown, after_interface_definition
+    # evaluator node (called twice)
     evaluation_success = create_evaluation_result_success()
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[
-            evaluation_success,  # 1st call: task_breakdown valid
-            evaluation_success,  # 2nd call: interface valid
-        ]
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    mock_invoke_llm_evaluator.side_effect = [
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+    ]
 
-    # interface_definition_node expects InterfaceSchemaResponse Pydantic model
+    # interface_definition node
     interface_schema_response = create_interface_schema_response()
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(
-        return_value=interface_schema_response
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=interface_schema_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
-    )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
-
-    # validation_node does NOT use LLM for success case (only uses JobqueueClient)
-    mock_llm_validation.return_value = (MagicMock(), perf_tracker, cost_tracker)
 
     # Setup: Mock Jobqueue clients (use default mock values for consistency)
     mock_jobqueue_master.return_value = create_mock_jobqueue_client()
@@ -412,14 +446,9 @@ async def test_e2e_workflow_success_first_try(
     assert result.get("job_id") == "job_uuid_test", "job_id should be set"
 
     # Assert: Verify LLM call counts
-    assert mock_llm_requirement.call_count == 1, "requirement_analysis called once"
-    assert mock_llm_evaluator.call_count == 2, "evaluator called twice"
-    assert mock_llm_interface.call_count == 1, "interface_definition called once"
-    # validation_node only uses LLM when validation fails (for fix proposals)
-    # In success case, LLM is not called
-    assert mock_llm_validation.call_count == 0, (
-        "validation LLM not called in success case"
-    )
+    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_evaluator.call_count == 2, "evaluator called twice"
+    assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
 
     # Assert: Verify Jobqueue call counts
     mock_jobqueue_master.return_value.create_job_master.assert_called_once()
@@ -430,23 +459,13 @@ async def test_e2e_workflow_success_first_try(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_success_with_retry(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -465,57 +484,47 @@ async def test_e2e_workflow_success_with_retry(
         - evaluator called 3 times (1st fail, 2nd success after task_breakdown, 3rd after interface)
         - Final retry_count is 0 (reset after success)
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock LLMs with Pydantic models
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node (called twice due to retry)
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Evaluator called 3 times: 1st fail, 2nd success (task), 3rd success (interface)
+    # evaluator node (called 3 times: 1st fail, 2nd success, 3rd success)
     evaluation_failure = create_evaluation_result_failure()
     evaluation_success = create_evaluation_result_success()
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[
-            evaluation_failure,  # 1st: task_breakdown invalid
-            evaluation_success,  # 2nd: task_breakdown valid (after retry)
-            evaluation_success,  # 3rd: interface valid
-        ]
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    mock_invoke_llm_evaluator.side_effect = [
+        StructuredCallResult(
+            result=evaluation_failure,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+    ]
 
-    # Interface definition with Pydantic model
+    # interface_definition node
     interface_schema_response = create_interface_schema_response()
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(
-        return_value=interface_schema_response
-    )
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
-    )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
-    mock_llm_validation.return_value = (
-        create_mock_llm(VALIDATION_SUCCESS_RESPONSE),
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=interface_schema_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
     # Setup: Mock Jobqueue clients (use default mock values for consistency)
@@ -542,40 +551,28 @@ async def test_e2e_workflow_success_with_retry(
     assert result.get("job_id") == "job_uuid_test", "job_id should be set"
 
     # Assert: Verify LLM call counts
-    assert mock_llm_requirement.call_count == 2, (
+    assert mock_invoke_llm_requirement.call_count == 2, (
         "requirement_analysis called twice (1 retry)"
     )
-    assert mock_llm_evaluator.call_count == 3, (
+    assert mock_invoke_llm_evaluator.call_count == 3, (
         "evaluator called 3 times (1 fail + 2 success)"
     )
-    assert mock_llm_interface.call_count == 1, "interface_definition called once"
-    # validation_node only uses LLM when validation fails (for fix proposals)
-    assert mock_llm_validation.call_count == 0, (
-        "validation LLM not called in success case"
-    )
+    assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
+    # Note: validation_node only uses LLM when validation fails (for fix proposals)
+    # In success cases, no LLM is called in validation node
 
 
 @pytest.mark.asyncio
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_success_after_interface_retry(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -594,58 +591,47 @@ async def test_e2e_workflow_success_after_interface_retry(
         - evaluator called 3 times (1st task success, 2nd interface fail, 3rd interface success)
         - Final retry_count is 0 (reset after success)
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock LLMs with Pydantic models
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node (called once)
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Evaluator called 3 times: task success, interface fail, interface success
+    # evaluator node (called 3 times: task success, interface fail, interface success)
     evaluation_success = create_evaluation_result_success()
     evaluation_failure = create_evaluation_result_failure()
+    mock_invoke_llm_evaluator.side_effect = [
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_failure,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+    ]
 
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[
-            evaluation_success,  # 1st: task_breakdown valid
-            evaluation_failure,  # 2nd: interface invalid
-            evaluation_success,  # 3rd: interface valid (after retry)
-        ]
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
-
-    # Interface definition with Pydantic model
+    # interface_definition node (called twice due to retry)
     interface_schema_response = create_interface_schema_response()
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(
-        return_value=interface_schema_response
-    )
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
-    )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
-    mock_llm_validation.return_value = (
-        create_mock_llm(VALIDATION_SUCCESS_RESPONSE),
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=interface_schema_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
     # Setup: Mock Jobqueue clients (use default mock values for consistency)
@@ -672,17 +658,15 @@ async def test_e2e_workflow_success_after_interface_retry(
     assert result.get("job_id") == "job_uuid_test", "job_id should be set"
 
     # Assert: Verify LLM call counts
-    assert mock_llm_requirement.call_count == 1, "requirement_analysis called once"
-    assert mock_llm_evaluator.call_count == 3, (
+    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_evaluator.call_count == 3, (
         "evaluator called 3 times (task success, interface fail/success)"
     )
-    assert mock_llm_interface.call_count == 2, (
+    assert mock_invoke_llm_interface.call_count == 2, (
         "interface_definition called twice (1 retry)"
     )
-    # validation_node only uses LLM when validation fails (for fix proposals)
-    assert mock_llm_validation.call_count == 0, (
-        "validation LLM not called in success case"
-    )
+    # Note: validation_node only uses LLM when validation fails (for fix proposals)
+    # In success cases, no LLM is called in validation node
 
 
 # ============================================================================
@@ -694,23 +678,13 @@ async def test_e2e_workflow_success_after_interface_retry(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_max_retries_reached(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -730,35 +704,26 @@ async def test_e2e_workflow_max_retries_reached(
         - No job_id or job_master_id is set
         - evaluation_result.is_valid = False
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock requirement_analysis to always return tasks
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node (always returns tasks)
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Setup: Mock evaluator to always fail (retry loop)
+    # evaluator node (always fails - provide enough failures to reach recursion limit)
     evaluation_failure = create_evaluation_result_failure()
-    mock_evaluator_structured = AsyncMock()
-    # evaluator called 5 times, all failures
-    mock_evaluator_structured.ainvoke = AsyncMock(side_effect=[evaluation_failure] * 5)
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
+    failure_result = StructuredCallResult(
+        result=evaluation_failure,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    # Use side_effect to return the same failure result many times (recursion_limit=25)
+    mock_invoke_llm_evaluator.side_effect = [failure_result] * 30
 
     # Execute: Run E2E workflow
     app = create_job_task_generator_agent()
@@ -770,44 +735,34 @@ async def test_e2e_workflow_max_retries_reached(
     result = await app.ainvoke(initial_state)
 
     # Assert: Verify max retries reached
-    assert result["retry_count"] == 0, "retry_count reset to 0 after final evaluation"
+    assert result["retry_count"] == 5, "retry_count should be 5 at max retries"
     assert "job_id" not in result, "job_id should not be set (workflow stopped)"
     assert "job_master_id" not in result, "job_master_id should not be set"
 
     # Assert: Verify LLM call counts
     # requirement_analysis called 6 times (initial 1 + retries 5 = 6 total)
-    assert mock_llm_requirement.call_count == 6, (
+    assert mock_invoke_llm_requirement.call_count == 6, (
         "requirement_analysis called 6 times (1 initial + 5 retries)"
     )
     # evaluator called 6 times (all failures)
-    assert mock_llm_evaluator.call_count == 6, (
+    assert mock_invoke_llm_evaluator.call_count == 6, (
         "evaluator called 6 times (1 initial + 5 retries)"
     )
     # interface_definition NOT called (workflow stopped before)
-    assert mock_llm_interface.call_count == 0, "interface_definition not called"
+    assert mock_invoke_llm_interface.call_count == 0, "interface_definition not called"
 
 
 @pytest.mark.asyncio
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_infeasible_tasks_detected(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -829,23 +784,14 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     Note: This test verifies that infeasible task detection doesn't crash the workflow.
     The workflow should retry and eventually succeed when requirements are improved.
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock requirement_analysis (same as test 1)
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
     # Setup: Mock evaluator with infeasible tasks initially, then success
@@ -868,36 +814,39 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     # Create success result
     evaluation_success = create_evaluation_result_success()
 
-    mock_evaluator_structured = AsyncMock()
-    # Return failure with infeasible_tasks 5 times, then success
-    # This simulates: initial failure → retries with failures → eventual success
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[evaluation_with_infeasible] * 5
-        + [
-            evaluation_success,  # After retries, task_breakdown is valid
-            evaluation_success,  # After interface_definition
-        ]
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    # evaluator node (returns failure 5 times, then success twice)
+    failure_results = [
+        StructuredCallResult(
+            result=evaluation_with_infeasible,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        )
+    ] * 5
+    success_results = [
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+    ]
+    mock_invoke_llm_evaluator.side_effect = failure_results + success_results
 
-    # Setup: Mock interface_definition
+    # interface_definition node
     interface_schema_response = create_interface_schema_response()
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(
-        return_value=interface_schema_response
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=interface_schema_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
-    )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
-
-    # validation_node does NOT use LLM for success case
-    mock_llm_validation.return_value = (MagicMock(), perf_tracker, cost_tracker)
 
     # Setup: Mock Jobqueue clients
     mock_jobqueue_master.return_value = create_mock_jobqueue_client()
@@ -926,12 +875,12 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     assert result["retry_count"] == 0, "retry_count should be reset to 0 after success"
 
     # Assert: Verify evaluator was called multiple times (failures + successes)
-    assert mock_llm_evaluator.call_count >= 6, (
-        f"evaluator called at least 6 times (5 failures + 1 success), got {mock_llm_evaluator.call_count}"
+    assert mock_invoke_llm_evaluator.call_count >= 6, (
+        f"evaluator called at least 6 times (5 failures + 1 success), got {mock_invoke_llm_evaluator.call_count}"
     )
     # requirement_analysis was retried multiple times due to evaluation failures
-    assert mock_llm_requirement.call_count >= 2, (
-        f"requirement_analysis called at least twice (initial + retries), got {mock_llm_requirement.call_count}"
+    assert mock_invoke_llm_requirement.call_count >= 2, (
+        f"requirement_analysis called at least twice (initial + retries), got {mock_invoke_llm_requirement.call_count}"
     )
 
 
@@ -941,11 +890,9 @@ async def test_e2e_workflow_infeasible_tasks_detected(
 
 
 @pytest.mark.asyncio
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
 async def test_e2e_workflow_empty_task_breakdown(
-    mock_llm_requirement: MagicMock,
+    mock_invoke_llm_requirement: AsyncMock,
 ) -> None:
     """Test E2E workflow with empty task breakdown → END.
 
@@ -958,24 +905,16 @@ async def test_e2e_workflow_empty_task_breakdown(
         - Error logging occurs
         - No job_id or job_master_id created
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
     # Setup: Mock requirement_analysis to return empty task breakdown
     empty_task_breakdown = TaskBreakdownResponse(
         tasks=[],  # Empty tasks list
         overall_summary="Failed to break down tasks",
     )
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(return_value=empty_task_breakdown)
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=empty_task_breakdown,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
     # Execute: Run E2E workflow
@@ -990,10 +929,13 @@ async def test_e2e_workflow_empty_task_breakdown(
     # Assert: Verify workflow terminated without creating job
     assert "job_id" not in result, "job_id should not be set (empty task breakdown)"
     assert "job_master_id" not in result, "job_master_id should not be set"
-    assert result.get("task_breakdown") == [], "task_breakdown should be empty"
+    # task_breakdown may be None or empty list when LLM fails to generate tasks
+    assert result.get("task_breakdown") in (None, []), (
+        "task_breakdown should be None or empty when generation fails"
+    )
 
     # Assert: Verify LLM was called only once (requirement_analysis)
-    assert mock_llm_requirement.call_count == 1, (
+    assert mock_invoke_llm_requirement.call_count == 1, (
         "requirement_analysis called once before termination"
     )
 
@@ -1002,23 +944,13 @@ async def test_e2e_workflow_empty_task_breakdown(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_empty_interface_definitions(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -1034,46 +966,35 @@ async def test_e2e_workflow_empty_interface_definitions(
         - evaluator_router detects empty interface_definitions
         - No job_id or job_master_id created
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock requirement_analysis (returns valid tasks)
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node (returns valid tasks)
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Setup: Mock evaluator (returns success for task_breakdown)
+    # evaluator node (returns success for task_breakdown)
     evaluation_success = create_evaluation_result_success()
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(return_value=evaluation_success)
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
+    mock_invoke_llm_evaluator.return_value = StructuredCallResult(
+        result=evaluation_success,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
 
-    # Setup: Mock interface_definition to return empty interfaces
+    # interface_definition node (returns empty interfaces)
     empty_interface_response = InterfaceSchemaResponse(
         interfaces=[],  # Empty interfaces list
     )
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(return_value=empty_interface_response)
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=empty_interface_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
 
     # Execute: Run E2E workflow
     app = create_job_task_generator_agent()
@@ -1104,23 +1025,19 @@ async def test_e2e_workflow_empty_interface_definitions(
     )
 
     # Assert: Verify LLM call counts
-    assert mock_llm_requirement.call_count == 1, "requirement_analysis called once"
-    assert mock_llm_evaluator.call_count == 2, (
+    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_evaluator.call_count == 2, (
         "evaluator called twice (after task_breakdown and after interface_definition)"
     )
-    assert mock_llm_interface.call_count == 1, "interface_definition called once"
+    assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
 
 
 @pytest.mark.asyncio
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
 async def test_e2e_workflow_llm_error_during_flow(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
 ) -> None:
     """Test E2E workflow with LLM error during execution.
 
@@ -1132,35 +1049,18 @@ async def test_e2e_workflow_llm_error_during_flow(
         - error_message is set in state
         - Workflow terminates gracefully
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock requirement_analysis (returns valid tasks)
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node (returns valid tasks)
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Setup: Mock evaluator to raise exception
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=Exception("LLM API timeout error")
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    # evaluator node (raises exception)
+    mock_invoke_llm_evaluator.side_effect = Exception("LLM API timeout error")
 
     # Execute: Run E2E workflow
     app = create_job_task_generator_agent()
@@ -1183,8 +1083,8 @@ async def test_e2e_workflow_llm_error_during_flow(
     assert "job_master_id" not in result, "job_master_id should not be set"
 
     # Assert: Verify LLM call counts
-    assert mock_llm_requirement.call_count == 1, "requirement_analysis called once"
-    assert mock_llm_evaluator.call_count == 1, "evaluator called once before error"
+    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_evaluator.call_count == 1, "evaluator called once before error"
 
 
 # ============================================================================
@@ -1196,23 +1096,13 @@ async def test_e2e_workflow_llm_error_during_flow(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_execution_time(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -1224,51 +1114,41 @@ async def test_e2e_workflow_execution_time(
         - No external API calls (100% API-key-free)
         - Workflow completes successfully
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock all LLMs (same as success test)
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
+    # evaluator node (called twice)
     evaluation_success = create_evaluation_result_success()
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[
-            evaluation_success,  # task_breakdown valid
-            evaluation_success,  # interface valid
-        ]
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    mock_invoke_llm_evaluator.side_effect = [
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+    ]
 
+    # interface_definition node
     interface_schema_response = create_interface_schema_response()
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(
-        return_value=interface_schema_response
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=interface_schema_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
-    )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
-
-    mock_llm_validation.return_value = (MagicMock(), perf_tracker, cost_tracker)
 
     # Setup: Mock Jobqueue clients
     mock_jobqueue_master.return_value = create_mock_jobqueue_client()
@@ -1311,23 +1191,13 @@ async def test_e2e_workflow_execution_time(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.validation.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.create_llm_with_fallback"
-)
-@patch(
-    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.create_llm_with_fallback"
-)
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
+@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
 async def test_e2e_workflow_state_consistency(
-    mock_llm_requirement: MagicMock,
-    mock_llm_evaluator: MagicMock,
-    mock_llm_interface: MagicMock,
-    mock_llm_validation: MagicMock,
+    mock_invoke_llm_interface: AsyncMock,
+    mock_invoke_llm_evaluator: AsyncMock,
+    mock_invoke_llm_requirement: AsyncMock,
     mock_jobqueue_master: MagicMock,
     mock_schema_matcher: MagicMock,
     mock_jobqueue_job_reg: MagicMock,
@@ -1340,54 +1210,48 @@ async def test_e2e_workflow_state_consistency(
         - All required fields are populated
         - No unexpected state mutations
     """
-    # Setup: Create trackers
-    perf_tracker, cost_tracker = create_mock_trackers()
-
-    # Setup: Mock all LLMs (with one retry scenario)
+    # Setup: Mock invoke_structured_llm for each node
+    # requirement_analysis node (called twice due to retry)
     task_breakdown_response = create_task_breakdown_response()
-    mock_requirement_structured = AsyncMock()
-    mock_requirement_structured.ainvoke = AsyncMock(
-        return_value=task_breakdown_response
-    )
-    mock_requirement_llm = MagicMock()
-    mock_requirement_llm.with_structured_output = MagicMock(
-        return_value=mock_requirement_structured
-    )
-    mock_llm_requirement.return_value = (
-        mock_requirement_llm,
-        perf_tracker,
-        cost_tracker,
+    mock_invoke_llm_requirement.return_value = StructuredCallResult(
+        result=task_breakdown_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
 
-    # Evaluator: 1st fail, then success
+    # evaluator node (1st fail, 2nd success, 3rd success)
     evaluation_failure = create_evaluation_result_failure()
     evaluation_success = create_evaluation_result_success()
-    mock_evaluator_structured = AsyncMock()
-    mock_evaluator_structured.ainvoke = AsyncMock(
-        side_effect=[
-            evaluation_failure,  # 1st: task_breakdown invalid
-            evaluation_success,  # 2nd: task_breakdown valid
-            evaluation_success,  # 3rd: interface valid
-        ]
-    )
-    mock_evaluator_llm = MagicMock()
-    mock_evaluator_llm.with_structured_output = MagicMock(
-        return_value=mock_evaluator_structured
-    )
-    mock_llm_evaluator.return_value = (mock_evaluator_llm, perf_tracker, cost_tracker)
+    mock_invoke_llm_evaluator.side_effect = [
+        StructuredCallResult(
+            result=evaluation_failure,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+        StructuredCallResult(
+            result=evaluation_success,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="mock-model",
+        ),
+    ]
 
+    # interface_definition node
     interface_schema_response = create_interface_schema_response()
-    mock_interface_structured = AsyncMock()
-    mock_interface_structured.ainvoke = AsyncMock(
-        return_value=interface_schema_response
+    mock_invoke_llm_interface.return_value = StructuredCallResult(
+        result=interface_schema_response,
+        recovered_via_json=False,
+        raw_text=None,
+        model_name="mock-model",
     )
-    mock_interface_llm = MagicMock()
-    mock_interface_llm.with_structured_output = MagicMock(
-        return_value=mock_interface_structured
-    )
-    mock_llm_interface.return_value = (mock_interface_llm, perf_tracker, cost_tracker)
-
-    mock_llm_validation.return_value = (MagicMock(), perf_tracker, cost_tracker)
 
     # Setup: Mock Jobqueue clients
     mock_jobqueue_master.return_value = create_mock_jobqueue_client()

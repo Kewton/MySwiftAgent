@@ -1,0 +1,60 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Input format: {"keyword": "...", "recipient_email": "..."}
+  source: {}
+
+  # Step 1: Build LLM prompt using stringTemplateAgent
+  # This is MANDATORY when using :source.field in multi-line strings
+  # Constructs a Japanese prompt for podcast script generation
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      keyword: :source.keyword
+      recipient_email: :source.recipient_email
+    params:
+      template: |-
+        あなたはポッドキャスト台本作成の専門家です。
+        以下のキーワードに基づき、魅力的で聴きやすいポッドキャスト台本を生成してください。
+
+        キーワード: ${keyword}
+        配信先メールアドレス: ${recipient_email}
+
+        # 制約条件
+        - タイトルは簡潔で、キーワードを含むこと
+        - 本文は自然な話し言葉で、3分程度の読み上げ時間を想定すること（約900文字）
+        - 本文は最低10文字以上であること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "title": "ポッドキャストのタイトル",
+          "script_body": "ポッドキャストの本文（Text-to-Speechにかけるテキスト）"
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # Uses gemini-2.5-flash model for podcast script generation
+  # Timeout: 60000ms (MANDATORY for LLM calls)
+  generate_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with success flag and error handling
+  # Direct reference pattern: extracts fields from LLM result
+  # Matches output_interface schema exactly
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        title: :generate_script.result.title
+        script_body: :generate_script.result.script_body
+        error_message: ""
+    isResult: true

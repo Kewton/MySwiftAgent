@@ -12,67 +12,108 @@ from ..state import WorkflowGeneratorState
 logger = logging.getLogger(__name__)
 
 
-def _generate_sample_from_schema(schema: dict[str, Any]) -> dict[str, Any] | str:
-    """Generate sample data from JSON Schema.
+SchemaValue = dict[str, Any] | str | int | float | bool | list[Any] | None
 
-    Args:
-        schema: JSON Schema object
 
-    Returns:
-        Sample data matching the schema
-    """
-    schema_type = schema.get("type", "object")
+def _first_dict(items: list[Any]) -> dict[str, Any]:
+    for candidate in items:
+        if isinstance(candidate, dict):
+            return candidate
+    return {}
+
+
+def _resolve_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    if "oneOf" in schema and isinstance(schema["oneOf"], list):
+        return _first_dict(schema["oneOf"])
+    if "anyOf" in schema and isinstance(schema["anyOf"], list):
+        return _first_dict(schema["anyOf"])
+    if "allOf" in schema and isinstance(schema["allOf"], list):
+        merged = {}
+        for part in schema["allOf"]:
+            if isinstance(part, dict):
+                merged.update(part)
+        return merged or schema
+    return schema
+
+
+def _enum_or_default(schema: dict[str, Any]) -> SchemaValue:
+    if "const" in schema:
+        return schema["const"]  # type: ignore[no-any-return]
+    enums = schema.get("enum")
+    if isinstance(enums, list) and enums:
+        return enums[0]  # type: ignore[no-any-return]
+    examples = schema.get("examples")
+    if isinstance(examples, list) and examples:
+        return examples[0]  # type: ignore[no-any-return]
+    default = schema.get("default")
+    if default is not None:
+        return default  # type: ignore[no-any-return]
+    example = schema.get("example")
+    if example is not None:
+        return example  # type: ignore[no-any-return]
+    return None
+
+
+def _normalise_type(value: Any) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        for entry in value:
+            if entry != "null":
+                return str(entry)
+        if value:
+            return str(value[0])
+    return None
+
+
+def _generate_sample_from_schema(schema: dict[str, Any]) -> SchemaValue:
+    schema = _resolve_schema(schema)
+
+    enum_value = _enum_or_default(schema)
+    if enum_value is not None:
+        return enum_value
+
+    schema_type = _normalise_type(schema.get("type")) or "object"
 
     if schema_type == "object":
         properties = schema.get("properties", {})
-        sample = {}
-
+        if not isinstance(properties, dict):
+            properties = {}
+        sample: dict[str, Any] = {}
         for prop_name, prop_schema in properties.items():
-            prop_type = prop_schema.get("type", "string")
-            prop_default = prop_schema.get("default")
-            prop_example = prop_schema.get("example")
-
-            # Use example or default if available
-            if prop_example is not None:
-                sample[prop_name] = prop_example
-            elif prop_default is not None:
-                sample[prop_name] = prop_default
-            # Generate sample based on type
-            elif prop_type == "string":
-                sample[prop_name] = f"sample_{prop_name}"
-            elif prop_type == "integer":
-                sample[prop_name] = 123
-            elif prop_type == "number":
-                sample[prop_name] = 123.45
-            elif prop_type == "boolean":
-                sample[prop_name] = True
-            elif prop_type == "array":
-                sample[prop_name] = ["sample_item"]
-            elif prop_type == "object":
-                sample[prop_name] = _generate_sample_from_schema(prop_schema)
-            else:
+            if not isinstance(prop_schema, dict):
                 sample[prop_name] = None
-
+                continue
+            sample[prop_name] = _generate_sample_from_schema(prop_schema)
         return sample
 
-    elif schema_type == "string":
-        return schema.get("example", "sample input text")
-
-    elif schema_type == "integer":
-        return schema.get("example", 123)
-
-    elif schema_type == "number":
-        return schema.get("example", 123.45)
-
-    elif schema_type == "boolean":
-        return schema.get("example", True)
-
-    elif schema_type == "array":
+    if schema_type == "array":
         items_schema = schema.get("items", {})
+        if isinstance(items_schema, list) and items_schema:
+            items_schema = _first_dict(items_schema)
+        if not isinstance(items_schema, dict):
+            items_schema = {}
         return [_generate_sample_from_schema(items_schema)]
 
-    else:
-        return {}
+    if schema_type == "string":
+        pattern = schema.get("pattern")
+        if pattern:
+            return f"sample_matching_{pattern[:12]}"
+        return "sample_text"
+
+    if schema_type == "integer":
+        return 1
+
+    if schema_type == "number":
+        return 1.0
+
+    if schema_type == "boolean":
+        return True
+
+    if schema_type == "null":
+        return None
+
+    return {}
 
 
 async def sample_input_generator_node(
@@ -93,7 +134,15 @@ async def sample_input_generator_node(
     """
     logger.info("Starting sample input generator node")
 
-    task_data = state["task_data"]
+    task_data = state.get("task_data")
+    if task_data is None:
+        message = "Sample input generation failed: task_data missing"
+        logger.error(message)
+        return {
+            **state,
+            "status": "failed",
+            "error_message": message,
+        }
     input_interface = task_data.get("input_interface", {})
     input_schema = input_interface.get("schema", {})
 
@@ -114,7 +163,11 @@ async def sample_input_generator_node(
         }
 
     except Exception as e:
-        logger.error(f"Error during sample input generation: {e}", exc_info=True)
+        logger.error(
+            "Error during sample input generation: %s",
+            e,
+            exc_info=True,
+        )
         return {
             **state,
             "status": "failed",

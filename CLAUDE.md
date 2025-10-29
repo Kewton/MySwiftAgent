@@ -433,7 +433,7 @@ AI生成 → 静的解析 → テスト作成 → 🏷️ PRラベル付与 → 
    - すべての手順を理解してから作業開始
 
 2. **作業計画書に手順書の参照を明記すること**
-   - `./dev-reports/{branch_path}/work-plan.md` に以下を記載：
+   - リポジトリのルートディレクトリ直下の `./dev-reports/{branch_path}/work-plan.md` に以下を記載：
    ```markdown
    ## 📚 参考ドキュメント
    - [新プロジェクトセットアップ手順書](../../docs/procedures/NEW_PROJECT_SETUP.md)
@@ -701,7 +701,7 @@ git push
 
 ## Claude Code 作業記録ルール
 
-Claude Codeによる開発作業では、以下のドキュメントを `./dev-reports/{branch_path}/` ディレクトリにMarkdown形式で保存します。
+Claude Codeによる開発作業では、以下のドキュメントをリポジトリのルートディレクトリ直下の `./dev-reports/{branch_path}/` ディレクトリにMarkdown形式で保存します。
 
 **ディレクトリ命名規則**: ブランチ名の階層構造を保持
 - 例: `feature/issue/104` → `./dev-reports/feature/issue/104/`
@@ -719,6 +719,8 @@ Claude Codeによる開発作業では、以下のドキュメントを `./dev-r
 ### **ドキュメント構成例**
 
 ```
+commonUI/
+・・・
 dev-reports/
 └── feature/
     └── issue/
@@ -887,7 +889,7 @@ dev-reports/
 承認後、以下の手順でCLAUDE.mdを更新：
 
 1. CLAUDE.md の該当セクションを修正
-2. 変更履歴を `dev-reports/{branch_path}/constraint-changes.md` に記録
+2. 変更履歴をリポジトリのルートディレクトリ直下 `./dev-reports/{branch_path}/constraint-changes.md` に記録
 3. PRのコミットメッセージに変更理由を明記
 
 ---
@@ -1066,7 +1068,7 @@ project/
 - [ ] ソースコード ({project_name}/app/)
 - [ ] 単体テスト (tests/unit/)
 - [ ] 結合テスト (tests/integration/)
-- [ ] ドキュメント (./dev-reports/)
+- [ ] ドキュメント (./dev-reports/)　＊リポジトリのルートディレクトリ直下
 
 ---
 

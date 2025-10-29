@@ -364,6 +364,184 @@ All category and model parameters are validated to prevent path traversal attack
 
 ---
 
+## Workflow Management Endpoints
+
+### Register Workflow
+
+**POST** `/api/v1/workflows/register`
+
+Registers a new GraphAI workflow by saving the YAML content to the config directory. Supports organizing workflows into subdirectories.
+
+**Request Body:**
+```json
+{
+  "workflow_name": "my_workflow",
+  "yaml_content": "version: 0.5\nnodes:\n  ...",
+  "directory": "category/subcategory",  // Optional
+  "overwrite": false                     // Optional
+}
+```
+
+**Request Fields:**
+- `workflow_name` (string, required): Workflow filename (without `.yml` extension)
+  - Must contain only alphanumeric characters, underscores, and hyphens
+  - Example: `podcast_generator`, `test_workflow_v2`
+- `yaml_content` (string, required): YAML content of the GraphAI workflow
+  - Must be valid YAML syntax
+- `directory` (string, optional): Subdirectory path for organizing workflows
+  - Default: `""` (saves to root `config/graphai/`)
+  - Example: `"test0001"` → `config/graphai/test0001/my_workflow.yml`
+  - Example: `"test/0001"` → `config/graphai/test/0001/my_workflow.yml`
+  - **Security**: Path traversal characters (`..`) are rejected
+- `overwrite` (boolean, optional): Overwrite existing file if it exists
+  - Default: `false`
+
+**Examples:**
+
+1. **Register workflow to root directory:**
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/workflows/register \
+     -H "Content-Type: application/json" \
+     -d '{
+       "workflow_name": "test_workflow",
+       "yaml_content": "version: 0.5\nnodes:\n  source: {}\n  output:\n    agent: copyAgent\n    inputs: [:source]\n    isResult: true\n"
+     }'
+   ```
+   → Saves to `config/graphai/test_workflow.yml`
+
+2. **Register workflow to subdirectory:**
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/workflows/register \
+     -H "Content-Type: application/json" \
+     -d '{
+       "workflow_name": "podcast_generator",
+       "yaml_content": "version: 0.5\nnodes: ...",
+       "directory": "llmwork"
+     }'
+   ```
+   → Saves to `config/graphai/llmwork/podcast_generator.yml`
+
+3. **Register workflow to nested subdirectory:**
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/workflows/register \
+     -H "Content-Type: application/json" \
+     -d '{
+       "workflow_name": "advanced_agent",
+       "yaml_content": "version: 0.5\nnodes: ...",
+       "directory": "expert/v2"
+     }'
+   ```
+   → Saves to `config/graphai/expert/v2/advanced_agent.yml`
+
+4. **Overwrite existing workflow:**
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/workflows/register \
+     -H "Content-Type: application/json" \
+     -d '{
+       "workflow_name": "test_workflow",
+       "yaml_content": "version: 0.5\nnodes: ...",
+       "overwrite": true
+     }'
+   ```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "file_path": "/absolute/path/to/config/graphai/test_workflow.yml",
+  "workflow_name": "test_workflow"
+}
+```
+
+**Response Fields:**
+- `status` (string): Registration status (`"success"` or `"error"`)
+- `file_path` (string): Absolute path to the saved workflow file
+- `workflow_name` (string): Workflow name (without `.yml` extension)
+
+**Error Responses:**
+
+- **400 Bad Request** - Invalid request parameters:
+  ```json
+  {
+    "status": "error",
+    "error_message": "Both workflow_name and yaml_content are required"
+  }
+  ```
+
+  ```json
+  {
+    "status": "error",
+    "error_message": "workflow_name must contain only alphanumeric characters, underscores, and hyphens"
+  }
+  ```
+
+  ```json
+  {
+    "status": "error",
+    "error_message": "Invalid directory parameter: \"..\" is not allowed for security reasons"
+  }
+  ```
+
+  ```json
+  {
+    "status": "error",
+    "error_message": "YAML syntax validation failed",
+    "validation_errors": [
+      {
+        "type": "yaml_syntax",
+        "message": "bad indentation of a mapping entry",
+        "line": 5,
+        "column": 3
+      }
+    ]
+  }
+  ```
+
+- **409 Conflict** - Workflow already exists:
+  ```json
+  {
+    "status": "error",
+    "error_message": "Workflow 'test_workflow' already exists. Set overwrite=true to replace it."
+  }
+  ```
+
+- **500 Internal Server Error** - File system error:
+  ```json
+  {
+    "status": "error",
+    "error_message": "Failed to create workflow directory",
+    "validation_errors": [
+      {
+        "type": "file_system",
+        "message": "EACCES: permission denied, mkdir '/path/to/config'"
+      }
+    ]
+  }
+  ```
+
+### Validation Rules
+
+**workflow_name:**
+- ✅ Valid: `test_workflow`, `podcast-generator`, `workflow_v2`
+- ❌ Invalid: `../etc/passwd`, `workflow.yml`, `my workflow` (spaces)
+
+**directory:**
+- ✅ Valid: `test0001`, `test/0001`, `category/subcategory`
+- ❌ Invalid: `../etc`, `../../secret`, `/absolute/path`
+
+**yaml_content:**
+- Must be valid YAML syntax
+- Typically follows GraphAI 0.5 format (see workflow examples)
+
+### Security
+
+- **Path traversal protection**: Directory parameter is validated to reject `..`
+- **Filename sanitization**: workflow_name must match `/^[a-zA-Z0-9_-]+$/`
+- **YAML validation**: Content is validated before writing to file
+- **Automatic directory creation**: Target directories are created safely with `recursive: true`
+
+---
+
 ## Admin Endpoints
 
 ### Admin Health Check

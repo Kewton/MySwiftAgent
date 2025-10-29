@@ -1,0 +1,58 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build prompt for Playwright Agent to extract PDF links
+  build_playwright_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      url: :source.url
+    params:
+      template: |-
+        あなたはPlaywrightを使用してWebサイトをクロールし、PDFリンクを抽出するエージェントです。
+        以下のURLをクロールし、ページ内およびリンク先のすべてのPDFファイルへのURLを抽出してください。
+
+        対象URL: ${url}
+
+        # 実行手順
+        1. 指定されたURLにアクセスする
+        2. ページ内のすべてのリンク（<a>タグのhref属性）を取得する
+        3. href属性が.pdfで終わるリンク、またはPDFファイルを指すリンクを抽出する
+        4. 相対URLは絶対URLに変換する
+        5. 重複を除去する
+        6. 動的コンテンツが存在する場合はJavaScriptを実行して読み込む
+
+        # 制約条件
+        - タイムアウトは30秒以内に設定すること
+        - 無効なURLやアクセス不可のリンクは除外すること
+        - 抽出したPDFリンクは完全なURLで返すこと
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "pdf_urls": ["https://example.com/file1.pdf", "https://example.com/file2.pdf"],
+          "count": 2,
+          "error_message": ""
+        }
+
+  # Step 2: Call Playwright Agent via fetchAgent to extract PDF links
+  extract_pdf_links:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/playwright
+      method: POST
+      body:
+        user_input: :build_playwright_prompt
+    timeout: 60000
+
+  # Step 3: Format final output with extracted PDF links
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :extract_pdf_links.result.success
+        pdf_urls: :extract_pdf_links.result.pdf_urls
+        count: :extract_pdf_links.result.count
+        error_message: :extract_pdf_links.result.error_message
+    isResult: true

@@ -7,9 +7,10 @@ Workflow:
 1. requirement_analysis → Decompose user requirements into tasks
 2. evaluator → Evaluate task quality and feasibility
 3. interface_definition → Define JSON Schema interfaces
-4. master_creation → Create TaskMasters, JobMaster, JobMasterTask
-5. validation → Validate workflow interfaces
-6. job_registration → Create executable Job
+4. schema_enrichment → Enrich interfaces with OpenAPI schemas
+5. master_creation → Create TaskMasters, JobMaster, JobMasterTask
+6. validation → Validate workflow interfaces
+7. job_registration → Create executable Job
 
 The agent uses conditional routing to handle:
 - Evaluation failures (retry or exit)
@@ -28,6 +29,7 @@ from .nodes import (
     job_registration_node,
     master_creation_node,
     requirement_analysis_node,
+    schema_enrichment_node,
     validation_node,
 )
 from .state import JobTaskGeneratorState
@@ -40,190 +42,131 @@ MAX_RETRY_COUNT = 5
 
 def evaluator_router(
     state: JobTaskGeneratorState,
-) -> Literal["interface_definition", "requirement_analysis", "master_creation", "END"]:
-    """Route after evaluator node based on evaluation result.
-
-    Routing logic:
-    1. If evaluation result is missing or error occurred → END
-    2. If evaluator_stage is "after_task_breakdown":
-       - If valid → interface_definition
-       - If invalid and retry < max → requirement_analysis (retry)
-       - If invalid and retry >= max → END
-    3. If evaluator_stage is "after_interface_definition":
-       - If valid → master_creation
-       - If invalid and retry < max → interface_definition (retry)
-       - If invalid and retry >= max → END
-
-    Args:
-        state: Current job task generator state
-
-    Returns:
-        Next node name or END
-    """
-    logger.info("=" * 80)
-    logger.info("🔀 Evaluator router: determining next node")
-    logger.info("=" * 80)
+) -> Literal[
+    "interface_definition",
+    "requirement_analysis",
+    "master_creation",
+    "END",
+]:
+    """Determine the next node after the evaluator step."""
 
     evaluation_result = state.get("evaluation_result")
     evaluator_stage = state.get("evaluator_stage", "after_task_breakdown")
     retry_count = state.get("retry_count", 0)
     error_message = state.get("error_message")
 
-    logger.info(f"📍 Current evaluator_stage: {evaluator_stage}")
-    logger.info(f"🔄 Current retry_count: {retry_count}")
-    logger.info(f"📊 Evaluation result present: {evaluation_result is not None}")
-    if error_message:
-        logger.warning(f"❌ Error message detected: {error_message}")
-    else:
-        logger.info("✅ No error message detected")
+    logger.info(
+        "Evaluator router invoked: stage=%s retry=%s error_present=%s",
+        evaluator_stage,
+        retry_count,
+        bool(error_message),
+    )
 
-    # If error occurred, end workflow
     if error_message:
-        logger.error(f"❌ Error detected in state: {error_message}")
-        logger.error("🛑 Routing decision: END (due to error)")
+        logger.error(
+            "Stopping workflow after evaluator error: %s",
+            error_message,
+        )
         return "END"
 
-    # If evaluation result is missing, end workflow
     if not evaluation_result:
-        logger.error("❌ Evaluation result is missing")
-        logger.error("🛑 Routing decision: END (no evaluation result)")
+        logger.error("Stopping workflow: evaluation result missing")
         return "END"
 
     is_valid = evaluation_result.get("is_valid", False)
     all_tasks_feasible = evaluation_result.get("all_tasks_feasible", True)
 
-    logger.info(
-        f"✅ Evaluation result: is_valid={is_valid}, "
-        f"all_tasks_feasible={all_tasks_feasible}, "
-        f"stage={evaluator_stage}, retry_count={retry_count}"
+    logger.debug(
+        "Evaluation summary: is_valid=%s all_tasks_feasible=%s",
+        is_valid,
+        all_tasks_feasible,
     )
 
-    # Phase 8: Check for empty results (tasks=[] or interfaces=[])
     if evaluator_stage == "after_task_breakdown":
         task_breakdown = state.get("task_breakdown", [])
         if not task_breakdown:
-            logger.error("Task breakdown returned empty tasks list → END")
+            logger.error("Task breakdown produced no tasks; aborting")
             return "END"
     elif evaluator_stage == "after_interface_definition":
-        interface_definitions = state.get("interface_definitions", [])
+        interface_definitions = state.get("interface_definitions", {})
         if not interface_definitions:
-            logger.error("Interface definition returned empty interfaces list → END")
+            logger.error(
+                "Interface definition produced no interfaces; aborting",
+            )
             return "END"
+    else:
+        logger.error("Unknown evaluator stage: %s", evaluator_stage)
+        return "END"
 
-    # Log infeasible tasks if any
     infeasible_tasks = evaluation_result.get("infeasible_tasks", [])
     if infeasible_tasks:
-        logger.warning(f"Found {len(infeasible_tasks)} infeasible tasks")
+        logger.warning(
+            "Detected %d infeasible tasks from evaluator",
+            len(infeasible_tasks),
+        )
         for task in infeasible_tasks:
-            logger.warning(f"  - {task.get('task_name')}: {task.get('reason')}")
-
-    # Route based on evaluator stage
-    logger.info(f"🔍 Checking routing logic for stage: {evaluator_stage}")
+            logger.warning(
+                "Infeasible task: %s (%s)",
+                task.get("task_name"),
+                task.get("reason"),
+            )
 
     if evaluator_stage == "after_task_breakdown":
-        logger.info("📍 Stage is 'after_task_breakdown'")
         if is_valid:
-            logger.info("✅ Task breakdown valid")
-            logger.info("➡️  Routing decision: interface_definition")
             return "interface_definition"
-        else:
-            logger.warning("❌ Task breakdown invalid")
-            if retry_count < MAX_RETRY_COUNT:
-                logger.warning(f"🔄 Retry {retry_count + 1}/{MAX_RETRY_COUNT}")
-                logger.warning("➡️  Routing decision: requirement_analysis (retry)")
-                return "requirement_analysis"
-            else:
-                logger.error(
-                    f"🔄 Max retries reached ({retry_count}/{MAX_RETRY_COUNT})"
-                )
-                logger.error("🛑 Routing decision: END")
-                return "END"
-
-    elif evaluator_stage == "after_interface_definition":
-        logger.info("📍 Stage is 'after_interface_definition'")
-        if is_valid:
-            logger.info("✅ Interface definition valid")
-            logger.info("➡️  Routing decision: master_creation")
-            return "master_creation"
-        else:
-            logger.warning("❌ Interface definition invalid")
-            if retry_count < MAX_RETRY_COUNT:
-                logger.warning(f"🔄 Retry {retry_count + 1}/{MAX_RETRY_COUNT}")
-                logger.warning("➡️  Routing decision: interface_definition (retry)")
-                return "interface_definition"
-            else:
-                logger.error(
-                    f"🔄 Max retries reached ({retry_count}/{MAX_RETRY_COUNT})"
-                )
-                logger.error("🛑 Routing decision: END")
-                return "END"
-
-    else:
-        logger.error(f"❌ Unknown evaluator stage: {evaluator_stage}")
-        logger.error("🛑 Routing decision: END")
+        if retry_count < MAX_RETRY_COUNT:
+            return "requirement_analysis"
+        logger.error("Max retries reached for requirement analysis")
         return "END"
+
+    if evaluator_stage == "after_interface_definition":
+        if is_valid:
+            return "master_creation"
+        if retry_count < MAX_RETRY_COUNT:
+            return "interface_definition"
+        logger.error("Max retries reached for interface definition")
+        return "END"
+
+    return "END"
 
 
 def validation_router(
     state: JobTaskGeneratorState,
 ) -> Literal["job_registration", "interface_definition", "END"]:
-    """Route after validation node based on validation result.
-
-    Routing logic:
-    1. If validation result is missing or error occurred → END
-    2. If validation is successful → job_registration
-    3. If validation failed:
-       - If retry < max → interface_definition (retry with fixes)
-       - If retry >= max → END
-
-    Args:
-        state: Current job task generator state
-
-    Returns:
-        Next node name or END
-    """
-    logger.info("Validation router: determining next node")
+    """Determine the next node after workflow validation."""
 
     validation_result = state.get("validation_result")
     retry_count = state.get("retry_count", 0)
     error_message = state.get("error_message")
 
-    # If error occurred, end workflow
+    logger.info(
+        "Validation router invoked: retry=%s error_present=%s",
+        retry_count,
+        bool(error_message),
+    )
+
     if error_message:
-        logger.error(f"Error detected in state: {error_message}")
+        logger.error("Stopping workflow during validation: %s", error_message)
         return "END"
 
-    # If validation result is missing, end workflow
     if not validation_result:
-        logger.error("Validation result is missing")
+        logger.error("Stopping workflow: validation result missing")
         return "END"
 
     is_valid = validation_result.get("is_valid", False)
     errors = validation_result.get("errors", [])
 
-    logger.info(
-        f"Validation result: is_valid={is_valid}, "
-        f"errors={len(errors)}, retry_count={retry_count}"
-    )
-
     if errors:
-        logger.warning("Validation errors:")
-        for error in errors:
-            logger.warning(f"  - {error}")
+        logger.warning("Validation errors detected: %s", errors)
 
-    # Route based on validation result
     if is_valid:
-        logger.info("Validation successful → job_registration")
         return "job_registration"
-    else:
-        if retry_count < MAX_RETRY_COUNT:
-            logger.warning(
-                f"Validation failed, retry {retry_count + 1}/{MAX_RETRY_COUNT} → interface_definition"
-            )
-            return "interface_definition"
-        else:
-            logger.error("Validation failed, max retries reached → END")
-            return "END"
+
+    if retry_count < MAX_RETRY_COUNT:
+        return "interface_definition"
+
+    logger.error("Validation retries exhausted; ending workflow")
+    return "END"
 
 
 def create_job_task_generator_agent() -> Any:
@@ -237,7 +180,8 @@ def create_job_task_generator_agent() -> Any:
             - interface_definition (if task breakdown valid)
             - requirement_analysis (if invalid, retry)
             - END (if max retries)
-        interface_definition → evaluator (re-evaluate interfaces)
+        interface_definition → schema_enrichment (enrich with OpenAPI schemas)
+        schema_enrichment → evaluator (re-evaluate interfaces)
         evaluator → (conditional)
             - master_creation (if interfaces valid)
             - interface_definition (if invalid, retry)
@@ -261,6 +205,7 @@ def create_job_task_generator_agent() -> Any:
     workflow.add_node("requirement_analysis", requirement_analysis_node)
     workflow.add_node("evaluator", evaluator_node)
     workflow.add_node("interface_definition", interface_definition_node)
+    workflow.add_node("schema_enrichment", schema_enrichment_node)
     workflow.add_node("master_creation", master_creation_node)
     workflow.add_node("validation", validation_node)
     workflow.add_node("job_registration", job_registration_node)
@@ -272,7 +217,8 @@ def create_job_task_generator_agent() -> Any:
     # requirement_analysis → evaluator
     workflow.add_edge("requirement_analysis", "evaluator")
 
-    # evaluator → (conditional) interface_definition / requirement_analysis / master_creation / END
+    # evaluator → conditional routing for interface_definition /
+    # requirement_analysis / master_creation / END
     workflow.add_conditional_edges(
         "evaluator",
         evaluator_router,
@@ -284,8 +230,11 @@ def create_job_task_generator_agent() -> Any:
         },
     )
 
-    # interface_definition → evaluator (re-evaluate)
-    workflow.add_edge("interface_definition", "evaluator")
+    # interface_definition → schema_enrichment
+    workflow.add_edge("interface_definition", "schema_enrichment")
+
+    # schema_enrichment → evaluator (re-evaluate)
+    workflow.add_edge("schema_enrichment", "evaluator")
 
     # master_creation → validation
     workflow.add_edge("master_creation", "validation")
@@ -304,7 +253,7 @@ def create_job_task_generator_agent() -> Any:
     # job_registration → END
     workflow.add_edge("job_registration", END)
 
-    # Compile graph (Phase 8: recursion_limit is set via RunnableConfig at runtime)
+    # Compile graph (recursion_limit is set via RunnableConfig at runtime)
     graph = workflow.compile()
 
     logger.info("Job/Task Generator Agent created successfully")

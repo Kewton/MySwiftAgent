@@ -13,15 +13,15 @@ class WorkflowGeneratorRequest(BaseModel):
         task_master_id: TaskMaster ID to generate workflow for single task (XOR with job_master_id)
     """
 
-    job_master_id: int | None = Field(
+    job_master_id: int | str | None = Field(
         default=None,
-        description="JobMaster ID to generate workflows for all tasks in the job",
-        examples=[123],
+        description="JobMaster ID to generate workflows for all tasks in the job (supports both int and ULID string)",
+        examples=[123, "jm_01K8DXE62NFJNB0SHJZPAWQWVT"],
     )
-    task_master_id: int | None = Field(
+    task_master_id: int | str | None = Field(
         default=None,
-        description="TaskMaster ID to generate workflow for single task",
-        examples=[456],
+        description="TaskMaster ID to generate workflow for single task (supports both int and ULID string)",
+        examples=[456, "tm_01K8DXE601HMZWW0K5HR9FDYCQ"],
     )
 
     @model_validator(mode="after")
@@ -48,10 +48,10 @@ class WorkflowResult(BaseModel):
         retry_count: Number of retries during self-repair loop
     """
 
-    task_master_id: int = Field(
+    task_master_id: str | int = Field(
         ...,
-        description="TaskMaster ID",
-        examples=[456],
+        description="TaskMaster ID (ULID string or int)",
+        examples=["tm_01K8K13NC8PRJ3V4R35C1AP2JP", 456],
     )
     task_name: str = Field(
         ...,

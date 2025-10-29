@@ -1,0 +1,71 @@
+version: 0.5
+nodes:
+  source: {}
+  # REQUIRED: Empty source node receives user_input from API request
+  # user_input structure: {raw_email_content, subject?, sender?}
+
+  # Step 1: Build LLM prompt using stringTemplateAgent
+  # This is MANDATORY when using :source.field references in multi-line strings
+  build_podcast_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      raw_email_content: :source.raw_email_content
+      subject: :source.subject
+      sender: :source.sender
+    params:
+      template: |-
+        あなたはプロのポッドキャストスクリプトライターです。
+        以下のニュースレター/メールコンテンツを読み込み、ポッドキャスト形式の自然な話し言葉スクリプトに変換してください。
+
+        # 入力情報
+        メール件名: ${subject}
+        送信者: ${sender}
+
+        メール本文:
+        ${raw_email_content}
+
+        # 要件
+        - ポッドキャストのナレーションに適した自然な日本語話し言葉を使用すること
+        - 以下の構成を含むこと：
+          1. 導入部（番組タイトル、本日のテーマ紹介）
+          2. 本題（メール内容の要約・解説）
+          3. まとめ（重要なポイント、次のアクション）
+        - 読みやすく、聞きやすいペースを意識した文体にすること
+        - 不要なHTML/Base64エンコーディングは削除し、テキストのみを抽出すること
+        - 長さは3-5分程度のナレーション時間を想定（約900-1500文字）
+
+        # 制約条件
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと
+        - 返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "podcast_script": "ポッドキャストのナレーションスクリプト（自然な話し言葉、導入・本題・まとめを含む）",
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # Using gemini-2.5-flash model as recommended
+  generate_podcast_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_podcast_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+    # MANDATORY: 60 seconds timeout for LLM calls
+
+  # Step 3: Final output node with direct references
+  # Maps expertAgent response to output_interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_podcast_script.result.success
+        podcast_script: :generate_podcast_script.result.podcast_script
+        error_message: :generate_podcast_script.result.error_message
+    isResult: true

@@ -1,14 +1,23 @@
 """HTTP client with retry logic for CommonUI application."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-from typing import Any, cast
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import httpx
-import streamlit as st
-from httpx import Response
 
-from core.config import APIConfig, ExpertAgentConfig, GraphAiServerConfig, MyVaultConfig
+try:
+    import streamlit as st  # type: ignore[import-not-found]
+except ModuleNotFoundError:
+    st = None  # type: ignore[assignment]
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
 from core.exceptions import (
     APIError,
     AuthenticationError,
@@ -18,59 +27,85 @@ from core.exceptions import (
 
 logger = logging.getLogger(__name__)
 
+RetryCallback = Callable[[int, int, str], None]
 
+
+def _build_auth_headers(api_config: Any) -> MutableMapping[str, str]:
+    headers: MutableMapping[str, str] = {}
+
+    service_token = getattr(api_config, "service_token", "")
+    service_name = getattr(api_config, "service_name", "")
+    admin_token = getattr(api_config, "admin_token", "")
+    bearer_token = getattr(api_config, "token", "")
+
+    if service_name and service_token:
+        headers["X-Service"] = service_name
+        headers["X-Token"] = service_token
+    elif admin_token and admin_token.strip():
+        headers["X-Admin-Token"] = admin_token
+    elif bearer_token and bearer_token.strip():
+        headers["Authorization"] = f"Bearer {bearer_token}"
+
+    return headers
+
+
+def _default_retry_callback(
+    retry: int,
+    max_retries: int,
+    service: str,
+) -> None:
+    if st is None:
+        return
+    st.info(
+        f"{service} temporarily unavailable, retrying... ({retry}/{max_retries})",
+    )
+
+
+@dataclass(slots=True)
 class HTTPClient:
     """HTTP client with automatic retries and error handling."""
 
-    def __init__(
-        self,
-        api_config: APIConfig | MyVaultConfig | ExpertAgentConfig | GraphAiServerConfig,
-        service_name: str,
-    ) -> None:
-        """Initialize HTTP client with API configuration."""
-        self.api_config = api_config
-        self.service_name = service_name
+    api_config: Any
+    service_name: str
+    retry_callback: RetryCallback | None = None
+    timeout: float = 30.0
+    _client: httpx.Client | None = None
 
-        # Prepare headers based on service type
-        headers = {}
-        if isinstance(api_config, MyVaultConfig):
-            # MyVault uses custom header authentication
-            if api_config.service_name and api_config.service_token:
-                headers["X-Service"] = api_config.service_name
-                headers["X-Token"] = api_config.service_token
-        elif isinstance(api_config, ExpertAgentConfig):
-            # ExpertAgent uses admin token in X-Admin-Token header
-            if api_config.admin_token and api_config.admin_token.strip():
-                headers["X-Admin-Token"] = api_config.admin_token
-        elif isinstance(api_config, GraphAiServerConfig):
-            # GraphAiServer uses admin token in X-Admin-Token header
-            if api_config.admin_token and api_config.admin_token.strip():
-                headers["X-Admin-Token"] = api_config.admin_token
-        elif isinstance(api_config, APIConfig):
-            # Standard Bearer token authentication
-            if api_config.token and api_config.token.strip():
-                headers["Authorization"] = f"Bearer {api_config.token}"
-
-        self.client = httpx.Client(
-            base_url=api_config.base_url,
+    def __post_init__(self) -> None:
+        headers = _build_auth_headers(self.api_config)
+        self.retry_callback = self.retry_callback or _default_retry_callback
+        self._client = httpx.Client(
+            base_url=self.api_config.base_url,
             headers=headers,
-            timeout=30.0,
+            timeout=self.timeout,
         )
 
-    def __enter__(self) -> "HTTPClient":
-        """Context manager entry."""
+    @property
+    def client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(
+                base_url=self.api_config.base_url,
+                headers=_build_auth_headers(self.api_config),
+                timeout=self.timeout,
+            )
+        return self._client
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
+    def __enter__(self) -> Self:  # pragma: no cover - context sugar
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Context manager exit."""
-        self.client.close()
+        self.close()
 
-    def _handle_response(self, response: Response) -> dict[str, Any]:
-        """Handle HTTP response and raise appropriate exceptions."""
+    def _handle_response(self, response: httpx.Response) -> dict[str, Any]:
         try:
-            if response.status_code in [200, 201]:  # Accept both 200 OK and 201 Created
+            if response.status_code in (200, 201):
                 return cast("dict[str, Any]", response.json())
-            if response.status_code == 204:  # No Content (e.g., successful DELETE)
+            if response.status_code == 204:
                 return {"message": "Success"}
             if response.status_code == 401:
                 raise AuthenticationError(self.service_name)
@@ -82,9 +117,9 @@ class HTTPClient:
                     self.service_name,
                     self.api_config.base_url,
                 )
-            error_data = {}
+            error_data: dict[str, Any] = {}
             with contextlib.suppress(Exception):
-                error_data = response.json()
+                error_data = dict(response.json())
             msg = f"HTTP {response.status_code}: {response.reason_phrase}"
             raise APIError(
                 msg,
@@ -92,8 +127,7 @@ class HTTPClient:
                 response_data=error_data,
             )
         except (ValueError, KeyError):
-            # Handle JSON decode errors (ValueError covers json.JSONDecodeError in older Python versions)
-            if response.status_code in [200, 201]:  # Also update this condition
+            if response.status_code in (200, 201):
                 return {"message": "Success", "data": response.text}
             msg = f"Invalid JSON response: {response.text[:100]}"
             raise APIError(
@@ -107,7 +141,6 @@ class HTTPClient:
         url: str,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """Make HTTP request with automatic retry for 5xx errors."""
         max_retries = 3
         retry_count = 0
 
@@ -119,24 +152,29 @@ class HTTPClient:
                 retry_count += 1
                 if retry_count >= max_retries:
                     raise
-                st.info(
-                    f"Service temporarily unavailable, retrying... ({retry_count}/{max_retries})",
-                )
+                if self.retry_callback:
+                    self.retry_callback(
+                        retry_count,
+                        max_retries,
+                        self.service_name,
+                    )
             except (AuthenticationError, RateLimitError, APIError):
                 raise
-            except Exception as e:
-                logger.exception(f"Unexpected error during {method} {url}")
-                msg = f"Unexpected error: {e!s}"
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.exception("Unexpected error during %s %s", method, url)
+                msg = f"Unexpected error: {exc!s}"
                 raise APIError(msg)
 
-        raise ServiceUnavailableError(self.service_name, self.api_config.base_url)
+        raise ServiceUnavailableError(
+            self.service_name,
+            getattr(self.api_config, "base_url", ""),
+        )
 
     def get(
         self,
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Make GET request."""
         return self._request_with_retry("GET", endpoint, params=params)
 
     def post(
@@ -144,7 +182,6 @@ class HTTPClient:
         endpoint: str,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Make POST request."""
         return self._request_with_retry("POST", endpoint, json=json_data)
 
     def put(
@@ -152,7 +189,6 @@ class HTTPClient:
         endpoint: str,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Make PUT request."""
         return self._request_with_retry("PUT", endpoint, json=json_data)
 
     def patch(
@@ -160,15 +196,12 @@ class HTTPClient:
         endpoint: str,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Make PATCH request."""
         return self._request_with_retry("PATCH", endpoint, json=json_data)
 
     def delete(self, endpoint: str) -> dict[str, Any]:
-        """Make DELETE request."""
         return self._request_with_retry("DELETE", endpoint)
 
     def health_check(self) -> bool:
-        """Perform health check on the service."""
         try:
             self.get("/health")
             return True

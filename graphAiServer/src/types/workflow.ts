@@ -21,6 +21,18 @@ export interface WorkflowRegisterRequest {
    * Default: false
    */
   overwrite?: boolean;
+
+  /**
+   * Optional: Subdirectory path for organizing workflows
+   * Examples:
+   * - "test0001" → config/graphai/test0001/{workflow_name}.yml
+   * - "test/0001" → config/graphai/test/0001/{workflow_name}.yml
+   * - undefined → config/graphai/{workflow_name}.yml
+   *
+   * Security: Path traversal characters ("..", "\", "/..") are rejected
+   * Default: undefined (saves to root config/graphai/)
+   */
+  directory?: string;
 }
 
 /**

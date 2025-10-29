@@ -1,0 +1,71 @@
+version: 0.5
+nodes:
+  # REQUIRED: Input node - receives user_input from API request
+  # Expected input: {"script_text": "...", "file_title": "..."}
+  source: {}
+
+  # Step 1: Build email generation prompt using stringTemplateAgent
+  # This is MANDATORY when using multiple :source.field references in multi-line strings
+  # Constructs a structured prompt for the LLM to generate email content
+  build_email_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      script_text: :source.script_text
+      file_title: :source.file_title
+    params:
+      template: |-
+        あなたはメールコンテンツ生成エキスパートです。
+        以下の情報を基に、構造化されたメール本文（件名と本文）を生成してください。
+
+        # 入力情報
+        スクリプト本文: ${script_text}
+        ファイルタイトル: ${file_title}
+
+        # タスク説明
+        - task_001のタイトル: ${file_title}
+        - スクリプト内容: ${script_text}
+        - メール宛先: user@example.com（固定値）
+        - メール件名: ファイルタイトルと処理内容を含む日本語の件名を生成
+        - メール本文: スクリプト内容とファイルタイトルを含む、ユーザーへの通知メッセージ
+
+        # 制約条件
+        - メール件名は50文字以内の日本語
+        - メール本文は100文字以上500文字以下の日本語
+        - 宛先は固定値 "user@example.com" を使用
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "to": "user@example.com",
+          "subject": "メール件名",
+          "body": "メール本文",
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # Generates structured email content using LLM
+  # Uses Gemini 2.5 Flash for fast, reliable JSON output
+  generate_email_content:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_email_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output
+  # Maps LLM result to output_interface schema
+  # Ensures all required fields are present with correct types
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_email_content.result.success
+        to: :generate_email_content.result.to
+        subject: :generate_email_content.result.subject
+        body: :generate_email_content.result.body
+        error_message: :generate_email_content.result.error_message
+    isResult: true

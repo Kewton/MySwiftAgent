@@ -1,0 +1,87 @@
+name: E2E Workflow Generation Test
+
+on:
+  push:
+    branches:
+      - feature/issue/*
+      - develop
+    paths:
+      - 'expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/**'
+      - 'expertAgent/aiagent/langgraph/workflowGeneratorAgents/**'
+      - 'expertAgent/core/openapi_schema_collector.py'
+      - 'expertAgent/tests/integration/test_e2e_workflow.py'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/**'
+      - 'expertAgent/aiagent/langgraph/workflowGeneratorAgents/**'
+      - 'expertAgent/core/openapi_schema_collector.py'
+      - 'expertAgent/tests/integration/test_e2e_workflow.py'
+  workflow_dispatch:
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.19"
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install Python dependencies
+        run: |
+          cd expertAgent
+          uv sync --extra dev
+
+      - name: Run E2E Workflow Generation Tests (Mocked)
+        id: e2e-test
+        run: |
+          cd expertAgent
+          uv run pytest tests/integration/test_e2e_workflow.py -v --tb=short
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          cd expertAgent
+          echo "## E2E Workflow Generation Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Test Type**: Mocked E2E Tests (100% API-key-free)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.e2e-test.outcome }}" = "success" ]; then
+            echo "🎉 All E2E tests passed!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Coverage**:" >> $GITHUB_STEP_SUMMARY
+            echo "- Phase 3-1: 正常系ワークフローテスト (3 tests)" >> $GITHUB_STEP_SUMMARY
+            echo "- Phase 3-2: 失敗シナリオテスト (2 tests)" >> $GITHUB_STEP_SUMMARY
+            echo "- Phase 3-3: エッジケーステスト (3 tests)" >> $GITHUB_STEP_SUMMARY
+            echo "- Phase 3-4: パフォーマンステスト (2 tests)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some E2E tests failed. See logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check test results
+        if: steps.e2e-test.outcome == 'failure'
+        run: |
+          echo "E2E tests failed"
+          exit 1

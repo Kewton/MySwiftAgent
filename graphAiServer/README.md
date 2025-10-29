@@ -235,6 +235,59 @@ curl -X POST http://localhost:8104/api/v1/myagent \
 }
 ```
 
+### Workflow Registration Endpoint
+
+```bash
+POST /api/v1/workflows/register
+```
+
+Registers a new GraphAI workflow by saving the YAML content to the config directory. Supports organizing workflows into subdirectories.
+
+**Request Body:**
+```json
+{
+  "workflow_name": "my_workflow",
+  "yaml_content": "version: 0.5\nnodes:\n  ...",
+  "directory": "category/subcategory",  // Optional
+  "overwrite": false                     // Optional
+}
+```
+
+**Examples:**
+
+```bash
+# Register to root directory
+curl -X POST http://localhost:8000/api/v1/workflows/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_name": "test_workflow",
+    "yaml_content": "version: 0.5\nnodes: ..."
+  }'
+
+# Register to subdirectory
+curl -X POST http://localhost:8000/api/v1/workflows/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_name": "podcast_generator",
+    "yaml_content": "version: 0.5\nnodes: ...",
+    "directory": "llmwork"
+  }'
+
+# Register to nested subdirectory
+curl -X POST http://localhost:8000/api/v1/workflows/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_name": "advanced_agent",
+    "yaml_content": "version: 0.5\nnodes: ...",
+    "directory": "expert/v2"
+  }'
+```
+
+**Directory parameter examples:**
+- `directory: "test0001"` → `config/graphai/test0001/my_workflow.yml`
+- `directory: "test/0001"` → `config/graphai/test/0001/my_workflow.yml`
+- `directory` not specified → `config/graphai/my_workflow.yml`
+
 For detailed API documentation including all response formats, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md).
 
 ## MyVault Integration

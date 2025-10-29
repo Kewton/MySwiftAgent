@@ -1,0 +1,78 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build LLM prompt with multiple source fields using stringTemplateAgent
+  # This is MANDATORY when using :source.field references in multi-line strings
+  build_extraction_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source.company_name
+      ir_site_url: :source.ir_site_url
+      analysis_period_years: :source.analysis_period_years
+    params:
+      template: |-
+        あなたはIRサイト情報抽出戦略の専門家です。
+        以下の企業のIRサイトから、過去の売上データ、財務諸表、ビジネスモデル情報を効率的に抽出するための具体的なPlaywright実行戦略を策定してください。
+
+        企業名: ${company_name}
+        IRサイトURL: ${ir_site_url}
+        分析対象期間: 過去${analysis_period_years}年間
+
+        # タスク
+        以下の3つのデータタイプについて、それぞれ抽出戦略を策定してください：
+        1. sales_data: 売上データ（年度別、四半期別など）
+        2. financial_statement: 財務諸表（貸借対照表、損益計算書など）
+        3. business_model: ビジネスモデルに関する記述
+
+        # 各戦略に含める情報
+        - url_path: 抽出対象のURLパス（相対パスまたは絶対パス）
+        - data_type: 上記3つのいずれか
+        - selectors: データ抽出に使用するCSSセレクタまたはXPathのリスト（複数指定可）
+        - keywords: 抽出対象を絞り込むためのキーワードリスト
+
+        # 制約条件
+        - 各URLパスは実際に存在する可能性が高いパスを指定すること
+        - セレクタは一般的なHTML構造に基づいた実用的なものにすること
+        - キーワードは日本語で指定すること
+        - 最低3つ、最大10個の抽出戦略を生成すること
+        - 売上データ、財務諸表、ビジネスモデルの3つのデータタイプをバランスよく含めること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true,
+          "extraction_plan": [
+            {
+              "url_path": "/ir/financial/sales",
+              "data_type": "sales_data",
+              "selectors": ["table.sales-data", "div.revenue-chart"],
+              "keywords": ["売上", "収益", "売上高"]
+            }
+          ],
+          "error_message": ""
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This generates the extraction strategy based on the prompt
+  generate_extraction_strategy:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_extraction_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with direct references to LLM result
+  # Using direct reference pattern to avoid unnecessary extraction nodes
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :generate_extraction_strategy.result.success
+        extraction_plan: :generate_extraction_strategy.result.extraction_plan
+        error_message: :generate_extraction_strategy.result.error_message
+    isResult: true

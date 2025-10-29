@@ -1,0 +1,66 @@
+version: 0.5
+nodes:
+  source: {}
+
+  # Step 1: Build prompt for qualitative business model analysis
+  # This node constructs a detailed prompt for LLM to analyze business model changes
+  build_analysis_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      sales_data: :source.structured_sales_data
+    params:
+      template: |-
+        あなたはビジネスモデル分析の専門家です。
+        以下の構造化された売上データを基に、過去5年間で発生したビジネスモデルの主要な変化点を定性的に分析してください。
+
+        売上データ: ${sales_data}
+
+        # 分析対象領域
+        - 戦略の変化（事業戦略、市場戦略の転換）
+        - 製品の変化（新製品投入、既存製品の廃止、ポートフォリオの変更）
+        - 市場の変化（新規市場への進出、既存市場からの撤退、顧客層の変化）
+        - 収益構造の変化（収益源の多様化、価格戦略の変更、利益率の変動）
+
+        # 制約条件
+        - 売上データから推測される変化点を特定すること
+        - 各変化点について、売上や事業への影響を評価すること
+        - 複数の変化点を特定し、それぞれの関連性を考慮すること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "key_changes": [
+            {
+              "change_area": "変化の領域（例: 戦略, 製品, 市場, 収益構造）",
+              "description": "変化の具体的な内容",
+              "impact_assessment": "売上や事業への影響評価"
+            }
+          ],
+          "overall_summary": "ビジネスモデル変化に関する全体的な要約"
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This node performs LLM-based qualitative analysis using the expertAgent jsonoutput API
+  generate_analysis:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_analysis_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output with success flag and error handling
+  # This node constructs the final output matching the output_interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        qualitative_analysis_summary:
+          key_changes: :generate_analysis.result.key_changes
+          overall_summary: :generate_analysis.result.overall_summary
+        error_message: ""
+    isResult: true

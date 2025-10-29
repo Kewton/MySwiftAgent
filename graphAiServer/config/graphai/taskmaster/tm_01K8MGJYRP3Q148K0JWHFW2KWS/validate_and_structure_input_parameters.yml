@@ -1,0 +1,84 @@
+version: 0.5
+nodes:
+  # REQUIRED: Source node receives user_input from API request
+  # Expected input format:
+  # {
+  #   "company_name": "string",
+  #   "ir_site_url": "string (URL format)",
+  #   "analysis_period_years": "integer (optional, default 5)",
+  #   "recipient_email": "string (email format)"
+  # }
+  source: {}
+
+  # Step 1: Build validation prompt using stringTemplateAgent
+  # This node constructs a multi-line prompt with source field references
+  # CRITICAL: Using stringTemplateAgent because the prompt contains multiple :source.field references
+  build_validation_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      company_name: :source.company_name
+      ir_site_url: :source.ir_site_url
+      analysis_period_years: :source.analysis_period_years
+      recipient_email: :source.recipient_email
+    params:
+      template: |-
+        あなたは入力パラメータの検証と構造化を行うシステムです。
+        以下のユーザー入力を検証し、標準化されたJSON形式に構造化してください。
+
+        入力パラメータ:
+        - 企業名: ${company_name}
+        - IRサイトURL: ${ir_site_url}
+        - 分析期間（年数）: ${analysis_period_years}
+        - 送信先メールアドレス: ${recipient_email}
+
+        # 検証ルール
+        - 企業名: 1文字以上の文字列であること
+        - IRサイトURL: 有効なURL形式（http:// または https:// で始まること）
+        - 分析期間: 1以上の整数であること（デフォルト値は5）
+        - 送信先メールアドレス: 有効なメールアドレス形式（xxx@xxx.xxx）であること
+        - すべての必須フィールドが存在すること
+
+        # 制約条件
+        - 検証に失敗した場合、success フラグを false に設定し、error_message に理由を記載すること
+        - 検証に成功した場合、success フラグを true に設定し、error_message は空文字列にすること
+        - 分析期間が指定されていない場合は、デフォルト値の 5 を使用すること
+        - 日本語で出力すること
+        - 出力は RESPONSE_FORMAT に従うこと。返却は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "success": true/false,
+          "company_name": "検証済みの企業名",
+          "ir_site_url": "検証済みのIRサイトURL",
+          "analysis_period_years": 5,
+          "recipient_email": "検証済みの送信先メールアドレス",
+          "error_message": "エラーメッセージ（失敗時のみ）"
+        }
+
+  # Step 2: Call expertAgent jsonoutput API via fetchAgent
+  # This node performs LLM-based validation and structuring
+  # Using gemini-2.5-flash model as recommended
+  validate_and_structure:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_validation_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+
+  # Step 3: Format final output
+  # Direct reference pattern: extract validated fields from LLM result
+  # and map them to output_interface schema
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: :validate_and_structure.result.success
+        company_name: :validate_and_structure.result.company_name
+        ir_site_url: :validate_and_structure.result.ir_site_url
+        analysis_period_years: :validate_and_structure.result.analysis_period_years
+        recipient_email: :validate_and_structure.result.recipient_email
+        error_message: :validate_and_structure.result.error_message
+    isResult: true

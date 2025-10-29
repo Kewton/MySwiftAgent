@@ -31,9 +31,7 @@ class TestUnicodePropertyEscapes:
         """Test that \\p{N} pattern is recognized as valid."""
         schema = {
             "type": "object",
-            "properties": {
-                "code": {"type": "string", "pattern": r"^\p{N}+$"}
-            },
+            "properties": {"code": {"type": "string", "pattern": r"^\p{N}+$"}},
         }
 
         # Should not raise error

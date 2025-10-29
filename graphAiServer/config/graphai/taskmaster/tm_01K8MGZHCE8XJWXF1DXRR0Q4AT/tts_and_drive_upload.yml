@@ -1,0 +1,86 @@
+version: 0.5
+nodes:
+  source: {}
+  # REQUIRED: Empty source node receives user_input from API request
+  # user_input structure: {newsletter_text: string, style_prompt?: string}
+
+  # Step 1: Build the TTS prompt with style instructions
+  # This node constructs a complete prompt for podcast script generation
+  build_tts_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      newsletter_text: :source.newsletter_text
+      style_prompt: :source.style_prompt
+    params:
+      template: |-
+        あなたはポッドキャストスクリプト生成エキスパートです。
+        以下のニュースレターテキストを基に、ポッドキャスト用の台本を生成してください。
+
+        ニュースレターテキスト:
+        ${newsletter_text}
+
+        スタイル指示:
+        ${style_prompt}
+
+        # 制約条件
+        - 自然な話し言葉で、聴き手に分かりやすい表現を使用すること
+        - 導入部分で内容を簡潔に紹介すること
+        - 本題で詳細な情報を提供すること
+        - まとめで重要なポイントを再確認すること
+        - 全体で2-3分程度の読み上げ時間を想定すること（約400-600語）
+        - 日本語で出力すること
+        - 出力は JSON 形式で行い、コメントやマークダウンは含めないこと
+
+        # RESPONSE_FORMAT:
+        {
+          "podcast_script": "生成されたポッドキャスト台本テキスト"
+        }
+
+  # Step 2: Generate podcast script using LLM
+  # Calls expertAgent jsonoutput API to generate the podcast script
+  generate_podcast_script:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_tts_prompt
+        model_name: gemini-2.5-flash
+    timeout: 60000
+    # CRITICAL: 60 second timeout for LLM calls
+
+  # Step 3: Call Text-to-Speech + Google Drive Upload API
+  # This expertAgent API handles both TTS conversion and Drive upload in one call
+  # Input: podcast_script from previous LLM generation
+  # Output: file_id, file_name, web_view_link, web_content_link, folder_path, file_size_mb
+  tts_and_upload:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8104/aiagent-api/v1/utility/text_to_speech_drive
+      method: POST
+      body:
+        text: :generate_podcast_script.result.podcast_script
+        # text parameter: The podcast script to convert to speech
+        # expertAgent will handle TTS conversion and automatic Google Drive upload
+    timeout: 60000
+    # CRITICAL: 60 second timeout for TTS + upload operations
+
+  # Step 4: Format final output
+  # Maps expertAgent API response to output_interface schema
+  # Ensures all required fields are present with proper error handling
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        # Success flag: true if TTS and upload completed
+        file_url: :tts_and_upload.web_view_link
+        # file_url: Public viewing URL from Google Drive (web_view_link field)
+        file_id: :tts_and_upload.file_id
+        # file_id: Google Drive file ID for future reference
+        file_name_uploaded: :tts_and_upload.file_name
+        # file_name_uploaded: Actual uploaded filename with .mp3 extension
+        error_message: ""
+        # error_message: Empty string on success (populated on error)
+    isResult: true
+    # REQUIRED: isResult: true marks this as the final output node

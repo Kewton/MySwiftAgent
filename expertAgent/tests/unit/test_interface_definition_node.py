@@ -11,7 +11,7 @@ These tests verify the interface definition node's behavior including:
 Issue #111: Comprehensive test coverage for all workflow nodes.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -40,10 +40,10 @@ class TestInterfaceDefinitionNode:
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
     async def test_interface_definition_success(
-        self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
+        self, mock_invoke_llm, mock_jobqueue_client, mock_schema_matcher
     ):
         """Test successful interface definition with valid LLM response.
 
@@ -95,12 +95,18 @@ class TestInterfaceDefinitionNode:
         ]
         mock_response = InterfaceSchemaResponse(interfaces=mock_interfaces)
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Setup mock JobqueueClient and SchemaMatcher
         mock_client_instance = AsyncMock()
@@ -142,17 +148,17 @@ class TestInterfaceDefinitionNode:
         assert result["evaluator_stage"] == "after_interface_definition"
         assert result["retry_count"] == 0  # Should remain 0 on first success
 
-        # Verify LLM was called
-        mock_structured.ainvoke.assert_called_once()
+        # Verify invoke_structured_llm was called
+        mock_invoke_llm.assert_called_once()
 
         # Verify SchemaMatcher was called for each interface
         assert mock_matcher_instance.find_or_create_interface_master.call_count == 2
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
-    async def test_interface_definition_with_evaluation_feedback(self, mock_create_llm):
+    async def test_interface_definition_with_evaluation_feedback(self, mock_invoke_llm):
         """Test interface definition with evaluation feedback (retry scenario).
 
         Priority: Medium
@@ -186,12 +192,18 @@ class TestInterfaceDefinitionNode:
         ]
         mock_response = InterfaceSchemaResponse(interfaces=mock_interfaces)
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Mock SchemaMatcher (even though we have evaluation_feedback)
         with patch(
@@ -233,20 +245,20 @@ class TestInterfaceDefinitionNode:
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
-    async def test_interface_definition_llm_error(self, mock_create_llm):
+    async def test_interface_definition_llm_error(self, mock_invoke_llm):
         """Test error handling when LLM invocation fails.
 
         Priority: Medium
         This tests exception handling and error message propagation.
         """
-        # Setup mock LLM to raise exception
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(side_effect=Exception("LLM API timeout"))
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm to raise exception
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredLLMError,
+        )
+
+        mock_invoke_llm.side_effect = StructuredLLMError("LLM API timeout")
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(2)
@@ -262,7 +274,6 @@ class TestInterfaceDefinitionNode:
 
         # Verify error handling
         assert "error_message" in result
-        assert "Interface definition failed" in result["error_message"]
         assert "LLM API timeout" in result["error_message"]
 
         # interface_definitions should not be in result
@@ -271,22 +282,20 @@ class TestInterfaceDefinitionNode:
         # Verify retry_count incremented
         assert result["retry_count"] == 1
 
-        # Verify LLM was called
-        mock_structured.ainvoke.assert_called_once()
+        # Verify invoke_structured_llm was called
+        mock_invoke_llm.assert_called_once()
 
     @pytest.mark.asyncio
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
-    async def test_interface_definition_empty_task_breakdown(self, mock_create_llm):
+    async def test_interface_definition_empty_task_breakdown(self, mock_invoke_llm):
         """Test error handling when task_breakdown is empty.
 
         Priority: Medium
         This tests edge case where no tasks are provided.
         """
-        # Setup mock LLM (won't be called due to empty check)
-        mock_llm = AsyncMock()
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Note: mock_invoke_llm won't be called due to empty check in interface_definition_node
 
         # Create test state with empty task_breakdown
         state = create_mock_workflow_state(
@@ -302,12 +311,11 @@ class TestInterfaceDefinitionNode:
         # Verify error handling
         assert "error_message" in result
         assert (
-            "Task breakdown is required for interface definition"
-            in result["error_message"]
+            "Interface definition requires a task breakdown" in result["error_message"]
         )
 
-        # Verify LLM was NOT called (early return)
-        mock_llm.with_structured_output.assert_not_called()
+        # Verify invoke_structured_llm was NOT called (early return)
+        mock_invoke_llm.assert_not_called()
 
     @pytest.mark.asyncio
     @patch(
@@ -317,17 +325,17 @@ class TestInterfaceDefinitionNode:
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
     async def test_interface_definition_retry_count_behavior(
-        self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
+        self, mock_invoke_llm, mock_jobqueue_client, mock_schema_matcher
     ):
         """Test retry_count increment behavior.
 
         Priority: Medium
         This tests the retry_count logic:
-        - If retry_count > 0: increment by 1
-        - If retry_count == 0: keep at 0
+        - If evaluation_feedback exists: increment retry_count
+        - If no evaluation_feedback: set retry_count to 0
         """
         # Create mock interface schema response
         mock_interfaces = [
@@ -341,12 +349,18 @@ class TestInterfaceDefinitionNode:
         ]
         mock_response = InterfaceSchemaResponse(interfaces=mock_interfaces)
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Setup mock JobqueueClient and SchemaMatcher
         mock_client_instance = AsyncMock()
@@ -358,7 +372,7 @@ class TestInterfaceDefinitionNode:
         )
         mock_schema_matcher.return_value = mock_matcher_instance
 
-        # Test Case 1: retry_count == 0 (first attempt)
+        # Test Case 1: retry_count == 0 (first attempt, no evaluation_feedback)
         task_breakdown = create_mock_task_breakdown(1)
         state = create_mock_workflow_state(
             retry_count=0,
@@ -371,24 +385,26 @@ class TestInterfaceDefinitionNode:
             "retry_count should remain 0 on first successful attempt"
         )
 
-        # Test Case 2: retry_count == 1 (first retry)
+        # Test Case 2: retry_count == 1 (retry with evaluation_feedback)
         state = create_mock_workflow_state(
             retry_count=1,
             user_requirement="Test requirement",
             task_breakdown=task_breakdown,
             evaluator_stage="after_task_breakdown",
+            evaluation_feedback="Need improvements",  # This indicates a retry scenario
         )
         result = await interface_definition_node(state)
         assert result["retry_count"] == 2, (
             "retry_count should increment from 1 to 2 on retry"
         )
 
-        # Test Case 3: retry_count == 3 (third retry)
+        # Test Case 3: retry_count == 3 (retry with evaluation_feedback)
         state = create_mock_workflow_state(
             retry_count=3,
             user_requirement="Test requirement",
             task_breakdown=task_breakdown,
             evaluator_stage="after_task_breakdown",
+            evaluation_feedback="Need improvements",  # This indicates a retry scenario
         )
         result = await interface_definition_node(state)
         assert result["retry_count"] == 4, (
@@ -403,10 +419,10 @@ class TestInterfaceDefinitionNode:
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
     async def test_interface_definition_missing_interface_master_id(
-        self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
+        self, mock_invoke_llm, mock_jobqueue_client, mock_schema_matcher
     ):
         """Test error handling when InterfaceMaster response is missing 'id' field.
 
@@ -425,12 +441,18 @@ class TestInterfaceDefinitionNode:
         ]
         mock_response = InterfaceSchemaResponse(interfaces=mock_interfaces)
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Setup mock JobqueueClient and SchemaMatcher
         mock_client_instance = AsyncMock()
@@ -452,14 +474,14 @@ class TestInterfaceDefinitionNode:
             evaluator_stage="after_task_breakdown",
         )
 
-        # Execute node
-        result = await interface_definition_node(state)
+        # Execute node - should raise ValueError
+        with pytest.raises(ValueError) as exc_info:
+            await interface_definition_node(state)
 
-        # Verify error handling
-        assert "error_message" in result
-        assert "InterfaceMaster response missing 'id' field" in result["error_message"]
-        assert "retry_count" in result
-        assert result["retry_count"] == 1  # Should increment on error
+        # Verify error message
+        assert "InterfaceMaster creation failed for task task_001" in str(
+            exc_info.value
+        )
 
     @pytest.mark.asyncio
     @patch(
@@ -469,10 +491,10 @@ class TestInterfaceDefinitionNode:
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.JobqueueClient"
     )
     @patch(
-        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.create_llm_with_fallback"
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
     )
     async def test_interface_definition_schema_validation(
-        self, mock_create_llm, mock_jobqueue_client, mock_schema_matcher
+        self, mock_invoke_llm, mock_jobqueue_client, mock_schema_matcher
     ):
         """Test schema validation with JSON Schema compliance.
 
@@ -533,12 +555,18 @@ class TestInterfaceDefinitionNode:
         ]
         mock_response = InterfaceSchemaResponse(interfaces=mock_interfaces)
 
-        # Setup mock LLM
-        mock_llm = AsyncMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=mock_response)
-        mock_llm.with_structured_output = MagicMock(return_value=mock_structured)
-        mock_create_llm.return_value = (mock_llm, None, None)
+        # Setup mock invoke_structured_llm
+
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
 
         # Setup mock JobqueueClient and SchemaMatcher
         mock_client_instance = AsyncMock()
