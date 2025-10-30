@@ -269,7 +269,11 @@ def create_mock_invoke_structured_llm(
         elif response_model == EvaluationResult:
             idx = evaluation_call_count[0]
             evaluation_call_count[0] += 1
-            result = evaluation_results[idx] if idx < len(evaluation_results) else evaluation_results[-1]
+            result = (
+                evaluation_results[idx]
+                if idx < len(evaluation_results)
+                else evaluation_results[-1]
+            )
             return StructuredCallResult(
                 result=result,
                 recovered_via_json=False,
@@ -355,9 +359,13 @@ def create_interface_schema_response() -> InterfaceSchemaResponse:
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_success_first_try(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -446,7 +454,9 @@ async def test_e2e_workflow_success_first_try(
     assert result.get("job_id") == "job_uuid_test", "job_id should be set"
 
     # Assert: Verify LLM call counts
-    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_requirement.call_count == 1, (
+        "requirement_analysis called once"
+    )
     assert mock_invoke_llm_evaluator.call_count == 2, "evaluator called twice"
     assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
 
@@ -459,9 +469,13 @@ async def test_e2e_workflow_success_first_try(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_success_with_retry(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -566,9 +580,13 @@ async def test_e2e_workflow_success_with_retry(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_success_after_interface_retry(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -658,7 +676,9 @@ async def test_e2e_workflow_success_after_interface_retry(
     assert result.get("job_id") == "job_uuid_test", "job_id should be set"
 
     # Assert: Verify LLM call counts
-    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_requirement.call_count == 1, (
+        "requirement_analysis called once"
+    )
     assert mock_invoke_llm_evaluator.call_count == 3, (
         "evaluator called 3 times (task success, interface fail/success)"
     )
@@ -678,9 +698,13 @@ async def test_e2e_workflow_success_after_interface_retry(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_max_retries_reached(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -756,9 +780,13 @@ async def test_e2e_workflow_max_retries_reached(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_infeasible_tasks_detected(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -890,7 +918,9 @@ async def test_e2e_workflow_infeasible_tasks_detected(
 
 
 @pytest.mark.asyncio
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 async def test_e2e_workflow_empty_task_breakdown(
     mock_invoke_llm_requirement: AsyncMock,
 ) -> None:
@@ -944,9 +974,13 @@ async def test_e2e_workflow_empty_task_breakdown(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_empty_interface_definitions(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -1025,7 +1059,9 @@ async def test_e2e_workflow_empty_interface_definitions(
     )
 
     # Assert: Verify LLM call counts
-    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
+    assert mock_invoke_llm_requirement.call_count == 1, (
+        "requirement_analysis called once"
+    )
     assert mock_invoke_llm_evaluator.call_count == 2, (
         "evaluator called twice (after task_breakdown and after interface_definition)"
     )
@@ -1033,7 +1069,9 @@ async def test_e2e_workflow_empty_interface_definitions(
 
 
 @pytest.mark.asyncio
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
 async def test_e2e_workflow_llm_error_during_flow(
     mock_invoke_llm_evaluator: AsyncMock,
@@ -1083,8 +1121,12 @@ async def test_e2e_workflow_llm_error_during_flow(
     assert "job_master_id" not in result, "job_master_id should not be set"
 
     # Assert: Verify LLM call counts
-    assert mock_invoke_llm_requirement.call_count == 1, "requirement_analysis called once"
-    assert mock_invoke_llm_evaluator.call_count == 1, "evaluator called once before error"
+    assert mock_invoke_llm_requirement.call_count == 1, (
+        "requirement_analysis called once"
+    )
+    assert mock_invoke_llm_evaluator.call_count == 1, (
+        "evaluator called once before error"
+    )
 
 
 # ============================================================================
@@ -1096,9 +1138,13 @@ async def test_e2e_workflow_llm_error_during_flow(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_execution_time(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
@@ -1191,9 +1237,13 @@ async def test_e2e_workflow_execution_time(
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher")
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.requirement_analysis.invoke_structured_llm"
+)
 @patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm")
-@patch("aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm")
+@patch(
+    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition.invoke_structured_llm"
+)
 async def test_e2e_workflow_state_consistency(
     mock_invoke_llm_interface: AsyncMock,
     mock_invoke_llm_evaluator: AsyncMock,
