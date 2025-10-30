@@ -55,12 +55,6 @@
 							💬 Chat
 						</a>
 						<a
-							href="/agents"
-							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
-						>
-							Agents
-						</a>
-						<a
 							href="/settings"
 							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
 						>
