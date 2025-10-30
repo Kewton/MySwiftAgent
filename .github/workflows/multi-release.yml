@@ -392,7 +392,7 @@ jobs:
 
             # Detect changed projects from git diff
             CHANGED_PROJECTS=""
-            for project in myscheduler jobqueue docs commonUI graphAiServer expertAgent myVault; do
+            for project in myscheduler jobqueue docs commonUI graphAiServer expertAgent myVault myAgentDesk; do
               # Check if project has version file (pyproject.toml or package.json)
               if ([[ -f "$project/pyproject.toml" ]] || [[ -f "$project/package.json" ]]) && git diff HEAD~1 HEAD --name-only | grep -q "^$project/"; then
                 if [[ -z "$CHANGED_PROJECTS" ]]; then

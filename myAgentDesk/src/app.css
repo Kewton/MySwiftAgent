@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	:root {
+		/* OpenWebUI inspired color variables */
+		--color-primary: 14 165 233;
+		--color-accent: 139 92 246;
+		--color-background: 255 255 255;
+		--color-foreground: 15 23 42;
+	}
+
+	.dark {
+		--color-background: 15 23 42;
+		--color-foreground: 248 250 252;
+	}
+
+	* {
+		@apply border-gray-200 dark:border-gray-700;
+	}
+
+	body {
+		@apply bg-white dark:bg-dark-bg text-slate-900 dark:text-slate-100;
+		@apply font-sans antialiased;
+	}
+}
+
+@layer components {
+	/* OpenWebUI inspired chat bubble */
+	.chat-bubble {
+		@apply rounded-lg p-4 mb-2 max-w-3xl;
+		@apply bg-white dark:bg-dark-card;
+		@apply shadow-sm hover:shadow-md transition-shadow;
+	}
+
+	/* Dify inspired node card */
+	.node-card {
+		@apply rounded-xl p-4 border-2;
+		@apply bg-gradient-to-br from-white to-gray-50;
+		@apply dark:from-dark-card dark:to-dark-bg;
+		@apply hover:scale-105 transition-transform cursor-pointer;
+	}
+
+	/* Sidebar (OpenWebUI style) */
+	.sidebar {
+		@apply w-64 h-full bg-gray-50 dark:bg-dark-card;
+		@apply border-r border-gray-200 dark:border-gray-700;
+		@apply flex flex-col;
+	}
+
+	/* Button variants */
+	.btn-primary {
+		@apply px-4 py-2 rounded-lg font-medium;
+		@apply bg-primary-500 hover:bg-primary-600;
+		@apply text-white transition-colors;
+	}
+
+	.btn-secondary {
+		@apply px-4 py-2 rounded-lg font-medium;
+		@apply bg-gray-200 hover:bg-gray-300;
+		@apply dark:bg-gray-700 dark:hover:bg-gray-600;
+		@apply text-gray-900 dark:text-white transition-colors;
+	}
+}
