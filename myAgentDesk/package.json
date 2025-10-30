@@ -1,6 +1,6 @@
 {
 	"name": "myagentdesk",
-	"version": "0.2.0",
+	"version": "0.1.0",
 	"description": "AI Agent Desktop - OpenWebUI-inspired interface with Dify workflow elements",
 	"type": "module",
 	"scripts": {
