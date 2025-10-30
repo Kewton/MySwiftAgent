@@ -30,10 +30,10 @@
 	}
 </script>
 
-<div class="min-h-screen flex flex-col">
+<div class="h-screen overflow-hidden flex flex-col">
 	<!-- OpenWebUI inspired Header -->
 	<header
-		class="sticky top-0 z-50 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-700"
+		class="flex-none z-50 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-700"
 	>
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
@@ -47,6 +47,12 @@
 							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							Home
+						</a>
+						<a
+							href="/chat"
+							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
+						>
+							💬 Chat
 						</a>
 						<a
 							href="/agents"
@@ -83,13 +89,4 @@
 	<main class="flex-1">
 		<slot />
 	</main>
-
-	<!-- Footer -->
-	<footer class="bg-gray-50 dark:bg-dark-card border-t border-gray-200 dark:border-gray-700">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-			<p class="text-center text-sm text-gray-600 dark:text-gray-400">
-				© 2025 myAgentDesk - AI Agent Desktop Interface
-			</p>
-		</div>
-	</footer>
 </div>
