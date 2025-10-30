@@ -47,7 +47,7 @@
 			// 会話が存在しない場合、新規作成
 			if (!activeConv) {
 				const newConv = conversationStore.create();
-				window.history.replaceState({}, '', `/chat?id=${newConv.id}`);
+				window.history.replaceState({}, '', `/create_job?id=${newConv.id}`);
 			}
 		}
 	});
@@ -235,7 +235,7 @@
 </script>
 
 <svelte:head>
-	<title>Chat - myAgentDesk</title>
+	<title>Create Job - myAgentDesk</title>
 </svelte:head>
 
 <!-- Layout -->

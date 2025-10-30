@@ -9,7 +9,7 @@
 	}
 
 	function goBack() {
-		goto('/chat');
+		goto('/create_job');
 	}
 </script>
 
