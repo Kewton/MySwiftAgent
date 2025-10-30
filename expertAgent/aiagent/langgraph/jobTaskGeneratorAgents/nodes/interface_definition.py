@@ -222,7 +222,9 @@ async def interface_definition_node(
     evaluation_feedback = state.get("evaluation_feedback")
     validation_result = state.get("validation_result")
 
-    if evaluation_feedback or (validation_result and not validation_result.get("is_valid", True)):
+    if evaluation_feedback or (
+        validation_result and not validation_result.get("is_valid", True)
+    ):
         updated_retry = current_retry + 1
     else:
         updated_retry = 0
