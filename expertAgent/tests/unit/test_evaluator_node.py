@@ -94,9 +94,7 @@ class TestEvaluatorNode:
         assert len(result["evaluation_result"]["infeasible_tasks"]) == 0
 
         # Verify retry_count is NOT modified by evaluator (it's managed by requirement_analysis/interface_definition)
-        assert result["retry_count"] == 2, (
-            "evaluator should not modify retry_count"
-        )
+        assert result["retry_count"] == 2, "evaluator should not modify retry_count"
 
         # evaluation_feedback should be None for valid results
         assert result.get("evaluation_feedback") is None
@@ -520,9 +518,7 @@ class TestEvaluatorNode:
             evaluator_stage="after_task_breakdown",
         )
         result = await evaluator_node(state)
-        assert result["retry_count"] == 3, (
-            "evaluator should not modify retry_count"
-        )
+        assert result["retry_count"] == 3, "evaluator should not modify retry_count"
 
         # Test Case 2: retry_count=0 should remain 0
         state = create_mock_workflow_state(

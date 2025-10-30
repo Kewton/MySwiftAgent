@@ -1,0 +1,51 @@
+# Node.js
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# SvelteKit
+.svelte-kit
+build
+
+# Development
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Testing
+coverage
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+tests
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Documentation
+README.md
+*.md
+!package.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
