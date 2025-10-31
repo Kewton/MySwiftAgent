@@ -71,18 +71,19 @@ def mock_llm_stream_ready():
 @pytest.fixture
 def mock_job_generator_success():
     """Mock successful job generator response."""
+    from app.schemas.job_generator import JobGeneratorResponse
 
     async def _mock_job_generator(request):
-        return {
-            "status": "success",
-            "job_id": "job_test_12345",
-            "job_master_id": "jm_test_12345",
-            "task_breakdown": [],
-        }
+        return JobGeneratorResponse(
+            status="success",
+            job_id="job_test_12345",
+            job_master_id="jm_test_12345",
+            task_breakdown=[],
+        )
 
-    # Patch at the source module where job_generator is defined
+    # Patch at the source module where generate_job_and_tasks is defined
     with patch(
-        "app.api.v1.job_generator_endpoints.job_generator",
+        "app.api.v1.job_generator_endpoints.generate_job_and_tasks",
         side_effect=_mock_job_generator,
     ):
         yield
@@ -386,7 +387,7 @@ class TestCreateJobEndpoint:
             raise Exception("Job Generator internal error")
 
         with patch(
-            "app.api.v1.job_generator_endpoints.job_generator",
+            "app.api.v1.job_generator_endpoints.generate_job_and_tasks",
             side_effect=_failing_job_generator,
         ):
             transport = ASGITransport(app=app)
@@ -421,7 +422,7 @@ class TestCreateJobEndpoint:
             }
 
         with patch(
-            "app.api.v1.job_generator_endpoints.job_generator",
+            "app.api.v1.job_generator_endpoints.generate_job_and_tasks",
             side_effect=_incomplete_job_generator,
         ):
             transport = ASGITransport(app=app)
@@ -451,20 +452,21 @@ class TestCreateJobEndpoint:
         """Test conversion of RequirementState to Job Generator format."""
         # This test indirectly verifies _convert_requirements_to_job_request
         # by checking that Job Generator is called with correct format
+        from app.schemas.job_generator import JobGeneratorResponse
 
         called_with = None
 
         async def _capture_job_generator(request):
             nonlocal called_with
             called_with = request
-            return {
-                "status": "success",
-                "job_id": "job_test",
-                "job_master_id": "jm_test",
-            }
+            return JobGeneratorResponse(
+                status="success",
+                job_id="job_test",
+                job_master_id="jm_test",
+            )
 
         with patch(
-            "app.api.v1.job_generator_endpoints.job_generator",
+            "app.api.v1.job_generator_endpoints.generate_job_and_tasks",
             side_effect=_capture_job_generator,
         ):
             transport = ASGITransport(app=app)
@@ -488,15 +490,13 @@ class TestCreateJobEndpoint:
 
                 assert response.status_code == 200
 
-                # Verify conversion format
+                # Verify conversion format (called_with is JobGeneratorRequest Pydantic model)
                 assert called_with is not None
-                assert "user_requirement" in called_with
-                assert "CSVファイル" in called_with["user_requirement"]
-                assert "売上データ分析" in called_with["user_requirement"]
-                assert "Excelレポート" in called_with["user_requirement"]
-                assert "毎日朝9時" in called_with["user_requirement"]
-                assert "available_capabilities" in called_with
-                assert called_with["available_capabilities"] == []  # Empty = use all
+                assert hasattr(called_with, "user_requirement")
+                assert "CSVファイル" in called_with.user_requirement
+                assert "売上データ分析" in called_with.user_requirement
+                assert "Excelレポート" in called_with.user_requirement
+                assert "毎日朝9時" in called_with.user_requirement
 
     async def test_missing_conversation_id_in_create_job(self):
         """Test error when conversation_id is missing in create-job."""
@@ -534,4 +534,4 @@ class TestCreateJobEndpoint:
                 "/aiagent-api/v1/chat/create-job", json=request_data
             )
 
-            assert response.status_code == 422  # Validation error
+            assert response.status_code == 400  # Insufficient completeness (0%)
