@@ -30,23 +30,29 @@
 	}
 </script>
 
-<div class="h-screen overflow-hidden flex flex-col">
+<div class="min-h-screen flex flex-col">
 	<!-- OpenWebUI inspired Header -->
 	<header
-		class="flex-none z-50 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-700"
+		class="sticky top-0 z-50 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-700"
 	>
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
 				<div class="flex items-center space-x-4">
-					<a href="/create_job" class="text-2xl font-bold text-primary-600 dark:text-primary-400">
+					<a href="/" class="text-2xl font-bold text-primary-600 dark:text-primary-400">
 						myAgentDesk
 					</a>
 					<nav class="hidden md:flex space-x-4">
 						<a
-							href="/create_job"
+							href="/"
 							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
 						>
-							Create Job
+							Home
+						</a>
+						<a
+							href="/agents"
+							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
+						>
+							Agents
 						</a>
 						<a
 							href="/settings"
@@ -77,4 +83,13 @@
 	<main class="flex-1">
 		<slot />
 	</main>
+
+	<!-- Footer -->
+	<footer class="bg-gray-50 dark:bg-dark-card border-t border-gray-200 dark:border-gray-700">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+			<p class="text-center text-sm text-gray-600 dark:text-gray-400">
+				© 2025 myAgentDesk - AI Agent Desktop Interface
+			</p>
+		</div>
+	</footer>
 </div>
