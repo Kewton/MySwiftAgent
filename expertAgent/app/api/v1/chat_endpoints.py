@@ -85,14 +85,14 @@ async def requirement_definition(request: RequirementChatRequest):
 
             # Parse current requirements
             current_requirements = RequirementState(
-                **request.context["current_requirements"]
+                **request.context.current_requirements
             )
 
             # Stream LLM responses
             full_response = ""
             async for chunk in stream_requirement_clarification(
                 user_message=request.user_message,
-                previous_messages=request.context["previous_messages"],
+                previous_messages=request.context.previous_messages,
                 current_requirements=current_requirements,
             ):
                 # Accumulate full response for conversation history

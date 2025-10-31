@@ -7,7 +7,7 @@ This module provides Pydantic models for the chat-based job creation flow:
 4. CreateJobResponse: Response after job creation
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -59,6 +59,33 @@ class Message(BaseModel):
     content: str = Field(..., description="Message content")
 
 
+class ContextData(BaseModel):
+    """Conversation context structure for requirement chat.
+
+    Validates that all required context fields are present before
+    SSE streaming begins, preventing runtime KeyError exceptions.
+    """
+
+    previous_messages: List[Dict[str, Any]] = Field(
+        ...,
+        description="Previous messages in the conversation",
+        examples=[[{"role": "user", "content": "Hello"}]],
+    )
+    current_requirements: Dict[str, Any] = Field(
+        ...,
+        description="Current requirement state (must include all RequirementState fields)",
+        examples=[
+            {
+                "data_source": None,
+                "process_description": None,
+                "output_format": None,
+                "schedule": None,
+                "completeness": 0.0,
+            }
+        ],
+    )
+
+
 class RequirementChatRequest(BaseModel):
     """Request for requirement clarification chat (SSE).
 
@@ -68,7 +95,7 @@ class RequirementChatRequest(BaseModel):
 
     conversation_id: str = Field(..., description="Unique conversation session ID")
     user_message: str = Field(..., description="User's latest message")
-    context: Dict = Field(
+    context: ContextData = Field(
         ...,
         description="Conversation context including previous messages and current requirements",
     )
