@@ -115,7 +115,8 @@ const translations = {
 		'alert.noConversation': '会話が選択されていません',
 
 		// Job Messages
-		'job.createSuccess': '✅ ジョブを作成しました！\n\n**Job ID:** `{0}`\n**JobMaster ID:** `{1}`\n\nこのジョブはmySchedulerで管理されています。'
+		'job.createSuccess':
+			'✅ ジョブを作成しました！\n\n**Job ID:** `{0}`\n**JobMaster ID:** `{1}`\n\nこのジョブはmySchedulerで管理されています。'
 	},
 	en: {
 		// Header
@@ -189,11 +190,13 @@ const translations = {
 		'error.jobCreation': 'Failed to create job.',
 
 		// Alert Messages
-		'alert.insufficientRequirements': 'Requirements are not sufficiently clarified (Current: {0}%, Required: 80%)',
+		'alert.insufficientRequirements':
+			'Requirements are not sufficiently clarified (Current: {0}%, Required: 80%)',
 		'alert.noConversation': 'No conversation selected',
 
 		// Job Messages
-		'job.createSuccess': '✅ Job created successfully!\n\n**Job ID:** `{0}`\n**JobMaster ID:** `{1}`\n\nThis job is managed by myScheduler.'
+		'job.createSuccess':
+			'✅ Job created successfully!\n\n**Job ID:** `{0}`\n**JobMaster ID:** `{1}`\n\nThis job is managed by myScheduler.'
 	}
 };
 
