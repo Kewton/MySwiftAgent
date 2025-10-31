@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation';
 	import { locale, t } from '$lib/stores/locale';
 	import { conversationStore, groupedConversations } from '$lib/stores/conversations';
-	import SidebarHeader from './sidebar/SidebarHeader.svelte';
 	import SearchBox from './sidebar/SearchBox.svelte';
 	import ConversationGroup from './sidebar/ConversationGroup.svelte';
 
@@ -98,13 +97,18 @@
 </script>
 
 {#if open}
-	<aside class="sidebar">
+	<aside
+		class="h-screen bg-white dark:bg-dark-card border-r border-gray-200 dark:border-gray-700 flex flex-col"
+		style="width: var(--inner-sidebar-width, 256px);"
+	>
 		<div class="p-4 border-b border-gray-200 dark:border-gray-700">
-			<SidebarHeader
-				onToggle={() => (open = false)}
-				onCreateConversation={createNewConversation}
-				title={t('sidebar.newChat')}
-			/>
+			<button
+				on:click={createNewConversation}
+				class="w-full mb-3 px-4 py-2 bg-primary-600 dark:bg-primary-700 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors flex items-center justify-center gap-2"
+			>
+				<span>➕</span>
+				<span class="text-sm font-medium">{t('sidebar.newChat')}</span>
+			</button>
 			<SearchBox
 				value={searchQuery}
 				onInput={(value) => (searchQuery = value)}
@@ -137,15 +141,6 @@
 					/>
 				{/each}
 			{/if}
-		</div>
-
-		<div class="p-4 border-t border-gray-200 dark:border-gray-700">
-			<a
-				href="/settings"
-				class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
-			>
-				⚙️ {t('sidebar.settings')}
-			</a>
 		</div>
 	</aside>
 {/if}

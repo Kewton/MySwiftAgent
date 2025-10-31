@@ -1,22 +1,18 @@
 <script lang="ts">
-	import { onMount, afterUpdate, onDestroy } from 'svelte';
+	import { onMount, afterUpdate } from 'svelte';
 	import { page } from '$app/stores';
-	import { browser } from '$app/environment';
-	import Sidebar from '$lib/components/Sidebar.svelte';
+	import InnerSidebar from '$lib/components/InnerSidebar.svelte';
 	import RequirementCard from '$lib/components/create_job/RequirementCard.svelte';
 	import ChatContainer from '$lib/components/create_job/ChatContainer.svelte';
 	import MessageInput from '$lib/components/create_job/MessageInput.svelte';
 	import { conversationStore, activeConversation } from '$lib/stores/conversations';
 	import { chatSession } from '$lib/stores/chatSession';
-	import { t } from '$lib/stores/locale';
+	import { innerSidebarOpen } from '$lib/stores/sidebar';
 
-	let sidebarOpen = true;
 	let message = '';
 	let isComposing = false; // IME入力中フラグ
 	let chatContainer: HTMLDivElement | undefined; // チャットスクロール用ref
 	let lastScrollToken = 0;
-	const SIDEBAR_OPEN_WIDTH = '16rem';
-	const SIDEBAR_CLOSED_WIDTH = '0px';
 
 	// アクティブな会話のリアクティブデータ
 	$: activeConv = $activeConversation;
@@ -31,11 +27,6 @@
 	};
 	$: sessionState = $chatSession;
 
-	function applySidebarWidth(width: string) {
-		if (!browser) return;
-		document.documentElement.style.setProperty('--sidebar-width', width);
-	}
-
 	onMount(() => {
 		// URLパラメータから会話IDを取得
 		const id = $page.url.searchParams.get('id');
@@ -49,16 +40,9 @@
 			window.history.replaceState({}, '', `/create_job?id=${newConv.id}`);
 		}
 
-		applySidebarWidth(sidebarOpen ? SIDEBAR_OPEN_WIDTH : SIDEBAR_CLOSED_WIDTH);
+		// Auto-open inner sidebar on this page
+		innerSidebarOpen.set(true);
 	});
-
-	onDestroy(() => {
-		applySidebarWidth(SIDEBAR_CLOSED_WIDTH);
-	});
-
-	$: if (browser) {
-		applySidebarWidth(sidebarOpen ? SIDEBAR_OPEN_WIDTH : SIDEBAR_CLOSED_WIDTH);
-	}
 
 	// メッセージ追加後に自動スクロール
 	afterUpdate(() => {
@@ -110,48 +94,11 @@
 
 <!-- Layout -->
 <div class="flex h-full">
-	<!-- Sidebar (fixed position, overlays content) -->
-	<div class="fixed inset-y-0 left-0 z-40">
-		<Sidebar bind:open={sidebarOpen} activeConversationId={conversationId} />
-	</div>
+	<!-- Inner Sidebar (conversation history) -->
+	<InnerSidebar open={$innerSidebarOpen} activeConversationId={conversationId} />
 
-	<!-- Main Content with left margin when sidebar is open -->
-	<main
-		class="flex-1 flex flex-col bg-white dark:bg-dark-bg overflow-hidden transition-all duration-300"
-	>
-		<!-- Header -->
-		<div class="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-gray-800 px-6 py-2">
-			<div class="flex items-center gap-3">
-				{#if !sidebarOpen}
-					<button
-						on:click={() => (sidebarOpen = true)}
-						class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors"
-						aria-label="Open sidebar"
-					>
-						<svg
-							class="w-5 h-5 text-gray-700 dark:text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 6h16M4 12h16M4 18h16"
-							/>
-						</svg>
-					</button>
-				{/if}
-				<div>
-					<h1 class="text-xl font-bold text-gray-900 dark:text-white">{t('header.title')}</h1>
-					{#if t('header.subtitle')}
-						<p class="text-xs text-gray-500 dark:text-gray-400">{t('header.subtitle')}</p>
-					{/if}
-				</div>
-			</div>
-		</div>
-
+	<!-- Main Content -->
+	<main class="flex-1 flex flex-col bg-white dark:bg-dark-bg overflow-hidden">
 		<!-- Fixed Requirement State Card -->
 		<RequirementCard
 			{requirements}
