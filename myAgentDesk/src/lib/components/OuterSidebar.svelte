@@ -17,7 +17,7 @@
 	}
 
 	const menuItems: MenuItem[] = [
-		{ id: 'home', icon: '🔥', label: 'Home', path: '/create_job' },
+		{ id: 'home', icon: '🔥', label: 'Home', path: '/' },
 		{ id: 'create', icon: '✏️', label: 'Create Job', path: '/create_job' },
 		{ id: 'history', icon: '📜', label: 'History', special: 'history' },
 		{ id: 'settings', icon: '⚙️', label: 'Settings', path: '/settings' }
@@ -48,7 +48,12 @@
 
 	function isActive(item: MenuItem): boolean {
 		if (!item.path) return false;
-		return $page.url.pathname === item.path || $page.url.pathname.startsWith(item.path);
+		// Exact match for most paths, but allow /create_job to match both / and /create_job
+		if (item.path === '/' && ($page.url.pathname === '/' || $page.url.pathname === '/create_job')) {
+			// Home is active on both / and /create_job if we're not on /create_job specifically
+			return $page.url.pathname === '/';
+		}
+		return $page.url.pathname === item.path;
 	}
 </script>
 
