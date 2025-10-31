@@ -11,8 +11,8 @@ Design decisions:
 """
 
 import logging
-from typing import Dict, List, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,9 @@ class ConversationStore:
 
         return conv
 
-    def get_messages(self, conversation_id: str, limit: Optional[int] = None) -> List[Dict]:
+    def get_messages(
+        self, conversation_id: str, limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         """Get messages from a conversation.
 
         Args:
@@ -127,7 +129,7 @@ class ConversationStore:
         if not conv:
             return []
 
-        messages = conv["messages"]
+        messages: List[Dict[str, Any]] = conv["messages"]
         if limit:
             return messages[-limit:]
         return messages

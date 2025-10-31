@@ -3,17 +3,19 @@
 Tests SSE streaming, job creation, and error handling.
 """
 
-import pytest
 import json
-from httpx import AsyncClient, ASGITransport
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 from app.main import app
-from app.schemas.chat import RequirementState
 
 
 @pytest.fixture
 def mock_llm_stream():
     """Mock LLM streaming responses for testing."""
+
     async def _stream(*args, **kwargs):
         # Simulate streaming response
         yield {"type": "message", "data": {"content": "かしこまりました。"}}
@@ -27,14 +29,14 @@ def mock_llm_stream():
                     "process_description": "データ分析",
                     "output_format": None,
                     "schedule": None,
-                    "completeness": 0.35
+                    "completeness": 0.35,
                 }
-            }
+            },
         }
 
     with patch(
         "app.api.v1.chat_endpoints.stream_requirement_clarification",
-        side_effect=_stream
+        side_effect=_stream,
     ):
         yield
 
@@ -42,6 +44,7 @@ def mock_llm_stream():
 @pytest.fixture
 def mock_llm_stream_ready():
     """Mock LLM streaming with requirements_ready event."""
+
     async def _stream(*args, **kwargs):
         yield {"type": "message", "data": {"content": "要件が整いました！"}}
         yield {
@@ -52,15 +55,15 @@ def mock_llm_stream_ready():
                     "process_description": "データ分析",
                     "output_format": "Excelレポート",
                     "schedule": "毎日実行",
-                    "completeness": 1.0
+                    "completeness": 1.0,
                 }
-            }
+            },
         }
         yield {"type": "requirements_ready", "data": {}}
 
     with patch(
         "app.api.v1.chat_endpoints.stream_requirement_clarification",
-        side_effect=_stream
+        side_effect=_stream,
     ):
         yield
 
@@ -68,18 +71,19 @@ def mock_llm_stream_ready():
 @pytest.fixture
 def mock_job_generator_success():
     """Mock successful job generator response."""
+
     async def _mock_job_generator(request):
         return {
             "status": "success",
             "job_id": "job_test_12345",
             "job_master_id": "jm_test_12345",
-            "task_breakdown": []
+            "task_breakdown": [],
         }
 
     # Patch at the source module where job_generator is defined
     with patch(
         "app.api.v1.job_generator_endpoints.job_generator",
-        side_effect=_mock_job_generator
+        side_effect=_mock_job_generator,
     ):
         yield
 
@@ -102,18 +106,19 @@ class TestRequirementDefinitionEndpoint:
                         "process_description": None,
                         "output_format": None,
                         "schedule": None,
-                        "completeness": 0.0
-                    }
-                }
+                        "completeness": 0.0,
+                    },
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/requirement-definition",
-                json=request_data
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
             )
 
             assert response.status_code == 200
-            assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            assert (
+                response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            )
 
             # Collect SSE events
             events = []
@@ -123,7 +128,9 @@ class TestRequirementDefinitionEndpoint:
                     events.append(data)
 
             # Verify events
-            assert len(events) >= 3  # At least 3 message chunks + requirement_update + done
+            assert (
+                len(events) >= 3
+            )  # At least 3 message chunks + requirement_update + done
 
             # Check message events
             message_events = [e for e in events if e["type"] == "message"]
@@ -148,21 +155,23 @@ class TestRequirementDefinitionEndpoint:
                 "context": {
                     "previous_messages": [
                         {"role": "user", "content": "売上データを分析したい"},
-                        {"role": "assistant", "content": "どのような形式のデータですか？"}
+                        {
+                            "role": "assistant",
+                            "content": "どのような形式のデータですか？",
+                        },
                     ],
                     "current_requirements": {
                         "data_source": None,
                         "process_description": "売上データを分析",
                         "output_format": None,
                         "schedule": None,
-                        "completeness": 0.35
-                    }
-                }
+                        "completeness": 0.35,
+                    },
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/requirement-definition",
-                json=request_data
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
             )
 
             assert response.status_code == 200
@@ -181,14 +190,13 @@ class TestRequirementDefinitionEndpoint:
                         "process_description": "データ分析",
                         "output_format": "Excelレポート",
                         "schedule": None,
-                        "completeness": 0.85
-                    }
-                }
+                        "completeness": 0.85,
+                    },
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/requirement-definition",
-                json=request_data
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
             )
 
             assert response.status_code == 200
@@ -217,14 +225,13 @@ class TestRequirementDefinitionEndpoint:
                         "process_description": None,
                         "output_format": None,
                         "schedule": None,
-                        "completeness": 0.0
-                    }
-                }
+                        "completeness": 0.0,
+                    },
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/requirement-definition",
-                json=request_data
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
             )
 
             assert response.status_code == 422  # Validation error
@@ -236,29 +243,33 @@ class TestRequirementDefinitionEndpoint:
             request_data = {
                 "conversation_id": "test_conv_004",
                 "user_message": "売上データを分析したい",
-                "context": {
-                    "invalid_key": "invalid_value"
-                }
+                "context": {"invalid_key": "invalid_value"},
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/requirement-definition",
-                json=request_data
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
             )
 
-            assert response.status_code in [400, 422, 500]  # Various possible error codes
+            assert response.status_code in [
+                400,
+                422,
+                500,
+            ]  # Various possible error codes
 
     async def test_llm_service_error_handling(self):
         """Test error handling when LLM service fails."""
+
         async def _failing_stream(*args, **kwargs):
             raise Exception("LLM service unavailable")
 
         with patch(
             "app.api.v1.chat_endpoints.stream_requirement_clarification",
-            side_effect=_failing_stream
+            side_effect=_failing_stream,
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 request_data = {
                     "conversation_id": "test_conv_005",
                     "user_message": "売上データを分析したい",
@@ -269,14 +280,13 @@ class TestRequirementDefinitionEndpoint:
                             "process_description": None,
                             "output_format": None,
                             "schedule": None,
-                            "completeness": 0.0
-                        }
-                    }
+                            "completeness": 0.0,
+                        },
+                    },
                 }
 
                 response = await client.post(
-                    "/aiagent-api/v1/chat/requirement-definition",
-                    json=request_data
+                    "/aiagent-api/v1/chat/requirement-definition", json=request_data
                 )
 
                 # Should return SSE with error event
@@ -309,13 +319,12 @@ class TestCreateJobEndpoint:
                     "process_description": "売上データの月別集計",
                     "output_format": "Excelレポート",
                     "schedule": "毎日朝9時",
-                    "completeness": 1.0
-                }
+                    "completeness": 1.0,
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/create-job",
-                json=request_data
+                "/aiagent-api/v1/chat/create-job", json=request_data
             )
 
             assert response.status_code == 200
@@ -337,13 +346,12 @@ class TestCreateJobEndpoint:
                     "process_description": "データ分析",
                     "output_format": None,
                     "schedule": None,
-                    "completeness": 0.60  # Below 80% threshold
-                }
+                    "completeness": 0.60,  # Below 80% threshold
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/create-job",
-                json=request_data
+                "/aiagent-api/v1/chat/create-job", json=request_data
             )
 
             assert response.status_code == 400
@@ -361,28 +369,30 @@ class TestCreateJobEndpoint:
                     "process_description": "データ分析",
                     "output_format": "Excelレポート",
                     "schedule": None,
-                    "completeness": 0.85  # 25% + 35% + 25% = 85%
-                }
+                    "completeness": 0.85,  # 25% + 35% + 25% = 85%
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/create-job",
-                json=request_data
+                "/aiagent-api/v1/chat/create-job", json=request_data
             )
 
             assert response.status_code == 200
 
     async def test_job_generator_failure(self):
         """Test error handling when Job Generator fails."""
+
         async def _failing_job_generator(request):
             raise Exception("Job Generator internal error")
 
         with patch(
             "app.api.v1.job_generator_endpoints.job_generator",
-            side_effect=_failing_job_generator
+            side_effect=_failing_job_generator,
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 request_data = {
                     "conversation_id": "test_conv_009",
                     "requirements": {
@@ -390,13 +400,12 @@ class TestCreateJobEndpoint:
                         "process_description": "データ分析",
                         "output_format": "Excelレポート",
                         "schedule": "毎日",
-                        "completeness": 0.85
-                    }
+                        "completeness": 0.85,
+                    },
                 }
 
                 response = await client.post(
-                    "/aiagent-api/v1/chat/create-job",
-                    json=request_data
+                    "/aiagent-api/v1/chat/create-job", json=request_data
                 )
 
                 assert response.status_code == 500
@@ -404,6 +413,7 @@ class TestCreateJobEndpoint:
 
     async def test_job_generator_missing_job_ids(self):
         """Test error when Job Generator doesn't return job IDs."""
+
         async def _incomplete_job_generator(request):
             return {
                 "status": "success",
@@ -412,10 +422,12 @@ class TestCreateJobEndpoint:
 
         with patch(
             "app.api.v1.job_generator_endpoints.job_generator",
-            side_effect=_incomplete_job_generator
+            side_effect=_incomplete_job_generator,
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 request_data = {
                     "conversation_id": "test_conv_010",
                     "requirements": {
@@ -423,18 +435,19 @@ class TestCreateJobEndpoint:
                         "process_description": "データ分析",
                         "output_format": "Excelレポート",
                         "schedule": "毎日",
-                        "completeness": 1.0
-                    }
+                        "completeness": 1.0,
+                    },
                 }
 
                 response = await client.post(
-                    "/aiagent-api/v1/chat/create-job",
-                    json=request_data
+                    "/aiagent-api/v1/chat/create-job", json=request_data
                 )
 
                 assert response.status_code == 500
 
-    async def test_requirements_to_job_request_conversion(self, mock_job_generator_success):
+    async def test_requirements_to_job_request_conversion(
+        self, mock_job_generator_success
+    ):
         """Test conversion of RequirementState to Job Generator format."""
         # This test indirectly verifies _convert_requirements_to_job_request
         # by checking that Job Generator is called with correct format
@@ -447,15 +460,17 @@ class TestCreateJobEndpoint:
             return {
                 "status": "success",
                 "job_id": "job_test",
-                "job_master_id": "jm_test"
+                "job_master_id": "jm_test",
             }
 
         with patch(
             "app.api.v1.job_generator_endpoints.job_generator",
-            side_effect=_capture_job_generator
+            side_effect=_capture_job_generator,
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 request_data = {
                     "conversation_id": "test_conv_011",
                     "requirements": {
@@ -463,13 +478,12 @@ class TestCreateJobEndpoint:
                         "process_description": "売上データ分析",
                         "output_format": "Excelレポート",
                         "schedule": "毎日朝9時",
-                        "completeness": 1.0
-                    }
+                        "completeness": 1.0,
+                    },
                 }
 
                 response = await client.post(
-                    "/aiagent-api/v1/chat/create-job",
-                    json=request_data
+                    "/aiagent-api/v1/chat/create-job", json=request_data
                 )
 
                 assert response.status_code == 200
@@ -494,13 +508,12 @@ class TestCreateJobEndpoint:
                     "process_description": "データ分析",
                     "output_format": "Excelレポート",
                     "schedule": "毎日",
-                    "completeness": 1.0
+                    "completeness": 1.0,
                 }
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/create-job",
-                json=request_data
+                "/aiagent-api/v1/chat/create-job", json=request_data
             )
 
             assert response.status_code == 422  # Validation error
@@ -514,12 +527,11 @@ class TestCreateJobEndpoint:
                 "requirements": {
                     "invalid_field": "value"
                     # Missing required fields
-                }
+                },
             }
 
             response = await client.post(
-                "/aiagent-api/v1/chat/create-job",
-                json=request_data
+                "/aiagent-api/v1/chat/create-job", json=request_data
             )
 
             assert response.status_code == 422  # Validation error

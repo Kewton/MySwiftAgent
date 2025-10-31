@@ -3,8 +3,8 @@
 Tests conversation history storage with 7-day TTL support.
 """
 
-import pytest
 from datetime import datetime, timedelta
+
 from app.services.conversation.conversation_store import ConversationStore
 
 
@@ -53,6 +53,7 @@ class TestConversationStore:
 
         # Wait a tiny bit to ensure different timestamp
         import time
+
         time.sleep(0.01)
 
         store.save_message("conv_001", "assistant", "Hi!")
@@ -132,7 +133,9 @@ class TestConversationStore:
         store.save_message("conv_001", "user", "Hello")
 
         # Manually set updated_at to 8 days ago (expired)
-        store._conversations["conv_001"]["updated_at"] = datetime.now() - timedelta(days=8)
+        store._conversations["conv_001"]["updated_at"] = datetime.now() - timedelta(
+            days=8
+        )
 
         # Create fresh conversation
         store.save_message("conv_002", "user", "Fresh message")
@@ -151,7 +154,9 @@ class TestConversationStore:
 
         # Create conversation 6 days ago (not expired)
         store.save_message("conv_001", "user", "Hello")
-        store._conversations["conv_001"]["updated_at"] = datetime.now() - timedelta(days=6)
+        store._conversations["conv_001"]["updated_at"] = datetime.now() - timedelta(
+            days=6
+        )
 
         # Trigger cleanup
         store.get_conversation("conv_001")

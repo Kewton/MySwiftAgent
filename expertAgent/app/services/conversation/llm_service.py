@@ -13,13 +13,13 @@ import logging
 import os
 from typing import AsyncGenerator, Dict, List
 
-from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import (
-    create_llm_with_fallback,
-)
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.requirement_clarification import (
     REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT,
     create_requirement_clarification_prompt,
     extract_requirement_from_message,
+)
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import (
+    create_llm_with_fallback,
 )
 from app.schemas.chat import RequirementState
 
@@ -169,7 +169,9 @@ async def non_streaming_clarification(
 
     try:
         response = await model.ainvoke(messages)
-        full_response = str(response.content) if hasattr(response, "content") else str(response)
+        full_response = (
+            str(response.content) if hasattr(response, "content") else str(response)
+        )
 
         updated_requirements = extract_requirement_from_message(
             user_message, full_response, current_requirements

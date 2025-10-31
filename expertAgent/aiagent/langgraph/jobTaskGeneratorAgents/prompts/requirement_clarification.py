@@ -11,9 +11,9 @@ Design philosophy:
 - Threshold: 80% completeness required for job creation
 """
 
-from typing import List, Dict
-from app.schemas.chat import RequirementState
+from typing import Dict, List
 
+from app.schemas.chat import RequirementState
 
 REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT = """
 あなたはドメインエキスパート向けのジョブ作成アシスタントです。
@@ -118,9 +118,7 @@ def create_requirement_clarification_prompt(
     """
     # Format conversation history (limit to last 10 messages for context window)
     recent_messages = previous_messages[-10:] if previous_messages else []
-    history = "\n".join(
-        [f"{msg['role']}: {msg['content']}" for msg in recent_messages]
-    )
+    history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
 
     if not history:
         history = "(対話開始)"
@@ -128,10 +126,10 @@ def create_requirement_clarification_prompt(
     # Format current requirement state
     requirements_status = f"""
 現在の要件明確化状態:
-- データソース: {current_requirements.data_source or '未定'}
-- 処理内容: {current_requirements.process_description or '未定'}
-- 出力形式: {current_requirements.output_format or '未定'}
-- スケジュール: {current_requirements.schedule or '未定'}
+- データソース: {current_requirements.data_source or "未定"}
+- 処理内容: {current_requirements.process_description or "未定"}
+- 出力形式: {current_requirements.output_format or "未定"}
+- スケジュール: {current_requirements.schedule or "未定"}
 - 明確化率: {int(current_requirements.completeness * 100)}%
 """
 
@@ -240,11 +238,23 @@ def extract_requirement_from_message(
     if not updated.data_source:
         if "CSV" in combined_text or "csv" in combined_text:
             updated.data_source = "CSVファイル"
-        elif "Excel" in combined_text or "excel" in combined_text or "エクセル" in combined_text:
+        elif (
+            "Excel" in combined_text
+            or "excel" in combined_text
+            or "エクセル" in combined_text
+        ):
             updated.data_source = "Excelファイル"
-        elif "データベース" in combined_text or "DB" in combined_text or "PostgreSQL" in combined_text or "MySQL" in combined_text:
+        elif (
+            "データベース" in combined_text
+            or "DB" in combined_text
+            or "PostgreSQL" in combined_text
+            or "MySQL" in combined_text
+        ):
             updated.data_source = "データベース"
-        elif "Google Sheets" in combined_text or "Googleスプレッドシート" in combined_text:
+        elif (
+            "Google Sheets" in combined_text
+            or "Googleスプレッドシート" in combined_text
+        ):
             updated.data_source = "Google Sheets"
         elif "API" in combined_text:
             updated.data_source = "API"
@@ -252,7 +262,16 @@ def extract_requirement_from_message(
     # Process description (extract from user message mainly)
     if not updated.process_description and len(user_message) > 5:
         # Simple heuristic: if user message mentions action verbs
-        action_keywords = ["分析", "集計", "生成", "送信", "通知", "処理", "計算", "作成"]
+        action_keywords = [
+            "分析",
+            "集計",
+            "生成",
+            "送信",
+            "通知",
+            "処理",
+            "計算",
+            "作成",
+        ]
         if any(keyword in user_message for keyword in action_keywords):
             updated.process_description = user_message[:100]  # Limit length
 

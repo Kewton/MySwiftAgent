@@ -9,18 +9,17 @@ Endpoints:
 - POST /chat/create-job: Create job from clarified requirements
 """
 
-import logging
 import json
-from typing import Dict
+import logging
 
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from app.schemas.chat import (
-    RequirementChatRequest,
-    RequirementState,
     CreateJobRequest,
     CreateJobResponse,
+    RequirementChatRequest,
+    RequirementState,
 )
 from app.schemas.job_generator import JobGeneratorRequest
 from app.services.conversation.conversation_store import conversation_store
@@ -222,8 +221,7 @@ async def create_job(request: CreateJobRequest):
             raise ValueError("Job Generator did not return job IDs")
 
         logger.info(
-            f"Successfully created job: "
-            f"job_id={job_id}, job_master_id={job_master_id}"
+            f"Successfully created job: job_id={job_id}, job_master_id={job_master_id}"
         )
 
         return CreateJobResponse(
@@ -243,10 +241,12 @@ async def create_job(request: CreateJobRequest):
         )
         raise HTTPException(
             status_code=500, detail=f"ジョブの作成に失敗しました: {str(e)}"
-        )
+        ) from e
 
 
-def _convert_requirements_to_job_request(requirements: RequirementState) -> JobGeneratorRequest:
+def _convert_requirements_to_job_request(
+    requirements: RequirementState,
+) -> JobGeneratorRequest:
     """Convert RequirementState to Job Generator request format.
 
     Args:
@@ -269,16 +269,16 @@ def _convert_requirements_to_job_request(requirements: RequirementState) -> JobG
     # Format requirements as natural language
     user_requirement = f"""
 ## データソース
-{requirements.data_source or '未指定'}
+{requirements.data_source or "未指定"}
 
 ## 処理内容
-{requirements.process_description or '未指定'}
+{requirements.process_description or "未指定"}
 
 ## 出力形式
-{requirements.output_format or '未指定'}
+{requirements.output_format or "未指定"}
 
 ## スケジュール
-{requirements.schedule or 'オンデマンド'}
+{requirements.schedule or "オンデマンド"}
 
 ---
 
@@ -286,6 +286,4 @@ def _convert_requirements_to_job_request(requirements: RequirementState) -> JobG
 利用可能なすべての機能（Google Drive, Gmail, GraphAI等）を使用可能です。
 """
 
-    return JobGeneratorRequest(
-        user_requirement=user_requirement.strip()
-    )
+    return JobGeneratorRequest(user_requirement=user_requirement.strip())

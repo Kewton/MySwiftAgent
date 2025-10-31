@@ -7,8 +7,9 @@ This module provides Pydantic models for the chat-based job creation flow:
 4. CreateJobResponse: Response after job creation
 """
 
+from typing import Dict, Optional
+
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
 
 
 class RequirementState(BaseModel):
