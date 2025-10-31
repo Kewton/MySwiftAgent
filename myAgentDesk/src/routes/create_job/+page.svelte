@@ -5,17 +5,15 @@
 	import RequirementCard from '$lib/components/create_job/RequirementCard.svelte';
 	import ChatContainer from '$lib/components/create_job/ChatContainer.svelte';
 	import MessageInput from '$lib/components/create_job/MessageInput.svelte';
-	import { conversationStore, activeConversation, type Message } from '$lib/stores/conversations';
+	import { conversationStore, activeConversation } from '$lib/stores/conversations';
+	import { chatSession } from '$lib/stores/chatSession';
 	import { t } from '$lib/stores/locale';
-	import { streamChatRequirementDefinition, createJob, ServiceError } from '$lib/services';
 
 	let sidebarOpen = true;
 	let message = '';
-	let isStreaming = false;
-	let isCreatingJob = false;
 	let isComposing = false; // IME入力中フラグ
 	let chatContainer: HTMLDivElement | undefined; // チャットスクロール用ref
-	let shouldScrollToBottom = false; // スクロールフラグ
+	let lastScrollToken = 0;
 
 	// アクティブな会話のリアクティブデータ
 	$: activeConv = $activeConversation;
@@ -28,6 +26,7 @@
 		schedule: null,
 		completeness: 0
 	};
+	$: sessionState = $chatSession;
 
 	onMount(() => {
 		// URLパラメータから会話IDを取得
@@ -36,27 +35,22 @@
 		if (id) {
 			// 既存の会話を選択
 			conversationStore.setActive(id);
-		} else {
+		} else if (!activeConv) {
 			// 会話が存在しない場合、新規作成
-			if (!activeConv) {
-				const newConv = conversationStore.create();
-				window.history.replaceState({}, '', `/create_job?id=${newConv.id}`);
-			}
+			const newConv = conversationStore.create();
+			window.history.replaceState({}, '', `/create_job?id=${newConv.id}`);
 		}
 	});
 
 	// メッセージ追加後に自動スクロール
 	afterUpdate(() => {
-		if (shouldScrollToBottom && chatContainer) {
+		if (!chatContainer) return;
+		const { scrollToken } = sessionState;
+		if (scrollToken !== lastScrollToken) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
-			shouldScrollToBottom = false;
+			lastScrollToken = scrollToken;
 		}
 	});
-
-	function formatTime(): string {
-		const now = new Date();
-		return now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-	}
 
 	// IME入力開始
 	function handleCompositionStart() {
@@ -81,115 +75,14 @@
 	}
 
 	async function handleSend() {
-		if (!message.trim() || isStreaming || !conversationId) return;
-
-		const userMessage = message.trim();
+		if (!message.trim() || sessionState.isStreaming) return;
+		const userMessage = message;
 		message = '';
-
-		// ユーザーメッセージを追加
-		const userMsg: Message = {
-			role: 'user',
-			message: userMessage,
-			timestamp: formatTime()
-		};
-		conversationStore.addMessage(conversationId, userMsg);
-		shouldScrollToBottom = true; // メッセージ追加後にスクロール
-
-		isStreaming = true;
-
-		let assistantMessage = '';
-		let hasAddedAssistantMsg = false;
-
-		try {
-			await streamChatRequirementDefinition(
-				conversationId,
-				userMessage,
-				messages.map((m) => ({ role: m.role, content: m.message })),
-				requirements,
-				// メッセージチャンク受信時
-				(content: string) => {
-					assistantMessage += content;
-
-					// アシスタントメッセージを追加または更新
-					if (!hasAddedAssistantMsg) {
-						const assistantMsg: Message = {
-							role: 'assistant',
-							message: assistantMessage,
-							timestamp: formatTime()
-						};
-						conversationStore.addMessage(conversationId, assistantMsg);
-						hasAddedAssistantMsg = true;
-					} else {
-						conversationStore.updateLastAssistantMessage(conversationId, assistantMessage);
-					}
-				},
-				// 要求状態更新時
-				(updatedRequirements) => {
-					conversationStore.updateRequirements(conversationId, updatedRequirements);
-				}
-			);
-		} catch (error) {
-			console.error('Error streaming chat:', error);
-			const errorMessage =
-				error instanceof ServiceError
-					? error.message
-					: error instanceof Error
-						? error.message
-						: t('error.general');
-			const errorMsg: Message = {
-				role: 'assistant',
-				message: errorMessage,
-				timestamp: formatTime()
-			};
-			conversationStore.addMessage(conversationId, errorMsg);
-		} finally {
-			isStreaming = false;
-		}
+		await chatSession.sendMessage(userMessage);
 	}
 
 	async function handleCreateJob() {
-		if (requirements.completeness < 0.8) {
-			alert(t('alert.insufficientRequirements', (requirements.completeness * 100).toFixed(0)));
-			return;
-		}
-
-		if (!conversationId) {
-			alert(t('alert.noConversation'));
-			return;
-		}
-
-		isCreatingJob = true;
-
-		try {
-			const result = await createJob(conversationId, requirements);
-
-			// ジョブ結果を保存
-			conversationStore.saveJobResult(conversationId, result);
-
-			// 成功メッセージを追加
-			const successMsg: Message = {
-				role: 'assistant',
-				message: t('job.createSuccess', result.job_id, result.job_master_id),
-				timestamp: formatTime()
-			};
-			conversationStore.addMessage(conversationId, successMsg);
-		} catch (error) {
-			console.error('Error creating job:', error);
-			const errorMessage =
-				error instanceof ServiceError
-					? error.message
-					: error instanceof Error
-						? error.message
-						: String(error);
-			const errorMsg: Message = {
-				role: 'assistant',
-				message: `❌ **${t('error.jobCreation')}** ${errorMessage}`,
-				timestamp: formatTime()
-			};
-			conversationStore.addMessage(conversationId, errorMsg);
-		} finally {
-			isCreatingJob = false;
-		}
+		await chatSession.submitJob();
 	}
 </script>
 
@@ -243,7 +136,11 @@
 		</div>
 
 		<!-- Fixed Requirement State Card -->
-		<RequirementCard {requirements} {isCreatingJob} onCreateJob={handleCreateJob} />
+		<RequirementCard
+			{requirements}
+			isCreatingJob={sessionState.isCreatingJob}
+			onCreateJob={handleCreateJob}
+		/>
 
 		<!-- Scrollable Chat Messages Area -->
 		<ChatContainer {messages} bind:containerRef={chatContainer} />
@@ -251,7 +148,7 @@
 		<!-- Input Area -->
 		<MessageInput
 			bind:message
-			{isStreaming}
+			isStreaming={sessionState.isStreaming}
 			{isComposing}
 			onSend={handleSend}
 			onKeydown={handleKeydown}

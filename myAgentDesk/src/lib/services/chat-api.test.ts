@@ -67,22 +67,20 @@ describe('streamChatRequirementDefinition', () => {
 			onRequirementUpdate
 		);
 
-		expect(mockFetch).toHaveBeenCalledWith(
-			'http://localhost:8104/aiagent-api/v1/chat/requirement-definition',
-			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					conversation_id: conversationId,
-					user_message: userMessage,
-					context: {
-						previous_messages: previousMessages,
-						current_requirements: requirements
-					}
-				})
-			}
+		const [url, options] = mockFetch.mock.calls[0];
+		expect(url).toBe('http://localhost:8104/aiagent-api/v1/chat/requirement-definition');
+		expect(options?.method).toBe('POST');
+		expect(options?.headers).toBeInstanceOf(Headers);
+		expect((options?.headers as Headers).get('Content-Type')).toBe('application/json');
+		expect(options?.body).toBe(
+			JSON.stringify({
+				conversation_id: conversationId,
+				user_message: userMessage,
+				context: {
+					previous_messages: previousMessages,
+					current_requirements: requirements
+				}
+			})
 		);
 
 		expect(onMessage).toHaveBeenCalledTimes(2);

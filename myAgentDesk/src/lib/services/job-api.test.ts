@@ -35,21 +35,22 @@ describe('createJob', () => {
 
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: async () => mockResponse
+			text: async () => JSON.stringify(mockResponse)
 		});
 
 		const result = await createJob(conversationId, requirements);
 
-		expect(mockFetch).toHaveBeenCalledWith('http://localhost:8104/aiagent-api/v1/chat/create-job', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
+		const [url, options] = mockFetch.mock.calls[0];
+		expect(url).toBe('http://localhost:8104/aiagent-api/v1/chat/create-job');
+		expect(options?.method).toBe('POST');
+		expect(options?.headers).toBeInstanceOf(Headers);
+		expect((options?.headers as Headers).get('Content-Type')).toBe('application/json');
+		expect(options?.body).toBe(
+			JSON.stringify({
 				conversation_id: conversationId,
 				requirements
 			})
-		});
+		);
 
 		expect(result).toEqual(mockResponse);
 	});
@@ -68,7 +69,8 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: false,
 			status: 400,
-			json: async () => ({ detail: 'Invalid requirements' })
+			statusText: 'Bad Request',
+			text: async () => JSON.stringify({ detail: 'Invalid requirements' })
 		});
 
 		await expect(createJob(conversationId, requirements)).rejects.toThrow(ServiceError);
@@ -82,7 +84,8 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: false,
 			status: 500,
-			json: async () => ({})
+			statusText: 'Internal Server Error',
+			text: async () => JSON.stringify({})
 		});
 
 		await expect(createJob(conversationId, requirements)).rejects.toThrow(ServiceError);
@@ -96,9 +99,7 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
 			status: 200,
-			json: async () => {
-				throw new Error('Invalid JSON');
-			}
+			text: async () => 'not json'
 		});
 
 		await expect(createJob(conversationId, requirements)).rejects.toThrow(ServiceError);
@@ -112,7 +113,8 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: false,
 			status: 403,
-			json: async () => ({ detail: 'Forbidden' })
+			statusText: 'Forbidden',
+			text: async () => JSON.stringify({ detail: 'Forbidden' })
 		});
 
 		try {

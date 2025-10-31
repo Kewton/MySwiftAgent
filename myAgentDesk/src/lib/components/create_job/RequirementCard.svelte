@@ -2,6 +2,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import { t } from '$lib/stores/locale';
+	import { COMPLETENESS_THRESHOLD } from '$lib/stores/chatSession';
 	import type { RequirementState } from '$lib/stores/conversations';
 
 	export let requirements: RequirementState;
@@ -10,7 +11,7 @@
 
 	let collapsed = false;
 
-	$: isReady = requirements.completeness >= 0.8;
+	$: isReady = requirements.completeness >= COMPLETENESS_THRESHOLD;
 </script>
 
 <div class="px-4 pt-3 pb-2 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-800">
