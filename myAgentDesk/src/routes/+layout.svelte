@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import OuterSidebar from '$lib/components/OuterSidebar.svelte';
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
 
@@ -31,10 +32,13 @@
 	function toggleDarkMode() {
 		darkMode = !darkMode;
 		updateDarkMode();
-		localStorage.setItem('darkMode', darkMode.toString());
+		if (browser) {
+			localStorage.setItem('darkMode', darkMode.toString());
+		}
 	}
 
 	function updateDarkMode() {
+		if (!browser) return;
 		if (darkMode) {
 			document.documentElement.classList.add('dark');
 		} else {
@@ -47,13 +51,14 @@
 	}
 
 	function updateLayoutVariables() {
+		if (!browser) return;
 		const width = outerSidebarExpanded
 			? OUTER_SIDEBAR_WIDTH_EXPANDED
 			: OUTER_SIDEBAR_WIDTH_COLLAPSED;
 		document.documentElement.style.setProperty('--outer-sidebar-width', `${width}px`);
 	}
 
-	$: {
+	$: if (browser) {
 		outerSidebarExpanded;
 		updateLayoutVariables();
 		localStorage.setItem('outerSidebarExpanded', outerSidebarExpanded.toString());
