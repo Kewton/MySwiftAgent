@@ -1,111 +1,282 @@
 <script lang="ts">
+	import { onMount, afterUpdate } from 'svelte';
+	import { page } from '$app/stores';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import ChatBubble from '$lib/components/ChatBubble.svelte';
-	import Button from '$lib/components/Button.svelte';
-	import Card from '$lib/components/Card.svelte';
+	import RequirementCard from '$lib/components/create_job/RequirementCard.svelte';
+	import ChatContainer from '$lib/components/create_job/ChatContainer.svelte';
+	import MessageInput from '$lib/components/create_job/MessageInput.svelte';
+	import { conversationStore, activeConversation, type Message } from '$lib/stores/conversations';
+	import { t } from '$lib/stores/locale';
+	import { streamChatRequirementDefinition, createJob, ServiceError } from '$lib/services';
 
 	let sidebarOpen = true;
 	let message = '';
+	let isStreaming = false;
+	let isCreatingJob = false;
+	let isComposing = false; // IME入力中フラグ
+	let chatContainer: HTMLDivElement | undefined; // チャットスクロール用ref
+	let shouldScrollToBottom = false; // スクロールフラグ
 
-	const demoMessages = [
-		{ role: 'user' as const, message: 'Hello! How can I use myAgentDesk?', timestamp: '10:30 AM' },
-		{
-			role: 'assistant' as const,
-			message:
-				'Welcome to myAgentDesk! You can manage AI agents, create workflows, and integrate with Cloudflare for secure backend connections. Try exploring the Agents page to see available agents.',
-			timestamp: '10:31 AM'
-		},
-		{
-			role: 'user' as const,
-			message: 'What kind of workflows can I create?',
-			timestamp: '10:32 AM'
-		},
-		{
-			role: 'assistant' as const,
-			message:
-				'You can create visual workflows connecting multiple agents, similar to Dify. Drag and drop nodes, configure connections, and orchestrate complex AI pipelines. Check out the workflow builder in the next phase!',
-			timestamp: '10:33 AM'
+	// アクティブな会話のリアクティブデータ
+	$: activeConv = $activeConversation;
+	$: conversationId = activeConv?.id || '';
+	$: messages = activeConv?.messages || [];
+	$: requirements = activeConv?.requirements || {
+		data_source: null,
+		process_description: null,
+		output_format: null,
+		schedule: null,
+		completeness: 0
+	};
+
+	onMount(() => {
+		// URLパラメータから会話IDを取得
+		const id = $page.url.searchParams.get('id');
+
+		if (id) {
+			// 既存の会話を選択
+			conversationStore.setActive(id);
+		} else {
+			// 会話が存在しない場合、新規作成
+			if (!activeConv) {
+				const newConv = conversationStore.create();
+				window.history.replaceState({}, '', `/?id=${newConv.id}`);
+			}
 		}
-	];
+	});
 
-	function toggleSidebar() {
-		sidebarOpen = !sidebarOpen;
+	// メッセージ追加後に自動スクロール
+	afterUpdate(() => {
+		if (shouldScrollToBottom && chatContainer) {
+			chatContainer.scrollTop = chatContainer.scrollHeight;
+			shouldScrollToBottom = false;
+		}
+	});
+
+	function formatTime(): string {
+		const now = new Date();
+		return now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 	}
 
-	function handleSend() {
-		if (message.trim()) {
-			// TODO: Implement message sending in Phase 4
-			console.log('Sending message:', message);
-			message = '';
+	// IME入力開始
+	function handleCompositionStart() {
+		isComposing = true;
+	}
+
+	// IME入力終了
+	function handleCompositionEnd() {
+		// compositionend後もフラグを少し維持（Enterキーイベントとの競合を防ぐ）
+		setTimeout(() => {
+			isComposing = false;
+		}, 100);
+	}
+
+	// キーボードイベント（IME対応）
+	function handleKeydown(event: KeyboardEvent) {
+		// IME入力中はEnterを無視（event.isComposingもチェック）
+		if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !isComposing) {
+			event.preventDefault();
+			handleSend();
+		}
+	}
+
+	async function handleSend() {
+		if (!message.trim() || isStreaming || !conversationId) return;
+
+		const userMessage = message.trim();
+		message = '';
+
+		// ユーザーメッセージを追加
+		const userMsg: Message = {
+			role: 'user',
+			message: userMessage,
+			timestamp: formatTime()
+		};
+		conversationStore.addMessage(conversationId, userMsg);
+		shouldScrollToBottom = true; // メッセージ追加後にスクロール
+
+		isStreaming = true;
+
+		let assistantMessage = '';
+		let hasAddedAssistantMsg = false;
+
+		try {
+			await streamChatRequirementDefinition(
+				conversationId,
+				userMessage,
+				messages.map((m) => ({ role: m.role, content: m.message })),
+				requirements,
+				// メッセージチャンク受信時
+				(content: string) => {
+					assistantMessage += content;
+
+					// アシスタントメッセージを追加または更新
+					if (!hasAddedAssistantMsg) {
+						const assistantMsg: Message = {
+							role: 'assistant',
+							message: assistantMessage,
+							timestamp: formatTime()
+						};
+						conversationStore.addMessage(conversationId, assistantMsg);
+						hasAddedAssistantMsg = true;
+					} else {
+						conversationStore.updateLastAssistantMessage(conversationId, assistantMessage);
+					}
+				},
+				// 要求状態更新時
+				(updatedRequirements) => {
+					conversationStore.updateRequirements(conversationId, updatedRequirements);
+				}
+			);
+		} catch (error) {
+			console.error('Error streaming chat:', error);
+			const errorMessage =
+				error instanceof ServiceError
+					? error.message
+					: error instanceof Error
+						? error.message
+						: t('error.general');
+			const errorMsg: Message = {
+				role: 'assistant',
+				message: errorMessage,
+				timestamp: formatTime()
+			};
+			conversationStore.addMessage(conversationId, errorMsg);
+		} finally {
+			isStreaming = false;
+		}
+	}
+
+	async function handleCreateJob() {
+		if (requirements.completeness < 0.8) {
+			alert(t('alert.insufficientRequirements', (requirements.completeness * 100).toFixed(0)));
+			return;
+		}
+
+		if (!conversationId) {
+			alert(t('alert.noConversation'));
+			return;
+		}
+
+		isCreatingJob = true;
+
+		try {
+			const result = await createJob(conversationId, requirements);
+
+			// ジョブ結果を保存
+			conversationStore.saveJobResult(conversationId, result);
+
+			// 成功メッセージを追加
+			const successMsg: Message = {
+				role: 'assistant',
+				message: t('job.createSuccess', result.job_id, result.job_master_id),
+				timestamp: formatTime()
+			};
+			conversationStore.addMessage(conversationId, successMsg);
+		} catch (error) {
+			console.error('Error creating job:', error);
+			const errorMessage =
+				error instanceof ServiceError
+					? error.message
+					: error instanceof Error
+						? error.message
+						: String(error);
+			const errorMsg: Message = {
+				role: 'assistant',
+				message: `❌ **${t('error.jobCreation')}** ${errorMessage}`,
+				timestamp: formatTime()
+			};
+			conversationStore.addMessage(conversationId, errorMsg);
+		} finally {
+			isCreatingJob = false;
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>myAgentDesk - Home</title>
+	<title>Create Job - myAgentDesk</title>
 </svelte:head>
 
-<!-- OpenWebUI-style Layout -->
+<!-- Layout -->
 <div class="flex h-[calc(100vh-4rem)]">
-	<!-- Sidebar -->
-	<Sidebar isOpen={sidebarOpen} />
+	<!-- Sidebar (fixed position, overlays content) -->
+	<div class="fixed top-16 left-0 bottom-0 z-40">
+		<Sidebar bind:open={sidebarOpen} activeConversationId={conversationId} />
+	</div>
 
-	<!-- Main Content -->
-	<div class="flex-1 flex flex-col">
-		<!-- Header with sidebar toggle -->
-		<div class="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-4">
-			<button
-				on:click={toggleSidebar}
-				class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-				aria-label="Toggle sidebar"
-			>
-				{#if sidebarOpen}
-					◀
-				{:else}
-					☰
+	<!-- Main Content with left margin when sidebar is open -->
+	<main
+		class="flex-1 flex flex-col bg-white dark:bg-dark-bg overflow-hidden transition-all duration-300"
+		class:ml-64={sidebarOpen}
+	>
+		<!-- Header -->
+		<div class="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-gray-800 px-6 py-2">
+			<div class="flex items-center gap-3">
+				{#if !sidebarOpen}
+					<button
+						on:click={() => (sidebarOpen = true)}
+						class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors"
+						aria-label="Open sidebar"
+					>
+						<svg
+							class="w-5 h-5 text-gray-700 dark:text-gray-300"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 6h16M4 12h16M4 18h16"
+							/>
+						</svg>
+					</button>
 				{/if}
-			</button>
-			<h1 class="text-xl font-semibold text-gray-900 dark:text-white">AI Chat</h1>
+				<div>
+					<h1 class="text-xl font-bold text-gray-900 dark:text-white">{t('header.title')}</h1>
+					{#if t('header.subtitle')}
+						<p class="text-xs text-gray-500 dark:text-gray-400">{t('header.subtitle')}</p>
+					{/if}
+				</div>
+			</div>
 		</div>
 
-		<!-- Chat Area (OpenWebUI style) -->
-		<div class="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-			{#each demoMessages as msg}
-				<ChatBubble role={msg.role} message={msg.message} timestamp={msg.timestamp} />
-			{/each}
-		</div>
+		<!-- Fixed Requirement State Card -->
+		<RequirementCard {requirements} {isCreatingJob} onCreateJob={handleCreateJob} />
+
+		<!-- Scrollable Chat Messages Area -->
+		<ChatContainer {messages} bind:containerRef={chatContainer} />
 
 		<!-- Input Area -->
-		<div class="border-t border-gray-200 dark:border-gray-700 p-4">
-			<div class="max-w-4xl mx-auto">
-				<div class="flex gap-2">
-					<input
-						type="text"
-						bind:value={message}
-						placeholder="Type your message here..."
-						class="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark-card text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-						on:keypress={(e) => e.key === 'Enter' && handleSend()}
-					/>
-					<Button variant="primary" size="lg" on:click={handleSend}>Send</Button>
-				</div>
-				<p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-					OpenWebUI-inspired interface • Powered by myAgentDesk
-				</p>
-			</div>
-		</div>
-	</div>
+		<MessageInput
+			bind:message
+			{isStreaming}
+			{isComposing}
+			onSend={handleSend}
+			onKeydown={handleKeydown}
+			onCompositionStart={handleCompositionStart}
+			onCompositionEnd={handleCompositionEnd}
+		/>
+	</main>
 </div>
 
-<!-- Quick Start Guide (shown when no sidebar) -->
-{#if !sidebarOpen}
-	<div class="fixed bottom-4 left-4 max-w-xs">
-		<Card variant="default" hoverable>
-			<div class="p-4">
-				<h3 class="text-sm font-semibold mb-2">💡 Quick Tip</h3>
-				<p class="text-xs text-gray-600 dark:text-gray-400">
-					Click the ☰ menu to open the sidebar and access your conversation history.
-				</p>
-			</div>
-		</Card>
-	</div>
-{/if}
+<style>
+	/* Custom scrollbar styling */
+	:global(.overflow-y-auto)::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	:global(.overflow-y-auto)::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	:global(.overflow-y-auto)::-webkit-scrollbar-thumb {
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 4px;
+	}
+
+	:global(.dark .overflow-y-auto)::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.2);
+	}
+</style>
