@@ -40,19 +40,16 @@ describe('createJob', () => {
 
 		const result = await createJob(conversationId, requirements);
 
-		expect(mockFetch).toHaveBeenCalledWith(
-			'http://localhost:8104/aiagent-api/v1/chat/create-job',
-			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					conversation_id: conversationId,
-					requirements
-				})
-			}
-		);
+		expect(mockFetch).toHaveBeenCalledWith('http://localhost:8104/aiagent-api/v1/chat/create-job', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				conversation_id: conversationId,
+				requirements
+			})
+		});
 
 		expect(result).toEqual(mockResponse);
 	});

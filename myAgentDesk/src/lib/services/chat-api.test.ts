@@ -37,7 +37,9 @@ describe('streamChatRequirementDefinition', () => {
 				.fn()
 				.mockResolvedValueOnce({
 					done: false,
-					value: new TextEncoder().encode('data: {"type":"message","data":{"content":"こんにちは"}}\n')
+					value: new TextEncoder().encode(
+						'data: {"type":"message","data":{"content":"こんにちは"}}\n'
+					)
 				})
 				.mockResolvedValueOnce({
 					done: false,
