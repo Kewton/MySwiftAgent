@@ -1,11 +1,13 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
+	import { locale, type Locale } from '$lib/stores/locale';
+	import { get } from 'svelte/store';
 
 	let settings = {
 		// General Settings
 		userName: 'Agent User',
-		language: 'en',
+		language: get(locale) as string,
 		timezone: 'UTC',
 
 		// API Settings
@@ -23,8 +25,20 @@
 
 	let saveStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
 
+	// Watch for language changes and update locale store
+	$: {
+		if (settings.language === 'ja' || settings.language === 'en') {
+			locale.set(settings.language as Locale);
+		}
+	}
+
 	function handleSave() {
 		saveStatus = 'saving';
+
+		// Update locale store
+		if (settings.language === 'ja' || settings.language === 'en') {
+			locale.set(settings.language as Locale);
+		}
 
 		// TODO: Implement actual save in Phase 4
 		setTimeout(() => {
@@ -48,6 +62,7 @@
 				emailNotifications: true,
 				desktopNotifications: false
 			};
+			locale.set('en');
 		}
 	}
 </script>

@@ -49,10 +49,10 @@
 							Home
 						</a>
 						<a
-							href="/agents"
+							href="/create_job"
 							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
 						>
-							Agents
+							Create Job
 						</a>
 						<a
 							href="/settings"
