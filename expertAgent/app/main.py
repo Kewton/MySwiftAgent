@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1 import (
     admin_endpoints,
     agent_endpoints,
+    chat_endpoints,
     drive_endpoints,
     gmail_utility_endpoints,
     google_auth_endpoints,
@@ -162,6 +163,7 @@ app.include_router(marp_report_endpoints.router, prefix="/v1", tags=["Marp Repor
 app.include_router(
     workflow_generator_endpoints.router, prefix="/v1", tags=["Workflow Generator"]
 )
+app.include_router(chat_endpoints.router, prefix="/v1", tags=["Chat"])
 app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
 

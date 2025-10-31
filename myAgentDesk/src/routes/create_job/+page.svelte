@@ -40,7 +40,7 @@
 			// 会話が存在しない場合、新規作成
 			if (!activeConv) {
 				const newConv = conversationStore.create();
-				window.history.replaceState({}, '', `/?id=${newConv.id}`);
+				window.history.replaceState({}, '', `/create_job?id=${newConv.id}`);
 			}
 		}
 	});
