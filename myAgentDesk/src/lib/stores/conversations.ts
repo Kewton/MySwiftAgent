@@ -9,26 +9,12 @@
 
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
+import { createEmptyRequirements, type JobResult, type RequirementState } from '$lib/domain/types';
 
 export interface Message {
 	role: 'user' | 'assistant';
 	message: string;
 	timestamp: string;
-}
-
-export interface RequirementState {
-	data_source: string | null;
-	process_description: string | null;
-	output_format: string | null;
-	schedule: string | null;
-	completeness: number;
-}
-
-export interface JobResult {
-	job_id: string;
-	job_master_id: string;
-	status: string;
-	message: string;
 }
 
 export interface Conversation {
@@ -95,19 +81,6 @@ function saveToStorage(state: ConversationStoreState) {
 function generateTitle(firstMessage: string): string {
 	const trimmed = firstMessage.trim();
 	return trimmed.length > 40 ? trimmed.substring(0, 40) + '...' : trimmed;
-}
-
-/**
- * 新しい空の要求状態を作成
- */
-function createEmptyRequirements(): RequirementState {
-	return {
-		data_source: null,
-		process_description: null,
-		output_format: null,
-		schedule: null,
-		completeness: 0
-	};
 }
 
 /**

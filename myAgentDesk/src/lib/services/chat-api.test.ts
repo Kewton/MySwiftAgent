@@ -5,7 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { streamChatRequirementDefinition } from './chat-api';
 import { ServiceError } from './types';
-import type { Message, RequirementState } from './types';
+import type { RequirementState } from '$lib/domain/types';
+import type { Message } from './types';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

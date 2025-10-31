@@ -3,7 +3,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import { t } from '$lib/stores/locale';
 	import { COMPLETENESS_THRESHOLD } from '$lib/stores/chatSession';
-	import type { RequirementState } from '$lib/stores/conversations';
+	import type { RequirementState } from '$lib/domain/types';
 
 	export let requirements: RequirementState;
 	export let isCreatingJob = false;

@@ -38,12 +38,12 @@
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
 				<div class="flex items-center space-x-4">
-					<a href="/" class="text-2xl font-bold text-primary-600 dark:text-primary-400">
+					<a href="/create_job" class="text-2xl font-bold text-primary-600 dark:text-primary-400">
 						myAgentDesk
 					</a>
 					<nav class="hidden md:flex space-x-4">
 						<a
-							href="/"
+							href="/create_job"
 							class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							Home

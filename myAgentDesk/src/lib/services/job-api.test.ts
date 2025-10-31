@@ -5,7 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createJob } from './job-api';
 import { ServiceError } from './types';
-import type { RequirementState, JobCreationResponse } from './types';
+import type { RequirementState } from '$lib/domain/types';
+import type { JobCreationResponse } from './types';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

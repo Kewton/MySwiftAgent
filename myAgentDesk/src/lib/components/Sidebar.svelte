@@ -45,12 +45,12 @@
 
 	function createNewConversation() {
 		const newConversation = conversationStore.create();
-		goto(`/?id=${newConversation.id}`);
+		goto(`/create_job?id=${newConversation.id}`);
 	}
 
 	function selectConversation(id: string) {
 		conversationStore.setActive(id);
-		goto(`/?id=${id}`);
+		goto(`/create_job?id=${id}`);
 	}
 
 	function deleteConversation(id: string) {

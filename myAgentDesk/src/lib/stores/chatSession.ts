@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { activeConversation, conversationStore, type Message } from './conversations';
 import { streamChatRequirementDefinition, createJob, ServiceError } from '$lib/services';
-import type { RequirementState } from './conversations';
+import type { RequirementState } from '$lib/domain/types';
 import { t } from './locale';
 
 interface ChatSessionState {

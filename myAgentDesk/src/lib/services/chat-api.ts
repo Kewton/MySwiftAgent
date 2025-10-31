@@ -2,7 +2,8 @@
  * Chat API Service - チャットストリーミングと要求定義支援
  */
 
-import type { ChatRequest, ChatStreamEvent, RequirementState, Message } from './types';
+import type { RequirementState } from '$lib/domain/types';
+import type { ChatRequest, ChatStreamEvent, Message } from './types';
 import { ServiceError } from './types';
 import { streamSse } from './http';
 

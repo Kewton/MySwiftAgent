@@ -2,7 +2,8 @@
  * Job API Service - ジョブ作成と管理
  */
 
-import type { JobCreationRequest, JobCreationResponse, RequirementState } from './types';
+import type { RequirementState } from '$lib/domain/types';
+import type { JobCreationRequest, JobCreationResponse } from './types';
 import { ServiceError } from './types';
 import { fetchJson } from './http';
 
