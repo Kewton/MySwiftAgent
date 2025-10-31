@@ -7,6 +7,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import { conversationStore, activeConversation, type Message } from '$lib/stores/conversations';
 	import { t } from '$lib/stores/locale';
+	import { streamChatRequirementDefinition, createJob, ServiceError } from '$lib/services';
 
 	let sidebarOpen = true;
 	let message = '';
@@ -28,8 +29,6 @@
 		schedule: null,
 		completeness: 0
 	};
-
-	const API_BASE = 'http://localhost:8104/aiagent-api/v1';
 
 	onMount(() => {
 		// URLパラメータから会話IDを取得
@@ -99,72 +98,48 @@
 
 		isStreaming = true;
 
+		let assistantMessage = '';
+		let hasAddedAssistantMsg = false;
+
 		try {
-			const response = await fetch(`${API_BASE}/chat/requirement-definition`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
+			await streamChatRequirementDefinition(
+				conversationId,
+				userMessage,
+				messages.map((m) => ({ role: m.role, content: m.message })),
+				requirements,
+				// メッセージチャンク受信時
+				(content: string) => {
+					assistantMessage += content;
+
+					// アシスタントメッセージを追加または更新
+					if (!hasAddedAssistantMsg) {
+						const assistantMsg: Message = {
+							role: 'assistant',
+							message: assistantMessage,
+							timestamp: formatTime()
+						};
+						conversationStore.addMessage(conversationId, assistantMsg);
+						hasAddedAssistantMsg = true;
+					} else {
+						conversationStore.updateLastAssistantMessage(conversationId, assistantMessage);
+					}
 				},
-				body: JSON.stringify({
-					conversation_id: conversationId,
-					user_message: userMessage,
-					context: {
-						previous_messages: messages.map((m) => ({ role: m.role, content: m.message })),
-						current_requirements: requirements
-					}
-				})
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-
-			const reader = response.body?.getReader();
-			const decoder = new TextDecoder();
-			let assistantMessage = '';
-			let hasAddedAssistantMsg = false;
-
-			if (reader) {
-				// eslint-disable-next-line no-constant-condition
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					const chunk = decoder.decode(value, { stream: true });
-					const lines = chunk.split('\n');
-
-					for (const line of lines) {
-						if (line.startsWith('data: ')) {
-							const data = JSON.parse(line.substring(6));
-
-							if (data.type === 'message') {
-								assistantMessage += data.data.content;
-
-								// アシスタントメッセージを追加または更新
-								if (!hasAddedAssistantMsg) {
-									const assistantMsg: Message = {
-										role: 'assistant',
-										message: assistantMessage,
-										timestamp: formatTime()
-									};
-									conversationStore.addMessage(conversationId, assistantMsg);
-									hasAddedAssistantMsg = true;
-								} else {
-									conversationStore.updateLastAssistantMessage(conversationId, assistantMessage);
-								}
-							} else if (data.type === 'requirement_update') {
-								// 要求状態を更新
-								conversationStore.updateRequirements(conversationId, data.data.requirements);
-							}
-						}
-					}
+				// 要求状態更新時
+				(updatedRequirements) => {
+					conversationStore.updateRequirements(conversationId, updatedRequirements);
 				}
-			}
+			);
 		} catch (error) {
 			console.error('Error streaming chat:', error);
+			const errorMessage =
+				error instanceof ServiceError
+					? error.message
+					: error instanceof Error
+						? error.message
+						: t('error.general');
 			const errorMsg: Message = {
 				role: 'assistant',
-				message: t('error.general'),
+				message: errorMessage,
 				timestamp: formatTime()
 			};
 			conversationStore.addMessage(conversationId, errorMsg);
@@ -187,36 +162,26 @@
 		isCreatingJob = true;
 
 		try {
-			const response = await fetch(`${API_BASE}/chat/create-job`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					conversation_id: conversationId,
-					requirements: requirements
-				})
-			});
+			const result = await createJob(conversationId, requirements);
 
-			const result = await response.json();
+			// ジョブ結果を保存
+			conversationStore.saveJobResult(conversationId, result);
 
-			if (response.ok) {
-				// ジョブ結果を保存
-				conversationStore.saveJobResult(conversationId, result);
-
-				// 成功メッセージを追加
-				const successMsg: Message = {
-					role: 'assistant',
-					message: t('job.createSuccess', result.job_id, result.job_master_id),
-					timestamp: formatTime()
-				};
-				conversationStore.addMessage(conversationId, successMsg);
-			} else {
-				throw new Error(result.detail || t('error.jobCreation'));
-			}
+			// 成功メッセージを追加
+			const successMsg: Message = {
+				role: 'assistant',
+				message: t('job.createSuccess', result.job_id, result.job_master_id),
+				timestamp: formatTime()
+			};
+			conversationStore.addMessage(conversationId, successMsg);
 		} catch (error) {
 			console.error('Error creating job:', error);
-			const errorMessage = error instanceof Error ? error.message : String(error);
+			const errorMessage =
+				error instanceof ServiceError
+					? error.message
+					: error instanceof Error
+						? error.message
+						: String(error);
 			const errorMsg: Message = {
 				role: 'assistant',
 				message: `❌ **${t('error.jobCreation')}** ${errorMessage}`,
