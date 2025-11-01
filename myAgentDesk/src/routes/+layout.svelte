@@ -5,6 +5,9 @@
 	import OuterSidebar from '$lib/components/OuterSidebar.svelte';
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
 
+	export let data;
+	export let params;
+
 	let darkMode = false;
 	let outerSidebarExpanded = true;
 

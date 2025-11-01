@@ -10,6 +10,9 @@
 	import { streamChatRequirementDefinition, createJob, ServiceError } from '$lib/services';
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
 
+	export let data;
+	export let params;
+
 	let message = '';
 	let isStreaming = false;
 	let isCreatingJob = false;

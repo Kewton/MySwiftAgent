@@ -9,6 +9,9 @@
 	import { chatSession } from '$lib/stores/chatSession';
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
 
+	export let data;
+	export let params;
+
 	let message = '';
 	let isComposing = false; // IME入力中フラグ
 	let chatContainer: HTMLDivElement | undefined; // チャットスクロール用ref
