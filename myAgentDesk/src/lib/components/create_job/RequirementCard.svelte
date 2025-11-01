@@ -14,7 +14,7 @@
 	$: isReady = requirements.completeness >= COMPLETENESS_THRESHOLD;
 </script>
 
-<div class="px-4 pt-6 pb-2 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-800">
+<div class="px-6 pt-6 pb-2 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-800">
 	<Card>
 		<div class="space-y-4 py-2">
 			<!-- Header with Collapse Button -->
