@@ -8,6 +8,7 @@
 	export let darkMode = false;
 	export let onToggleDarkMode: () => void = () => {};
 	export let onToggleHistory: () => void = () => {};
+	export let onToggleSidebar: () => void = () => {};
 
 	interface MenuItem {
 		id: string;
@@ -29,10 +30,6 @@
 		label: 'Dark Mode',
 		special: 'darkMode' as const
 	};
-
-	function toggleExpanded() {
-		expanded = !expanded;
-	}
 
 	function handleMenuClick(item: MenuItem) {
 		if (item.special === 'darkMode') {
@@ -112,7 +109,7 @@
 >
 	<!-- Toggle Button -->
 	<button
-		on:click={toggleExpanded}
+		on:click={onToggleSidebar}
 		class="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700 overflow-hidden"
 		aria-label="Toggle sidebar"
 	>

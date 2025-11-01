@@ -1,78 +1,34 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import OuterSidebar from '$lib/components/OuterSidebar.svelte';
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
+	import { layoutStore, toggleDarkMode, toggleOuterSidebar } from '$lib/stores/layout';
 
 	export let data;
 	export let params;
 
-	let darkMode = false;
-	let outerSidebarExpanded = true;
-
 	const OUTER_SIDEBAR_WIDTH_EXPANDED = 240;
 	const OUTER_SIDEBAR_WIDTH_COLLAPSED = 64;
-
-	onMount(() => {
-		// Initialize dark mode from localStorage or system preference
-		const stored = localStorage.getItem('darkMode');
-		if (stored !== null) {
-			darkMode = stored === 'true';
-		} else {
-			darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		}
-		updateDarkMode();
-
-		// Initialize outer sidebar state
-		const storedSidebar = localStorage.getItem('outerSidebarExpanded');
-		if (storedSidebar !== null) {
-			outerSidebarExpanded = storedSidebar === 'true';
-		}
-		updateLayoutVariables();
-	});
-
-	function toggleDarkMode() {
-		darkMode = !darkMode;
-		updateDarkMode();
-		if (browser) {
-			localStorage.setItem('darkMode', darkMode.toString());
-		}
-	}
-
-	function updateDarkMode() {
-		if (!browser) return;
-		if (darkMode) {
-			document.documentElement.classList.add('dark');
-		} else {
-			document.documentElement.classList.remove('dark');
-		}
-	}
 
 	function toggleInnerSidebar() {
 		innerSidebarOpen.update((v) => !v);
 	}
 
-	function updateLayoutVariables() {
-		if (!browser) return;
-		const width = outerSidebarExpanded
+	$: if (browser) {
+		const width = $layoutStore.outerSidebarExpanded
 			? OUTER_SIDEBAR_WIDTH_EXPANDED
 			: OUTER_SIDEBAR_WIDTH_COLLAPSED;
 		document.documentElement.style.setProperty('--outer-sidebar-width', `${width}px`);
-	}
-
-	$: if (browser) {
-		outerSidebarExpanded;
-		updateLayoutVariables();
-		localStorage.setItem('outerSidebarExpanded', outerSidebarExpanded.toString());
 	}
 </script>
 
 <div class="h-screen overflow-hidden bg-white dark:bg-dark-bg flex">
 	<!-- Outer Sidebar (VS Code style) -->
 	<OuterSidebar
-		bind:expanded={outerSidebarExpanded}
-		bind:darkMode
+		expanded={$layoutStore.outerSidebarExpanded}
+		darkMode={$layoutStore.darkMode}
+		onToggleSidebar={toggleOuterSidebar}
 		onToggleDarkMode={toggleDarkMode}
 		onToggleHistory={toggleInnerSidebar}
 	/>
