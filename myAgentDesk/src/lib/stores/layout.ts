@@ -101,7 +101,10 @@ export function setOuterSidebarExpanded(value: boolean) {
 }
 
 export function toggleOuterSidebar() {
-	layoutStoreInternal.update((state) => ({ ...state, outerSidebarExpanded: !state.outerSidebarExpanded }));
+	layoutStoreInternal.update((state) => ({
+		...state,
+		outerSidebarExpanded: !state.outerSidebarExpanded
+	}));
 }
 
 export type LayoutStore = typeof layoutStore;
