@@ -390,6 +390,13 @@ jobs:
         working-directory: ./${{ matrix.project }}
         run: npm run lint
 
+      - name: Sync SvelteKit (if needed)
+        working-directory: ./${{ matrix.project }}
+        run: |
+          if grep -q "svelte-kit sync" package.json 2>/dev/null || grep -q "@sveltejs/kit" package.json 2>/dev/null; then
+            npx svelte-kit sync || true
+          fi
+
       - name: Run TypeScript compilation
         working-directory: ./${{ matrix.project }}
         run: npm run type-check
