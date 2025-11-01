@@ -1,24 +1,11 @@
 from pathlib import Path
 
-from dotenv import load_dotenv
 from pydantic import Field
-from pydantic_settings import BaseSettings  # pydantic_settingsからインポート
-
-# Load environment variables from expertAgent/.env (new policy)
-# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
-PROJECT_ROOT = Path(__file__).parent.parent
-env_path = PROJECT_ROOT / ".env"
-
-if env_path.exists():
-    # override=False: Respect environment variables set by quick-start.sh/dev-start.sh
-    # This ensures LOG_DIR from startup scripts takes precedence
-    load_dotenv(dotenv_path=env_path, override=False)
-else:
-    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
-    load_dotenv(override=False)
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """Application settings with .env.local override support for git worktree parallel development."""
     OPENAI_API_KEY: str = Field(default="")
     GOOGLE_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
@@ -61,6 +48,20 @@ class Settings(BaseSettings):
     JOB_GENERATOR_EVALUATOR_MODEL: str = Field(default="claude-haiku-4-5")
     JOB_GENERATOR_INTERFACE_DEFINITION_MODEL: str = Field(default="claude-haiku-4-5")
     JOB_GENERATOR_VALIDATION_MODEL: str = Field(default="claude-haiku-4-5")
+
+    class Config:
+        """Pydantic settings configuration for git worktree support.
+
+        Environment variable loading order (later takes precedence):
+        1. System environment variables (set by quick-start.sh, docker-compose, etc.)
+        2. .env file (shared settings: API keys, DB connections)
+        3. .env.local file (worktree-specific settings: port numbers, log directories)
+
+        Note: env_file_encoding ensures UTF-8 for cross-platform compatibility
+        """
+        env_file = [".env", ".env.local"]  # .env.local takes precedence
+        env_file_encoding = "utf-8"
+        case_sensitive = False
 
 
 # インスタンス生成
