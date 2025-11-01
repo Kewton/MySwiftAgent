@@ -37,6 +37,7 @@ def set_sqlite_pragma(dbapi_conn, connection_record):
         cursor.execute("PRAGMA busy_timeout=30000")  # 30 second busy timeout
         cursor.close()
 
+
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
