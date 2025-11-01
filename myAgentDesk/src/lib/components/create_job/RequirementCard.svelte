@@ -2,7 +2,8 @@
 	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import { t } from '$lib/stores/locale';
-	import type { RequirementState } from '$lib/stores/conversations';
+	import { COMPLETENESS_THRESHOLD } from '$lib/stores/chatSession';
+	import type { RequirementState } from '$lib/domain/types';
 
 	export let requirements: RequirementState;
 	export let isCreatingJob = false;
@@ -10,10 +11,10 @@
 
 	let collapsed = false;
 
-	$: isReady = requirements.completeness >= 0.8;
+	$: isReady = requirements.completeness >= COMPLETENESS_THRESHOLD;
 </script>
 
-<div class="px-4 pt-3 pb-2 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-800">
+<div class="px-6 pt-6 pb-2 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-800">
 	<Card>
 		<div class="space-y-4 py-2">
 			<!-- Header with Collapse Button -->
@@ -23,10 +24,23 @@
 				</h3>
 				<button
 					on:click={() => (collapsed = !collapsed)}
-					class="p-2 text-2xl text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+					class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
 					aria-label={collapsed ? t('requirement.expand') : t('requirement.collapse')}
 				>
-					{collapsed ? '▼' : '▲'}
+					<svg
+						class="w-5 h-5 transition-transform duration-200"
+						class:rotate-180={collapsed}
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M5 15l7-7 7 7"
+						/>
+					</svg>
 				</button>
 			</div>
 

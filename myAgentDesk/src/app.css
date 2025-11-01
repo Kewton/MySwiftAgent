@@ -34,6 +34,11 @@
 		@apply shadow-sm hover:shadow-md transition-shadow;
 	}
 
+	.assistant-bubble {
+		@apply max-w-none bg-transparent dark:bg-transparent shadow-none hover:shadow-none;
+		@apply w-full;
+	}
+
 	/* Dify inspired node card */
 	.node-card {
 		@apply rounded-xl p-4 border-2;

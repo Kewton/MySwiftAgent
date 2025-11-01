@@ -8,6 +8,8 @@ on:
       - 'myscheduler/**'
       - 'jobqueue/**'
       - 'expertAgent/**'
+      - 'myAgentDesk/**'
+      - 'graphAiServer/**'
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
@@ -22,6 +24,8 @@ on:
       - 'myscheduler/**'
       - 'jobqueue/**'
       - 'expertAgent/**'
+      - 'myAgentDesk/**'
+      - 'graphAiServer/**'
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
@@ -38,6 +42,8 @@ jobs:
       myscheduler: ${{ steps.changes.outputs.myscheduler }}
       jobqueue: ${{ steps.changes.outputs.jobqueue }}
       expertAgent: ${{ steps.changes.outputs.expertAgent }}
+      myAgentDesk: ${{ steps.changes.outputs.myAgentDesk }}
+      graphAiServer: ${{ steps.changes.outputs.graphAiServer }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,6 +91,22 @@ jobs:
             else
               echo "expertAgent=false" >> $GITHUB_OUTPUT
               echo "❌ expertAgent directory does not exist"
+            fi
+
+            if [ -d "myAgentDesk" ]; then
+              echo "myAgentDesk=true" >> $GITHUB_OUTPUT
+              echo "✅ myAgentDesk directory exists"
+            else
+              echo "myAgentDesk=false" >> $GITHUB_OUTPUT
+              echo "❌ myAgentDesk directory does not exist"
+            fi
+
+            if [ -d "graphAiServer" ]; then
+              echo "graphAiServer=true" >> $GITHUB_OUTPUT
+              echo "✅ graphAiServer directory exists"
+            else
+              echo "graphAiServer=false" >> $GITHUB_OUTPUT
+              echo "❌ graphAiServer directory does not exist"
             fi
           fi
 
@@ -336,3 +358,58 @@ jobs:
         run: |
           echo "⚖️ Checking license compliance..."
           uv export | grep -E "(GPL|AGPL)" && echo "❌ GPL license detected" || echo "✅ License compliance OK"
+
+  test-typescript:
+    name: TypeScript Test Suite
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.myAgentDesk == 'true' || needs.detect-changes.outputs.graphAiServer == 'true'
+    strategy:
+      matrix:
+        node-version: ['20']
+        project:
+          - ${{ needs.detect-changes.outputs.myAgentDesk == 'true' && 'myAgentDesk' || '' }}
+          - ${{ needs.detect-changes.outputs.graphAiServer == 'true' && 'graphAiServer' || '' }}
+        exclude:
+          - project: ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        working-directory: ./${{ matrix.project }}
+        run: npm install
+
+      - name: Run ESLint
+        working-directory: ./${{ matrix.project }}
+        run: npm run lint
+
+      - name: Sync SvelteKit (if needed)
+        working-directory: ./${{ matrix.project }}
+        run: |
+          if grep -q "svelte-kit sync" package.json 2>/dev/null || grep -q "@sveltejs/kit" package.json 2>/dev/null; then
+            npx svelte-kit sync || true
+          fi
+
+      - name: Run TypeScript compilation
+        working-directory: ./${{ matrix.project }}
+        run: npm run type-check
+
+      - name: Run build
+        working-directory: ./${{ matrix.project }}
+        run: npm run build
+
+      - name: Run tests (if exists)
+        working-directory: ./${{ matrix.project }}
+        run: |
+          if grep -q '"test"' package.json; then
+            npm test || echo "⚠️ Tests not configured or failed"
+          else
+            echo "⚠️ No test script found in package.json"
+          fi

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import RequirementCard from './RequirementCard.svelte';
-import type { RequirementState } from '$lib/stores/conversations';
+import type { RequirementState } from '$lib/domain/types';
 
 describe('RequirementCard', () => {
 	const mockRequirements: RequirementState = {
