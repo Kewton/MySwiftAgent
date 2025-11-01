@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Application settings with .env.local override support for git worktree parallel development."""
+
     OPENAI_API_KEY: str = Field(default="")
     GOOGLE_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
@@ -57,6 +58,7 @@ class Settings(BaseSettings):
 
         Note: env_file_encoding ensures UTF-8 for cross-platform compatibility
         """
+
         env_file = [".env", ".env.local"]  # .env.local takes precedence
         env_file_encoding = "utf-8"
         case_sensitive = False
