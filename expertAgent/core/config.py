@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     JOB_GENERATOR_INTERFACE_DEFINITION_MODEL: str = Field(default="claude-haiku-4-5")
     JOB_GENERATOR_VALIDATION_MODEL: str = Field(default="claude-haiku-4-5")
 
+    # Workflow Generator Configuration (Issue #110)
+    WORKFLOW_GENERATOR_MODEL: str = Field(default="claude-haiku-4-5")
+    WORKFLOW_GENERATOR_MAX_TOKENS: int = Field(default=16384)
+
+    # Server Configuration
+    HOST: str = Field(default="0.0.0.0")
+    PORT: int = Field(default=8000)
+
     class Config:
         """Pydantic settings configuration for git worktree support.
 
