@@ -4,9 +4,6 @@
 	import { locale, type Locale } from '$lib/stores/locale';
 	import { get } from 'svelte/store';
 
-	export let data;
-	export let params;
-
 	let settings = {
 		language: get(locale) as string
 	};

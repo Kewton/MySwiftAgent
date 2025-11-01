@@ -53,12 +53,10 @@
 	}
 
 	const initialPage = get(page);
-	let currentHref = initialPage.url.href;
 	let currentPath = normalizePath(initialPage.url.pathname);
 	let currentRouteId = initialPage.route.id ?? '';
 
 	const unsubscribe = page.subscribe(($page) => {
-		currentHref = $page.url.href;
 		currentPath = normalizePath($page.url.pathname);
 		currentRouteId = $page.route.id ?? '';
 	});

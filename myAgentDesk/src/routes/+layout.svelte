@@ -5,9 +5,6 @@
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
 	import { layoutStore, toggleDarkMode, toggleOuterSidebar } from '$lib/stores/layout';
 
-	export let data;
-	export let params;
-
 	const OUTER_SIDEBAR_WIDTH_EXPANDED = 240;
 	const OUTER_SIDEBAR_WIDTH_COLLAPSED = 64;
 
