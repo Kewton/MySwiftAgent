@@ -6,20 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# Load environment variables from myVault/.env (new policy)
-# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-env_path = PROJECT_ROOT / ".env"
-
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path, override=False)
-else:
-    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
-    load_dotenv(override=False)
 
 
 def load_config_yaml() -> dict[str, Any]:
@@ -54,9 +42,19 @@ class Settings(BaseSettings):
     - MSA_MASTER_KEY: Master encryption key (base64:...)
     - TOKEN_<service-name>: Service authentication tokens
     - DATABASE_URL (optional): Override database URL from config.yaml
+
+    Environment variable loading order (later takes precedence):
+    1. System environment variables (set by quick-start.sh, docker-compose, etc.)
+    2. .env file (shared settings: API keys, DB connections)
+    3. .env.local file (worktree-specific settings: port numbers, log directories)
     """
 
-    model_config = SettingsConfigDict(extra="allow")
+    model_config = SettingsConfigDict(
+        extra="allow",
+        env_file=[".env", ".env.local"],  # .env.local takes precedence
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
     # Master encryption key (Base64-encoded 32 bytes) - MUST be in environment
     msa_master_key: str = Field(
