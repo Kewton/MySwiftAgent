@@ -12,17 +12,19 @@ const JSON_HEADERS = {
 export interface FetchJsonOptions extends Omit<RequestOptions, 'body'> {
 	body?: unknown;
 	skipDefaultHeaders?: boolean;
+	baseUrl?: string; // Optional custom base URL (e.g., for myScheduler API)
 }
 
 export async function fetchJson<T>({
 	path,
 	body,
 	skipDefaultHeaders,
+	baseUrl,
 	headers,
 	method = 'GET',
 	...rest
 }: FetchJsonOptions): Promise<T> {
-	const url = `${getApiBase()}${path}`;
+	const url = `${baseUrl || getApiBase()}${path}`;
 	const requestHeaders = new Headers(headers);
 
 	if (!skipDefaultHeaders) {
