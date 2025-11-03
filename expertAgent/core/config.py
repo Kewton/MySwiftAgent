@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     WORKFLOW_GENERATOR_MODEL: str = Field(default="claude-haiku-4-5")
     WORKFLOW_GENERATOR_MAX_TOKENS: int = Field(default=16384)
 
+    # Langfuse Observability Configuration (Issue #113)
+    LANGFUSE_PUBLIC_KEY: str = Field(default="")
+    LANGFUSE_SECRET_KEY: str = Field(default="")
+    LANGFUSE_HOST: str = Field(default="http://localhost:3001")
+
     # Server Configuration
     HOST: str = Field(default="0.0.0.0")  # noqa: S104  # Development default, override via .env for production
     PORT: int = Field(default=8000)

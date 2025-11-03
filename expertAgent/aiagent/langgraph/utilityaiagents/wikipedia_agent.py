@@ -3,13 +3,16 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from aiagent.langgraph.common import make_wikipedia_graph
 
 
-async def wikipediaagent(query: str, _modelname: str, language: str = "ja") -> str:
+async def wikipediaagent(
+    query: str, _modelname: str, language: str = "ja", config: dict | None = None
+) -> str:
     """Wikipedia MCPを使用してWikipedia記事の検索・取得を実行します。
 
     Args:
         query: 実行するタスクの説明（例: "日本の歴史について教えてください"）
         _modelname: 使用するLLMモデル名
         language: Wikipedia言語コード（デフォルト: ja）
+        config: LangGraph config (optional, for callbacks like Langfuse)
 
     Returns:
         str: 実行結果のメッセージ
@@ -33,7 +36,9 @@ Provide comprehensive and accurate information from Wikipedia."""
     async with make_wikipedia_graph(
         "wikipediaagent", _modelname, 15, language
     ) as graph:
-        result = await graph.ainvoke({"messages": [system_msg, human_msg]})
+        result = await graph.ainvoke(
+            {"messages": [system_msg, human_msg]}, config=config
+        )
         aiMessage = ""
         for message in result.get("messages", []):
             if isinstance(message, AIMessage) and isinstance(message.content, str):

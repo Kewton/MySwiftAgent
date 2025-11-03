@@ -10,6 +10,7 @@ from app.schemas.standardAiAgent import (
     ExpertAiAgentResponse,
     ExpertAiAgentResponseJson,
 )
+from app.services.trace_service import trace_service
 from app.utils.json_converter import (
     ensure_json_structure,
     force_to_json_response,
@@ -44,13 +45,17 @@ class ResponseBuilder:
         response_type: str,
         text: str | None = None,
         chathistory: list[Any] | None = None,
+        trace_id: str | None = None,
     ) -> ExpertAiAgentResponse:
         cleaned = self.remove_think_tags(result)
+        langfuse_url = trace_service.get_trace_url(trace_id) if trace_id else None
         return ExpertAiAgentResponse(
             result=cleaned,
             text=text or cleaned,
             type=response_type,
             chathistory=chathistory,
+            trace_id=trace_id,
+            langfuse_url=langfuse_url,
         )
 
     def build_json_response(
@@ -62,7 +67,10 @@ class ResponseBuilder:
         error_context: str | None = None,
         error_detail: str | None = None,
         chathistory: list[Any] | None = None,
+        trace_id: str | None = None,
     ) -> ExpertAiAgentResponseJson:
+        langfuse_url = trace_service.get_trace_url(trace_id) if trace_id else None
+
         if isinstance(raw, (dict, list)):
             structured = ensure_json_structure(raw, response_type)
             return ExpertAiAgentResponseJson(
@@ -70,6 +78,8 @@ class ResponseBuilder:
                 type=structured.get("type") or response_type,
                 attempts=attempts,
                 chathistory=chathistory or structured.get("chathistory"),
+                trace_id=trace_id,
+                langfuse_url=langfuse_url,
             )
 
         cleaned = self.remove_think_tags(str(raw))
@@ -80,6 +90,8 @@ class ResponseBuilder:
                 type=response_type,
                 attempts=attempts,
                 chathistory=chathistory,
+                trace_id=trace_id,
+                langfuse_url=langfuse_url,
             )
         except ValueError:
             forced = force_to_json_response(
@@ -92,6 +104,8 @@ class ResponseBuilder:
                 type=response_type,
                 attempts=attempts,
                 chathistory=chathistory,
+                trace_id=trace_id,
+                langfuse_url=langfuse_url,
             )
 
     def ensure_json_structure(
