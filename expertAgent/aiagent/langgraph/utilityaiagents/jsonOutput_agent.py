@@ -17,16 +17,13 @@ from core.config import settings
 
 
 async def jsonOutputagent(
-    query: str,
-    _modelname: str = "gpt-4o-mini",
-    project: str | None = None,
-    config: dict | None = None,
+    query: str, _modelname: str = "gpt-4o-mini", project: str | None = None
 ) -> dict:
     async with make_utility_graph(
         "mymcp.stdio_explorer", "exploreragent", _modelname, 10, project=project
     ) as graph:
         print(f"mymcp.stdio_explorer start query:{query}")
-        result = await graph.ainvoke({"messages": query}, config=config)
+        result = await graph.ainvoke({"messages": query})
         aiMessage = ""
         result_dict: dict = {}
         for message in result.get("messages", []):

@@ -6,10 +6,11 @@ export { streamChatRequirementDefinition } from './chat-api';
 export { createJob } from './job-api';
 export type {
 	Message,
+	RequirementState,
+	JobResult,
 	ChatRequest,
 	ChatStreamEvent,
 	JobCreationRequest,
 	JobCreationResponse
 } from './types';
-export type { RequirementState, JobResult } from '$lib/domain/types';
 export { ServiceError } from './types';

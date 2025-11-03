@@ -11,7 +11,7 @@ from aiagent.langgraph.common import make_graph
 
 
 async def filereaderagent(
-    query: str, _modelname: str, project: str | None = None, config: dict | None = None
+    query: str, _modelname: str, project: str | None = None
 ) -> str:
     """File Readerエージェントを実行します。
 
@@ -19,7 +19,6 @@ async def filereaderagent(
         query: ユーザーからの問い合わせ（ファイルパス/URLと指示を含む）
         _modelname: 使用するLLMモデル名（例: "gpt-4o", "gemini-1.5-flash"）
         project: プロジェクト名（MyVault認証用、デフォルトはNone）
-        config: LangGraph config (optional, for callbacks like Langfuse)
 
     Returns:
         str: エージェントからの応答メッセージ
@@ -35,7 +34,7 @@ async def filereaderagent(
     async with make_graph(
         "mymcp.stdio_file_reader", "filereaderagent", _modelname, project=project
     ) as graph:
-        result = await graph.ainvoke({"messages": query}, config=config)
+        result = await graph.ainvoke({"messages": query})
         aiMessage = ""
         for message in result.get("messages", []):
             if isinstance(message, AIMessage):
