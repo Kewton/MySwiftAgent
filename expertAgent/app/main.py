@@ -19,6 +19,7 @@ from app.api.v1 import (
     google_auth_endpoints,
     job_generator_endpoints,
     marp_report_endpoints,
+    observability_endpoints,
     tts_endpoints,
     utility_endpoints,
     workflow_generator_endpoints,
@@ -166,6 +167,7 @@ app.include_router(
 app.include_router(chat_endpoints.router, prefix="/v1", tags=["Chat"])
 app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
+app.include_router(observability_endpoints.router, prefix="/v1")
 
 
 @app.get("/health")

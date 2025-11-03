@@ -27,6 +27,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Allow TypeScript/JavaScript lib directories in frontend projects
+!myAgentDesk/src/lib/
 parts/
 sdist/
 var/
@@ -543,3 +545,4 @@ docker-compose-data/
 # CommonUI Data (script execution)
 # ===================================================================
 commonUI/data/
+langfuse

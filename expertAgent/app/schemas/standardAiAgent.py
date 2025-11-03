@@ -24,6 +24,8 @@ class ExpertAiAgentRequest(BaseModel):
     force_json: bool = True  # Force JSON response (default: True)
     max_retries: int = 2  # Maximum retry attempts for JSON conversion (default: 2)
     language: str | None = None  # Language parameter for some agents (e.g., wikipedia)
+    user_id: str | None = None  # User ID for Langfuse tracing (Issue #113)
+    session_id: str | None = None  # Session ID for Langfuse tracing (Issue #113)
 
 
 class ExpertAiAgentResponse(BaseModel):
@@ -32,6 +34,8 @@ class ExpertAiAgentResponse(BaseModel):
     text: str | None = None
     type: str | None = None
     chathistory: List[ChatMessage] | None = None
+    trace_id: str | None = None  # Langfuse trace ID (Issue #113)
+    langfuse_url: str | None = None  # Langfuse UI URL (Issue #113)
 
 
 class ExpertAiAgentResponseJson(BaseModel):
@@ -41,3 +45,5 @@ class ExpertAiAgentResponseJson(BaseModel):
     chathistory: List[ChatMessage] | None = None
     attempts: int | None = None  # Number of retry attempts (if applicable)
     is_json_guaranteed: bool = True  # JSON guarantee flag
+    trace_id: str | None = None  # Langfuse trace ID (Issue #113)
+    langfuse_url: str | None = None  # Langfuse UI URL (Issue #113)

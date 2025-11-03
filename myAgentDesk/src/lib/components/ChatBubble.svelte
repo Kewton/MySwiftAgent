@@ -7,13 +7,13 @@
 	export let timestamp: string = '';
 
 	const roleIcon: Record<typeof role, string> = {
-		user: '👤',
-		assistant: '🤖'
+		user: '',
+		assistant: '🔥'
 	};
 
 	$: isUser = role === 'user';
-	$: bubbleClasses = `chat-bubble max-w-3xl ${isUser ? 'ml-auto bg-primary-50 dark:bg-primary-900/20 text-right' : 'mr-auto bg-white dark:bg-dark-card'}`;
-	$: wrapperClasses = `mb-4 flex ${isUser ? 'justify-end' : 'justify-start'}`;
+	$: bubbleClasses = `chat-bubble max-w-3xl ${isUser ? 'ml-auto bg-primary-50 dark:bg-primary-900/20 text-right' : 'assistant-bubble w-full'}`;
+	$: wrapperClasses = `mb-4 flex ${isUser ? 'justify-end' : 'justify-start w-full'}`;
 	$: contentLayoutClasses = `flex gap-3 items-start ${isUser ? 'flex-row-reverse text-right' : 'text-left'}`;
 	$: renderedMessage = isUser ? message : renderMarkdown(message);
 	$: timestampClasses = `text-xs text-gray-500 dark:text-gray-400 mt-2 ${isUser ? 'text-right' : 'text-left'}`;
@@ -22,7 +22,9 @@
 <div class={wrapperClasses}>
 	<div class={bubbleClasses}>
 		<div class={contentLayoutClasses}>
-			<span class="text-xl flex-shrink-0">{roleIcon[role]}</span>
+			{#if roleIcon[role]}
+				<span class="text-xl flex-shrink-0">{roleIcon[role]}</span>
+			{/if}
 			{#if isUser}
 				<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
 					{message}
