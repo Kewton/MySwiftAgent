@@ -2,10 +2,10 @@
  * Job API Service - ジョブ作成と管理
  */
 
-import type { RequirementState } from '$lib/domain/types';
-import type { JobCreationRequest, JobCreationResponse } from './types';
+import type { JobCreationRequest, JobCreationResponse, RequirementState } from './types';
 import { ServiceError } from './types';
-import { fetchJson } from './http';
+
+const API_BASE = 'http://localhost:8104/aiagent-api/v1';
 
 /**
  * ジョブを作成
@@ -24,39 +24,32 @@ export async function createJob(
 		requirements
 	};
 
+	let response: Response;
+
 	try {
-		return await fetchJson<JobCreationResponse>({
-			path: '/chat/create-job',
+		response = await fetch(`${API_BASE}/chat/create-job`, {
 			method: 'POST',
-			body: request
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(request)
 		});
 	} catch (error) {
-		if (error instanceof ServiceError) {
-			const isConnectionFailure = !error.statusCode && error.message.startsWith('Failed to fetch');
-			if (isConnectionFailure) {
-				throw new ServiceError('Failed to connect to job creation API', undefined, error);
-			}
-
-			if (error.statusCode && error.message === 'Failed to parse JSON response') {
-				throw new ServiceError(
-					'Failed to parse job creation response',
-					error.statusCode,
-					error.originalError
-				);
-			}
-
-			if (error.statusCode) {
-				const detail =
-					(error.originalError as { detail?: string } | undefined)?.detail || 'Unknown error';
-				throw new ServiceError(
-					`Job creation failed: ${detail}`,
-					error.statusCode,
-					error.originalError
-				);
-			}
-
-			throw error;
-		}
-		throw new ServiceError('Job creation failed', undefined, error);
+		throw new ServiceError('Failed to connect to job creation API', undefined, error);
 	}
+
+	let result: unknown;
+
+	try {
+		result = await response.json();
+	} catch (error) {
+		throw new ServiceError('Failed to parse job creation response', response.status, error);
+	}
+
+	if (!response.ok) {
+		const errorDetail = (result as { detail?: string }).detail || 'Unknown error';
+		throw new ServiceError(`Job creation failed: ${errorDetail}`, response.status);
+	}
+
+	return result as JobCreationResponse;
 }

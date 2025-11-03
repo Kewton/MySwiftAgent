@@ -5,8 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createJob } from './job-api';
 import { ServiceError } from './types';
-import type { RequirementState } from '$lib/domain/types';
-import type { JobCreationResponse } from './types';
+import type { RequirementState, JobCreationResponse } from './types';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -36,22 +35,21 @@ describe('createJob', () => {
 
 		mockFetch.mockResolvedValue({
 			ok: true,
-			text: async () => JSON.stringify(mockResponse)
+			json: async () => mockResponse
 		});
 
 		const result = await createJob(conversationId, requirements);
 
-		const [url, options] = mockFetch.mock.calls[0];
-		expect(url).toBe('http://localhost:8104/aiagent-api/v1/chat/create-job');
-		expect(options?.method).toBe('POST');
-		expect(options?.headers).toBeInstanceOf(Headers);
-		expect((options?.headers as Headers).get('Content-Type')).toBe('application/json');
-		expect(options?.body).toBe(
-			JSON.stringify({
+		expect(mockFetch).toHaveBeenCalledWith('http://localhost:8104/aiagent-api/v1/chat/create-job', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
 				conversation_id: conversationId,
 				requirements
 			})
-		);
+		});
 
 		expect(result).toEqual(mockResponse);
 	});
@@ -70,8 +68,7 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: false,
 			status: 400,
-			statusText: 'Bad Request',
-			text: async () => JSON.stringify({ detail: 'Invalid requirements' })
+			json: async () => ({ detail: 'Invalid requirements' })
 		});
 
 		await expect(createJob(conversationId, requirements)).rejects.toThrow(ServiceError);
@@ -85,8 +82,7 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: false,
 			status: 500,
-			statusText: 'Internal Server Error',
-			text: async () => JSON.stringify({})
+			json: async () => ({})
 		});
 
 		await expect(createJob(conversationId, requirements)).rejects.toThrow(ServiceError);
@@ -100,7 +96,9 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
 			status: 200,
-			text: async () => 'not json'
+			json: async () => {
+				throw new Error('Invalid JSON');
+			}
 		});
 
 		await expect(createJob(conversationId, requirements)).rejects.toThrow(ServiceError);
@@ -114,8 +112,7 @@ describe('createJob', () => {
 		mockFetch.mockResolvedValue({
 			ok: false,
 			status: 403,
-			statusText: 'Forbidden',
-			text: async () => JSON.stringify({ detail: 'Forbidden' })
+			json: async () => ({ detail: 'Forbidden' })
 		});
 
 		try {

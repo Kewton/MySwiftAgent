@@ -29,7 +29,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
     # LangGraph and LangChain
-    "langchain>=0.3.0",
     "langchain-mcp-adapters>=0.1.0",
     "langgraph>=0.2.0",
     "langgraph-sdk>=0.1.0",
@@ -59,8 +58,6 @@ dependencies = [
     "pypdf>=4.0.0",
     "pyyaml>=6.0.3",
     "sse-starlette>=3.0.2",
-    # Observability (Issue #113)
-    "langfuse>=3.0.0",
 ]
 
 [project.optional-dependencies]

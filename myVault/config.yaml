@@ -90,14 +90,6 @@ policies:
         actions: ["read", "write", "list"]
         resources: ["secret:*:GOOGLE_*"]
 
-  # ExpertAgent Langfuse - write access for managing Langfuse observability secrets
-  - name: expertagent-langfuse-editor
-    description: "Write access to Langfuse-related secrets for expertAgent observability integration"
-    permissions:
-      - effect: "allow"
-        actions: ["read", "write", "list"]
-        resources: ["secret:expertAgent:*langfuse*"]
-
 # Service definitions
 # Tokens are loaded from environment variables: TOKEN_<service-name>
 # Services are assigned roles which grant specific permissions
@@ -129,12 +121,11 @@ services:
       - commonui-admin
 
   - name: expertagent
-    description: "ExpertAgent AI service - read-only access to secrets + Google OAuth management + Langfuse observability"
+    description: "ExpertAgent AI service - read-only access to secrets + Google OAuth management"
     enabled: true
     roles:
       - expertagent-reader
       - expertagent-google-editor
-      - expertagent-langfuse-editor
 
   - name: graphaiserver
     description: "GraphAI Server - read-only access to secrets for AI agent workflows"
