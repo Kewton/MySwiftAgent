@@ -7,6 +7,8 @@ has been refactored to extract_requirement_with_llm (async function).
 TODO: Update tests to use the new async API (extract_requirement_with_llm).
 """
 
+# ruff: noqa
+
 import pytest
 
 pytestmark = pytest.mark.skip(
