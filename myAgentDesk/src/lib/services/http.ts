@@ -12,17 +12,21 @@ const JSON_HEADERS = {
 export interface FetchJsonOptions extends Omit<RequestOptions, 'body'> {
 	body?: unknown;
 	skipDefaultHeaders?: boolean;
+	baseUrl?: string; // Optional custom base URL (e.g., for myScheduler API)
+	timeout?: number; // Timeout in milliseconds (default: 300000ms = 5 minutes for long-running operations)
 }
 
 export async function fetchJson<T>({
 	path,
 	body,
 	skipDefaultHeaders,
+	baseUrl,
 	headers,
 	method = 'GET',
+	timeout = 600000, // 10 minutes default for job creation
 	...rest
 }: FetchJsonOptions): Promise<T> {
-	const url = `${getApiBase()}${path}`;
+	const url = `${baseUrl || getApiBase()}${path}`;
 	const requestHeaders = new Headers(headers);
 
 	if (!skipDefaultHeaders) {
@@ -33,6 +37,10 @@ export async function fetchJson<T>({
 		});
 	}
 
+	// Create AbortController for timeout
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeout);
+
 	let response: Response;
 
 	try {
@@ -40,10 +48,17 @@ export async function fetchJson<T>({
 			method,
 			headers: requestHeaders,
 			body: body === undefined ? undefined : JSON.stringify(body),
+			signal: controller.signal,
 			...rest
 		});
 	} catch (error) {
+		clearTimeout(timeoutId);
+		if ((error as Error).name === 'AbortError') {
+			throw new ServiceError(`Request timeout after ${timeout / 1000} seconds`, undefined, error);
+		}
 		throw new ServiceError(`Failed to fetch ${path}`, undefined, error);
+	} finally {
+		clearTimeout(timeoutId);
 	}
 
 	let parsed: unknown = null;

@@ -16,7 +16,7 @@ from typing import AsyncGenerator, Dict, List
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.requirement_clarification import (
     REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT,
     create_requirement_clarification_prompt,
-    extract_requirement_from_message,
+    extract_requirement_with_llm,
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import (
     create_llm_with_fallback,
@@ -94,8 +94,8 @@ async def stream_requirement_clarification(
                 full_response += content
                 yield {"type": "message", "data": {"content": content}}
 
-        # Extract requirements from full conversation
-        updated_requirements = extract_requirement_from_message(
+        # Extract requirements from full conversation using LLM
+        updated_requirements = await extract_requirement_with_llm(
             user_message, full_response, current_requirements
         )
 
@@ -173,7 +173,7 @@ async def non_streaming_clarification(
             str(response.content) if hasattr(response, "content") else str(response)
         )
 
-        updated_requirements = extract_requirement_from_message(
+        updated_requirements = await extract_requirement_with_llm(
             user_message, full_response, current_requirements
         )
 

@@ -139,7 +139,7 @@ export const chatSession = (() => {
 		const conversation = get(activeConversation);
 		if (!conversation) {
 			setError(t('alert.noConversation'));
-			return;
+			return undefined;
 		}
 
 		const { id: conversationId, requirements } = conversation;
@@ -151,7 +151,7 @@ export const chatSession = (() => {
 			);
 			setError(message);
 			safeAlert(message);
-			return;
+			return undefined;
 		}
 
 		setCreating(true);
@@ -169,6 +169,7 @@ export const chatSession = (() => {
 
 			conversationStore.addMessage(conversationId, success);
 			requestScroll();
+			return result; // Return the job creation result
 		} catch (error) {
 			console.error('Error creating job:', error);
 			const message = `❌ **${t('error.jobCreation')}** ${resolveErrorMessage(error)}`;
@@ -179,6 +180,7 @@ export const chatSession = (() => {
 			});
 			setError(message);
 			requestScroll();
+			return undefined;
 		} finally {
 			setCreating(false);
 		}

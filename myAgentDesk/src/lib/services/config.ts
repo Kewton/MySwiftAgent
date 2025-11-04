@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE = 'http://localhost:8104/aiagent-api/v1';
+const DEFAULT_API_BASE = '/aiagent-api/v1';
 
 function sanitizeBaseUrl(url: string): string {
 	return url.replace(/\/$/, '');

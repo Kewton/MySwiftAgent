@@ -73,7 +73,7 @@ def mock_job_generator_success():
     """Mock successful job generator response."""
     from app.schemas.job_generator import JobGeneratorResponse
 
-    async def _mock_job_generator(request):
+    async def _mock_job_generator(request, background_tasks):
         return JobGeneratorResponse(
             status="success",
             job_id="job_test_12345",
@@ -456,7 +456,7 @@ class TestCreateJobEndpoint:
 
         called_with = None
 
-        async def _capture_job_generator(request):
+        async def _capture_job_generator(request, background_tasks):
             nonlocal called_with
             called_with = request
             return JobGeneratorResponse(

@@ -4,7 +4,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 
 from app.api.v1.job_generator_endpoints import (
     _build_response_from_state,
@@ -236,50 +236,39 @@ class TestGenerateJobAndTasks:
             user_requirement="Upload PDF and send email", max_retry=5
         )
 
-        # Execute
-        result = await generate_job_and_tasks(request)
+        # Create mock BackgroundTasks
+        background_tasks = BackgroundTasks()
 
-        # Assert
-        assert result.status == "success"
-        assert result.job_id == "550e8400-e29b-41d4-a716-446655440000"
-        assert result.job_master_id == "123"
-        mock_create_state.assert_called_once_with(
-            user_requirement="Upload PDF and send email"
-        )
-        mock_create_agent.assert_called_once()
-        mock_agent.ainvoke.assert_called_once()
+        # Execute
+        result = await generate_job_and_tasks(request, background_tasks)
+
+        # Assert - with background tasks, it returns immediately with status="creating"
+        assert result.status == "creating"
+        assert result.job_id is not None  # job_id is generated upfront
+        assert result.job_master_id is None  # Not set until background task completes
+        assert "Job creation started" in result.error_message
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
-    @patch("app.api.v1.job_generator_endpoints.create_initial_state")
     @patch("app.api.v1.job_generator_endpoints.secrets_manager.get_secret")
-    async def test_generate_job_and_tasks_failure(
-        self, mock_get_secret, mock_create_state, mock_create_agent
-    ):
-        """Test job generation failure."""
-        # Mock secrets manager
-        mock_get_secret.return_value = "test-anthropic-api-key"
-
-        # Mock initial state
-        mock_create_state.return_value = {"user_requirement": "Invalid requirement"}
-
-        # Mock agent to raise exception
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke = AsyncMock(side_effect=Exception("LLM API timeout"))
-        mock_create_agent.return_value = mock_agent
+    async def test_generate_job_and_tasks_failure(self, mock_get_secret):
+        """Test job generation failure when ANTHROPIC_API_KEY is missing."""
+        # Mock secrets manager to raise error (ANTHROPIC_API_KEY not found)
+        mock_get_secret.side_effect = ValueError("Secret not found: ANTHROPIC_API_KEY")
 
         # Create request
         request = JobGeneratorRequest(
-            user_requirement="Invalid requirement", max_retry=5
+            user_requirement="Test requirement", max_retry=5
         )
 
-        # Execute and expect HTTPException
+        # Create mock BackgroundTasks
+        background_tasks = BackgroundTasks()
+
+        # Execute and expect HTTPException (initial setup failure)
         with pytest.raises(HTTPException) as exc_info:
-            await generate_job_and_tasks(request)
+            await generate_job_and_tasks(request, background_tasks)
 
         assert exc_info.value.status_code == 500
-        assert "Job generation failed" in exc_info.value.detail
-        assert "LLM API timeout" in exc_info.value.detail
+        assert "ANTHROPIC_API_KEY not configured" in exc_info.value.detail
 
     @pytest.mark.asyncio
     @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
@@ -334,11 +323,14 @@ class TestGenerateJobAndTasks:
             user_requirement="Upload PDF and send Slack notification", max_retry=5
         )
 
-        # Execute
-        result = await generate_job_and_tasks(request)
+        # Create mock BackgroundTasks
+        background_tasks = BackgroundTasks()
 
-        # Assert
-        assert result.status == "partial_success"
-        assert result.job_id == "550e8400-e29b-41d4-a716-446655440000"
-        assert len(result.infeasible_tasks) == 1
-        assert len(result.alternative_proposals) == 1
+        # Execute
+        result = await generate_job_and_tasks(request, background_tasks)
+
+        # Assert - with background tasks, it returns immediately with status="creating"
+        assert result.status == "creating"
+        assert result.job_id is not None  # job_id is generated upfront
+        assert result.job_master_id is None  # Not set until background task completes
+        assert "Job creation started" in result.error_message

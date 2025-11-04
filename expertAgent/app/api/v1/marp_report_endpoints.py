@@ -10,7 +10,12 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from jinja2 import Environment, FileSystemLoader  # type: ignore
 
-from app.schemas.marp_report import MarpReportRequest, MarpReportResponse
+from app.schemas.marp_report import (
+    MarpReportGetResponse,
+    MarpReportRequest,
+    MarpReportResponse,
+)
+from app.services.job_creation_state import job_state_manager
 
 logger = logging.getLogger(__name__)
 
@@ -258,5 +263,83 @@ async def generate_marp_report(request: MarpReportRequest) -> MarpReportResponse
         raise
     except Exception as e:
         logger.exception("Failed to generate Marp report")
+        msg = f"Internal server error: {e}"
+        raise HTTPException(status_code=500, detail=msg) from e
+
+
+@router.get("/marp-report/{job_id}", response_model=MarpReportGetResponse)
+async def get_marp_report_by_job_id(
+    job_id: str,
+    format: str = "html",  # noqa: A002
+) -> MarpReportGetResponse:
+    """Get Marp presentation report by job ID.
+
+    Args:
+        job_id: Job ID to retrieve report for
+        format: Output format (html, pdf, png) - currently only affects response structure
+
+    Returns:
+        Marp report with Markdown and metadata
+
+    Raises:
+        HTTPException: If job not found, not completed, or report generation fails
+    """
+    start_time = time.time()
+
+    # Get job status from state manager
+    job_status = job_state_manager.get_status(job_id)
+
+    if not job_status:
+        msg = f"Job ID not found: {job_id}"
+        raise HTTPException(status_code=404, detail=msg)
+
+    if job_status.status != "completed":
+        msg = f"Job is not completed yet. Current status: {job_status.status}"
+        raise HTTPException(status_code=400, detail=msg)
+
+    if not job_status.result:
+        msg = f"Job result not available for job_id: {job_id}"
+        raise HTTPException(status_code=404, detail=msg)
+
+    try:
+        # Use existing generation logic
+        job_result = job_status.result
+
+        # Extract template data
+        template_data = _extract_template_data(job_result)
+
+        # Use default theme for GET requests
+        template_data["theme"] = "default"
+        template_data["include_implementation_steps"] = True
+
+        # Render template
+        template = jinja_env.get_template("job_report.md.j2")
+        marp_markdown = template.render(**template_data)
+
+        # Calculate slide count
+        suggestions_count = template_data["suggestions_count"]
+        tasks_count = template_data["tasks_count"]
+        slide_count = _count_slides(suggestions_count, True, tasks_count)
+
+        generation_time_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            f"Generated Marp report for job_id={job_id} "
+            f"(slides={slide_count}, time={generation_time_ms:.0f}ms)"
+        )
+
+        return MarpReportGetResponse(
+            job_id=job_id,
+            markdown=marp_markdown,
+            html="",  # Client-side rendering recommended
+            pdf_url=None,
+            png_urls=None,
+            slide_count=slide_count,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to generate Marp report for job_id={job_id}")
         msg = f"Internal server error: {e}"
         raise HTTPException(status_code=500, detail=msg) from e
