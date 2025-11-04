@@ -3,10 +3,11 @@
 import json
 import logging
 import os
+import uuid
 from typing import Any
 
 import anthropic
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from aiagent.langgraph.jobTaskGeneratorAgents import (
@@ -14,6 +15,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents import (
     create_job_task_generator_agent,
 )
 from app.schemas.job_generator import JobGeneratorRequest, JobGeneratorResponse
+from app.services.job_creation_state import job_state_manager
 from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
@@ -62,34 +64,75 @@ class RequirementRelaxationSuggestion(BaseModel):
 router = APIRouter()
 
 
+@router.get(
+    "/jobs/{job_id}/status",
+    summary="Get Job Creation Status",
+    description="Check the status of an async job creation process",
+    tags=["Job Generator"],
+)
+async def get_job_creation_status(job_id: str) -> dict[str, Any]:
+    """Get job creation status for polling.
+
+    Args:
+        job_id: Unique job ID from POST /job-generator
+
+    Returns:
+        {
+            "job_id": str,
+            "status": "creating" | "completed" | "failed",
+            "progress": 0-100,
+            "start_time": ISO timestamp,
+            "end_time": ISO timestamp (if completed/failed),
+            "job_master_id": str (if completed),
+            "error_message": str (if failed),
+            "result": dict (if completed)
+        }
+
+    Raises:
+        HTTPException: If job_id not found
+    """
+    logger.info(f"Status check requested for job_id: {job_id}")
+
+    status = job_state_manager.get_status(job_id)
+    if not status:
+        logger.warning(f"Job ID {job_id} not found")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Job ID {job_id} not found. Job may have been cleaned up or never existed.",
+        )
+
+    return status.model_dump()
+
+
 @router.post(
     "/job-generator",
     response_model=JobGeneratorResponse,
-    summary="Job/Task Auto-Generation",
-    description="Automatically generate Job and Tasks from natural language requirements using LangGraph agent",
+    summary="Job/Task Auto-Generation (Async)",
+    description="Asynchronously generate Job and Tasks from natural language requirements using LangGraph agent. Returns job_id immediately and processes in background.",
     tags=["Job Generator"],
 )
 async def generate_job_and_tasks(
     request: JobGeneratorRequest,
+    background_tasks: BackgroundTasks,
 ) -> JobGeneratorResponse:
-    """Generate Job and Tasks from natural language requirements.
+    """Generate Job and Tasks from natural language requirements (Async).
 
-    This endpoint uses a LangGraph agent to:
-    1. Analyze user requirements and decompose into tasks
-    2. Evaluate task quality and feasibility
-    3. Define JSON Schema interfaces
-    4. Create TaskMasters, JobMaster, and JobMasterTask associations
-    5. Validate workflow interfaces
-    6. Register executable Job
+    This endpoint:
+    1. Generates a unique job_id immediately
+    2. Starts background job creation process
+    3. Returns job_id for status polling
+
+    Use GET /api/v1/jobs/{job_id}/status to check progress.
 
     Args:
         request: Job generation request with user requirement
+        background_tasks: FastAPI background tasks
 
     Returns:
-        Job generation response with job_id, status, and detailed results
+        Job generation response with job_id and status='creating'
 
     Raises:
-        HTTPException: If job generation fails critically
+        HTTPException: If initial setup fails
     """
     logger.info(f"Job generation request received: {request.user_requirement[:100]}...")
 
@@ -111,40 +154,104 @@ async def generate_job_and_tasks(
                 detail="ANTHROPIC_API_KEY not configured in myVault. Please add it via CommonUI.",
             ) from e
 
-        # Create initial state
-        initial_state = create_initial_state(
+        # Generate unique job_id upfront
+        job_id = str(uuid.uuid4())
+        logger.info(f"Generated job_id: {job_id}")
+
+        # Create job creation tracking entry
+        job_state_manager.create_job(job_id)
+
+        # Start background job creation
+        background_tasks.add_task(
+            _create_job_in_background,
+            job_id=job_id,
             user_requirement=request.user_requirement,
+            max_retry=request.max_retry,
         )
 
-        # Override max retry count if specified
-        if request.max_retry != 5:
-            logger.info(f"Using custom max_retry: {request.max_retry}")
-            # Note: MAX_RETRY_COUNT is defined in agent.py (5 by default)
-            # This would require agent modification to support dynamic retry count
-            # For now, we log the request but use the default value
+        # Return immediately with job_id
+        return JobGeneratorResponse(
+            status="creating",
+            job_id=job_id,
+            job_master_id=None,
+            task_breakdown=None,
+            evaluation_result=None,
+            infeasible_tasks=[],
+            alternative_proposals=[],
+            api_extension_proposals=[],
+            requirement_relaxation_suggestions=[],
+            validation_errors=[],
+            error_message="Job creation started. Use GET /api/v1/jobs/{job_id}/status to check progress.",
+        )
+
+    except Exception as e:
+        logger.error(f"Job generation initial setup failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Job generation setup failed: {str(e)}",
+        ) from e
+
+
+async def _create_job_in_background(
+    job_id: str,
+    user_requirement: str,
+    max_retry: int,
+) -> None:
+    """Background task for job creation.
+
+    Args:
+        job_id: Unique job ID
+        user_requirement: User requirement text
+        max_retry: Maximum retry count
+    """
+    logger.info(f"[BG:{job_id}] Starting background job creation")
+
+    try:
+        # Create initial state
+        initial_state = create_initial_state(
+            user_requirement=user_requirement,
+        )
+
+        # Update progress: 10% - Initial state created
+        job_state_manager.update_progress(job_id, 10)
 
         # Create and invoke LangGraph agent
-        logger.info("Creating Job/Task Generator Agent")
+        logger.info(f"[BG:{job_id}] Creating Job/Task Generator Agent")
         agent = create_job_task_generator_agent()
 
-        logger.info("Invoking LangGraph agent")
+        # Update progress: 20% - Agent created
+        job_state_manager.update_progress(job_id, 20)
+
+        logger.info(f"[BG:{job_id}] Invoking LangGraph agent")
         # Phase 8: Set recursion_limit to 100 (increased due to multiple LLM calls and evaluations)
         final_state = await agent.ainvoke(
             initial_state, config={"recursion_limit": 100}
         )
 
-        logger.info("LangGraph agent execution completed")
-        logger.debug(f"Final state keys: {final_state.keys()}")
+        # Update progress: 90% - Agent execution completed
+        job_state_manager.update_progress(job_id, 90)
+
+        logger.info(f"[BG:{job_id}] LangGraph agent execution completed")
+        logger.debug(f"[BG:{job_id}] Final state keys: {final_state.keys()}")
 
         # Extract results from final state
-        return _build_response_from_state(final_state)
+        response = _build_response_from_state(final_state)
+
+        # Update progress: 100% - Completed
+        job_state_manager.mark_completed(
+            job_id=job_id,
+            job_master_id=response.job_master_id,
+            result=response.model_dump(),
+        )
+
+        logger.info(f"[BG:{job_id}] Job creation completed successfully")
 
     except Exception as e:
-        logger.error(f"Job generation failed: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Job generation failed: {str(e)}",
-        ) from e
+        logger.error(f"[BG:{job_id}] Job creation failed: {e}", exc_info=True)
+        job_state_manager.mark_failed(
+            job_id=job_id,
+            error_message=f"Job creation failed: {str(e)}",
+        )
 
 
 def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:

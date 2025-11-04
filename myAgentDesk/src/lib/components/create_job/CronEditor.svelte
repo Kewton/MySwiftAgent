@@ -106,28 +106,64 @@
 			<button
 				type="button"
 				on:click={() => setPreset('0 9 * * *')}
-				class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover transition"
+				class="px-3 py-2 text-sm border rounded-lg transition"
+				class:bg-indigo-100={cronExpression === '0 9 * * *'}
+				class:dark:bg-indigo-900={cronExpression === '0 9 * * *'}
+				class:border-indigo-500={cronExpression === '0 9 * * *'}
+				class:dark:border-indigo-400={cronExpression === '0 9 * * *'}
+				class:font-semibold={cronExpression === '0 9 * * *'}
+				class:border-gray-300={cronExpression !== '0 9 * * *'}
+				class:dark:border-gray-600={cronExpression !== '0 9 * * *'}
+				class:hover:bg-gray-50={cronExpression !== '0 9 * * *'}
+				class:dark:hover:bg-dark-hover={cronExpression !== '0 9 * * *'}
 			>
 				毎日9時
 			</button>
 			<button
 				type="button"
 				on:click={() => setPreset('0 */6 * * *')}
-				class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover transition"
+				class="px-3 py-2 text-sm border rounded-lg transition"
+				class:bg-indigo-100={cronExpression === '0 */6 * * *'}
+				class:dark:bg-indigo-900={cronExpression === '0 */6 * * *'}
+				class:border-indigo-500={cronExpression === '0 */6 * * *'}
+				class:dark:border-indigo-400={cronExpression === '0 */6 * * *'}
+				class:font-semibold={cronExpression === '0 */6 * * *'}
+				class:border-gray-300={cronExpression !== '0 */6 * * *'}
+				class:dark:border-gray-600={cronExpression !== '0 */6 * * *'}
+				class:hover:bg-gray-50={cronExpression !== '0 */6 * * *'}
+				class:dark:hover:bg-dark-hover={cronExpression !== '0 */6 * * *'}
 			>
 				6時間ごと
 			</button>
 			<button
 				type="button"
 				on:click={() => setPreset('0 9 * * 1')}
-				class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover transition"
+				class="px-3 py-2 text-sm border rounded-lg transition"
+				class:bg-indigo-100={cronExpression === '0 9 * * 1'}
+				class:dark:bg-indigo-900={cronExpression === '0 9 * * 1'}
+				class:border-indigo-500={cronExpression === '0 9 * * 1'}
+				class:dark:border-indigo-400={cronExpression === '0 9 * * 1'}
+				class:font-semibold={cronExpression === '0 9 * * 1'}
+				class:border-gray-300={cronExpression !== '0 9 * * 1'}
+				class:dark:border-gray-600={cronExpression !== '0 9 * * 1'}
+				class:hover:bg-gray-50={cronExpression !== '0 9 * * 1'}
+				class:dark:hover:bg-dark-hover={cronExpression !== '0 9 * * 1'}
 			>
 				毎週月曜9時
 			</button>
 			<button
 				type="button"
 				on:click={() => setPreset('0 9 1 * *')}
-				class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover transition"
+				class="px-3 py-2 text-sm border rounded-lg transition"
+				class:bg-indigo-100={cronExpression === '0 9 1 * *'}
+				class:dark:bg-indigo-900={cronExpression === '0 9 1 * *'}
+				class:border-indigo-500={cronExpression === '0 9 1 * *'}
+				class:dark:border-indigo-400={cronExpression === '0 9 1 * *'}
+				class:font-semibold={cronExpression === '0 9 1 * *'}
+				class:border-gray-300={cronExpression !== '0 9 1 * *'}
+				class:dark:border-gray-600={cronExpression !== '0 9 1 * *'}
+				class:hover:bg-gray-50={cronExpression !== '0 9 1 * *'}
+				class:dark:hover:bg-dark-hover={cronExpression !== '0 9 1 * *'}
 			>
 				毎月1日9時
 			</button>

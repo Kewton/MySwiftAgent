@@ -82,3 +82,49 @@ class MarpReportResponse(BaseModel):
         description="Generation time in milliseconds",
         ge=0,
     )
+
+
+class MarpReportGetResponse(BaseModel):
+    """Response schema for GET /marp-report/{job_id} endpoint.
+
+    This matches the frontend's expected schema from marp-api.ts.
+
+    Attributes:
+        job_id: Job ID
+        markdown: Generated Marp Markdown text
+        html: Marp-generated HTML (empty for now - client-side rendering)
+        pdf_url: PDF download URL (null for now)
+        png_urls: PNG URLs for each slide (null for now)
+        slide_count: Number of generated slides
+    """
+
+    job_id: str = Field(
+        ...,
+        description="Job ID",
+    )
+
+    markdown: str = Field(
+        ...,
+        description="Generated Marp Markdown text",
+    )
+
+    html: str = Field(
+        default="",
+        description="Marp-generated HTML (empty - client-side rendering recommended)",
+    )
+
+    pdf_url: str | None = Field(
+        default=None,
+        description="PDF download URL (not yet implemented)",
+    )
+
+    png_urls: list[str] | None = Field(
+        default=None,
+        description="PNG URLs for each slide (not yet implemented)",
+    )
+
+    slide_count: int = Field(
+        ...,
+        description="Number of generated slides",
+        ge=1,
+    )

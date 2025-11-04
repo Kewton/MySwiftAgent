@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { getMarpReport } from '$lib/services/marp-api';
 	import type { MarpReportResponse } from '$lib/services/marp-api';
+	import { Marp } from '@marp-team/marp-core';
 
 	export let jobId: string;
 	export let format: 'html' | 'pdf' | 'png' = 'html';
@@ -27,7 +28,16 @@
 
 		try {
 			report = await getMarpReport(jobId, format);
-			html = report.html;
+
+			// htmlが空の場合、Markdownをクライアント側でHTMLに変換
+			if (!report.html && report.markdown) {
+				const marp = new Marp();
+				const { html: renderedHtml } = marp.render(report.markdown);
+				html = renderedHtml;
+			} else {
+				html = report.html;
+			}
+
 			totalSlides = report.slide_count;
 			currentSlide = 1;
 			isLoading = false;
@@ -137,7 +147,8 @@
 		background: white;
 	}
 
+	/* ダークモード時もMarpスライドは白背景を維持（Marpのデフォルトスタイルは明るい背景用のため） */
 	:global(.dark) .marp-viewer iframe {
-		background: #1a1a1a;
+		background: white;
 	}
 </style>

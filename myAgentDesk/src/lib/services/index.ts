@@ -3,7 +3,7 @@
  */
 
 export { streamChatRequirementDefinition } from './chat-api';
-export { createJob } from './job-api';
+export { createJob, createJobAsync, getJobStatus, type JobStatus } from './job-api';
 export { createSchedule, getScheduleHistory, deleteSchedule, toggleSchedule } from './schedule-api';
 export { getMarpReport, getMarpMarkdown, getMarpPdfUrl, getMarpPngUrls } from './marp-api';
 export type {
