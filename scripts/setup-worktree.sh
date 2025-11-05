@@ -1,10 +1,15 @@
 #!/bin/bash
 # scripts/setup-worktree.sh
-# Worktree自動セットアップスクリプト（空きポート検出方式）
+# Worktree自動セットアップスクリプト（空きポート検出方式 + myVault/langfuse柔軟配置）
 #
 # Usage:
 #   cd ~/MySwiftAgent-worktrees/feature-issue-126
 #   ~/MySwiftAgent/scripts/setup-worktree.sh
+#
+# Features:
+#   - 空きポート自動検出・割り当て
+#   - myVault/langfuse の配置パターン選択（共有/独立/カスタム）
+#   - .env シンボリックリンク作成
 
 set -e
 
@@ -13,6 +18,7 @@ WORKTREE_NAME=$(basename "$WORKTREE_DIR")
 MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/MySwiftAgent")
 
 echo "📍 Setting up worktree: $WORKTREE_NAME"
+echo ""
 
 # .env.local が既に存在する場合は再実行しない
 if [ -f .env.local ]; then
@@ -124,17 +130,156 @@ elif [ -e .env ]; then
     echo "✅ .env already exists (symlink or file)"
 fi
 
-# myVault DB のコピー（並行起動対応）
-if [ -f "$MAIN_REPO/myVault/data/myvault.db" ]; then
-    mkdir -p myVault/data
-    cp "$MAIN_REPO/myVault/data/myvault.db" myVault/data/myvault.db
-    echo "✅ Copied myVault DB from main worktree"
-    echo "   Note: This is an independent copy for parallel execution."
-    echo "   Use ~/MySwiftAgent/scripts/sync-myvault-db.sh to sync updates."
-elif [ -d "$MAIN_REPO/myVault/data" ]; then
-    echo "⚠️  myVault DB not found in main worktree"
-    echo "   Expected: $MAIN_REPO/myVault/data/myvault.db"
-    echo "   Please run myVault setup in main worktree first."
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔐 myVault Directory Setup"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Select myVault directory placement:"
+echo "  1) Share with develop branch (symlink to $MAIN_REPO/myVault)"
+echo "     → Resource efficient, data shared across worktrees"
+echo "  2) Independent copy in current worktree (PWD/myVault)"
+echo "     → Fully isolated environment, safe for parallel testing"
+echo "  3) Custom path (manual input)"
+echo "     → Flexible, share with specific worktrees"
+echo ""
+read -p "Enter choice [1-3] (default: 1): " myvault_choice
+myvault_choice=${myvault_choice:-1}
+
+case $myvault_choice in
+    1)
+        # 共有モード（developブランチ）
+        if [ -d "$MAIN_REPO/myVault" ]; then
+            if [ -e myVault ]; then
+                rm -rf myVault
+            fi
+            ln -s "$MAIN_REPO/myVault" myVault
+            echo "✅ Created symlink: myVault -> $MAIN_REPO/myVault"
+            echo "   Note: Sharing myVault with develop branch."
+        else
+            echo "⚠️  $MAIN_REPO/myVault not found. Creating independent copy instead."
+            mkdir -p myVault/data
+        fi
+        ;;
+    2)
+        # 独立モード（PWD）
+        mkdir -p myVault/data
+        if [ -f "$MAIN_REPO/myVault/data/myvault.db" ]; then
+            cp "$MAIN_REPO/myVault/data/myvault.db" myVault/data/myvault.db
+            echo "✅ Created independent myVault directory"
+            echo "   Copied DB from: $MAIN_REPO/myVault/data/myvault.db"
+            echo "   Note: Use ~/MySwiftAgent/scripts/sync-myvault-db.sh to sync updates."
+        else
+            echo "✅ Created independent myVault directory"
+            echo "⚠️  Source DB not found. Starting with empty DB."
+        fi
+        ;;
+    3)
+        # カスタムモード（手動入力）
+        read -p "Enter custom myVault path: " custom_myvault_path
+        if [ -d "$custom_myvault_path" ]; then
+            if [ -e myVault ]; then
+                rm -rf myVault
+            fi
+            ln -s "$custom_myvault_path" myVault
+            echo "✅ Created symlink: myVault -> $custom_myvault_path"
+        else
+            echo "❌ Path not found: $custom_myvault_path"
+            echo "   Creating independent directory instead."
+            mkdir -p myVault/data
+        fi
+        ;;
+    *)
+        echo "❌ Invalid choice. Creating independent directory."
+        mkdir -p myVault/data
+        ;;
+esac
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔍 Langfuse Directory Setup"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Select Langfuse directory placement:"
+echo "  1) Share with develop branch (symlink to $MAIN_REPO/langfuse)"
+echo "     → Resource efficient, single Docker instance"
+echo "  2) Independent copy in current worktree (PWD/langfuse)"
+echo "     → Fully isolated environment, separate Docker instance"
+echo "  3) Custom path (manual input)"
+echo "     → Flexible, share with specific worktrees"
+echo ""
+read -p "Enter choice [1-3] (default: 1): " langfuse_choice
+langfuse_choice=${langfuse_choice:-1}
+
+case $langfuse_choice in
+    1)
+        # 共有モード（developブランチ）
+        if [ -d "$MAIN_REPO/langfuse" ]; then
+            if [ -e langfuse ]; then
+                rm -rf langfuse
+            fi
+            ln -s "$MAIN_REPO/langfuse" langfuse
+            echo "✅ Created symlink: langfuse -> $MAIN_REPO/langfuse"
+            echo "   Note: Sharing Langfuse with develop branch."
+        else
+            echo "⚠️  $MAIN_REPO/langfuse not found. Creating independent copy instead."
+            mkdir -p langfuse
+        fi
+        ;;
+    2)
+        # 独立モード（PWD）
+        if [ -d "$MAIN_REPO/langfuse" ]; then
+            # 設定ファイルのみコピー（データは除外）
+            mkdir -p langfuse
+            [ -f "$MAIN_REPO/langfuse/.env.example" ] && cp "$MAIN_REPO/langfuse/.env.example" langfuse/
+            [ -f "$MAIN_REPO/langfuse/docker-compose.langfuse.yml" ] && cp "$MAIN_REPO/langfuse/docker-compose.langfuse.yml" langfuse/
+            [ -f "$MAIN_REPO/langfuse/README.md" ] && cp "$MAIN_REPO/langfuse/README.md" langfuse/
+            echo "✅ Created independent langfuse directory"
+            echo "   Copied config files from: $MAIN_REPO/langfuse/"
+            echo "   Note: You can start your own Langfuse instance here."
+        else
+            echo "⚠️  $MAIN_REPO/langfuse not found. Directory already exists in git."
+            echo "✅ Using existing langfuse directory"
+        fi
+        ;;
+    3)
+        # カスタムモード（手動入力）
+        read -p "Enter custom langfuse path: " custom_langfuse_path
+        if [ -d "$custom_langfuse_path" ]; then
+            if [ -e langfuse ]; then
+                rm -rf langfuse
+            fi
+            ln -s "$custom_langfuse_path" langfuse
+            echo "✅ Created symlink: langfuse -> $custom_langfuse_path"
+        else
+            echo "❌ Path not found: $custom_langfuse_path"
+            echo "   Creating independent directory instead."
+            mkdir -p langfuse
+        fi
+        ;;
+    *)
+        echo "❌ Invalid choice. Using existing directory."
+        ;;
+esac
+
+# .env.local にセットアップ情報を追記
+cat >> .env.local <<EOF
+
+# Setup Configuration (for reference)
+# myVault: $([ -L myVault ] && echo "Shared (symlink)" || echo "Independent")
+# langfuse: $([ -L langfuse ] && echo "Shared (symlink)" || echo "Independent")
+EOF
+
+if [ -L myVault ]; then
+    cat >> .env.local <<EOF
+# Note: myVault is shared. Port settings above may not apply.
+EOF
+fi
+
+if [ -L langfuse ]; then
+    cat >> .env.local <<EOF
+# Note: langfuse is shared. Port settings above may not apply.
+EOF
 fi
 
 echo ""
@@ -149,7 +294,24 @@ echo "   2. Start development servers:"
 echo "      cd expertAgent && uv run uvicorn app.main:app --reload"
 echo "      cd myAgentDesk && npm run dev"
 echo ""
-echo "   3. Access services:"
+if [ -L myVault ]; then
+    echo "   3. myVault: Shared with $MAIN_REPO/myVault"
+    echo "      - Access via shared instance"
+else
+    echo "   3. myVault: Independent instance"
+    echo "      - Start: cd myVault && uv run uvicorn app.main:app --reload"
+    echo "      - Access: http://localhost:$PORT_MYVAULT"
+fi
+echo ""
+if [ -L langfuse ]; then
+    echo "   4. Langfuse: Shared with $MAIN_REPO/langfuse"
+    echo "      - Access via shared instance at http://localhost:3001"
+else
+    echo "   4. Langfuse: Independent instance"
+    echo "      - Start: cd langfuse && docker compose -f docker-compose.langfuse.yml --env-file .env up -d"
+    echo "      - Access: http://localhost:3001 (or custom port if configured)"
+fi
+echo ""
+echo "   5. Access services:"
 echo "      - expertAgent: http://localhost:$PORT_EXPERTAGENT"
-echo "      - myVault: http://localhost:$PORT_MYVAULT"
 echo "      - myAgentDesk: http://localhost:$PORT_VITE"

@@ -545,4 +545,10 @@ docker-compose-data/
 # CommonUI Data (script execution)
 # ===================================================================
 commonUI/data/
-langfuse
+
+# ===================================================================
+# Langfuse (keep config, exclude runtime data)
+# ===================================================================
+langfuse/.env
+langfuse/docker-compose-data/
+langfuse/data/
