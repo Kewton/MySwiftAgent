@@ -12,7 +12,7 @@ Endpoints:
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from app.schemas.chat import (
@@ -147,7 +147,7 @@ async def requirement_definition(request: RequirementChatRequest):
 
 
 @router.post("/create-job", response_model=CreateJobResponse)
-async def create_job(request: CreateJobRequest):
+async def create_job(request: CreateJobRequest, background_tasks: BackgroundTasks):
     """Create job from clarified requirements.
 
     Converts clarified requirements into a Job Generator request and
@@ -211,7 +211,7 @@ async def create_job(request: CreateJobRequest):
         # Call existing Job Generator endpoint
         from app.api.v1.job_generator_endpoints import generate_job_and_tasks
 
-        result = await generate_job_and_tasks(job_generator_request)
+        result = await generate_job_and_tasks(job_generator_request, background_tasks)
 
         # Extract job IDs from result (JobGeneratorResponse is a Pydantic model)
         job_id = result.job_id

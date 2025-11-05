@@ -11,81 +11,108 @@ Design philosophy:
 - Threshold: 80% completeness required for job creation
 """
 
+import logging
 from typing import Dict, List
 
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+    StructuredLLMError,
+    invoke_structured_llm,
+)
 from app.schemas.chat import RequirementState
+
+logger = logging.getLogger(__name__)
 
 REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT = """
 あなたはドメインエキスパート向けのジョブ作成アシスタントです。
 
 ## あなたの役割
-1. ユーザーの曖昧な要求を段階的に明確化する
-2. 技術的な詳細ではなく、ビジネス上の目的（What）に焦点を当てる
-3. 必要最小限の情報を収集し、実装方法（How）は自動で決定する
+ユーザーの要求を4つの観点から構造化して明確化し、仮説を立てて確認を得るアプローチを取ります。
 
-## 明確化すべき要件
-以下の4つの要件を順番に明確化してください：
+## 4つの観点（重要度順）
+1. **処理内容** (35%) - 何をしたいか（最重要）
+2. **データソース** (25%) - どのデータを使うか
+3. **出力形式** (25%) - どのような形式で結果が欲しいか
+4. **スケジュール** (15%) - いつ実行するか
 
-1. **データソース** (重要度: 25%)
-   - どのデータを使うか
-   - 例: CSVファイル、Excelファイル、データベース、Google Sheets、API
+## 対話の進め方
 
-2. **処理内容** (重要度: 35% - 最重要)
-   - 何をしたいか
-   - 例: データ分析、レポート生成、メール送信、通知、集計
+### 初回メッセージ時
+ユーザーの最初の入力から、4つの観点すべてについて仮説を立ててください。
+不明な観点があっても、可能な限り推測して仮説を提示してください。
 
-3. **出力形式** (重要度: 25%)
-   - どのような形式で結果が欲しいか
-   - 例: Excelレポート、PDFドキュメント、メール、Slack通知、JSON API
+**提示すべき内容**（形式は自由）:
+- **処理内容の仮説** + 他の選択肢（3つ程度）
+- **データソースの仮説** + 他の選択肢（CSVファイル / Excelファイル / データベース / API など）
+- **出力形式の仮説** + 他の選択肢（Excelレポート / PDFレポート / メール / Slack通知 など）
+- **スケジュールの仮説** + 他の選択肢（オンデマンド / 毎日 / 毎週 / 毎月 など）
+- **確認の問いかけ**（この理解で合っていますか？修正したい箇所があれば教えてください）
 
-4. **スケジュール** (重要度: 15%)
-   - いつ実行するか
-   - 例: オンデマンド、毎日朝9時、毎週月曜日、毎月1日
+**重要**: 上記4つの観点すべてについて、仮説と選択肢を必ず提示してください。
+形式は自然な日本語で読みやすければOKです。
 
-## 対話のガイドライン
+### フィードバック対応時
+ユーザーが修正を指示したら：
+1. 修正された観点を更新
+2. 更新後の全体像を再度提示
+3. 他に修正が必要か確認
 
-### 質問の仕方
-- **一度に1つの質問** をする（複数質問は避ける）
-- **専門用語を避け**、わかりやすい言葉を使う
-- ユーザーが迷っている場合は**選択肢を提示**する
-- 具体例を示して理解を助ける
+### 仮説の立て方のルール
+- **具体的に**: 「データ分析」→「売上データの月次推移分析」
+- **実現可能に**: 技術的に実装できる範囲で
+- **簡潔に**: 1観点あたり1〜2文で
+- **不明な場合**: 最も一般的な選択肢を仮説とする
 
-### 質問の順序
-1. まず処理内容を聞く（最重要）
-2. 次にデータソースを聞く
-3. 出力形式を聞く
-4. 最後にスケジュールを聞く
+### 完成度の判断
+すべての観点について仮説が確定したら（completeness >= 0.8）：
 
-### 応答の形式
-- 自然な日本語で会話する
-- 箇条書きは最小限に
-- ユーザーの回答を確認・要約する
-- 次に何を聞くか明示する
+**提示すべき内容**（形式は自由）:
+- 要件が整ったことを伝える
+- 確定した要件を4つの観点で整理してサマリー表示
+  - 処理内容
+  - データソース
+  - 出力形式
+  - スケジュール
+- 「ジョブを作成」ボタンのクリックを促す
 
-### completeness計算ルール
-- data_source明確: +0.25
-- process_description明確: +0.35（最重要）
-- output_format明確: +0.25
-- schedule明確: +0.15
+形式は自然な日本語で読みやすければOKです。
+
+## 重要な注意事項
+- **必ず4つの観点すべてについて仮説を提示**（不明でも推測）
+- **選択肢は具体的で分かりやすく**
+- **技術的な詳細は聞かない**（実装方法、ライブラリ等）
+- **一度に複数質問しない**（仮説確認のみ）
+- **ユーザーの言葉を尊重**（専門用語を使わない）
+
+## 応答形式の重要なルール
+
+あなたの応答には**2つの部分**が必要です：
+
+### 1. ユーザー向けテキスト（自由形式）
+自然な日本語で、4つの観点の仮説と選択肢を提示してください。
+
+### 2. 抽出用JSON（必須・厳密）
+ユーザー向けテキストの**最後に**、以下のJSON形式で要件情報を必ず出力してください：
+
+```json
+{
+  "data_source": "仮説または確定値（例: CSVファイル）",
+  "process_description": "仮説または確定値（例: 売上データを分析したい）",
+  "output_format": "仮説または確定値（例: Excelレポート）",
+  "schedule": "仮説または確定値（例: 毎日実行）"
+}
+```
+
+**重要**:
+- 4つのフィールドすべて必須（不明な場合は推測値を入れる）
+- JSONは応答の最後に配置
+- JSON前後に ```json ``` のマーカーは不要
+
+## completeness計算ルール
+- data_source確定: +0.25
+- process_description確定: +0.35（最重要）
+- output_format確定: +0.25
+- schedule確定: +0.15
 - **合計0.8以上（80%）でジョブ作成可能**
-
-### 明確化完了の判断
-completenessが0.8以上になったら、以下のように提案してください：
-
-「要件が整いました！以下の内容でジョブを作成しますか？
-
-📋 要件サマリー
-- データソース: [X]
-- 処理内容: [Y]
-- 出力形式: [Z]
-- スケジュール: [W]
-
-「ジョブを作成」ボタンをクリックしてください。」
-
-## 注意事項
-- 実装方法（プログラミング言語、ライブラリ等）は聞かない
-- APIの技術的詳細は聞かない
-- ユーザーが技術的な質問をしても、ビジネス要件に誘導する
 """
 
 
@@ -133,34 +160,29 @@ def create_requirement_clarification_prompt(
 - 明確化率: {int(current_requirements.completeness * 100)}%
 """
 
-    # Suggest next question if completeness < 80%
-    next_question_hint = ""
-    if current_requirements.completeness < 0.8:
-        if not current_requirements.process_description:
-            next_question_hint = "\n（ヒント: まず処理内容を聞きましょう）"
-        elif not current_requirements.data_source:
-            next_question_hint = "\n（ヒント: 次はデータソースを聞きましょう）"
-        elif not current_requirements.output_format:
-            next_question_hint = "\n（ヒント: 次は出力形式を聞きましょう）"
-        elif not current_requirements.schedule:
-            next_question_hint = "\n（ヒント: 最後にスケジュールを聞きましょう）"
+    # Determine if this is the first message
+    is_first_message = len(recent_messages) == 0
+
+    # Suggest next action based on completeness
+    action_hint = ""
+    if is_first_message:
+        action_hint = "\n\n## あなたのタスク\n1. ユーザーのメッセージから4つの観点すべてについて仮説を立てる\n2. 仮説提示形式に従って、具体的な仮説と選択肢を提示する\n3. ユーザーに確認を求める"
+    elif current_requirements.completeness < 0.8:
+        action_hint = "\n\n## あなたのタスク\n1. ユーザーのフィードバックを反映して仮説を更新する\n2. 更新後の全体像を再度提示する\n3. 他に修正が必要か確認する"
+    else:
+        action_hint = "\n\n## あなたのタスク\n1. 要件が整ったことを伝える\n2. 確定した要件をサマリー形式で提示する\n3. 「ジョブを作成」ボタンのクリックを促す"
 
     return f"""
-{requirements_status}{next_question_hint}
+{requirements_status}
 
 ## 対話履歴
 {history}
 
 ## ユーザーの最新メッセージ
 user: {user_message}
+{action_hint}
 
-## あなたのタスク
-1. ユーザーの最新メッセージから要件を抽出する
-2. 不明な点があれば1つ質問を返す（複数質問禁止）
-3. 要件が十分明確（80%以上）なら、ジョブ作成を提案する
-4. 自然な日本語で応答する
-
-応答してください。
+応答してください（内容が明確であれば、形式は自然な日本語で自由に表現してOKです）。
 """
 
 
@@ -202,104 +224,105 @@ def calculate_completeness(state: RequirementState) -> float:
     return score
 
 
-def extract_requirement_from_message(
-    user_message: str, assistant_response: str, current: RequirementState
+async def extract_requirement_with_llm(
+    user_message: str,
+    assistant_response: str,
+    current_requirements: RequirementState,
 ) -> RequirementState:
-    """Extract requirement information from conversation messages.
+    """LLMを使用して要件を抽出・更新します。
 
-    This is a simple keyword-based extraction for Phase 1.
-    Future phases will use LLM structured output for better accuracy.
+    ユーザーメッセージとアシスタント応答を分析し、構造化出力で
+    RequirementState を正確に抽出します。
 
     Args:
-        user_message: User's message
-        assistant_response: Assistant's response
-        current: Current requirement state
+        user_message: ユーザーのメッセージ
+        assistant_response: アシスタントの応答
+        current_requirements: 現在の要件状態
 
     Returns:
-        Updated requirement state
+        更新された要件状態
+
+    Raises:
+        StructuredLLMError: LLM呼び出しが失敗した場合
 
     Example:
-        >>> state = RequirementState(completeness=0.0)
-        >>> updated = extract_requirement_from_message(
-        ...     "CSVファイルを使います",
+        >>> state = RequirementState(data_source="CSVファイル")
+        >>> updated = await extract_requirement_with_llm(
+        ...     "データソースはExcel",
         ...     "かしこまりました",
         ...     state
         ... )
         >>> print(updated.data_source)
-        CSVファイル
+        Excelファイル
     """
-    updated = current.model_copy()
+    # システムプロンプト
+    system_prompt = """あなたは要件抽出の専門家です。
+ユーザーとアシスタントの対話から、ジョブ作成に必要な要件を抽出してください。
 
-    # Combine both messages for analysis
-    combined_text = f"{user_message} {assistant_response}"
+## 抽出する要件（4項目）
+1. data_source: データソース（CSVファイル、Excelファイル、データベース等）
+2. process_description: 処理内容（何をしたいか）
+3. output_format: 出力形式（Excelレポート、PDF、メール等）
+4. schedule: スケジュール（毎日、毎週、オンデマンド等）
 
-    # Simple keyword-based extraction
-    # Data source
-    if not updated.data_source:
-        if "CSV" in combined_text or "csv" in combined_text:
-            updated.data_source = "CSVファイル"
-        elif (
-            "Excel" in combined_text
-            or "excel" in combined_text
-            or "エクセル" in combined_text
-        ):
-            updated.data_source = "Excelファイル"
-        elif (
-            "データベース" in combined_text
-            or "DB" in combined_text
-            or "PostgreSQL" in combined_text
-            or "MySQL" in combined_text
-        ):
-            updated.data_source = "データベース"
-        elif (
-            "Google Sheets" in combined_text
-            or "Googleスプレッドシート" in combined_text
-        ):
-            updated.data_source = "Google Sheets"
-        elif "API" in combined_text:
-            updated.data_source = "API"
+## 重要なルール
+- ユーザーが明示的に修正を指示した場合は、**必ず**その値に更新してください
+  例: 「データソースはExcel」→ data_source = "Excelファイル"
+- 現在の要件状態と異なる値を指定された場合は、**上書き**してください
+- 言及されていない項目は、現在の値を維持してください（nullのままなら null）
+- 推測はできるだけ避け、明示的に言及された内容のみ抽出してください
+- 値は具体的な日本語で記述してください（例: "CSV" → "CSVファイル"）
+"""
 
-    # Process description (extract from user message mainly)
-    if not updated.process_description and len(user_message) > 5:
-        # Simple heuristic: if user message mentions action verbs
-        action_keywords = [
-            "分析",
-            "集計",
-            "生成",
-            "送信",
-            "通知",
-            "処理",
-            "計算",
-            "作成",
-        ]
-        if any(keyword in user_message for keyword in action_keywords):
-            updated.process_description = user_message[:100]  # Limit length
+    # ユーザープロンプト
+    user_prompt = f"""## 現在の要件状態
+- data_source: {current_requirements.data_source or "未設定"}
+- process_description: {current_requirements.process_description or "未設定"}
+- output_format: {current_requirements.output_format or "未設定"}
+- schedule: {current_requirements.schedule or "未設定"}
 
-    # Output format
-    if not updated.output_format:
-        if "Excel" in combined_text and "レポート" in combined_text:
-            updated.output_format = "Excelレポート"
-        elif "PDF" in combined_text:
-            updated.output_format = "PDFドキュメント"
-        elif "メール" in combined_text or "email" in combined_text:
-            updated.output_format = "メール"
-        elif "Slack" in combined_text:
-            updated.output_format = "Slack通知"
-        elif "JSON" in combined_text or "API" in combined_text:
-            updated.output_format = "JSON API"
+## 対話内容
+### ユーザー
+{user_message}
 
-    # Schedule
-    if not updated.schedule:
-        if "毎日" in combined_text:
-            updated.schedule = "毎日実行"
-        elif "毎週" in combined_text:
-            updated.schedule = "毎週実行"
-        elif "毎月" in combined_text:
-            updated.schedule = "毎月実行"
-        elif "オンデマンド" in combined_text or "手動" in combined_text:
-            updated.schedule = "オンデマンド実行"
+### アシスタント
+{assistant_response}
 
-    # Recalculate completeness
-    updated.completeness = calculate_completeness(updated)
+上記の対話から、要件を抽出して更新してください。
+"""
 
-    return updated
+    # LLMを構造化出力モードで呼び出し
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    try:
+        result = await invoke_structured_llm(
+            messages=messages,
+            response_model=RequirementState,
+            context_label="requirement_extraction",
+            model_env_var="REQUIREMENT_EXTRACTION_MODEL",
+            default_model="gemini-2.0-flash",
+        )
+
+        # Recalculate completeness based on filled fields (don't trust LLM's calculation)
+        extracted_state = result.result
+        extracted_state.completeness = calculate_completeness(extracted_state)
+
+        logger.info(
+            f"Successfully extracted requirements via LLM: "
+            f"completeness={extracted_state.completeness:.0%} "
+            f"(data_source={'set' if extracted_state.data_source else 'unset'}, "
+            f"process={'set' if extracted_state.process_description else 'unset'}, "
+            f"output={'set' if extracted_state.output_format else 'unset'}, "
+            f"schedule={'set' if extracted_state.schedule else 'unset'})"
+        )
+
+        return extracted_state
+
+    except StructuredLLMError as e:
+        logger.error(f"LLM requirement extraction failed: {e}")
+        # Fallback: return current state unchanged
+        logger.warning("Falling back to current requirements state")
+        return current_requirements

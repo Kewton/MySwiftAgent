@@ -194,6 +194,27 @@ function createConversationStore() {
 		},
 
 		/**
+		 * 最後のメッセージを更新（経過時間表示用）
+		 */
+		updateLastMessage: (id: string, updatedMessage: Message) => {
+			update((state) => {
+				const conversations = state.conversations.map((conv) => {
+					if (conv.id === id) {
+						const messages = [...conv.messages];
+						const lastIdx = messages.length - 1;
+						if (lastIdx >= 0) {
+							messages[lastIdx] = updatedMessage;
+						}
+						return { ...conv, messages, updatedAt: Date.now() };
+					}
+					return conv;
+				});
+
+				return { ...state, conversations };
+			});
+		},
+
+		/**
 		 * 要求状態を更新
 		 */
 		updateRequirements: (id: string, requirements: RequirementState) => {

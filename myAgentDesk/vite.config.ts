@@ -14,6 +14,11 @@ export default defineConfig({
 				target: process.env.CLOUDFLARE_API_URL || 'http://localhost:8787',
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api/, '')
+			},
+			// expertAgent API proxy (worktree-aware)
+			'/aiagent-api': {
+				target: process.env.EXPERT_AGENT_URL || 'http://localhost:8114',
+				changeOrigin: true
 			}
 		}
 	},
