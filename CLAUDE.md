@@ -791,40 +791,133 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 ```
 
-### myVault データベースの並行起動対応
+### myVault / langfuse の柔軟な配置戦略
 
-**WALモード有効化により、複数worktreeでの同時起動が可能です。**
+**テスト環境構築効率化のため、myVaultとlangfuseを複数worktreeから共有可能にしつつ、別端末での環境構築も確実に動作させます。**
 
-#### 戦略
+#### 配置パターン（3種類）
 
-1. **独立データベース**: 各worktreeで独立したSQLiteデータベースを使用
-2. **WALモード**: 並行書き込みパフォーマンスを向上（通常の2-3倍）
-3. **DB同期**: 重要なシークレット追加時に `scripts/sync-myvault-db.sh` で同期
+`scripts/setup-worktree.sh` 実行時に、myVaultとlangfuseの両方について以下3パターンから選択できます：
 
-#### 運用フロー
+| パターン | 配置方法 | メリット | デメリット | 推奨ユースケース |
+|---------|---------|---------|----------|-----------------|
+| **1. 共有 (develop)** | `../../MySwiftAgent/{myVault,langfuse}` へのシンボリックリンク | ✅ リソース効率的<br>✅ データ共有可能<br>✅ ポート競合なし | ⚠️ developブランチ依存 | **開発効率重視**<br>複数worktreeで同じデータを参照 |
+| **2. 独立 (PWD)** | カレントworktree内に実ディレクトリ配置 | ✅ 完全に独立した環境<br>✅ 安全性が高い<br>✅ 別端末でも動作 | ⚠️ リソース消費増<br>⚠️ ポート管理必要 | **複数worktreeで並行テスト**<br>**CI/CD環境**<br>**別端末での初回セットアップ** |
+| **3. カスタム** | 任意のパスへのシンボリックリンク | ✅ 柔軟性が高い<br>✅ 複数worktreeで共有可能 | ⚠️ 手動管理が必要 | **特定worktree間のみ共有** |
+
+#### セットアップフロー
 
 ```bash
-# 1. worktree作成時: メインworktreeのDBを自動コピー
+# 1. worktree作成
+git worktree add ../MySwiftAgent-worktrees/feature-issue-126 -b feature/issue/126
+cd ../MySwiftAgent-worktrees/feature-issue-126
+
+# 2. セットアップスクリプト実行（対話的に選択）
 ~/MySwiftAgent/scripts/setup-worktree.sh
 
-# 2. 開発中: 各worktreeで独立してmyVaultを起動可能
-cd myVault
-uv run uvicorn app.main:app --reload  # ポート番号は自動割り当て
+# 🔐 myVault Directory Setup
+# Select myVault directory placement:
+#   1) Share with develop branch (symlink to ~/MySwiftAgent/myVault)
+#   2) Independent copy in current worktree (PWD/myVault)
+#   3) Custom path (manual input)
+# Enter choice [1-3] (default: 1): 1  ← 開発効率重視の場合
 
-# 3. 重要なシークレット追加後: 全worktreeに同期
+# 🔍 Langfuse Directory Setup
+# Select Langfuse directory placement:
+#   1) Share with develop branch (symlink to ~/MySwiftAgent/langfuse)
+#   2) Independent copy in current worktree (PWD/langfuse)
+#   3) Custom path (manual input)
+# Enter choice [1-3] (default: 1): 1  ← リソース効率重視の場合
+```
+
+#### 各パターンの詳細
+
+**パターン1: 共有モード（デフォルト推奨）**
+```bash
+# ディレクトリ構造
+feature-issue-126/
+├── myVault -> ~/MySwiftAgent/myVault      # シンボリックリンク
+├── langfuse -> ~/MySwiftAgent/langfuse    # シンボリックリンク
+└── .env.local                             # ポート番号は共有元に従う
+
+# メリット
+# - developブランチと同じmyVault DBを参照
+# - Langfuse Docker環境を共有（1インスタンスのみ起動）
+# - ディスク容量節約
+```
+
+**パターン2: 独立モード（並行テスト推奨）**
+```bash
+# ディレクトリ構造
+feature-issue-126/
+├── myVault/                               # 実ディレクトリ
+│   └── data/myvault.db                   # 独立DB（WALモード有効）
+├── langfuse/                              # 実ディレクトリ
+│   ├── .env.example                      # 設定ファイル
+│   └── docker-compose.langfuse.yml       # Docker Compose設定
+└── .env.local                             # worktree固有ポート番号
+
+# メリット
+# - 完全に独立した環境（他worktreeに影響なし）
+# - 別端末でクローンしても即座に利用可能
+# - 並行テストに最適
+
+# セットアップ（独立モード選択時）
+cd myVault
+cp .env.example .env  # 初回のみ
+uv run uvicorn app.main:app --reload --port 8113  # worktree固有ポート
+
+cd langfuse
+cp .env.example .env  # 初回のみ
+docker compose -f docker-compose.langfuse.yml --env-file .env up -d
+```
+
+**パターン3: カスタムモード（柔軟性重視）**
+```bash
+# 例: 複数worktreeで共有するが、developブランチとは分離
+mkdir -p ~/MySwiftAgent-shared/myVault
+mkdir -p ~/MySwiftAgent-shared/langfuse
+
+# setup-worktree.sh でカスタムパスを指定
+# Enter custom myVault path: ~/MySwiftAgent-shared/myVault
+# Enter custom langfuse path: ~/MySwiftAgent-shared/langfuse
+```
+
+#### DB同期（独立モード時）
+
+独立モード選択時、myVault DBは自動的にdevelopブランチからコピーされます。重要なシークレット追加後に同期が必要な場合：
+
+```bash
+# 全worktreeのmyVault DBを最新版に同期
 ~/MySwiftAgent/scripts/sync-myvault-db.sh
 ```
 
-**メリット**: 若干の性能低下はあるものの、各worktreeでmyVaultを独立起動できます。
+#### 別端末での環境構築
+
+**重要**: langfuse設定ファイルがgit管理されているため、別端末でも即座に利用可能です。
+
+```bash
+# 別端末でクローン
+git clone https://github.com/your-org/MySwiftAgent.git
+cd MySwiftAgent
+
+# langfuse/.env.example から .env を作成
+cd langfuse
+cp .env.example .env
+
+# Docker起動
+docker compose -f docker-compose.langfuse.yml --env-file .env up -d
+```
 
 ## 📋 worktree作業時のチェックリスト
 
 ### worktree作成時
 
 - [ ] `git worktree add` でworktreeを作成
-- [ ] `scripts/setup-worktree.sh` を実行してポート設定
+- [ ] `scripts/setup-worktree.sh` を実行（myVault/langfuseの配置パターンを選択）
 - [ ] 各プロジェクトで `uv sync` / `npm install` を実行
 - [ ] `.env.local` でポート番号が正しく設定されているか確認
+- [ ] 独立モードの場合、`langfuse/.env` を作成してDocker起動
 - [ ] 開発サーバーを起動して、ポート衝突がないか確認
 
 ### worktree削除時
@@ -839,9 +932,12 @@ uv run uvicorn app.main:app --reload  # ポート番号は自動割り当て
 - ✅ `.git` ディレクトリはメインworktreeのみに存在し、他のworktreeは参照のみ
 - ✅ `git fetch`, `git pull` はどのworktreeからでも実行可能
 - ✅ `git push` は各worktreeで独立して実行
-- ✅ myVaultは各worktreeで独立起動可能（WALモード有効化済み）
+- ✅ myVault/langfuseは配置戦略に応じて**共有モード/独立モード**を選択可能
+  - 共有モード: リソース効率的、developブランチと同じDBを参照
+  - 独立モード: 完全に独立した環境、WALモード有効化済み
 - ❌ 大容量ファイル（node_modules, .venv, ログファイル等）はworktree毎に生成されるため、ディスク容量に注意
 - ❌ 推奨最大worktree数: 3-4個（ディスク容量とパフォーマンスのバランス）
+  - 独立モード選択時は特にディスク容量に注意（Langfuse Dockerボリュームが大きい）
 
 ## 🛠️ 便利コマンド
 
