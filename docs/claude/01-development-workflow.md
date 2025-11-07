@@ -36,30 +36,34 @@ graph LR
 | フェーズ | 利用スキル | モデル | コマンド | セッション | 用途 |
 |---------|-----------|--------|----------|-----------|------|
 | **1. Feature定義** | 要件定義 | Opus | `/requirements` | メイン | ユーザーストーリー、受入条件作成 |
-| **2. 仕様ドラフト** | 設計方針 | Opus | `/design` | メイン | アーキテクチャ設計、技術選定 |
-| **3. レビュー・承認** | アーキテクチャレビュー | Opus | `/review-arch` | メイン | 設計レビュー、リスク評価 |
-| **4. Issue分割** | Issue分割 | Opus | `/issue-split` | メイン | FeatureをIssueに分割 |
-| **5. 作業計画** | 作業計画 | Opus | `/plan` | メイン | Issue単位の詳細作業計画 |
-| **6. ブランチ作成** | - | Sonnet | - | **→ worktree** | git worktreeでissueブランチ作成 |
-| **7. 開発（実装）** | - | Sonnet | - | worktree | コード実装（手動作業） |
-| **8. テスト作成** | - | Sonnet | - | worktree | 単体・結合テスト作成（手動作業） |
-| **9. リファクタリング** | リファクタリング | Sonnet | `/refactor` | worktree | コード品質改善（必要時） |
-| **10. 進捗管理** | 進捗報告 | Sonnet | `/progress` | worktree | 進捗サマリ、ブロッカー報告 |
-| **11. PR作成** | - | Sonnet | - | worktree | Pull Request作成（手動作業） |
-| **12. コードレビュー** | アーキテクチャレビュー | Opus | `/review-arch` | worktree | コードレビュー支援（必要時） |
-| **13. CI/CD実行** | - | Sonnet | - | worktree | 自動テスト・ビルド（自動処理） |
-| **14. マージ** | - | Sonnet | - | worktree | developブランチへマージ（手動作業） |
+| **2. UIモックアップ** 🆕 | UIデザイン | Sonnet | `/ui-mockup` | メイン | UI必要時のみ、4パターン生成 |
+| **3. 仕様ドラフト** | 設計方針 | Opus | `/design` | メイン | アーキテクチャ設計、技術選定 |
+| **4. レビュー・承認** | アーキテクチャレビュー | Opus | `/review-arch` | メイン | 設計レビュー、リスク評価 |
+| **5. Issue分割** | Issue分割 | Opus | `/issue-split` | メイン | FeatureをIssueに分割 |
+| **6. 作業計画** | 作業計画 | Opus | `/plan` | メイン | Issue単位の詳細作業計画 |
+| **7. ブランチ作成** | - | Sonnet | - | **→ worktree** | git worktreeでissueブランチ作成 |
+| **8. 開発（TDD実装）** | TDD実装 | Sonnet | `/tdd-impl` | worktree | テスト駆動開発による実装 |
+| **9. 品質保証** | 受入テスト | Opus | `/acceptance-test` | worktree | 受入テスト実行・分析 |
+| **10. リファクタリング** | リファクタリング | Sonnet | `/refactor` | worktree | コード品質改善（必要時） |
+| **11. 進捗管理** | 進捗報告 | Sonnet | `/progress` | worktree | 進捗サマリ、ブロッカー報告 |
+| **12. PR作成** | - | Sonnet | - | worktree | Pull Request作成（手動作業） |
+| **13. コードレビュー** | アーキテクチャレビュー | Opus | `/review-arch` | worktree | コードレビュー支援（必要時） |
+| **14. CI/CD実行** | - | Sonnet | - | worktree | 自動テスト・ビルド（自動処理） |
+| **15. マージ** | - | Sonnet | - | worktree | developブランチへマージ（手動作業） |
 | 🏁 **Featureクローズ処理** ||||| |
-| **15. フィーチャーフラグ設定** | - | Sonnet | - | **← メイン** | フラグ設定（手動作業） |
-| **16. Wiki文書化** | - | Sonnet | - | メイン推奨 | 仕様確定・文書化（両セッション可） |
-| **17. リリース準備** | - | Sonnet | - | メイン | リリースノート作成等（手動作業） |
+| **16. フィーチャーフラグ設定** | - | Sonnet | - | **← メイン** | フラグ設定（手動作業） |
+| **17. Wiki文書化** | - | Sonnet | - | メイン推奨 | 仕様確定・文書化（両セッション可） |
+| **18. リリース準備** | - | Sonnet | - | メイン | リリースノート作成等（手動作業） |
 
 ### スキル実行フローの例
 
 ```mermaid
 graph TD
     Start[新機能要求] --> Req["要件定義<br/>(/requirements - Opus)"]
-    Req --> Design["設計方針<br/>(/design - Opus)"]
+    Req --> UICheck{UI開発<br/>必要?}
+    UICheck -->|Yes| Mockup["UIモックアップ<br/>(/ui-mockup - Sonnet)<br/>4パターン生成"]
+    UICheck -->|No| Design["設計方針<br/>(/design - Opus)"]
+    Mockup --> Design
     Design --> Review1["設計レビュー<br/>(/review-arch - Opus)"]
     Review1 -->|承認| IssueSplit["Issue分割<br/>(/issue-split - Opus)"]
     Review1 -->|要修正| Design
@@ -68,9 +72,11 @@ graph TD
     Plan --> SessionSwitch["🔄 セッション切替<br/>worktree作成"]
     SessionSwitch --> Branch["ブランチ作成<br/>(手動 - Sonnet)"]
 
-    Branch --> Dev["開発実装<br/>(手動 - Sonnet)"]
-    Dev --> Test["テスト作成<br/>(手動 - Sonnet)"]
-    Test --> Refactor{"リファクタ<br/>必要?"}
+    Branch --> Dev["開発（TDD実装）<br/>(/tdd-impl - Sonnet)"]
+    Dev --> QA["品質保証<br/>(/acceptance-test - Opus)"]
+    QA --> QAResult{テスト<br/>合格?}
+    QAResult -->|No| Dev
+    QAResult -->|Yes| Refactor{"リファクタ<br/>必要?"}
     Refactor -->|Yes| RefactorExec["リファクタリング<br/>(/refactor - Sonnet)"]
     Refactor -->|No| Progress["進捗報告<br/>(/progress - Sonnet)"]
     RefactorExec --> Progress
@@ -87,6 +93,8 @@ graph TD
     Wiki --> End[リリース]
 
     style Req fill:#e3f2fd
+    style UICheck fill:#ffccbc
+    style Mockup fill:#c8e6c9
     style Design fill:#e3f2fd
     style Review1 fill:#e3f2fd
     style IssueSplit fill:#e3f2fd
@@ -97,8 +105,9 @@ graph TD
     style SessionSwitch fill:#ffccbc
     style SessionReturn fill:#ffccbc
     style Branch fill:#e8f5e9
-    style Dev fill:#e8f5e9
-    style Test fill:#e8f5e9
+    style Dev fill:#fff3e0
+    style QA fill:#e3f2fd
+    style QAResult fill:#fce4ec
     style PR fill:#e8f5e9
     style CI fill:#fce4ec
     style Merge fill:#e8f5e9
@@ -128,6 +137,101 @@ Featureは「**ユーザーに価値を届ける単位**」として、以下を
 - シニアエンジニア/アーキテクトによるレビュー
 - 技術的最適性と既存アーキテクチャとの整合性確認
 - 承認後「**Ready**」状態へ遷移
+
+## 🎨 UIモックアップ作成プロセス
+
+### UIモックアップスキル (`/ui-mockup`)
+
+**目的**: Feature定義後、UI開発が必要な場合に4つのデザインパターンを生成
+
+**適用条件**:
+- myAgentDeskプロジェクトでUI追加/改修が必要な場合
+- Feature定義で画面要素が含まれる場合
+- ユーザーインタラクションが発生する機能
+
+**プロセス**:
+1. **UI要件抽出**: Feature定義からUI要件を分析
+2. **パターン生成**: 4つの異なるデザインアプローチを作成
+3. **プレビュー環境構築**: SvelteKitで実際に操作可能な環境を提供
+4. **比較資料作成**: 各パターンの特徴と推奨理由をまとめ
+
+**4つのデザインパターンの観点**:
+- **パターンA**: シンプル・ミニマル（基本機能のみ）
+- **パターンB**: 標準・バランス型（推奨機能含む）
+- **パターンC**: リッチ・高機能（全機能搭載）
+- **パターンD**: 革新的・実験的（新しいUXパターン）
+
+**出力物**:
+```
+myAgentDesk/src/routes/(preview)/mockups/feature-[番号]/
+├── pattern-a/+page.svelte  # パターンA
+├── pattern-b/+page.svelte  # パターンB
+├── pattern-c/+page.svelte  # パターンC
+├── pattern-d/+page.svelte  # パターンD
+├── +layout.svelte          # 共通レイアウト
+├── comparison/+page.svelte # 比較ページ
+└── data.json              # モックデータ
+```
+
+**レビュープロセス**:
+1. プレビュー環境で4パターンを実際に操作
+2. 比較ページで並べて確認
+3. 選定後、選択したパターンを本実装の基盤とする
+
+## 🎯 新スキルによる品質向上プロセス
+
+### TDD実装スキル (`/tdd-impl`)
+
+**目的**: テスト駆動開発により品質を作り込みながら実装
+
+**プロセス**:
+1. **Red Phase**: 失敗するテストを先に作成
+2. **Green Phase**: テストを通る最小限のコードを実装
+3. **Refactor Phase**: コードを整理・最適化
+4. **Coverage Check**: 単体テストカバレッジ90%以上を確認
+
+**出力**:
+- 実装コード
+- 単体テストコード
+- カバレッジレポート
+
+### 受入テストスキル (`/acceptance-test`)
+
+**目的**: Issue要件の自動検証と品質保証
+
+**プロセス**:
+1. **テストケース生成**: Issueの受入条件から自動生成
+2. **E2Eテスト実行**: PlaywrightによるGUIテスト
+3. **結果分析**: テスト結果の詳細レポート生成
+4. **フィードバック**: 不合格時は具体的な修正点を提示
+
+**出力**:
+- テスト実行結果
+- スクリーンショット/動画（失敗時）
+- 修正推奨事項
+
+### フィードバックループ
+
+```mermaid
+graph LR
+    TDD[TDD実装] --> AT[受入テスト]
+    AT --> Pass{合格?}
+    Pass -->|Yes| Next[次工程へ]
+    Pass -->|No| FB[フィードバック]
+    FB --> TDD
+
+    style TDD fill:#fff3e0
+    style AT fill:#e3f2fd
+    style Pass fill:#fce4ec
+    style FB fill:#ffccbc
+```
+
+**差し戻し条件**:
+- 受入テスト不合格
+- カバレッジ基準未達
+- パフォーマンス基準未達
+
+**最大イテレーション**: 3回（超過時はエスカレーション）
 
 ## 📝 Issue管理
 
