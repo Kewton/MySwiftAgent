@@ -5,15 +5,15 @@ import helmet from 'helmet';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
-import { runGraphAI, testGraphAI } from './services/graphai.ts';
-import type { GraphAIResponse } from './services/graphai.ts';
-import { secretsManager } from './services/secretsManager.ts';
-import { settings } from './config/settings.ts';
+import { runGraphAI, testGraphAI } from './services/graphai.js';
+import type { GraphAIResponse } from './services/graphai.js';
+import { secretsManager } from './services/secretsManager.js';
+import { settings } from './config/settings.js';
 import type {
   WorkflowRegisterRequest,
   WorkflowRegisterResponse,
   WorkflowValidationError,
-} from './types/workflow.ts';
+} from './types/workflow.js';
 
 const app = express();
 

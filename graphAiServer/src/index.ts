@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import app from './app.ts';
+import app from './app.js';
 
 // Configure global fetch timeout (300 seconds)
 const originalFetch = global.fetch;

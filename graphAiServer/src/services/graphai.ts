@@ -5,8 +5,8 @@ import * as packages from "@graphai/agents";
 import { tokenBoundStringsAgent } from "@graphai/token_bound_string_agent";
 import { fileReadAgent, fileWriteAgent, pathUtilsAgent } from "@graphai/vanilla_node_agents";
 import dotenv from 'dotenv';
-import { secretsManager } from './secretsManager.ts';
-import { settings } from '../config/settings.ts';
+import { secretsManager } from './secretsManager.js';
+import { settings } from '../config/settings.js';
 
 dotenv.config();
 
