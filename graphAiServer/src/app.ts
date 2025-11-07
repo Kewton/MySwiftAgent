@@ -1,10 +1,12 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
-import { runGraphAI, testGraphAI, GraphAIResponse } from './services/graphai.js';
+import { runGraphAI, testGraphAI } from './services/graphai.js';
+import type { GraphAIResponse } from './services/graphai.js';
 import { secretsManager } from './services/secretsManager.js';
 import { settings } from './config/settings.js';
 import type {
