@@ -69,7 +69,7 @@ describe('streamChatRequirementDefinition', () => {
 		);
 
 		const [url, options] = mockFetch.mock.calls[0];
-		expect(url).toBe('http://localhost:8104/aiagent-api/v1/chat/requirement-definition');
+		expect(url).toBe('/aiagent-api/v1/chat/requirement-definition');
 		expect(options?.method).toBe('POST');
 		expect(options?.headers).toBeInstanceOf(Headers);
 		expect((options?.headers as Headers).get('Content-Type')).toBe('application/json');
