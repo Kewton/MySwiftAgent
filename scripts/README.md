@@ -8,6 +8,7 @@ JobQueue、MyScheduler、MyVault、ExpertAgent、GraphAiServer、CommonUIの全�
 
 | スクリプト | 用途 | 概要 |
 |-----------|------|------|
+| `unified-start.sh` | **🎯 統一起動** | 全サービスの一括起動・停止（Phase 1 MVP） |
 | `quick-start.sh` | **🚀 クイック起動** | 一発で全サービス起動（代替ポート使用） |
 | `dev-start.sh` | **🔧 開発環境管理** | 包括的なサービス管理（標準ポート使用） |
 | `health-check.sh` | **🔍 ヘルスチェック** | サービス監視・診断 |
@@ -18,6 +19,51 @@ JobQueue、MyScheduler、MyVault、ExpertAgent、GraphAiServer、CommonUIの全�
 | `build-images.sh` | **🐳 Docker Build** | バージョンタグ付きイメージビルド |
 
 ## 🚀 クイックスタート
+
+### 統一起動スクリプト（推奨・NEW）
+
+```bash
+# 全サービスを依存関係順に起動
+./scripts/unified-start.sh start
+
+# サービス状態確認
+./scripts/unified-start.sh status
+
+# 全サービス停止
+./scripts/unified-start.sh stop
+
+# 全サービス再起動
+./scripts/unified-start.sh restart
+
+# ヘルプ表示
+./scripts/unified-start.sh --help
+```
+
+**unified-start.sh の特徴:**
+- ✅ **依存関係順に自動起動**: Infrastructure → Middleware → Application
+- ✅ **モジュール化設計**: ライブラリ構造（`unified-lib/`）でメンテナンス性向上
+- ✅ **Bash 3.2対応**: macOSデフォルトBashで動作
+- ✅ **標準ポート使用**: `8001-8005` (API), `5173, 8501` (UI)
+- ✅ **Phase 1 MVP**: シンプルで確実な動作
+
+**起動順序:**
+1. Layer 1 (Infrastructure): myVault, jobqueue
+2. Layer 2 (Middleware): myscheduler, graphAiServer
+3. Layer 3 (Application): expertAgent, myAgentDesk, commonUI
+
+**詳細ドキュメント:**
+- [unified-start-usage.md](../docs/unified-start-usage.md)
+
+**アクセスURL (unified-start.sh):**
+- myAgentDesk: http://localhost:5173
+- commonUI: http://localhost:8501
+- jobqueue API: http://localhost:8001
+- myscheduler API: http://localhost:8002
+- myVault API: http://localhost:8003
+- expertAgent API: http://localhost:8004
+- graphAiServer API: http://localhost:8005
+
+---
 
 ### 即座に起動（代替ポート）
 

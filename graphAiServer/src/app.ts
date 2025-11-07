@@ -1,17 +1,19 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
-import { runGraphAI, testGraphAI, GraphAIResponse } from './services/graphai.js';
-import { secretsManager } from './services/secretsManager.js';
-import { settings } from './config/settings.js';
+import { runGraphAI, testGraphAI } from './services/graphai.ts';
+import type { GraphAIResponse } from './services/graphai.ts';
+import { secretsManager } from './services/secretsManager.ts';
+import { settings } from './config/settings.ts';
 import type {
   WorkflowRegisterRequest,
   WorkflowRegisterResponse,
   WorkflowValidationError,
-} from './types/workflow.js';
+} from './types/workflow.ts';
 
 const app = express();
 

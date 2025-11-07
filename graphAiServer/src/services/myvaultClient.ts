@@ -1,5 +1,6 @@
 // src/services/myvaultClient.ts
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 
 export class MyVaultError extends Error {
   constructor(message: string) {

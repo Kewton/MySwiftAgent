@@ -1,6 +1,6 @@
 // src/services/secretsManager.ts
-import { settings } from '../config/settings.js';
-import { MyVaultClient, MyVaultError } from './myvaultClient.js';
+import { settings } from '../config/settings.ts';
+import { MyVaultClient, MyVaultError } from './myvaultClient.ts';
 
 interface CacheEntry {
   value: string;
