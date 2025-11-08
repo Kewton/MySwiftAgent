@@ -12,46 +12,73 @@
 
 ## 🏗️ ディレクトリ構造
 
-```
-~/MySwiftAgent/                          # メインworktree (develop ブランチ)
-├── .env                                 # 共有環境変数（APIキーなど）
-├── .git/                                # Gitリポジトリ本体
-└── scripts/                             # 共有スクリプト
-    ├── setup-worktree.sh                # worktree自動セットアップ
-    └── sync-myvault-db.sh               # myVault DB同期
+**重要**: worktreeは**MySwiftAgentと同じ親ディレクトリ**に自動配置されます。
 
-~/MySwiftAgent-worktrees/                # worktree専用ディレクトリ
-├── feature-issue-126/                   # worktree 1 (feature/issue/126)
-│   ├── .env -> ~/MySwiftAgent/.env     # シンボリックリンク（共有設定）
-│   ├── .env.local                       # worktree固有設定（ポート番号）
-│   ├── myVault/data/myvault.db         # 独立DB（並行起動対応）
-│   ├── expertAgent/
-│   │   ├── .venv/                       # 独立した仮想環境
-│   │   └── logs/                        # worktree固有ログ
-│   └── myAgentDesk/
-│       └── node_modules/                # 独立した依存関係
-└── feature-issue-127/                   # worktree 2 (feature/issue/127)
-    ├── .env -> ~/MySwiftAgent/.env     # シンボリックリンク（共有設定）
-    ├── .env.local                       # worktree固有設定（ポート番号）
-    └── ...
 ```
+~/share/work/github_kewton/              # 親ディレクトリ（例）
+├── MySwiftAgent/                        # メインworktree (develop ブランチ)
+│   ├── .env                             # 共有環境変数（APIキーなど）
+│   ├── .git/                            # Gitリポジトリ本体
+│   └── scripts/                         # 共有スクリプト
+│       ├── setup-worktree.sh            # worktree自動セットアップ
+│       ├── worktree-create-from-issue.sh  # Issue番号からworktree作成
+│       └── sync-myvault-db.sh           # myVault DB同期
+│
+└── MySwiftAgent-worktrees/              # worktree専用ディレクトリ（自動作成）
+    ├── feature-issue-126/               # worktree 1 (feature/issue/126)
+    │   ├── .env -> ../MySwiftAgent/.env  # シンボリックリンク（共有設定）
+    │   ├── .env.local                   # worktree固有設定（ポート番号）
+    │   ├── myVault/data/myvault.db      # 独立DB（並行起動対応）
+    │   ├── expertAgent/
+    │   │   ├── .venv/                   # 独立した仮想環境
+    │   │   └── logs/                    # worktree固有ログ
+    │   └── myAgentDesk/
+    │       └── node_modules/            # 独立した依存関係
+    └── feature-issue-127/               # worktree 2 (feature/issue/127)
+        ├── .env -> ../MySwiftAgent/.env  # シンボリックリンク（共有設定）
+        ├── .env.local                   # worktree固有設定（ポート番号）
+        └── ...
+```
+
+**パス解決の仕組み**:
+- `worktree-create-from-issue.sh` は自動的に親ディレクトリを検出
+- `WORKTREES_BASE_DIR="$(dirname "$MAIN_REPO")/MySwiftAgent-worktrees"`
+- MySwiftAgentがどこにあっても、同じ親ディレクトリにworktreeが作成される
 
 ## 🚀 基本操作
 
 ### worktreeの作成
 
+**推奨方法: GitHub Issueから自動作成**
+
 ```bash
 # メインリポジトリから実行
-cd ~/MySwiftAgent
+cd ~/MySwiftAgent  # 実際のパスは任意
 
-# 新しいworktreeを作成（ブランチも同時に作成）
+# Issue番号を指定してworktree自動作成
+./scripts/worktree-create-from-issue.sh 142
+
+# 自動的に以下が実行される:
+# 1. GitHub IssueからタイトルとラベルFを取得
+# 2. ブランチ種別を自動判定 (feature/fix/refactor等)
+# 3. 親ディレクトリ/MySwiftAgent-worktrees/ にworktree作成
+# 4. setup-worktree.sh で自動セットアップ
+```
+
+**手動作成方法（高度なユーザー向け）**
+
+```bash
+# メインリポジトリから実行
+cd ~/MySwiftAgent  # 実際のパスは任意
+
+# 親ディレクトリ配下のMySwiftAgent-worktreesに作成
 git worktree add ../MySwiftAgent-worktrees/feature-issue-126 -b feature/issue/126
 
 # 作成されたworktreeに移動
 cd ../MySwiftAgent-worktrees/feature-issue-126
 
 # 自動セットアップスクリプトを実行
-~/MySwiftAgent/scripts/setup-worktree.sh
+../../MySwiftAgent/scripts/setup-worktree.sh
 ```
 
 ### worktree一覧の確認
@@ -139,7 +166,7 @@ class Settings(BaseSettings):
 
 | パターン | 配置方法 | メリット | デメリット | 推奨ユースケース |
 |---------|---------|---------|----------|-----------------|
-| **1. 共有 (develop)** | `../../MySwiftAgent/{myVault,langfuse}` へのシンボリックリンク | ✅ リソース効率的<br>✅ データ共有可能<br>✅ ポート競合なし | ⚠️ developブランチ依存 | **開発効率重視**<br>複数worktreeで同じデータを参照 |
+| **1. データ共有** | **データディレクトリのみ**シンボリックリンク<br>`myVault/data -> ../MySwiftAgent/myVault/data`<br>アプリコードは実ディレクトリ | ✅ データ共有可能<br>✅ git管理の問題なし<br>✅ アプリコード独立 | - | **開発効率重視（推奨）**<br>複数worktreeで同じDBを参照 |
 | **2. 独立 (PWD)** | カレントworktree内に実ディレクトリ配置 | ✅ 完全に独立した環境<br>✅ 安全性が高い<br>✅ 別端末でも動作 | ⚠️ リソース消費増<br>⚠️ ポート管理必要 | **複数worktreeで並行テスト**<br>**CI/CD環境**<br>**別端末での初回セットアップ** |
 | **3. カスタム** | 任意のパスへのシンボリックリンク | ✅ 柔軟性が高い<br>✅ 複数worktreeで共有可能 | ⚠️ 手動管理が必要 | **特定worktree間のみ共有** |
 
@@ -155,33 +182,41 @@ cd ../MySwiftAgent-worktrees/feature-issue-126
 
 # 🔐 myVault Directory Setup
 # Select myVault directory placement:
-#   1) Share with develop branch (symlink to ~/MySwiftAgent/myVault)
+#   1) Share data with develop branch (symlink myVault/data only)
 #   2) Independent copy in current worktree (PWD/myVault)
 #   3) Custom path (manual input)
-# Enter choice [1-3] (default: 1): 1  ← 開発効率重視の場合
+# Enter choice [1-3] (default: 1): 1  ← データ共有＋アプリコード独立（推奨）
 
 # 🔍 Langfuse Directory Setup
 # Select Langfuse directory placement:
-#   1) Share with develop branch (symlink to ~/MySwiftAgent/langfuse)
+#   1) Share data with develop branch (symlink langfuse/data only)
 #   2) Independent copy in current worktree (PWD/langfuse)
 #   3) Custom path (manual input)
-# Enter choice [1-3] (default: 1): 1  ← リソース効率重視の場合
+# Enter choice [1-3] (default: 1): 1  ← データ共有＋設定ファイル独立（推奨）
 ```
 
 ### 各パターンの詳細
 
-**パターン1: 共有モード（デフォルト推奨）**
+**パターン1: データ共有モード（デフォルト推奨）**
 ```bash
 # ディレクトリ構造
 feature-issue-126/
-├── myVault -> ~/MySwiftAgent/myVault      # シンボリックリンク
-├── langfuse -> ~/MySwiftAgent/langfuse    # シンボリックリンク
-└── .env.local                             # ポート番号は共有元に従う
+├── myVault/                               # 実ディレクトリ
+│   ├── app/                               # アプリコード（git管理）
+│   ├── tests/                             # テストコード（git管理）
+│   ├── pyproject.toml                     # 依存関係（git管理）
+│   └── data -> ~/MySwiftAgent/myVault/data  # データのみシンボリックリンク
+├── langfuse/                              # 実ディレクトリ
+│   ├── docker-compose.yml                 # 設定ファイル（git管理）
+│   ├── .env.example                       # 設定例（git管理）
+│   └── data -> ~/MySwiftAgent/langfuse/data # データのみシンボリックリンク
+└── .env.local                             # worktree固有設定
 
 # メリット
-# - developブランチと同じmyVault DBを参照
-# - Langfuse Docker環境を共有（1インスタンスのみ起動）
+# - developブランチと同じデータ（DB、Docker volumes）を参照
+# - アプリケーションコードは独立（git管理の問題なし）
 # - ディスク容量節約
+# - git statusに「削除」が表示されない
 ```
 
 **パターン2: 独立モード（並行テスト推奨）**
@@ -307,14 +342,17 @@ uv run uvicorn app.main:app --reload
 ### 全worktreeで並列作業
 
 ```bash
+# 実際のパスは環境により異なります
+# 例: ~/share/work/github_kewton/ 配下の場合
+
 # ターミナル1: メインworktree (develop)
-cd ~/MySwiftAgent
+cd ~/share/work/github_kewton/MySwiftAgent
 
 # ターミナル2: worktree 1 (feature/issue/126)
-cd ~/MySwiftAgent-worktrees/feature-issue-126
+cd ~/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-126
 
 # ターミナル3: worktree 2 (feature/issue/127)
-cd ~/MySwiftAgent-worktrees/feature-issue-127
+cd ~/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-127
 ```
 
 ## 📚 詳細ドキュメント
