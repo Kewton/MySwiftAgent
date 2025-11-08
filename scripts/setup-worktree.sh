@@ -15,7 +15,17 @@ set -e
 
 WORKTREE_DIR=$(pwd)
 WORKTREE_NAME=$(basename "$WORKTREE_DIR")
-MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/MySwiftAgent")
+
+# メインリポジトリのパスを取得（worktree対応）
+# worktreeの場合、--git-common-dirで共有.gitディレクトリのパスを取得し、その親がメインリポジトリ
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || echo "")
+if [ -n "$GIT_COMMON_DIR" ] && [ "$GIT_COMMON_DIR" != ".git" ]; then
+    # worktreeの場合（.git/worktrees/xxx のようなパス）
+    MAIN_REPO=$(cd "$GIT_COMMON_DIR/.." && pwd)
+else
+    # 通常のリポジトリの場合
+    MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/MySwiftAgent")
+fi
 
 echo "📍 Setting up worktree: $WORKTREE_NAME"
 echo ""

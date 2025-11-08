@@ -41,7 +41,7 @@ graph LR
 | **4. レビュー・承認** | アーキテクチャレビュー | Opus | `/review-arch` | メイン | 設計レビュー、リスク評価 |
 | **5. Issue分割** | Issue分割 | Opus | `/issue-split` | メイン | FeatureをIssueに分割 |
 | **6. 作業計画** | 作業計画 | Opus | `/plan` | メイン | Issue単位の詳細作業計画 |
-| **7. ブランチ作成** | - | Sonnet | - | **→ worktree** | git worktreeでissueブランチ作成 |
+| **7. ブランチ作成** | Worktree自動セットアップ | Sonnet | `/worktree-setup` | **→ worktree** | Issue番号から自動でworktree環境構築 |
 | **8. 開発（TDD実装）** | TDD実装 | Sonnet | `/tdd-impl` | worktree | テスト駆動開発による実装 |
 | **9. 品質保証** | 受入テスト | Opus | `/acceptance-test` | worktree | 受入テスト実行・分析 |
 | **10. リファクタリング** | リファクタリング | Sonnet | `/refactor` | worktree | コード品質改善（必要時） |
@@ -70,7 +70,7 @@ graph TD
     IssueSplit --> Plan["作業計画<br/>(/plan - Opus)<br/>Issue単位"]
 
     Plan --> SessionSwitch["🔄 セッション切替<br/>worktree作成"]
-    SessionSwitch --> Branch["ブランチ作成<br/>(手動 - Sonnet)"]
+    SessionSwitch --> Branch["Worktree自動セットアップ<br/>(/worktree-setup - Sonnet)"]
 
     Branch --> Dev["開発（TDD実装）<br/>(/tdd-impl - Sonnet)"]
     Dev --> QA["品質保証<br/>(/acceptance-test - Opus)"]
