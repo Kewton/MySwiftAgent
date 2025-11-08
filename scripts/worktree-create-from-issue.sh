@@ -24,8 +24,8 @@
 set -e
 
 # ==================== 設定 ====================
-WORKTREES_BASE_DIR="$HOME/MySwiftAgent-worktrees"
 MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/MySwiftAgent")
+WORKTREES_BASE_DIR="$(dirname "$MAIN_REPO")/MySwiftAgent-worktrees"
 SETUP_SCRIPT="$MAIN_REPO/scripts/setup-worktree.sh"
 
 # ==================== 引数チェック ====================

@@ -12,46 +12,73 @@
 
 ## 🏗️ ディレクトリ構造
 
-```
-~/MySwiftAgent/                          # メインworktree (develop ブランチ)
-├── .env                                 # 共有環境変数（APIキーなど）
-├── .git/                                # Gitリポジトリ本体
-└── scripts/                             # 共有スクリプト
-    ├── setup-worktree.sh                # worktree自動セットアップ
-    └── sync-myvault-db.sh               # myVault DB同期
+**重要**: worktreeは**MySwiftAgentと同じ親ディレクトリ**に自動配置されます。
 
-~/MySwiftAgent-worktrees/                # worktree専用ディレクトリ
-├── feature-issue-126/                   # worktree 1 (feature/issue/126)
-│   ├── .env -> ~/MySwiftAgent/.env     # シンボリックリンク（共有設定）
-│   ├── .env.local                       # worktree固有設定（ポート番号）
-│   ├── myVault/data/myvault.db         # 独立DB（並行起動対応）
-│   ├── expertAgent/
-│   │   ├── .venv/                       # 独立した仮想環境
-│   │   └── logs/                        # worktree固有ログ
-│   └── myAgentDesk/
-│       └── node_modules/                # 独立した依存関係
-└── feature-issue-127/                   # worktree 2 (feature/issue/127)
-    ├── .env -> ~/MySwiftAgent/.env     # シンボリックリンク（共有設定）
-    ├── .env.local                       # worktree固有設定（ポート番号）
-    └── ...
 ```
+~/share/work/github_kewton/              # 親ディレクトリ（例）
+├── MySwiftAgent/                        # メインworktree (develop ブランチ)
+│   ├── .env                             # 共有環境変数（APIキーなど）
+│   ├── .git/                            # Gitリポジトリ本体
+│   └── scripts/                         # 共有スクリプト
+│       ├── setup-worktree.sh            # worktree自動セットアップ
+│       ├── worktree-create-from-issue.sh  # Issue番号からworktree作成
+│       └── sync-myvault-db.sh           # myVault DB同期
+│
+└── MySwiftAgent-worktrees/              # worktree専用ディレクトリ（自動作成）
+    ├── feature-issue-126/               # worktree 1 (feature/issue/126)
+    │   ├── .env -> ../MySwiftAgent/.env  # シンボリックリンク（共有設定）
+    │   ├── .env.local                   # worktree固有設定（ポート番号）
+    │   ├── myVault/data/myvault.db      # 独立DB（並行起動対応）
+    │   ├── expertAgent/
+    │   │   ├── .venv/                   # 独立した仮想環境
+    │   │   └── logs/                    # worktree固有ログ
+    │   └── myAgentDesk/
+    │       └── node_modules/            # 独立した依存関係
+    └── feature-issue-127/               # worktree 2 (feature/issue/127)
+        ├── .env -> ../MySwiftAgent/.env  # シンボリックリンク（共有設定）
+        ├── .env.local                   # worktree固有設定（ポート番号）
+        └── ...
+```
+
+**パス解決の仕組み**:
+- `worktree-create-from-issue.sh` は自動的に親ディレクトリを検出
+- `WORKTREES_BASE_DIR="$(dirname "$MAIN_REPO")/MySwiftAgent-worktrees"`
+- MySwiftAgentがどこにあっても、同じ親ディレクトリにworktreeが作成される
 
 ## 🚀 基本操作
 
 ### worktreeの作成
 
+**推奨方法: GitHub Issueから自動作成**
+
 ```bash
 # メインリポジトリから実行
-cd ~/MySwiftAgent
+cd ~/MySwiftAgent  # 実際のパスは任意
 
-# 新しいworktreeを作成（ブランチも同時に作成）
+# Issue番号を指定してworktree自動作成
+./scripts/worktree-create-from-issue.sh 142
+
+# 自動的に以下が実行される:
+# 1. GitHub IssueからタイトルとラベルFを取得
+# 2. ブランチ種別を自動判定 (feature/fix/refactor等)
+# 3. 親ディレクトリ/MySwiftAgent-worktrees/ にworktree作成
+# 4. setup-worktree.sh で自動セットアップ
+```
+
+**手動作成方法（高度なユーザー向け）**
+
+```bash
+# メインリポジトリから実行
+cd ~/MySwiftAgent  # 実際のパスは任意
+
+# 親ディレクトリ配下のMySwiftAgent-worktreesに作成
 git worktree add ../MySwiftAgent-worktrees/feature-issue-126 -b feature/issue/126
 
 # 作成されたworktreeに移動
 cd ../MySwiftAgent-worktrees/feature-issue-126
 
 # 自動セットアップスクリプトを実行
-~/MySwiftAgent/scripts/setup-worktree.sh
+../../MySwiftAgent/scripts/setup-worktree.sh
 ```
 
 ### worktree一覧の確認
@@ -307,14 +334,17 @@ uv run uvicorn app.main:app --reload
 ### 全worktreeで並列作業
 
 ```bash
+# 実際のパスは環境により異なります
+# 例: ~/share/work/github_kewton/ 配下の場合
+
 # ターミナル1: メインworktree (develop)
-cd ~/MySwiftAgent
+cd ~/share/work/github_kewton/MySwiftAgent
 
 # ターミナル2: worktree 1 (feature/issue/126)
-cd ~/MySwiftAgent-worktrees/feature-issue-126
+cd ~/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-126
 
 # ターミナル3: worktree 2 (feature/issue/127)
-cd ~/MySwiftAgent-worktrees/feature-issue-127
+cd ~/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-127
 ```
 
 ## 📚 詳細ドキュメント
