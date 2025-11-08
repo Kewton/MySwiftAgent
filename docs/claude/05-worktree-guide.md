@@ -166,7 +166,7 @@ class Settings(BaseSettings):
 
 | パターン | 配置方法 | メリット | デメリット | 推奨ユースケース |
 |---------|---------|---------|----------|-----------------|
-| **1. 共有 (develop)** | `../../MySwiftAgent/{myVault,langfuse}` へのシンボリックリンク | ✅ リソース効率的<br>✅ データ共有可能<br>✅ ポート競合なし | ⚠️ developブランチ依存 | **開発効率重視**<br>複数worktreeで同じデータを参照 |
+| **1. データ共有** | **データディレクトリのみ**シンボリックリンク<br>`myVault/data -> ../MySwiftAgent/myVault/data`<br>アプリコードは実ディレクトリ | ✅ データ共有可能<br>✅ git管理の問題なし<br>✅ アプリコード独立 | - | **開発効率重視（推奨）**<br>複数worktreeで同じDBを参照 |
 | **2. 独立 (PWD)** | カレントworktree内に実ディレクトリ配置 | ✅ 完全に独立した環境<br>✅ 安全性が高い<br>✅ 別端末でも動作 | ⚠️ リソース消費増<br>⚠️ ポート管理必要 | **複数worktreeで並行テスト**<br>**CI/CD環境**<br>**別端末での初回セットアップ** |
 | **3. カスタム** | 任意のパスへのシンボリックリンク | ✅ 柔軟性が高い<br>✅ 複数worktreeで共有可能 | ⚠️ 手動管理が必要 | **特定worktree間のみ共有** |
 
@@ -182,33 +182,41 @@ cd ../MySwiftAgent-worktrees/feature-issue-126
 
 # 🔐 myVault Directory Setup
 # Select myVault directory placement:
-#   1) Share with develop branch (symlink to ~/MySwiftAgent/myVault)
+#   1) Share data with develop branch (symlink myVault/data only)
 #   2) Independent copy in current worktree (PWD/myVault)
 #   3) Custom path (manual input)
-# Enter choice [1-3] (default: 1): 1  ← 開発効率重視の場合
+# Enter choice [1-3] (default: 1): 1  ← データ共有＋アプリコード独立（推奨）
 
 # 🔍 Langfuse Directory Setup
 # Select Langfuse directory placement:
-#   1) Share with develop branch (symlink to ~/MySwiftAgent/langfuse)
+#   1) Share data with develop branch (symlink langfuse/data only)
 #   2) Independent copy in current worktree (PWD/langfuse)
 #   3) Custom path (manual input)
-# Enter choice [1-3] (default: 1): 1  ← リソース効率重視の場合
+# Enter choice [1-3] (default: 1): 1  ← データ共有＋設定ファイル独立（推奨）
 ```
 
 ### 各パターンの詳細
 
-**パターン1: 共有モード（デフォルト推奨）**
+**パターン1: データ共有モード（デフォルト推奨）**
 ```bash
 # ディレクトリ構造
 feature-issue-126/
-├── myVault -> ~/MySwiftAgent/myVault      # シンボリックリンク
-├── langfuse -> ~/MySwiftAgent/langfuse    # シンボリックリンク
-└── .env.local                             # ポート番号は共有元に従う
+├── myVault/                               # 実ディレクトリ
+│   ├── app/                               # アプリコード（git管理）
+│   ├── tests/                             # テストコード（git管理）
+│   ├── pyproject.toml                     # 依存関係（git管理）
+│   └── data -> ~/MySwiftAgent/myVault/data  # データのみシンボリックリンク
+├── langfuse/                              # 実ディレクトリ
+│   ├── docker-compose.yml                 # 設定ファイル（git管理）
+│   ├── .env.example                       # 設定例（git管理）
+│   └── data -> ~/MySwiftAgent/langfuse/data # データのみシンボリックリンク
+└── .env.local                             # worktree固有設定
 
 # メリット
-# - developブランチと同じmyVault DBを参照
-# - Langfuse Docker環境を共有（1インスタンスのみ起動）
+# - developブランチと同じデータ（DB、Docker volumes）を参照
+# - アプリケーションコードは独立（git管理の問題なし）
 # - ディスク容量節約
+# - git statusに「削除」が表示されない
 ```
 
 **パターン2: 独立モード（並行テスト推奨）**

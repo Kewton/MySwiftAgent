@@ -146,8 +146,8 @@ echo "🔐 myVault Directory Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Select myVault directory placement:"
-echo "  1) Share with develop branch (symlink to $MAIN_REPO/myVault)"
-echo "     → Resource efficient, data shared across worktrees"
+echo "  1) Share data with develop branch (symlink myVault/data only)"
+echo "     → Resource efficient, data shared, app code independent"
 echo "  2) Independent copy in current worktree (PWD/myVault)"
 echo "     → Fully isolated environment, safe for parallel testing"
 echo "  3) Custom path (manual input)"
@@ -158,14 +158,18 @@ myvault_choice=${myvault_choice:-1}
 
 case $myvault_choice in
     1)
-        # 共有モード（developブランチ）
+        # 共有モード（データディレクトリのみシンボリックリンク）
         if [ -d "$MAIN_REPO/myVault" ]; then
-            if [ -e myVault ]; then
-                rm -rf myVault
+            # アプリケーションコードは実ディレクトリのまま維持
+            # データディレクトリのみシンボリックリンク化
+            if [ -d myVault/data ] && [ ! -L myVault/data ]; then
+                rm -rf myVault/data
             fi
-            ln -s "$MAIN_REPO/myVault" myVault
-            echo "✅ Created symlink: myVault -> $MAIN_REPO/myVault"
-            echo "   Note: Sharing myVault with develop branch."
+            if [ ! -e myVault/data ]; then
+                ln -s "$MAIN_REPO/myVault/data" myVault/data
+            fi
+            echo "✅ Created symlink: myVault/data -> $MAIN_REPO/myVault/data"
+            echo "   Note: Sharing myVault data with develop branch (app code is independent)."
         else
             echo "⚠️  $MAIN_REPO/myVault not found. Creating independent copy instead."
             mkdir -p myVault/data
@@ -211,8 +215,8 @@ echo "🔍 Langfuse Directory Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Select Langfuse directory placement:"
-echo "  1) Share with develop branch (symlink to $MAIN_REPO/langfuse)"
-echo "     → Resource efficient, single Docker instance"
+echo "  1) Share data with develop branch (symlink langfuse/data only)"
+echo "     → Resource efficient, data shared, config files independent"
 echo "  2) Independent copy in current worktree (PWD/langfuse)"
 echo "     → Fully isolated environment, separate Docker instance"
 echo "  3) Custom path (manual input)"
@@ -223,14 +227,25 @@ langfuse_choice=${langfuse_choice:-1}
 
 case $langfuse_choice in
     1)
-        # 共有モード（developブランチ）
+        # 共有モード（データディレクトリのみシンボリックリンク）
         if [ -d "$MAIN_REPO/langfuse" ]; then
-            if [ -e langfuse ]; then
-                rm -rf langfuse
+            # アプリケーション設定ファイルは実ディレクトリのまま維持
+            # データディレクトリ/docker-compose-dataのみシンボリックリンク化
+            if [ -d langfuse/data ] && [ ! -L langfuse/data ]; then
+                rm -rf langfuse/data
             fi
-            ln -s "$MAIN_REPO/langfuse" langfuse
-            echo "✅ Created symlink: langfuse -> $MAIN_REPO/langfuse"
-            echo "   Note: Sharing Langfuse with develop branch."
+            if [ ! -e langfuse/data ] && [ -d "$MAIN_REPO/langfuse/data" ]; then
+                ln -s "$MAIN_REPO/langfuse/data" langfuse/data
+            fi
+            if [ -d langfuse/docker-compose-data ] && [ ! -L langfuse/docker-compose-data ]; then
+                rm -rf langfuse/docker-compose-data
+            fi
+            if [ ! -e langfuse/docker-compose-data ] && [ -d "$MAIN_REPO/langfuse/docker-compose-data" ]; then
+                ln -s "$MAIN_REPO/langfuse/docker-compose-data" langfuse/docker-compose-data
+            fi
+            echo "✅ Created symlink: langfuse/data -> $MAIN_REPO/langfuse/data"
+            echo "✅ Created symlink: langfuse/docker-compose-data -> $MAIN_REPO/langfuse/docker-compose-data"
+            echo "   Note: Sharing Langfuse data with develop branch (config files are independent)."
         else
             echo "⚠️  $MAIN_REPO/langfuse not found. Creating independent copy instead."
             mkdir -p langfuse
