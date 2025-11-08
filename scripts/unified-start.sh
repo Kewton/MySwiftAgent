@@ -20,7 +20,13 @@ export PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Load libraries
 source "${SCRIPT_DIR}/unified-lib/common.sh"
 source "${SCRIPT_DIR}/unified-lib/process-manager.sh"
+source "${SCRIPT_DIR}/unified-lib/error-catalog.sh"
 source "${SCRIPT_DIR}/unified-lib/health-check.sh"
+
+# Global state for rollback (compatible with bash 3.2+)
+STARTED_SERVICES=()
+ROLLBACK_IN_PROGRESS=false
+FORCE_MODE=false
 
 # Service definitions (hardcoded for Phase 1)
 # Format: "service_name:port:directory:start_command"
@@ -54,6 +60,91 @@ ALL_SERVICES=(
 # Health check timeout (can be overridden via --timeout option)
 HEALTH_CHECK_TIMEOUT=30
 
+# Rollback function - stops all started services
+rollback_services() {
+    # Prevent recursive calls
+    if [[ "$ROLLBACK_IN_PROGRESS" == "true" ]]; then
+        return 0
+    fi
+
+    ROLLBACK_IN_PROGRESS=true
+
+    if [[ ${#STARTED_SERVICES[@]} -eq 0 ]]; then
+        print_info "No services to rollback"
+        return 0
+    fi
+
+    echo ""
+    print_warning "═══════════════════════════════════════════════════════════"
+    print_warning "  ROLLBACK: Stopping ${#STARTED_SERVICES[@]} started service(s)"
+    print_warning "═══════════════════════════════════════════════════════════"
+    echo ""
+
+    # Stop services in reverse order
+    local i
+    for ((i=${#STARTED_SERVICES[@]}-1; i>=0; i--)); do
+        local service_name="${STARTED_SERVICES[$i]}"
+        print_service "$service_name" "Rolling back..."
+        stop_service "$service_name" || true
+    done
+
+    # Clear the list
+    STARTED_SERVICES=()
+
+    echo ""
+    print_success "Rollback completed - all started services stopped"
+    echo ""
+}
+
+# Error handler - called on script error or interruption
+error_handler() {
+    local exit_code=$?
+    local line_number="${1:-unknown}"
+
+    # Ignore exit code 0
+    if [[ $exit_code -eq 0 ]]; then
+        return 0
+    fi
+
+    echo ""
+    print_error "═══════════════════════════════════════════════════════════"
+    print_error "  ERROR DETECTED - Initiating rollback"
+    print_error "═══════════════════════════════════════════════════════════"
+
+    if [[ "$line_number" != "unknown" ]]; then
+        print_error "Failed at line: ${line_number}"
+    fi
+
+    # Execute rollback
+    rollback_services
+
+    # Show error report based on exit code
+    if [[ $exit_code -eq $EXIT_USER_INTERRUPTED ]]; then
+        show_error_report "$EXIT_USER_INTERRUPTED"
+    else
+        show_error_report "$EXIT_PARTIAL_STARTUP_FAILED" "Startup interrupted with exit code: ${exit_code}"
+    fi
+
+    exit "$EXIT_PARTIAL_STARTUP_FAILED"
+}
+
+# Interrupt handler - called on SIGINT or SIGTERM
+interrupt_handler() {
+    echo ""
+    print_warning "═══════════════════════════════════════════════════════════"
+    print_warning "  INTERRUPTED - Cleaning up started services"
+    print_warning "═══════════════════════════════════════════════════════════"
+
+    rollback_services
+
+    show_error_report "$EXIT_USER_INTERRUPTED"
+    exit "$EXIT_USER_INTERRUPTED"
+}
+
+# Set up traps for error handling
+trap 'error_handler $LINENO' ERR
+trap 'interrupt_handler' INT TERM
+
 # Show help
 show_help() {
     cat << EOF
@@ -63,7 +154,7 @@ USAGE:
     ./scripts/unified-start.sh <command> [options]
 
 COMMANDS:
-    start              Start all microservices in dependency order
+    start [--force]    Start all microservices in dependency order
     stop               Stop all microservices
     restart            Restart all microservices
     status             Check status of all microservices
@@ -71,6 +162,7 @@ COMMANDS:
     --help             Show this help message
 
 OPTIONS:
+    --force            Force start by killing any processes on required ports
     --timeout N        Set health check timeout in seconds (default: 30)
     --health-check-only  Only perform health checks without starting services
     --skip-health-check  Skip health checks after starting services
@@ -94,6 +186,9 @@ DESCRIPTION:
 EXAMPLES:
     # Start all services
     ./scripts/unified-start.sh start
+
+    # Force start (kill conflicting processes)
+    ./scripts/unified-start.sh start --force
 
     # Start services with custom health check timeout
     ./scripts/unified-start.sh start --timeout 60
@@ -133,8 +228,16 @@ start_layer() {
         # Parse service specification: name:port:directory:start_command
         IFS=':' read -r service_name port directory start_command <<< "$service_spec"
 
-        if ! start_service "$service_name" "$directory" "$port" "$start_command"; then
+        if start_service "$service_name" "$directory" "$port" "$start_command"; then
+            # Track successfully started service for rollback
+            STARTED_SERVICES+=("$service_name")
+        else
             failed_services+=("$service_name")
+            # Trigger rollback on failure
+            print_error "${service_name}: Failed to start - triggering rollback"
+            rollback_services
+            show_service_failure_details "$service_name"
+            exit "$EXIT_SERVICE_START_FAILED"
         fi
     done
 
@@ -166,12 +269,16 @@ cmd_start() {
 
     # Check dependencies
     if ! check_dependencies; then
-        print_error "Please install missing dependencies and try again"
-        exit 1
+        show_error_report "$EXIT_DEPENDENCY_ERROR"
+        exit "$EXIT_DEPENDENCY_ERROR"
     fi
 
     # Initialize directories
     init_directories
+
+    # Clean up stale PID files before starting
+    cleanup_stale_pids
+    echo ""
 
     print_step "Starting all services in dependency order..."
     echo ""
@@ -337,9 +444,27 @@ main() {
             start|stop|restart|status|health)
                 local command="$1"
                 shift
+
+                # Parse command-specific options
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --force)
+                            FORCE_MODE=true
+                            shift
+                            ;;
+                        --skip-health-check)
+                            shift
+                            # Pass to command if needed
+                            ;;
+                        *)
+                            break
+                            ;;
+                    esac
+                done
+
                 case "$command" in
                     start)
-                        cmd_start "$@"
+                        cmd_start
                         ;;
                     stop)
                         cmd_stop

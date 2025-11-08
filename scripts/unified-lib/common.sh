@@ -3,8 +3,9 @@
 # Common Functions Library for MySwiftAgent Unified Start Script
 # Provides color output, logging, and utility functions
 
-# Strict error handling
-set -euo pipefail
+# Strict error handling (disabled for sourcing in tests)
+# set -euo pipefail is disabled to allow this library to be sourced in test environments
+# Individual functions handle their own errors appropriately
 
 # Color definitions
 readonly RED='\033[0;31m'
@@ -156,6 +157,80 @@ check_dependencies() {
     return 0
 }
 
+# Clean up stale PID files
+cleanup_stale_pids() {
+    if [[ ! -d "$PID_DIR" ]]; then
+        return 0
+    fi
+
+    local cleaned=0
+
+    for pid_file in "$PID_DIR"/*.pid; do
+        # Skip if no pid files exist
+        if [[ ! -f "$pid_file" ]]; then
+            continue
+        fi
+
+        local pid
+        pid=$(cat "$pid_file" 2>/dev/null || echo "")
+
+        if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
+            # Process is not running, remove stale PID file
+            local service_name
+            service_name=$(basename "$pid_file" .pid)
+            print_info "Cleaning stale PID file for: ${service_name}"
+            rm -f "$pid_file"
+            ((cleaned++))
+        fi
+    done
+
+    if [[ $cleaned -gt 0 ]]; then
+        print_success "Cleaned up ${cleaned} stale PID file(s)"
+    fi
+}
+
+# Find orphaned processes (processes that have PID files but shouldn't be running)
+find_orphaned_processes() {
+    if [[ ! -d "$PID_DIR" ]]; then
+        return 0
+    fi
+
+    local orphaned=0
+
+    for pid_file in "$PID_DIR"/*.pid; do
+        if [[ ! -f "$pid_file" ]]; then
+            continue
+        fi
+
+        local pid
+        pid=$(cat "$pid_file" 2>/dev/null || echo "")
+
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            local service_name
+            service_name=$(basename "$pid_file" .pid)
+            echo "${service_name}:${pid}"
+            ((orphaned++))
+        fi
+    done
+
+    return $orphaned
+}
+
+# Clean up all temporary files and directories
+cleanup_all() {
+    print_step "Cleaning up temporary files..."
+
+    # Clean stale PID files
+    cleanup_stale_pids
+
+    # Remove empty log files
+    if [[ -d "$LOG_DIR" ]]; then
+        find "$LOG_DIR" -type f -name "*.log" -size 0 -delete 2>/dev/null || true
+    fi
+
+    print_success "Cleanup completed"
+}
+
 # Cleanup function for trap
 cleanup_on_exit() {
     local exit_code=$?
@@ -179,6 +254,9 @@ export -f init_directories
 export -f show_banner
 export -f command_exists
 export -f check_dependencies
+export -f cleanup_stale_pids
+export -f find_orphaned_processes
+export -f cleanup_all
 
 # Export color variables
 export RED GREEN YELLOW BLUE PURPLE CYAN WHITE NC
