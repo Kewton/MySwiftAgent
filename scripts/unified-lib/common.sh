@@ -26,7 +26,10 @@ fi
 
 # Detect worktree index for directory isolation
 # Note: worktree-utils.sh must be sourced before this, or we use index 0 as default
-if command -v get_current_worktree_index &> /dev/null; then
+# WORKTREE_OVERRIDE can be set by --worktree option to override the auto-detected index
+if [[ -n "${WORKTREE_OVERRIDE:-}" ]]; then
+    WORKTREE_INDEX="$WORKTREE_OVERRIDE"
+elif command -v get_current_worktree_index &> /dev/null; then
     WORKTREE_INDEX=$(get_current_worktree_index 2>/dev/null || echo "0")
 else
     # Fallback: try to get from .env.local if worktree-utils not loaded yet

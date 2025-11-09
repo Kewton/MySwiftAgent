@@ -34,6 +34,7 @@ source "${SCRIPT_DIR}/lib/env-loader.sh"
 STARTED_SERVICES=()
 ROLLBACK_IN_PROGRESS=false
 FORCE_MODE=false
+WORKTREE_OVERRIDE=""  # Override worktree index for --worktree option
 
 # Service definitions (using environment variables for ports)
 # Format: "service_name:port:directory:start_command"
@@ -180,14 +181,13 @@ COMMANDS:
     --help             Show this help message
 
 OPTIONS:
+    --worktree INDEX   Operate on specific worktree by index (e.g., --worktree 2)
     --force            Force start by killing any processes on required ports
     --timeout N        Set health check timeout in seconds (default: 30)
     --health-check-only  Only perform health checks without starting services
     --skip-health-check  Skip health checks after starting services
-
-OPTIONS:
-    --env-file PATH  Load custom environment file (overrides .env and .env.local)
-    --dry-run        Show configuration without starting services (use with 'start')
+    --env-file PATH    Load custom environment file (overrides .env and .env.local)
+    --dry-run          Show configuration without starting services (use with 'start')
 
 DESCRIPTION:
     This script manages the lifecycle of all MySwiftAgent microservices:
@@ -229,6 +229,11 @@ EXAMPLES:
 
     # Check health only (without starting)
     ./scripts/unified-start.sh --health-check-only
+
+    # Operate on specific worktree (index 2)
+    ./scripts/unified-start.sh status --worktree 2
+    ./scripts/unified-start.sh start --worktree 2
+    ./scripts/unified-start.sh stop --worktree 2
 
     # Stop all services
     ./scripts/unified-start.sh stop
@@ -421,8 +426,35 @@ cmd_restart() {
 
 # Command: status
 cmd_status() {
-    # Load environment variables (silent mode)
-    load_env_files > /dev/null 2>&1 || true
+    # Override .env.local path if --worktree is specified
+    if [[ -n "${WORKTREE_OVERRIDE:-}" ]]; then
+        # Find worktree directory with the specified index
+        local target_worktree_dir=""
+        local current_dir=$(pwd)
+        local worktrees_dir=$(dirname "$current_dir")
+
+        for worktree in "$worktrees_dir"/*/; do
+            if [[ -f "${worktree}.env.local" ]]; then
+                local wt_index=$(grep "^WORKTREE_INDEX=" "${worktree}.env.local" 2>/dev/null | cut -d'=' -f2)
+                if [[ "$wt_index" == "$WORKTREE_OVERRIDE" ]]; then
+                    target_worktree_dir="$worktree"
+                    break
+                fi
+            fi
+        done
+
+        if [[ -n "$target_worktree_dir" ]]; then
+            # Load environment from target worktree
+            LOCAL_ENV_FILE="${target_worktree_dir}.env.local"
+            load_env_files > /dev/null 2>&1 || true
+        else
+            print_warning "Worktree with index $WORKTREE_OVERRIDE not found"
+            return 1
+        fi
+    else
+        # Load environment variables (silent mode)
+        load_env_files > /dev/null 2>&1 || true
+    fi
 
     # Build service definitions
     build_service_definitions
@@ -534,6 +566,11 @@ main() {
                 # Parse command-specific options
                 while [[ $# -gt 0 ]]; do
                     case "$1" in
+                        --worktree)
+                            WORKTREE_OVERRIDE="$2"
+                            export WORKTREE_OVERRIDE
+                            shift 2
+                            ;;
                         --force)
                             FORCE_MODE=true
                             shift
