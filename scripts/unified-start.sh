@@ -4,11 +4,15 @@
 # Single command to start/stop/restart all microservices
 #
 # Usage:
-#   ./scripts/unified-start.sh start   - Start all services
-#   ./scripts/unified-start.sh stop    - Stop all services
-#   ./scripts/unified-start.sh restart - Restart all services
-#   ./scripts/unified-start.sh status  - Check service status
-#   ./scripts/unified-start.sh --help  - Show help
+#   ./scripts/unified-start.sh start [--env-file PATH] [--dry-run]   - Start all services
+#   ./scripts/unified-start.sh stop                                  - Stop all services
+#   ./scripts/unified-start.sh restart [--env-file PATH]             - Restart all services
+#   ./scripts/unified-start.sh status                                - Check service status
+#   ./scripts/unified-start.sh --help                                - Show help
+#
+# Options:
+#   --env-file PATH  Load custom environment file (overrides .env and .env.local)
+#   --dry-run        Show configuration without starting services
 
 # Strict error handling (no -e to allow partial failures)
 set -uo pipefail
@@ -20,6 +24,7 @@ export PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Load libraries
 source "${SCRIPT_DIR}/unified-lib/common.sh"
 source "${SCRIPT_DIR}/unified-lib/process-manager.sh"
+source "${SCRIPT_DIR}/lib/env-loader.sh"
 
 # Service definitions (hardcoded for Phase 1)
 # Format: "service_name:port:directory:start_command"
@@ -65,6 +70,10 @@ COMMANDS:
     status     Check status of all microservices
     --help     Show this help message
 
+OPTIONS:
+    --env-file PATH  Load custom environment file (overrides .env and .env.local)
+    --dry-run        Show configuration without starting services (use with 'start')
+
 DESCRIPTION:
     This script manages the lifecycle of all MySwiftAgent microservices:
 
@@ -82,8 +91,14 @@ DESCRIPTION:
         - commonUI      (Port 8501) : Common UI components
 
 EXAMPLES:
-    # Start all services
+    # Start all services (loads .env and .env.local)
     ./scripts/unified-start.sh start
+
+    # Start with custom environment file
+    ./scripts/unified-start.sh start --env-file .env.production
+
+    # Show configuration without starting (dry-run)
+    ./scripts/unified-start.sh start --dry-run
 
     # Check service status
     ./scripts/unified-start.sh status
@@ -129,6 +144,20 @@ start_layer() {
 # Command: start
 cmd_start() {
     show_banner
+
+    # Load environment variables
+    print_step "Loading environment variables..."
+    if ! load_env_files "$@"; then
+        print_error "Failed to load environment variables"
+        exit 1
+    fi
+    echo ""
+
+    # If dry-run mode, exit after showing configuration
+    if [[ "${DRY_RUN_MODE:-false}" == "true" ]]; then
+        print_info "Dry-run mode: configuration displayed, exiting without starting services"
+        exit 0
+    fi
 
     # Check dependencies
     if ! check_dependencies; then
@@ -238,14 +267,26 @@ cmd_status() {
 main() {
     local command="${1:-}"
 
+    # Shift command, pass remaining args to subcommands
+    if [[ -n "$command" ]]; then
+        shift
+    fi
+
     case "$command" in
         start)
-            cmd_start
+            cmd_start "$@"
             ;;
         stop)
             cmd_stop
             ;;
         restart)
+            # Load env for restart as well
+            print_step "Loading environment variables..."
+            if ! load_env_files "$@"; then
+                print_error "Failed to load environment variables"
+                exit 1
+            fi
+            echo ""
             cmd_restart
             ;;
         status)
