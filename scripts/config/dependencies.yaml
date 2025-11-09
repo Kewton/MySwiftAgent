@@ -1,0 +1,50 @@
+# MySwiftAgent Service Dependencies
+# This file defines service startup order and dependencies
+
+dependencies:
+  # JobQueue has no dependencies - starts first
+  JobQueue:
+    depends_on: []
+    priority: 1
+
+  # MyScheduler depends on JobQueue
+  MyScheduler:
+    depends_on:
+      - JobQueue
+    priority: 2
+
+  # MyVault has no dependencies - can start early
+  MyVault:
+    depends_on: []
+    priority: 1
+
+  # ExpertAgent depends on MyVault
+  ExpertAgent:
+    depends_on:
+      - MyVault
+    priority: 3
+
+  # GraphAiServer can start independently
+  GraphAiServer:
+    depends_on: []
+    priority: 2
+
+  # MyAgentDesk depends on all backend services
+  MyAgentDesk:
+    depends_on:
+      - JobQueue
+      - MyScheduler
+      - MyVault
+      - ExpertAgent
+      - GraphAiServer
+    priority: 10  # Starts last
+
+  # CommonUI depends on all backend services
+  CommonUI:
+    depends_on:
+      - JobQueue
+      - MyScheduler
+      - MyVault
+      - ExpertAgent
+      - GraphAiServer
+    priority: 10  # Starts last
