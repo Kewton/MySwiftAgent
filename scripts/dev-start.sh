@@ -622,6 +622,9 @@ Service-specific commands:
     --myscheduler-only  Only operate on MyScheduler service
     --commonui-only     Only operate on CommonUI service
 
+Docker options:
+    --skip-docker       Skip Docker Compose services and only start native services
+
 Examples:
     $0                           # Start all services
     $0 start                     # Start all services
@@ -665,6 +668,7 @@ clean_temp_files() {
 main() {
     local command="start"
     local service_filter=""
+    local skip_docker=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -683,6 +687,10 @@ main() {
                 ;;
             --commonui-only)
                 service_filter="commonui"
+                shift
+                ;;
+            --skip-docker)
+                skip_docker=true
                 shift
                 ;;
             -h|--help)
