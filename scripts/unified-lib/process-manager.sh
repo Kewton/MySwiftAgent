@@ -3,8 +3,9 @@
 # Process Manager Library for MySwiftAgent Unified Start Script
 # Provides service lifecycle management functions
 
-# Strict error handling
-set -euo pipefail
+# Strict error handling (disabled for sourcing in tests)
+# set -euo pipefail is disabled to allow this library to be sourced in test environments
+# Individual functions handle their own errors appropriately
 
 # Source common library if not already loaded
 if [[ -z "${PROJECT_ROOT:-}" ]]; then
@@ -55,19 +56,81 @@ check_port() {
     fi
 }
 
+# Get detailed port conflict information
+get_port_conflict_info() {
+    local port="$1"
+
+    if ! check_port "$port"; then
+        return 1
+    fi
+
+    local pids
+    pids=$(lsof -ti:"$port" -sTCP:LISTEN 2>/dev/null || echo "")
+
+    if [[ -z "$pids" ]]; then
+        return 1
+    fi
+
+    for pid in $pids; do
+        local cmd user
+        cmd=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+        user=$(ps -p "$pid" -o user= 2>/dev/null || echo "unknown")
+
+        echo "PID:$pid|CMD:$cmd|USER:$user"
+    done
+}
+
 # Kill process on port
 kill_port() {
     local port="$1"
     local service_name="$2"
+    local force_mode="${3:-false}"
 
     if check_port "$port"; then
-        local pid
-        pid=$(lsof -ti:"$port" -sTCP:LISTEN)
-        print_warning "${service_name}: Port ${port} is in use by PID ${pid}"
-        print_info "${service_name}: Killing process on port ${port}..."
-        kill -9 "$pid" 2>/dev/null || true
-        sleep 1
+        local conflict_info
+        conflict_info=$(get_port_conflict_info "$port")
+
+        if [[ -n "$conflict_info" ]]; then
+            print_warning "${service_name}: Port ${port} is in use"
+
+            # Show detailed conflict information
+            while IFS='|' read -r pid_info cmd_info user_info; do
+                local pid="${pid_info#PID:}"
+                local cmd="${cmd_info#CMD:}"
+                local user="${user_info#USER:}"
+
+                echo -e "  ${YELLOW}Conflicting process:${NC}"
+                echo -e "    ${WHITE}PID:${NC}     $pid"
+                echo -e "    ${WHITE}Command:${NC} $cmd"
+                echo -e "    ${WHITE}User:${NC}    $user"
+            done <<< "$conflict_info"
+
+            if [[ "$force_mode" == "true" ]]; then
+                print_info "${service_name}: Force mode enabled - killing process(es) on port ${port}..."
+                local pid
+                pid=$(lsof -ti:"$port" -sTCP:LISTEN)
+                kill -9 $pid 2>/dev/null || true
+                sleep 1
+
+                # Verify port is free
+                if check_port "$port"; then
+                    print_error "${service_name}: Failed to free port ${port}"
+                    return 1
+                else
+                    print_success "${service_name}: Port ${port} freed"
+                fi
+            else
+                print_error "${service_name}: Port ${port} is in use. Use --force to kill conflicting processes"
+                # Show error from catalog if available
+                if declare -f show_port_conflict_details &>/dev/null; then
+                    show_port_conflict_details "$port" "$service_name"
+                fi
+                return 1
+            fi
+        fi
     fi
+
+    return 0
 }
 
 # Start a service
@@ -89,8 +152,10 @@ start_service() {
         return 0
     fi
 
-    # Kill any process on the port
-    kill_port "$port" "$service_name"
+    # Kill any process on the port (pass FORCE_MODE)
+    if ! kill_port "$port" "$service_name" "${FORCE_MODE:-false}"; then
+        return 1
+    fi
 
     # Check if service directory exists
     if [[ ! -d "$service_dir" ]]; then
@@ -280,6 +345,7 @@ check_all_services_status() {
 export -f is_service_running
 export -f get_service_pid
 export -f check_port
+export -f get_port_conflict_info
 export -f kill_port
 export -f start_service
 export -f stop_service

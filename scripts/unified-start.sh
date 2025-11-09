@@ -20,6 +20,13 @@ export PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Load libraries
 source "${SCRIPT_DIR}/unified-lib/common.sh"
 source "${SCRIPT_DIR}/unified-lib/process-manager.sh"
+source "${SCRIPT_DIR}/unified-lib/error-catalog.sh"
+source "${SCRIPT_DIR}/unified-lib/health-check.sh"
+
+# Global state for rollback (compatible with bash 3.2+)
+STARTED_SERVICES=()
+ROLLBACK_IN_PROGRESS=false
+FORCE_MODE=false
 
 # Service definitions (hardcoded for Phase 1)
 # Format: "service_name:port:directory:start_command"
@@ -50,6 +57,94 @@ ALL_SERVICES=(
     "expertagent" "myagentdesk" "commonui"
 )
 
+# Health check timeout (can be overridden via --timeout option)
+HEALTH_CHECK_TIMEOUT=30
+
+# Rollback function - stops all started services
+rollback_services() {
+    # Prevent recursive calls
+    if [[ "$ROLLBACK_IN_PROGRESS" == "true" ]]; then
+        return 0
+    fi
+
+    ROLLBACK_IN_PROGRESS=true
+
+    if [[ ${#STARTED_SERVICES[@]} -eq 0 ]]; then
+        print_info "No services to rollback"
+        return 0
+    fi
+
+    echo ""
+    print_warning "═══════════════════════════════════════════════════════════"
+    print_warning "  ROLLBACK: Stopping ${#STARTED_SERVICES[@]} started service(s)"
+    print_warning "═══════════════════════════════════════════════════════════"
+    echo ""
+
+    # Stop services in reverse order
+    local i
+    for ((i=${#STARTED_SERVICES[@]}-1; i>=0; i--)); do
+        local service_name="${STARTED_SERVICES[$i]}"
+        print_service "$service_name" "Rolling back..."
+        stop_service "$service_name" || true
+    done
+
+    # Clear the list
+    STARTED_SERVICES=()
+
+    echo ""
+    print_success "Rollback completed - all started services stopped"
+    echo ""
+}
+
+# Error handler - called on script error or interruption
+error_handler() {
+    local exit_code=$?
+    local line_number="${1:-unknown}"
+
+    # Ignore exit code 0
+    if [[ $exit_code -eq 0 ]]; then
+        return 0
+    fi
+
+    echo ""
+    print_error "═══════════════════════════════════════════════════════════"
+    print_error "  ERROR DETECTED - Initiating rollback"
+    print_error "═══════════════════════════════════════════════════════════"
+
+    if [[ "$line_number" != "unknown" ]]; then
+        print_error "Failed at line: ${line_number}"
+    fi
+
+    # Execute rollback
+    rollback_services
+
+    # Show error report based on exit code
+    if [[ $exit_code -eq $EXIT_USER_INTERRUPTED ]]; then
+        show_error_report "$EXIT_USER_INTERRUPTED"
+    else
+        show_error_report "$EXIT_PARTIAL_STARTUP_FAILED" "Startup interrupted with exit code: ${exit_code}"
+    fi
+
+    exit "$EXIT_PARTIAL_STARTUP_FAILED"
+}
+
+# Interrupt handler - called on SIGINT or SIGTERM
+interrupt_handler() {
+    echo ""
+    print_warning "═══════════════════════════════════════════════════════════"
+    print_warning "  INTERRUPTED - Cleaning up started services"
+    print_warning "═══════════════════════════════════════════════════════════"
+
+    rollback_services
+
+    show_error_report "$EXIT_USER_INTERRUPTED"
+    exit "$EXIT_USER_INTERRUPTED"
+}
+
+# Set up traps for error handling
+trap 'error_handler $LINENO' ERR
+trap 'interrupt_handler' INT TERM
+
 # Show help
 show_help() {
     cat << EOF
@@ -59,11 +154,18 @@ USAGE:
     ./scripts/unified-start.sh <command> [options]
 
 COMMANDS:
-    start      Start all microservices in dependency order
-    stop       Stop all microservices
-    restart    Restart all microservices
-    status     Check status of all microservices
-    --help     Show this help message
+    start [--force]    Start all microservices in dependency order
+    stop               Stop all microservices
+    restart            Restart all microservices
+    status             Check status of all microservices
+    health             Check health of all running services
+    --help             Show this help message
+
+OPTIONS:
+    --force            Force start by killing any processes on required ports
+    --timeout N        Set health check timeout in seconds (default: 30)
+    --health-check-only  Only perform health checks without starting services
+    --skip-health-check  Skip health checks after starting services
 
 DESCRIPTION:
     This script manages the lifecycle of all MySwiftAgent microservices:
@@ -85,8 +187,20 @@ EXAMPLES:
     # Start all services
     ./scripts/unified-start.sh start
 
+    # Force start (kill conflicting processes)
+    ./scripts/unified-start.sh start --force
+
+    # Start services with custom health check timeout
+    ./scripts/unified-start.sh start --timeout 60
+
     # Check service status
     ./scripts/unified-start.sh status
+
+    # Check service health
+    ./scripts/unified-start.sh health
+
+    # Check health only (without starting)
+    ./scripts/unified-start.sh --health-check-only
 
     # Stop all services
     ./scripts/unified-start.sh stop
@@ -114,8 +228,16 @@ start_layer() {
         # Parse service specification: name:port:directory:start_command
         IFS=':' read -r service_name port directory start_command <<< "$service_spec"
 
-        if ! start_service "$service_name" "$directory" "$port" "$start_command"; then
+        if start_service "$service_name" "$directory" "$port" "$start_command"; then
+            # Track successfully started service for rollback
+            STARTED_SERVICES+=("$service_name")
+        else
             failed_services+=("$service_name")
+            # Trigger rollback on failure
+            print_error "${service_name}: Failed to start - triggering rollback"
+            rollback_services
+            show_service_failure_details "$service_name"
+            exit "$EXIT_SERVICE_START_FAILED"
         fi
     done
 
@@ -128,16 +250,35 @@ start_layer() {
 
 # Command: start
 cmd_start() {
+    local skip_health_check=false
+
+    # Parse start-specific options
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --skip-health-check)
+                skip_health_check=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
     show_banner
 
     # Check dependencies
     if ! check_dependencies; then
-        print_error "Please install missing dependencies and try again"
-        exit 1
+        show_error_report "$EXIT_DEPENDENCY_ERROR"
+        exit "$EXIT_DEPENDENCY_ERROR"
     fi
 
     # Initialize directories
     init_directories
+
+    # Clean up stale PID files before starting
+    cleanup_stale_pids
+    echo ""
 
     print_step "Starting all services in dependency order..."
     echo ""
@@ -176,8 +317,34 @@ cmd_start() {
     else
         print_warning "Startup completed with ${stopped_count} service(s) failed"
     fi
+
+    # Perform health checks unless skipped
+    if [[ "$skip_health_check" == false ]]; then
+        echo ""
+        print_step "Running health checks (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
+        echo ""
+
+        # Prepare service specs for health check
+        local service_specs=()
+        for service_spec in "${LAYER1_SERVICES[@]}" "${LAYER2_SERVICES[@]}" "${LAYER3_SERVICES[@]}"; do
+            IFS=':' read -r service_name port directory start_command <<< "$service_spec"
+            # Only check services that have HTTP health endpoints
+            # Skip commonui as it doesn't have a /health endpoint
+            if [[ "$service_name" != "commonui" && "$service_name" != "myagentdesk" ]]; then
+                service_specs+=("${service_name}:${port}")
+            fi
+        done
+
+        if wait_for_all_services_healthy "$HEALTH_CHECK_TIMEOUT" "${service_specs[@]}"; then
+            print_success "All services are healthy"
+        else
+            print_warning "Some services failed health checks"
+        fi
+    fi
+
     echo ""
     print_info "Use './scripts/unified-start.sh status' to check service status"
+    print_info "Use './scripts/unified-start.sh health' to check service health"
     print_info "Use './scripts/unified-start.sh stop' to stop all services"
 }
 
@@ -234,39 +401,106 @@ cmd_status() {
     check_all_services_status "${service_specs[@]}"
 }
 
+# Command: health
+cmd_health() {
+    # Prepare service specs for health check
+    local service_specs=()
+
+    for service_spec in "${LAYER1_SERVICES[@]}" "${LAYER2_SERVICES[@]}" "${LAYER3_SERVICES[@]}"; do
+        IFS=':' read -r service_name port directory start_command <<< "$service_spec"
+        # Only check services that have HTTP health endpoints
+        # Skip commonui as it doesn't have a /health endpoint
+        if [[ "$service_name" != "commonui" && "$service_name" != "myagentdesk" ]]; then
+            service_specs+=("${service_name}:${port}")
+        fi
+    done
+
+    if check_all_services_health "${service_specs[@]}"; then
+        print_success "All services passed health checks"
+        return 0
+    else
+        print_error "Some services failed health checks"
+        return 1
+    fi
+}
+
 # Main entry point
 main() {
-    local command="${1:-}"
+    # Parse global options first
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --timeout)
+                HEALTH_CHECK_TIMEOUT="$2"
+                shift 2
+                ;;
+            --health-check-only)
+                cmd_health
+                exit $?
+                ;;
+            --help|-h|help)
+                show_help
+                exit 0
+                ;;
+            start|stop|restart|status|health)
+                local command="$1"
+                shift
 
-    case "$command" in
-        start)
-            cmd_start
-            ;;
-        stop)
-            cmd_stop
-            ;;
-        restart)
-            cmd_restart
-            ;;
-        status)
-            cmd_status
-            ;;
-        --help|-h|help)
-            show_help
-            ;;
-        "")
-            print_error "No command specified"
-            echo ""
-            show_help
-            exit 1
-            ;;
-        *)
-            print_error "Unknown command: $command"
-            echo ""
-            show_help
-            exit 1
-            ;;
-    esac
+                # Parse command-specific options
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --force)
+                            FORCE_MODE=true
+                            shift
+                            ;;
+                        --skip-health-check)
+                            shift
+                            # Pass to command if needed
+                            ;;
+                        *)
+                            break
+                            ;;
+                    esac
+                done
+
+                case "$command" in
+                    start)
+                        cmd_start
+                        ;;
+                    stop)
+                        cmd_stop
+                        ;;
+                    restart)
+                        cmd_restart
+                        ;;
+                    status)
+                        cmd_status
+                        ;;
+                    health)
+                        cmd_health
+                        ;;
+                esac
+                return $?
+                ;;
+            "")
+                print_error "No command specified"
+                echo ""
+                show_help
+                exit 1
+                ;;
+            *)
+                print_error "Unknown option or command: $1"
+                echo ""
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
+    # If we get here, no command was specified
+    print_error "No command specified"
+    echo ""
+    show_help
+    exit 1
 }
 
 # Run main
