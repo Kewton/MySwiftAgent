@@ -2,6 +2,8 @@
 
 AI開発支援のため、以下のスキルが利用可能です。各スキルは適切なモデル（Opus/Sonnet）を選択し、タスクに最適化されています。
 
+**🔥 スラッシュコマンド対応**: 主要スキルは `.claude/commands/` に配置され、`/skill-name` 形式で直接呼び出し可能です。
+
 ## 📦 利用可能なスキル（13種類）
 
 | スキル名 | モデル | 用途 | 起動方法 |
@@ -11,14 +13,16 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 | **設計方針** | Opus | アーキテクチャ設計・技術選定 | `/design` または「設計方針を作成」 |
 | **Issue分割** | Opus | FeatureをIssueに分割・依存関係整理 | `/issue-split` または「Issueに分割」 |
 | **作業計画** | Opus | Issue単位の具体的な作業計画立案 | `/plan` または「作業計画を立案」 |
-| **Worktree自動セットアップ** 🆕 | Sonnet | Issue番号から自動でworktree環境構築 | `/worktree-setup` または「Issue #123のworktree作成」 |
-| **PM自動開発** 🆕🔥 | Opus | Issue開発を自律実行（TDD→テスト→報告） | `/pm-auto-dev` または「Issue #123を開発」 |
-| **TDD実装** 🆕 | Sonnet | テスト駆動開発による品質実装 | `/tdd-impl` または「TDD実装を実行」 |
-| **受入テスト** 🆕 | Opus | 自動受入テスト実行・品質保証 | `/acceptance-test` または「受入テストを実行」 |
+| **Worktree自動セットアップ** 🆕✅ | Sonnet | Issue番号から自動でworktree環境構築 | **`/worktree-setup`** または「Issue #123のworktree作成」 |
+| **PM自動開発** 🆕🔥✅ | Opus | Issue開発を自律実行（TDD→テスト→報告） | **`/pm-auto-dev`** または「Issue #123を開発」 |
+| **TDD実装** 🆕✅ | Sonnet | テスト駆動開発による品質実装 | **`/tdd-impl`** または「TDD実装を実行」 |
+| **受入テスト** 🆕✅ | Opus | 自動受入テスト実行・品質保証 | **`/acceptance-test`** または「受入テストを実行」 |
 | **アーキテクチャレビュー** | Opus | 設計レビュー・リスク評価 | `/review-arch` または「アーキテクチャをレビュー」 |
 | **進捗報告** | Sonnet | 進捗サマリ・ブロッカー報告 | `/progress` または「進捗を報告」 |
 | **リファクタリング** | Sonnet | コード品質改善（Codex CLI連携） | `/refactor` または「リファクタリングを実施」 |
-| **PR作成** 🆕 | Sonnet | Pull Request自動作成 | `/pm-create-pr` または「PRを作成」 |
+| **PR作成** 🆕✅ | Sonnet | Pull Request自動作成 | **`/pm-create-pr`** または「PRを作成」 |
+
+**凡例**: ✅ = スラッシュコマンド対応済み（`.claude/commands/` に配置）
 
 ## 🎯 スキル使用例
 
@@ -249,25 +253,48 @@ graph LR
 
 ## 📝 カスタマイズ
 
-スキル定義は`.claude/skills/`ディレクトリに配置されており、必要に応じてカスタマイズ可能です。
+スキル定義は`.claude/skills/`および`.claude/commands/`ディレクトリに配置されており、必要に応じてカスタマイズ可能です。
+
+### スキルとスラッシュコマンドの違い
+
+| 種類 | 配置場所 | 呼び出し方法 | 用途 |
+|------|---------|------------|------|
+| **スキル** | `.claude/skills/` | 自然言語でClaude Code が自動選択 | AI が文脈から判断して使用 |
+| **スラッシュコマンド** | `.claude/commands/` | `/command-name` で直接呼び出し | ユーザーが明示的に実行 |
+
+**推奨**: 頻繁に使う主要なスキルは両方に配置（スラッシュコマンドとしてもアクセス可能に）
 
 ### カスタムスキルの作成方法
 
-1. `.claude/skills/` にMarkdownファイルを作成
+#### スキルとして作成（自動選択）
+1. `.claude/skills/` にMarkdownファイルを作成（例: `my-skill.md`）
 2. スキル定義を記述
-3. Claude Codeを再起動して認識させる
+3. Claude Codeが自然言語から自動的に選択
+
+#### スラッシュコマンドとして作成（明示的呼び出し）
+1. `.claude/commands/` にMarkdownファイルを作成（例: `my-command.md`）
+2. コマンド定義を記述
+3. `/my-command` で直接実行可能
+
+#### 両方で使えるようにする
+1. `.claude/skills/my-skill.md` を作成
+2. `.claude/commands/` にコピー: `cp .claude/skills/my-skill.md .claude/commands/`
+3. 自然言語と `/my-skill` の両方で利用可能に
 
 ### スキル定義の構造
 
-```yaml
----
-name: skill-name
-model: opus # または sonnet
-trigger: /command-name
----
+```markdown
+# スキル名
 
-# スキル内容
-実行する処理の詳細...
+## 概要
+このスキルの目的と概要を記述
+
+## 使用方法
+- `/skill-name [パラメータ]`（スラッシュコマンドの場合）
+- 「〜してください」（自然言語の場合）
+
+## 実行内容
+具体的な処理内容を記述...
 ```
 
 ---
