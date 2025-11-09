@@ -43,8 +43,13 @@ else
 fi
 
 # Worktree-specific directories for process isolation
-readonly LOG_DIR="${PROJECT_ROOT}/logs/wt${WORKTREE_INDEX}"
-readonly PID_DIR="/tmp/myswiftagent-wt${WORKTREE_INDEX}"
+# Only set if not already defined
+if [[ -z "${LOG_DIR:-}" ]]; then
+    readonly LOG_DIR="${PROJECT_ROOT}/logs/wt${WORKTREE_INDEX}"
+fi
+if [[ -z "${PID_DIR:-}" ]]; then
+    readonly PID_DIR="/tmp/myswiftagent-wt${WORKTREE_INDEX}"
+fi
 
 # Timestamp function
 get_timestamp() {
