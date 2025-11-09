@@ -4,11 +4,15 @@
 # Single command to start/stop/restart all microservices
 #
 # Usage:
-#   ./scripts/unified-start.sh start   - Start all services
-#   ./scripts/unified-start.sh stop    - Stop all services
-#   ./scripts/unified-start.sh restart - Restart all services
-#   ./scripts/unified-start.sh status  - Check service status
-#   ./scripts/unified-start.sh --help  - Show help
+#   ./scripts/unified-start.sh start [--env-file PATH] [--dry-run]   - Start all services
+#   ./scripts/unified-start.sh stop                                  - Stop all services
+#   ./scripts/unified-start.sh restart [--env-file PATH]             - Restart all services
+#   ./scripts/unified-start.sh status                                - Check service status
+#   ./scripts/unified-start.sh --help                                - Show help
+#
+# Options:
+#   --env-file PATH  Load custom environment file (overrides .env and .env.local)
+#   --dry-run        Show configuration without starting services
 
 # Strict error handling (no -e to allow partial failures)
 set -uo pipefail
@@ -24,6 +28,7 @@ source "${SCRIPT_DIR}/unified-lib/error-catalog.sh"
 source "${SCRIPT_DIR}/unified-lib/health-check.sh"
 source "${SCRIPT_DIR}/unified-lib/worktree-utils.sh"
 source "${SCRIPT_DIR}/unified-lib/port-manager.sh"
+source "${SCRIPT_DIR}/lib/env-loader.sh"
 
 # Global state for rollback (compatible with bash 3.2+)
 STARTED_SERVICES=()
@@ -169,6 +174,10 @@ OPTIONS:
     --health-check-only  Only perform health checks without starting services
     --skip-health-check  Skip health checks after starting services
 
+OPTIONS:
+    --env-file PATH  Load custom environment file (overrides .env and .env.local)
+    --dry-run        Show configuration without starting services (use with 'start')
+
 DESCRIPTION:
     This script manages the lifecycle of all MySwiftAgent microservices:
 
@@ -186,8 +195,14 @@ DESCRIPTION:
         - commonUI      (Port 8501) : Common UI components
 
 EXAMPLES:
-    # Start all services
+    # Start all services (loads .env and .env.local)
     ./scripts/unified-start.sh start
+
+    # Start with custom environment file
+    ./scripts/unified-start.sh start --env-file .env.production
+
+    # Show configuration without starting (dry-run)
+    ./scripts/unified-start.sh start --dry-run
 
     # Force start (kill conflicting processes)
     ./scripts/unified-start.sh start --force
@@ -268,6 +283,20 @@ cmd_start() {
     done
 
     show_banner
+
+    # Load environment variables
+    print_step "Loading environment variables..."
+    if ! load_env_files "$@"; then
+        print_error "Failed to load environment variables"
+        exit 1
+    fi
+    echo ""
+
+    # If dry-run mode, exit after showing configuration
+    if [[ "${DRY_RUN_MODE:-false}" == "true" ]]; then
+        print_info "Dry-run mode: configuration displayed, exiting without starting services"
+        exit 0
+    fi
 
     # Check dependencies
     if ! check_dependencies; then
@@ -487,6 +516,10 @@ main() {
                             shift
                             # Pass to command if needed
                             ;;
+                        --env-file|--dry-run)
+                            # Keep env-related options for cmd_start
+                            break
+                            ;;
                         *)
                             break
                             ;;
@@ -495,12 +528,19 @@ main() {
 
                 case "$command" in
                     start)
-                        cmd_start
+                        cmd_start "$@"
                         ;;
                     stop)
                         cmd_stop
                         ;;
                     restart)
+                        # Load env for restart as well
+                        print_step "Loading environment variables..."
+                        if ! load_env_files "$@"; then
+                            print_error "Failed to load environment variables"
+                            exit 1
+                        fi
+                        echo ""
                         cmd_restart
                         ;;
                     status)
