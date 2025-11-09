@@ -23,8 +23,23 @@ if [[ -z "${PROJECT_ROOT:-}" ]]; then
     UNIFIED_LIB_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
     readonly PROJECT_ROOT="$(dirname "$(dirname "$UNIFIED_LIB_DIR")")"
 fi
-readonly LOG_DIR="${PROJECT_ROOT}/logs"
-readonly PID_DIR="/tmp/myswiftagent"
+
+# Detect worktree index for directory isolation
+# Note: worktree-utils.sh must be sourced before this, or we use index 0 as default
+if command -v get_current_worktree_index &> /dev/null; then
+    WORKTREE_INDEX=$(get_current_worktree_index 2>/dev/null || echo "0")
+else
+    # Fallback: try to get from .env.local if worktree-utils not loaded yet
+    if [[ -f "${PROJECT_ROOT}/.env.local" ]]; then
+        WORKTREE_INDEX=$(grep "^WORKTREE_INDEX=" "${PROJECT_ROOT}/.env.local" 2>/dev/null | cut -d'=' -f2 || echo "0")
+    else
+        WORKTREE_INDEX="0"
+    fi
+fi
+
+# Worktree-specific directories for process isolation
+readonly LOG_DIR="${PROJECT_ROOT}/logs/wt${WORKTREE_INDEX}"
+readonly PID_DIR="/tmp/myswiftagent-wt${WORKTREE_INDEX}"
 
 # Timestamp function
 get_timestamp() {
@@ -262,4 +277,4 @@ export -f cleanup_all
 export RED GREEN YELLOW BLUE PURPLE CYAN WHITE NC
 
 # Export global configuration
-export PROJECT_ROOT LOG_DIR PID_DIR
+export PROJECT_ROOT LOG_DIR PID_DIR WORKTREE_INDEX

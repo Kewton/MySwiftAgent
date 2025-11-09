@@ -35,27 +35,38 @@ STARTED_SERVICES=()
 ROLLBACK_IN_PROGRESS=false
 FORCE_MODE=false
 
-# Service definitions (hardcoded for Phase 1)
+# Service definitions (using environment variables for ports)
 # Format: "service_name:port:directory:start_command"
+# Port numbers are read from environment variables set by env-loader.sh
+# Fallback to default ports if environment variables are not set
 
-# Layer 1: Infrastructure services
-LAYER1_SERVICES=(
-    "myvault:8003:${PROJECT_ROOT}/myVault:uv run uvicorn app.main:app --host 0.0.0.0 --port 8003"
-    "jobqueue:8001:${PROJECT_ROOT}/jobqueue:uv run uvicorn app.main:app --host 0.0.0.0 --port 8001"
-)
+# Initialize service arrays (will be populated after environment is loaded)
+LAYER1_SERVICES=()
+LAYER2_SERVICES=()
+LAYER3_SERVICES=()
 
-# Layer 2: Middleware services
-LAYER2_SERVICES=(
-    "myscheduler:8002:${PROJECT_ROOT}/myscheduler:uv run uvicorn app.main:app --host 0.0.0.0 --port 8002"
-    "graphaiserver:8005:${PROJECT_ROOT}/graphAiServer:PORT=8005 npm run dev"
-)
+# Build service definitions from environment variables
+# This function must be called AFTER load_env_files()
+build_service_definitions() {
+    # Layer 1: Infrastructure services
+    LAYER1_SERVICES=(
+        "myvault:${MYVAULT_PORT:-8003}:${PROJECT_ROOT}/myVault:uv run uvicorn app.main:app --host 0.0.0.0 --port ${MYVAULT_PORT:-8003}"
+        "jobqueue:${JOBQUEUE_PORT:-8001}:${PROJECT_ROOT}/jobqueue:uv run uvicorn app.main:app --host 0.0.0.0 --port ${JOBQUEUE_PORT:-8001}"
+    )
 
-# Layer 3: Application services
-LAYER3_SERVICES=(
-    "expertagent:8004:${PROJECT_ROOT}/expertAgent:uv run uvicorn app.main:app --host 0.0.0.0 --port 8004"
-    "myagentdesk:5173:${PROJECT_ROOT}/myAgentDesk:npm run dev -- --host 0.0.0.0 --port 5173"
-    "commonui:8501:${PROJECT_ROOT}/commonUI:uv run streamlit run Home.py --server.port 8501"
-)
+    # Layer 2: Middleware services
+    LAYER2_SERVICES=(
+        "myscheduler:${MYSCHEDULER_PORT:-8002}:${PROJECT_ROOT}/myscheduler:uv run uvicorn app.main:app --host 0.0.0.0 --port ${MYSCHEDULER_PORT:-8002}"
+        "graphaiserver:${GRAPHAI_PORT:-8005}:${PROJECT_ROOT}/graphAiServer:PORT=${GRAPHAI_PORT:-8005} npm run dev"
+    )
+
+    # Layer 3: Application services
+    LAYER3_SERVICES=(
+        "expertagent:${EXPERTAGENT_PORT:-8004}:${PROJECT_ROOT}/expertAgent:uv run uvicorn app.main:app --host 0.0.0.0 --port ${EXPERTAGENT_PORT:-8004}"
+        "myagentdesk:${VITE_PORT:-5173}:${PROJECT_ROOT}/myAgentDesk:npm run dev -- --host 0.0.0.0 --port ${VITE_PORT:-5173}"
+        "commonui:8501:${PROJECT_ROOT}/commonUI:uv run streamlit run Home.py --server.port 8501"
+    )
+}
 
 # All services list (for status and stop commands)
 ALL_SERVICES=(
@@ -292,6 +303,9 @@ cmd_start() {
     fi
     echo ""
 
+    # Build service definitions from loaded environment variables
+    build_service_definitions
+
     # If dry-run mode, exit after showing configuration
     if [[ "${DRY_RUN_MODE:-false}" == "true" ]]; then
         print_info "Dry-run mode: configuration displayed, exiting without starting services"
@@ -407,6 +421,12 @@ cmd_restart() {
 
 # Command: status
 cmd_status() {
+    # Load environment variables (silent mode)
+    load_env_files > /dev/null 2>&1 || true
+
+    # Build service definitions
+    build_service_definitions
+
     # Show worktree information if in a worktree
     if is_worktree; then
         echo ""
@@ -463,6 +483,12 @@ cmd_status() {
 
 # Command: health
 cmd_health() {
+    # Load environment variables (silent mode)
+    load_env_files > /dev/null 2>&1 || true
+
+    # Build service definitions
+    build_service_definitions
+
     # Prepare service specs for health check
     local service_specs=()
 
