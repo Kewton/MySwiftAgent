@@ -1,0 +1,77 @@
+# MySwiftAgent Service Definitions
+# This file defines all services, their ports, directories, and configuration
+
+services:
+  - name: JobQueue
+    port: 8001
+    directory: jobqueue
+    log_file: jobqueue.log
+    pid_file: jobqueue.pid
+    start_command: "LOG_DIR='{{LOG_DIR}}' LOG_LEVEL='{{LOG_LEVEL}}' uv run uvicorn app.main:app --host 0.0.0.0 --port {{PORT}} --workers 4"
+    health_endpoint: /health
+    env_port_var: JOBQUEUE_PORT
+    log_level_source: jobqueue/.env
+
+  - name: MyScheduler
+    port: 8002
+    directory: myscheduler
+    log_file: myscheduler.log
+    pid_file: myscheduler.pid
+    start_command: "JOBQUEUE_API_URL='{{JOBQUEUE_API_URL}}' LOG_DIR='{{LOG_DIR}}' LOG_LEVEL='{{LOG_LEVEL}}' uv run uvicorn app.main:app --host 0.0.0.0 --port {{PORT}}"
+    health_endpoint: /health
+    env_port_var: MYSCHEDULER_PORT
+    log_level_source: myscheduler/.env
+
+  - name: MyVault
+    port: 8003
+    directory: myVault
+    log_file: myvault.log
+    pid_file: myvault.pid
+    start_command: "DATABASE_URL='sqlite:///./data/myvault.db' LOG_DIR='{{LOG_DIR}}' LOG_LEVEL='{{LOG_LEVEL}}' uv run uvicorn app.main:app --host 0.0.0.0 --port {{PORT}}"
+    health_endpoint: /health
+    env_port_var: MYVAULT_PORT
+    log_level_source: myVault/.env
+    required_env:
+      - MSA_MASTER_KEY
+    skip_if_missing_env: true
+
+  - name: ExpertAgent
+    port: 8004
+    directory: expertAgent
+    log_file: expertagent.log
+    pid_file: expertagent.pid
+    start_command: "MYVAULT_BASE_URL='{{MYVAULT_BASE_URL}}' LOG_DIR='{{LOG_DIR}}' LOG_LEVEL='{{LOG_LEVEL}}' uv run uvicorn app.main:app --host 0.0.0.0 --port {{PORT}} --workers 4"
+    health_endpoint: /health
+    env_port_var: EXPERTAGENT_PORT
+    log_level_source: expertAgent/.env
+
+  - name: GraphAiServer
+    port: 8005
+    directory: graphAiServer
+    log_file: graphaiserver.log
+    pid_file: graphaiserver.pid
+    start_command: "PORT={{PORT}} npm start"
+    health_endpoint: /health
+    env_port_var: GRAPHAISERVER_PORT
+
+  - name: MyAgentDesk
+    port: 8000
+    directory: myAgentDesk
+    log_file: myagentdesk.log
+    pid_file: myagentdesk.pid
+    start_command: "PORT={{PORT}} npm run dev"
+    # No health endpoint for SvelteKit dev server (port check only)
+    env_port_var: MYAGENTDESK_PORT
+    wait_before_start: 3
+    custom_health_check: port_only
+
+  - name: CommonUI
+    port: 8501
+    directory: commonUI
+    log_file: commonui.log
+    pid_file: commonui.pid
+    start_command: "uv run streamlit run Home.py --server.port {{PORT}} --server.headless true"
+    # No health endpoint for Streamlit (port check only)
+    env_port_var: COMMONUI_PORT
+    wait_before_start: 3
+    custom_health_check: port_only
