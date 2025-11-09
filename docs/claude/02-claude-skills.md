@@ -2,7 +2,7 @@
 
 AI開発支援のため、以下のスキルが利用可能です。各スキルは適切なモデル（Opus/Sonnet）を選択し、タスクに最適化されています。
 
-## 📦 利用可能なスキル（11種類）
+## 📦 利用可能なスキル（13種類）
 
 | スキル名 | モデル | 用途 | 起動方法 |
 |---------|--------|------|---------|
@@ -12,11 +12,13 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 | **Issue分割** | Opus | FeatureをIssueに分割・依存関係整理 | `/issue-split` または「Issueに分割」 |
 | **作業計画** | Opus | Issue単位の具体的な作業計画立案 | `/plan` または「作業計画を立案」 |
 | **Worktree自動セットアップ** 🆕 | Sonnet | Issue番号から自動でworktree環境構築 | `/worktree-setup` または「Issue #123のworktree作成」 |
+| **PM自動開発** 🆕🔥 | Opus | Issue開発を自律実行（TDD→テスト→報告） | `/pm-auto-dev` または「Issue #123を開発」 |
 | **TDD実装** 🆕 | Sonnet | テスト駆動開発による品質実装 | `/tdd-impl` または「TDD実装を実行」 |
 | **受入テスト** 🆕 | Opus | 自動受入テスト実行・品質保証 | `/acceptance-test` または「受入テストを実行」 |
 | **アーキテクチャレビュー** | Opus | 設計レビュー・リスク評価 | `/review-arch` または「アーキテクチャをレビュー」 |
 | **進捗報告** | Sonnet | 進捗サマリ・ブロッカー報告 | `/progress` または「進捗を報告」 |
 | **リファクタリング** | Sonnet | コード品質改善（Codex CLI連携） | `/refactor` または「リファクタリングを実施」 |
+| **PR作成** 🆕 | Sonnet | Pull Request自動作成 | `/pm-create-pr` または「PRを作成」 |
 
 ## 🎯 スキル使用例
 
@@ -47,7 +49,26 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
    → Issueラベルからブランチ種別判定、worktree自動作成
 ```
 
-### Issue開発中
+### Issue開発（自動実行 🔥）
+```
+User: 「Issue #145を開発してください」
+Claude: /pm-auto-dev 145 を実行...
+→ TDD実装 → 受入テスト → リファクタ → 進捗報告を自律実行
+→ イテレーション最大3回（テスト不合格時は自動再実装）
+→ 完了後、ユーザーに動作確認を依頼
+
+User: [動作確認OK]
+User: 「PRを作成してください」
+Claude: /pm-create-pr を実行...
+→ Issue情報から自動でタイトル・説明生成、PR作成
+
+User: [動作確認で不具合発見]
+User: 「不具合を修正してください」
+Claude: /pm-auto-dev 145 --mode=fix を実行...
+→ 是正モードで再実装、テスト実行
+```
+
+### Issue開発（手動実行）
 ```
 User: 「TDD実装でユーザー認証機能を開発してください」
 Claude: /tdd-impl を実行...
@@ -67,6 +88,88 @@ Claude: /refactor を実行...
 ```
 
 ## 🆕 新スキルの詳細
+
+### PM自動開発スキル (`/pm-auto-dev`) 🔥
+
+**最重要スキル**: Issue開発を**完全自動化**するプロジェクトマネージャースキル
+
+**特徴**:
+- TDD実装 → 受入テスト → リファクタリング → 進捗報告を**自律実行**
+- テスト不合格時は最大3回まで**自動再実装**（イテレーション制御）
+- ユーザーは `/pm-auto-dev [Issue番号]` 1回呼ぶだけ
+- 完了後は動作確認のみでOK
+
+**実行モード**:
+- `full`: 新規開発モード（デフォルト）
+- `fix`: 是正モード（動作確認で不具合発見時）
+
+**実行フロー**:
+```mermaid
+graph TD
+    Start[ユーザー: /pm-auto-dev 145] --> PM[PMエージェント起動]
+    PM --> TDD[TDD実装エージェント]
+    TDD --> Test[受入テストエージェント]
+    Test --> Pass{合格?}
+    Pass -->|No| Iter{イテレーション<br/>上限?}
+    Iter -->|未満| TDD
+    Iter -->|到達| Escalate[エスカレーション]
+    Pass -->|Yes| Refactor{リファクタ<br/>必要?}
+    Refactor -->|Yes| RefactorAgent[リファクタエージェント]
+    Refactor -->|No| Progress[進捗報告エージェント]
+    RefactorAgent --> Progress
+    Progress --> UserCheck[ユーザー動作確認]
+    UserCheck -->|OK| PR[/pm-create-pr]
+    UserCheck -->|NG| Fix[/pm-auto-dev --mode=fix]
+    Fix --> TDD
+```
+
+**パラメータ**:
+- `issue_number`: 開発対象のIssue番号（必須）
+- `mode`: `full` or `fix`（デフォルト: full）
+- `max_iterations`: 最大イテレーション回数（デフォルト: 3）
+- `skip_refactor`: リファクタリングをスキップ（デフォルト: false）
+
+**使用例**:
+```bash
+# 基本的な使い方
+/pm-auto-dev 145
+
+# 是正モード
+/pm-auto-dev 145 --mode=fix
+
+# イテレーション回数変更
+/pm-auto-dev 145 --max-iterations=5
+```
+
+### PR作成スキル (`/pm-create-pr`)
+
+**特徴**:
+- Issue情報から**自動でPRタイトル・説明生成**
+- 変更内容の自動分析
+- テスト結果の自動埋め込み
+- Conventional Commits形式に準拠
+
+**実行条件**:
+- `/pm-auto-dev` 完了後
+- ユーザーの動作確認OK後
+- `pre-push-check-all.sh` 全パス
+
+**実行フロー**:
+```mermaid
+graph LR
+    Start[ユーザー: /pm-create-pr] --> Detect[Issue番号検出]
+    Detect --> Analyze[変更内容分析]
+    Analyze --> Generate[PR説明生成]
+    Generate --> Check[最終チェック]
+    Check --> Create[PR作成]
+    Create --> Report[URL報告]
+```
+
+**パラメータ**:
+- `issue_number`: Issue番号（省略時は自動検出）
+- `base_branch`: マージ先（デフォルト: develop）
+- `draft`: Draft PRとして作成（デフォルト: false）
+- `auto_assign`: 自分を自動アサイン（デフォルト: true）
 
 ### Worktree自動セットアップスキル (`/worktree-setup`)
 
