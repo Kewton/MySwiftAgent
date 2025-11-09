@@ -22,6 +22,8 @@ source "${SCRIPT_DIR}/unified-lib/common.sh"
 source "${SCRIPT_DIR}/unified-lib/process-manager.sh"
 source "${SCRIPT_DIR}/unified-lib/error-catalog.sh"
 source "${SCRIPT_DIR}/unified-lib/health-check.sh"
+source "${SCRIPT_DIR}/unified-lib/worktree-utils.sh"
+source "${SCRIPT_DIR}/unified-lib/port-manager.sh"
 
 # Global state for rollback (compatible with bash 3.2+)
 STARTED_SERVICES=()
@@ -376,6 +378,35 @@ cmd_restart() {
 
 # Command: status
 cmd_status() {
+    # Show worktree information if in a worktree
+    if is_worktree; then
+        echo ""
+        echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${CYAN}║${NC}                    ${WHITE}Worktree Information${NC}                           ${CYAN}║${NC}"
+        echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
+        echo ""
+
+        local worktree_name
+        local worktree_index
+        local main_repo
+        worktree_name=$(get_worktree_name)
+        worktree_index=$(get_current_worktree_index)
+        main_repo=$(get_main_repo_path)
+
+        echo -e "  ${BLUE}Worktree Name:${NC}    $worktree_name"
+        echo -e "  ${BLUE}Worktree Index:${NC}   $worktree_index"
+        echo -e "  ${BLUE}Main Repository:${NC}  $main_repo"
+        echo ""
+
+        # Show port assignments
+        echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${CYAN}║${NC}                    ${WHITE}Port Assignments${NC}                              ${CYAN}║${NC}"
+        echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
+        echo ""
+        get_port_status_summary
+        echo ""
+    fi
+
     # Prepare service specs for status check
     local service_specs=()
 

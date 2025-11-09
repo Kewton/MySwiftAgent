@@ -355,6 +355,177 @@ cd ~/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-126
 cd ~/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-127
 ```
 
+## 🔧 worktree管理モジュール（Issue #144）
+
+### モジュール構成
+
+worktree管理機能は、再利用可能なモジュールとして実装されています：
+
+```
+scripts/unified-lib/
+├── worktree-utils.sh    # worktree検出・管理
+└── port-manager.sh      # ポート計算・衝突検出
+```
+
+### worktree-utils.sh
+
+**主な機能**:
+- worktree自動検出
+- メインリポジトリパス取得
+- worktreeインデックス管理
+- 使用中インデックスの追跡
+
+**主な関数**:
+```bash
+get_main_repo_path              # メインリポジトリのパスを取得
+is_worktree                     # 現在がworktreeかどうか判定
+get_worktree_name               # worktree名を取得
+list_all_worktrees              # 全worktreeのリスト取得
+get_used_worktree_indices       # 使用中のインデックス取得
+find_available_worktree_index   # 利用可能なインデックスを検索
+get_current_worktree_index      # 現在のworktreeインデックス取得
+get_worktree_info               # worktree情報サマリ取得
+count_worktrees                 # worktree数をカウント
+```
+
+**使用例**:
+```bash
+source scripts/unified-lib/worktree-utils.sh
+
+# worktreeかどうか確認
+if is_worktree; then
+    echo "This is a worktree"
+    echo "Index: $(get_current_worktree_index)"
+    echo "Main repo: $(get_main_repo_path)"
+fi
+
+# 利用可能なインデックスを取得
+next_index=$(find_available_worktree_index)
+echo "Next available index: $next_index"
+```
+
+### port-manager.sh
+
+**主な機能**:
+- サービスごとのポート番号計算
+- ポート使用状況確認
+- 空きポート検出
+- ポート競合チェック
+
+**ポート計算アルゴリズム**:
+```
+ポート番号 = ベースポート + (worktreeインデックス × 10)
+
+例: expertagent (index=1)
+    8104 + (1 × 10) = 8114
+```
+
+**主な関数**:
+```bash
+calculate_port service_name index    # ポート番号を計算
+is_port_in_use port                  # ポートが使用中か確認
+find_available_port start_port       # 空きポートを検索
+get_all_ports_for_index index        # 全サービスのポート一覧
+check_port_conflicts index           # ポート競合チェック
+suggest_alternative_port service port # 代替ポート提案
+get_port_status_summary              # ポート状態サマリ
+```
+
+**デフォルトベースポート**:
+```bash
+expertagent:  8104
+myvault:      8103
+myscheduler:  8102
+jobqueue:     8101
+graphai:      8100
+vite:         5173  # +1 ずつ増加（特殊ケース）
+```
+
+**使用例**:
+```bash
+source scripts/unified-lib/port-manager.sh
+
+# ポート番号を計算
+port=$(calculate_port expertagent 2)
+echo "ExpertAgent port for index 2: $port"  # 8124
+
+# ポート使用確認
+if is_port_in_use 8104; then
+    echo "Port 8104 is in use"
+    alternative=$(find_available_port 8104)
+    echo "Use alternative port: $alternative"
+fi
+
+# ポート状態サマリを表示
+get_port_status_summary
+```
+
+### unified-start.sh との統合
+
+`unified-start.sh status` コマンドは、worktree環境で以下の情報を自動表示：
+
+```bash
+./scripts/unified-start.sh status
+
+# 出力例:
+╔══════════════════════════════════════════════════════════════════════╗
+║                    Worktree Information                           ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+  Worktree Name:    feature-issue-144
+  Worktree Index:   6
+  Main Repository:  /Users/user/MySwiftAgent
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                    Port Assignments                              ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+Port Status for Worktree Index: 6
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  expertagent     : 8164   (Available)
+  myvault         : 8163   (Available)
+  myscheduler     : 8162   (Available)
+  jobqueue        : 8161   (Available)
+  graphai         : 8160   (Available)
+  vite            : 5179   (Available)
+```
+
+### テスト
+
+モジュールの品質は、包括的なテストスイートで保証されています：
+
+```bash
+# worktree-utilsのテスト（28テスト、100%パス）
+./tests/scripts/test_worktree_utils.sh
+
+# port-managerのテスト（55テスト、100%パス）
+./tests/scripts/test_port_manager.sh
+```
+
+**テスト項目**:
+- 関数の存在確認
+- worktree検出の正確性
+- インデックス計算の正確性
+- ポート計算の正確性（複数インデックス）
+- ポート衝突検出
+- エラーハンドリング（不正な入力）
+- エッジケース（非worktree環境、使用済みポート等）
+
+### 技術仕様
+
+**対応環境**:
+- macOS (lsof使用)
+- Linux (lsof/netstat使用)
+- Bash 3.2+互換
+
+**安全性**:
+- 入力値の厳密な検証
+- エラーハンドリング
+- 後方互換性の保証
+- 非worktree環境でも正常動作
+
+---
+
 ## 📚 詳細ドキュメント
 
 並列開発の詳細なワークフローについては、[並列開発ワークフロー](../workflows/parallel-development.md) を参照してください。

@@ -13,19 +13,14 @@
 
 set -e
 
-WORKTREE_DIR=$(pwd)
-WORKTREE_NAME=$(basename "$WORKTREE_DIR")
+# Get script directory and load libraries
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/unified-lib/worktree-utils.sh"
+source "${SCRIPT_DIR}/unified-lib/port-manager.sh"
 
-# メインリポジトリのパスを取得（worktree対応）
-# worktreeの場合、--git-common-dirで共有.gitディレクトリのパスを取得し、その親がメインリポジトリ
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || echo "")
-if [ -n "$GIT_COMMON_DIR" ] && [ "$GIT_COMMON_DIR" != ".git" ]; then
-    # worktreeの場合（.git/worktrees/xxx のようなパス）
-    MAIN_REPO=$(cd "$GIT_COMMON_DIR/.." && pwd)
-else
-    # 通常のリポジトリの場合
-    MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/MySwiftAgent")
-fi
+WORKTREE_DIR=$(pwd)
+WORKTREE_NAME=$(get_worktree_name)
+MAIN_REPO=$(get_main_repo_path)
 
 echo "📍 Setting up worktree: $WORKTREE_NAME"
 echo ""
@@ -38,38 +33,12 @@ if [ -f .env.local ]; then
     exit 0
 fi
 
-# 全worktreeから使用中のインデックスを収集
+# Detect and assign worktree index using library functions
 echo "🔍 Detecting used worktree indices..."
-USED_INDICES=()
+USED_INDICES_STR=$(get_used_worktree_indices)
+read -ra USED_INDICES <<< "$USED_INDICES_STR"
 
-# MySwiftAgent-worktrees ディレクトリ内の全worktreeをスキャン
-WORKTREES_DIR="$(dirname "$WORKTREE_DIR")"
-if [ -d "$WORKTREES_DIR" ]; then
-    for worktree in "$WORKTREES_DIR"/*/; do
-        if [ -f "${worktree}.env.local" ]; then
-            # .env.local から WORKTREE_INDEX を抽出
-            INDEX=$(grep "^WORKTREE_INDEX=" "${worktree}.env.local" 2>/dev/null | cut -d'=' -f2)
-            if [ -n "$INDEX" ]; then
-                USED_INDICES+=($INDEX)
-            fi
-        fi
-    done
-fi
-
-# 使用中のインデックスをソート
-if [ ${#USED_INDICES[@]} -gt 0 ]; then
-    USED_INDICES=($(printf '%s\n' "${USED_INDICES[@]}" | sort -n | uniq))
-fi
-
-# 空いている最小のインデックスを検索（1から順に）
-WORKTREE_INDEX=1
-for used in "${USED_INDICES[@]}"; do
-    if [ "$WORKTREE_INDEX" -eq "$used" ]; then
-        WORKTREE_INDEX=$((WORKTREE_INDEX + 1))
-    else
-        break
-    fi
-done
+WORKTREE_INDEX=$(find_available_worktree_index)
 
 echo "✅ Assigned index: $WORKTREE_INDEX"
 if [ ${#USED_INDICES[@]} -gt 0 ]; then
@@ -78,20 +47,13 @@ else
     echo "   Used indices: none (this is the first worktree)"
 fi
 
-# ポート番号を計算
-BASE_EXPERTAGENT=8104
-BASE_MYVAULT=8103
-BASE_MYSCHEDULER=8102
-BASE_JOBQUEUE=8101
-BASE_GRAPHAI=8100
-BASE_VITE=5173
-
-PORT_EXPERTAGENT=$((BASE_EXPERTAGENT + (WORKTREE_INDEX * 10)))
-PORT_MYVAULT=$((BASE_MYVAULT + (WORKTREE_INDEX * 10)))
-PORT_MYSCHEDULER=$((BASE_MYSCHEDULER + (WORKTREE_INDEX * 10)))
-PORT_JOBQUEUE=$((BASE_JOBQUEUE + (WORKTREE_INDEX * 10)))
-PORT_GRAPHAI=$((BASE_GRAPHAI + (WORKTREE_INDEX * 10)))
-PORT_VITE=$((BASE_VITE + WORKTREE_INDEX))
+# Calculate port numbers using library functions
+PORT_EXPERTAGENT=$(calculate_port expertagent "$WORKTREE_INDEX")
+PORT_MYVAULT=$(calculate_port myvault "$WORKTREE_INDEX")
+PORT_MYSCHEDULER=$(calculate_port myscheduler "$WORKTREE_INDEX")
+PORT_JOBQUEUE=$(calculate_port jobqueue "$WORKTREE_INDEX")
+PORT_GRAPHAI=$(calculate_port graphai "$WORKTREE_INDEX")
+PORT_VITE=$(calculate_port vite "$WORKTREE_INDEX")
 
 # .env.local ファイルを生成（インデックスも記録）
 cat > .env.local <<EOF
