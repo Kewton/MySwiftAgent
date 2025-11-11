@@ -256,9 +256,7 @@ class TestGenerateJobAndTasks:
         mock_get_secret.side_effect = ValueError("Secret not found: ANTHROPIC_API_KEY")
 
         # Create request
-        request = JobGeneratorRequest(
-            user_requirement="Test requirement", max_retry=5
-        )
+        request = JobGeneratorRequest(user_requirement="Test requirement", max_retry=5)
 
         # Create mock BackgroundTasks
         background_tasks = BackgroundTasks()
