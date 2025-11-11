@@ -313,4 +313,4 @@ graph LR
 
 ---
 
-[← CLAUDE.mdに戻る](../../CLAUDE.md) | [次: Claude Code Skills →](./02-claude-skills.md)
+[← CLAUDE.mdに戻る](../../CLAUDE.md) | [次: スラッシュコマンド →](./02-slash-commands.md)

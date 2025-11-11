@@ -1,8 +1,10 @@
 # Claude Code Skills ヘルプ
 
-## 利用可能なスキル一覧（7種類）
+## 利用可能なスキル一覧（13種類）
 
-### 1. 要件定義 (`/requirements`)
+### 開発プロセススキル
+
+#### 1. 要件定義 (`/requirements`)
 **用途**: ユーザーストーリー、受入条件、技術要件を生成
 **モデル**: Opus
 **フェーズ**: 1. Feature定義（メインセッション）
@@ -11,25 +13,25 @@
 /requirements プロフィール画像アップロード機能
 ```
 
-### 2. 設計方針 (`/design`)
+#### 2. 設計方針 (`/design-policy`)
 **用途**: アーキテクチャ設計、技術選定、設計判断を支援
 **モデル**: Opus
 **フェーズ**: 2. 仕様ドラフト（メインセッション）
 **使用例**:
 ```
-/design 認証システムの設計
+/design-policy 認証システムの設計
 ```
 
-### 3. アーキテクチャレビュー (`/review-arch`)
+#### 3. アーキテクチャレビュー (`/architecture-review`)
 **用途**: 設計レビュー、リスク評価、改善提案
 **モデル**: Opus
 **フェーズ**: 3. レビュー・承認（メインセッション） / 12. コードレビュー（worktreeセッション）
 **使用例**:
 ```
-/review-arch [設計書を添付]
+/architecture-review [設計書を添付]
 ```
 
-### 4. Issue分割 (`/issue-split`)
+#### 4. Issue分割 (`/issue-split`)
 **用途**: FeatureをIssueに分割、依存関係整理
 **モデル**: Opus
 **フェーズ**: 4. Issue分割（メインセッション）
@@ -38,31 +40,95 @@
 /issue-split ユーザー管理機能
 ```
 
-### 5. 作業計画 (`/plan`)
+#### 5. 作業計画 (`/work-plan`)
 **用途**: Issue単位の具体的な作業計画立案
 **モデル**: Opus
 **フェーズ**: 5. 作業計画（メインセッション）
 **使用例**:
 ```
-/plan Issue #123
+/work-plan Issue #123
 ```
 
-### 6. 進捗報告 (`/progress`)
-**用途**: 進捗サマリ作成、ブロッカー報告、次ステップ明確化
+### 実装支援スキル
+
+#### 6. 受入テスト (`/acceptance-test`)
+**用途**: BDD形式の受入テストシナリオ作成
 **モデル**: Sonnet
-**フェーズ**: 10. 進捗管理（worktreeセッション）
+**フェーズ**: 6. テスト作成（worktreeセッション）
 **使用例**:
 ```
-/progress
+/acceptance-test ユーザーログイン機能
 ```
 
-### 7. リファクタリング (`/refactor`)
+#### 7. TDD実装 (`/tdd-impl`)
+**用途**: テスト駆動開発でコード実装
+**モデル**: Sonnet
+**フェーズ**: 7. TDD実装（worktreeセッション）
+**使用例**:
+```
+/tdd-impl UserService.authenticate
+```
+
+#### 8. リファクタリング (`/refactoring`)
 **用途**: コード品質改善、設計パターン適用、技術的負債解消
 **モデル**: Sonnet + Codex CLI
 **フェーズ**: 9. リファクタリング（worktreeセッション、必要時）
 **使用例**:
 ```
-/refactor [対象コード]
+/refactoring [対象コード]
+```
+
+### 環境設定スキル
+
+#### 9. Worktreeセットアップ (`/worktree-setup`)
+**用途**: git worktreeの作成と環境設定
+**モデル**: Haiku
+**フェーズ**: worktree作成時
+**使用例**:
+```
+/worktree-setup issue/123-user-auth
+```
+
+### 進捗管理スキル
+
+#### 10. 進捗報告 (`/progress-report`)
+**用途**: 進捗サマリ作成、ブロッカー報告、次ステップ明確化
+**モデル**: Sonnet
+**フェーズ**: 10. 進捗管理（worktreeセッション）
+**使用例**:
+```
+/progress-report
+```
+
+### 自動化スキル
+
+#### 11. PM自動開発 (`/pm-auto-dev`)
+**用途**: プロダクトマネージャーとして自動開発を実行
+**モデル**: Opus + Sonnet
+**フェーズ**: 自動化フロー
+**使用例**:
+```
+/pm-auto-dev Issue #123
+```
+
+#### 12. PR作成 (`/pm-create-pr`)
+**用途**: プルリクエストの自動作成とドラフト生成
+**モデル**: Sonnet
+**フェーズ**: 11. PR作成（worktreeセッション）
+**使用例**:
+```
+/pm-create-pr feat: ユーザー認証機能
+```
+
+### UIデザインスキル
+
+#### 13. UIモックアップ (`/ui-mockup`)
+**用途**: HTMLモックアップを生成
+**モデル**: Sonnet
+**フェーズ**: UIデザイン段階
+**使用例**:
+```
+/ui-mockup ログイン画面
 ```
 
 ## スキルの実行方法
@@ -108,16 +174,22 @@
 
 ## カスタマイズ
 
-スキル定義ファイルは `.claude/skills/` ディレクトリに配置されています：
-- `requirements.md` - 要件定義スキル
-- `design-policy.md` - 設計方針スキル
-- `issue-split.md` - Issue分割スキル
-- `work-plan.md` - 作業計画スキル
-- `architecture-review.md` - レビュースキル
-- `progress-report.md` - 進捗報告スキル
-- `refactoring.md` - リファクタリングスキル
+スラッシュコマンド定義ファイルは `.claude/commands/` ディレクトリに配置されています：
+- `requirements.md` - 要件定義コマンド
+- `design-policy.md` - 設計方針コマンド
+- `issue-split.md` - Issue分割コマンド
+- `work-plan.md` - 作業計画コマンド
+- `architecture-review.md` - レビューコマンド
+- `progress-report.md` - 進捗報告コマンド
+- `refactoring.md` - リファクタリングコマンド
+- `acceptance-test.md` - 受入テストコマンド
+- `tdd-impl.md` - TDD実装コマンド
+- `worktree-setup.md` - Worktreeセットアップコマンド
+- `pm-auto-dev.md` - PM自動開発コマンド
+- `pm-create-pr.md` - PR作成コマンド
+- `ui-mockup.md` - UIモックアップコマンド
 
-各ファイルを編集することで、スキルの動作をカスタマイズできます。
+各ファイルを編集することで、スラッシュコマンドの動作をカスタマイズできます。
 
 ## トラブルシューティング
 

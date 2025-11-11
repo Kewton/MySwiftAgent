@@ -576,7 +576,7 @@ Feature完了後、仕様を確定版としてWikiに転記。
 ## 📚 関連ドキュメント
 
 - [CLAUDE.md](../../CLAUDE.md) - プロジェクト全体ガイドライン
-- [Claude Code Skills](../../.claude/skills/) - AI活用スキル定義
+- [Claude Code スラッシュコマンド](../../.claude/commands/) - AI活用スラッシュコマンド定義
 - [GitHub Wiki](https://github.com/kewton/MySwiftAgent/wiki) - 確定仕様書
 
 ---

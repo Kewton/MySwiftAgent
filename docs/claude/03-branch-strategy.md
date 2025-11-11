@@ -151,4 +151,4 @@ mainブランチへのマージ時、変更されたすべてのプロジェク�
 
 ---
 
-[← Claude Skills](./02-claude-skills.md) | [CLAUDE.md](../../CLAUDE.md) | [次: 品質基準 →](./04-quality-standards.md)
+[← スラッシュコマンド](./02-slash-commands.md) | [CLAUDE.md](../../CLAUDE.md) | [次: 品質基準 →](./04-quality-standards.md)

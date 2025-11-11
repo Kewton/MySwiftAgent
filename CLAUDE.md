@@ -46,7 +46,7 @@
 | カテゴリ | ドキュメント | 内容 | 優先度 |
 |---------|------------|------|--------|
 | **開発フロー** | [01-development-workflow.md](./docs/claude/01-development-workflow.md) | アジャイル開発、Feature/Issue管理 | 🔴 高 |
-| **Claude Skills** | [02-claude-skills.md](./docs/claude/02-claude-skills.md) | 利用可能なスキル一覧と使用方法 | 🔴 高 |
+| **スラッシュコマンド** | [02-slash-commands.md](./docs/claude/02-slash-commands.md) | 利用可能なスラッシュコマンド一覧と使用方法 | 🔴 高 |
 | **ブランチ戦略** | [03-branch-strategy.md](./docs/claude/03-branch-strategy.md) | ブランチルール、PR戦略、リリース | 🔴 高 |
 | **品質基準** | [04-quality-standards.md](./docs/claude/04-quality-standards.md) | テスト方針、静的解析、CI/CD | 🔴 高 |
 | **並列開発** | [05-worktree-guide.md](./docs/claude/05-worktree-guide.md) | git worktree による並列開発 | 🟡 中 |
@@ -74,7 +74,7 @@
 ## 🔍 用途別クイックリンク
 
 ### 新機能開発を始める
-→ [開発フロー](./docs/claude/01-development-workflow.md)、[Claude Skills](./docs/claude/02-claude-skills.md)、[ブランチ戦略](./docs/claude/03-branch-strategy.md)
+→ [開発フロー](./docs/claude/01-development-workflow.md)、[スラッシュコマンド](./docs/claude/02-slash-commands.md)、[ブランチ戦略](./docs/claude/03-branch-strategy.md)
 
 ### バグ修正を行う
 → [ブランチ戦略](./docs/claude/03-branch-strategy.md)、[品質基準](./docs/claude/04-quality-standards.md)

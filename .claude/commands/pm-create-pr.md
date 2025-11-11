@@ -27,7 +27,20 @@
 
 ### Phase 1: ブランチとIssue情報の取得
 
-#### 1-1. 現在のブランチ確認
+#### 1-1. base_branchの初期化
+
+まず、マージ先ブランチを設定します：
+
+```bash
+# パラメータで指定されていない場合、developをデフォルトとする
+base_branch="${base_branch:-develop}"
+```
+
+**重要**: このプロジェクトのブランチ戦略では、`feature/*`, `fix/*`, `vibe/*` ブランチは **必ず `develop` ブランチにマージ** します。`main` ブランチへの直接マージは禁止されています。
+
+詳細: [docs/claude/03-branch-strategy.md](../../docs/claude/03-branch-strategy.md)
+
+#### 1-2. 現在のブランチ確認
 
 ```bash
 git branch --show-current
@@ -35,7 +48,7 @@ git branch --show-current
 
 期待されるブランチ名: `feature/issue/{issue_number}`
 
-#### 1-2. Issue番号の検出
+#### 1-3. Issue番号の検出
 
 パラメータで`issue_number`が指定されていない場合、ブランチ名から抽出：
 
@@ -86,18 +99,21 @@ cat dev-reports/feature/issue/{issue_number}/progress-report.md
 #### 2-1. ブランチの最新性確認
 
 ```bash
-git fetch origin {base_branch}
-git merge-base --is-ancestor origin/{base_branch} HEAD
+# base_branchが未設定の場合、developをデフォルトとする
+base_branch="${base_branch:-develop}"
+
+git fetch origin "${base_branch}"
+git merge-base --is-ancestor origin/"${base_branch}" HEAD
 ```
 
 最新でない場合は警告：
 ```
-⚠️ 警告: 現在のブランチが{base_branch}の最新から分岐していません。
+⚠️ 警告: 現在のブランチが${base_branch}の最新から分岐していません。
 
 推奨アクション:
-1. developブランチの最新を取り込む:
-   git fetch origin {base_branch}
-   git rebase origin/{base_branch}
+1. ${base_branch}ブランチの最新を取り込む:
+   git fetch origin ${base_branch}
+   git rebase origin/${base_branch}
 
 2. コンフリクト解決後に再度 /pm-create-pr を実行
 ```
@@ -163,7 +179,10 @@ PR作成を中止しました。以下を実施してください:
 変更ファイルから主要プロジェクトを判定：
 
 ```bash
-git diff --name-status origin/{base_branch}...HEAD
+# base_branchが未設定の場合、developをデフォルトとする
+base_branch="${base_branch:-develop}"
+
+git diff --name-status origin/"${base_branch}"...HEAD
 ```
 
 判定ルール:
@@ -198,14 +217,17 @@ git diff --name-status origin/{base_branch}...HEAD
 #### 4-1. 変更内容の分析
 
 ```bash
+# base_branchが未設定の場合、developをデフォルトとする
+base_branch="${base_branch:-develop}"
+
 # 変更ファイル一覧
-git diff --name-status origin/{base_branch}...HEAD
+git diff --name-status origin/"${base_branch}"...HEAD
 
 # ファイルごとの追加/削除行数
-git diff --stat origin/{base_branch}...HEAD
+git diff --stat origin/"${base_branch}"...HEAD
 
 # コミットメッセージ一覧
-git log --oneline origin/{base_branch}...HEAD
+git log --oneline origin/"${base_branch}"...HEAD
 ```
 
 #### 4-2. PR説明文生成
@@ -330,14 +352,22 @@ labels=$(gh issue view {issue_number} --json labels --jq '.labels[].name' | tr '
 #### 5-2. PR作成コマンド実行
 
 ```bash
+# base_branchが未設定の場合、developをデフォルトとする
+base_branch="${base_branch:-develop}"
+
 gh pr create \
-  --base {base_branch} \
-  --title "{pr_title}" \
-  --body "{pr_body}" \
-  --label "{labels}" \
-  {draft_flag} \
-  {assignee_flag}
+  --base "${base_branch}" \
+  --title "${pr_title}" \
+  --body "${pr_body}" \
+  --label "${labels}" \
+  ${draft_flag} \
+  ${assignee_flag}
 ```
+
+**重要な注意事項**:
+- **base_branch は必ず `develop` に設定されます**（デフォルト値）
+- `feature/*`, `fix/*`, `vibe/*` ブランチからのPRは `develop` ブランチへマージするのがプロジェクトルールです
+- `main` ブランチへの直接PRは禁止されています（[ブランチ戦略](../../docs/claude/03-branch-strategy.md)参照）
 
 **オプション**:
 - `--draft`: Draft PRとして作成（`draft=true`の場合）
