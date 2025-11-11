@@ -52,6 +52,7 @@
 | **並列開発** | [05-worktree-guide.md](./docs/claude/05-worktree-guide.md) | git worktree による並列開発 | 🟡 中 |
 | **エラー防止** | [06-ci-cd-prevention.md](./docs/claude/06-ci-cd-prevention.md) | GitHub Actions エラー再発防止 | 🟡 中 |
 | **文書管理** | [07-documentation-rules.md](./docs/claude/07-documentation-rules.md) | 作業ドキュメント管理ルール | 🟡 中 |
+| **Issue分割** | [08-issue-split.md](./docs/claude/08-issue-split.md) | Issue分割詳細ガイド、受入基準の2層構造 | 🔴 高 |
 
 ---
 
@@ -75,6 +76,9 @@
 
 ### 新機能開発を始める
 → [開発フロー](./docs/claude/01-development-workflow.md)、[スラッシュコマンド](./docs/claude/02-slash-commands.md)、[ブランチ戦略](./docs/claude/03-branch-strategy.md)
+
+### FeatureをIssueに分割する
+→ [Issue分割ガイド](./docs/claude/08-issue-split.md)、[開発フロー](./docs/claude/01-development-workflow.md)
 
 ### バグ修正を行う
 → [ブランチ戦略](./docs/claude/03-branch-strategy.md)、[品質基準](./docs/claude/04-quality-standards.md)
