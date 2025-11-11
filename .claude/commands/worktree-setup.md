@@ -1,3 +1,10 @@
+---
+model: sonnet
+description: "Issue番号からgit worktree環境を自動構築"
+phase: "7. ブランチ作成"
+session: "main → worktree"
+---
+
 # Worktree自動セットアップスキル
 
 ## 概要
@@ -198,10 +205,6 @@ multiSelect: false
 
 - **Bash**: `gh issue view`, `./scripts/worktree-create-from-issue.sh`
 - **AskUserQuestion**: ブランチ種別が判定できない場合のみ
-
-## モデル設定
-- model: sonnet（環境構築タスクのため）
-- temperature: 0.3（正確性重視）
 
 ## 関連ドキュメント
 - [05-worktree-guide.md](../../docs/claude/05-worktree-guide.md)

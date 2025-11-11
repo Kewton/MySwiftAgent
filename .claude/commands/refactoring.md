@@ -1,3 +1,10 @@
+---
+model: sonnet
+description: "コード品質改善、設計パターン適用、技術的負債解消"
+phase: "10. リファクタリング"
+session: "worktree"
+---
+
 # リファクタリングスキル
 
 ## 概要
@@ -173,8 +180,3 @@ codex refactor \
 ## 出力フォーマット
 
 PRの説明文として使用可能なMarkdown形式。Before/Afterのコード比較、改善内容の説明を含む。
-
-## モデル設定
-- model: sonnet（効率的な処理のため）
-- temperature: 0.2（一貫性のあるリファクタリングのため）
-- tools: Codex CLI（MCP経由で実コード変更）

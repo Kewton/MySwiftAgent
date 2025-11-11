@@ -1,3 +1,10 @@
+---
+model: opus
+description: "Issue単位の具体的な作業計画立案"
+phase: "6. 作業計画"
+session: "main"
+---
+
 # 作業計画立案スキル（Issue単位）
 
 ## 概要
@@ -168,7 +175,3 @@ Issue完了条件：
 ## 出力フォーマット
 
 GitHub Issueのコメントやプロジェクト管理ツールに転記可能なMarkdown形式。
-
-## モデル設定
-- model: opus（詳細な計画立案のため）
-- temperature: 0.5（論理的で具体的な計画のため）

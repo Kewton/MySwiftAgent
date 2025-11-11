@@ -1,3 +1,10 @@
+---
+model: opus
+description: "Issue要件に基づく自動受入テスト実行"
+phase: "9. 品質保証"
+session: "worktree"
+---
+
 # 受入テストスキル
 
 ## 概要

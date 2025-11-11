@@ -1,3 +1,10 @@
+---
+model: sonnet
+description: "Claude Code Skills の使用方法とガイド"
+phase: "ヘルプ"
+session: "any"
+---
+
 # Claude Code Skills ヘルプ
 
 ## 利用可能なスキル一覧（13種類）

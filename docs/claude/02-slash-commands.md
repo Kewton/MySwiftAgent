@@ -272,6 +272,13 @@ graph LR
 ### スラッシュコマンド定義の構造
 
 ```markdown
+---
+model: opus | sonnet
+description: "スキルの簡潔な説明（1行）"
+phase: "開発フェーズ番号と名称"
+session: "main" | "worktree" | "any"
+---
+
 # コマンド名
 
 ## 概要
@@ -284,6 +291,12 @@ graph LR
 ## 実行内容
 具体的な処理内容を記述...
 ```
+
+**フロントマター項目**:
+- `model`: 使用するClaudeモデル（opus/sonnet）
+- `description`: スキルの簡潔な説明（1行）
+- `phase`: 開発ワークフローのフェーズ番号と名称
+- `session`: 実行するセッション（main/worktree/any）
 
 ---
 

@@ -1,3 +1,10 @@
+---
+model: sonnet
+description: "開発進捗サマリ作成、ブロッカー報告"
+phase: "11. 進捗管理"
+session: "worktree"
+---
+
 # 進捗報告スキル
 
 ## 概要
@@ -133,7 +140,3 @@ Week 3: ███████ 7 points (今週)
 ## 出力フォーマット
 
 Slack、メール、Issue コメントに適したMarkdown形式で出力。視覚的に分かりやすい絵文字と表を活用。
-
-## モデル設定
-- model: sonnet（定型的な報告のため）
-- temperature: 0.4（一貫性のある報告のため）

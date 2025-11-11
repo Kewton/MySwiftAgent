@@ -1,3 +1,10 @@
+---
+model: opus
+description: "FeatureをIssueに分割、依存関係整理"
+phase: "5. Issue分割"
+session: "main"
+---
+
 # Issue分割スキル
 
 ## 概要
@@ -281,7 +288,3 @@ Issue分割後、各Issueの詳細な作業計画は `/work-plan` スキルで�
 - [詳細ガイド](../../docs/claude/08-issue-split.md)
 - [開発ワークフロー](../../docs/claude/01-development-workflow.md)
 - [PM自動開発スキル](./pm-auto-dev.md)
-
-## モデル設定
-- model: opus（複雑な分割判断のため）
-- temperature: 0.6（柔軟性と論理性のバランス）

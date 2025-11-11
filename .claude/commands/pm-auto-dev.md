@@ -1,3 +1,10 @@
+---
+model: opus
+description: "Issue開発を完全自動化（TDD→テスト→報告）"
+phase: "8-11. 自動開発"
+session: "worktree"
+---
+
 # PM自動開発スキル
 
 ## 概要

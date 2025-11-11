@@ -1,3 +1,10 @@
+---
+model: sonnet
+description: "SvelteKitで4つのインタラクティブなUIプロトタイプを生成"
+phase: "2. UIモックアップ"
+session: "main"
+---
+
 # UIモックアップスキル
 
 ## 概要

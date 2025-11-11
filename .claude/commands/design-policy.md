@@ -1,3 +1,10 @@
+---
+model: opus
+description: "アーキテクチャ設計、技術選定、設計判断を支援"
+phase: "3. 仕様ドラフト"
+session: "main"
+---
+
 # 設計方針作成スキル
 
 ## 概要
@@ -114,7 +121,3 @@ CLAUDE.mdの以下の原則に準拠：
 ## 出力フォーマット
 
 設計方針書（design-policy.md）形式で出力。図表を含む構造化されたMarkdownドキュメント。
-
-## モデル設定
-- model: opus（複雑な設計判断のため）
-- temperature: 0.5（論理的な設計のため低めに設定）
