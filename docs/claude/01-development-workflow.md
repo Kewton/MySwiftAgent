@@ -29,9 +29,9 @@ graph LR
 各開発フェーズで利用可能なClaude Code Skills（スキルを使用しないフェーズも含む）：
 
 ### 📍 セッション区分
-- **フェーズ 1-5**: メインセッション（develop ブランチ） - Feature計画
-- **フェーズ 6-14**: worktree セッション（issue ブランチ） - Issue開発
-- **フェーズ 15-17**: メインセッション（develop ブランチ） - **Featureクローズ処理**
+- **フェーズ 1-6**: メインセッション（develop ブランチ） - Feature計画
+- **フェーズ 7-15**: worktree セッション（issue ブランチ） - Issue開発
+- **フェーズ 16-19**: メインセッション（develop ブランチ） - **Featureクローズ処理**
 
 | フェーズ | 利用スキル | モデル | コマンド | セッション | 用途 |
 |---------|-----------|--------|----------|-----------|------|
@@ -39,21 +39,22 @@ graph LR
 | **2. UIモックアップ** 🆕 | UIデザイン | Sonnet | `/ui-mockup` | メイン | UI必要時のみ、4パターン生成 |
 | **3. 仕様ドラフト** | 設計方針 | Opus | `/design` | メイン | アーキテクチャ設計、技術選定 |
 | **4. レビュー・承認** | アーキテクチャレビュー | Opus | `/review-arch` | メイン | 設計レビュー、リスク評価 |
-| **5. Issue分割** | Issue分割 | Opus | `/issue-split` | メイン | FeatureをIssueに分割 |
-| **6. 作業計画** | 作業計画 | Opus | `/plan` | メイン | Issue単位の詳細作業計画 |
-| **7. ブランチ作成** | Worktree自動セットアップ | Sonnet | `/worktree-setup` | **→ worktree** | Issue番号から自動でworktree環境構築 |
-| **8. 開発（TDD実装）** | TDD実装 | Sonnet | `/tdd-impl` | worktree | テスト駆動開発による実装 |
-| **9. 品質保証** | 受入テスト | Opus | `/acceptance-test` | worktree | 受入テスト実行・分析 |
-| **10. リファクタリング** | リファクタリング | Sonnet | `/refactor` | worktree | コード品質改善（必要時） |
-| **11. 進捗管理** | 進捗報告 | Sonnet | `/progress` | worktree | 進捗サマリ、ブロッカー報告 |
-| **12. PR作成** | - | Sonnet | - | worktree | Pull Request作成（手動作業） |
-| **13. コードレビュー** | アーキテクチャレビュー | Opus | `/review-arch` | worktree | コードレビュー支援（必要時） |
-| **14. CI/CD実行** | - | Sonnet | - | worktree | 自動テスト・ビルド（自動処理） |
-| **15. マージ** | - | Sonnet | - | worktree | developブランチへマージ（手動作業） |
+| **5. Issue分割** | Issue分割 | Opus | `/issue-split` | メイン | FeatureをIssueに分割（計画書作成） |
+| **6. Issue登録** 🆕 | Issue一括作成 | Sonnet | `/issue-create` | メイン | GitHub Issueに一括登録、親子関連付け |
+| **7. 作業計画** | 作業計画 | Opus | `/work-plan` | メイン | Issue単位の詳細作業計画 |
+| **8. ブランチ作成** | Worktree自動セットアップ | Sonnet | `/worktree-setup` | **→ worktree** | Issue番号から自動でworktree環境構築 |
+| **9. 開発（TDD実装）** | TDD実装 | Sonnet | `/tdd-impl` | worktree | テスト駆動開発による実装 |
+| **10. 品質保証** | 受入テスト | Opus | `/acceptance-test` | worktree | 受入テスト実行・分析 |
+| **11. リファクタリング** | リファクタリング | Sonnet | `/refactor` | worktree | コード品質改善（必要時） |
+| **12. 進捗管理** | 進捗報告 | Sonnet | `/progress` | worktree | 進捗サマリ、ブロッカー報告 |
+| **13. PR作成** | - | Sonnet | - | worktree | Pull Request作成（手動作業） |
+| **14. コードレビュー** | アーキテクチャレビュー | Opus | `/review-arch` | worktree | コードレビュー支援（必要時） |
+| **15. CI/CD実行** | - | Sonnet | - | worktree | 自動テスト・ビルド（自動処理） |
+| **16. マージ** | - | Sonnet | - | worktree | developブランチへマージ（手動作業） |
 | 🏁 **Featureクローズ処理** ||||| |
-| **16. フィーチャーフラグ設定** | - | Sonnet | - | **← メイン** | フラグ設定（手動作業） |
-| **17. Wiki文書化** | - | Sonnet | - | メイン推奨 | 仕様確定・文書化（両セッション可） |
-| **18. リリース準備** | - | Sonnet | - | メイン | リリースノート作成等（手動作業） |
+| **17. フィーチャーフラグ設定** | - | Sonnet | - | **← メイン** | フラグ設定（手動作業） |
+| **18. Wiki文書化** | - | Sonnet | - | メイン推奨 | 仕様確定・文書化（両セッション可） |
+| **19. リリース準備** | - | Sonnet | - | メイン | リリースノート作成等（手動作業） |
 
 ### スキル実行フローの例
 
@@ -65,9 +66,10 @@ graph TD
     UICheck -->|No| Design["設計方針<br/>(/design - Opus)"]
     Mockup --> Design
     Design --> Review1["設計レビュー<br/>(/review-arch - Opus)"]
-    Review1 -->|承認| IssueSplit["Issue分割<br/>(/issue-split - Opus)"]
+    Review1 -->|承認| IssueSplit["Issue分割<br/>(/issue-split - Opus)<br/>計画書作成"]
     Review1 -->|要修正| Design
-    IssueSplit --> Plan["作業計画<br/>(/plan - Opus)<br/>Issue単位"]
+    IssueSplit --> IssueCreate["Issue登録<br/>(/issue-create - Sonnet)<br/>GitHub一括作成"]
+    IssueCreate --> Plan["作業計画<br/>(/work-plan - Opus)<br/>Issue単位"]
 
     Plan --> SessionSwitch["🔄 セッション切替<br/>worktree作成"]
     SessionSwitch --> Branch["Worktree自動セットアップ<br/>(/worktree-setup - Sonnet)"]
@@ -98,6 +100,7 @@ graph TD
     style Design fill:#e3f2fd
     style Review1 fill:#e3f2fd
     style IssueSplit fill:#e3f2fd
+    style IssueCreate fill:#c8e6c9
     style Plan fill:#e3f2fd
     style RefactorExec fill:#fff3e0
     style Progress fill:#fff3e0

@@ -4,7 +4,7 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 
 **🔥 スラッシュコマンド対応**: 主要スキルは `.claude/commands/` に配置され、`/skill-name` 形式で直接呼び出し可能です。
 
-## 📦 利用可能なスキル（13種類）
+## 📦 利用可能なスキル（14種類）
 
 | スキル名 | モデル | 用途 | 起動方法 |
 |---------|--------|------|---------|
@@ -12,7 +12,8 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 | **UIモックアップ** 🆕 | Sonnet | SvelteKitで4パターンのUI生成 | `/ui-mockup` または「UIモックアップを作成」 |
 | **設計方針** | Opus | アーキテクチャ設計・技術選定 | `/design` または「設計方針を作成」 |
 | **Issue分割** | Opus | FeatureをIssueに分割・依存関係整理 | `/issue-split` または「Issueに分割」 |
-| **作業計画** | Opus | Issue単位の具体的な作業計画立案 | `/plan` または「作業計画を立案」 |
+| **Issue登録** 🆕✅ | Sonnet | GitHub Issueに一括登録・親子関連付け | **`/issue-create`** または「Issue #152から子Issueを作成」 |
+| **作業計画** | Opus | Issue単位の具体的な作業計画立案 | `/work-plan` または「作業計画を立案」 |
 | **Worktree自動セットアップ** 🆕✅ | Sonnet | Issue番号から自動でworktree環境構築 | **`/worktree-setup`** または「Issue #123のworktree作成」 |
 | **PM自動開発** 🆕🔥✅ | Opus | Issue開発を自律実行（TDD→テスト→報告） | **`/pm-auto-dev`** または「Issue #123を開発」 |
 | **TDD実装** 🆕✅ | Sonnet | テスト駆動開発による品質実装 | **`/tdd-impl`** または「TDD実装を実行」 |
@@ -42,13 +43,17 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 
 4. User: 「FeatureをIssueに分割してください」
    Claude: /issue-split を実行...
-   → 複数のIssueと依存関係マトリクスを生成
+   → Issue分割計画書（issue-split.md）を作成
 
-5. User: 「Issue #123の作業計画を立案してください」
-   Claude: /plan を実行...
+5. User: 「Issue #152から子Issueを作成してください」
+   Claude: /issue-create を実行...
+   → GitHub Issueを一括作成、親子関連付け
+
+6. User: 「Issue #201の作業計画を立案してください」
+   Claude: /work-plan を実行...
    → Issue単位の詳細タスク、スケジュールを生成
 
-6. User: 「Issue #123のworktreeを作成してください」
+7. User: 「Issue #201のworktreeを作成してください」
    Claude: /worktree-setup を実行...
    → Issueラベルからブランチ種別判定、worktree自動作成
 ```
