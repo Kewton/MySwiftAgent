@@ -67,8 +67,23 @@
 | **アーキテクチャを理解する** | [architecture-overview.md](./docs/design/architecture-overview.md) | 🟡 推奨 |
 | **環境変数を設定する** | [environment-variables.md](./docs/design/environment-variables.md) | 🟡 推奨 |
 | **myVault連携を実装する** | [myvault-integration.md](./docs/design/myvault-integration.md) | 🟡 推奨 |
+| **デプロイメントを行う** | [deployment-guide.md](./docs/ops/deployment-guide.md) | 🟡 推奨 |
 
 **重要**: 該当するドキュメントは作業開始前に必ず全文を読み、作業計画書 (`work-plan.md`) に参照を明記してください。
+
+### 📚 プロジェクト別必須ドキュメント
+
+各マイクロサービスの開発時に参照すべきドキュメント:
+
+| プロジェクト | 必須ドキュメント | 説明 |
+|-------------|----------------|------|
+| **expertAgent** | [API_REFERENCE.md](./expertAgent/docs/API_REFERENCE.md) | 全API仕様 (Job Generator, Workflow Generator, Chat, Marp Report, Observability) |
+| **expertAgent** | [job-generation-workflow.md](./docs/spec/job-generation-workflow.md) | Job Generator仕様とLangGraphエージェント設計 |
+| **graphAiServer** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | ワークフロー生成ルール・利用可能Agent一覧 |
+| **myAgentDesk** | [README.md](./myAgentDesk/README.md) | SvelteKitアーキテクチャ・API統合・トラブルシューティング |
+| **全サービス** | [service-dependencies.md](./docs/arch/service-dependencies.md) | サービス間依存関係・起動順序・通信フロー |
+| **全サービス** | [deployment-guide.md](./docs/ops/deployment-guide.md) | Docker Compose/Kubernetesデプロイ手順 |
+| **全サービス** | [acceptance-testing.md](./docs/spec/acceptance-testing.md) | 統一起動スクリプト・受入テスト効率化 |
 
 ---
 

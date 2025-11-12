@@ -410,6 +410,12 @@ GraphAI workflows are defined in YAML files under `config/graphai/`. You can cre
 2. Defining nodes, agents, and connections
 3. Referencing the workflow name in the API request
 
+**📚 Workflow Generation Rules:**
+
+For detailed guidelines on creating GraphAI workflows, including available agents, design patterns, and best practices, see:
+- **[GraphAI Workflow Generation Rules](docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)** - Complete workflow creation guide
+- **[Available Agents](docs/AVAILABLE_AGENTS.md)** - List of usable agents in this environment
+
 **Example workflow structure:**
 ```yaml
 version: 0.5

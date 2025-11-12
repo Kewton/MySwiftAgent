@@ -836,6 +836,784 @@ ADMIN_TOKEN=your_admin_token_here
 
 ---
 
+## Job Generator API
+
+### Generate Job and Tasks (Async)
+
+**POST** `/api/v1/job-generator`
+
+Asynchronously generates Job and Tasks from natural language requirements using LangGraph agent. Returns job_id immediately and processes in background.
+
+#### Features
+
+- 自然言語要求からJob/Task自動生成
+- 非同期バックグラウンド処理
+- 実現可能性評価と代替案提案
+- 要求緩和提案（Requirement Relaxation Suggestions）
+- リトライ機能付きLangGraphエージェント実行
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `user_requirement` | string | Yes | 自然言語で記述したJob/Task生成要求 |
+| `max_retry` | integer | No | 評価・検証の最大リトライ回数（デフォルト: 5、範囲: 1-10） |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/job-generator \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_requirement": "PDFファイルをGoogle Driveにアップロードして、完了をメール通知する",
+    "max_retry": 5
+  }'
+```
+
+#### Response
+
+**Success Response (200 OK - Creating):**
+
+```json
+{
+  "status": "creating",
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "job_master_id": null,
+  "task_breakdown": null,
+  "evaluation_result": null,
+  "infeasible_tasks": [],
+  "alternative_proposals": [],
+  "api_extension_proposals": [],
+  "requirement_relaxation_suggestions": [],
+  "validation_errors": [],
+  "error_message": "Job creation started. Use GET /api/v1/jobs/{job_id}/status to check progress."
+}
+```
+
+**Error Response (500 Internal Server Error):**
+
+```json
+{
+  "detail": "ANTHROPIC_API_KEY not configured in myVault. Please add it via CommonUI."
+}
+```
+
+#### Notes
+
+- ジョブ作成は非同期で実行されます
+- レスポンスの`job_id`を使用して`GET /api/v1/jobs/{job_id}/status`でステータスを確認してください
+- ANTHROPIC_API_KEYがmyVaultに設定されている必要があります
+
+---
+
+### Get Job Creation Status
+
+**GET** `/api/v1/jobs/{job_id}/status`
+
+Check the status of an async job creation process.
+
+#### Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `job_id` | string (path) | Yes | ジョブID（POST /job-generatorで取得） |
+
+#### Request Example
+
+```bash
+curl -X GET http://localhost:8104/aiagent-api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/status
+```
+
+#### Response
+
+**Success Response (200 OK - Completed):**
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "progress": 100,
+  "start_time": "2025-10-15T10:30:00Z",
+  "end_time": "2025-10-15T10:31:45Z",
+  "job_master_id": "jm_01K89W9DBHAPWMMZVHWT2N7GX9",
+  "result": {
+    "status": "success",
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "job_master_id": "jm_01K89W9DBHAPWMMZVHWT2N7GX9",
+    "task_breakdown": [...],
+    "evaluation_result": {...}
+  }
+}
+```
+
+**Response (200 OK - Creating):**
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "creating",
+  "progress": 45,
+  "start_time": "2025-10-15T10:30:00Z",
+  "end_time": null,
+  "job_master_id": null,
+  "result": null
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "detail": "Job ID 550e8400-e29b-41d4-a716-446655440000 not found. Job may have been cleaned up or never existed."
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | string | ジョブID |
+| `status` | string | ステータス（"creating", "completed", "failed"） |
+| `progress` | integer | 進捗率（0-100） |
+| `start_time` | string | 開始時刻（ISO 8601形式） |
+| `end_time` | string | 終了時刻（ISO 8601形式、未完了時はnull） |
+| `job_master_id` | string | JobMaster ID（完了時のみ） |
+| `result` | object | ジョブ生成結果（完了時のみ） |
+| `error_message` | string | エラーメッセージ（失敗時のみ） |
+
+---
+
+## Workflow Generator API
+
+### Generate GraphAI Workflow YAML
+
+**POST** `/api/v1/workflow-generator`
+
+Generate GraphAI workflow YAML files from JobMaster or TaskMaster using LangGraph agent.
+
+#### Features
+
+- JobMaster単位または個別TaskMaster単位でのワークフロー生成
+- LangGraphエージェントによる自動YAML生成
+- 自己修復ループ（バリデーションエラー時の自動リトライ）
+- ULID/整数ID両対応
+- バッチ処理（Job内の全タスク一括生成）
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `job_master_id` | string/int | XOR | JobMaster ID（全タスクのワークフローを生成） |
+| `task_master_id` | string/int | XOR | TaskMaster ID（単一タスクのワークフローを生成） |
+
+**Note**: `job_master_id`と`task_master_id`は排他的（XOR）です。どちらか一方のみ指定してください。
+
+#### Request Examples
+
+**Example 1: Generate workflows for all tasks in a job**
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/workflow-generator \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_master_id": "jm_01K8DXE62NFJNB0SHJZPAWQWVT"
+  }'
+```
+
+**Example 2: Generate workflow for single task**
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/workflow-generator \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_master_id": "tm_01K8DXE601HMZWW0K5HR9FDYCQ"
+  }'
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "status": "success",
+  "workflows": [
+    {
+      "task_master_id": "tm_01K8K13NC8PRJ3V4R35C1AP2JP",
+      "task_name": "Send email notification",
+      "workflow_name": "send_email_notification",
+      "yaml_content": "version: 0.5\nnodes:\n  send_email:\n    agent: fetchAgent\n    ...",
+      "status": "success",
+      "validation_result": {
+        "is_valid": true
+      },
+      "error_message": null,
+      "retry_count": 0
+    }
+  ],
+  "total_tasks": 3,
+  "successful_tasks": 3,
+  "failed_tasks": 0,
+  "generation_time_ms": 5432.1
+}
+```
+
+**Partial Success Response (200 OK):**
+
+```json
+{
+  "status": "partial_success",
+  "workflows": [
+    {
+      "task_master_id": "tm_01K8K13NC8PRJ3V4R35C1AP2JP",
+      "task_name": "Complex task",
+      "workflow_name": "complex_task",
+      "yaml_content": "",
+      "status": "failed",
+      "validation_result": null,
+      "error_message": "Max retries exceeded (3 attempts)",
+      "retry_count": 3
+    }
+  ],
+  "total_tasks": 2,
+  "successful_tasks": 1,
+  "failed_tasks": 1,
+  "generation_time_ms": 8234.5
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "detail": "JobMaster or TaskMaster not found: Job ID jm_notfound not found"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "detail": "Exactly one of 'job_master_id' or 'task_master_id' must be provided"
+}
+```
+
+---
+
+## Chat API
+
+### Requirement Definition Chat (SSE)
+
+**POST** `/api/v1/chat/requirement-definition`
+
+Stream requirement clarification chat using Server-Sent Events (SSE) for real-time AI responses.
+
+#### Features
+
+- リアルタイムチャット形式での要求明確化
+- Server-Sent Events (SSE)によるストリーミング応答
+- 要求完成度（completeness）の自動計算
+- 会話履歴の保存
+- 構造化された要求状態管理
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversation_id` | string | Yes | 会話セッションID |
+| `user_message` | string | Yes | ユーザーメッセージ |
+| `context` | object | Yes | 会話コンテキスト |
+| `context.previous_messages` | array | Yes | 過去のメッセージ履歴 |
+| `context.current_requirements` | object | Yes | 現在の要求状態 |
+
+#### Request Example
+
+```bash
+curl -N -X POST http://localhost:8104/aiagent-api/v1/chat/requirement-definition \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "conv_001",
+    "user_message": "売上データを分析したい",
+    "context": {
+      "previous_messages": [],
+      "current_requirements": {
+        "data_source": null,
+        "process_description": null,
+        "output_format": null,
+        "schedule": null,
+        "completeness": 0.0
+      }
+    }
+  }'
+```
+
+#### Response (SSE Events)
+
+**Event 1: Message chunk**
+
+```
+event: message
+data: {"type": "message", "data": {"content": "データソースは"}}
+```
+
+**Event 2: Requirement update**
+
+```
+event: message
+data: {"type": "requirement_update", "data": {"requirements": {"data_source": "CSVファイル", "completeness": 0.25}}}
+```
+
+**Event 3: Requirements ready**
+
+```
+event: message
+data: {"type": "requirements_ready", "data": {}}
+```
+
+**Event 4: Done**
+
+```
+event: message
+data: {"type": "done"}
+```
+
+**Error Event:**
+
+```
+event: message
+data: {"type": "error", "data": {"message": "エラーが発生しました。もう一度お試しください。"}}
+```
+
+#### Notes
+
+- SSE接続のため、`curl -N`オプションまたはEventSource APIを使用してください
+- completeness ≥ 0.8（80%）でジョブ作成可能になります
+- 会話履歴は自動的に保存されます
+
+---
+
+### Create Job from Requirements
+
+**POST** `/api/v1/chat/create-job`
+
+Create job from clarified requirements gathered through chat dialogue.
+
+#### Features
+
+- チャットで明確化した要求からJob/Task自動生成
+- 要求完成度の検証（80%以上必須）
+- 既存Job Generator APIとの統合
+- 自然言語要求への自動変換
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversation_id` | string | Yes | 会話セッションID |
+| `requirements` | object | Yes | 明確化された要求状態 |
+| `requirements.data_source` | string | No | データソース |
+| `requirements.process_description` | string | No | 処理内容 |
+| `requirements.output_format` | string | No | 出力形式 |
+| `requirements.schedule` | string | No | 実行スケジュール |
+| `requirements.completeness` | float | Yes | 完成度（0.0-1.0、≥0.8必須） |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/chat/create-job \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "conv_001",
+    "requirements": {
+      "data_source": "CSVファイル",
+      "process_description": "売上データの月別集計",
+      "output_format": "Excelレポート",
+      "schedule": "毎日朝9時",
+      "completeness": 0.95
+    }
+  }'
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "job_master_id": "jm_01K89W9DBHAPWMMZVHWT2N7GX9",
+  "status": "success",
+  "message": "ジョブを作成しました"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "detail": "Requirements not sufficiently clarified (60% < 80%)"
+}
+```
+
+**Error Response (500 Internal Server Error):**
+
+```json
+{
+  "detail": "ジョブの作成に失敗しました: Job Generator error"
+}
+```
+
+---
+
+## Marp Report API
+
+### Generate Marp Presentation
+
+**POST** `/api/v1/marp-report`
+
+Generate Marp presentation slides from Job Generator result for visual reporting.
+
+#### Features
+
+- Job Generator結果からMarpプレゼンテーション自動生成
+- 要求緩和提案（Requirement Relaxation Suggestions）の可視化
+- 3つのテーマ選択（default, gaia, uncover）
+- 実装ステップの表示/非表示切り替え
+- タスク別の提案グルーピング
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `job_result` | object | XOR | Job Generator実行結果JSON |
+| `json_file_path` | string | XOR | Job Generator結果JSONファイルパス |
+| `theme` | string | No | Marpテーマ（"default", "gaia", "uncover"、デフォルト: "default"） |
+| `include_implementation_steps` | boolean | No | 実装ステップを含めるか（デフォルト: true） |
+
+**Note**: `job_result`と`json_file_path`は排他的（XOR）です。どちらか一方のみ指定してください。
+
+#### Request Examples
+
+**Example 1: Generate from inline JSON**
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/marp-report \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_result": {
+      "status": "partial_success",
+      "infeasible_tasks": [...],
+      "requirement_relaxation_suggestions": [...]
+    },
+    "theme": "gaia",
+    "include_implementation_steps": true
+  }'
+```
+
+**Example 2: Generate from file**
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/marp-report \
+  -H "Content-Type: application/json" \
+  -d '{
+    "json_file_path": "/tmp/job_result.json",
+    "theme": "default",
+    "include_implementation_steps": false
+  }'
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "marp_markdown": "---\nmarp: true\ntheme: default\n---\n\n# Job/Task Generation Report\n...",
+  "slide_count": 15,
+  "suggestions_count": 6,
+  "generation_time_ms": 45.3
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "detail": "JSON file not found: /tmp/nonexistent.json"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "detail": "Either job_result or json_file_path must be provided"
+}
+```
+
+---
+
+### Get Marp Report by Job ID
+
+**GET** `/api/v1/marp-report/{job_id}`
+
+Get Marp presentation report by job ID from job creation status.
+
+#### Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `job_id` | string (path) | Yes | ジョブID |
+| `format` | string (query) | No | 出力形式（"html", "pdf", "png"、デフォルト: "html"） |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8104/aiagent-api/v1/marp-report/550e8400-e29b-41d4-a716-446655440000?format=html"
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "markdown": "---\nmarp: true\ntheme: default\n---\n\n# Job/Task Generation Report\n...",
+  "html": "",
+  "pdf_url": null,
+  "png_urls": null,
+  "slide_count": 15
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "detail": "Job ID not found: 550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "detail": "Job is not completed yet. Current status: creating"
+}
+```
+
+#### Notes
+
+- ジョブが完了状態（status: "completed"）である必要があります
+- HTML/PDF/PNGレンダリングはクライアントサイド推奨（現在html/pdf_url/png_urlsは未実装）
+- Marp CLIまたはMarp for VS Codeでプレビュー可能
+
+---
+
+## Observability API
+
+### Get Trace List
+
+**GET** `/api/v1/observability/traces`
+
+Get list of Langfuse traces with filtering and pagination support.
+
+#### Features
+
+- Langfuseトレース一覧取得
+- user_id, session_id, tagsによるフィルタリング
+- ページネーション対応
+- LangfuseダッシュボードURLリンク
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | No | ユーザーIDでフィルタ |
+| `session_id` | string | No | セッションIDでフィルタ |
+| `tags` | string | No | タグでフィルタ（カンマ区切り） |
+| `limit` | integer | No | 取得件数（デフォルト: 50、範囲: 1-1000） |
+| `offset` | integer | No | ページネーション用オフセット（デフォルト: 0） |
+
+#### Request Examples
+
+**Example 1: Get recent traces**
+
+```bash
+curl -X GET "http://localhost:8104/aiagent-api/v1/observability/traces?limit=10"
+```
+
+**Example 2: Filter by user and tags**
+
+```bash
+curl -X GET "http://localhost:8104/aiagent-api/v1/observability/traces?user_id=user_123&tags=production,job-generator&limit=20"
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "traces": [
+    {
+      "id": "trace_abc123",
+      "name": "Job Generator Execution",
+      "user_id": "user_123",
+      "session_id": "session_456",
+      "timestamp": "2025-10-15T10:30:00Z",
+      "tags": ["production", "job-generator"],
+      "metadata": {"version": "1.0"},
+      "langfuse_url": "https://langfuse.example.com/trace/trace_abc123"
+    }
+  ],
+  "total": 100,
+  "limit": 10,
+  "offset": 0
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "detail": "Invalid limit value"
+}
+```
+
+---
+
+### Get Trace Detail
+
+**GET** `/api/v1/observability/traces/{trace_id}`
+
+Get detailed information for a specific trace including observations (spans, generations, events).
+
+#### Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `trace_id` | string (path) | Yes | トレースID |
+
+#### Request Example
+
+```bash
+curl -X GET http://localhost:8104/aiagent-api/v1/observability/traces/trace_abc123
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "id": "trace_abc123",
+  "name": "Job Generator Execution",
+  "user_id": "user_123",
+  "session_id": "session_456",
+  "timestamp": "2025-10-15T10:30:00Z",
+  "tags": ["production"],
+  "metadata": {"version": "1.0"},
+  "observations": [
+    {
+      "id": "obs_generation_001",
+      "type": "generation",
+      "name": "Claude API Call",
+      "start_time": "2025-10-15T10:30:05Z",
+      "end_time": "2025-10-15T10:30:15Z",
+      "input": "Generate job from requirement...",
+      "output": "Job created successfully",
+      "metadata": {},
+      "model": "claude-3-haiku-20240307",
+      "usage": {
+        "input_tokens": 150,
+        "output_tokens": 200,
+        "total_tokens": 350
+      }
+    }
+  ],
+  "langfuse_url": "https://langfuse.example.com/trace/trace_abc123"
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "detail": "Trace not found: trace_abc123"
+}
+```
+
+---
+
+### Submit Feedback Score
+
+**POST** `/api/v1/observability/scores`
+
+Submit feedback score for a trace (e.g., user rating, accuracy score).
+
+#### Features
+
+- トレースへのフィードバック送信
+- 0.0-1.0のスコア値
+- カスタムスコア名（user_rating, accuracy等）
+- オプションコメント
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `trace_id` | string | Yes | トレースID |
+| `name` | string | Yes | スコア名（例: "user_rating", "accuracy"） |
+| `value` | float | Yes | スコア値（0.0-1.0） |
+| `comment` | string | No | オプションコメント |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8104/aiagent-api/v1/observability/scores \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trace_id": "trace_abc123",
+    "name": "user_rating",
+    "value": 0.9,
+    "comment": "Very helpful response"
+  }'
+```
+
+#### Response
+
+**Success Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "score_id": "score_xyz789",
+  "message": "Score submitted successfully"
+}
+```
+
+**Error Response (500 Internal Server Error):**
+
+```json
+{
+  "success": false,
+  "score_id": null,
+  "message": "Failed to submit score: API error"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "detail": "Score value must be between 0.0 and 1.0"
+}
+```
+
+---
+
 ## Testing
 
 Run tests:
