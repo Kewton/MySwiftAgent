@@ -92,6 +92,9 @@
 ### 作業ドキュメントを作成する
 → [ドキュメント管理](./docs/claude/07-documentation-rules.md)
 
+### 完成した機能をドキュメント化する
+→ [ドキュメント管理](./docs/claude/07-documentation-rules.md)、[スラッシュコマンド](./docs/claude/02-slash-commands.md)
+
 ---
 
 ## 🤖 Claude Code向けガイドライン

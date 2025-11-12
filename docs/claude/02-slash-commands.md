@@ -4,7 +4,7 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 
 **🔥 スラッシュコマンド対応**: 主要スキルは `.claude/commands/` に配置され、`/skill-name` 形式で直接呼び出し可能です。
 
-## 📦 利用可能なスキル（14種類）
+## 📦 利用可能なスキル（15種類）
 
 | スキル名 | モデル | 用途 | 起動方法 |
 |---------|--------|------|---------|
@@ -22,6 +22,7 @@ AI開発支援のため、以下のスキルが利用可能です。各スキル
 | **進捗報告** | Sonnet | 進捗サマリ・ブロッカー報告 | `/progress` または「進捗を報告」 |
 | **リファクタリング** | Sonnet | コード品質改善（Codex CLI連携） | `/refactor` または「リファクタリングを実施」 |
 | **PR作成** 🆕✅ | Sonnet | Pull Request自動作成 | **`/pm-create-pr`** または「PRを作成」 |
+| **ドキュメント登録** 🆕✅ | Sonnet | 完成機能をカテゴリ別ドキュメントに統合 | **`/doc-register`** または「Issue #152をドキュメント化」 |
 
 **凡例**: ✅ = スラッシュコマンド対応済み（`.claude/commands/` に配置）
 
@@ -302,6 +303,121 @@ session: "main" | "worktree" | "any"
 - `description`: スキルの簡潔な説明（1行）
 - `phase`: 開発ワークフローのフェーズ番号と名称
 - `session`: 実行するセッション（main/worktree/any）
+
+---
+
+## `/doc-register` - 完成機能のドキュメント登録 🆕✅
+
+### 概要
+Issue/Feature完了時に、成果物をカテゴリ別の既存ドキュメントに追記・統合します。
+
+### 用途
+- Feature完了後の仕様書作成
+- アーキテクチャ変更のドキュメント化
+- 運用手順書の更新
+- ガイドライン・規約の追加
+
+### 基本構文
+```bash
+/doc-register <Issue番号> [オプション]
+```
+
+### オプション
+
+| オプション | 説明 | デフォルト |
+|-----------|------|-----------|
+| `--scope <global\|{service}>` | スコープ（global=ルートdocs/, service=マイクロサービス内） | 自動判定 |
+| `--category <rule\|arch\|spec\|ops>` | カテゴリ | 自動判定 |
+| `--target <ファイル名>` | 追記先ドキュメント | 自動判定 |
+| `--section <セクション名>` | 追記先セクション | 自動判定 |
+| `--draft` | ドラフトモード（コミットしない） | false |
+| `--no-child` | 子Issue自動処理スキップ | false |
+
+### 使用例
+
+#### 例1: 自動判定で登録
+```bash
+/doc-register 152
+# → expertAgent/docs/spec/MLOps-Features.md に追記
+```
+
+#### 例2: プロジェクト全体のアーキテクチャに追記
+```bash
+/doc-register 152 --scope global --category arch
+# → docs/arch/System-Overview.md に追記
+```
+
+#### 例3: マイクロサービス固有のドキュメントに追記
+```bash
+/doc-register 169 --scope expertAgent --category arch
+# → expertAgent/docs/arch/LangGraph-Design.md に追記
+```
+
+#### 例4: myVault固有の仕様に追記
+```bash
+/doc-register 200 --scope myVault --category spec
+# → myVault/docs/spec/Secret-Management.md に追記
+```
+
+### 配置ルール
+
+| スコープ | 配置先 | 用途 | 例 |
+|---------|-------|------|-----|
+| global | `docs/rule/` | プロジェクト全体のガイドライン | 開発フロー、Git戦略 |
+| global | `docs/arch/` | プロジェクト全体のアーキテクチャ | システム構成図、DB設計 |
+| global | `docs/spec/` | プロジェクト横断機能 | ユーザー管理、決済 |
+| global | `docs/ops/` | プロジェクト全体の運用 | リリース手順、監視 |
+| {service} | `{service}/docs/arch/` | マイクロサービス固有設計 | LangGraph設計 |
+| {service} | `{service}/docs/spec/` | マイクロサービス固有機能 | Job Generator |
+| {service} | `{service}/docs/ops/` | マイクロサービス固有運用 | デプロイ手順 |
+
+### 自動判定ロジック
+
+- **スコープ判定**:
+  - dev-reportsのプロジェクト言及をカウント
+  - ラベル `project:expertAgent` を検出
+  - タイトルからプロジェクト名を抽出
+  - デフォルト: expertAgent
+
+- **カテゴリ判定**:
+  - ラベル: `architecture` → `arch`
+  - ラベル: `feature` → `spec`
+  - ラベル: `ops` → `ops`
+  - タイトルキーワードから判定
+
+- **ターゲットファイル判定**:
+  - 既存ドキュメントとの類似度計算
+  - 類似度 > 0.6 → 既存ファイルに追記
+  - 類似度 < 0.6 → 新規ファイル作成
+
+### ドキュメント構造
+
+生成されるセクションの構造:
+
+```markdown
+## Issue #{number}: {title}
+
+**ステータス**: ✅ 完了
+**完了日**: {closedAt}
+**担当者**: {assignees}
+**関連PR**: #{pr_number}
+
+### 📋 概要
+### 🎯 ユーザーストーリー
+### ✅ 受入基準
+### 🏗️ アーキテクチャ
+### 🔧 実装詳細
+### 🧪 テスト結果
+### 📦 関連子Issue（親Issueの場合）
+```
+
+### 関連コマンド
+- `/issue-create`: Issue一括作成
+- `/pm-auto-dev`: Issue自動開発
+- `/pm-create-pr`: PR自動作成
+
+### 詳細仕様
+→ [ドキュメント管理ルール](./07-documentation-rules.md)
 
 ---
 

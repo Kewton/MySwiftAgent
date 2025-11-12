@@ -189,6 +189,221 @@ dev-reports/
 2. 変更履歴をリポジトリのルートディレクトリ直下 `./dev-reports/{branch_path}/constraint-changes.md` に記録
 3. PRのコミットメッセージに変更理由を明記
 
+---
+
+## 📁 完成ドキュメント管理（docs/）
+
+### **作業ドキュメント (dev-reports/) と完成ドキュメント (docs/) の関係**
+
+| ドキュメント種別 | 配置先 | 用途 | ライフサイクル | 管理方法 |
+|---------------|-------|------|--------------|---------|
+| **作業ドキュメント** | `dev-reports/feature/issue/{number}/` | Issue/Feature開発中の一時的なドキュメント | Issue完了時に削除またはアーカイブ | ブランチ毎に作成 |
+| **完成ドキュメント** | `docs/{category}/` または `{service}/docs/{category}/` | 完成した機能の恒久的なドキュメント | 継続的に更新・保守 | `/doc-register` で統合 |
+
+### **ディレクトリ構造**
+
+#### **プロジェクト全体（root/docs/）**
+
+```
+docs/
+├── rule/                         # ガイドライン
+│   ├── Development-Flow.md       # 開発フロー
+│   ├── Coding-Convention.md      # コーディング規約
+│   └── Git-Workflow.md           # Git戦略
+├── arch/                         # アーキテクチャ
+│   ├── System-Overview.md        # システム全体構成
+│   ├── Database-Schema.md        # DB設計
+│   └── Tech-Stack.md             # 技術スタック
+├── spec/                         # プロジェクト横断機能
+│   ├── User-Account.md           # ユーザー管理
+│   └── Payment.md                # 決済機能
+└── ops/                          # 運用
+    ├── Release-Process.md        # リリース手順
+    └── Monitoring.md             # 監視・アラート
+```
+
+#### **マイクロサービス固有（{service}/docs/）**
+
+```
+expertAgent/docs/
+├── arch/
+│   ├── LangGraph-Design.md       # LangGraph設計
+│   └── Agent-State.md            # エージェント状態管理
+├── spec/
+│   ├── Job-Generator.md          # Job Generator機能
+│   ├── Workflow-Generator.md     # Workflow Generator機能
+│   └── MLOps-Features.md         # MLOps機能
+└── ops/
+    └── Deployment.md             # expertAgent デプロイ手順
+
+myVault/docs/
+├── arch/
+│   └── Security-Design.md        # セキュリティ設計
+├── spec/
+│   └── Secret-Management.md      # シークレット管理機能
+└── ops/
+    └── Backup-Strategy.md        # バックアップ戦略
+
+graphAiServer/docs/
+├── arch/
+│   └── Workflow-Engine.md        # ワークフロー実行エンジン
+├── spec/
+│   └── GraphAI-Integration.md    # GraphAI統合仕様
+└── ops/
+    └── Performance-Tuning.md     # パフォーマンスチューニング
+```
+
+### **ドキュメント配置ルール**
+
+| スコープ | 配置先 | 用途 | 例 |
+|---------|-------|------|-----|
+| **global** | `docs/rule/` | プロジェクト全体のガイドライン | 開発フロー、Git戦略、コーディング規約 |
+| **global** | `docs/arch/` | プロジェクト全体のアーキテクチャ | システム構成図、DB設計、技術選定 |
+| **global** | `docs/spec/` | プロジェクト横断機能 | ユーザー管理、決済、認証 |
+| **global** | `docs/ops/` | プロジェクト全体の運用 | リリース手順、監視、トラブルシュート |
+| **{service}** | `{service}/docs/arch/` | マイクロサービス固有設計 | LangGraph設計、状態管理 |
+| **{service}** | `{service}/docs/spec/` | マイクロサービス固有機能 | Job Generator、Secret Management |
+| **{service}** | `{service}/docs/ops/` | マイクロサービス固有運用 | デプロイ手順、パフォーマンスチューニング |
+
+### **dev-reports から docs/ への移行フロー**
+
+```
+dev-reports/feature/issue/152/
+  ├── design-policy.md       → expertAgent/docs/arch/ に統合
+  ├── work-plan.md           → docs/rule/ に統合（必要に応じて）
+  ├── phase-N-progress.md    → （アーカイブ、統合しない）
+  └── final-report.md        → expertAgent/docs/spec/ に統合
+
+/doc-register 152 実行
+  ↓
+expertAgent/docs/spec/MLOps-Features.md
+  - Issue #152の概要、ユーザーストーリー、受入基準を追加
+  - dev-reports/design-policy.md からアーキテクチャを抽出
+  - dev-reports/work-plan.md から実装詳細を抽出
+  - dev-reports/final-report.md からテスト結果を抽出
+  - 親Issueの場合、子Issue情報も自動統合
+  - セクション構造化して既存ドキュメントに追記
+```
+
+### **`/doc-register` コマンドの使用方法**
+
+完成したIssue/Featureを恒久的なドキュメントに統合するには、`/doc-register` コマンドを使用します。
+
+#### **基本構文**
+```bash
+/doc-register <Issue番号> [オプション]
+```
+
+#### **オプション**
+| オプション | 説明 | デフォルト |
+|-----------|------|-----------|
+| `--scope <global\|{service}>` | スコープ（global=ルートdocs/, service=マイクロサービス内） | 自動判定 |
+| `--category <rule\|arch\|spec\|ops>` | カテゴリ | 自動判定 |
+| `--target <ファイル名>` | 追記先ドキュメント | 自動判定 |
+| `--section <セクション名>` | 追記先セクション | 自動判定 |
+| `--draft` | ドラフトモード（コミットしない） | false |
+| `--no-child` | 子Issue自動処理スキップ | false |
+
+#### **使用例**
+
+**例1: 自動判定で登録**
+```bash
+/doc-register 152
+# → expertAgent/docs/spec/MLOps-Features.md に追記（新規作成）
+```
+
+**例2: プロジェクト全体のアーキテクチャに追記**
+```bash
+/doc-register 152 --scope global --category arch
+# → docs/arch/System-Overview.md に追記
+```
+
+**例3: expertAgent固有のアーキテクチャに追記**
+```bash
+/doc-register 169 --scope expertAgent --category arch
+# → expertAgent/docs/arch/LangGraph-Design.md に追記
+```
+
+**例4: myVault固有の仕様に追記**
+```bash
+/doc-register 200 --scope myVault --category spec
+# → myVault/docs/spec/Secret-Management.md に追記
+```
+
+#### **自動判定ロジック**
+
+**スコープ判定**:
+- `dev-reports/feature/issue/{number}/` 配下のファイルで、プロジェクト名（expertAgent, myVault等）の言及回数をカウント
+- ラベル `project:expertAgent` 等を検出
+- タイトルに「プロジェクト全体」が含まれる場合は `global`
+- デフォルト: `expertAgent`
+
+**カテゴリ判定**:
+- ラベル `architecture`, `tech-debt` → `category=arch`
+- ラベル `feature`, `enhancement` → `category=spec`
+- ラベル `ops`, `deployment` → `category=ops`
+- ラベル `documentation`, `onboarding` → `category=rule`
+- タイトルのキーワードマッチング
+
+**ターゲットファイル判定**:
+- ベースディレクトリ: `scope=global` → `docs/{category}/`, `scope={service}` → `{service}/docs/{category}/`
+- 既存ドキュメントとの類似度計算
+- 類似度 > 0.6 → 既存ドキュメントに追記
+- 類似度 < 0.6 → 新規ドキュメント作成
+
+#### **生成されるセクション構造**
+
+```markdown
+## Issue #{number}: {title}
+
+**ステータス**: ✅ 完了
+**完了日**: {closedAt}
+**担当者**: {assignees}
+**関連PR**: #{pr_number}
+
+---
+
+### 📋 概要
+
+{dev-reports/design-policy.md から抽出}
+
+### 🎯 ユーザーストーリー
+
+{Issue本文から抽出}
+
+### ✅ 受入基準
+
+{Issue本文から抽出}
+
+### 🏗️ アーキテクチャ
+
+{dev-reports/design-policy.md から抽出}
+
+### 🔧 実装詳細
+
+{dev-reports/work-plan.md から抽出}
+
+### 🧪 テスト結果
+
+{dev-reports/final-report.md から抽出}
+
+### 📦 関連子Issue（親Issueの場合）
+
+- ✅ [Issue #{child_num}](../../issues/{child_num}): {child_title}
+- ...
+
+---
+
+_最終更新: {datetime.now()} by /doc-register_
+```
+
+#### **詳細仕様**
+
+→ [スラッシュコマンド一覧](./02-slash-commands.md) の `/doc-register` セクション
+→ [完全版設計方針書](../../workspace/wiki-command-policy-v2.md)
+
+---
+
 ## 📋 ドキュメントテンプレート
 
 ### **1. design-policy.md**
