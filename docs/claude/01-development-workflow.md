@@ -43,10 +43,10 @@ graph LR
 | **6. Issue登録** 🆕 | Issue一括作成 | Sonnet | `/issue-create` | メイン | GitHub Issueに一括登録、親子関連付け |
 | **7. 作業計画** | 作業計画 | Opus | `/work-plan` | メイン | Issue単位の詳細作業計画 |
 | **8. ブランチ作成** | Worktree自動セットアップ | Sonnet | `/worktree-setup` | **→ worktree** | Issue番号から自動でworktree環境構築 |
-| **9. 開発（TDD実装）** | TDD実装 | Sonnet | `/tdd-impl` | worktree | テスト駆動開発による実装 |
-| **10. 品質保証** | 受入テスト | Opus | `/acceptance-test` | worktree | 受入テスト実行・分析 |
-| **11. リファクタリング** | リファクタリング | Sonnet | `/refactor` | worktree | コード品質改善（必要時） |
-| **12. 進捗管理** | 進捗報告 | Sonnet | `/progress` | worktree | 進捗サマリ、ブロッカー報告 |
+| **9. 開発（TDD実装）** | TDD実装 | Sonnet | `/tdd-impl` または `/pm-auto-dev` | worktree | テスト駆動開発による実装 |
+| **10. 品質保証** | 受入テスト | Opus | `/acceptance-test` または `/pm-auto-dev` | worktree | 受入テスト実行・分析 |
+| **11. リファクタリング** | リファクタリング | Sonnet | `/refactor` または `/pm-auto-dev` | worktree | コード品質改善（必要時） |
+| **12. 進捗管理** | 進捗報告 | Sonnet | `/progress` または `/pm-auto-dev` | worktree | 進捗サマリ、ブロッカー報告 |
 | **13. PR作成** | - | Sonnet | - | worktree | Pull Request作成（手動作業） |
 | **14. コードレビュー** | アーキテクチャレビュー | Opus | `/review-arch` | worktree | コードレビュー支援（必要時） |
 | **15. CI/CD実行** | - | Sonnet | - | worktree | 自動テスト・ビルド（自動処理） |
@@ -55,6 +55,173 @@ graph LR
 | **17. フィーチャーフラグ設定** | - | Sonnet | - | **← メイン** | フラグ設定（手動作業） |
 | **18. Wiki文書化** | - | Sonnet | - | メイン推奨 | 仕様確定・文書化（両セッション可） |
 | **19. リリース準備** | - | Sonnet | - | メイン | リリースノート作成等（手動作業） |
+
+---
+
+### 🤖 フェーズ9-12の実行方式
+
+フェーズ9（TDD実装）〜フェーズ12（進捗報告）には、**2つの実行方式**があります：
+
+#### 📋 実行パターン比較
+
+| 項目 | パターンA: 個別実行 | パターンB: 一括委託 |
+|------|-------------------|-------------------|
+| **実行方法** | 各スラッシュコマンドを手動実行<br/>`/tdd-impl` → `/acceptance-test` → `/refactor` → `/progress` | PM Auto-Devに一括委託<br/>`/pm-auto-dev [Issue番号]` |
+| **制御方法** | ユーザーがフェーズごとに判断・実行 | PM Auto-Devが自動でフェーズを進行 |
+| **エラー時** | ユーザーが対処を判断 | 最大3回まで自動リトライ |
+| **適用場面** | 複雑なIssue、実験的な実装 | 標準的なIssue、定型的な実装 |
+
+#### ✅ パターンA: 個別実行（手動ステップ実行）
+
+**実行コマンド**:
+```bash
+/tdd-impl [Issue番号]
+# 結果確認後、手動で次へ
+/acceptance-test [Issue番号]
+# 結果確認後、手動で次へ
+/refactor [Issue番号]
+# 結果確認後、手動で次へ
+/progress [Issue番号]
+```
+
+**メリット**:
+- ✅ **きめ細かい制御**: 各フェーズの結果を確認してから次に進める
+- ✅ **柔軟な対処**: 問題発生時に即座にユーザーが介入・対処可能
+- ✅ **学習効果**: 各フェーズの動作を観察しながら進められる
+- ✅ **複雑な要件対応**: 標準プロセスから外れる実装に適している
+
+**デメリット**:
+- ❌ **手動作業**: 各フェーズで手動でコマンド実行が必要
+- ❌ **待機時間**: フェーズ間でユーザーが結果確認・判断する時間が必要
+- ❌ **一貫性**: ユーザーの判断により実行品質にばらつきが生じる可能性
+
+**推奨ケース**:
+- 新しい技術スタックの導入
+- アーキテクチャに影響する大きな変更
+- 実験的な実装やプロトタイプ開発
+- 複雑な依存関係のあるIssue
+
+#### 🚀 パターンB: 一括委託（PM Auto-Dev自動実行）
+
+**実行コマンド**:
+```bash
+/pm-auto-dev [Issue番号]
+```
+
+**メリット**:
+- ✅ **完全自動化**: Issue情報取得 → TDD → 受入テスト → リファクタリング → 進捗報告を自動実行
+- ✅ **リトライロジック**: 受入テスト失敗時、最大3回まで自動でTDD実装に戻る
+- ✅ **時間効率**: ユーザーの待機時間なしで完結
+- ✅ **品質保証**: 統一されたプロセスで一貫した品質を担保
+- ✅ **ファイルベースI/O**: 各フェーズの結果がJSONファイルとして保存され、デバッグ可能
+
+**デメリット**:
+- ❌ **制御の喪失**: フェーズ間でユーザーが介入できない
+- ❌ **ブラックボックス化**: 内部でサブエージェントが動作するため、途中経過が見えにくい
+- ❌ **最大リトライ制限**: 3回の自動リトライで解決しない場合はエスカレーション（手動対応）
+- ❌ **標準外対応**: カスタムな実装フローには対応困難
+
+**推奨ケース**:
+- 標準的なCRUD実装
+- 既存パターンに従った機能追加
+- 定型的なバグ修正
+- 明確な仕様が確定しているIssue
+
+#### 🔄 実行フローの違い
+
+**パターンA（個別実行）**:
+```mermaid
+graph LR
+    A["TDD実装<br/>/tdd-impl"] --> U1{ユーザー<br/>判断}
+    U1 -->|OK| B["受入テスト<br/>/acceptance-test"]
+    U1 -->|NG| A
+    B --> U2{ユーザー<br/>判断}
+    U2 -->|Pass| C["リファクタリング<br/>/refactor"]
+    U2 -->|Fail| A
+    C --> U3{ユーザー<br/>判断}
+    U3 -->|OK| D["進捗報告<br/>/progress"]
+
+    style A fill:#fff3e0
+    style B fill:#e3f2fd
+    style C fill:#fff3e0
+    style D fill:#fff3e0
+    style U1 fill:#fce4ec
+    style U2 fill:#fce4ec
+    style U3 fill:#fce4ec
+```
+
+**パターンB（一括委託）**:
+```mermaid
+graph LR
+    Start["PM Auto-Dev起動<br/>/pm-auto-dev"] --> Phase1[Issue情報収集]
+    Phase1 --> Phase2[TDD実装<br/>サブエージェント]
+    Phase2 --> Check1{結果?}
+    Check1 -->|success| Phase3[受入テスト<br/>サブエージェント]
+    Check1 -->|failed| Retry{リトライ<br/>回数}
+    Retry -->|3回未満| Phase2
+    Retry -->|3回以上| Escalate[エスカレーション]
+    Phase3 --> Check2{結果?}
+    Check2 -->|passed| Phase4[リファクタリング<br/>サブエージェント]
+    Check2 -->|failed| Retry
+    Phase4 --> Phase5[進捗報告<br/>サブエージェント]
+    Phase5 --> End[完了]
+
+    style Start fill:#c8e6c9
+    style Phase2 fill:#fff3e0
+    style Phase3 fill:#e3f2fd
+    style Phase4 fill:#fff3e0
+    style Phase5 fill:#fff3e0
+    style Check1 fill:#fce4ec
+    style Check2 fill:#fce4ec
+    style Retry fill:#ffccbc
+    style Escalate fill:#ffccbc
+```
+
+#### 💡 実装の内部構造
+
+PM Auto-Devは、各フェーズで専門のサブエージェントを呼び出します：
+
+| フェーズ | サブエージェント | 入力ファイル | 出力ファイル |
+|---------|----------------|------------|------------|
+| Phase 2 | `tdd-impl-agent` | `tdd-context.json` | `tdd-result.json` |
+| Phase 3 | `acceptance-test-agent` | `acceptance-context.json` | `acceptance-result.json` |
+| Phase 4 | `refactoring-agent` | `refactor-context.json` | `refactor-result.json` |
+| Phase 5 | `progress-report-agent` | `progress-context.json` | `progress-report.md` |
+
+**ファイル配置例**:
+```
+dev-reports/feature/issue/166/pm-auto-dev/iteration-1/
+├── tdd-context.json          ← PM Auto-Devが作成（入力）
+├── tdd-result.json           ← tdd-impl-agentが作成（出力）
+├── acceptance-context.json   ← PM Auto-Devが作成
+├── acceptance-result.json    ← acceptance-test-agentが作成
+├── refactor-context.json     ← PM Auto-Devが作成
+├── refactor-result.json      ← refactoring-agentが作成
+├── progress-context.json     ← PM Auto-Devが作成
+└── progress-report.md        ← progress-report-agentが作成
+```
+
+#### 🎯 どちらを選ぶべきか？
+
+**パターンAを選ぶべき状況**:
+- 💡 新技術の検証・学習を兼ねた開発
+- 🔬 実験的な実装や概念実証（PoC）
+- 🏗️ アーキテクチャに影響する大規模変更
+- 🎨 UI/UXの試行錯誤が必要な機能
+- 🐛 原因不明のバグ修正（試行錯誤が必要）
+
+**パターンBを選ぶべき状況**:
+- 🏃 時間効率を重視したい場合
+- 📋 要件が明確で標準パターンに従う実装
+- 🔄 定型的なCRUD操作の追加
+- 🐞 原因が明確なバグ修正
+- ✅ 既存コードベースのパターンを踏襲する機能追加
+
+**関連ドキュメント**:
+- [PM Auto-Dev移行完了レポート](../../workspace/pm-auto-dev-design/10-pm-auto-dev-migration-complete.md)
+- [サブエージェント実装仕様](../../workspace/pm-auto-dev-design/06-official-subagent-implementation.md)
+
+---
 
 ### スキル実行フローの例
 

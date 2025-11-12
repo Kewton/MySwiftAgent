@@ -10,25 +10,22 @@ session: "worktree"
 ## 概要
 Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリング → 進捗報告）を**完全自動化**するプロジェクトマネージャースキルです。ユーザーはIssue番号を指定するだけで、開発完了まで自律的に実行します。
 
+**新アーキテクチャ**: サブエージェント方式を採用し、各フェーズを専門エージェントに委譲します。
+
 ## 使用方法
 - `/pm-auto-dev [Issue番号]`
-- `/pm-auto-dev [Issue番号] --mode=fix`（是正モード）
 - `/pm-auto-dev [Issue番号] --max-iterations=5`（イテレーション回数変更）
 - 「Issue #145を開発してください」
-- 「Issue #145を是正してください」
 
 ## 実行内容
 
-あなたはプロジェクトマネージャーとして、Issue開発を統括します。以下のフェーズを**自律的に**実行し、品質基準を満たすまで完了させてください。
+あなたはプロジェクトマネージャーとして、Issue開発を統括します。各フェーズは**専門サブエージェント**に委譲し、結果ファイルを確認しながら品質基準を満たすまで完了させてください。
 
 ### 📋 パラメータ
 
 - **issue_number**: 開発対象のIssue番号（必須）
-- **mode**: 実行モード
-  - `full`: 新規開発モード（デフォルト）
-  - `fix`: 是正モード（動作確認で不具合発見時）
 - **max_iterations**: 最大イテレーション回数（デフォルト: 3）
-- **skip_refactor**: リファクタリングをスキップ（デフォルト: false）
+- **target_coverage**: 目標カバレッジ（デフォルト: 90）
 
 ---
 
@@ -48,41 +45,44 @@ Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリ�
 
 各フェーズ開始時に`in_progress`に、完了時に`completed`に更新してください。
 
+---
+
 ### Phase 1: Issue情報収集
 
-1. **GitHub Issue情報の取得**:
-   ```bash
-   gh issue view {issue_number} --json title,body,labels,assignees
-   ```
+#### 1-1. Issue情報取得
 
-2. **作業計画の確認**:
-   ```bash
-   cat dev-reports/feature/issue/{issue_number}/work-plan.md
-   ```
+```bash
+gh issue view {issue_number} --json number,title,body,labels,assignees
+```
 
-   ファイルが存在しない場合は、Issue本文から要件を抽出してください。
+#### 1-2. 必要情報の抽出
 
-3. **受入条件の抽出**:
-   - Issue本文から`## 受入条件`セクションを抽出
-   - 各受入条件をリスト化
+Issue本文から以下を抽出：
 
-4. **実装要件の確認**:
-   - `## 実装タスク`から実装すべき内容を確認
-   - 技術スタック、依存関係を確認
+- **タイトル**: Issue件名
+- **受入条件** (`## 受入条件`セクション)
+- **技術要件** (`## 技術要件`セクション)
+- **実装タスク** (`## 実装タスク`セクション)
 
-5. **現在のブランチ確認**:
-   ```bash
-   git branch --show-current
-   ```
+#### 1-3. ディレクトリ構造作成
 
-   `feature/issue/{issue_number}`ブランチで作業していることを確認。異なる場合は警告。
+```bash
+BRANCH=$(git branch --show-current)
+ISSUE_NUM=$(echo "$BRANCH" | grep -oE '[0-9]+$')
 
-**Phase 1完了条件**:
-- Issue情報が取得できた
-- 受入条件が明確
-- 実装要件が理解できた
+if [ -z "$ISSUE_NUM" ]; then
+  echo "❌ Error: Issue番号がブランチ名から取得できません"
+  exit 1
+fi
 
-TodoWriteでPhase 1を`completed`に更新し、Phase 2を`in_progress`に設定してください。
+# ベースディレクトリ作成
+BASE_DIR="dev-reports/feature/issue/${ISSUE_NUM}/pm-auto-dev/iteration-1"
+mkdir -p "$BASE_DIR"
+
+echo "✅ ディレクトリ作成: $BASE_DIR"
+```
+
+TodoWriteでPhase 1を`completed`に、Phase 2を`in_progress`に設定してください。
 
 ---
 
@@ -95,434 +95,540 @@ TodoWriteでPhase 1を`completed`に更新し、Phase 2を`in_progress`に設定
 - [x] Phase 2: TDD実装 (イテレーション 1/3)
 ```
 
-#### 2-1. Red Phase: 失敗するテストを作成
+#### 2-1. TDDコンテキストファイル作成
 
-1. **テストケース設計**:
-   - 受入条件から必要なテストケースを設計
-   - Given-When-Then形式で整理
-   - 正常系・異常系・エッジケースを考慮
+Writeツールで以下のファイルを作成：
 
-2. **テストコード作成**:
-   - `tests/unit/test_issue_{issue_number}_*.py`
-   - `tests/integration/test_issue_{issue_number}_*.py`
-   - Arrange-Act-Assert構造
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-context.json
+```
 
-3. **テスト実行（失敗確認）**:
-   ```bash
-   uv run pytest tests/unit/test_issue_{issue_number}_*.py -v
-   ```
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "acceptance_criteria": [
+    "受入条件1",
+    "受入条件2"
+  ],
+  "implementation_tasks": [
+    "実装タスク1",
+    "実装タスク2"
+  ],
+  "target_coverage": 90
+}
+```
 
-   全テストが失敗することを確認。
+**重要**: Phase 1で取得したIssue情報を正確に転記してください。
 
-#### 2-2. Green Phase: テストを通す最小限の実装
+#### 2-2. TDD実装サブエージェント呼び出し
 
-1. **実装ファイル作成・変更**:
-   - 作業計画に従って実装
-   - テストを通すことだけを考える
-   - 過剰な実装はしない
+以下のテキストを記述してください（サブエージェントが自動起動されます）：
 
-2. **テスト実行（成功確認）**:
-   ```bash
-   uv run pytest tests/unit/ -v
-   ```
+```
+Use tdd-impl-agent to implement Issue #{issue_number} with TDD approach.
 
-   全テストが成功することを確認。
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-context.json
+Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.json
 
-#### 2-3. Refactor Phase: コードを整理
+Please follow the Red-Green-Refactor cycle and ensure all tests pass with 90% coverage.
+```
 
-1. **コード品質改善**:
-   - 重複コード削除（DRY原則）
-   - 命名規則の適用
-   - 関数/クラスの分割（単一責任原則）
+#### 2-3. 結果確認
 
-2. **テスト再実行**:
-   ```bash
-   uv run pytest tests/unit/ -v
-   ```
+サブエージェントが完了したら、Readツールで結果ファイルを確認：
 
-   リファクタリング後も全テスト成功を確認。
+```bash
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.json
+```
 
-#### 2-4. Coverage Check: カバレッジ確認
+**結果判定**:
 
-1. **カバレッジ測定**:
-   ```bash
-   uv run pytest --cov=app --cov-report=term-missing --cov-report=html
-   ```
+##### ケース1: TDD実装成功 (`status: "success"`)
 
-2. **カバレッジ判定**:
-   - **90%以上**: Phase 2完了 → Phase 3へ
-   - **90%未満**: 未カバー箇所を特定し、テスト追加（Phase 2-1へ戻る）
+```json
+{
+  "status": "success",
+  "coverage": 92.5,
+  "unit_tests": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  }
+}
+```
 
-3. **静的解析チェック**:
-   ```bash
-   uv run ruff check .
-   uv run ruff format .
-   uv run mypy app/
-   ```
+→ **Phase 3へ進む**
 
-   全てエラー0件であることを確認。エラーがあれば修正。
+TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定。
 
-**Phase 2完了条件**:
-- ✅ 単体テストカバレッジ 90%以上
-- ✅ 全テスト成功
-- ✅ 静的解析エラー 0件
+##### ケース2: TDD実装失敗 (`status: "failed"`)
 
-TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定してください。
+```json
+{
+  "status": "failed",
+  "coverage": 75.0,
+  "error": "目標カバレッジ90%に達していません（現在: 75.0%）"
+}
+```
+
+→ **イテレーション回数確認**:
+
+- **イテレーション回数 < max_iterations**:
+  - イテレーション回数を+1
+  - Todoリストを更新: `Phase 2: TDD実装 (イテレーション 2/3)`
+  - **Phase 2-1に戻る**（新しいコンテキストファイルを作成し、再度サブエージェント呼び出し）
+
+- **イテレーション回数 >= max_iterations**:
+  - ユーザーにエスカレーション:
+    ```
+    ❌ TDD実装が{max_iterations}回のイテレーション後も失敗しました。
+
+    ## 最終エラー
+    - カバレッジ: 75.0%（目標: 90%）
+    - 静的解析エラー: 3件
+
+    ## 次のアクション
+    1. 目標カバレッジを下げる（--target-coverage=80）
+    2. 手動でテストを追加する
+    3. Issue要件を見直す
+    ```
 
 ---
 
 ### Phase 3: 受入テスト
 
-#### 3-1. 受入テストケースの生成
+#### 3-1. 受入テストコンテキストファイル作成
 
-1. **受入条件からテストケース化**:
-   Issue本文の`## 受入条件`から、各項目をテストケースに変換：
+Writeツールで以下のファイルを作成：
 
-   例：
-   ```
-   受入条件:
-   - [ ] worktreeが自動検出されること
-
-   → テストケース:
-   def test_worktree_auto_detection():
-       \"\"\"受入条件: worktreeが自動検出されること\"\"\"
-       # Given: 3つのworktreeが存在する環境
-       # When: worktree検出機能を実行
-       # Then: 全3つのworktreeが検出される
-   ```
-
-2. **統合テストファイル作成**:
-   ```bash
-   tests/integration/test_issue_{issue_number}_acceptance.py
-   ```
-
-#### 3-2. 受入テスト実行
-
-1. **環境準備**:
-   - 必要なサービスが起動しているか確認
-   - テストデータの準備
-
-2. **テスト実行**:
-   ```bash
-   uv run pytest tests/integration/test_issue_{issue_number}_acceptance.py -v
-   ```
-
-3. **結果判定**:
-   - **全テスト合格**: Phase 4へ進む
-   - **テスト不合格**: 以下を実行
-
-#### 3-3. テスト不合格時の処理
-
-1. **イテレーション回数確認**:
-   - 現在のイテレーション回数が`{max_iterations}`未満:
-     - イテレーション回数を+1
-     - Todoリストを更新: `Phase 2: TDD実装 (イテレーション 2/3)`
-     - **Phase 2に戻る**（失敗原因を踏まえて再実装）
-
-   - `{max_iterations}`回到達:
-     - **エスカレーション**（後述）
-
-2. **失敗分析**:
-   失敗したテストケースについて分析し、ユーザーに報告：
-
-   ```
-   ❌ 受入テスト不合格（イテレーション 2/3）
-
-   ## 失敗テストケース
-
-   ### test_worktree_auto_detection
-   - 期待値: 3個のworktree検出
-   - 実際の値: 2個のworktree検出
-   - エラー: AssertionError
-
-   ## 原因分析
-   symlink経由のworktreeが検出されていない
-
-   ## 修正方針
-   `git worktree list`の出力パース処理を修正
-
-   イテレーション 3/3 で再実装します...
-   ```
-
-#### 3-4. エスカレーション（イテレーション上限到達時）
-
+**ファイルパス**:
 ```
-⚠️ 受入テスト不合格が{max_iterations}回連続しました。
-
-## テスト失敗内容
-[失敗したテストケースと原因の詳細]
-
-## 考えられる問題
-1. 要件の見直しが必要な可能性
-2. テストケースが厳しすぎる可能性
-3. アーキテクチャの根本的な見直しが必要な可能性
-
-## 推奨アクション
-シニアエンジニアに相談してください。
-
-PM自動開発を中断します。
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-context.json
 ```
 
-エスカレーション時はTodoリストを更新し、作業を停止してください。
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "feature_summary": "Issue件名",
+  "acceptance_criteria": [
+    "受入条件1",
+    "受入条件2"
+  ],
+  "test_scenarios": [
+    "シナリオ1: ...",
+    "シナリオ2: ..."
+  ]
+}
+```
 
-**Phase 3完了条件**:
-- ✅ 全受入テスト合格
+#### 3-2. 受入テストサブエージェント呼び出し
 
-TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定してください。
+以下のテキストを記述してください：
+
+```
+Use acceptance-test-agent to verify Issue #{issue_number} acceptance criteria.
+
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-context.json
+Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-result.json
+
+Please execute all test scenarios and verify all acceptance criteria are met.
+```
+
+#### 3-3. 結果確認
+
+Readツールで結果ファイルを確認：
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-result.json
+```
+
+**結果判定**:
+
+##### ケース1: 受入テスト成功 (`status: "passed"`)
+
+```json
+{
+  "status": "passed",
+  "test_cases": [
+    {"scenario": "シナリオ1", "result": "passed"},
+    {"scenario": "シナリオ2", "result": "passed"}
+  ],
+  "acceptance_criteria_status": [
+    {"criterion": "受入条件1", "verified": true},
+    {"criterion": "受入条件2", "verified": true}
+  ]
+}
+```
+
+→ **Phase 4へ進む**
+
+TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定。
+
+##### ケース2: 受入テスト失敗 (`status: "failed"`)
+
+```json
+{
+  "status": "failed",
+  "test_cases": [
+    {"scenario": "シナリオ1", "result": "passed"},
+    {"scenario": "シナリオ2", "result": "failed"}
+  ],
+  "error": "受入テストの一部が失敗しました"
+}
+```
+
+→ **イテレーション回数確認** → **Phase 2に戻る**（TDD実装からやり直し）
 
 ---
 
-### Phase 4: リファクタリング（条件付き）
+### Phase 4: リファクタリング
 
-**スキップ条件**:
-- `skip_refactor=true`が指定されている
-- コード品質が十分高い（後述の評価で判定）
+#### 4-1. リファクタリングコンテキストファイル作成
 
-#### 4-1. コード品質評価
+Writeツールで以下のファイルを作成：
 
-1. **複雑度チェック**:
-   - 関数の行数が20行を超えていないか
-   - ネストが3段階を超えていないか
-   - 引数が5個を超えていないか
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/refactor-context.json
+```
 
-2. **コードスメル検出**:
-   - 重複コード
-   - マジックナンバー
-   - 長すぎる変数名/短すぎる変数名
-   - 意味不明な命名
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "refactor_targets": [
+    "app/services/database.py",
+    "app/models/job.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 92.5,
+    "complexity_score": 12
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern",
+    "Dependency Injection"
+  ],
+  "improvement_goals": [
+    "カバレッジを95%以上に向上",
+    "循環的複雑度を10以下に削減",
+    "重複コードの削除"
+  ]
+}
+```
 
-3. **リファクタリング要否判定**:
-   - 問題なし: Phase 4をスキップ → Phase 5へ
-   - 問題あり: リファクタリング実施
+**重要**: TDD結果ファイルから現在のカバレッジを取得して `before_coverage` に設定してください。
 
-#### 4-2. リファクタリング実施
+#### 4-2. リファクタリングサブエージェント呼び出し
 
-1. **改善実施**:
-   - 長い関数の分割
-   - 重複コードの共通化
-   - マジックナンバーの定数化
-   - 命名の改善
+以下のテキストを記述してください：
 
-2. **テスト再実行**:
-   ```bash
-   uv run pytest tests/ -v
-   ```
+```
+Use refactoring-agent to improve code quality for Issue #{issue_number}.
 
-   **重要**: リファクタリング後、全テストが成功することを確認。
-   失敗した場合はリファクタリングを元に戻す。
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/refactor-context.json
+Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/refactor-result.json
 
-3. **カバレッジ確認**:
-   ```bash
-   uv run pytest --cov=app --cov-report=term-missing
-   ```
+Please apply SOLID principles and design patterns while maintaining all tests passing.
+```
 
-   カバレッジが下がっていないことを確認。
+#### 4-3. 結果確認
 
-**Phase 4完了条件**:
-- ✅ リファクタリング完了 or スキップ
-- ✅ 全テスト引き続き成功
-- ✅ カバレッジ維持
+Readツールで結果ファイルを確認：
 
-TodoWriteでPhase 4を`completed`に、Phase 5を`in_progress`に設定してください。
+```bash
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/refactor-result.json
+```
+
+**結果判定**:
+
+##### ケース1: リファクタリング成功 (`status: "success"`)
+
+```json
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 92.5,
+    "after_coverage": 95.0,
+    "before_complexity": 12,
+    "after_complexity": 8
+  },
+  "refactorings_applied": [
+    "Repository Pattern適用",
+    "重複コード削除"
+  ]
+}
+```
+
+→ **Phase 5へ進む**
+
+TodoWriteでPhase 4を`completed`に、Phase 5を`in_progress`に設定。
+
+##### ケース2: リファクタリング失敗 (`status: "failed"`)
+
+リファクタリングは任意フェーズのため、失敗してもPhase 5へ進みます。
+ただし、失敗理由をユーザーに報告してください。
 
 ---
 
 ### Phase 5: 進捗報告
 
-#### 5-1. 統計情報収集
+#### 5-1. 進捗レポートコンテキストファイル作成
 
-1. **変更ファイル統計**:
-   ```bash
-   git diff --name-status origin/develop...HEAD
-   git diff --stat origin/develop...HEAD
-   git log --oneline origin/develop...HEAD | wc -l
+Writeツールで以下のファイルを作成：
+
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-context.json
+```
+
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 92.5
+    },
+    "acceptance": {
+      "status": "passed"
+    },
+    "refactor": {
+      "status": "success"
+    }
+  }
+}
+```
+
+**重要**: 各フェーズの実際の結果を正確に転記してください。
+
+#### 5-2. 進捗レポートサブエージェント呼び出し
+
+以下のテキストを記述してください：
+
+```
+Use progress-report-agent to generate progress report for Issue #{issue_number} iteration 1.
+
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-context.json
+Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-report.md
+
+Please summarize all phase results and suggest next steps.
+```
+
+#### 5-3. レポート表示
+
+サブエージェントが完了したら、Readツールでレポートを読み込んで表示：
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-report.md
+```
+
+**レポート内容**:
+- 概要（Issue番号、イテレーション、ステータス）
+- フェーズ別結果（TDD、受入テスト、リファクタリング）
+- 総合品質メトリクス
+- ブロッカー（あれば）
+- 次のステップ
+
+TodoWriteでPhase 5を`completed`に設定。
+
+---
+
+## 🔄 イテレーション制御ロジック
+
+### イテレーションが必要になるケース
+
+1. **TDD実装失敗** (Phase 2-3):
+   - カバレッジ不足
+   - 静的解析エラー
+   - テスト失敗
+
+2. **受入テスト失敗** (Phase 3-3):
+   - テストシナリオ失敗
+   - 受入条件未達成
+
+### イテレーション処理フロー
+
+```
+Phase 2 → Phase 3 → 受入テスト失敗
+  ↓                    ↓
+  ←──────────────────┘
+  (イテレーション+1)
+
+Phase 2 (イテレーション2) → Phase 3 → ...
+```
+
+### 最大イテレーション到達時
+
+```
+❌ Issue #{issue_number} の開発が{max_iterations}回のイテレーション後も完了しませんでした。
+
+## 最終状態
+- TDD実装: {tdd_status}
+- 受入テスト: {acceptance_status}
+- カバレッジ: {coverage}%
+
+## 推奨アクション
+1. 目標カバレッジを下げる（--target-coverage=80）
+2. 最大イテレーション回数を増やす（--max-iterations=5）
+3. Issue要件を見直す
+4. 手動で実装を修正する
+
+## 作業ファイル
+- コンテキストファイル: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/
+- 結果ファイル: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/
+```
+
+---
+
+## 📂 ファイル構造
+
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/
+├── iteration-1/
+│   ├── tdd-context.json          ← TDD実装の入力
+│   ├── tdd-result.json           ← TDD実装の出力
+│   ├── acceptance-context.json   ← 受入テストの入力
+│   ├── acceptance-result.json    ← 受入テストの出力
+│   ├── refactor-context.json     ← リファクタリングの入力
+│   ├── refactor-result.json      ← リファクタリングの出力
+│   ├── progress-context.json     ← 進捗レポートの入力
+│   └── progress-report.md        ← 進捗レポート（Markdown）
+├── iteration-2/                  ← イテレーション2（失敗時）
+│   ├── tdd-context.json
+│   └── ...
+└── iteration-3/                  ← イテレーション3（失敗時）
+    └── ...
+```
+
+---
+
+## 🎯 完了条件
+
+以下をすべて満たすこと：
+
+- ✅ Phase 1: Issue情報収集完了
+- ✅ Phase 2: TDD実装成功（カバレッジ90%以上、静的解析エラー0件）
+- ✅ Phase 3: 受入テスト成功（全シナリオ合格、全受入条件検証済み）
+- ✅ Phase 4: リファクタリング完了（または失敗時は理由報告）
+- ✅ Phase 5: 進捗レポート作成完了
+
+---
+
+## 🚨 エラーハンドリング
+
+### サブエージェントが応答しない場合
+
+サブエージェントが10分以上応答しない場合：
+
+1. **タイムアウト判定**: サブエージェントを中断
+2. **ユーザーに報告**:
+   ```
+   ⚠️ {agent-name} がタイムアウトしました（10分経過）
+
+   ## 次のアクション
+   1. サブエージェントを再実行する
+   2. 手動で該当フェーズを実行する
+   3. Issue要件を簡素化する
    ```
 
-2. **テスト結果収集**:
-   - 単体テストカバレッジ
-   - 受入テスト件数
-   - イテレーション回数
+### コンテキストファイル作成失敗
 
-3. **静的解析結果**:
-   - Ruffエラー数
-   - MyPyエラー数
-
-#### 5-2. 進捗報告ファイル作成
-
-**保存先**: `dev-reports/feature/issue/{issue_number}/progress-report.md`
-
-```markdown
-# 進捗報告 - Issue #{issue_number}
-
-> **ステータス**: ✅ 完了
-> **完了日時**: {completion_date}
-> **担当者**: PM Auto-Dev Agent
-
-## 📋 Issue情報
-
-- **タイトル**: {issue_title}
-- **ラベル**: {labels}
-
-## 📊 実装サマリ
-
-### 実装内容
-{implementation_description}
-
-### 変更統計
-
-| 指標 | 数値 |
-|------|------|
-| 追加ファイル | {added_files}個 |
-| 変更ファイル | {modified_files}個 |
-| 追加行数 | +{added_lines}行 |
-| 削除行数 | -{deleted_lines}行 |
-| コミット数 | {commit_count}件 |
-
-## 🧪 テスト結果
-
-### 単体テスト
-- テストケース数: {unit_test_count}件
-- 成功: {unit_success}件 ✅
-- カバレッジ: {unit_coverage}%
-
-### 受入テスト
-- テストケース数: {acceptance_test_count}件
-- 成功: {acceptance_success}件 ✅
-
-### 静的解析
-- Ruff: ✅ エラー0件
-- MyPy: ✅ エラー0件
-
-## 🔄 開発プロセス
-
-### イテレーション履歴
-| イテレーション | 結果 | 備考 |
-|--------------|------|------|
-| 1 | {result_1} | {note_1} |
-| ... | ... | ... |
-
-**総イテレーション回数**: {iteration_count}/{max_iterations}
-
-### リファクタリング
-{refactoring_performed ? "実施済み" : "スキップ"}
-
-## 🚀 次のステップ
-
-### Phase 12: ユーザー動作確認
-
-**確認手順**:
-1. worktree環境でサービスを起動
-   ```bash
-   cd {worktree_path}
-   ./scripts/dev-start.sh
-   ```
-
-2. 各機能が正常に動作することを確認
-
-3. 確認結果に応じて:
-   - **動作OK**: `/pm-create-pr` でPR作成
-   - **不具合あり**: `/pm-auto-dev {issue_number} --mode=fix` で是正
-
----
-
-**作成日時**: {created_at}
-**作成者**: PM Auto-Dev Agent
-```
-
-#### 5-3. ユーザーへの完了報告
-
-ターミナルに以下を出力：
+Phase 1でIssue情報が不足している場合：
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Issue #{issue_number} 開発完了！
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ Issue #{issue_number} の情報が不足しています
 
-📋 Issue: {issue_title}
+## 不足情報
+- 受入条件（## 受入条件セクションが存在しません）
 
-📊 実装サマリ:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  変更ファイル:  {changed_files}個
-  追加/削除:     +{added_lines}/-{deleted_lines}行
-  イテレーション: {iteration_count}/{max_iterations}回
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🧪 テスト結果:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  単体テスト:     {unit_test_count}件成功 ({unit_coverage}%)
-  受入テスト:     {acceptance_test_count}件成功
-  静的解析:       エラー0件
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📝 進捗報告: dev-reports/feature/issue/{issue_number}/progress-report.md
-
-🚀 次のステップ:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  1. worktree環境で動作確認を実施してください
-
-  2. 動作確認OK後、PR作成:
-     /pm-create-pr
-
-  3. 不具合発見時、是正:
-     /pm-auto-dev {issue_number} --mode=fix
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 次のアクション
+1. Issue本文を修正して受入条件を追加
+2. PM Auto-Devを再実行
 ```
 
-**Phase 5完了条件**:
-- ✅ 進捗報告ファイル作成完了
-- ✅ ユーザーへの完了報告実施
+---
 
-TodoWriteでPhase 5を`completed`に設定し、全Todoを完了状態にしてください。
+## 📝 使用例
+
+### 基本的な使用方法
+
+```
+User: /pm-auto-dev 166
+
+PM Auto-Dev:
+✅ Phase 1: Issue情報収集完了
+  - Issue #166: jobqueueにaiosqlite対応のDATABASE_URL設定
+  - 受入条件: 2件
+  - 実装タスク: 3件
+
+🔄 Phase 2: TDD実装 (イテレーション 1/3)
+  - コンテキストファイル作成完了
+  - tdd-impl-agent を起動中...
+
+✅ Phase 2: TDD実装成功
+  - カバレッジ: 92.5%
+  - テスト: 25/25 passed
+  - 静的解析: 0 errors
+
+✅ Phase 3: 受入テスト成功
+  - テストシナリオ: 2/2 passed
+  - 受入条件: 2/2 verified
+
+✅ Phase 4: リファクタリング成功
+  - カバレッジ: 92.5% → 95.0%
+  - 複雑度: 12 → 8
+
+✅ Phase 5: 進捗レポート作成完了
+
+🎉 Issue #166 の開発が完了しました！
+```
 
 ---
 
-## 🛠️ 是正モード (mode=fix)
+## 🔧 トラブルシューティング
 
-ユーザーの動作確認で不具合が見つかった場合に使用します。
+### Q1: サブエージェントが見つからない
 
-### 実行内容
+**エラー**:
+```
+Error: Subagent 'tdd-impl-agent' not found
+```
 
-1. **ユーザーからの不具合報告受領**:
-   「どのような不具合がありましたか？詳細を教えてください」
+**対応**:
+`.claude/agents/tdd-impl-agent.md` が存在するか確認してください。
 
-2. **不具合の理解**:
-   - 再現手順
-   - 期待される動作
-   - 実際の動作
+### Q2: コンテキストファイルが見つからない
 
-3. **不具合を再現するテストケース追加**:
-   Phase 2-1 (Red Phase) で不具合を再現するテストを作成
+**エラー**:
+```
+Error: tdd-context.json not found
+```
 
-4. **Phase 2から再実行**:
-   - イテレーションカウントはリセット
-   - 不具合修正を含めて再実装
+**対応**:
+Phase 2-1でWriteツールを使ってコンテキストファイルを作成してください。
 
----
+### Q3: イテレーションが進まない
 
-## 📊 品質基準
+**現象**:
+Phase 2で失敗しているのにPhase 3に進んでしまう
 
-以下を満たすまでPhase 3から先に進まない：
-
-- ✅ 単体テストカバレッジ 90%以上
-- ✅ 受入テスト 全件合格
-- ✅ 静的解析エラー 0件（Ruff, MyPy）
-- ✅ `./scripts/pre-push-check-all.sh` 実行可能
-
-## 🚨 重要な制約
-
-1. **自律性**: ユーザーの介入なしに可能な限り進める
-2. **透明性**: 各フェーズの結果をTodoリストとターミナルで報告
-3. **品質第一**: 品質基準を満たさない限り次フェーズに進まない
-4. **イテレーション制限**: 無限ループを防ぐため上限を設ける
-5. **エラーハンドリング**: エラー発生時は明確なメッセージで報告
-
-## 📚 参照ドキュメント
-
-- [開発ワークフロー](../../docs/claude/01-development-workflow.md)
-- [品質基準](../../docs/claude/04-quality-standards.md)
-- [TDD実装スキル](./tdd-impl.md)
-- [受入テストスキル](./acceptance-test.md)
+**対応**:
+Phase 2-3の結果判定ロジックを確認し、`status: "failed"` の場合はPhase 2に戻るようにしてください。
 
 ---
 
-それでは、Issue #{issue_number} の開発を開始します！
+## 📚 関連ドキュメント
+
+- [サブエージェント設計](../../workspace/pm-auto-dev-design/06-official-subagent-implementation.md)
+- [統合仕様](../../workspace/pm-auto-dev-design/07-slash-command-subagent-integration.md)
+- [実装完了レポート](../../workspace/pm-auto-dev-design/08-implementation-complete.md)
+- [検証レポート](../../workspace/pm-auto-dev-design/09-verification-report.md)
