@@ -1,60 +1,263 @@
-# 受入テスト機能
+# 受入テスト効率化機能
 
-このドキュメントは、MySwiftAgentプロジェクトにおける受入テストの効率化に関する機能を記録します。
+MySwiftAgentの全マイクロサービスを統一的に起動・管理するための機能です。複数のブランチで並行して受入テストを実施でき、開発・テストの効率を大幅に向上させます。
 
 ## 目次
 
-- [Issue #140: 受入テストの効率化](#issue-140-受入テストの効率化)
+- [概要](#概要)
+- [機能仕様](#機能仕様)
+- [利用方法](#利用方法)
+- [アーキテクチャ](#アーキテクチャ)
+- [トラブルシューティング](#トラブルシューティング)
+- [変更履歴](#変更履歴)
 
 ---
 
-## Issue #140: 受入テストの効率化
+## 概要
 
-**ステータス**: ✅ 完了
-**完了日**: 2025-11-11
-**担当者**: なし
+### 背景
+
+従来、MySwiftAgentの受入テストを行うには、7つのマイクロサービスを個別に起動する必要があり、環境構築に10-15分かかっていました。また、複数のブランチで並行テストを行う場合、ポート競合の手動解決が必要でした。
+
+### ソリューション
+
+統一起動スクリプト `scripts/unified-start.sh` により、以下を実現します:
+
+- **単一コマンドでの一括起動**: 全7サービスを正しい依存順序で起動
+- **Worktree並列起動**: 最大4つのブランチで同時にテスト環境を構築
+- **自動ポート管理**: ポート競合を自動検出・回避
+- **ヘルスチェック**: 各サービスの起動完了と健全性を自動確認
+- **エラー自動復旧**: 起動失敗時の自動ロールバック
+
+### 効果
+
+| 指標 | 改善前 | 改善後 | 改善率 |
+|------|--------|--------|--------|
+| セットアップ時間 | 10-15分 | 3分以内 | **80%削減** |
+| 並列テスト数 | 1ブランチ | 4ブランチ | **4倍向上** |
+| 起動成功率 | 70% | 95%以上 | **25%向上** |
 
 ---
 
-### 📋 概要
+## 機能仕様
 
-MySwiftAgentの受入テストプロセスを効率化するため、全マイクロサービスの一括起動とworktree並列テスト環境を提供する統一起動スクリプトを開発しました。
+### 対象サービス
 
-従来、各マイクロサービスを個別に起動する必要があり、受入テスト環境の構築に10-15分かかっていましたが、このソリューションにより起動時間を3分以内に短縮し、最大4つのブランチで並列テストを実施できるようになりました。
+以下の7つのマイクロサービスを管理します:
 
-### 🎯 ユーザーストーリー
+| サービス名 | デフォルトポート | 役割 |
+|-----------|----------------|------|
+| myVault | 8103 | シークレット管理 |
+| jobqueue | 8101 | ジョブキュー管理 |
+| myscheduler | 8102 | ジョブスケジューリング |
+| graphAiServer | 8105 | ワークフロー実行 |
+| expertAgent | 8104 | AIエージェント |
+| myAgentDesk | 5173 | Web UI |
+| commonUI | 8601 | 共通UIコンポーネント |
 
-- POとして各ブランチにおいて一つのスクリプトで全てのマイクロサービスを起動したい。なぜなら受け入れテストを効率化したいからだ。
-- POとして複数のブランチにおいて一つのスクリプトで全てのマイクロサービスを起動し、同時に実行可能にしたい。なぜなら受け入れテストを効率化したいからだ。
+### 起動順序
 
-### ✅ 受入基準
+依存関係に基づき、以下の3層構造で順次起動します:
 
-#### 必須受入基準
+```
+Layer 1 (インフラ層)
+  ├── myVault       (シークレット管理が全サービスの前提)
+  └── jobqueue      (キュー管理)
 
-1. **一括起動機能**
-   - 単一コマンドで全7サービス(jobqueue, myscheduler, myVault, expertAgent, graphAiServer, myAgentDesk, commonUI)が起動すること
-   - 各サービスのヘルスチェックが成功すること
-   - 起動順序が正しく制御されること(インフラ層→ミドルウェア層→アプリケーション層)
+Layer 2 (ミドルウェア層)
+  ├── myscheduler   (Layer 1に依存)
+  └── graphAiServer (Layer 1に依存)
 
-2. **Worktree並列起動機能**
-   - 複数worktreeで同時起動してもポート競合が発生しないこと
-   - 最大4つのworktreeで並列実行可能なこと
-   - worktreeごとに独立したPIDファイル・ログファイル管理ができること
+Layer 3 (アプリケーション層)
+  ├── expertAgent   (Layer 1, 2に依存)
+  └── myAgentDesk/commonUI (全レイヤーに依存)
+```
 
-3. **エラーハンドリング**
-   - 起動失敗時に適切なエラーメッセージが表示されること
-   - 部分的な起動失敗時に自動ロールバックが実行されること
-   - ポート競合が検出され、解決方法が提示されること
+### Worktree対応
 
-4. **パフォーマンス**
-   - 全サービス起動が3分以内に完了すること
-   - メモリ使用量が規定値(1 worktreeあたり8GB)以内であること
+複数のgit worktreeで同時起動する際、以下のルールでポート番号を自動割り当てします:
 
-### 🏗️ アーキテクチャ
+```
+ポート番号 = ベースポート + (worktreeインデックス × 10)
+```
 
-#### システム構成
+**例**:
+- `develop` (index 0): expertAgent は 8104
+- `worktree-1` (index 1): expertAgent は 8114
+- `worktree-2` (index 2): expertAgent は 8124
 
-統一起動スクリプト(unified-start.sh)は、以下の階層構造で構成されています:
+### ヘルスチェック
+
+各サービスの `/health` エンドポイントを監視し、起動完了を確認します:
+
+- **タイムアウト**: 30秒（デフォルト）
+- **リトライ間隔**: 1秒
+- **ステータス表示**: ✅ 成功 / ⚠️ 警告 / ❌ 失敗
+
+### エラーハンドリング
+
+起動失敗時、以下の処理を自動実行します:
+
+1. **ポート競合検出**: 使用中のポートとプロセスを特定
+2. **自動ロールバック**: 起動済みサービスを逆順で停止
+3. **クリーンアップ**: PIDファイル・一時ファイルを削除
+4. **エラー提案**: 解決方法を具体的に提示
+
+---
+
+## 利用方法
+
+### 基本コマンド
+
+#### 全サービスの起動
+
+```bash
+./scripts/unified-start.sh start
+```
+
+**動作**:
+1. 環境変数を読み込み（`.env` → `.env.local`の順で優先）
+2. Layer 1 → Layer 2 → Layer 3 の順で起動
+3. 各サービスのヘルスチェックを実行
+4. 起動完了メッセージを表示
+
+#### 全サービスの停止
+
+```bash
+./scripts/unified-start.sh stop
+```
+
+**動作**:
+- Layer 3 → Layer 2 → Layer 1 の逆順で停止
+- PIDファイルをクリーンアップ
+
+#### サービスステータス確認
+
+```bash
+./scripts/unified-start.sh status
+```
+
+**出力例**:
+```
+✅ jobqueue: Running healthy (PID: 12345, Port: 8101)
+✅ myscheduler: Running healthy (PID: 12346, Port: 8102)
+⚠️ myVault: Running but health check failed (PID: 12347, Port: 8103)
+❌ expertAgent: Not running
+```
+
+#### 全サービスの再起動
+
+```bash
+./scripts/unified-start.sh restart
+```
+
+### 応用コマンド
+
+#### カスタム環境ファイルを使用
+
+```bash
+./scripts/unified-start.sh start --env-file .env.production
+```
+
+#### ドライラン（設定確認のみ）
+
+```bash
+./scripts/unified-start.sh start --dry-run
+```
+
+#### 強制起動（既存プロセスを停止）
+
+```bash
+./scripts/unified-start.sh start --force
+```
+
+**注意**: ポート競合しているプロセスを自動的に停止します。
+
+#### ヘルスチェックタイムアウトのカスタマイズ
+
+```bash
+./scripts/unified-start.sh start --timeout 60
+```
+
+#### 特定worktreeの操作
+
+```bash
+# worktree 2のサービスを起動
+./scripts/unified-start.sh start --worktree 2
+
+# worktree 2のステータス確認
+./scripts/unified-start.sh status --worktree 2
+
+# worktree 2のサービスを停止
+./scripts/unified-start.sh stop --worktree 2
+```
+
+### Worktree並列起動の手順
+
+#### 1. Worktreeを作成
+
+```bash
+# Issue #123用のworktreeを作成
+git worktree add ../MySwiftAgent-worktrees/feature-issue-123 -b feature/issue/123
+```
+
+#### 2. 各worktreeでサービスを起動
+
+```bash
+# Main repository (develop)
+cd /path/to/MySwiftAgent
+./scripts/unified-start.sh start
+
+# Worktree 1
+cd ../MySwiftAgent-worktrees/feature-issue-123
+./scripts/unified-start.sh start
+```
+
+**自動的に実行されること**:
+- Worktreeインデックスの検出（`git worktree list`で判定）
+- ポート番号の自動計算
+- `.env.local`の優先読み込み（worktree固有設定）
+
+#### 3. 全worktreeのステータスを一括確認
+
+```bash
+# Main repositoryで実行
+./scripts/unified-start.sh status --all-worktrees
+```
+
+### 環境変数の管理
+
+#### 優先順位
+
+環境変数は以下の優先順で読み込まれます（上が優先）:
+
+1. コマンドライン引数（`--env-file`等）
+2. `.env.local`（worktree固有設定）
+3. 各プロジェクトの`.env`（プロジェクト設定）
+4. スクリプトのデフォルト値
+
+#### `.env.local`の例
+
+Worktree固有のポート設定:
+
+```bash
+# .env.local (worktree-1用)
+JOBQUEUE_PORT=8111
+MYSCHEDULER_PORT=8112
+MYVAULT_PORT=8113
+EXPERTAGENT_PORT=8114
+GRAPHAISERVER_PORT=8115
+MYAGENTDESK_PORT=5174
+COMMONUI_PORT=8611
+```
+
+**注意**: 通常は自動計算されるため、手動設定は不要です。
+
+---
+
+## アーキテクチャ
+
+### システム構成
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -71,152 +274,256 @@ MySwiftAgentの受入テストプロセスを効率化するため、全マイ�
 └────────────────┴──────────────┴─────────────────┴──────────────┘
 ```
 
-#### 技術スタック
+### ディレクトリ構造
 
-- **実装言語**: Bash (POSIX準拠)
-  - 理由: 既存資産との整合性、依存関係最小化、プロセス管理に最適
-- **設定管理**: YAML (yqコマンドでパース)
-  - Phase 1ではBashハードコーディング、Phase 2でYAML導入
-- **依存ツール**: curl (ヘルスチェック), lsof (ポート確認), pkill (プロセス管理)
+```
+scripts/
+├── unified-start.sh          # メインスクリプト
+├── lib/
+│   ├── common.sh             # 共通関数（色出力、ログ等）
+│   ├── port-manager.sh       # ポート管理
+│   ├── process-manager.sh    # プロセス管理
+│   ├── health-check.sh       # ヘルスチェック
+│   ├── worktree-utils.sh     # worktree検出・管理
+│   ├── env-loader.sh         # 環境変数読み込み
+│   └── docker-utils.sh       # Docker管理（langfuse用）
+└── config/
+    ├── services.yaml         # サービス定義
+    └── dependencies.yaml     # 依存関係定義
+```
 
-#### 主要コンポーネント
+### 技術スタック
 
-1. **メインスクリプト** (`scripts/unified-start.sh`)
-   - コマンドルーティング、全体制御、エラーハンドリング
+| 要素 | 技術 | 理由 |
+|------|------|------|
+| **実装言語** | Bash (POSIX準拠) | 既存資産との整合性、依存最小化 |
+| **設定管理** | YAML (yqコマンド) | 可読性、拡張性 |
+| **プロセス管理** | nohup + PIDファイル | シンプル、確実 |
+| **ヘルスチェック** | curl + エンドポイント監視 | 標準的、信頼性高 |
+| **ポート確認** | lsof | macOS/Linux両対応 |
 
-2. **ポート管理モジュール** (`scripts/lib/port-manager.sh`)
-   - worktreeインデックス検出、ポート番号計算(base_port + index × 10)、競合解決
+### 主要コンポーネント
 
-3. **プロセス管理モジュール** (`scripts/lib/process-manager.sh`)
-   - サービス起動・停止、PIDファイル管理、依存関係チェック
+#### 1. ポート管理モジュール (`port-manager.sh`)
 
-4. **ヘルスチェックモジュール** (`scripts/lib/health-check.sh`)
-   - `/health`エンドポイント監視、リトライ機構、ステータス可視化
+**機能**:
+- Worktreeインデックスの自動検出
+- ポート番号計算: `base_port + (index × 10)`
+- ポート使用状況確認
+- 代替ポートの提案
 
-### 🔧 実装詳細
+**主要関数**:
+```bash
+detect_worktree_index()      # worktreeインデックス検出
+calculate_ports()            # ポート番号計算
+check_port_available()       # ポート使用確認
+resolve_port_conflict()      # ポート競合解決
+```
 
-#### Phase 1: MVP実装 (Issue #140-1, #140-2, #140-3)
+#### 2. プロセス管理モジュール (`process-manager.sh`)
 
-**Issue #140-1: 基本統一起動スクリプトの実装**
-- 全マイクロサービスの一括起動・停止機能
-- ハードコーディングされた依存関係と固定ポート
-- 単一worktreeでの動作に焦点
+**機能**:
+- サービスのライフサイクル管理
+- PIDファイルによるプロセス追跡
+- 依存関係に基づく起動順序制御
+- Graceful shutdown
 
-**Issue #140-2: ヘルスチェック機能の実装**
-- 各サービスの`/health`エンドポイント確認
-- リトライ機構(最大30秒、1秒間隔)
-- 色付き表示(✅成功、⚠️警告、❌失敗)
+**主要関数**:
+```bash
+start_service()              # サービス起動
+stop_service()               # サービス停止
+restart_service()            # サービス再起動
+is_service_running()         # 稼働状況確認
+```
 
-**Issue #140-3: エラーハンドリングとロールバック機能**
-- エラートラップ機構(`trap`コマンド)
-- 起動済みサービスのトラッキングと自動ロールバック
-- ポート競合検出と解決提案
+#### 3. ヘルスチェックモジュール (`health-check.sh`)
 
-#### Phase 2: Worktree対応 (Issue #140-4, #140-5, #140-6, #140-7)
+**機能**:
+- `/health`エンドポイント監視
+- リトライ機構（最大30秒、1秒間隔）
+- ステータス可視化
 
-**Issue #140-4: Worktree自動検出とポート管理**
-- `git worktree list`による自動検出
-- ポート番号計算アルゴリズム: base_port + (index × 10)
-- 空きポート検出と代替ポート提案
-
-**Issue #140-5: 複数Worktree並列起動サポート**
-- worktreeごとのPIDファイル分離(`/tmp/myswiftagent-wt{index}/*.pid`)
-- 最大4 worktree同時起動対応
-- リソース使用量の事前チェック
-
-**Issue #140-6: 環境変数の階層的管理機能**
-- `.env` → `.env.local`の優先読み込み
-- サービスURL自動構成(JOBQUEUE_API_URL等)
-- 必須環境変数のバリデーション
-
-**Issue #140-7: YAML設定ファイル導入**
-- `services.yaml`によるサービス定義
-- `dependencies.yaml`による依存関係管理
-- yqコマンドによるパース(オプション)
-
-#### Phase 3: 高度な機能 (Issue #140-8, #140-9, #140-10)
-
-**Issue #140-8: Docker Compose統合**
-- langfuseなどのDockerサービス管理
-- worktreeごとのDocker環境分離オプション
-- `--skip-docker`による除外機能
-
-**Issue #140-9: ステータスダッシュボード機能**
-- 全サービスの状態一覧表示
-- メモリ・CPU使用率の表示
-- `--watch`オプションによる自動更新
-
-**Issue #140-10: メトリクス収集と自動リカバリ**
-- サービス異常の自動検知
-- 設定可能な再起動ポリシー
-- 再起動履歴の記録
-
-### 🧪 テスト結果
-
-#### 機能テスト
-- ✅ 単一コマンドで全7サービスが起動
-- ✅ 各サービスのヘルスチェックが成功
-- ✅ 複数worktreeで同時起動してもポート競合なし
-- ✅ 起動失敗時に適切なエラーメッセージ表示
-
-#### 性能テスト
-- ✅ 全サービス起動時間: **3分以内達成** (従来10-15分から80%削減)
-- ✅ 4つのworktreeで同時起動可能
-- ✅ メモリ使用量: **規定値以内** (1 worktreeあたり8GB以下)
-
-#### 運用テスト
-- ✅ ログファイルが適切に出力・分離
-- ✅ PIDファイルによるプロセス管理が正常動作
-- ✅ 異常終了時のクリーンアップが実行
-
-### 📦 成果物
-
-1. **実装コード**
-   - `scripts/unified-start.sh` - メインスクリプト
-   - `scripts/lib/` - 各モジュール(common.sh, port-manager.sh, process-manager.sh, health-check.sh等)
-   - `scripts/config/` - 設定ファイル(services.yaml, dependencies.yaml)
-
-2. **テストコード**
-   - `scripts/test/unit/` - 単体テストスクリプト
-   - `scripts/test/integration/` - 統合テストスクリプト
-
-3. **ドキュメント**
-   - `docs/unified-start-usage.md` - 使用方法
-   - `docs/unified-start-config.md` - 設定リファレンス
-   - `docs/unified-start-trouble.md` - トラブルシューティング
-
-### 📊 ビジネスインパクト
-
-#### 定量的効果
-- **セットアップ時間短縮**: 10-15分 → 3分以内 (**80%削減**)
-- **並列テスト実施**: 1 → 4 worktree (**4倍向上**)
-- **起動成功率**: 70% → 95%以上 (**25%向上**)
-
-#### 定性的効果
-- テスターの認知負荷軽減(複数コマンドの記憶不要)
-- テスト環境の再現性向上(標準化された起動手順)
-- 開発者とQA間のコミュニケーションコスト削減
-- 新規参画者のオンボーディング時間短縮
-
-### 📚 関連リソース
-
-- **GitHub Issue**: [#140](https://github.com/kewton/MySwiftAgent/issues/140)
-- **設計方針書**: `dev-reports/feature/issue/140/design.md`
-- **要件定義書**: `dev-reports/feature/issue/140/requirements.md`
-- **作業計画書**: `dev-reports/feature/issue/140/work-plan.md`
-- **Issue分割計画**: `dev-reports/feature/issue/140/issue-breakdown.md`
-
-### 🔄 今後の拡張計画
-
-#### 短期的拡張 (3ヶ月以内)
-- Kubernetes manifestsの自動生成
-- CI/CD環境での利用(GitHub Actions統合)
-
-#### 長期的拡張 (6ヶ月以降)
-- Web UIによる起動管理ダッシュボード
-- メトリクス収集とモニタリング統合
-- 自動スケーリング機能
+**主要関数**:
+```bash
+check_service_health()       # 個別サービスヘルスチェック
+check_all_health()           # 全サービスヘルスチェック
+wait_for_healthy()           # 起動待機
+```
 
 ---
 
-_最終更新: 2025-11-12 by /doc-register_
+## トラブルシューティング
+
+### ポート競合エラー
+
+**症状**:
+```
+❌ Error: Port 8104 is already in use by process 12345
+```
+
+**原因**: 既に別のプロセスがポートを使用中
+
+**解決方法**:
+
+1. **強制起動**（既存プロセスを停止）:
+   ```bash
+   ./scripts/unified-start.sh start --force
+   ```
+
+2. **手動でプロセスを確認・停止**:
+   ```bash
+   # ポート使用中のプロセスを確認
+   lsof -i :8104
+
+   # プロセスを停止
+   kill <PID>
+   ```
+
+3. **別のポートを使用**（`.env.local`で設定）:
+   ```bash
+   EXPERTAGENT_PORT=8204
+   ```
+
+### ヘルスチェック失敗
+
+**症状**:
+```
+⚠️ myVault: Running but health check failed (PID: 12347, Port: 8103)
+```
+
+**原因**:
+- サービスは起動しているが、`/health`エンドポイントが応答しない
+- 依存サービスが未起動
+
+**解決方法**:
+
+1. **ログを確認**:
+   ```bash
+   tail -f logs/myVault.log
+   ```
+
+2. **手動でヘルスチェック**:
+   ```bash
+   curl http://localhost:8103/health
+   ```
+
+3. **依存サービスを確認**:
+   ```bash
+   ./scripts/unified-start.sh status
+   ```
+
+### Worktreeインデックス検出失敗
+
+**症状**:
+```
+❌ Error: Could not detect worktree index
+```
+
+**原因**: worktreeの構成が想定外
+
+**解決方法**:
+
+1. **Worktreeリストを確認**:
+   ```bash
+   git worktree list
+   ```
+
+2. **手動でインデックスを指定**:
+   ```bash
+   ./scripts/unified-start.sh start --worktree 2
+   ```
+
+### 環境変数が読み込まれない
+
+**症状**: サービスが正しい設定で起動しない
+
+**解決方法**:
+
+1. **ドライランで設定を確認**:
+   ```bash
+   ./scripts/unified-start.sh start --dry-run
+   ```
+
+2. **環境変数の読み込み順を確認**:
+   - `.env`ファイルが存在するか
+   - `.env.local`が意図した値になっているか
+
+3. **カスタム環境ファイルを明示的に指定**:
+   ```bash
+   ./scripts/unified-start.sh start --env-file .env.test
+   ```
+
+### メモリ不足
+
+**症状**:
+```
+⚠️ Warning: Available memory (6GB) is below recommended (8GB)
+```
+
+**原因**: システムメモリが不足
+
+**解決方法**:
+
+1. **不要なプロセスを停止**
+
+2. **起動するworktree数を減らす**:
+   - 推奨: 最大4 worktree
+   - 各worktree: 約2GB必要
+
+3. **サービスごとに起動**（一括起動を避ける）:
+   ```bash
+   # Layer 1のみ起動
+   ./scripts/unified-start.sh start --layer 1
+   ```
+
+---
+
+## 変更履歴
+
+### 2025-11-11 - Initial Release (Issue #140)
+
+**追加機能**:
+- 統一起動スクリプト `scripts/unified-start.sh` の実装
+- 全7サービスの一括起動・停止機能
+- Worktree並列起動サポート（最大4ブランチ）
+- 自動ポート管理とポート競合解決
+- ヘルスチェック機能（`/health`エンドポイント監視）
+- エラーハンドリングとロールバック機能
+- 環境変数の階層的管理（`.env` → `.env.local`）
+- YAML設定ファイルによるサービス定義
+- Docker Compose統合（langfuse対応）
+- ステータスダッシュボード
+- メトリクス収集と自動リカバリ
+
+**実装フェーズ**:
+- Phase 1: MVP実装（基本起動、ヘルスチェック、エラーハンドリング）
+- Phase 2: Worktree対応（自動検出、並列起動、環境変数管理、YAML設定）
+- Phase 3: 高度な機能（Docker統合、ダッシュボード、メトリクス）
+
+**性能指標**:
+- セットアップ時間: 10-15分 → 3分以内（80%削減）
+- 並列テスト数: 1 → 4 worktree（4倍向上）
+- 起動成功率: 70% → 95%以上（25%向上）
+
+**関連リソース**:
+- GitHub Issue: [#140](https://github.com/kewton/MySwiftAgent/issues/140)
+- 設計方針書: `dev-reports/feature/issue/140/design.md`
+- 要件定義書: `dev-reports/feature/issue/140/requirements.md`
+- 作業計画書: `dev-reports/feature/issue/140/work-plan.md`
+- Issue分割計画: `dev-reports/feature/issue/140/issue-breakdown.md`
+
+**子Issue**:
+- Issue #140-1: 基本統一起動スクリプトの実装
+- Issue #140-2: ヘルスチェック機能の実装
+- Issue #140-3: エラーハンドリングとロールバック機能
+- Issue #140-4: Worktree自動検出とポート管理
+- Issue #140-5: 複数Worktree並列起動サポート
+- Issue #140-6: 環境変数の階層的管理機能
+- Issue #140-7: YAML設定ファイル導入
+- Issue #140-8: Docker Compose統合
+- Issue #140-9: ステータスダッシュボード機能
+- Issue #140-10: メトリクス収集と自動リカバリ
+
+---
+
+_最終更新: 2025-11-12_
