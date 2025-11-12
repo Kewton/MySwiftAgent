@@ -66,11 +66,19 @@ gh issue view <親Issue番号>
   - Phase名
   - 各Issueの所属Phase
   - Phase完了条件
+  - Phaseの実行順序（Week情報）
+  - 並列実行マーク（⚡）の有無
 
 - **依存関係**:
   - 依存先Issue（ブロックされる側）
   - ブロック対象Issue（ブロックする側）
   - 並列実行可能性
+  - 依存関係マトリクスからの情報
+
+- **スケジュール情報**:
+  - 総見積工数
+  - 並列化による短縮効果
+  - Phase別の週次スケジュール
 
 ### 3. 子Issueの一括作成
 
@@ -153,6 +161,123 @@ gh issue edit <親Issue番号> --body "$(cat /tmp/parent-issue-body.md)"
 
 ---
 
+## 📅 実装Phase計画と実行順序
+
+本Featureは **<Phase数>つのPhase** に分割され、各Phaseに子Issueが割り当てられています。
+Phase内で並列実行可能なIssueは同時着手できますが、Phase間には依存関係があります。
+
+### Phase 1: <Phase名>（Week <週番号>） ⚡並列実行可能
+
+**開始条件**: なし（即座に着手可能）
+
+**実行順序**:
+1. 📌 **並列着手**: <並列実行可能なIssue番号> を同時に開始可能
+
+| Issue | タイトル | 見積 | 担当 | 依存 |
+|-------|----------|------|------|------|
+| #<子Issue番号> | Issue #<親Issue番号>-<連番>: <タイトル> | <見積> | <担当> | なし |
+| #<子Issue番号> | Issue #<親Issue番号>-<連番>: <タイトル> | <見積> | <担当> | なし |
+
+**Phase完了条件**:
+- [ ] <完了条件1>
+- [ ] <完了条件2>
+
+**ブロック解除**: Phase 1完了で **Phase 2** の <Issue番号リスト> が着手可能
+
+---
+
+### Phase 2: <Phase名>（Week <週番号>） ⚡一部並列可
+
+**開始条件**: <依存Issue番号> が完了
+
+**実行順序**:
+1. 📌 **並列着手**: <並列実行可能なIssue番号> を同時に開始可能
+2. ⏩ **独立着手**: <Issue番号> は <依存Issue番号> 完了後に開始
+
+| Issue | タイトル | 見積 | 担当 | 依存 |
+|-------|----------|------|------|------|
+| #<子Issue番号> | Issue #<親Issue番号>-<連番>: <タイトル> | <見積> | <担当> | #<依存Issue> ✅ |
+
+**Phase完了条件**:
+- [ ] `/pm-auto-dev <Issue番号リスト>` 完了（自動検証済み）
+- [ ] <完了条件>
+
+**ブロック解除**: <次Phase情報>
+
+---
+
+（各Phaseごとに同様の構造を繰り返す）
+
+---
+
+## 🔀 依存関係可視化
+
+```mermaid
+graph TD
+    subgraph "Phase 1: <Phase名>（Week <週番号>）"
+        I<子Issue番号>[#<子Issue番号> <タイトル短縮><br/><見積>]
+        I<子Issue番号>[#<子Issue番号> <タイトル短縮><br/><見積>]
+    end
+
+    subgraph "Phase 2: <Phase名>（Week <週番号>）"
+        I<子Issue番号>[#<子Issue番号> <タイトル短縮><br/><見積>]
+    end
+
+    %% 依存関係
+    I<子Issue番号> --> I<子Issue番号>
+    I<子Issue番号> --> I<子Issue番号>
+
+    %% 並列実行可能なIssueのスタイル
+    style I<子Issue番号> fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style I<子Issue番号> fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+```
+
+**凡例**:
+- 🟦 青枠太線: Phase 1 並列実行可能
+- 🟧 橙枠太線: Phase 2 並列実行可能
+- 矢印: 依存関係（元Issue完了後に先Issue着手可能）
+
+---
+
+## 📊 実行シミュレーション（最短スケジュール）
+
+| Week | 並列作業 | 実行Issue | 作業日数 |
+|------|---------|-----------|---------|
+| Week 1 Day 1-<日数> | <並列数>名並列 | <Issue番号リスト> | <日数>日 |
+| Week <週番号> Day <日数> | <並列数>名並列 | <Issue番号リスト> | <日数>日 |
+
+**合計**: 約<営業日数>営業日（並列化により<元日数>日→<短縮日数>日に短縮）
+
+---
+
+## 🎯 推奨着手順序
+
+### 🚀 今すぐ着手可能（Phase 1）
+```bash
+# 並列で<人数>名がそれぞれ着手
+/work-plan <子Issue番号>  # <タイトル>（<見積>）
+/work-plan <子Issue番号>  # <タイトル>（<見積>）
+```
+
+### ⏳ Phase 1完了待ち（Phase 2）
+```bash
+# <依存Issue番号>完了後、並列で着手可能
+/work-plan <子Issue番号>  # <タイトル>（<見積>）
+/work-plan <子Issue番号>  # <タイトル>（<見積>）
+
+# <依存Issue番号>完了後、着手可能
+/work-plan <子Issue番号>  # <タイトル>（<見積>）
+```
+
+### ⏳ Phase 2完了待ち（Phase 3以降）
+```bash
+# 順次実行
+/work-plan <子Issue番号>  # <タイトル>（<依存条件>）
+/work-plan <子Issue番号>  # <タイトル>（<依存条件>）
+```
+
+---
+
 ## 子Issue進捗
 
 ### Phase 1: <Phase名>
@@ -163,15 +288,14 @@ gh issue edit <親Issue番号> --body "$(cat /tmp/parent-issue-body.md)"
 - [ ] #<子Issue番号> Issue #<親Issue番号>-<連番>: <タイトル>（<見積>）
 ...
 
+---
+
 ## 全体進捗
 - **完了**: 0/<総Issue数> (0%)
 - **作業中**: 0/<総Issue数>
 - **未着手**: <総Issue数>/<総Issue数>
 
-## マイルストーン
-- Phase 1完了予定: <期限>
-- Phase 2完了予定: <期限>
-- 全体完了予定: <期限>
+**予定**: Week <開始週> 開始 → Week <完了週> 完了（約<週数>週間）
 
 ---
 
@@ -224,72 +348,79 @@ issue-split.mdの末尾に以下を追記：
 
 #### コンソール出力
 ```
+================================================================================
 ✅ 子Issueを一括作成しました
+================================================================================
 
-親Issue: #152 要件定義エージェントへのMLOps導入
-  https://github.com/Kewton/MySwiftAgent/issues/152
+親Issue: #<親Issue番号> <Feature名>
+  https://github.com/Kewton/MySwiftAgent/issues/<親Issue番号>
 
-作成された子Issue: 10個
+作成された子Issue: <総Issue数>個
 
-Phase 1: 基盤構築（並列可）
-  #201: Issue #152-1: Valkey永続化基盤の実装（3日）
-    https://github.com/Kewton/MySwiftAgent/issues/201
-    📌 並列実行可能: #202
+--------------------------------------------------------------------------------
+Phase 1: <Phase名>（並列可）
+--------------------------------------------------------------------------------
+  #<子Issue番号>: Issue #<親Issue番号>-<連番>: <タイトル>（<見積>）
+    https://github.com/Kewton/MySwiftAgent/issues/<子Issue番号>
+    📌 並列実行可能: #<子Issue番号>
+    🚧 Blocks: #<子Issue番号>, #<子Issue番号>
 
-  #202: Issue #152-8: プロンプトYAML化実装（2日）
-    https://github.com/Kewton/MySwiftAgent/issues/202
-    📌 並列実行可能: #201
+  #<子Issue番号>: Issue #<親Issue番号>-<連番>: <タイトル>（<見積>）
+    https://github.com/Kewton/MySwiftAgent/issues/<子Issue番号>
+    📌 並列実行可能: #<子Issue番号>
 
-Phase 2: コアAPI実装
-  #203: Issue #152-2: 診断情報取得API実装（2日）
-    https://github.com/Kewton/MySwiftAgent/issues/203
-    ⚠️  Blocked by: #201
+--------------------------------------------------------------------------------
+Phase 2: <Phase名>
+--------------------------------------------------------------------------------
+  #<子Issue番号>: Issue #<親Issue番号>-<連番>: <タイトル>（<見積>）
+    https://github.com/Kewton/MySwiftAgent/issues/<子Issue番号>
+    ⚠️  Blocked by: #<子Issue番号>
+    📌 並列実行可能: #<子Issue番号>
+    🚧 Blocks: #<子Issue番号>
 
-  #204: Issue #152-3: フィードバックAPI実装（1日）
-    https://github.com/Kewton/MySwiftAgent/issues/204
-    ⚠️  Blocked by: #201
-    📌 並列実行可能: #203
+  （各Phaseごとに同様の形式で出力）
 
-  #205: Issue #152-4: 複数候補提示機能（3日）
-    https://github.com/Kewton/MySwiftAgent/issues/205
-    ⚠️  Blocked by: #202
-
-Phase 3: AI機能拡張
-  #206: Issue #152-5: AI推奨システム実装（2日）
-    https://github.com/Kewton/MySwiftAgent/issues/206
-    ⚠️  Blocked by: #205
-
-Phase 4: 可視化・分析
-  #207: Issue #152-6: 品質可視化API実装（2日）
-    https://github.com/Kewton/MySwiftAgent/issues/207
-    ⚠️  Blocked by: #203, #204
-
-  #208: Issue #152-7: リアルタイムダッシュボード実装（2日）
-    https://github.com/Kewton/MySwiftAgent/issues/208
-    ⚠️  Blocked by: #207
-
-Phase 5: ABテスト
-  #209: Issue #152-9: ABテスト基盤実装（4日）
-    https://github.com/Kewton/MySwiftAgent/issues/209
-    ⚠️  Blocked by: #202, #207
-
-Phase 6: UI統合
-  #210: Issue #152-10: UI実装（5日）
-    https://github.com/Kewton/MySwiftAgent/issues/210
-    ⚠️  Blocked by: #203, #204, #205, #206, #207, #208
-
+================================================================================
 📊 統計情報
-- 総Issue数: 10個
-- 総見積工数: 216時間（約5週間）
-- 並列実行可能: 3組（Phase 1: #201/#202、Phase 2: #203/#204）
+================================================================================
+- 総Issue数: <総Issue数>個
+- 総見積工数: <総日数>日（約<週数>週間）
+- 並列実行可能: <並列グループ数>組
+  - Phase 1: #<子Issue番号> ⇄ #<子Issue番号>
+  - Phase 2: #<子Issue番号> ⇄ #<子Issue番号>
+- ブロック関係:
+  - #<子Issue番号> → #<子Issue番号>, #<子Issue番号> (Phase 1完了でPhase 2開始可能)
+  - #<子Issue番号> → #<子Issue番号> (<説明>)
+  - #<子Issue番号> → #<子Issue番号> (<説明>)
 
-📄 Issue分割計画書を更新しました
-  dev-reports/feature/issue/152/issue-split.md
+================================================================================
+📄 更新されたファイル
+================================================================================
+- 親Issue #<親Issue番号>: 実行順序・依存関係グラフ・子Issueタスクリスト追加
+  https://github.com/Kewton/MySwiftAgent/issues/<親Issue番号>
 
+- issue-split.md: GitHub Issueリンクセクション追加
+  dev-reports/feature/issue/<親Issue番号>/issue-split.md
+
+================================================================================
 🎯 次のステップ
-1. 親Issue（#152）で全体進捗を確認
-2. Phase 1の並列実行可能Issue（#201, #202）から着手
+================================================================================
+1. 親Issue（#<親Issue番号>）で全体進捗を確認
+   https://github.com/Kewton/MySwiftAgent/issues/<親Issue番号>
+
+2. Phase 1の並列実行可能Issueから着手
+   - #<子Issue番号>: <タイトル>
+   - #<子Issue番号>: <タイトル>
+
 3. 各Issueで /work-plan を実行して詳細作業計画を立案
+   例: /work-plan <子Issue番号>
+
+4. /pm-auto-dev で自動開発・テスト実行
+   例: /pm-auto-dev <子Issue番号>
+
+================================================================================
+✅ Issue一括作成が完了しました
+================================================================================
 ```
 
 ## エラーハンドリング

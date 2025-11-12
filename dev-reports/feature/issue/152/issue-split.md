@@ -740,4 +740,72 @@ graph TD
 
 ---
 
-**END OF DOCUMENT**
+**END OF DOCUMENT**---
+
+## 🔗 作成されたGitHub Issue
+
+### 親Issue
+- #152: 要件定義エージェントへのMLOpsの導入
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/152
+
+### 子Issue
+
+#### Phase 1: 基盤構築（並列可）
+- #169: Issue #152-1: Valkey永続化基盤の実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/169
+  - サイズ: M、優先度: High、見積: 3日
+  - 📌 並列実行可能: #177
+
+- #177: Issue #152-8: プロンプトYAML化実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/177
+  - サイズ: M、優先度: Medium、見積: 2日
+  - 📌 並列実行可能: #169
+
+#### Phase 2: コアAPI実装
+- #171: Issue #152-2: 診断情報取得API実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/171
+  - サイズ: M、優先度: High、見積: 2日
+  - ⚠️ Blocked by: #169
+  - 📌 並列実行可能: #172
+
+- #172: Issue #152-3: フィードバックAPI実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/172
+  - サイズ: S、優先度: High、見積: 1日
+  - ⚠️ Blocked by: #169
+  - 📌 並列実行可能: #171
+
+- #173: Issue #152-4: 複数候補提示機能（基本実装）
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/173
+  - サイズ: M、優先度: High、見積: 3日
+
+#### Phase 3: AI機能拡張
+- #174: Issue #152-5: AI推奨システム実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/174
+  - サイズ: M、優先度: Medium、見積: 2日
+
+#### Phase 4: 可視化・分析
+- #175: Issue #152-6: 品質可視化API実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/175
+  - サイズ: M、優先度: Medium、見積: 2日
+  - ⚠️ Blocked by: #171
+
+- #176: Issue #152-7: リアルタイムダッシュボード実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/176
+  - サイズ: M、優先度: Medium、見積: 2日
+  - ⚠️ Blocked by: #175
+
+#### Phase 5: ABテスト
+- #178: Issue #152-9: ABテスト基盤実装
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/178
+  - サイズ: L、優先度: Low、見積: 4日
+
+#### Phase 6: UI統合
+- #170: Issue #152-10: UI実装（フロントエンド統合）
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/170
+  - サイズ: L、優先度: Medium、見積: 5日
+
+### 作成日時
+2025-11-12
+
+### 作成者
+@maenokota
