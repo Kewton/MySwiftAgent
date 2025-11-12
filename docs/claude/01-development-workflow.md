@@ -24,7 +24,7 @@ graph LR
     style H fill:#e0f2f1
 ```
 
-## 🤖 開発フローとClaude Code Skillsマッピング
+## 🤖 開発フローとスラッシュコマンドマッピング
 
 各開発フェーズで利用可能なClaude Code Skills（スキルを使用しないフェーズも含む）：
 

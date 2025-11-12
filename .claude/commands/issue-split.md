@@ -281,7 +281,7 @@ GitHub Projects や Issue に直接転記可能なMarkdown形式。
 
 ## 次のステップ
 
-Issue分割後、各Issueの詳細な作業計画は `/work-plan` スキルで立案してください。
+Issue分割後は `/issue-create` コマンドでGitHub Issueを一括作成し、各Issueの詳細な作業計画は `/work-plan` で立案してください。
 
 ## 参照ドキュメント
 
