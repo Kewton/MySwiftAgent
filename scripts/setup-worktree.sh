@@ -124,12 +124,20 @@ case $myvault_choice in
         if [ -d "$MAIN_REPO/myVault" ]; then
             # アプリケーションコードは実ディレクトリのまま維持
             # データディレクトリのみシンボリックリンク化
-            if [ -d myVault/data ] && [ ! -L myVault/data ]; then
-                rm -rf myVault/data
+
+            # 既存のディレクトリまたはシンボリックリンクを削除
+            if [ -e myVault/data ]; then
+                if [ -L myVault/data ]; then
+                    # 既存シンボリックリンクを削除（Git管理下の場合もあるため）
+                    rm myVault/data
+                elif [ -d myVault/data ]; then
+                    # 実ディレクトリの場合は削除
+                    rm -rf myVault/data
+                fi
             fi
-            if [ ! -e myVault/data ]; then
-                ln -s "$MAIN_REPO/myVault/data" myVault/data
-            fi
+
+            # 新しいシンボリックリンクを作成
+            ln -s "$MAIN_REPO/myVault/data" myVault/data
             echo "✅ Created symlink: myVault/data -> $MAIN_REPO/myVault/data"
             echo "   Note: Sharing myVault data with develop branch (app code is independent)."
         else
@@ -193,20 +201,33 @@ case $langfuse_choice in
         if [ -d "$MAIN_REPO/langfuse" ]; then
             # アプリケーション設定ファイルは実ディレクトリのまま維持
             # データディレクトリ/docker-compose-dataのみシンボリックリンク化
-            if [ -d langfuse/data ] && [ ! -L langfuse/data ]; then
-                rm -rf langfuse/data
+
+            # langfuse/data の処理
+            if [ -e langfuse/data ]; then
+                if [ -L langfuse/data ]; then
+                    rm langfuse/data
+                elif [ -d langfuse/data ]; then
+                    rm -rf langfuse/data
+                fi
             fi
-            if [ ! -e langfuse/data ] && [ -d "$MAIN_REPO/langfuse/data" ]; then
+            if [ -d "$MAIN_REPO/langfuse/data" ]; then
                 ln -s "$MAIN_REPO/langfuse/data" langfuse/data
+                echo "✅ Created symlink: langfuse/data -> $MAIN_REPO/langfuse/data"
             fi
-            if [ -d langfuse/docker-compose-data ] && [ ! -L langfuse/docker-compose-data ]; then
-                rm -rf langfuse/docker-compose-data
+
+            # langfuse/docker-compose-data の処理
+            if [ -e langfuse/docker-compose-data ]; then
+                if [ -L langfuse/docker-compose-data ]; then
+                    rm langfuse/docker-compose-data
+                elif [ -d langfuse/docker-compose-data ]; then
+                    rm -rf langfuse/docker-compose-data
+                fi
             fi
-            if [ ! -e langfuse/docker-compose-data ] && [ -d "$MAIN_REPO/langfuse/docker-compose-data" ]; then
+            if [ -d "$MAIN_REPO/langfuse/docker-compose-data" ]; then
                 ln -s "$MAIN_REPO/langfuse/docker-compose-data" langfuse/docker-compose-data
+                echo "✅ Created symlink: langfuse/docker-compose-data -> $MAIN_REPO/langfuse/docker-compose-data"
             fi
-            echo "✅ Created symlink: langfuse/data -> $MAIN_REPO/langfuse/data"
-            echo "✅ Created symlink: langfuse/docker-compose-data -> $MAIN_REPO/langfuse/docker-compose-data"
+
             echo "   Note: Sharing Langfuse data with develop branch (config files are independent)."
         else
             echo "⚠️  $MAIN_REPO/langfuse not found. Creating independent copy instead."

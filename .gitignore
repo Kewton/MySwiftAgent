@@ -381,6 +381,7 @@ myscheduler/jobs.db*
 myscheduler/data/
 jobqueue/data/
 myVault/myvault.db*
+myVault/data
 myVault/data/*
 !myVault/data/.gitkeep
 commonUI/.streamlit/secrets.toml
