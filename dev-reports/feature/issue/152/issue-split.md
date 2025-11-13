@@ -37,6 +37,9 @@ expertAgent の `/v1/chat/requirement-definition` API（要件定義エージェ
 - [ ] Valkeyクライアント設定追加
 - [ ] ConversationStoreValkey実装
 - [ ] 環境変数による切り替え機能
+- [ ] scripts/dev-start.sh からのValkey起動機能
+- [ ] docker-compose.yml へのValkeyサービス定義追加
+- [ ] worktree環境毎のValkey起動（ポート番号自動割り当て）
 - [ ] 単体テスト作成（カバレッジ90%以上）
 - [ ] 結合テスト作成
 - [ ] ドキュメント更新
@@ -55,6 +58,9 @@ expertAgent の `/v1/chat/requirement-definition` API（要件定義エージェ
 - [ ] 会話データがValkeyに保存される
 - [ ] TTL機能が正しく動作する（24時間後に自動削除）
 - [ ] trace_id、prompt_versionが保存・取得できる
+- [ ] scripts/dev-start.sh からValkeyが起動可能
+- [ ] docker-compose up でValkeyが起動可能
+- [ ] worktree環境毎に独立したValkeyインスタンスが起動（ポート衝突なし）
 
 **品質基準**:
 - [ ] 単体テストカバレッジ 90%以上
@@ -368,41 +374,70 @@ expertAgent の `/v1/chat/requirement-definition` API（要件定義エージェ
 ---
 
 ### Issue #152-8: プロンプトYAML化実装
-**概要**: 全プロンプトを外部YAMLファイルで管理
-**サイズ**: M (2日)
+**概要**: 全プロンプトを外部YAMLファイルで管理（複数バージョン対応）
+**サイズ**: L (4日)
 **優先度**: Medium
-**作業見積**: 16時間
+**作業見積**: 32時間
 **担当候補**: Backend
 
 **スコープ**:
-- [ ] YAMLテンプレート作成
-- [ ] PromptLoader実装
+- [ ] expertAgent/prompts/ ディレクトリ構造の設計・作成
+- [ ] プロンプト名ディレクトリ + 複数YAMLファイル管理機能
+- [ ] jobTaskGeneratorAgents/prompts/ のYAML化（全プロンプト）
+- [ ] workflowGeneratorAgents/prompts/ のYAML化（全プロンプト）
+- [ ] PromptLoader実装（default.yaml自動フォールバック）
+- [ ] リクエスト時のYAMLファイル名指定機能（API拡張）
 - [ ] ホットリロード機能
 - [ ] バージョン管理機能
-- [ ] 単体テスト作成
+- [ ] 単体テスト作成（カバレッジ90%以上）
+- [ ] 4シナリオでの動作確認（jobTaskGeneratorAgents + ジョブマスタ登録確認）
+- [ ] 4シナリオでの動作確認（workflowGeneratorAgents + ワークフロー生成・実行確認）
+- [ ] ドキュメント更新
 
 **技術スタック**:
 - 言語/FW: Python/YAML
 - 監視: watchdog
+- エージェント: LangGraph (jobTaskGeneratorAgents, workflowGeneratorAgents)
 
 **受入基準 (Acceptance Criteria)**:
 
 #### 🤖 自動検証可能な基準（pm-auto-devが実施）
 
 **機能要件**:
-- [ ] YAMLからプロンプトが読み込まれる
+- [ ] expertAgent/prompts/ ディレクトリ構造が正しく作成される
+- [ ] プロンプト名ディレクトリ配下に複数YAMLファイルを配置可能
+- [ ] YAMLからプロンプトが読み込まれる（default.yaml自動フォールバック）
+- [ ] リクエスト時にYAMLファイル名を指定可能（API拡張）
 - [ ] バージョン切り替えが動作する
 - [ ] ホットリロードが機能する
 - [ ] キャッシュが正しく動作
+- [ ] jobTaskGeneratorAgents の全プロンプトがYAML化される
+- [ ] workflowGeneratorAgents の全プロンプトがYAML化される
+
+**シナリオ検証（jobTaskGeneratorAgents）**:
+- [ ] シナリオ1: 企業IR分析でジョブマスタ・タスクマスタ・インタフェースマスタが登録される
+- [ ] シナリオ2: WebサイトPDF抽出でジョブマスタ・タスクマスタ・インタフェースマスタが登録される
+- [ ] シナリオ3: Gmail検索ポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される
+- [ ] シナリオ4: キーワードポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される
+
+**シナリオ検証（workflowGeneratorAgents）**:
+- [ ] シナリオ1: 企業IR分析のLLMワークフローが生成・実行可能
+- [ ] シナリオ2: WebサイトPDF抽出のLLMワークフローが生成・実行可能
+- [ ] シナリオ3: Gmail検索ポッドキャスト生成のLLMワークフローが生成・実行可能
+- [ ] シナリオ4: キーワードポッドキャスト生成のLLMワークフローが生成・実行可能
 
 **品質基準**:
 - [ ] 単体テストカバレッジ 90%以上
 - [ ] Ruff/MyPy エラーゼロ
 - [ ] 読み込み時間 100ms以内
+- [ ] 4シナリオ全てでジョブマスタ・タスクマスタ・インタフェースマスタ登録成功
+- [ ] 4シナリオ全てでワークフロー生成・実行成功
 
 **テストケース**:
-- [ ] 正常系: プロンプト読み込み
+- [ ] 正常系: プロンプト読み込み（default.yaml）
+- [ ] 正常系: プロンプト読み込み（指定ファイル名）
 - [ ] 異常系: 不正なYAML
+- [ ] 異常系: 存在しないファイル名指定（default.yamlにフォールバック）
 - [ ] エッジケース: ファイル変更検知
 
 #### 👤 手動検証が必要な基準（ユーザーが実施）
@@ -410,6 +445,13 @@ expertAgent の `/v1/chat/requirement-definition` API（要件定義エージェ
 **プロンプト管理**:
 - [ ] エンジニア以外でも編集可能
 - [ ] バージョン管理が分かりやすい
+- [ ] ディレクトリ構造が直感的
+
+**シナリオ動作確認**:
+- [ ] シナリオ1（企業IR分析）の結果が妥当
+- [ ] シナリオ2（WebサイトPDF抽出）の結果が妥当
+- [ ] シナリオ3（Gmail検索ポッドキャスト）の結果が妥当
+- [ ] シナリオ4（キーワードポッドキャスト）の結果が妥当
 
 ---
 
