@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_maker
 from app.models.job import BackoffStrategy, Job, JobStatus
 from app.models.result import JobResult
 from app.models.task import Task, TaskStatus
@@ -454,10 +454,11 @@ class WorkerManager:
     async def _worker_loop(self, worker_name: str) -> None:
         """Main worker loop."""
         logger.info(f"[WORKER] Starting worker: {worker_name}")
+        session_maker = get_session_maker()
 
         while self.running:
             try:
-                async with AsyncSessionLocal() as session:
+                async with session_maker() as session:
                     # Get next available job
                     logger.debug(f"[WORKER] {worker_name} polling for next job...")
                     job = await self._get_next_job(session)
