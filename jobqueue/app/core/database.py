@@ -73,13 +73,13 @@ def _init_engine() -> None:
     logger.info(f"Database engine initialized with URL: {settings.database_url}")
 
 
-def get_engine():
+def get_engine() -> Any:
     """Get database engine (creates it if not initialized)."""
     _init_engine()
     return _engine
 
 
-def get_session_maker():
+def get_session_maker() -> Any:
     """Get session maker (creates it if not initialized)."""
     _init_engine()
     return _session_maker
