@@ -35,9 +35,11 @@ def _init_engine() -> None:
     settings = get_settings()
 
     # Debug logging
-    logger.info(f"[DATABASE] Loading database configuration...")
+    logger.info("[DATABASE] Loading database configuration...")
     logger.info(f"[DATABASE] DATABASE_URL from settings: {settings.database_url}")
-    logger.info(f"[DATABASE] Config file path: {env_path if env_path.exists() else 'N/A'}")
+    logger.info(
+        f"[DATABASE] Config file path: {env_path if env_path.exists() else 'N/A'}"
+    )
 
     # Create database directory if it doesn't exist
     if settings.database_url.startswith("sqlite"):
@@ -52,6 +54,7 @@ def _init_engine() -> None:
 
     # Enable WAL mode for SQLite
     if settings.database_url.startswith("sqlite"):
+
         def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
             """Set SQLite pragma for WAL mode and foreign keys."""
             cursor = dbapi_connection.cursor()

@@ -15,9 +15,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=str(env_path) if env_path.exists() else None,
-        env_file_encoding='utf-8',
+        env_file_encoding="utf-8",
         case_sensitive=False,
-        extra='ignore'
+        extra="ignore",
     )
 
     # Database
