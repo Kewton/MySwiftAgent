@@ -82,6 +82,31 @@ mkdir -p "$BASE_DIR"
 echo "✅ ディレクトリ作成: $BASE_DIR"
 ```
 
+#### 1-4. 作業計画ファイル確認
+
+Readツールで作業計画ファイルの存在を確認：
+
+```bash
+WORK_PLAN_FILE="dev-reports/feature/issue/${ISSUE_NUM}/work-plan.md"
+
+if [ -f "$WORK_PLAN_FILE" ]; then
+  echo "✅ 作業計画ファイル発見: $WORK_PLAN_FILE"
+  cat "$WORK_PLAN_FILE"
+else
+  echo "⚠️  作業計画ファイルが存在しません"
+  echo "推奨: /work-plan ${ISSUE_NUM} を実行して作業計画を作成してください"
+fi
+```
+
+**作業計画ファイルが存在する場合**:
+- 作業計画の内容を読み込み、以降のフェーズで活用
+- 詳細タスク分解、タスク依存関係、作業スケジュールを考慮
+- 成果物チェックリスト、Definition of Doneを検証項目に追加
+
+**作業計画ファイルが存在しない場合**:
+- Issue本文の情報のみで進行（従来通り）
+- ユーザーに作業計画作成を推奨
+
 TodoWriteでPhase 1を`completed`に、Phase 2を`in_progress`に設定してください。
 
 ---
@@ -116,11 +141,40 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-context.jso
     "実装タスク1",
     "実装タスク2"
   ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "データモデル定義",
+      "estimated_hours": 2,
+      "deliverables": ["models/user.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "API エンドポイント実装",
+      "estimated_hours": 4,
+      "deliverables": ["api/profile.py"],
+      "dependencies": ["1.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "models/user.py",
+    "api/profile.py",
+    "tests/unit/test_user.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "CI/CDグリーン"
+  ],
   "target_coverage": 90
 }
 ```
 
-**重要**: Phase 1で取得したIssue情報を正確に転記してください。
+**重要**:
+- Phase 1で取得したIssue情報を正確に転記してください
+- 作業計画ファイルが存在する場合は、`work_plan_tasks`、`deliverables_checklist`、`definition_of_done` を追加
+- 作業計画ファイルが存在しない場合は、これらのフィールドは空配列または省略
 
 #### 2-2. TDD実装サブエージェント呼び出し
 
@@ -404,11 +458,48 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-contex
     "refactor": {
       "status": "success"
     }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "データモデル定義",
+        "estimated_hours": 2,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "API エンドポイント実装",
+        "estimated_hours": 4,
+        "status": "completed"
+      }
+    ],
+    "deliverables_status": [
+      {"file": "models/user.py", "created": true},
+      {"file": "api/profile.py", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "すべてのタスクが完了", "verified": true},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": true}
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 6,
+      "actual": 7,
+      "variance": "+1h"
+    }
   }
 }
 ```
 
-**重要**: 各フェーズの実際の結果を正確に転記してください。
+**重要**:
+- 各フェーズの実際の結果を正確に転記してください
+- 作業計画ファイルが存在する場合は、`work_plan_comparison` を追加
+  - 計画されたタスクの完了状況
+  - 成果物の作成状況
+  - Definition of Doneの検証状況
+  - 予定工数と実績工数の比較
+- 作業計画ファイルが存在しない場合は、`has_work_plan: false` を設定
 
 #### 5-2. 進捗レポートサブエージェント呼び出し
 
@@ -435,6 +526,11 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-re
 - 概要（Issue番号、イテレーション、ステータス）
 - フェーズ別結果（TDD、受入テスト、リファクタリング）
 - 総合品質メトリクス
+- **作業計画比較**（作業計画が存在する場合）
+  - 計画タスクの完了率
+  - 成果物の作成状況
+  - Definition of Done達成率
+  - 予定工数 vs 実績工数
 - ブロッカー（あれば）
 - 次のステップ
 
@@ -492,21 +588,23 @@ Phase 2 (イテレーション2) → Phase 3 → ...
 ## 📂 ファイル構造
 
 ```
-dev-reports/feature/issue/{issue_number}/pm-auto-dev/
-├── iteration-1/
-│   ├── tdd-context.json          ← TDD実装の入力
-│   ├── tdd-result.json           ← TDD実装の出力
-│   ├── acceptance-context.json   ← 受入テストの入力
-│   ├── acceptance-result.json    ← 受入テストの出力
-│   ├── refactor-context.json     ← リファクタリングの入力
-│   ├── refactor-result.json      ← リファクタリングの出力
-│   ├── progress-context.json     ← 進捗レポートの入力
-│   └── progress-report.md        ← 進捗レポート（Markdown）
-├── iteration-2/                  ← イテレーション2（失敗時）
-│   ├── tdd-context.json
-│   └── ...
-└── iteration-3/                  ← イテレーション3（失敗時）
-    └── ...
+dev-reports/feature/issue/{issue_number}/
+├── work-plan.md                  ← 作業計画（/work-plan で作成）
+└── pm-auto-dev/
+    ├── iteration-1/
+    │   ├── tdd-context.json          ← TDD実装の入力（作業計画情報含む）
+    │   ├── tdd-result.json           ← TDD実装の出力
+    │   ├── acceptance-context.json   ← 受入テストの入力
+    │   ├── acceptance-result.json    ← 受入テストの出力
+    │   ├── refactor-context.json     ← リファクタリングの入力
+    │   ├── refactor-result.json      ← リファクタリングの出力
+    │   ├── progress-context.json     ← 進捗レポートの入力（作業計画比較含む）
+    │   └── progress-report.md        ← 進捗レポート（Markdown）
+    ├── iteration-2/                  ← イテレーション2（失敗時）
+    │   ├── tdd-context.json
+    │   └── ...
+    └── iteration-3/                  ← イテレーション3（失敗時）
+        └── ...
 ```
 
 ---
@@ -569,15 +667,19 @@ PM Auto-Dev:
   - Issue #166: jobqueueにaiosqlite対応のDATABASE_URL設定
   - 受入条件: 2件
   - 実装タスク: 3件
+  - 作業計画: 存在 (dev-reports/feature/issue/166/work-plan.md)
+    - 計画タスク: 5件
+    - 予定工数: 8時間
 
 🔄 Phase 2: TDD実装 (イテレーション 1/3)
-  - コンテキストファイル作成完了
+  - コンテキストファイル作成完了（作業計画情報含む）
   - tdd-impl-agent を起動中...
 
 ✅ Phase 2: TDD実装成功
   - カバレッジ: 92.5%
   - テスト: 25/25 passed
   - 静的解析: 0 errors
+  - 成果物: 5/5 created
 
 ✅ Phase 3: 受入テスト成功
   - テストシナリオ: 2/2 passed
@@ -588,8 +690,31 @@ PM Auto-Dev:
   - 複雑度: 12 → 8
 
 ✅ Phase 5: 進捗レポート作成完了
+  - 計画タスク完了率: 100% (5/5)
+  - Definition of Done達成率: 100% (3/3)
+  - 予定工数: 8h / 実績工数: 9h (差分: +1h)
 
 🎉 Issue #166 の開発が完了しました！
+```
+
+### 作業計画なしで実行する場合
+
+```
+User: /pm-auto-dev 167
+
+PM Auto-Dev:
+✅ Phase 1: Issue情報収集完了
+  - Issue #167: 新機能実装
+  - 受入条件: 3件
+  - 実装タスク: 4件
+  ⚠️  作業計画: 未作成
+    推奨: /work-plan 167 を実行して作業計画を作成してください
+
+🔄 Phase 2: TDD実装 (イテレーション 1/3)
+  - コンテキストファイル作成完了（Issue情報のみ）
+  - tdd-impl-agent を起動中...
+
+（以降、従来通りの実行）
 ```
 
 ---
@@ -628,7 +753,24 @@ Phase 2-3の結果判定ロジックを確認し、`status: "failed"` の場合�
 
 ## 📚 関連ドキュメント
 
+- [作業計画立案スキル](/work-plan) - Issue単位の詳細な作業計画を作成
 - [サブエージェント設計](../../workspace/pm-auto-dev-design/06-official-subagent-implementation.md)
 - [統合仕様](../../workspace/pm-auto-dev-design/07-slash-command-subagent-integration.md)
 - [実装完了レポート](../../workspace/pm-auto-dev-design/08-implementation-complete.md)
 - [検証レポート](../../workspace/pm-auto-dev-design/09-verification-report.md)
+
+## 💡 推奨ワークフロー
+
+Issue開発を最も効率的に進めるための推奨ワークフローです：
+
+1. **Phase 6: 作業計画立案** - `/work-plan {issue_number}` を実行
+   - 詳細タスク分解、依存関係、スケジュールを策定
+   - 成果物チェックリスト、Definition of Doneを定義
+   - 作業計画書を `dev-reports/feature/issue/{issue_number}/work-plan.md` に保存
+
+2. **Phase 8-11: 自動開発** - `/pm-auto-dev {issue_number}` を実行
+   - 作業計画を自動的に読み込み、計画に沿った開発を実行
+   - TDD実装、受入テスト、リファクタリングを自動化
+   - 進捗レポートで計画との差分を確認
+
+この2ステップで、計画から実装、検証、報告までを一貫して管理できます。
