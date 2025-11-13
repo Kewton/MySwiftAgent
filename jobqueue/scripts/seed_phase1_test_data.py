@@ -17,7 +17,7 @@ from typing import Any, cast
 from sqlalchemy import select
 from ulid import new as ulid_new
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_maker
 from app.models.interface_master import InterfaceMaster
 from app.models.job import Job, JobStatus
 from app.models.job_master import JobMaster
@@ -155,7 +155,8 @@ JOB_MASTER = {
 
 async def seed_phase1_test_data() -> None:
     """Seed test data for Phase 1 Job Execution History UI."""
-    async with AsyncSessionLocal() as db:
+    session_maker = get_session_maker()
+    async with session_maker() as db:
         print("=" * 80)
         print("🚀 Starting Phase 1 Test Data Seeding")
         print("=" * 80)

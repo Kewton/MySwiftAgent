@@ -14,7 +14,7 @@ from datetime import datetime
 from sqlalchemy import select
 from ulid import new as ulid_new
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_maker
 from app.models.interface_master import InterfaceMaster
 from app.models.task_master import TaskMaster
 
@@ -120,7 +120,8 @@ TASK_MASTER_ASSOCIATIONS = {
 
 async def seed_missing_interfaces() -> None:
     """Register missing interfaces and associate with TaskMasters."""
-    async with AsyncSessionLocal() as db:
+    session_maker = get_session_maker()
+    async with session_maker() as db:
         print("🚀 Starting interface seeding process...")
         print(f"⏰ Timestamp: {datetime.now().isoformat()}\n")
 

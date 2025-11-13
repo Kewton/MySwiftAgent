@@ -1,26 +1,24 @@
 """Application configuration."""
 
-from functools import lru_cache
 from pathlib import Path
 
-from dotenv import load_dotenv
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Load environment variables from jobqueue/.env (new policy)
-# Note: override=False respects existing environment variables set by quick-start.sh or docker-compose
+# Calculate path to jobqueue/.env
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 env_path = PROJECT_ROOT / ".env"
-
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path, override=False)
-else:
-    # Fallback to auto-detection (for docker-compose where env vars are pre-set)
-    load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
     """Application settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=str(env_path) if env_path.exists() else None,
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     # Database
     database_url: str = Field(default="sqlite+aiosqlite:///./data/jobqueue.db")
@@ -40,7 +38,13 @@ class Settings(BaseSettings):
     LOG_DIR: str = Field(default="./")
 
 
-@lru_cache
+# Singleton instance - created once on first import
+_settings_instance: Settings | None = None
+
+
 def get_settings() -> Settings:
-    """Get cached settings instance."""
-    return Settings()
+    """Get settings instance."""
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = Settings()
+    return _settings_instance

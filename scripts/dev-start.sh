@@ -36,6 +36,7 @@ MYVAULT_PORT="${MYVAULT_PORT:-8003}"
 EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
 GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
 COMMONUI_PORT="${COMMONUI_PORT:-8501}"
+MYAGENTDESK_PORT="${MYAGENTDESK_PORT:-8000}"
 
 # Automatically configure service URLs (new policy)
 export JOBQUEUE_API_URL="http://localhost:${JOBQUEUE_PORT}"
@@ -54,6 +55,7 @@ MYVAULT_DIR="$PROJECT_ROOT/myVault"
 EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
 GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
 COMMONUI_DIR="$PROJECT_ROOT/commonUI"
+MYAGENTDESK_DIR="$PROJECT_ROOT/myAgentDesk"
 
 # Log and PID directories
 LOG_DIR="$PROJECT_ROOT/logs"
@@ -66,6 +68,7 @@ MYVAULT_LOG="$LOG_DIR/myvault.log"
 EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 COMMONUI_LOG="$LOG_DIR/commonui.log"
+MYAGENTDESK_LOG="$LOG_DIR/myagentdesk.log"
 SETUP_LOG="$LOG_DIR/setup.log"
 
 # PID files
@@ -75,6 +78,7 @@ MYVAULT_PID="$PID_DIR/myvault.pid"
 EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
+MYAGENTDESK_PID="$PID_DIR/myagentdesk.pid"
 
 # API tokens for development
 DEV_JOBQUEUE_TOKEN="dev-jobqueue-token-$(date +%s)"
@@ -94,7 +98,8 @@ show_banner() {
 ║   🔐 MyVault       - Secrets management service                               ║
 ║   🤖 ExpertAgent   - AI agent service                                         ║
 ║   🔄 GraphAiServer - Graph AI workflow service                                ║
-║   🎨 CommonUI      - Web interface                                            ║
+║   🎨 CommonUI      - Streamlit web interface                                  ║
+║   🖥️  MyAgentDesk  - SvelteKit web interface                                  ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -142,6 +147,7 @@ init_directories() {
     > "$EXPERTAGENT_LOG" 2>/dev/null || true
     > "$GRAPHAISERVER_LOG" 2>/dev/null || true
     > "$COMMONUI_LOG" 2>/dev/null || true
+    > "$MYAGENTDESK_LOG" 2>/dev/null || true
 
     print_success "Directories initialized"
 }
@@ -199,6 +205,29 @@ check_dependencies() {
 # Setup development environment files
 setup_dev_environment() {
     print_step "Setting up development environment..."
+
+    # Special handling for myVault: link to main repository's .env if in worktree
+    if [[ -d "$PROJECT_ROOT/.git/worktrees" ]] || [[ -f "$PROJECT_ROOT/.git" ]]; then
+        # This is a worktree environment
+        local main_repo_path="/Users/maenokota/share/work/github_kewton/MySwiftAgent"
+        if [[ -f "$main_repo_path/myVault/.env" ]] && [[ ! -e "$PROJECT_ROOT/myVault/.env" ]]; then
+            print_info "Linking myVault/.env to main repository (worktree mode)"
+            ln -s "$main_repo_path/myVault/.env" "$PROJECT_ROOT/myVault/.env"
+        fi
+    fi
+
+    # Generate .env files from .env.example if they don't exist
+    for project in jobqueue myscheduler myVault expertAgent graphAiServer; do
+        # Skip if .env already exists (including symlinks)
+        if [[ -f "$PROJECT_ROOT/$project/.env" ]] || [[ -L "$PROJECT_ROOT/$project/.env" ]]; then
+            continue
+        fi
+
+        if [[ -f "$PROJECT_ROOT/$project/.env.example" ]]; then
+            print_info "Generating $project/.env from .env.example"
+            cp "$PROJECT_ROOT/$project/.env.example" "$PROJECT_ROOT/$project/.env"
+        fi
+    done
 
     # Note: CommonUI/.env is now managed as a project-level .env file
     # Service URLs are automatically configured via environment variables (see above)
@@ -276,6 +305,16 @@ install_service_deps() {
                     return 1
                 }
             fi
+        fi
+
+        # Build TypeScript projects if needed
+        if [[ -f "tsconfig.json" ]] && [[ ! -d "dist" ]]; then
+            print_info "$service: Building TypeScript project..."
+            npm run build >> "$SETUP_LOG" 2>&1 || {
+                print_error "$service: Failed to build TypeScript project"
+                cd "$PROJECT_ROOT"
+                return 1
+            }
         fi
     else
         print_error "$service: No supported dependency manifest found (pyproject.toml or package.json)"
@@ -452,8 +491,12 @@ check_service_status() {
     if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
         local pid=$(cat "$pid_file")
         if check_port $port; then
+            # Try health endpoint first (for FastAPI services)
             if curl -sf "$health_url/health" >/dev/null 2>&1; then
                 print_success "$name: Running healthy (PID: $pid, Port: $port)"
+            # If no health endpoint, just check if port responds (for Streamlit, SvelteKit, etc.)
+            elif curl -sf -o /dev/null -w "%{http_code}" "$health_url" 2>/dev/null | grep -qE "^(200|301|302|404)"; then
+                print_success "$name: Running (PID: $pid, Port: $port)"
             else
                 print_warning "$name: Running but health check failed (PID: $pid, Port: $port)"
             fi
@@ -494,6 +537,8 @@ show_service_urls() {
     echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$GRAPHAISERVER_PORT/health${NC}${CYAN}                  │${NC}"
     echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} 🎨 CommonUI:          ${WHITE}http://localhost:$COMMONUI_PORT${NC}${CYAN}                           │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 🖥️  MyAgentDesk:      ${WHITE}http://localhost:$MYAGENTDESK_PORT${NC}${CYAN}                          │${NC}"
     echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
 }
@@ -530,6 +575,10 @@ show_logs() {
         tail -n 20 "$COMMONUI_LOG" 2>/dev/null || echo "No logs available"
         echo ""
 
+        echo -e "${YELLOW}=== MyAgentDesk Logs ===${NC}"
+        tail -n 20 "$MYAGENTDESK_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
         echo -e "${BLUE}Use '$0 logs <service>' to follow specific service logs${NC}"
     else
         case $service in
@@ -557,13 +606,17 @@ show_logs() {
                 print_info "Following CommonUI logs (Ctrl+C to stop):"
                 tail -f "$COMMONUI_LOG"
                 ;;
+            myagentdesk)
+                print_info "Following MyAgentDesk logs (Ctrl+C to stop):"
+                tail -f "$MYAGENTDESK_LOG"
+                ;;
             setup)
                 print_info "Following setup logs (Ctrl+C to stop):"
                 tail -f "$SETUP_LOG"
                 ;;
             *)
                 print_error "Unknown service: $service"
-                echo "Available services: jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, setup"
+                echo "Available services: jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, myagentdesk, setup"
                 return 1
                 ;;
         esac
@@ -598,6 +651,14 @@ run_api_tests() {
         print_success "CommonUI is responding on port $COMMONUI_PORT"
     else
         print_error "CommonUI is not responding"
+    fi
+
+    # Test MyAgentDesk (different approach since it's SvelteKit)
+    print_info "Testing MyAgentDesk availability..."
+    if check_port $MYAGENTDESK_PORT; then
+        print_success "MyAgentDesk is responding on port $MYAGENTDESK_PORT"
+    else
+        print_error "MyAgentDesk is not responding"
     fi
 }
 
@@ -769,7 +830,7 @@ main() {
                 # Load jobqueue-specific LOG_LEVEL from jobqueue/.env
                 local jobqueue_log_level=$(grep -E "^LOG_LEVEL=" "$JOBQUEUE_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "INFO")
                 start_service "JobQueue" "$JOBQUEUE_DIR" $JOBQUEUE_PORT "$JOBQUEUE_PID" "$JOBQUEUE_LOG" \
-                    "LOG_DIR='$LOG_DIR' LOG_LEVEL='$jobqueue_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $JOBQUEUE_PORT --workers 4" || exit 1
+                    "DATABASE_URL='sqlite+aiosqlite:///./data/jobqueue.db' LOG_DIR='$LOG_DIR' LOG_LEVEL='$jobqueue_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $JOBQUEUE_PORT" || exit 1
             fi
 
             # Start MyScheduler
@@ -845,6 +906,25 @@ main() {
                 fi
             fi
 
+            # Start MyAgentDesk
+            if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
+                install_service_deps "MyAgentDesk" "$MYAGENTDESK_DIR" || exit 1
+
+                print_service "🖥️ " "MyAgentDesk" "Starting SvelteKit application..."
+                cd "$MYAGENTDESK_DIR"
+                nohup bash -c "PORT=$MYAGENTDESK_PORT npm run dev -- --port $MYAGENTDESK_PORT --host 0.0.0.0" > "$MYAGENTDESK_LOG" 2>&1 &
+                echo $! > "$MYAGENTDESK_PID"
+                cd "$PROJECT_ROOT"
+
+                # Wait for MyAgentDesk
+                sleep 5
+                if check_port $MYAGENTDESK_PORT; then
+                    print_success "MyAgentDesk: Started successfully (Port: $MYAGENTDESK_PORT)"
+                else
+                    print_error "MyAgentDesk: Failed to start"
+                fi
+            fi
+
             echo ""
             print_success "🎉 All services started successfully!"
             show_service_urls
@@ -856,6 +936,9 @@ main() {
 
         stop)
             print_step "Stopping all services..."
+            if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
+                stop_service "MyAgentDesk" "$MYAGENTDESK_PID"
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 stop_service "CommonUI" "$COMMONUI_PID"
             fi
@@ -904,6 +987,9 @@ main() {
             fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
                 check_service_status "CommonUI" "$COMMONUI_PID" $COMMONUI_PORT
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
+                check_service_status "MyAgentDesk" "$MYAGENTDESK_PID" $MYAGENTDESK_PORT
             fi
             echo ""
             ;;
