@@ -34,6 +34,7 @@ expertAgent の `/v1/chat/requirement-definition` API（要件定義エージェ
 **担当候補**: Backend
 
 **スコープ**:
+- [ ] リポジトリ直下にvalkeyディレクトリを作成（設定・データ格納用）
 - [ ] Valkeyクライアント設定追加
 - [ ] ConversationStoreValkey実装
 - [ ] 環境変数による切り替え機能
@@ -54,6 +55,8 @@ expertAgent の `/v1/chat/requirement-definition` API（要件定義エージェ
 #### 🤖 自動検証可能な基準（pm-auto-devが実施）
 
 **機能要件**:
+- [ ] リポジトリ直下にvalkeyディレクトリが作成される
+- [ ] valkeyディレクトリ配下に設定ファイル・データファイルが格納される
 - [ ] Valkey接続が正常に確立される
 - [ ] 会話データがValkeyに保存される
 - [ ] TTL機能が正しく動作する（24時間後に自動削除）
