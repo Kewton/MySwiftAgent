@@ -3,7 +3,7 @@
 ## 📋 ドキュメント情報
 
 **作成日**: 2025-11-11
-**更新日**: 2025-11-11
+**更新日**: 2025-11-15
 **対象Issue**: #152
 **対象プロジェクト**: expertAgent
 **優先度**: Medium (feature)
@@ -136,11 +136,23 @@
 
 #### 1.1 診断情報取得機能（FR-4）
 
-**目的**: conversation_id から プロンプト・LLMレスポンス・トークン使用量などの診断情報を取得
+**目的**: conversation_id から プロンプト・LLMレスポンス・トークン使用量などの診断情報を取得し、job/user/project/workflow単位での分析を可能にする
 
 **新規エンドポイント**:
 ```python
+# 単一会話の診断情報取得
 GET /v1/chat/diagnostics/{conversation_id}
+
+# 一覧取得（フィルタリング対応）- Issue #171拡張
+GET /v1/chat/diagnostics
+    ?job_id={job_id}
+    &user_id={user_id}
+    &project_id={project_id}
+    &workflow_id={workflow_id}
+    &start_date={YYYY-MM-DD}
+    &end_date={YYYY-MM-DD}
+    &limit=100
+    &offset=0
 ```
 
 **レスポンススキーマ**:
@@ -156,6 +168,17 @@ class DiagnosticInfo(BaseModel):
     total_execution_time_ms: float
     error: Optional[str] = None
 
+    # Issue #171拡張: メタデータ追加
+    metadata: DiagnosticMetadata
+
+class DiagnosticMetadata(BaseModel):
+    job_id: Optional[str] = None
+    task_id: Optional[str] = None
+    workflow_id: Optional[str] = None
+    user_id: Optional[str] = None
+    project_id: Optional[str] = None
+    updated_at: str
+
 class DiagnosticTurn(BaseModel):
     turn_number: int
     timestamp: str
@@ -167,13 +190,36 @@ class DiagnosticTurn(BaseModel):
     output_tokens: int
     execution_time_ms: float
     temperature: float
+
+# Issue #171拡張: 一覧取得用スキーマ
+class DiagnosticListResponse(BaseModel):
+    conversations: List[DiagnosticSummary]
+    pagination: PaginationMetadata
+
+class DiagnosticSummary(BaseModel):
+    conversation_id: str
+    metadata: DiagnosticMetadata
+    summary: ConversationSummary
+
+class ConversationSummary(BaseModel):
+    message_count: int
+    total_tokens: int
+    duration_seconds: float
+
+class PaginationMetadata(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    has_next: bool
 ```
 
 **実装方針**:
 1. `stream_requirement_clarification()` で Langfuse トレーシングを開始
-2. `conversation_store.save_trace_id(conversation_id, trace_id)` でマッピング保存
-3. 各ターンのメタデータを `conversation_store` に保存
-4. `GET /chat/diagnostics/{conversation_id}` で Langfuse API + conversation_store を統合して返却
+2. `conversation_store.save_conversation()` で会話データとメタデータ（job_id, user_id, project_id, workflow_id）を保存
+3. セカンダリインデックス（Redis SET）を構築してjob/user/project/workflow単位での高速検索を実現
+4. 各ターンのメタデータを `conversation_store` に保存
+5. `GET /chat/diagnostics/{conversation_id}` で Langfuse API + conversation_store を統合して返却
+6. `GET /chat/diagnostics` で複合フィルタリング・ページネーションに対応した一覧取得
 
 ---
 
@@ -479,7 +525,11 @@ from typing import Optional, Dict, List
 from datetime import timedelta
 
 class ConversationStoreValkey(ConversationStore):
-    """Valkey を使用した永続化対応の会話ストア"""
+    """Valkey を使用した永続化対応の会話ストア
+
+    Issue #171拡張: MLOps分析用メタデータ（job_id, user_id, project_id, workflow_id）と
+    セカンダリインデックスをサポート
+    """
 
     def __init__(self, valkey_client: valkey.Valkey, ttl: int = 86400):
         """
@@ -529,6 +579,42 @@ class ConversationStoreValkey(ConversationStore):
         """プロンプトバージョンを保存"""
         key = f"{self.key_prefix}{conversation_id}:prompt_version"
         await self.valkey.set(key, version, ex=self.ttl)
+
+    # Issue #171拡張: メタデータ保存とセカンダリインデックス
+    async def save_metadata(
+        self,
+        conversation_id: str,
+        job_id: Optional[str] = None,
+        task_id: Optional[str] = None,
+        workflow_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None
+    ):
+        """MLOps分析用メタデータを保存し、セカンダリインデックスを構築
+
+        詳細実装は Issue #171 で定義
+        """
+        # メタデータ本体の保存
+        metadata_key = f"{self.key_prefix}{conversation_id}:metadata"
+        metadata = {
+            "job_id": job_id,
+            "task_id": task_id,
+            "workflow_id": workflow_id,
+            "user_id": user_id,
+            "project_id": project_id,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        await self.valkey.set(metadata_key, json.dumps(metadata), ex=self.ttl)
+
+        # セカンダリインデックスの構築（Redis SET使用）
+        if job_id:
+            await self.valkey.sadd(f"job_index:{job_id}", conversation_id)
+        if user_id:
+            await self.valkey.sadd(f"user_index:{user_id}", conversation_id)
+        if project_id:
+            await self.valkey.sadd(f"project_index:{project_id}", conversation_id)
+        if workflow_id:
+            await self.valkey.sadd(f"workflow_index:{workflow_id}", conversation_id)
 
     async def get_statistics(self, days: int = 30) -> Dict:
         """統計情報を取得（Valkey Streams を活用）"""
@@ -1094,7 +1180,7 @@ class SignificanceTest(BaseModel):
 
 ### 1. Conversation Store 拡張
 
-**既存**: インメモリストア（dict）
+**既存**: インメモリストア（dict）→ Valkey永続化（Issue #169, #171拡張）
 
 **拡張内容**:
 ```python
@@ -1107,6 +1193,8 @@ class ConversationStore:
         self._conversations: Dict[str, Conversation] = {}
         self._trace_mappings: Dict[str, str] = {}  # conversation_id -> trace_id
         self._prompt_versions: Dict[str, str] = {}  # conversation_id -> version
+        # Issue #171拡張: MLOps分析用メタデータ
+        self._metadata: Dict[str, ConversationMetadata] = {}  # conversation_id -> metadata
 
     # 既存メソッド
     def save_message(self, conversation_id: str, role: str, content: str): ...
@@ -1128,6 +1216,30 @@ class ConversationStore:
     def get_prompt_version(self, conversation_id: str) -> Optional[str]:
         """conversation_id からプロンプトバージョンを取得"""
         return self._prompt_versions.get(conversation_id)
+
+    # Issue #171拡張: メタデータ管理
+    def save_metadata(
+        self,
+        conversation_id: str,
+        job_id: Optional[str] = None,
+        task_id: Optional[str] = None,
+        workflow_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None
+    ):
+        """MLOps分析用メタデータを保存"""
+        self._metadata[conversation_id] = ConversationMetadata(
+            job_id=job_id,
+            task_id=task_id,
+            workflow_id=workflow_id,
+            user_id=user_id,
+            project_id=project_id,
+            updated_at=datetime.utcnow()
+        )
+
+    def get_metadata(self, conversation_id: str) -> Optional[ConversationMetadata]:
+        """メタデータを取得"""
+        return self._metadata.get(conversation_id)
 
     def get_statistics(self, days: int) -> ConversationStatistics:
         """統計情報を集計"""
@@ -1155,6 +1267,17 @@ class Conversation(BaseModel):
     completeness: float = 0.0
     created_at: datetime
     updated_at: datetime
+    # Issue #171拡張: メタデータ追加
+    metadata: Optional[ConversationMetadata] = None
+
+class ConversationMetadata(BaseModel):
+    """Issue #171: MLOps分析用メタデータ"""
+    job_id: Optional[str] = None
+    task_id: Optional[str] = None
+    workflow_id: Optional[str] = None
+    user_id: Optional[str] = None
+    project_id: Optional[str] = None
+    updated_at: datetime
 
 class Message(BaseModel):
     role: str  # "user" / "assistant"
@@ -1175,6 +1298,12 @@ tags = [
     f"multi_candidate={enable_multi_candidate}",  # 複数候補提示の有無
     f"ai_recommendation={ai_recommendation}",  # AI推奨の有無
     f"conversation_id={conversation_id}",  # 会話ID
+    # Issue #171拡張: MLOps分析用タグ
+    f"job_id={job_id}",  # Job単位での分析
+    f"task_id={task_id}",  # Task単位での分析
+    f"workflow_id={workflow_id}",  # Workflow単位での分析
+    f"user_id={user_id}",  # User単位での分析
+    f"project_id={project_id}",  # Project単位での分析
 ]
 ```
 
@@ -1189,8 +1318,20 @@ metadata = {
     "enable_multi_candidate": True,
     "ai_recommendation": True,
     "selected_candidate_id": "A",  # ユーザーが選択した候補
+    # Issue #171拡張: MLOps分析用メタデータ
+    "job_id": job_id,  # Job Generator で生成されたジョブID
+    "task_id": task_id,  # 実行中のタスクID
+    "workflow_id": workflow_id,  # GraphAI ワークフローID
+    "user_id": user_id,  # ユーザー識別子
+    "project_id": project_id,  # プロジェクト識別子
 }
 ```
+
+**Issue #171拡張によるメリット**:
+- ✅ **Job単位のコスト分析**: 特定ジョブのトークン使用量・実行時間を集計
+- ✅ **User単位の使用量追跡**: ユーザーごとのLLM利用状況を可視化
+- ✅ **Project単位のメトリクス**: プロジェクト横断でのパフォーマンス比較
+- ✅ **Workflow単位の追跡**: ワークフロー実行の成功率・エラー率を分析
 
 ---
 
@@ -1812,6 +1953,7 @@ Response:
 | 2025-11-11 | 1.0 | 初版作成（パターンD採用） | Claude |
 | 2025-11-12 | 1.1 | 改善推奨事項を反映（Redis永続化、AI推奨詳細、SSE実装、エラーハンドリング、ホットリロード） | Claude |
 | 2025-11-12 | 1.2 | RedisからValkeyへ変更（ライセンス懸念対応、BSD 3-Clause） | Claude |
+| 2025-11-15 | 1.3 | Issue #171拡張を反映（MLOps分析用メタデータ、セカンダリインデックス、job/user/project/workflow単位での追跡機能） | Claude |
 
 ---
 
