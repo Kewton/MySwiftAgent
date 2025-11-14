@@ -4,10 +4,11 @@ Tests for Issue #169: Valkey persistence infrastructure implementation.
 Verifies response times meet the requirement of <50ms.
 """
 
-import pytest
-import time
 import asyncio
-from typing import List, Dict, Any
+import time
+from typing import Any, Dict, List
+
+import pytest
 
 from app.services.valkey_client import ValkeyClient
 from app.stores.conversation_store_valkey import ConversationStoreValkey
@@ -146,7 +147,7 @@ class TestConversationStorePerformance:
         await conversation_store_test.get_conversation("perf-large-001")
         get_elapsed = (time.perf_counter() - start_time) * 1000
 
-        print(f"\nLarge conversation (100 messages):")
+        print("\nLarge conversation (100 messages):")
         print(f"  Save: {save_elapsed:.2f}ms")
         print(f"  Get: {get_elapsed:.2f}ms")
 

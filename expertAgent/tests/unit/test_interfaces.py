@@ -4,8 +4,9 @@ Tests for Issue #169: Valkey persistence infrastructure implementation.
 This test module verifies the ConversationStore interface abstract methods.
 """
 
-import pytest
 from typing import Any, Dict, List, Optional
+
+import pytest
 
 from app.stores.interfaces import ConversationStore
 
