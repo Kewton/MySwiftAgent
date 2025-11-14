@@ -8,7 +8,7 @@ services:
     image: valkey/valkey:latest
     container_name: myswiftagent-valkey
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Host port 6380 to avoid conflict with langfuse-redis
     volumes:
       - ./valkey/data:/data
       - ./valkey/config/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
