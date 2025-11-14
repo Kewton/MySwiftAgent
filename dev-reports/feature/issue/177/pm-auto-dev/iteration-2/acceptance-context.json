@@ -1,0 +1,50 @@
+{
+  "issue_number": 177,
+  "iteration": 2,
+  "feature_summary": "プロンプトYAML化実装（Iteration 2: プロンプト移行完了）",
+  "acceptance_criteria": [
+    "expertAgent/prompts/ ディレクトリ構造が正しく作成される",
+    "プロンプト名ディレクトリ配下に複数YAMLファイルを配置可能",
+    "YAMLからプロンプトが読み込まれる（default.yaml自動フォールバック）",
+    "リクエスト時にYAMLファイル名を指定可能（API拡張）",
+    "バージョン切り替えが動作する",
+    "ホットリロードが機能する",
+    "キャッシュが正しく動作する",
+    "jobTaskGeneratorAgents の全プロンプトがYAML化される",
+    "workflowGeneratorAgents の全プロンプトがYAML化される",
+    "シナリオ1: 企業IR分析でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ2: WebサイトPDF抽出でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ3: Gmail検索ポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ4: キーワードポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "読み込み時間 100ms以内"
+  ],
+  "test_scenarios": [
+    "シナリオ1: 移行したYAMLプロンプトがPromptLoaderで正しく読み込める",
+    "シナリオ2: jobTaskGeneratorAgentsの5プロンプトがすべてYAML化されている",
+    "シナリオ3: workflowGeneratorAgentsのプロンプトがYAML化されている",
+    "シナリオ4: YAMLプロンプトに必要なメタデータが含まれている",
+    "シナリオ5: YAMLプロンプトのバージョン管理が動作する"
+  ],
+  "current_status": {
+    "iteration_1_completed": [
+      "PromptLoaderクラス実装完了",
+      "PromptCacheクラス実装完了",
+      "FileWatcherクラス実装完了",
+      "単体テストカバレッジ96.55%達成",
+      "静的解析エラー0件"
+    ],
+    "iteration_2_completed": [
+      "jobTaskGeneratorAgents 5プロンプトYAML化完了",
+      "workflowGeneratorAgents 1プロンプトYAML化完了",
+      "YAMLプロンプト用テスト38件追加",
+      "全68テスト合格"
+    ],
+    "pending_features": [
+      "API拡張（prompt_versionパラメータ）",
+      "LangGraphエージェント統合",
+      "4シナリオのエンドツーエンド検証"
+    ]
+  }
+}
