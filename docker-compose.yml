@@ -3,6 +3,26 @@
 # See docs/design/environment-variables.md for details
 
 services:
+  # Valkey Service - In-memory data store for conversation persistence
+  valkey:
+    image: valkey/valkey:latest
+    container_name: myswiftagent-valkey
+    ports:
+      - "6380:6379"  # Host port 6380 to avoid conflict with langfuse-redis
+    volumes:
+      - ./valkey/data:/data
+      - ./valkey/config/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
+    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "valkey-cli", "PING"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
   # JobQueue Service - Job queue management API
   jobqueue:
     env_file:
@@ -131,6 +151,9 @@ services:
       - TZ=Asia/Tokyo
       # Admin authentication
       - ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN}
+      # Valkey Configuration (Conversation persistence)
+      - VALKEY_URL=redis://valkey:6379
+      - CONVERSATION_STORE_TYPE=${CONVERSATION_STORE_TYPE:-valkey}
       # MyVault Configuration (Priority for secrets management)
       - MYVAULT_ENABLED=${MYVAULT_ENABLED:-true}
       - MYVAULT_BASE_URL=http://myvault:8000
@@ -172,6 +195,8 @@ services:
       - SYS_ADMIN
     depends_on:
       myvault:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
     networks:
       - myswiftagent

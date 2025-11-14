@@ -61,6 +61,8 @@ dependencies = [
     "sse-starlette>=3.0.2",
     # Observability (Issue #113)
     "langfuse>=3.0.0",
+    # Valkey/Redis persistence (Issue #169)
+    "valkey>=6.0.0",
 ]
 
 [project.optional-dependencies]

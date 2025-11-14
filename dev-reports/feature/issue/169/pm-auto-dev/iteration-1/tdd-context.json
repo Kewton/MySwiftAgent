@@ -1,0 +1,202 @@
+{
+  "issue_number": 169,
+  "issue_title": "Issue #152-1: Valkey永続化基盤の実装",
+  "acceptance_criteria": [
+    "リポジトリ直下にvalkeyディレクトリが作成される",
+    "valkeyディレクトリ配下に設定ファイル・データファイルが格納される",
+    "Valkey接続が正常に確立される",
+    "会話データがValkeyに保存される",
+    "TTL機能が正しく動作する（24時間後に自動削除）",
+    "trace_id、prompt_versionが保存・取得できる",
+    "scripts/dev-start.sh からValkeyが起動可能",
+    "docker-compose up でValkeyが起動可能",
+    "worktree環境毎に独立したValkeyインスタンスが起動（ポート衝突なし）",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "読み書きレスポンスタイム 50ms以内",
+    "正常系: 会話データの保存・取得",
+    "異常系: Valkey接続エラー時のフォールバック",
+    "エッジケース: 大量データ（1000会話）の処理"
+  ],
+  "implementation_tasks": [
+    "リポジトリ直下にvalkeyディレクトリを作成（設定・データ格納用）",
+    "Valkeyクライアント設定追加",
+    "ConversationStoreValkey実装",
+    "環境変数による切り替え機能",
+    "scripts/dev-start.sh からのValkey起動機能",
+    "docker-compose.yml へのValkeyサービス定義追加",
+    "worktree環境毎のValkey起動（ポート番号自動割り当て）",
+    "単体テスト作成（カバレッジ90%以上）",
+    "結合テスト作成",
+    "ドキュメント更新"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Valkey環境準備",
+      "estimated_hours": 2,
+      "deliverables": [
+        "valkey/",
+        "valkey/config/valkey.conf",
+        "valkey/data/"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "Docker環境設定",
+      "estimated_hours": 2,
+      "deliverables": [
+        "docker-compose.yml",
+        "valkey/Dockerfile"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "開発用起動スクリプト拡張",
+      "estimated_hours": 2,
+      "deliverables": [
+        "scripts/dev-start.sh",
+        "scripts/setup-valkey-worktree.sh"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "Valkeyクライアント基本実装",
+      "estimated_hours": 3,
+      "deliverables": [
+        "expertAgent/app/services/valkey_client.py",
+        "expertAgent/requirements.txt"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "ConversationStoreValkey実装",
+      "estimated_hours": 4,
+      "deliverables": [
+        "expertAgent/app/stores/conversation_store_valkey.py",
+        "expertAgent/app/stores/interfaces.py"
+      ],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "環境変数による切り替え機能",
+      "estimated_hours": 1,
+      "deliverables": [
+        "expertAgent/app/config.py",
+        "expertAgent/.env.example"
+      ],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "単体テスト作成",
+      "estimated_hours": 4,
+      "deliverables": [
+        "expertAgent/tests/unit/test_valkey_client.py",
+        "expertAgent/tests/unit/test_conversation_store_valkey.py"
+      ],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "結合テスト作成",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/tests/integration/test_valkey_integration.py",
+        "expertAgent/tests/fixtures/valkey_fixtures.py"
+      ],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "パフォーマンステスト",
+      "estimated_hours": 1,
+      "deliverables": [
+        "expertAgent/tests/performance/test_valkey_performance.py"
+      ],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "技術ドキュメント作成",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "expertAgent/docs/valkey-integration.md",
+        "README.md"
+      ],
+      "dependencies": ["Phase 3完了"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "運用ドキュメント作成",
+      "estimated_hours": 1,
+      "deliverables": [
+        "docs/ops/valkey-operations.md"
+      ],
+      "dependencies": ["4.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "PR準備・最終確認",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "Pull Request"
+      ],
+      "dependencies": ["4.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "valkey/",
+    "valkey/config/valkey.conf",
+    "docker-compose.yml",
+    "scripts/dev-start.sh",
+    "scripts/setup-valkey-worktree.sh",
+    "expertAgent/app/services/valkey_client.py",
+    "expertAgent/app/stores/conversation_store_valkey.py",
+    "expertAgent/app/stores/interfaces.py",
+    "expertAgent/app/config.py",
+    "expertAgent/.env.example",
+    "expertAgent/tests/unit/test_valkey_client.py",
+    "expertAgent/tests/unit/test_conversation_store_valkey.py",
+    "expertAgent/tests/integration/test_valkey_integration.py",
+    "expertAgent/tests/performance/test_valkey_performance.py",
+    "expertAgent/tests/fixtures/valkey_fixtures.py",
+    "expertAgent/docs/valkey-integration.md",
+    "docs/ops/valkey-operations.md",
+    "README.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "リポジトリ直下にvalkeyディレクトリが作成される",
+    "Valkey接続が正常に確立される",
+    "会話データがValkeyに保存される",
+    "TTL機能が正しく動作する",
+    "worktree環境毎に独立したValkeyインスタンスが起動",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "読み書きレスポンスタイム50ms以内",
+    "CI/CDグリーン",
+    "サーバー再起動後もデータが保持される",
+    "複数インスタンス間でデータ共有可能",
+    "メモリ使用量が想定範囲内",
+    "ドキュメント更新完了",
+    "コードレビュー承認"
+  ],
+  "target_coverage": 90,
+  "estimated_total_hours": 24,
+  "technical_requirements": {
+    "language": "Python/FastAPI",
+    "database": "Valkey (Redis互換)",
+    "package": "valkey-py",
+    "ttl": "24時間",
+    "response_time": "50ms以内",
+    "concurrent_sessions": 1000
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "issue_number": 169,
+  "iteration": 2,
+  "scope": "Infrastructure Integration",
+  "acceptance_criteria": [
+    "scripts/dev-start.sh からValkeyが起動可能",
+    "docker-compose up でValkeyが起動可能",
+    "worktree環境毎に独立したValkeyインスタンスが起動（ポート衝突なし）"
+  ],
+  "implementation_tasks": [
+    "Docker環境設定（docker-compose.yml更新）",
+    "Valkey Dockerfileの作成（必要に応じて）",
+    "dev-start.shへのValkey起動機能追加",
+    "setup-valkey-worktree.sh スクリプト作成",
+    "ポート管理システムの実装"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.2",
+      "description": "Docker環境設定",
+      "estimated_hours": 2,
+      "deliverables": [
+        "docker-compose.yml",
+        "valkey/Dockerfile"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "開発用起動スクリプト拡張",
+      "estimated_hours": 2,
+      "deliverables": [
+        "scripts/dev-start.sh",
+        "scripts/setup-valkey-worktree.sh"
+      ],
+      "dependencies": ["1.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "docker-compose.yml",
+    "scripts/dev-start.sh",
+    "scripts/setup-valkey-worktree.sh"
+  ],
+  "technical_requirements": {
+    "docker_compose_version": "3.8+",
+    "valkey_image": "valkey/valkey:latest",
+    "default_port": 6379,
+    "worktree_port_range": "6380-6399",
+    "persistence": "RDB and AOF",
+    "volumes": "./valkey/data:/data"
+  },
+  "test_requirements": [
+    "Docker起動確認テスト",
+    "dev-start.sh起動確認テスト",
+    "worktreeポート衝突回避テスト",
+    "データ永続化確認テスト"
+  ],
+  "target_coverage": 90
+}
