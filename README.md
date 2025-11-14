@@ -46,6 +46,33 @@ MySwiftAgent/
 
 詳細は各プロジェクトのREADMEを参照してください。
 
+## 💾 Valkey永続化基盤
+
+**Valkey**（Redis互換）を使用した会話データの永続化基盤が統合されました。
+
+### 主な機能
+
+- **🗄️ 会話データ永続化**: expertAgentの会話履歴をValkeyに保存
+- **⏱️ TTL管理**: デフォルト24時間のTTL（設定可能）
+- **🔄 メタデータ管理**: trace_idとprompt_versionの永続化
+- **🏗️ インフラ統合**: Docker Compose、dev-start.sh、worktree対応
+- **🎯 高パフォーマンス**: 50ms以内のレスポンスタイム、1000同時会話対応
+
+### セットアップ
+
+```bash
+# Docker Composeで起動
+docker-compose up -d valkey
+
+# または開発スクリプトで起動
+./scripts/dev-start.sh start
+
+# Worktree環境用（ポート自動割り当て）
+./scripts/setup-valkey-worktree.sh
+```
+
+詳細は[Valkey統合ガイド](expertAgent/docs/valkey-integration.md)および[運用ガイド](docs/ops/valkey-operations.md)を参照してください。
+
 ## 🚀 クイックスタート
 
 ### 方法1: Docker Compose（推奨）
