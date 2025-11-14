@@ -1,0 +1,87 @@
+{
+  "issue_number": 169,
+  "refactor_targets": [
+    "expertAgent/app/services/valkey_client.py",
+    "expertAgent/app/stores/conversation_store_valkey.py",
+    "expertAgent/app/stores/interfaces.py",
+    "expertAgent/tests/unit/test_valkey_client.py",
+    "expertAgent/tests/unit/test_conversation_store_valkey.py",
+    "expertAgent/tests/integration/test_valkey_integration.py",
+    "expertAgent/tests/performance/test_valkey_performance.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 95.71,
+    "complexity_score": 12,
+    "mypy_warnings": 3,
+    "ruff_errors": 0,
+    "unit_tests": 36,
+    "test_coverage_details": {
+      "valkey_client": 100.0,
+      "conversation_store_valkey": 100.0,
+      "interfaces": 71.43
+    }
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern",
+    "Dependency Injection",
+    "Factory Pattern for store selection",
+    "Async Context Manager improvements",
+    "Error handling standardization"
+  ],
+  "improvement_goals": [
+    "カバレッジを97%以上に向上（interfacesモジュールのカバレッジ改善）",
+    "MyPy警告を0に削減（__aexit__メソッドの型注釈修正）",
+    "循環的複雑度を10以下に削減",
+    "重複コードの削除",
+    "エラーハンドリングの統一化",
+    "非同期処理の最適化",
+    "接続プールの効率化",
+    "メモリ使用量の最適化"
+  ],
+  "specific_refactoring_tasks": [
+    {
+      "file": "valkey_client.py",
+      "tasks": [
+        "__aexit__メソッドの型注釈修正",
+        "エラーハンドリングの標準化",
+        "接続プール管理の改善"
+      ]
+    },
+    {
+      "file": "conversation_store_valkey.py",
+      "tasks": [
+        "__aexit__メソッドの型注釈修正",
+        "JSONシリアライゼーションの最適化",
+        "メタデータ処理の効率化"
+      ]
+    },
+    {
+      "file": "interfaces.py",
+      "tasks": [
+        "抽象メソッドのデフォルト実装追加",
+        "テストカバレッジの向上",
+        "ドキュメント文字列の充実"
+      ]
+    }
+  ],
+  "code_smell_detection": [
+    "Long method detection",
+    "Duplicate code analysis",
+    "Complex conditional logic",
+    "Magic numbers and strings",
+    "Improper exception handling"
+  ],
+  "performance_optimization": [
+    "Connection pooling optimization",
+    "Batch operations support",
+    "Lazy loading implementation",
+    "Memory footprint reduction"
+  ],
+  "maintainability_improvements": [
+    "Comprehensive docstrings",
+    "Type hints consistency",
+    "Logging standardization",
+    "Error message clarity",
+    "Configuration validation"
+  ]
+}
