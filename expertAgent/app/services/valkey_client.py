@@ -74,7 +74,7 @@ class ValkeyClient:
     async def disconnect(self) -> None:
         """Disconnect from Valkey server."""
         if self._client:
-            await self._client.close()
+            await self._client.close()  # type: ignore[no-untyped-call]
             self._connected = False
             self._client = None
 
@@ -201,6 +201,11 @@ class ValkeyClient:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[object],
+    ) -> None:
         """Async context manager exit."""
         await self.disconnect()

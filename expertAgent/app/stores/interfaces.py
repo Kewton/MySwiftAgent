@@ -21,7 +21,7 @@ class ConversationStore(ABC):
 
         Should be called before any operations.
         """
-        pass
+        ...
 
     @abstractmethod
     async def disconnect(self) -> None:
@@ -29,7 +29,7 @@ class ConversationStore(ABC):
 
         Should be called when done with the store.
         """
-        pass
+        ...
 
     @abstractmethod
     async def save_conversation(
@@ -52,7 +52,7 @@ class ConversationStore(ABC):
         Returns:
             True if successful
         """
-        pass
+        ...
 
     @abstractmethod
     async def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
@@ -64,7 +64,7 @@ class ConversationStore(ABC):
         Returns:
             Conversation data with messages and metadata, or None if not found
         """
-        pass
+        ...
 
     @abstractmethod
     async def delete_conversation(self, conversation_id: str) -> bool:
@@ -76,7 +76,7 @@ class ConversationStore(ABC):
         Returns:
             True if deleted, False if not found
         """
-        pass
+        ...
 
     @abstractmethod
     async def exists(self, conversation_id: str) -> bool:
@@ -88,4 +88,4 @@ class ConversationStore(ABC):
         Returns:
             True if exists
         """
-        pass
+        ...
