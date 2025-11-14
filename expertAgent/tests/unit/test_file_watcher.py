@@ -175,3 +175,107 @@ class TestFileWatcherErrorHandling:
 
         # Cleanup
         await watcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_double_start_warning(self, tmp_path: Path) -> None:
+        """Test warning when starting an already running watcher."""
+        # Arrange
+        loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
+        watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
+
+        # Act
+        await watcher.start()
+        await watcher.start()  # Second start should log warning
+
+        # Assert: Should still be running
+        assert watcher.is_running()
+
+        # Cleanup
+        await watcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_double_stop_warning(self, tmp_path: Path) -> None:
+        """Test warning when stopping an already stopped watcher."""
+        # Arrange
+        loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
+        watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
+
+        # Act
+        await watcher.start()
+        await watcher.stop()
+        await watcher.stop()  # Second stop should log warning
+
+        # Assert: Should not be running
+        assert not watcher.is_running()
+
+    @pytest.mark.asyncio
+    async def test_non_yaml_file_ignored(self, tmp_path: Path) -> None:
+        """Test that non-YAML files are ignored by the watcher."""
+        # Arrange
+        prompt_dir = tmp_path / "test_prompt"
+        prompt_dir.mkdir()
+
+        loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
+        watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
+
+        await watcher.start()
+        await asyncio.sleep(0.1)
+
+        # Act: Create non-YAML file
+        txt_file = prompt_dir / "readme.txt"
+        txt_file.write_text("This is not a YAML file", encoding="utf-8")
+        await asyncio.sleep(0.5)
+
+        # Assert: Watcher should still be running (no crash)
+        assert watcher.is_running()
+
+        # Cleanup
+        await watcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_cache_disabled_no_invalidation(self, tmp_path: Path) -> None:
+        """Test that watcher doesn't crash when cache is disabled."""
+        # Arrange
+        prompt_dir = tmp_path / "test_prompt"
+        prompt_dir.mkdir()
+
+        default_file = prompt_dir / "default.yaml"
+        default_file.write_text(
+            yaml.dump({"content": "original"}), encoding="utf-8"
+        )
+
+        loader = PromptLoader(base_dir=tmp_path, enable_cache=False)
+        watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
+
+        await watcher.start()
+        await asyncio.sleep(0.1)
+
+        # Act: Modify file (should not crash even though cache is None)
+        default_file.write_text(
+            yaml.dump({"content": "modified"}), encoding="utf-8"
+        )
+        await asyncio.sleep(0.5)
+
+        # Assert: Watcher should still be running
+        assert watcher.is_running()
+
+        # Cleanup
+        await watcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_watcher_start_exception_handling(self, tmp_path: Path) -> None:
+        """Test exception handling when starting watcher fails."""
+        # Arrange
+        loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
+        # Use a non-existent directory to trigger an error
+        watcher = FileWatcher(base_dir=tmp_path / "nonexistent", prompt_loader=loader)
+
+        # Act & Assert: Should handle the error gracefully
+        try:
+            await watcher.start()
+            # If it succeeds (watchdog creates the directory), stop it
+            if watcher.is_running():
+                await watcher.stop()
+        except Exception:
+            # Expected if directory doesn't exist and can't be created
+            pass

@@ -129,3 +129,43 @@ class TestPromptCache:
 
         cache.clear()
         assert cache.size() == 0
+
+
+class TestPromptCacheSingleton:
+    """Test singleton pattern for PromptCache."""
+
+    def test_get_instance_returns_same_instance(self) -> None:
+        """Test that get_instance returns the same instance."""
+        # Arrange & Act
+        PromptCache.reset_instance()  # Ensure clean state
+        instance1 = PromptCache.get_instance()
+        instance2 = PromptCache.get_instance()
+
+        # Assert
+        assert instance1 is instance2
+
+    def test_reset_instance(self) -> None:
+        """Test that reset_instance clears singleton."""
+        # Arrange
+        instance1 = PromptCache.get_instance()
+        instance1.set("key", {"value": 1})
+
+        # Act
+        PromptCache.reset_instance()
+        instance2 = PromptCache.get_instance()
+
+        # Assert
+        assert instance1 is not instance2
+        assert instance2.get("key") is None  # New instance has no data
+
+    def test_invalidate_prompt_no_entries(self) -> None:
+        """Test invalidate_prompt when no entries exist for the prompt."""
+        # Arrange
+        cache = PromptCache()
+        cache.set("other_prompt:v1", {"value": 1})
+
+        # Act: Invalidate non-existent prompt
+        cache.invalidate_prompt("test_prompt")
+
+        # Assert: Other prompt should still exist
+        assert cache.get("other_prompt:v1") == {"value": 1}
