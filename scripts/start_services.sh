@@ -60,6 +60,17 @@ check_port() {
     fi
 }
 
+# Function to find process ID by port
+find_pid_by_port() {
+    local port=$1
+    local pid=$(lsof -Pi :$port -sTCP:LISTEN -t 2>/dev/null | head -1)
+    if [ -n "$pid" ]; then
+        echo "$pid"
+        return 0
+    fi
+    return 1
+}
+
 # Function to wait for service to be ready
 wait_for_service() {
     local name=$1
@@ -127,11 +138,38 @@ start_service() {
     # Save PID
     echo $service_pid > "$pid_file"
 
+    # Verify PID file was created successfully
+    if [ ! -f "$pid_file" ]; then
+        print_error "Failed to create PID file: $pid_file"
+        if kill -0 $service_pid 2>/dev/null; then
+            kill $service_pid
+        fi
+        return 1
+    fi
+
+    # Verify PID in file matches what we saved
+    local saved_pid=$(cat "$pid_file")
+    if [ "$saved_pid" != "$service_pid" ]; then
+        print_error "PID file corruption detected. Expected: $service_pid, Found: $saved_pid"
+        if kill -0 $service_pid 2>/dev/null; then
+            kill $service_pid
+        fi
+        rm -f "$pid_file"
+        return 1
+    fi
+
     # Wait for service to be ready
     local health_url="http://localhost:$port"
     if wait_for_service "$name" "$health_url"; then
-        print_success "$name started successfully (PID: $service_pid, Port: $port)"
-        return 0
+        # Double-check PID file still exists and process is running
+        if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+            print_success "$name started successfully (PID: $service_pid, Port: $port)"
+            return 0
+        else
+            print_error "$name process or PID file disappeared after startup"
+            rm -f "$pid_file"
+            return 1
+        fi
     else
         # Service failed to start, clean up
         if kill -0 $service_pid 2>/dev/null; then
@@ -146,9 +184,14 @@ start_service() {
 stop_service() {
     local name=$1
     local pid_file=$2
+    local port=$3  # Optional: port number for fallback detection
 
+    local pid=""
+    local stopped=false
+
+    # Try to get PID from file first
     if [ -f "$pid_file" ]; then
-        local pid=$(cat "$pid_file")
+        pid=$(cat "$pid_file")
         if kill -0 $pid 2>/dev/null; then
             print_status "Stopping $name (PID: $pid)..."
             kill $pid
@@ -158,12 +201,47 @@ stop_service() {
             if kill -0 $pid 2>/dev/null; then
                 print_warning "Force stopping $name..."
                 kill -9 $pid
+                sleep 1
             fi
 
-            print_success "$name stopped"
+            # Verify process is stopped
+            if ! kill -0 $pid 2>/dev/null; then
+                print_success "$name stopped"
+                stopped=true
+            fi
         fi
         rm -f "$pid_file"
     fi
+
+    # If PID file didn't exist or process wasn't stopped, try port-based detection
+    if [ -n "$port" ] && [ "$stopped" = false ]; then
+        if check_port $port; then
+            pid=$(find_pid_by_port $port)
+            if [ -n "$pid" ]; then
+                print_warning "$name found running on port $port without PID file (PID: $pid)"
+                print_status "Stopping $name (PID: $pid)..."
+                kill $pid
+                sleep 2
+
+                # Force kill if still running
+                if kill -0 $pid 2>/dev/null; then
+                    print_warning "Force stopping $name..."
+                    kill -9 $pid
+                    sleep 1
+                fi
+
+                if ! kill -0 $pid 2>/dev/null; then
+                    print_success "$name stopped"
+                    stopped=true
+                fi
+            fi
+        fi
+    fi
+
+    # Clean up any stale PID file
+    rm -f "$pid_file"
+
+    return 0
 }
 
 # Function to check service status
@@ -172,16 +250,55 @@ check_status() {
     local pid_file=$2
     local port=$3
 
-    if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
-        local pid=$(cat "$pid_file")
-        if check_port $port; then
-            print_success "$name is running (PID: $pid, Port: $port)"
-        else
-            print_warning "$name process exists but port $port is not listening"
+    local pid_from_file=""
+    local pid_from_port=""
+    local has_pid_file=false
+    local process_running=false
+    local port_listening=false
+
+    # Check PID file
+    if [ -f "$pid_file" ]; then
+        has_pid_file=true
+        pid_from_file=$(cat "$pid_file")
+        if kill -0 "$pid_from_file" 2>/dev/null; then
+            process_running=true
         fi
-    else
-        print_error "$name is not running"
+    fi
+
+    # Check port
+    if check_port $port; then
+        port_listening=true
+        pid_from_port=$(find_pid_by_port $port)
+    fi
+
+    # Analyze status and provide detailed feedback
+    if [ "$has_pid_file" = true ] && [ "$process_running" = true ]; then
+        if [ "$port_listening" = true ]; then
+            # Check if PID from file matches PID on port
+            if [ "$pid_from_file" = "$pid_from_port" ]; then
+                print_success "$name is running (PID: $pid_from_file, Port: $port)"
+            else
+                print_warning "$name PID/port mismatch! PID file: $pid_from_file, Port $port: $pid_from_port"
+            fi
+        else
+            print_warning "$name process exists (PID: $pid_from_file) but port $port is not listening"
+        fi
+    elif [ "$has_pid_file" = true ] && [ "$process_running" = false ]; then
+        # Stale PID file
+        if [ "$port_listening" = true ]; then
+            print_warning "$name has stale PID file but different process on port $port (PID: $pid_from_port)"
+        else
+            print_error "$name is not running (stale PID file)"
+        fi
         # Clean up stale PID file
+        rm -f "$pid_file"
+    elif [ "$has_pid_file" = false ] && [ "$port_listening" = true ]; then
+        # Running without PID file
+        print_warning "$name is running on port $port (PID: $pid_from_port) but has no PID file"
+    else
+        # Not running
+        print_error "$name is not running"
+        # Clean up any stale PID file
         rm -f "$pid_file"
     fi
 }
@@ -232,6 +349,23 @@ check_dependencies() {
     if ! command -v curl &> /dev/null; then
         print_error "curl is not installed. Please install curl for health checks."
         ((missing_deps++))
+    fi
+
+    # Check if lsof is available for port checking
+    if ! command -v lsof &> /dev/null; then
+        print_warning "lsof is not installed. Port-based process detection may not work."
+    fi
+
+    # Check if Docker is available and daemon is running (optional but recommended)
+    if command -v docker &> /dev/null; then
+        if ! docker info &> /dev/null; then
+            print_warning "Docker is installed but daemon is not running. Some features may not work."
+            print_status "Try starting Docker with: sudo systemctl start docker (Linux) or start Docker Desktop (Mac/Windows)"
+        else
+            print_success "Docker daemon is running"
+        fi
+    else
+        print_warning "Docker is not installed. Container-based features will not be available."
     fi
 
     # Check if project directories exist
@@ -389,13 +523,13 @@ main() {
         stop)
             print_status "🛑 Stopping MySwiftAgent services..."
             if [ -z "$service_filter" ] || [ "$service_filter" = "commonui" ]; then
-                stop_service "CommonUI" "$COMMONUI_PID"
+                stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
             fi
             if [ -z "$service_filter" ] || [ "$service_filter" = "myscheduler" ]; then
-                stop_service "MyScheduler" "$MYSCHEDULER_PID"
+                stop_service "MyScheduler" "$MYSCHEDULER_PID" "$MYSCHEDULER_PORT"
             fi
             if [ -z "$service_filter" ] || [ "$service_filter" = "jobqueue" ]; then
-                stop_service "JobQueue" "$JOBQUEUE_PID"
+                stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
             fi
             print_success "All services stopped"
             ;;
