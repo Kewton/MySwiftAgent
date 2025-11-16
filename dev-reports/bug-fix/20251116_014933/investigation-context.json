@@ -1,0 +1,29 @@
+{
+  "issue_description": "commonUIのEdit Secret機能実行時、'Failed to retrieve current value: Service MyVault is unavailable at http://myvault:8000' エラーが表示される",
+  "error_logs": [
+    "AttributeError: 'str' object has no attribute 'hex'",
+    "File \"/app/app/api/secrets.py\", line 132, in get_secret",
+    "db_secret.encrypted_value.hex()"
+  ],
+  "affected_files": [
+    "myVault/app/api/secrets.py",
+    "myVault/app/models/secret.py"
+  ],
+  "reproduction_steps": [
+    "1. docker-compose up -d を実行",
+    "2. commonUIにアクセス",
+    "3. MyVaultページでEdit Secretを選択",
+    "4. 'Show current secret value'をチェック",
+    "5. エラーが表示される"
+  ],
+  "environment": {
+    "os": "macOS",
+    "python_version": "3.12",
+    "project": "myVault",
+    "branch": "develop",
+    "docker": true
+  },
+  "related_issue_number": null,
+  "severity_hint": "high",
+  "root_cause": "データベースに保存されている暗号化データが文字列(hex)形式だが、コードはバイト列を期待して.hex()メソッドを呼び出している"
+}

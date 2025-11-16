@@ -1,0 +1,28 @@
+{
+  "bug_id": "20251116_000836",
+  "bug_description": "dev-start.sh stopコマンドがPIDファイル不在により機能しない",
+  "fix_summary": "ポートベースのプロセス検出、PIDファイル作成確実性向上、statusコマンド改善、Docker確認強化を実装",
+  "acceptance_criteria": [
+    "PIDファイルがない状態でもstopコマンドが正常に動作する",
+    "実行中のサービス（MyVault、CommonUI）が正常に停止される",
+    "サービス起動時に確実にPIDファイルが作成される",
+    "statusコマンドがPIDファイルとポート占有プロセスの不一致を検出できる",
+    "Docker未起動時に適切なエラーメッセージが表示される"
+  ],
+  "test_scenarios": [
+    "シナリオ1: PIDファイルなしでのstopコマンド実行",
+    "シナリオ2: 修正されたstart_services.shでのサービス起動・停止",
+    "シナリオ3: statusコマンドでのPID/ポート不一致検出",
+    "シナリオ4: Docker未起動状態での起動試行"
+  ],
+  "current_running_services": {
+    "MyVault": {
+      "pid": 72747,
+      "port": 8003
+    },
+    "CommonUI": {
+      "pid": 64978,
+      "port": 8501
+    }
+  }
+}

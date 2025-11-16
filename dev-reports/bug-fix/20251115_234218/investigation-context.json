@@ -1,0 +1,29 @@
+{
+  "issue_description": "dev-start.sh環境でサービスが起動せず、CommonUIからMyVaultへのシークレット登録ができない",
+  "error_logs": [
+    "Cannot connect to the Docker daemon at unix:///Users/maenokota/.docker/run/docker.sock. Is the docker daemon running?",
+    "[Secret Creation] Service 'MyVault' is unavailable. Please check if it's running.",
+    "Valkey: Not running",
+    "All services not running"
+  ],
+  "affected_files": [
+    "scripts/dev-start.sh",
+    "commonUI/core/config.py",
+    "commonUI/.streamlit/secrets.toml"
+  ],
+  "reproduction_steps": [
+    "1. ./scripts/dev-start.sh start を実行",
+    "2. Valkeyの起動でDocker接続エラー",
+    "3. 全サービスが起動失敗",
+    "4. CommonUIからMyVault接続不可"
+  ],
+  "environment": {
+    "os": "macOS",
+    "python_version": "3.11+",
+    "project": "MySwiftAgent",
+    "branch": "develop",
+    "docker_status": "not_running"
+  },
+  "related_issue_number": null,
+  "severity_hint": "critical"
+}

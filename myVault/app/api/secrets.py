@@ -76,9 +76,9 @@ async def create_secret(
     db_secret = Secret(
         project=secret.project,
         path=secret.path,
-        encrypted_value=encrypted_value,
-        encryption_iv=iv,
-        encryption_tag=tag,
+        encrypted_value=bytes.fromhex(encrypted_value),
+        encryption_iv=bytes.fromhex(iv),
+        encryption_tag=bytes.fromhex(tag),
         version=1,
         updated_by=current_service,
     )
@@ -128,10 +128,21 @@ async def get_secret(
 
     # Decrypt value
     try:
+        # SQLite stores bytes as hex strings, so check type
+        if isinstance(db_secret.encrypted_value, bytes):
+            encrypted_hex = db_secret.encrypted_value.hex()
+            iv_hex = db_secret.encryption_iv.hex()
+            tag_hex = db_secret.encryption_tag.hex()
+        else:
+            # Already hex strings
+            encrypted_hex = db_secret.encrypted_value
+            iv_hex = db_secret.encryption_iv
+            tag_hex = db_secret.encryption_tag
+
         decrypted_value = crypto_service.decrypt(
-            db_secret.encrypted_value,
-            db_secret.encryption_iv,
-            db_secret.encryption_tag,
+            encrypted_hex,
+            iv_hex,
+            tag_hex,
         )
     except ValueError as e:
         raise HTTPException(
@@ -183,9 +194,9 @@ async def update_secret(
     encrypted_value, iv, tag = crypto_service.encrypt(secret_update.value)
 
     # Update secret
-    db_secret.encrypted_value = encrypted_value
-    db_secret.encryption_iv = iv
-    db_secret.encryption_tag = tag
+    db_secret.encrypted_value = bytes.fromhex(encrypted_value)
+    db_secret.encryption_iv = bytes.fromhex(iv)
+    db_secret.encryption_tag = bytes.fromhex(tag)
     db_secret.version += 1
     db_secret.updated_by = current_service
 

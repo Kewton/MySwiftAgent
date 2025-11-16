@@ -1,0 +1,16 @@
+{
+  "bug_id": "20251116_012946",
+  "bug_description": "myVaultのデータベーススキーマとORMモデルの不一致によるServiceUnavailableError",
+  "fix_summary": "created_atカラムをsecretsテーブルに追加するマイグレーションスクリプトを作成・実行",
+  "acceptance_criteria": [
+    "myVaultサービスが正常に動作する",
+    "commonUIからmyVaultページにエラーなくアクセスできる",
+    "既存の15件のシークレットデータが保持されている",
+    "APIエンドポイントが正常にレスポンスを返す"
+  ],
+  "test_scenarios": [
+    "シナリオ1: myVault APIの直接アクセステスト",
+    "シナリオ2: commonUIからのmyVaultページアクセステスト",
+    "シナリオ3: データ整合性の確認（15件のシークレット）"
+  ]
+}

@@ -452,37 +452,62 @@ start_service() {
     fi
 }
 
+# Helper function to find PID by port
+find_pid_by_port() {
+    local port=$1
+    lsof -ti ":$port" 2>/dev/null || echo ""
+}
+
 # Stop a service
 stop_service() {
     local name=$1
     local pid_file=$2
+    local port=${3:-}  # Optional port parameter
 
+    local pid=""
+
+    # Try to get PID from file first
     if [[ -f "$pid_file" ]]; then
-        local pid=$(cat "$pid_file")
-        if kill -0 $pid 2>/dev/null; then
-            print_service "🛑" "$name" "Stopping service (PID: $pid)..."
-            kill -TERM $pid 2>/dev/null || true
+        pid=$(cat "$pid_file")
 
-            # Wait for graceful shutdown
-            local attempts=0
-            while kill -0 $pid 2>/dev/null && [[ $attempts -lt 10 ]]; do
-                sleep 1
-                ((attempts++))
-            done
-
-            # Force kill if still running
-            if kill -0 $pid 2>/dev/null; then
-                print_warning "$name: Force stopping..."
-                kill -KILL $pid 2>/dev/null || true
-            fi
-
-            print_success "$name: Stopped"
-        else
-            print_info "$name: Process not running"
+        # Verify process is actually running
+        if ! kill -0 $pid 2>/dev/null; then
+            print_warning "$name: PID file exists but process not running (stale PID: $pid)"
+            rm -f "$pid_file"
+            pid=""
         fi
+    fi
+
+    # Fallback to port-based detection if no valid PID from file
+    if [[ -z "$pid" && -n "$port" ]]; then
+        pid=$(find_pid_by_port "$port")
+        if [[ -n "$pid" ]]; then
+            print_warning "$name: PID file not found, detected via port $port (PID: $pid)"
+        fi
+    fi
+
+    # Stop the service if we found a PID
+    if [[ -n "$pid" ]]; then
+        print_service "🛑" "$name" "Stopping service (PID: $pid)..."
+        kill -TERM $pid 2>/dev/null || true
+
+        # Wait for graceful shutdown
+        local attempts=0
+        while kill -0 $pid 2>/dev/null && [[ $attempts -lt 10 ]]; do
+            sleep 1
+            ((attempts++))
+        done
+
+        # Force kill if still running
+        if kill -0 $pid 2>/dev/null; then
+            print_warning "$name: Force stopping..."
+            kill -KILL $pid 2>/dev/null || true
+        fi
+
+        print_success "$name: Stopped"
         rm -f "$pid_file"
     else
-        print_info "$name: PID file not found"
+        print_info "$name: Not running"
     fi
 }
 
@@ -722,12 +747,12 @@ clean_temp_files() {
     print_step "Cleaning temporary files..."
 
     # Stop all services first
-    stop_service "CommonUI" "$COMMONUI_PID"
-    stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
-    stop_service "ExpertAgent" "$EXPERTAGENT_PID"
-    stop_service "MyVault" "$MYVAULT_PID"
-    stop_service "MyScheduler" "$MYSCHEDULER_PID"
-    stop_service "JobQueue" "$JOBQUEUE_PID"
+    stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
+    stop_service "GraphAiServer" "$GRAPHAISERVER_PID" "$GRAPHAISERVER_PORT"
+    stop_service "ExpertAgent" "$EXPERTAGENT_PID" "$EXPERTAGENT_PORT"
+    stop_service "MyVault" "$MYVAULT_PID" "$MYVAULT_PORT"
+    stop_service "MyScheduler" "$MYSCHEDULER_PID" "$MYSCHEDULER_PORT"
+    stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
 
     # Stop Valkey
     if command -v docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "^myswiftagent-valkey$"; then
@@ -997,25 +1022,25 @@ main() {
         stop)
             print_step "Stopping all services..."
             if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
-                stop_service "MyAgentDesk" "$MYAGENTDESK_PID"
+                stop_service "MyAgentDesk" "$MYAGENTDESK_PID" "$MYAGENTDESK_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
-                stop_service "CommonUI" "$COMMONUI_PID"
+                stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
-                stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
+                stop_service "GraphAiServer" "$GRAPHAISERVER_PID" "$GRAPHAISERVER_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
-                stop_service "ExpertAgent" "$EXPERTAGENT_PID"
+                stop_service "ExpertAgent" "$EXPERTAGENT_PID" "$EXPERTAGENT_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
-                stop_service "MyVault" "$MYVAULT_PID"
+                stop_service "MyVault" "$MYVAULT_PID" "$MYVAULT_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
-                stop_service "MyScheduler" "$MYSCHEDULER_PID"
+                stop_service "MyScheduler" "$MYSCHEDULER_PID" "$MYSCHEDULER_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "jobqueue" ]]; then
-                stop_service "JobQueue" "$JOBQUEUE_PID"
+                stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
             fi
             # Stop Valkey
             if [[ -z "$service_filter" || "$service_filter" == "valkey" ]]; then

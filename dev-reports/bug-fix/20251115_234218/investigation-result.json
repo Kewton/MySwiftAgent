@@ -1,0 +1,189 @@
+{
+  "status": "completed",
+  "investigation_summary": {
+    "issue_description": "dev-start.sh環境でDocker daemonが起動していないためValkeyが起動せず、全サービスが連鎖的に起動失敗する",
+    "error_type": "EnvironmentDependencyError",
+    "affected_files": [
+      "scripts/dev-start.sh",
+      "expertAgent/.env",
+      "expertAgent/core/config.py",
+      "valkey/config/valkey.conf"
+    ],
+    "reproduction_confirmed": true
+  },
+  "root_cause_analysis": {
+    "category": "環境問題",
+    "primary_cause": "Docker Desktopアプリケーションが起動していない状態でdev-start.shを実行",
+    "contributing_factors": [
+      "dev-start.shはDocker daemonの起動状態を事前チェックしない",
+      "Valkey起動にDockerが必須だが、Docker未起動時のフォールバック処理が不十分",
+      "ExpertAgentのVALKEY_ENABLED設定がfalseのため、Valkeyなしでも本来動作可能なはず",
+      "CommonUIからMyVaultへの接続は別問題（MyVault自体は起動していた可能性）"
+    ],
+    "evidence": [
+      "エラーログ: 'Cannot connect to the Docker daemon at unix:///Users/maenokota/.docker/run/docker.sock. Is the docker daemon running?'",
+      "dev-start.sh:851行目でdocker commandの存在のみチェックし、daemon起動状態は未確認",
+      "docker ps実行時に接続エラーが発生（docker.sockが存在しない）",
+      "Docker Desktop.appは/Applications/にインストール済みだが未起動",
+      "expertAgent/.env: VALKEY_ENABLED未設定（デフォルトfalse）のため、Valkey依存は本来不要",
+      "Valkey containerは過去に起動していた（Exited (0) 24 minutes ago）"
+    ]
+  },
+  "severity_assessment": {
+    "severity": "high",
+    "impact": "開発環境の全サービスが起動できず、開発作業が完全に停止",
+    "data_loss_risk": "なし（既存データは保護されている）",
+    "business_impact": "開発者がローカル環境でサービスのテスト・開発ができない"
+  },
+  "recommended_actions": [
+    {
+      "action_id": "1",
+      "priority": "high",
+      "title": "Docker daemon起動チェックとユーザーガイダンスの追加",
+      "description": "dev-start.shにDocker daemon起動状態の事前チェックを追加し、未起動時はユーザーに起動を促す明確なメッセージを表示する",
+      "estimated_effort": "30分",
+      "risk_level": "low",
+      "files_to_modify": [
+        "scripts/dev-start.sh"
+      ],
+      "implementation_details": [
+        "check_dependencies()関数内でdocker psコマンドを実行",
+        "接続エラー時は「Docker Desktopを起動してください」と具体的に指示",
+        "Docker Desktop自動起動オプションの提供（open -a Docker）",
+        "Valkey起動前に再度Docker daemon状態を確認"
+      ],
+      "test_coverage_required": true,
+      "rollback_plan": "変更を元に戻す（既存のチェック処理のみに依存）"
+    },
+    {
+      "action_id": "2",
+      "priority": "medium",
+      "title": "Valkey起動失敗時のグレースフルフォールバック",
+      "description": "ValkeyがなくてもExpertAgent等のサービスが起動できるよう、Valkey起動失敗を警告として扱い処理を継続する",
+      "estimated_effort": "45分",
+      "risk_level": "medium",
+      "files_to_modify": [
+        "scripts/dev-start.sh"
+      ],
+      "implementation_details": [
+        "Valkey起動失敗時にexit 1ではなくwarningを表示して継続",
+        "VALKEY_ENABLED=falseの場合はValkeyスキップを明示的にログ出力",
+        "各サービス起動時にValkey依存の有無を確認（expertAgent等）",
+        "CommonUIにValkey未起動時の動作モード（メモリストア）を明記"
+      ],
+      "test_coverage_required": true,
+      "rollback_plan": "従来通りValkey起動失敗でスクリプト終了"
+    },
+    {
+      "action_id": "3",
+      "priority": "medium",
+      "title": "既存Valkey containerの再利用機能",
+      "description": "Stopped状態のValkeyコンテナが存在する場合、docker runの代わりにdocker startで再起動する",
+      "estimated_effort": "30分",
+      "risk_level": "low",
+      "files_to_modify": [
+        "scripts/dev-start.sh"
+      ],
+      "implementation_details": [
+        "docker ps -a | grep myswiftagent-valkeyで既存コンテナを検索",
+        "Stopped状態ならdocker start myswiftagent-valkeyで再起動",
+        "Running状態なら何もしない（既存処理のまま）",
+        "Valkey起動失敗リスクの低減（設定ファイル読み込み問題等）"
+      ],
+      "test_coverage_required": false,
+      "rollback_plan": "常にdocker rm → docker runの処理に戻す"
+    },
+    {
+      "action_id": "4",
+      "priority": "low",
+      "title": "サービス起動順序の最適化と依存関係明示",
+      "description": "各サービスの依存関係を明確にし、Valkey→JobQueue→MyScheduler→MyVault→...の順序を保証",
+      "estimated_effort": "1時間",
+      "risk_level": "low",
+      "files_to_modify": [
+        "scripts/dev-start.sh",
+        "docs/arch/service-dependencies.md"
+      ],
+      "implementation_details": [
+        "サービス起動前に依存サービスのヘルスチェック実装",
+        "wait_for_service()関数にタイムアウト時のリトライ処理追加",
+        "各サービスのREADMEに必須依存サービスを明記",
+        "起動失敗時のエラーメッセージに次のアクション提示"
+      ],
+      "test_coverage_required": false,
+      "rollback_plan": "既存の起動順序のまま運用"
+    },
+    {
+      "action_id": "5",
+      "priority": "low",
+      "title": "CommonUIのMyVault接続問題の個別調査",
+      "description": "Valkey問題とは別に、CommonUIからMyVaultへのシークレット登録失敗を調査",
+      "estimated_effort": "1時間",
+      "risk_level": "low",
+      "files_to_modify": [
+        "commonUI/core/config.py",
+        "commonUI/.streamlit/secrets.toml"
+      ],
+      "implementation_details": [
+        "MyVault起動状態の確認（docker ps、health check）",
+        "CommonUIのMYVAULT_BASE_URL設定確認（ポート8003 vs 8103）",
+        "認証トークン（MYVAULT_SERVICE_TOKEN）の有効性確認",
+        "ネットワーク接続テスト（curl http://localhost:8003/health）"
+      ],
+      "test_coverage_required": false,
+      "rollback_plan": "現状維持（既存の設定のまま）"
+    }
+  ],
+  "related_code_locations": [
+    {
+      "file": "scripts/dev-start.sh",
+      "line_number": 851,
+      "code_snippet": "if command -v docker &> /dev/null; then",
+      "issue": "dockerコマンドの存在のみチェックし、daemon起動状態を確認していない"
+    },
+    {
+      "file": "scripts/dev-start.sh",
+      "line_number": 863,
+      "code_snippet": "docker run -d --name myswiftagent-valkey ...",
+      "issue": "docker run失敗時のエラーハンドリングが不十分"
+    },
+    {
+      "file": "expertAgent/core/config.py",
+      "line_number": 61,
+      "code_snippet": "VALKEY_ENABLED: bool = Field(default=False)",
+      "issue": "VALKEY_ENABLEDがfalseなのにValkey起動を試みる（dev-start.shとの不整合）"
+    },
+    {
+      "file": "scripts/dev-start.sh",
+      "line_number": 856,
+      "code_snippet": "docker stop myswiftagent-valkey 2>/dev/null || true",
+      "issue": "停止済みコンテナを毎回削除して再作成（非効率）"
+    }
+  ],
+  "next_steps": [
+    "対策案1を実施（優先度: high） - Docker daemon起動チェック追加",
+    "対策案2を実施（優先度: medium） - Valkeyフォールバック処理追加",
+    "対策案3を実施（優先度: medium） - 既存コンテナ再利用",
+    "dev-start.shを再実行してサービス起動確認",
+    "対策案5を別タスクとして実施（CommonUI→MyVault接続問題）"
+  ],
+  "investigation_time_minutes": 25,
+  "tools_used": [
+    "Read (dev-start.sh, config files, .env files)",
+    "Bash (docker --version, docker ps, pgrep, open -a Docker)",
+    "Grep (Valkey/Redis references)",
+    "Glob (config files, docker-compose files)"
+  ],
+  "workaround": {
+    "immediate_fix": "Docker Desktopを手動で起動してからdev-start.shを実行",
+    "command": "open -a Docker && sleep 10 && ./scripts/dev-start.sh start",
+    "verification": "docker ps でValkey containerが起動しているか確認"
+  },
+  "prevention_measures": [
+    "dev-start.sh起動時にDocker daemonの起動状態を自動チェック",
+    "未起動時は自動的にDocker Desktopを起動（ユーザー確認付き）",
+    "Valkey起動失敗時のエラーメッセージを改善（具体的な対処法を提示）",
+    "サービス依存関係ドキュメントの整備（どのサービスがValkeyを必要とするか）",
+    "CI/CDでDocker環境のセットアップテストを追加"
+  ]
+}
