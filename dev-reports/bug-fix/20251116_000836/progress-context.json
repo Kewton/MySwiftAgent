@@ -1,0 +1,66 @@
+{
+  "bug_id": "20251116_000836",
+  "bug_description": "dev-start.sh stopコマンドがPIDファイル不在により機能しない",
+  "phase_results": {
+    "investigation": {
+      "status": "completed",
+      "root_cause": "サービスがdev-start.shスクリプト経由で起動されていないため、PIDファイルが作成されず、stop_service関数がPIDファイルに完全依存している"
+    },
+    "tdd_fix": {
+      "status": "completed",
+      "coverage": "All tests passing",
+      "fixes": [
+        "ポートベースのプロセス検出機能追加",
+        "PIDファイル作成の確実性向上",
+        "statusコマンドの改善",
+        "Docker確認強化"
+      ]
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_results": "4/4 scenarios passed",
+      "criteria_verified": "5/5 acceptance criteria met"
+    }
+  },
+  "work_plan_comparison": {
+    "planned_tasks": [
+      "ポートベースのプロセス検出機能の追加",
+      "PIDファイル作成の確実性向上",
+      "statusコマンドの改善",
+      "Docker起動前チェックの強化"
+    ],
+    "deliverables_status": [
+      {
+        "item": "scripts/start_services.sh（全対策実装済み）",
+        "status": "completed"
+      },
+      {
+        "item": "tests/scripts/test_start_services_fixes.sh",
+        "status": "completed"
+      },
+      {
+        "item": "tests/integration/test_bug_fix_20251116_000836_acceptance.sh",
+        "status": "completed"
+      }
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": "8-12時間",
+      "actual": "約30分（サブエージェント活用により大幅短縮）",
+      "variance": "-7.5～-11.5時間"
+    }
+  },
+  "key_achievements": [
+    "PIDファイルなしでもstopコマンドが動作するようになった",
+    "ポートベースのプロセス検出機能が実装された",
+    "PIDファイルの作成が確実になった",
+    "statusコマンドが詳細な診断情報を提供するようになった",
+    "Docker未起動時に有用なエラーメッセージが表示されるようになった"
+  ],
+  "git_commit": "43d0313",
+  "files_modified": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/scripts/start_services.sh",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/tests/scripts/test_start_services_fixes.sh",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/tests/scripts/test_start_services_integration.sh",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/tests/scripts/test_start_services.bats"
+  ]
+}

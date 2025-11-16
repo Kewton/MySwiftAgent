@@ -1,0 +1,50 @@
+{
+  "bug_id": "20251116_000836",
+  "bug_description": "dev-start.sh stopコマンドがPIDファイル不在により機能しない",
+  "selected_actions": [
+    {
+      "action_id": "SOL-001",
+      "title": "ポートベースのプロセス検出機能の追加",
+      "priority": "high"
+    },
+    {
+      "action_id": "SOL-002",
+      "title": "PIDファイル作成の確実性向上",
+      "priority": "high"
+    },
+    {
+      "action_id": "SOL-005",
+      "title": "statusコマンドの改善",
+      "priority": "medium"
+    },
+    {
+      "action_id": "SOL-003",
+      "title": "Docker起動前チェックの強化",
+      "priority": "medium"
+    }
+  ],
+  "work_plan_tasks": [
+    "stop_service関数にポート番号パラメータを追加し、フォールバック機能を実装",
+    "start_service関数でサービス起動後に実PIDを取得してPIDファイルに保存",
+    "check_service_status関数でPIDファイルとポート占有プロセスの不一致を検出",
+    "check_dependencies関数でDocker接続確認を強化"
+  ],
+  "deliverables_checklist": [
+    "scripts/dev-start.sh（全対策実装済み）",
+    "tests/scripts/test_dev_start.sh（新規作成）"
+  ],
+  "definition_of_done": [
+    "PIDファイルなしでもstopコマンドが動作する",
+    "サービス起動時に確実にPIDファイルが作成される",
+    "statusコマンドがポートベースでも動作する",
+    "Docker未起動時でも適切なエラーメッセージが表示される",
+    "実行中のサービス（MyVault、CommonUI）が正常に停止できる"
+  ],
+  "target_coverage": 90,
+  "test_requirements": [
+    "stop_service関数のテスト（PIDファイルあり/なし）",
+    "ポート検出による停止のテスト",
+    "PIDファイル作成の確実性テスト",
+    "statusコマンドの不一致検出テスト"
+  ]
+}

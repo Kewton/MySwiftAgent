@@ -1,0 +1,290 @@
+{
+  "investigation_summary": {
+    "title": "dev-start.sh stop コマンド PID ファイル問題の調査結果",
+    "status": "調査完了",
+    "severity": "medium",
+    "investigated_at": "2025-11-16T00:08:36+09:00"
+  },
+  "root_cause_analysis": {
+    "primary_cause": "サービスが dev-start.sh スクリプト経由で起動されていないため、PIDファイルが作成されない",
+    "technical_details": [
+      {
+        "finding": "実行中のサービスのPPIDが1である",
+        "evidence": "ps -p 72747,64978 -o ppid でPPID=1を確認。これは親プロセスが終了したことを意味する",
+        "implication": "サービスがスクリプト外で手動起動されたか、スクリプトのnohupプロセスが予期せず終了した"
+      },
+      {
+        "finding": "PIDディレクトリにはvalkey.pidのみ存在",
+        "evidence": "ls -la /Users/maenokota/share/work/github_kewton/MySwiftAgent/.pids/ でvalkey.pid(Nov 15 23:49)のみ確認",
+        "implication": "他のサービスのPIDファイルが作成されなかった、または削除された"
+      },
+      {
+        "finding": "サービスログファイルがすべて空（0バイト）",
+        "evidence": "commonui.log, expertagent.log, graphaiserver.log, jobqueue.log, myscheduler.log, myvault.log がすべて0バイト（Nov 16 00:07）",
+        "implication": "dev-start.sh の start コマンドが実行されたが、サービスは正常に起動しなかった。または、ログがリダイレクトされていない"
+      },
+      {
+        "finding": "Dockerデーモンが停止している",
+        "evidence": "docker ps コマンドで 'Cannot connect to the Docker daemon' エラー",
+        "implication": "Valkey（Docker経由で起動）が起動できず、Redis依存のサービスに影響"
+      },
+      {
+        "finding": "サービスは実際に起動している",
+        "evidence": "lsof -ti:8003,8501 でMyVault(PID:72747)とCommonUI(PID:64978)が稼働中を確認",
+        "implication": "手動起動または別の起動メカニズムが使用された"
+      }
+    ]
+  },
+  "identified_issues": [
+    {
+      "issue_id": "ISSUE-001",
+      "category": "Process Management",
+      "description": "PIDファイル作成のタイミング問題",
+      "details": "start_service関数(L432-436)でnohup起動後に$!でPIDを取得してPIDファイルに保存しているが、nohupプロセスが即座に終了する場合、子プロセス（実際のサービス）のPIDが記録されない",
+      "affected_code": "scripts/dev-start.sh:432-436",
+      "risk_level": "high"
+    },
+    {
+      "issue_id": "ISSUE-002",
+      "category": "Dependency Management",
+      "description": "Docker依存性の明示的なチェック不足",
+      "details": "Valkey起動前にDockerデーモンの接続確認を行っているが、失敗時の処理が不十分。他のサービスがRedis/Valkeyに依存する場合、起動順序とエラーハンドリングが重要",
+      "affected_code": "scripts/dev-start.sh:851-884",
+      "risk_level": "medium"
+    },
+    {
+      "issue_id": "ISSUE-003",
+      "category": "Logging",
+      "description": "ログファイルへのリダイレクト失敗の可能性",
+      "details": "nohup実行時のログリダイレクト(> $log_file 2>&1)が期待通りに動作していない可能性。ログファイルが0バイトのまま",
+      "affected_code": "scripts/dev-start.sh:432",
+      "risk_level": "low"
+    },
+    {
+      "issue_id": "ISSUE-004",
+      "category": "Service Lifecycle",
+      "description": "stop_service関数のPIDファイル存在前提の設計",
+      "details": "stop_service関数(L456-487)はPIDファイルの存在を前提としており、ファイルがない場合は何もせずに終了。実際に稼働中のプロセスを検出・停止する仕組みがない",
+      "affected_code": "scripts/dev-start.sh:456-487",
+      "risk_level": "high"
+    }
+  ],
+  "evidence_collected": {
+    "running_processes": [
+      {
+        "service": "MyVault",
+        "pid": 72747,
+        "ppid": 1,
+        "port": 8003,
+        "started_at": "Sat Nov 15 23:55:09 2025",
+        "command": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/myVault/.venv/bin/python3 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8003"
+      },
+      {
+        "service": "CommonUI",
+        "pid": 64978,
+        "ppid": 1,
+        "port": 8501,
+        "started_at": "Sat Nov 15 23:55:09 2025",
+        "command": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/commonUI/.venv/bin/python3 .venv/bin/streamlit run Home.py --server.port 8501 --server.headless true"
+      }
+    ],
+    "pid_files_found": [
+      {
+        "file": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/.pids/valkey.pid",
+        "content": "8239",
+        "modified_at": "Nov 15 23:49"
+      }
+    ],
+    "pid_files_missing": [
+      "jobqueue.pid",
+      "myscheduler.pid",
+      "myvault.pid",
+      "expertagent.pid",
+      "graphaiserver.pid",
+      "commonui.pid",
+      "myagentdesk.pid"
+    ],
+    "log_files_status": {
+      "empty_logs": [
+        "commonui.log (0 bytes)",
+        "expertagent.log (0 bytes)",
+        "graphaiserver.log (0 bytes)",
+        "jobqueue.log (0 bytes)",
+        "myscheduler.log (0 bytes)",
+        "myvault.log (0 bytes)",
+        "myagentdesk.log (0 bytes)",
+        "valkey.log (0 bytes)",
+        "setup.log (0 bytes)"
+      ],
+      "last_modified": "Nov 16 00:07"
+    },
+    "docker_status": {
+      "daemon_running": false,
+      "error": "Cannot connect to the Docker daemon at unix:///Users/maenokota/.docker/run/docker.sock. Is the docker daemon running?"
+    }
+  },
+  "actionable_solutions": [
+    {
+      "solution_id": "SOL-001",
+      "priority": "high",
+      "category": "PID Management Enhancement",
+      "title": "ポートベースのプロセス検出機能の追加",
+      "description": "stop_service関数を拡張し、PIDファイルが存在しない場合でもポート番号からプロセスを検出して停止できるようにする",
+      "implementation_steps": [
+        "1. stop_service関数にポート番号パラメータを追加",
+        "2. PIDファイルがない場合、lsof -ti:{port} でプロセスを検出",
+        "3. 検出したPIDに対してSIGTERMを送信",
+        "4. 10秒待機後も稼働していればSIGKILLを送信",
+        "5. 停止確認とログ出力"
+      ],
+      "expected_outcome": "PIDファイルの有無に関わらず、ポート占有プロセスを確実に停止できる",
+      "code_example": "```bash\nstop_service() {\n    local name=$1\n    local pid_file=$2\n    local port=$3  # 新規追加\n    \n    local pid_to_stop=\"\"\n    \n    # Try PID file first\n    if [[ -f \"$pid_file\" ]]; then\n        pid_to_stop=$(cat \"$pid_file\")\n    # Fallback to port-based detection\n    elif [[ -n \"$port\" ]]; then\n        pid_to_stop=$(lsof -ti:$port 2>/dev/null)\n        if [[ -n \"$pid_to_stop\" ]]; then\n            print_warning \"$name: PID file not found, detected via port $port (PID: $pid_to_stop)\"\n        fi\n    fi\n    \n    # ... rest of stop logic\n}\n```",
+      "risks": [
+        "誤ったポートのプロセスを停止する可能性（ポート番号の二重使用時）",
+        "複数プロセスが同じポートを使用している場合の処理"
+      ],
+      "estimated_effort": "2-3時間"
+    },
+    {
+      "solution_id": "SOL-002",
+      "priority": "high",
+      "category": "Process Tracking",
+      "title": "PIDファイル作成の確実性向上",
+      "description": "nohup起動後、実際の子プロセスのPIDを確実に取得・記録する仕組みを実装",
+      "implementation_steps": [
+        "1. nohup起動後、ポート監視で実際のプロセスPIDを取得",
+        "2. lsof -ti:{port} で実PIDを取得してPIDファイルに保存",
+        "3. wait_for_service成功後にPIDファイルの内容を検証",
+        "4. PIDファイルが正しく作成されない場合はエラーとして扱う"
+      ],
+      "expected_outcome": "サービス起動時に必ずPIDファイルが作成され、stop時に利用可能になる",
+      "code_example": "```bash\n# Start the service\nnohup bash -c \"$start_command\" > \"$log_file\" 2>&1 &\nlocal service_pid=$!\n\n# Wait for service to bind to port\nlocal attempt=0\nwhile [[ $attempt -lt 30 ]]; do\n    local actual_pid=$(lsof -ti:$port 2>/dev/null)\n    if [[ -n \"$actual_pid\" ]]; then\n        echo $actual_pid > \"$pid_file\"\n        print_info \"$name: PID $actual_pid recorded to $pid_file\"\n        break\n    fi\n    sleep 1\n    ((attempt++))\ndone\n```",
+      "risks": [
+        "起動遅延時にタイムアウトする可能性",
+        "複数プロセスがポートを共有する場合の混乱"
+      ],
+      "estimated_effort": "3-4時間"
+    },
+    {
+      "solution_id": "SOL-003",
+      "priority": "medium",
+      "category": "Docker Integration",
+      "title": "Docker起動前チェックの強化",
+      "description": "Dockerデーモンの接続確認を起動前に実施し、失敗時の明確なエラーメッセージと回避策を提示",
+      "implementation_steps": [
+        "1. Docker依存サービス起動前にdocker infoでデーモン接続確認",
+        "2. 接続失敗時、ユーザーに明確なエラーメッセージを表示",
+        "3. --skip-docker オプションでDocker依存を回避可能にする",
+        "4. Valkey代替として外部Redisサーバー設定を許可"
+      ],
+      "expected_outcome": "Dockerが利用できない環境でも、適切なフォールバック処理が実行される",
+      "code_example": "```bash\ncheck_docker_availability() {\n    if ! command -v docker &> /dev/null; then\n        return 1\n    fi\n    if ! docker info >/dev/null 2>&1; then\n        return 1\n    fi\n    return 0\n}\n\n# In start command\nif [[ \"$skip_docker\" != true ]] && check_docker_availability; then\n    # Start Valkey via Docker\nelse\n    print_warning \"Docker not available, using external Redis/Valkey\"\n    # Expect REDIS_URL or VALKEY_URL from environment\nfi\n```",
+      "risks": [
+        "外部Redisサーバーの設定負担",
+        "ローカル開発環境での一貫性低下"
+      ],
+      "estimated_effort": "2-3時間"
+    },
+    {
+      "solution_id": "SOL-004",
+      "priority": "medium",
+      "category": "Logging",
+      "title": "ログ出力の診断機能追加",
+      "description": "ログファイルが空の場合の原因を診断し、デバッグ情報を提供",
+      "implementation_steps": [
+        "1. サービス起動後、ログファイルサイズをチェック",
+        "2. 0バイトの場合、stderrへの出力確認",
+        "3. プロセスが実際に稼働しているか確認",
+        "4. デバッグモードでstdout/stderrを端末に出力するオプション追加"
+      ],
+      "expected_outcome": "ログが記録されない原因を迅速に特定できる",
+      "code_example": "```bash\n# After wait_for_service\nif [[ ! -s \"$log_file\" ]]; then\n    print_warning \"$name: Log file is empty, checking process status...\"\n    if ps -p $service_pid > /dev/null 2>&1; then\n        print_info \"$name: Process is running but not logging\"\n    else\n        print_error \"$name: Process exited without logging\"\n        return 1\n    fi\nfi\n```",
+      "risks": [],
+      "estimated_effort": "1-2時間"
+    },
+    {
+      "solution_id": "SOL-005",
+      "priority": "low",
+      "category": "Service Discovery",
+      "title": "status コマンドの改善",
+      "description": "PIDファイルに依存せず、ポートベースでサービス稼働状況を確認",
+      "implementation_steps": [
+        "1. check_service_status関数を拡張",
+        "2. PIDファイルがない場合でもポート監視で稼働確認",
+        "3. プロセス名とコマンドラインの一致確認",
+        "4. PIDファイルとの不一致を検出・警告"
+      ],
+      "expected_outcome": "PIDファイルが失われた場合でも、サービス状態を正確に把握できる",
+      "code_example": "```bash\ncheck_service_status() {\n    local name=$1\n    local pid_file=$2\n    local port=$3\n    \n    local pid_from_file=\"\"\n    local pid_from_port=\"\"\n    \n    [[ -f \"$pid_file\" ]] && pid_from_file=$(cat \"$pid_file\")\n    pid_from_port=$(lsof -ti:$port 2>/dev/null)\n    \n    if [[ -n \"$pid_from_file\" && \"$pid_from_file\" == \"$pid_from_port\" ]]; then\n        print_success \"$name: Running (PID: $pid_from_file, Port: $port)\"\n    elif [[ -n \"$pid_from_port\" ]]; then\n        print_warning \"$name: Running but PID file mismatch (Port PID: $pid_from_port, File: ${pid_from_file:-none})\"\n    else\n        print_error \"$name: Not running\"\n    fi\n}\n```",
+      "risks": [],
+      "estimated_effort": "1-2時間"
+    }
+  ],
+  "recommended_approach": {
+    "phase_1": {
+      "title": "即座対応（1-2日）",
+      "tasks": [
+        "SOL-001: ポートベースのプロセス検出機能の実装（stop強化）",
+        "SOL-005: statusコマンドの改善（現状把握の改善）"
+      ],
+      "justification": "stopコマンドが動作しない問題を最優先で解決し、開発者体験を改善"
+    },
+    "phase_2": {
+      "title": "根本対策（3-5日）",
+      "tasks": [
+        "SOL-002: PIDファイル作成の確実性向上",
+        "SOL-003: Docker起動前チェックの強化"
+      ],
+      "justification": "PIDファイル管理の信頼性を向上させ、Docker依存の問題を解消"
+    },
+    "phase_3": {
+      "title": "品質向上（1-2日）",
+      "tasks": [
+        "SOL-004: ログ出力の診断機能追加"
+      ],
+      "justification": "デバッグ効率を向上させ、将来の問題解決を迅速化"
+    }
+  },
+  "test_plan": {
+    "unit_tests": [
+      "stop_service関数: PIDファイルあり/なしの両ケース",
+      "stop_service関数: ポート検出による停止",
+      "check_service_status関数: PIDファイルとポート状態の不一致検出"
+    ],
+    "integration_tests": [
+      "dev-start.sh start -> stop のフルサイクル",
+      "Docker未起動時の起動スクリプト動作",
+      "手動起動サービスのstopコマンドによる停止"
+    ],
+    "regression_tests": [
+      "既存の正常起動ケースの動作確認",
+      "複数サービス同時起動・停止",
+      "ログファイルの正常記録確認"
+    ]
+  },
+  "additional_notes": {
+    "observations": [
+      "サービスがPPID=1で稼働していることから、手動起動またはnohupの親プロセス終了が発生",
+      "ログファイルが0バイトであることから、dev-start.shのstartコマンドは実行されたが、サービスは別の方法で起動された可能性",
+      "Dockerデーモン停止が複数のエラーの起点となっている可能性"
+    ],
+    "follow_up_questions": [
+      "サービスはどのように起動されたのか？（手動 or スクリプト）",
+      "前回のdev-start.sh実行ログは保存されているか？",
+      "Dockerデーモン停止の経緯と再起動手順の確認"
+    ]
+  },
+  "references": {
+    "related_files": [
+      "/Users/maenokota/share/work/github_kewton/MySwiftAgent/scripts/dev-start.sh",
+      "/Users/maenokota/share/work/github_kewton/MySwiftAgent/.pids/",
+      "/Users/maenokota/share/work/github_kewton/MySwiftAgent/logs/"
+    ],
+    "related_issues": [],
+    "documentation": [
+      "bash nohup process management",
+      "lsof port monitoring",
+      "Docker daemon connection troubleshooting"
+    ]
+  }
+}

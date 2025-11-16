@@ -1,0 +1,48 @@
+{
+  "bug_id": "20251115_234218",
+  "bug_description": "dev-start.sh環境でDocker未起動によるサービス起動失敗とMyVault接続エラー",
+  "selected_actions": [
+    {
+      "action_id": "1",
+      "title": "即座の回避策 - Docker Desktop起動",
+      "description": "Docker Desktopを起動してサービス開始",
+      "files_to_modify": [],
+      "estimated_effort": "1分"
+    },
+    {
+      "action_id": "2",
+      "title": "Docker daemon起動チェック追加",
+      "description": "dev-start.shにDocker daemon起動状態の事前チェックと自動起動オプション追加",
+      "files_to_modify": ["scripts/dev-start.sh"],
+      "estimated_effort": "30分"
+    },
+    {
+      "action_id": "3",
+      "title": "Valkey依存性の解消",
+      "description": "Valkey起動失敗時でも他サービスを起動可能にする",
+      "files_to_modify": ["scripts/dev-start.sh"],
+      "estimated_effort": "45分"
+    },
+    {
+      "action_id": "4",
+      "title": "CommonUI → MyVault接続設定修正",
+      "description": "ポート番号とURLの一致を確認（環境変数による適切な設定）",
+      "files_to_modify": ["commonUI/.streamlit/secrets.toml"],
+      "estimated_effort": "30分"
+    }
+  ],
+  "total_estimated_effort": "2時間",
+  "deliverables": [
+    "scripts/dev-start.sh（Docker daemon チェック機能追加）",
+    "scripts/dev-start.sh（Valkey依存性解消）",
+    "commonUI/.streamlit/secrets.toml（環境変数依存に修正）",
+    "tests/scripts/test_dev_start.sh（新規テスト追加）"
+  ],
+  "definition_of_done": [
+    "Docker未起動時に分かりやすいエラーメッセージ表示",
+    "Docker自動起動オプションが動作",
+    "Valkey未起動でも他サービスが起動可能",
+    "CommonUIからMyVaultへのシークレット登録が成功",
+    "Playwright MCPで自動テスト実行成功"
+  ]
+}

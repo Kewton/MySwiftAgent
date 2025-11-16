@@ -30,6 +30,7 @@ for project in myVault jobqueue myscheduler expertAgent graphAiServer commonUI; 
 done
 
 # Service ports (can be overridden via environment variables)
+VALKEY_PORT="${VALKEY_PORT:-6379}"
 JOBQUEUE_PORT="${JOBQUEUE_PORT:-8001}"
 MYSCHEDULER_PORT="${MYSCHEDULER_PORT:-8002}"
 MYVAULT_PORT="${MYVAULT_PORT:-8003}"
@@ -49,6 +50,7 @@ export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
 # Note: GraphAI workflow environment variables are automatically available from above exports
 
 # Service directories
+VALKEY_DIR="$PROJECT_ROOT/valkey"
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
 MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
 MYVAULT_DIR="$PROJECT_ROOT/myVault"
@@ -62,6 +64,7 @@ LOG_DIR="$PROJECT_ROOT/logs"
 PID_DIR="$PROJECT_ROOT/.pids"
 
 # Log files
+VALKEY_LOG="$LOG_DIR/valkey.log"
 JOBQUEUE_LOG="$LOG_DIR/jobqueue.log"
 MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
 MYVAULT_LOG="$LOG_DIR/myvault.log"
@@ -72,6 +75,7 @@ MYAGENTDESK_LOG="$LOG_DIR/myagentdesk.log"
 SETUP_LOG="$LOG_DIR/setup.log"
 
 # PID files
+VALKEY_PID="$PID_DIR/valkey.pid"
 JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
 MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
 MYVAULT_PID="$PID_DIR/myvault.pid"
@@ -141,6 +145,7 @@ init_directories() {
 
     # Clear old logs
     > "$SETUP_LOG"
+    > "$VALKEY_LOG" 2>/dev/null || true
     > "$JOBQUEUE_LOG" 2>/dev/null || true
     > "$MYSCHEDULER_LOG" 2>/dev/null || true
     > "$MYVAULT_LOG" 2>/dev/null || true
@@ -447,37 +452,62 @@ start_service() {
     fi
 }
 
+# Helper function to find PID by port
+find_pid_by_port() {
+    local port=$1
+    lsof -ti ":$port" 2>/dev/null || echo ""
+}
+
 # Stop a service
 stop_service() {
     local name=$1
     local pid_file=$2
+    local port=${3:-}  # Optional port parameter
 
+    local pid=""
+
+    # Try to get PID from file first
     if [[ -f "$pid_file" ]]; then
-        local pid=$(cat "$pid_file")
-        if kill -0 $pid 2>/dev/null; then
-            print_service "🛑" "$name" "Stopping service (PID: $pid)..."
-            kill -TERM $pid 2>/dev/null || true
+        pid=$(cat "$pid_file")
 
-            # Wait for graceful shutdown
-            local attempts=0
-            while kill -0 $pid 2>/dev/null && [[ $attempts -lt 10 ]]; do
-                sleep 1
-                ((attempts++))
-            done
-
-            # Force kill if still running
-            if kill -0 $pid 2>/dev/null; then
-                print_warning "$name: Force stopping..."
-                kill -KILL $pid 2>/dev/null || true
-            fi
-
-            print_success "$name: Stopped"
-        else
-            print_info "$name: Process not running"
+        # Verify process is actually running
+        if ! kill -0 $pid 2>/dev/null; then
+            print_warning "$name: PID file exists but process not running (stale PID: $pid)"
+            rm -f "$pid_file"
+            pid=""
         fi
+    fi
+
+    # Fallback to port-based detection if no valid PID from file
+    if [[ -z "$pid" && -n "$port" ]]; then
+        pid=$(find_pid_by_port "$port")
+        if [[ -n "$pid" ]]; then
+            print_warning "$name: PID file not found, detected via port $port (PID: $pid)"
+        fi
+    fi
+
+    # Stop the service if we found a PID
+    if [[ -n "$pid" ]]; then
+        print_service "🛑" "$name" "Stopping service (PID: $pid)..."
+        kill -TERM $pid 2>/dev/null || true
+
+        # Wait for graceful shutdown
+        local attempts=0
+        while kill -0 $pid 2>/dev/null && [[ $attempts -lt 10 ]]; do
+            sleep 1
+            ((attempts++))
+        done
+
+        # Force kill if still running
+        if kill -0 $pid 2>/dev/null; then
+            print_warning "$name: Force stopping..."
+            kill -KILL $pid 2>/dev/null || true
+        fi
+
+        print_success "$name: Stopped"
         rm -f "$pid_file"
     else
-        print_info "$name: PID file not found"
+        print_info "$name: Not running"
     fi
 }
 
@@ -517,6 +547,8 @@ show_service_urls() {
     echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${NC}"
     echo -e "${CYAN}│                        Service URLs                                │${NC}"
     echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│${NC} 🔄 Valkey:            ${WHITE}redis://localhost:$VALKEY_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} 📋 JobQueue API:      ${WHITE}http://localhost:$JOBQUEUE_PORT${NC}${CYAN}                          │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$JOBQUEUE_PORT/health${NC}${CYAN}                  │${NC}"
     echo -e "${CYAN}│${NC}    ↳ Docs:            ${WHITE}http://localhost:$JOBQUEUE_PORT/docs${NC}${CYAN}                    │${NC}"
@@ -551,6 +583,10 @@ show_logs() {
         print_step "Showing all service logs (last 20 lines each):"
         echo ""
 
+        echo -e "${YELLOW}=== Valkey Logs ===${NC}"
+        tail -n 20 "$VALKEY_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
         echo -e "${YELLOW}=== JobQueue Logs ===${NC}"
         tail -n 20 "$JOBQUEUE_LOG" 2>/dev/null || echo "No logs available"
         echo ""
@@ -582,6 +618,10 @@ show_logs() {
         echo -e "${BLUE}Use '$0 logs <service>' to follow specific service logs${NC}"
     else
         case $service in
+            valkey)
+                print_info "Following Valkey logs (Ctrl+C to stop):"
+                tail -f "$VALKEY_LOG"
+                ;;
             jobqueue)
                 print_info "Following JobQueue logs (Ctrl+C to stop):"
                 tail -f "$JOBQUEUE_LOG"
@@ -616,7 +656,7 @@ show_logs() {
                 ;;
             *)
                 print_error "Unknown service: $service"
-                echo "Available services: jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, myagentdesk, setup"
+                echo "Available services: valkey, jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, myagentdesk, setup"
                 return 1
                 ;;
         esac
@@ -707,12 +747,18 @@ clean_temp_files() {
     print_step "Cleaning temporary files..."
 
     # Stop all services first
-    stop_service "CommonUI" "$COMMONUI_PID"
-    stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
-    stop_service "ExpertAgent" "$EXPERTAGENT_PID"
-    stop_service "MyVault" "$MYVAULT_PID"
-    stop_service "MyScheduler" "$MYSCHEDULER_PID"
-    stop_service "JobQueue" "$JOBQUEUE_PID"
+    stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
+    stop_service "GraphAiServer" "$GRAPHAISERVER_PID" "$GRAPHAISERVER_PORT"
+    stop_service "ExpertAgent" "$EXPERTAGENT_PID" "$EXPERTAGENT_PORT"
+    stop_service "MyVault" "$MYVAULT_PID" "$MYVAULT_PORT"
+    stop_service "MyScheduler" "$MYSCHEDULER_PID" "$MYSCHEDULER_PORT"
+    stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
+
+    # Stop Valkey
+    if command -v docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "^myswiftagent-valkey$"; then
+        docker stop myswiftagent-valkey 2>/dev/null || true
+        docker rm myswiftagent-valkey 2>/dev/null || true
+    fi
 
     # Clean logs (disabled to preserve logs for debugging)
     # rm -f "$LOG_DIR"/*.log 2>/dev/null || true
@@ -823,6 +869,45 @@ main() {
 
             print_step "Installing dependencies and starting services..."
             echo ""
+
+            # Start Valkey
+            if [[ -z "$service_filter" || "$service_filter" == "valkey" ]]; then
+                # Check if Docker is available and valkey-server is not
+                if command -v docker &> /dev/null; then
+                    print_service "🔄" "Valkey" "Starting via Docker..."
+                    cd "$PROJECT_ROOT"
+
+                    # Stop any existing Valkey container
+                    docker stop myswiftagent-valkey 2>/dev/null || true
+                    docker rm myswiftagent-valkey 2>/dev/null || true
+
+                    # Create data directory
+                    mkdir -p "$VALKEY_DIR/data"
+
+                    # Start Valkey container
+                    docker run -d \
+                        --name myswiftagent-valkey \
+                        -p "$VALKEY_PORT:6379" \
+                        -v "$VALKEY_DIR/data:/data" \
+                        -v "$VALKEY_DIR/config/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro" \
+                        valkey/valkey:latest \
+                        valkey-server /usr/local/etc/valkey/valkey.conf \
+                        >> "$VALKEY_LOG" 2>&1
+
+                    # Get container PID
+                    docker inspect -f '{{.State.Pid}}' myswiftagent-valkey > "$VALKEY_PID"
+
+                    # Wait for Valkey to be ready
+                    sleep 2
+                    if docker exec myswiftagent-valkey valkey-cli PING >/dev/null 2>&1; then
+                        print_success "Valkey: Started successfully (Port: $VALKEY_PORT)"
+                    else
+                        print_error "Valkey: Failed to start"
+                    fi
+                else
+                    print_warning "Valkey: Docker not available, skipping"
+                fi
+            fi
 
             # Start JobQueue
             if [[ -z "$service_filter" || "$service_filter" == "jobqueue" ]]; then
@@ -937,25 +1022,35 @@ main() {
         stop)
             print_step "Stopping all services..."
             if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
-                stop_service "MyAgentDesk" "$MYAGENTDESK_PID"
+                stop_service "MyAgentDesk" "$MYAGENTDESK_PID" "$MYAGENTDESK_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "commonui" ]]; then
-                stop_service "CommonUI" "$COMMONUI_PID"
+                stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "graphaiserver" ]]; then
-                stop_service "GraphAiServer" "$GRAPHAISERVER_PID"
+                stop_service "GraphAiServer" "$GRAPHAISERVER_PID" "$GRAPHAISERVER_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "expertagent" ]]; then
-                stop_service "ExpertAgent" "$EXPERTAGENT_PID"
+                stop_service "ExpertAgent" "$EXPERTAGENT_PID" "$EXPERTAGENT_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myvault" ]]; then
-                stop_service "MyVault" "$MYVAULT_PID"
+                stop_service "MyVault" "$MYVAULT_PID" "$MYVAULT_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myscheduler" ]]; then
-                stop_service "MyScheduler" "$MYSCHEDULER_PID"
+                stop_service "MyScheduler" "$MYSCHEDULER_PID" "$MYSCHEDULER_PORT"
             fi
             if [[ -z "$service_filter" || "$service_filter" == "jobqueue" ]]; then
-                stop_service "JobQueue" "$JOBQUEUE_PID"
+                stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
+            fi
+            # Stop Valkey
+            if [[ -z "$service_filter" || "$service_filter" == "valkey" ]]; then
+                if command -v docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "^myswiftagent-valkey$"; then
+                    print_service "🛑" "Valkey" "Stopping Docker container..."
+                    docker stop myswiftagent-valkey 2>/dev/null || true
+                    docker rm myswiftagent-valkey 2>/dev/null || true
+                    rm -f "$VALKEY_PID" 2>/dev/null || true
+                    print_success "Valkey: Stopped"
+                fi
             fi
             print_success "All services stopped"
             ;;
@@ -970,6 +1065,18 @@ main() {
         status)
             print_step "Service Status Check:"
             echo ""
+            # Check Valkey
+            if [[ -z "$service_filter" || "$service_filter" == "valkey" ]]; then
+                if command -v docker &> /dev/null && docker ps --format '{{.Names}}' | grep -q "^myswiftagent-valkey$"; then
+                    if docker exec myswiftagent-valkey valkey-cli PING >/dev/null 2>&1; then
+                        print_success "Valkey: Running healthy (Port: $VALKEY_PORT)"
+                    else
+                        print_warning "Valkey: Running but health check failed (Port: $VALKEY_PORT)"
+                    fi
+                else
+                    print_error "Valkey: Not running"
+                fi
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "jobqueue" ]]; then
                 check_service_status "JobQueue" "$JOBQUEUE_PID" $JOBQUEUE_PORT
             fi

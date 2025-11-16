@@ -1,0 +1,33 @@
+{
+  "bug_id": "20251116_012946",
+  "bug_description": "myVaultのデータベーススキーマとORMモデルの不一致によるServiceUnavailableError",
+  "selected_actions": [
+    {
+      "action_id": "1",
+      "title": "データベースマイグレーション実行",
+      "description": "既存のsecretsテーブルにcreated_atカラムを追加するマイグレーションスクリプトを作成・実行",
+      "files_to_modify": ["myVault/scripts/migrate_add_created_at.py"],
+      "estimated_effort": "30分"
+    },
+    {
+      "action_id": "2",
+      "title": "データベース初期化スクリプトの確認・更新",
+      "description": "新規環境構築時に正しいスキーマが作成されるようdatabase.pyを確認",
+      "files_to_modify": ["myVault/app/core/database.py"],
+      "estimated_effort": "15分"
+    }
+  ],
+  "total_estimated_effort": "45分",
+  "deliverables": [
+    "myVault/scripts/migrate_add_created_at.py",
+    "myVault/app/core/database.py",
+    "tests/unit/test_migrate_created_at.py"
+  ],
+  "definition_of_done": [
+    "created_atカラムがsecretsテーブルに追加される",
+    "既存のデータが保持される",
+    "commonUIからmyVaultにアクセスできる",
+    "新規環境でも正しいスキーマが作成される",
+    "単体テストカバレッジ 90%以上"
+  ]
+}

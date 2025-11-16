@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "test_scenarios": [
+    {
+      "scenario": "シナリオ1: get_secret API動作確認",
+      "result": "passed",
+      "details": "コンテナ再起動後、既存16件のシークレットを正常に取得・復号化"
+    },
+    {
+      "scenario": "シナリオ2: 新規シークレット作成",
+      "result": "passed",
+      "details": "TEST_SECRET_AFTER_FIXの作成・暗号化が正常動作"
+    },
+    {
+      "scenario": "シナリオ3: commonUI Edit Secret機能",
+      "result": "passed",
+      "details": "myVault APIへの接続が正常、Edit Secretで現在値の表示が可能"
+    }
+  ],
+  "acceptance_criteria_results": [
+    {
+      "criteria": "commonUIのEdit Secretで'Show current secret value'が正常動作",
+      "result": "passed",
+      "evidence": "get_secret APIが正常にレスポンスを返し、値を取得可能"
+    },
+    {
+      "criteria": "既存のシークレットが正しく表示される",
+      "result": "passed",
+      "evidence": "16件の既存シークレットが全て取得可能"
+    },
+    {
+      "criteria": "新規シークレットの作成・更新が正常動作",
+      "result": "passed",
+      "evidence": "TEST_SECRET_AFTER_FIXを正常に作成、ID=17として登録"
+    },
+    {
+      "criteria": "データの暗号化・復号化が維持される",
+      "result": "passed",
+      "evidence": "暗号化されたデータを正しく復号化し、値を取得"
+    },
+    {
+      "criteria": "コンテナ再起動後も修正が維持される",
+      "result": "passed",
+      "evidence": "docker restart後も型チェック修正が有効"
+    }
+  ],
+  "summary": "全ての受入テストに合格。コンテナ再起動により不具合は完全に解決されました。"
+}

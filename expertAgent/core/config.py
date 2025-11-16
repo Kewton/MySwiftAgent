@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     LANGFUSE_SECRET_KEY: str = Field(default="")
     LANGFUSE_HOST: str = Field(default="http://localhost:3001")
 
+    # Valkey Configuration (Issue #169)
+    VALKEY_ENABLED: bool = Field(default=False)  # Enable Valkey persistence
+    VALKEY_HOST: str = Field(default="localhost")
+    VALKEY_PORT: int = Field(default=6379)
+    VALKEY_DB: int = Field(default=0)
+    VALKEY_TTL: int = Field(default=86400)  # 24 hours in seconds
+
     # Server Configuration
     HOST: str = Field(default="0.0.0.0")  # noqa: S104  # Development default, override via .env for production
     PORT: int = Field(default=8000)

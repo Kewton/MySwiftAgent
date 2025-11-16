@@ -1,0 +1,41 @@
+{
+  "issue_number": 169,
+  "iteration": 2,
+  "feature_summary": "Valkey永続化基盤のインフラ統合 - Docker環境、開発スクリプト、worktree対応を追加",
+  "acceptance_criteria": [
+    "scripts/dev-start.sh からValkeyが起動可能",
+    "docker-compose up でValkeyが起動可能",
+    "worktree環境毎に独立したValkeyインスタンスが起動（ポート衝突なし）"
+  ],
+  "test_scenarios": [
+    "シナリオ1: Docker Compose統合 - docker-compose.ymlにValkeyサービスが定義され、起動可能なことを確認",
+    "シナリオ2: dev-start.sh統合 - dev-start.shからValkeyを起動・停止・ステータス確認できることを検証",
+    "シナリオ3: worktree環境対応 - setup-valkey-worktree.shによりworktree毎に独立したValkeyインスタンスが起動することを確認",
+    "シナリオ4: ポート管理 - worktree間でポート衝突が起きないことを検証",
+    "シナリオ5: データ永続化 - ボリュームマウントによりデータが永続化されることを確認",
+    "シナリオ6: ヘルスチェック - Dockerコンテナのヘルスチェックが正しく動作することを確認",
+    "シナリオ7: 環境変数設定 - VALKEY_URLが適切に設定されることを確認"
+  ],
+  "completed_deliverables": [
+    "docker-compose.yml (Valkeyサービス追加)",
+    "scripts/dev-start.sh (Valkey起動機能追加)",
+    "scripts/setup-valkey-worktree.sh (新規作成)",
+    "tests/infrastructure/test_issue_169_docker_compose.py",
+    "tests/infrastructure/test_issue_169_dev_start_script.py",
+    "tests/infrastructure/test_issue_169_valkey_worktree_script.py"
+  ],
+  "test_environment": {
+    "docker_installed": true,
+    "docker_compose_installed": true,
+    "bash_available": true,
+    "test_framework": "pytest",
+    "infrastructure_tests": 37
+  },
+  "previous_iteration_status": {
+    "iteration_1": {
+      "core_functionality": "completed",
+      "coverage": 95.71,
+      "tests": 82
+    }
+  }
+}

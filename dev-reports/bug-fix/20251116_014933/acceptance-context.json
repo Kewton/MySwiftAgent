@@ -1,0 +1,16 @@
+{
+  "bug_id": "20251116_014933",
+  "bug_description": "commonUIのEdit Secret機能でServiceUnavailableError",
+  "fix_summary": "データ型不整合を修正（.hex()呼び出し削除、hex文字列として統一）",
+  "acceptance_criteria": [
+    "commonUIのEdit Secretで'Show current secret value'が正常動作",
+    "既存のシークレットが正しく表示される",
+    "新規シークレットの作成・更新が正常動作",
+    "データの暗号化・復号化が維持される"
+  ],
+  "test_scenarios": [
+    "シナリオ1: get_secret APIの動作確認",
+    "シナリオ2: commonUI Edit Secret機能の動作確認",
+    "シナリオ3: 新規シークレット作成・更新の確認"
+  ]
+}

@@ -22,6 +22,9 @@ COPY core/ ./core/
 COPY components/ ./components/
 COPY pages/ ./pages/
 
+# Copy Streamlit configuration
+COPY .streamlit/ ./.streamlit/
+
 # Copy configuration files (not mounted by volumes)
 COPY data/ ./config/
 
