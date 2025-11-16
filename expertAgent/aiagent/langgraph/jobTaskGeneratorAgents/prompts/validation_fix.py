@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.services.prompt_loader import PromptLoader
+
 
 class InterfaceFixProposal(BaseModel):
     """Proposal for fixing interface validation error."""
@@ -66,7 +68,14 @@ class ValidationFixResponse(BaseModel):
     )
 
 
-VALIDATION_FIX_SYSTEM_PROMPT = """あなたはインターフェース整合性の専門家です。
+# Load prompt from YAML
+_loader = PromptLoader.create_default()
+_prompt_data = _loader.load_prompt("validation_fix")
+VALIDATION_FIX_SYSTEM_PROMPT = _prompt_data.get("system_prompt", "")
+
+# Fallback to hardcoded prompt if YAML not found
+if not VALIDATION_FIX_SYSTEM_PROMPT:
+    VALIDATION_FIX_SYSTEM_PROMPT = """あなたはインターフェース整合性の専門家です。
 jobqueueのWorkflowValidatorが報告したバリデーションエラーを分析し、修正案を提案します。
 
 ## バリデーションエラーの種類
