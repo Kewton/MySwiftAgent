@@ -38,6 +38,7 @@ EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
 GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
 COMMONUI_PORT="${COMMONUI_PORT:-8501}"
 MYAGENTDESK_PORT="${MYAGENTDESK_PORT:-8000}"
+LANGFUSE_PORT="${LANGFUSE_PORT:-3001}"
 
 # Automatically configure service URLs (new policy)
 export JOBQUEUE_API_URL="http://localhost:${JOBQUEUE_PORT}"
@@ -72,6 +73,7 @@ EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 COMMONUI_LOG="$LOG_DIR/commonui.log"
 MYAGENTDESK_LOG="$LOG_DIR/myagentdesk.log"
+LANGFUSE_LOG="$LOG_DIR/langfuse.log"
 SETUP_LOG="$LOG_DIR/setup.log"
 
 # PID files
@@ -83,6 +85,7 @@ EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
 MYAGENTDESK_PID="$PID_DIR/myagentdesk.pid"
+LANGFUSE_PID="$PID_DIR/langfuse.pid"
 
 # API tokens for development
 DEV_JOBQUEUE_TOKEN="dev-jobqueue-token-$(date +%s)"
@@ -104,6 +107,7 @@ show_banner() {
 ║   🔄 GraphAiServer - Graph AI workflow service                                ║
 ║   🎨 CommonUI      - Streamlit web interface                                  ║
 ║   🖥️  MyAgentDesk  - SvelteKit web interface                                  ║
+║   📊 Langfuse      - LLM observability platform                               ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -153,6 +157,7 @@ init_directories() {
     > "$GRAPHAISERVER_LOG" 2>/dev/null || true
     > "$COMMONUI_LOG" 2>/dev/null || true
     > "$MYAGENTDESK_LOG" 2>/dev/null || true
+    > "$LANGFUSE_LOG" 2>/dev/null || true
 
     print_success "Directories initialized"
 }
@@ -571,6 +576,9 @@ show_service_urls() {
     echo -e "${CYAN}│${NC} 🎨 CommonUI:          ${WHITE}http://localhost:$COMMONUI_PORT${NC}${CYAN}                           │${NC}"
     echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} 🖥️  MyAgentDesk:      ${WHITE}http://localhost:$MYAGENTDESK_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} 📊 Langfuse:          ${WHITE}http://localhost:$LANGFUSE_PORT${NC}${CYAN}                          │${NC}"
+    echo -e "${CYAN}│${NC}    ↳ Health:          ${WHITE}http://localhost:$LANGFUSE_PORT/api/public/health${NC}${CYAN}        │${NC}"
     echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
 }
@@ -615,6 +623,10 @@ show_logs() {
         tail -n 20 "$MYAGENTDESK_LOG" 2>/dev/null || echo "No logs available"
         echo ""
 
+        echo -e "${YELLOW}=== Langfuse Logs ===${NC}"
+        tail -n 20 "$LANGFUSE_LOG" 2>/dev/null || echo "No logs available"
+        echo ""
+
         echo -e "${BLUE}Use '$0 logs <service>' to follow specific service logs${NC}"
     else
         case $service in
@@ -650,13 +662,17 @@ show_logs() {
                 print_info "Following MyAgentDesk logs (Ctrl+C to stop):"
                 tail -f "$MYAGENTDESK_LOG"
                 ;;
+            langfuse)
+                print_info "Following Langfuse logs (Ctrl+C to stop):"
+                tail -f "$LANGFUSE_LOG"
+                ;;
             setup)
                 print_info "Following setup logs (Ctrl+C to stop):"
                 tail -f "$SETUP_LOG"
                 ;;
             *)
                 print_error "Unknown service: $service"
-                echo "Available services: valkey, jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, myagentdesk, setup"
+                echo "Available services: valkey, jobqueue, myscheduler, myvault, expertagent, graphaiserver, commonui, myagentdesk, langfuse, setup"
                 return 1
                 ;;
         esac
@@ -723,6 +739,10 @@ Service-specific commands:
     --myscheduler-only  Only operate on MyScheduler service
     --commonui-only     Only operate on CommonUI service
 
+Services:
+    - valkey, jobqueue, myscheduler, myvault, expertagent
+    - graphaiserver, commonui, myagentdesk, langfuse
+
 Docker options:
     --skip-docker       Skip Docker Compose services and only start native services
 
@@ -742,11 +762,127 @@ Development tokens:
 EOF
 }
 
+# Start Langfuse services via docker-compose
+start_langfuse() {
+    print_service "📊" "Langfuse" "Starting LLM observability platform..."
+
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        print_warning "Langfuse: Docker not available, skipping"
+        return 0
+    fi
+
+    # Check if docker-compose is available
+    if ! command -v docker-compose &> /dev/null; then
+        print_warning "Langfuse: docker-compose not available, skipping"
+        return 0
+    fi
+
+    cd "$PROJECT_ROOT" || {
+        print_error "Langfuse: Cannot change to project root"
+        return 1
+    }
+
+    # Start Langfuse services via docker-compose
+    print_info "Langfuse: Starting services (db, clickhouse, redis, minio, worker, server)..."
+    docker-compose up -d langfuse-db langfuse-clickhouse langfuse-redis langfuse-minio langfuse-worker langfuse-server >> "$LANGFUSE_LOG" 2>&1
+
+    if [ $? -ne 0 ]; then
+        print_error "Langfuse: Failed to start services"
+        return 1
+    fi
+
+    # Save docker-compose PID marker (for tracking)
+    echo "docker-compose-langfuse" > "$LANGFUSE_PID"
+
+    # Wait for Langfuse server to be ready
+    print_info "Langfuse: Waiting for services to be ready..."
+    local max_attempts=60
+    local attempt=1
+
+    while [[ $attempt -le $max_attempts ]]; do
+        if curl -sf "http://localhost:$LANGFUSE_PORT/api/public/health" >/dev/null 2>&1; then
+            print_success "Langfuse: Started successfully (Port: $LANGFUSE_PORT)"
+            print_info "Langfuse: Web UI available at http://localhost:$LANGFUSE_PORT"
+            return 0
+        fi
+
+        if [[ $attempt -eq 1 ]]; then
+            echo -n "    Checking"
+        fi
+        echo -n "."
+
+        sleep 2
+        ((attempt++))
+    done
+
+    echo ""
+    print_warning "Langfuse: Service started but health check timeout (may still be initializing)"
+    print_info "Langfuse: Check logs with '$0 logs langfuse'"
+    return 0
+}
+
+# Stop Langfuse services via docker-compose
+stop_langfuse() {
+    print_service "🛑" "Langfuse" "Stopping LLM observability platform..."
+
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        print_info "Langfuse: Docker not available, skipping"
+        rm -f "$LANGFUSE_PID" 2>/dev/null || true
+        return 0
+    fi
+
+    # Check if docker-compose is available
+    if ! command -v docker-compose &> /dev/null; then
+        print_info "Langfuse: docker-compose not available, skipping"
+        rm -f "$LANGFUSE_PID" 2>/dev/null || true
+        return 0
+    fi
+
+    cd "$PROJECT_ROOT" || {
+        print_error "Langfuse: Cannot change to project root"
+        return 1
+    }
+
+    # Stop Langfuse services via docker-compose
+    docker-compose stop langfuse-server langfuse-worker langfuse-minio langfuse-redis langfuse-clickhouse langfuse-db 2>/dev/null || true
+
+    # Remove PID file
+    rm -f "$LANGFUSE_PID" 2>/dev/null || true
+
+    print_success "Langfuse: Stopped"
+}
+
+# Check Langfuse status
+check_langfuse_status() {
+    if ! command -v docker &> /dev/null || ! command -v docker-compose &> /dev/null; then
+        print_error "Langfuse: Docker/docker-compose not available"
+        return
+    fi
+
+    # Check if containers are running
+    local running_containers=$(docker-compose ps --services --filter "status=running" 2>/dev/null | grep -E "^langfuse-" | wc -l)
+
+    if [[ $running_containers -gt 0 ]]; then
+        # Try health endpoint
+        if curl -sf "http://localhost:$LANGFUSE_PORT/api/public/health" >/dev/null 2>&1; then
+            print_success "Langfuse: Running healthy (Port: $LANGFUSE_PORT, $running_containers/6 containers)"
+        else
+            print_warning "Langfuse: Running but health check failed (Port: $LANGFUSE_PORT, $running_containers/6 containers)"
+        fi
+    else
+        print_error "Langfuse: Not running"
+        rm -f "$LANGFUSE_PID" 2>/dev/null || true
+    fi
+}
+
 # Clean temporary files
 clean_temp_files() {
     print_step "Cleaning temporary files..."
 
     # Stop all services first
+    stop_langfuse
     stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
     stop_service "GraphAiServer" "$GRAPHAISERVER_PID" "$GRAPHAISERVER_PORT"
     stop_service "ExpertAgent" "$EXPERTAGENT_PID" "$EXPERTAGENT_PORT"
@@ -1010,6 +1146,11 @@ main() {
                 fi
             fi
 
+            # Start Langfuse (optional, via docker-compose)
+            if [[ -z "$service_filter" || "$service_filter" == "langfuse" ]]; then
+                start_langfuse || print_warning "Langfuse: Failed to start (check logs for details)"
+            fi
+
             echo ""
             print_success "🎉 All services started successfully!"
             show_service_urls
@@ -1021,6 +1162,10 @@ main() {
 
         stop)
             print_step "Stopping all services..."
+            # Stop Langfuse first (docker-compose services)
+            if [[ -z "$service_filter" || "$service_filter" == "langfuse" ]]; then
+                stop_langfuse
+            fi
             if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
                 stop_service "MyAgentDesk" "$MYAGENTDESK_PID" "$MYAGENTDESK_PORT"
             fi
@@ -1097,6 +1242,9 @@ main() {
             fi
             if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
                 check_service_status "MyAgentDesk" "$MYAGENTDESK_PID" $MYAGENTDESK_PORT
+            fi
+            if [[ -z "$service_filter" || "$service_filter" == "langfuse" ]]; then
+                check_langfuse_status
             fi
             echo ""
             ;;
