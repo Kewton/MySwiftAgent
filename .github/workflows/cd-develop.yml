@@ -8,6 +8,7 @@ on:
       - 'jobqueue/**'
       - 'expertAgent/**'
       - 'commonUI/**'
+      - 'valkey/**'
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
