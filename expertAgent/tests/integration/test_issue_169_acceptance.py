@@ -3,11 +3,12 @@
 This module tests all acceptance criteria and scenarios defined in Issue #169.
 """
 
-import pytest
-import time
 import os
-from typing import List, Dict, Any
+import time
 from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
 from app.stores.conversation_store_valkey import ConversationStoreValkey
