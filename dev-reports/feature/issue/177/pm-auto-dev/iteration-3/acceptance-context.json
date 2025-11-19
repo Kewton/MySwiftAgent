@@ -1,0 +1,52 @@
+{
+  "issue_number": 177,
+  "iteration": 3,
+  "feature_summary": "プロンプトYAML化実装（最終完成）",
+  "acceptance_criteria": [
+    "expertAgent/prompts/ ディレクトリ構造が正しく作成される",
+    "プロンプト名ディレクトリ配下に複数YAMLファイルを配置可能",
+    "YAMLからプロンプトが読み込まれる（default.yaml自動フォールバック）",
+    "リクエスト時にYAMLファイル名を指定可能（API拡張）",
+    "バージョン切り替えが動作する",
+    "ホットリロードが機能する",
+    "キャッシュが正しく動作する",
+    "jobTaskGeneratorAgents の全プロンプトがYAML化される",
+    "workflowGeneratorAgents の全プロンプトがYAML化される",
+    "シナリオ1: 企業IR分析でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ2: WebサイトPDF抽出でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ3: Gmail検索ポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ4: キーワードポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "読み込み時間 100ms以内"
+  ],
+  "test_scenarios": [
+    "シナリオ1: API拡張によりprompt_configsが正しく設定できる",
+    "シナリオ2: 後方互換性が保たれている（prompt_configs省略可能）",
+    "シナリオ3: PromptConfigスキーマのバリデーションが動作する",
+    "シナリオ4: 4つのビジネスシナリオのテストが作成されている",
+    "シナリオ5: 全96テストがパスする"
+  ],
+  "cumulative_status": {
+    "iteration_1": [
+      "PromptLoader実装（カバレッジ96.55%）",
+      "PromptCache実装（カバレッジ100%）",
+      "FileWatcher実装",
+      "40テスト作成・全パス"
+    ],
+    "iteration_2": [
+      "jobTaskGeneratorAgents 5プロンプトYAML化",
+      "workflowGeneratorAgents 1プロンプトYAML化",
+      "38テスト追加・全パス"
+    ],
+    "iteration_3": [
+      "PromptConfigスキーマ作成",
+      "JobGeneratorRequest/WorkflowGeneratorRequestにprompt_configs追加",
+      "後方互換性維持",
+      "シナリオテスト8件作成",
+      "API拡張テスト10件作成"
+    ]
+  },
+  "total_tests": 96,
+  "final_iteration": true
+}
