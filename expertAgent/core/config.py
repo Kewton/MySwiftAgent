@@ -58,11 +58,16 @@ class Settings(BaseSettings):
     LANGFUSE_HOST: str = Field(default="http://localhost:3001")
 
     # Valkey Configuration (Issue #169)
+    CONVERSATION_STORE_TYPE: str = Field(default="memory")  # 'memory' or 'valkey'
     VALKEY_ENABLED: bool = Field(default=False)  # Enable Valkey persistence
+    VALKEY_URL: str = Field(default="redis://localhost:6379")  # Redis-compatible URL
     VALKEY_HOST: str = Field(default="localhost")
     VALKEY_PORT: int = Field(default=6379)
     VALKEY_DB: int = Field(default=0)
     VALKEY_TTL: int = Field(default=86400)  # 24 hours in seconds
+
+    # JobQueue API Configuration
+    JOBQUEUE_API_URL: str = Field(default="http://localhost:8001")
 
     # Server Configuration
     HOST: str = Field(default="0.0.0.0")  # noqa: S104  # Development default, override via .env for production
@@ -82,6 +87,7 @@ class Settings(BaseSettings):
         env_file = [".env", ".env.local"]  # .env.local takes precedence
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"  # Ignore extra fields from .env (e.g., Langfuse service config)
 
 
 # インスタンス生成

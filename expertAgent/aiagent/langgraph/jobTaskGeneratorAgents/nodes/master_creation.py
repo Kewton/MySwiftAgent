@@ -174,7 +174,7 @@ async def master_creation_node(
         job_description = f"Auto-generated job from requirement: {user_requirement}"
         job_method = "POST"
         job_url = (
-            "http://localhost:8105/api/v1/graphai/execute"  # GraphAI execution endpoint
+            "http://localhost:8005/api/v1/graphai/execute"  # GraphAI execution endpoint
         )
         job_timeout_sec = 300  # 5 minutes
 

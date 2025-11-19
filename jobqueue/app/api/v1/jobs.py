@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.merge import merge_dict_deep, merge_dict_shallow, merge_tags
 from app.models.job import Job, JobStatus
 from app.models.job_master import JobMaster
+from app.models.job_master_task import JobMasterTask
 from app.models.result import JobResult, JobResultHistory
 from app.models.task import Task, TaskStatus
 from app.models.task_master import TaskMaster
@@ -368,8 +369,9 @@ async def create_job_from_master(
     db.add(job)
     await db.flush()
 
-    # Create tasks if provided
+    # Create tasks if provided, otherwise auto-generate from JobMasterTasks
     if job_data.tasks:
+        # Explicit task creation from provided data
         for task_data in job_data.tasks:
             # Get task master
             task_master = await db.get(TaskMaster, task_data.master_id)
@@ -421,6 +423,45 @@ async def create_job_from_master(
                 order=task_data.sequence,
                 status=TaskStatus.QUEUED,
                 input_data=task_data.input_data,
+                attempt=0,
+            )
+
+            db.add(task)
+    else:
+        # Auto-generate tasks from JobMasterTasks
+        job_master_tasks = await db.scalars(
+            select(JobMasterTask)
+            .where(JobMasterTask.job_master_id == master_id)
+            .order_by(JobMasterTask.order)
+        )
+
+        for jm_task in job_master_tasks.all():
+            # Get task master
+            task_master = await db.get(TaskMaster, jm_task.task_master_id)
+            if not task_master:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Task master {jm_task.task_master_id} not found for JobMasterTask order {jm_task.order}",
+                )
+
+            if not task_master.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Task master {task_master.id} is inactive",
+                )
+
+            # Generate ULID for task ID
+            task_id = f"t_{ulid_new()}"
+
+            # Create task instance with empty input_data (will be populated at execution time)
+            task = Task(
+                id=task_id,
+                job_id=job_id,
+                master_id=task_master.id,
+                master_version=task_master.current_version,
+                order=jm_task.order,
+                status=TaskStatus.QUEUED,
+                input_data={},  # Empty initial data
                 attempt=0,
             )
 

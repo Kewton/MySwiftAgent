@@ -390,13 +390,13 @@ class JobqueueClient:
         scheduled_at: str | None = None,
         timeout_sec: int = 120,
     ) -> dict:
-        """Create new Job.
+        """Create new Job from JobMaster.
 
         Args:
             master_id: JobMaster ID
             name: Job name
-            method: HTTP method (GET, POST, etc.)
-            url: Target URL
+            method: HTTP method (GET, POST, etc.) - not used (inherited from master)
+            url: Target URL - not used (inherited from master)
             tasks: Task parameters (optional, if None, will be auto-generated from JobMasterTask)
             priority: Job priority (1=highest, 10=lowest)
             scheduled_at: Scheduled execution time (ISO 8601 format, optional)
@@ -405,14 +405,12 @@ class JobqueueClient:
         Returns:
             Created Job
         """
+        # Use /jobs/from-master/{master_id} endpoint with JobCreateFromMaster schema
         return await self._request(
             "POST",
-            "/api/v1/jobs",
+            f"/api/v1/jobs/from-master/{master_id}",
             json={
-                "master_id": master_id,
                 "name": name,
-                "method": method,
-                "url": url,
                 "tasks": tasks,
                 "priority": priority,
                 "scheduled_at": scheduled_at,
