@@ -28,6 +28,16 @@ Valkey is started automatically by:
 
 ## CI/CD
 
+### GitHub Actions Integration
+
+Valkey service container is automatically started in GitHub Actions CI:
+- Uses `valkey/valkey:latest` image
+- Accessible at `localhost:6379`
+- Health checks via `valkey-cli ping`
+- Enables full integration test coverage in CI
+
+### Git Configuration
+
 The `data/` directory structure is preserved in git via `.gitkeep` file,
 while actual data files are excluded by `.gitignore` patterns.
 
