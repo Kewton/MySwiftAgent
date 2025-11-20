@@ -88,28 +88,28 @@ class TestIssue169AcceptanceCriteria:
         # Allow 5 second variance for test execution time
         assert 86395 <= ttl <= 86400, f"TTL {ttl} not within expected range"
 
-        # Test short TTL expiration
+        # Test short TTL is correctly set (verification approach)
         short_ttl_id = "ac5-short-ttl"
+        short_ttl_seconds = 1
         await conversation_store_test.save_conversation(
             conversation_id=short_ttl_id,
             messages=sample_messages,
-            ttl=1,  # 1 second (reduced for faster expiration)
+            ttl=short_ttl_seconds,
         )
 
-        assert await conversation_store_test.exists(short_ttl_id), "Conversation should exist initially"
+        # Verify TTL is set correctly
+        client = conversation_store_test._client
+        key = f"{conversation_store_test.key_prefix}{short_ttl_id}"
+        ttl_value = await client.get_ttl(key)
+        assert 0 < ttl_value <= short_ttl_seconds, f"TTL should be set to {short_ttl_seconds}s, got {ttl_value}s"
 
-        # Wait for expiration with retry logic to handle timing variations
-        await asyncio.sleep(2)  # Initial wait longer than TTL
+        # For expiration verification, use sufficient wait time (10 seconds total)
+        # This accounts for CI environment variations
+        await asyncio.sleep(10)
 
-        # Retry logic: Check up to 5 times with 1-second intervals
-        for retry in range(5):
-            exists_after_ttl = await conversation_store_test.exists(short_ttl_id)
-            if not exists_after_ttl:
-                break  # Successfully expired
-            if retry < 4:  # Don't sleep after last retry
-                await asyncio.sleep(1)
-
-        assert not exists_after_ttl, f"Conversation should be expired after {2 + retry} seconds (TTL=1s)"
+        # Verify expiration occurred
+        exists_after_expiration = await conversation_store_test.exists(short_ttl_id)
+        assert not exists_after_expiration, f"Conversation should be expired after 10 seconds (TTL={short_ttl_seconds}s)"
 
     async def test_ac6_metadata_persistence(
         self,
@@ -197,7 +197,7 @@ class TestIssue169Scenarios:
         """Scenario 2: TTL-configured conversation data is auto-deleted after specified time."""
         conversation_id = "scenario2-ttl"
 
-        # Given: Conversation with 1-second TTL (reduced for faster expiration)
+        # Given: Conversation with 1-second TTL
         ttl_seconds = 1
 
         # When: Save with TTL
@@ -210,19 +210,19 @@ class TestIssue169Scenarios:
         # Then: Exists immediately
         assert await conversation_store_test.exists(conversation_id)
 
-        # When: Wait for TTL to expire with retry logic to handle timing variations
-        await asyncio.sleep(ttl_seconds + 1)  # Initial wait longer than TTL
+        # Verify TTL is set correctly
+        client = conversation_store_test._client
+        key = f"{conversation_store_test.key_prefix}{conversation_id}"
+        ttl_value = await client.get_ttl(key)
+        assert 0 < ttl_value <= ttl_seconds, f"TTL should be set to {ttl_seconds}s, got {ttl_value}s"
 
-        # Retry logic: Check up to 5 times with 1-second intervals
-        for retry in range(5):
-            exists_after_ttl = await conversation_store_test.exists(conversation_id)
-            if not exists_after_ttl:
-                break  # Successfully expired
-            if retry < 4:  # Don't sleep after last retry
-                await asyncio.sleep(1)
+        # When: Wait for TTL expiration (use sufficient time for CI environment)
+        # 10 seconds ensures expiration definitely occurs even with timing variations
+        await asyncio.sleep(10)
 
-        # Then: Automatically deleted
-        assert not exists_after_ttl, f"Conversation should be automatically deleted after {ttl_seconds + 1 + retry} seconds (TTL={ttl_seconds}s)"
+        # Then: Automatically deleted after sufficient wait time
+        exists_after_ttl = await conversation_store_test.exists(conversation_id)
+        assert not exists_after_ttl, f"Conversation should be automatically deleted after 10 seconds (TTL={ttl_seconds}s)"
 
         retrieved_after_ttl = await conversation_store_test.get_conversation(conversation_id)
         assert retrieved_after_ttl is None, "Conversation should return None after TTL expiration"
