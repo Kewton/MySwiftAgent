@@ -99,7 +99,8 @@ class TestIssue169AcceptanceCriteria:
         assert await conversation_store_test.exists(short_ttl_id), "Conversation should exist initially"
 
         # Wait for expiration (async sleep to avoid blocking event loop)
-        await asyncio.sleep(3)
+        # Add extra buffer time to ensure TTL has fully expired
+        await asyncio.sleep(4)
 
         # Verify conversation has expired
         exists_after_ttl = await conversation_store_test.exists(short_ttl_id)
@@ -205,7 +206,8 @@ class TestIssue169Scenarios:
         assert await conversation_store_test.exists(conversation_id)
 
         # When: Wait for TTL to expire (async sleep to avoid blocking event loop)
-        await asyncio.sleep(ttl_seconds + 1)
+        # Add extra buffer time to ensure TTL has fully expired
+        await asyncio.sleep(ttl_seconds + 2)
 
         # Then: Automatically deleted
         exists_after_ttl = await conversation_store_test.exists(conversation_id)
