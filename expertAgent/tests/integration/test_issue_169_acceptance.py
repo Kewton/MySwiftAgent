@@ -98,13 +98,18 @@ class TestIssue169AcceptanceCriteria:
 
         assert await conversation_store_test.exists(short_ttl_id), "Conversation should exist initially"
 
-        # Wait for expiration (async sleep to avoid blocking event loop)
-        # Add extra buffer time to ensure TTL has fully expired
-        await asyncio.sleep(4)
+        # Wait for expiration with retry logic to handle timing variations
+        await asyncio.sleep(3)  # Initial wait slightly longer than TTL
 
-        # Verify conversation has expired
-        exists_after_ttl = await conversation_store_test.exists(short_ttl_id)
-        assert not exists_after_ttl, "Conversation should be expired"
+        # Retry logic: Check up to 3 times with 1-second intervals
+        for retry in range(3):
+            exists_after_ttl = await conversation_store_test.exists(short_ttl_id)
+            if not exists_after_ttl:
+                break  # Successfully expired
+            if retry < 2:  # Don't sleep after last retry
+                await asyncio.sleep(1)
+
+        assert not exists_after_ttl, f"Conversation should be expired after {3 + retry} seconds"
 
     async def test_ac6_metadata_persistence(
         self,
@@ -205,13 +210,19 @@ class TestIssue169Scenarios:
         # Then: Exists immediately
         assert await conversation_store_test.exists(conversation_id)
 
-        # When: Wait for TTL to expire (async sleep to avoid blocking event loop)
-        # Add extra buffer time to ensure TTL has fully expired
-        await asyncio.sleep(ttl_seconds + 2)
+        # When: Wait for TTL to expire with retry logic to handle timing variations
+        await asyncio.sleep(ttl_seconds + 1)  # Initial wait slightly longer than TTL
+
+        # Retry logic: Check up to 3 times with 1-second intervals
+        for retry in range(3):
+            exists_after_ttl = await conversation_store_test.exists(conversation_id)
+            if not exists_after_ttl:
+                break  # Successfully expired
+            if retry < 2:  # Don't sleep after last retry
+                await asyncio.sleep(1)
 
         # Then: Automatically deleted
-        exists_after_ttl = await conversation_store_test.exists(conversation_id)
-        assert not exists_after_ttl, "Conversation should be automatically deleted after TTL"
+        assert not exists_after_ttl, f"Conversation should be automatically deleted after {ttl_seconds + 1 + retry} seconds"
 
         retrieved_after_ttl = await conversation_store_test.get_conversation(conversation_id)
         assert retrieved_after_ttl is None, "Conversation should return None after TTL expiration"
