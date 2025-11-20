@@ -13,7 +13,7 @@ from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
 @pytest.fixture
 def mock_valkey():
     """Mock Valkey client."""
-    with patch("app.services.valkey_client.valkey.Valkey") as mock:
+    with patch("app.services.valkey_client.ValkeyAsync") as mock:
         client = MagicMock()
         client.ping = AsyncMock(return_value=True)
         client.set = AsyncMock(return_value=True)
@@ -45,7 +45,7 @@ class TestValkeyClientConnection:
     @pytest.mark.unit
     async def test_connect_failure(self):
         """Test connection failure handling."""
-        with patch("app.services.valkey_client.valkey.Valkey") as mock:
+        with patch("app.services.valkey_client.ValkeyAsync") as mock:
             mock.side_effect = Exception("Connection failed")
 
             client = ValkeyClient(host="invalid-host", port=6379)
