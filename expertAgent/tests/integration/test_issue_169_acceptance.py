@@ -3,6 +3,7 @@
 This module tests all acceptance criteria and scenarios defined in Issue #169.
 """
 
+import asyncio
 import os
 import time
 from pathlib import Path
@@ -97,10 +98,12 @@ class TestIssue169AcceptanceCriteria:
 
         assert await conversation_store_test.exists(short_ttl_id), "Conversation should exist initially"
 
-        # Wait for expiration
-        time.sleep(3)
+        # Wait for expiration (async sleep to avoid blocking event loop)
+        await asyncio.sleep(3)
 
-        assert not await conversation_store_test.exists(short_ttl_id), "Conversation should be expired"
+        # Verify conversation has expired
+        exists_after_ttl = await conversation_store_test.exists(short_ttl_id)
+        assert not exists_after_ttl, "Conversation should be expired"
 
     async def test_ac6_metadata_persistence(
         self,
@@ -201,12 +204,15 @@ class TestIssue169Scenarios:
         # Then: Exists immediately
         assert await conversation_store_test.exists(conversation_id)
 
-        # When: Wait for TTL to expire
-        time.sleep(ttl_seconds + 1)
+        # When: Wait for TTL to expire (async sleep to avoid blocking event loop)
+        await asyncio.sleep(ttl_seconds + 1)
 
         # Then: Automatically deleted
-        assert not await conversation_store_test.exists(conversation_id)
-        assert await conversation_store_test.get_conversation(conversation_id) is None
+        exists_after_ttl = await conversation_store_test.exists(conversation_id)
+        assert not exists_after_ttl, "Conversation should be automatically deleted after TTL"
+
+        retrieved_after_ttl = await conversation_store_test.get_conversation(conversation_id)
+        assert retrieved_after_ttl is None, "Conversation should return None after TTL expiration"
 
     async def test_scenario3_metadata_persistence(
         self,
@@ -230,6 +236,7 @@ class TestIssue169Scenarios:
 
         # Then: Metadata is persisted
         retrieved = await conversation_store_test.get_conversation(conversation_id)
+        assert retrieved is not None, "Failed to retrieve conversation"
         assert retrieved["metadata"]["trace_id"] == trace_id
         assert retrieved["metadata"]["prompt_version"] == prompt_version
 
