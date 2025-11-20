@@ -7,7 +7,7 @@ Provides async Redis-compatible client using Valkey.
 import json
 from typing import Any, Dict, Optional, cast
 
-import valkey
+from valkey.asyncio import Valkey as ValkeyAsync
 
 
 class ValkeyConnectionError(Exception):
@@ -49,7 +49,7 @@ class ValkeyClient:
         self.host = host
         self.port = port
         self.db = db
-        self._client: Optional[valkey.Valkey] = None
+        self._client: Optional[ValkeyAsync] = None
         self._connected = False
 
     async def connect(self) -> None:
@@ -59,7 +59,7 @@ class ValkeyClient:
             ValkeyConnectionError: If connection fails
         """
         try:
-            self._client = valkey.Valkey(
+            self._client = ValkeyAsync(
                 host=self.host,
                 port=self.port,
                 db=self.db,

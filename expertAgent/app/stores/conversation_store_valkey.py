@@ -79,12 +79,15 @@ class ConversationStoreValkey(ConversationStore):
             messages: List of conversation messages
             trace_id: Optional trace ID for observability
             prompt_version: Optional prompt version identifier
-            **kwargs: Additional metadata fields
+            **kwargs: Additional metadata fields (including optional ttl parameter)
 
         Returns:
             True if successful
         """
         key = self._get_key(conversation_id)
+
+        # Extract TTL from kwargs, or use default
+        ttl = kwargs.pop("ttl", self.ttl)
 
         # Build conversation data structure
         metadata: Dict[str, Any] = {
@@ -107,7 +110,7 @@ class ConversationStoreValkey(ConversationStore):
         }
 
         # Save with TTL
-        return await self._client.set(key, conversation_data, ttl=self.ttl)
+        return await self._client.set(key, conversation_data, ttl=ttl)
 
     async def get_conversation(
         self, conversation_id: str
