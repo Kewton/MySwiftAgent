@@ -7,11 +7,6 @@ Tests cover:
 - Memory management
 """
 
-from pathlib import Path
-
-import pytest
-import yaml
-
 from app.services.prompt_cache import PromptCache
 
 

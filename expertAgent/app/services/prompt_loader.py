@@ -67,7 +67,9 @@ class PromptLoader:
         self.base_dir = Path(base_dir)
         self.enable_cache = enable_cache
         self._cache = PromptCache() if enable_cache else None
-        logger.info(f"PromptLoader initialized (base_dir={self.base_dir}, cache={'enabled' if enable_cache else 'disabled'})")
+        logger.info(
+            f"PromptLoader initialized (base_dir={self.base_dir}, cache={'enabled' if enable_cache else 'disabled'})"
+        )
 
     @classmethod
     def create_default(cls) -> "PromptLoader":
@@ -129,7 +131,9 @@ class PromptLoader:
         logger.info(f"Loaded prompt: {prompt_name} (version: {version})")
         return data
 
-    def _get_from_cache(self, prompt_name: str, version: str) -> Optional[dict[str, Any]]:
+    def _get_from_cache(
+        self, prompt_name: str, version: str
+    ) -> Optional[dict[str, Any]]:
         """Get prompt from cache if available.
 
         Args:
@@ -147,7 +151,9 @@ class PromptLoader:
                 return cached
         return None
 
-    def _set_to_cache(self, prompt_name: str, version: str, data: dict[str, Any]) -> None:
+    def _set_to_cache(
+        self, prompt_name: str, version: str, data: dict[str, Any]
+    ) -> None:
         """Set prompt data to cache.
 
         Args:
@@ -247,7 +253,9 @@ class PromptLoader:
         yaml_files = prompt_dir.glob(f"*{YAML_FILE_EXTENSION}")
         versions = [f.stem for f in yaml_files]
 
-        logger.debug(f"Found {len(versions)} versions for prompt '{prompt_name}': {versions}")
+        logger.debug(
+            f"Found {len(versions)} versions for prompt '{prompt_name}': {versions}"
+        )
         return sorted(versions)
 
     def clear_cache(self) -> None:

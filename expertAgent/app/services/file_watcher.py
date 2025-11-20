@@ -77,7 +77,9 @@ class PromptFileHandler(FileSystemEventHandler):
         prompt_name = file_path.parent.name
         version = file_path.stem
 
-        logger.info(f"Detected {event_type}: {prompt_name}/{version}{YAML_FILE_EXTENSION}")
+        logger.info(
+            f"Detected {event_type}: {prompt_name}/{version}{YAML_FILE_EXTENSION}"
+        )
 
         # Invalidate cache for this specific version
         self._invalidate_cache(prompt_name, version)

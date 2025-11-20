@@ -108,7 +108,9 @@ class PromptCache:
             self._cache.pop(key, None)
 
         if keys_to_remove:
-            logger.info(f"Invalidated {len(keys_to_remove)} cache entries for prompt: {prompt_name}")
+            logger.info(
+                f"Invalidated {len(keys_to_remove)} cache entries for prompt: {prompt_name}"
+            )
         else:
             logger.debug(f"No cache entries found for prompt: {prompt_name}")
 

@@ -8,7 +8,6 @@ Tests cover:
 """
 
 import asyncio
-import time
 from pathlib import Path
 
 import pytest
@@ -29,9 +28,7 @@ class TestFileWatcher:
         prompt_dir.mkdir()
 
         default_file = prompt_dir / "default.yaml"
-        default_file.write_text(
-            yaml.dump({"value": "original"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"value": "original"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
         watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
@@ -45,9 +42,7 @@ class TestFileWatcher:
 
         # Modify file
         await asyncio.sleep(0.1)  # Ensure watcher is ready
-        default_file.write_text(
-            yaml.dump({"value": "modified"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"value": "modified"}), encoding="utf-8")
 
         # Wait for file system event to propagate
         await asyncio.sleep(0.5)
@@ -69,9 +64,7 @@ class TestFileWatcher:
         default_file = prompt_dir / "default.yaml"
         v2_file = prompt_dir / "v2.yaml"
 
-        default_file.write_text(
-            yaml.dump({"version": "default_v1"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"version": "default_v1"}), encoding="utf-8")
         v2_file.write_text(yaml.dump({"version": "v2_v1"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
@@ -85,9 +78,7 @@ class TestFileWatcher:
         await watcher.start()
         await asyncio.sleep(0.1)
 
-        default_file.write_text(
-            yaml.dump({"version": "default_v2"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"version": "default_v2"}), encoding="utf-8")
         v2_file.write_text(yaml.dump({"version": "v2_v2"}), encoding="utf-8")
 
         await asyncio.sleep(0.5)
@@ -121,9 +112,7 @@ class TestFileWatcher:
         prompt_dir.mkdir()
 
         default_file = prompt_dir / "default.yaml"
-        default_file.write_text(
-            yaml.dump({"content": "default"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"content": "default"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
         watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
@@ -156,9 +145,7 @@ class TestFileWatcherErrorHandling:
         prompt_dir.mkdir()
 
         default_file = prompt_dir / "default.yaml"
-        default_file.write_text(
-            yaml.dump({"content": "valid"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"content": "valid"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
         watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
@@ -240,9 +227,7 @@ class TestFileWatcherErrorHandling:
         prompt_dir.mkdir()
 
         default_file = prompt_dir / "default.yaml"
-        default_file.write_text(
-            yaml.dump({"content": "original"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"content": "original"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=False)
         watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
@@ -251,9 +236,7 @@ class TestFileWatcherErrorHandling:
         await asyncio.sleep(0.1)
 
         # Act: Modify file (should not crash even though cache is None)
-        default_file.write_text(
-            yaml.dump({"content": "modified"}), encoding="utf-8"
-        )
+        default_file.write_text(yaml.dump({"content": "modified"}), encoding="utf-8")
         await asyncio.sleep(0.5)
 
         # Assert: Watcher should still be running

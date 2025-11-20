@@ -9,9 +9,7 @@ Tests cover:
 - Error handling
 """
 
-import tempfile
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
@@ -229,9 +227,7 @@ class TestPromptLoaderMultipleVersions:
         (prompt_dir / "default.yaml").write_text(
             yaml.dump({"name": "default"}), encoding="utf-8"
         )
-        (prompt_dir / "v2.yaml").write_text(
-            yaml.dump({"name": "v2"}), encoding="utf-8"
-        )
+        (prompt_dir / "v2.yaml").write_text(yaml.dump({"name": "v2"}), encoding="utf-8")
         (prompt_dir / "experimental.yaml").write_text(
             yaml.dump({"name": "experimental"}), encoding="utf-8"
         )
@@ -264,9 +260,7 @@ class TestPromptLoaderPerformance:
             "user_prompt_template": "B" * 1000,
             "metadata": {"key": "value"},
         }
-        (prompt_dir / "default.yaml").write_text(
-            yaml.dump(data), encoding="utf-8"
-        )
+        (prompt_dir / "default.yaml").write_text(yaml.dump(data), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path)
 

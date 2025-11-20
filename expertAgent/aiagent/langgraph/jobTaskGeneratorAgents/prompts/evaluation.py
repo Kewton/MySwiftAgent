@@ -306,9 +306,15 @@ def _build_evaluation_system_prompt() -> str:
 
     # If YAML prompt is loaded, replace placeholders
     if base_prompt:
-        base_prompt = base_prompt.replace("{graphai_capabilities}", graphai_capabilities)
-        base_prompt = base_prompt.replace("{expert_agent_capabilities}", expert_agent_capabilities)
-        base_prompt = base_prompt.replace("{infeasible_tasks_table}", infeasible_tasks_table)
+        base_prompt = base_prompt.replace(
+            "{graphai_capabilities}", graphai_capabilities
+        )
+        base_prompt = base_prompt.replace(
+            "{expert_agent_capabilities}", expert_agent_capabilities
+        )
+        base_prompt = base_prompt.replace(
+            "{infeasible_tasks_table}", infeasible_tasks_table
+        )
         return base_prompt
 
     # Fallback to original hardcoded prompt

@@ -124,7 +124,9 @@ def _build_task_breakdown_system_prompt() -> str:
     # If YAML prompt is loaded, replace placeholder with capabilities
     if base_prompt:
         # Replace {expert_agent_capabilities} placeholder with actual capabilities
-        base_prompt = base_prompt.replace("{expert_agent_capabilities}", expert_agent_capabilities)
+        base_prompt = base_prompt.replace(
+            "{expert_agent_capabilities}", expert_agent_capabilities
+        )
         return base_prompt
 
     # If no YAML prompt loaded, use fallback

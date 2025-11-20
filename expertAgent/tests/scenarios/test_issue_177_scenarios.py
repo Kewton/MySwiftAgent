@@ -47,7 +47,9 @@ class TestScenario1_CorporateIRAnalysis:
         )
 
         # Verify job creation
-        assert final_state.get("job_master_id") is not None, "JobMaster should be created"
+        assert final_state.get("job_master_id") is not None, (
+            "JobMaster should be created"
+        )
         assert final_state.get("task_breakdown") is not None, "Tasks should be created"
 
         # Verify task breakdown structure
@@ -98,11 +100,15 @@ class TestScenario1_CorporateIRAnalysis:
 
         # Verify workflow generation
         assert final_state.get("yaml_content") is not None, "YAML should be generated"
-        assert final_state.get("workflow_name") is not None, "Workflow name should exist"
+        assert final_state.get("workflow_name") is not None, (
+            "Workflow name should exist"
+        )
 
         # If validation passed, check status
         if final_state.get("is_valid"):
-            assert final_state["status"] == "success", "Status should be success when valid"
+            assert final_state["status"] == "success", (
+                "Status should be success when valid"
+            )
 
 
 class TestScenario2_WebsitePDFExtraction:

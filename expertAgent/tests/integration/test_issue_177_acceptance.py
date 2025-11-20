@@ -11,7 +11,6 @@ Tests cover:
 """
 
 import asyncio
-import tempfile
 import time
 from pathlib import Path
 
@@ -19,7 +18,6 @@ import pytest
 import yaml
 
 from app.services.file_watcher import FileWatcher
-from app.services.prompt_cache import PromptCache
 from app.services.prompt_loader import PromptLoader
 
 
@@ -52,8 +50,10 @@ class TestIssue177DirectoryStructure:
 
         # Then: Each subdirectory should be a valid prompt name directory
         for subdir in subdirs:
-            assert subdir.name.replace("_", "").isalnum() or subdir.name.replace("-", "").isalnum(), \
-                f"Invalid prompt name: {subdir.name}"
+            assert (
+                subdir.name.replace("_", "").isalnum()
+                or subdir.name.replace("-", "").isalnum()
+            ), f"Invalid prompt name: {subdir.name}"
 
 
 class TestIssue177MultipleYAMLFiles:
@@ -65,9 +65,13 @@ class TestIssue177MultipleYAMLFiles:
         prompt_dir = tmp_path / "test_prompt"
         prompt_dir.mkdir()
 
-        (prompt_dir / "default.yaml").write_text(yaml.dump({"name": "default"}), encoding="utf-8")
+        (prompt_dir / "default.yaml").write_text(
+            yaml.dump({"name": "default"}), encoding="utf-8"
+        )
         (prompt_dir / "v2.yaml").write_text(yaml.dump({"name": "v2"}), encoding="utf-8")
-        (prompt_dir / "experimental.yaml").write_text(yaml.dump({"name": "experimental"}), encoding="utf-8")
+        (prompt_dir / "experimental.yaml").write_text(
+            yaml.dump({"name": "experimental"}), encoding="utf-8"
+        )
 
         loader = PromptLoader(base_dir=tmp_path)
 
@@ -88,8 +92,7 @@ class TestIssue177YAMLLoading:
         prompt_dir.mkdir()
 
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({"system_prompt": "Default system prompt"}),
-            encoding="utf-8"
+            yaml.dump({"system_prompt": "Default system prompt"}), encoding="utf-8"
         )
 
         loader = PromptLoader(base_dir=tmp_path)
@@ -107,12 +110,10 @@ class TestIssue177YAMLLoading:
         prompt_dir.mkdir()
 
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({"system_prompt": "Default"}),
-            encoding="utf-8"
+            yaml.dump({"system_prompt": "Default"}), encoding="utf-8"
         )
         (prompt_dir / "v2.yaml").write_text(
-            yaml.dump({"system_prompt": "Version 2"}),
-            encoding="utf-8"
+            yaml.dump({"system_prompt": "Version 2"}), encoding="utf-8"
         )
 
         loader = PromptLoader(base_dir=tmp_path)
@@ -134,16 +135,13 @@ class TestIssue177VersionSwitching:
         prompt_dir.mkdir()
 
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({"version": "1.0"}),
-            encoding="utf-8"
+            yaml.dump({"version": "1.0"}), encoding="utf-8"
         )
         (prompt_dir / "v2.yaml").write_text(
-            yaml.dump({"version": "2.0"}),
-            encoding="utf-8"
+            yaml.dump({"version": "2.0"}), encoding="utf-8"
         )
         (prompt_dir / "v3.yaml").write_text(
-            yaml.dump({"version": "3.0"}),
-            encoding="utf-8"
+            yaml.dump({"version": "3.0"}), encoding="utf-8"
         )
 
         loader = PromptLoader(base_dir=tmp_path)
@@ -170,10 +168,7 @@ class TestIssue177HotReload:
         prompt_dir.mkdir()
 
         yaml_file = prompt_dir / "default.yaml"
-        yaml_file.write_text(
-            yaml.dump({"content": "Original"}),
-            encoding="utf-8"
-        )
+        yaml_file.write_text(yaml.dump({"content": "Original"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
         watcher = FileWatcher(base_dir=tmp_path, prompt_loader=loader)
@@ -187,10 +182,7 @@ class TestIssue177HotReload:
 
         try:
             # When: Modify the YAML file
-            yaml_file.write_text(
-                yaml.dump({"content": "Modified"}),
-                encoding="utf-8"
-            )
+            yaml_file.write_text(yaml.dump({"content": "Modified"}), encoding="utf-8")
 
             # Wait for file watcher to detect change
             await asyncio.sleep(0.5)
@@ -218,8 +210,7 @@ class TestIssue177CacheOperations:
         prompt_dir.mkdir()
 
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({"content": "Test"}),
-            encoding="utf-8"
+            yaml.dump({"content": "Test"}), encoding="utf-8"
         )
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
@@ -243,10 +234,7 @@ class TestIssue177CacheOperations:
         prompt_dir.mkdir()
 
         yaml_file = prompt_dir / "default.yaml"
-        yaml_file.write_text(
-            yaml.dump({"content": "Original"}),
-            encoding="utf-8"
-        )
+        yaml_file.write_text(yaml.dump({"content": "Original"}), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
 
@@ -255,10 +243,7 @@ class TestIssue177CacheOperations:
 
         # When: Clear cache and modify file
         loader.clear_cache()
-        yaml_file.write_text(
-            yaml.dump({"content": "Modified"}),
-            encoding="utf-8"
-        )
+        yaml_file.write_text(yaml.dump({"content": "Modified"}), encoding="utf-8")
 
         # Then: New content should be loaded
         result2 = loader.load_prompt("test_prompt")
@@ -279,20 +264,16 @@ class TestIssue177PerformanceRequirements:
             "system_prompt": "A" * 1000,  # 1KB system prompt
             "user_prompt_template": "B" * 1000,  # 1KB user prompt
             "examples": [
-                {"input": f"Example {i}", "output": f"Result {i}"}
-                for i in range(10)
+                {"input": f"Example {i}", "output": f"Result {i}"} for i in range(10)
             ],
             "metadata": {
                 "version": "1.0",
                 "author": "test",
-                "description": "Test prompt for performance"
-            }
+                "description": "Test prompt for performance",
+            },
         }
 
-        (prompt_dir / "default.yaml").write_text(
-            yaml.dump(data),
-            encoding="utf-8"
-        )
+        (prompt_dir / "default.yaml").write_text(yaml.dump(data), encoding="utf-8")
 
         loader = PromptLoader(base_dir=tmp_path, enable_cache=True)
 
