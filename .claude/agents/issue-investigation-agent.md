@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "不具合の現状把握・原因調査を実施"
 type: "subagent"
 ---
