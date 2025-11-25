@@ -3,11 +3,38 @@
 
 	export let data: PageData;
 
+	type FeedbackKey =
+		| 'requirement_clarity'
+		| 'hypothesis_accuracy'
+		| 'response_naturalness'
+		| 'overall_satisfaction';
+
+	const feedbackKeys: FeedbackKey[] = [
+		'requirement_clarity',
+		'hypothesis_accuracy',
+		'response_naturalness',
+		'overall_satisfaction'
+	];
+
+	const labels: Record<FeedbackKey, string> = {
+		requirement_clarity: '要件明確化の分かりやすさ',
+		hypothesis_accuracy: '仮説の精度',
+		response_naturalness: '応答の自然さ',
+		overall_satisfaction: '総合満足度'
+	};
+
+	const shortLabels: Record<FeedbackKey, string> = {
+		requirement_clarity: '要件明確化',
+		hypothesis_accuracy: '仮説精度',
+		response_naturalness: '応答自然さ',
+		overall_satisfaction: '総合満足度'
+	};
+
 	let activeTab = 'candidates';
 	let selectedCandidate: string | null = null;
 	let feedbackSubmitted = false;
 	let selectedPromptVersion = 'v1';
-	let feedbackScores = {
+	let feedbackScores: Record<FeedbackKey, number> = {
 		requirement_clarity: 0,
 		hypothesis_accuracy: 0,
 		response_naturalness: 0,
@@ -166,17 +193,11 @@
 				{#if selectedCandidate}
 					<form on:submit|preventDefault={submitFeedback} class="advanced-feedback">
 						<div class="feedback-grid">
-							{#each Object.entries(feedbackScores) as [key, value]}
-								{@const labels = {
-									requirement_clarity: '要件明確化の分かりやすさ',
-									hypothesis_accuracy: '仮説の精度',
-									response_naturalness: '応答の自然さ',
-									overall_satisfaction: '総合満足度'
-								}}
+							{#each feedbackKeys as key (key)}
 								<div class="feedback-card-advanced">
 									<div class="feedback-header">
 										<h4>{labels[key]}</h4>
-										<div class="score-big">{value || '—'}</div>
+										<div class="score-big">{feedbackScores[key] || '—'}</div>
 									</div>
 									<input
 										type="range"
@@ -210,18 +231,12 @@
 			<section class="section">
 				<div class="metrics-advanced">
 					<div class="metrics-row">
-						{#each Object.entries(data.metrics.averageScores) as [key, value]}
-							{@const labels = {
-								requirement_clarity: '要件明確化',
-								hypothesis_accuracy: '仮説精度',
-								response_naturalness: '応答自然さ',
-								overall_satisfaction: '総合満足度'
-							}}
+						{#each feedbackKeys as key (key)}
 							<div class="metric-advanced">
 								<div class="metric-icon">📈</div>
 								<div class="metric-data">
-									<div class="metric-name">{labels[key]}</div>
-									<div class="metric-number">{value.toFixed(2)}</div>
+									<div class="metric-name">{shortLabels[key]}</div>
+									<div class="metric-number">{data.metrics.averageScores[key].toFixed(2)}</div>
 								</div>
 							</div>
 						{/each}

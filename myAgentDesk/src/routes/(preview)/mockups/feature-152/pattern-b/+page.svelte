@@ -3,9 +3,29 @@
 
 	export let data: PageData;
 
+	type FeedbackKey =
+		| 'requirement_clarity'
+		| 'hypothesis_accuracy'
+		| 'response_naturalness'
+		| 'overall_satisfaction';
+
+	const feedbackKeys: FeedbackKey[] = [
+		'requirement_clarity',
+		'hypothesis_accuracy',
+		'response_naturalness',
+		'overall_satisfaction'
+	];
+
+	const labels: Record<FeedbackKey, string> = {
+		requirement_clarity: '要件明確化の分かりやすさ',
+		hypothesis_accuracy: '仮説の精度',
+		response_naturalness: '応答の自然さ',
+		overall_satisfaction: '総合満足度'
+	};
+
 	let selectedCandidate: string | null = null;
 	let feedbackSubmitted = false;
-	let feedbackScores = {
+	let feedbackScores: Record<FeedbackKey, number> = {
 		requirement_clarity: 0,
 		hypothesis_accuracy: 0,
 		response_naturalness: 0,
@@ -125,16 +145,10 @@
 		{#if selectedCandidate}
 			<form on:submit|preventDefault={submitFeedback} class="feedback-form">
 				<div class="score-cards">
-					{#each Object.entries(feedbackScores) as [key, value]}
-						{@const labels = {
-							requirement_clarity: '要件明確化の分かりやすさ',
-							hypothesis_accuracy: '仮説の精度',
-							response_naturalness: '応答の自然さ',
-							overall_satisfaction: '総合満足度'
-						}}
+					{#each feedbackKeys as key (key)}
 						<div class="score-card">
 							<label for={key}>{labels[key]}</label>
-							<div class="score-display">{value || '未評価'}</div>
+							<div class="score-display">{feedbackScores[key] || '未評価'}</div>
 							<input
 								id={key}
 								type="range"

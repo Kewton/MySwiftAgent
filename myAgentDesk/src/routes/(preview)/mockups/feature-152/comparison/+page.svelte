@@ -3,16 +3,32 @@
 
 	export let data: PageData;
 
-	let selectedPatterns = new Set(['pattern-a', 'pattern-b']);
+	type PatternId = 'pattern-a' | 'pattern-b' | 'pattern-c' | 'pattern-d';
+
+	let selectedPatterns = new Set<PatternId>(['pattern-a', 'pattern-b']);
 
 	function togglePattern(patternId: string) {
-		if (selectedPatterns.has(patternId)) {
-			selectedPatterns.delete(patternId);
+		const id = patternId as PatternId;
+		if (selectedPatterns.has(id)) {
+			selectedPatterns.delete(id);
 		} else {
-			selectedPatterns.add(patternId);
+			selectedPatterns.add(id);
 		}
 		selectedPatterns = selectedPatterns;
 	}
+
+	function isPatternSelected(id: string): boolean {
+		return selectedPatterns.has(id as PatternId);
+	}
+
+	function getFeatureSupport(
+		feature: (typeof data.featureComparison)[number],
+		patternId: string
+	): boolean {
+		return feature.support[patternId as PatternId] ?? false;
+	}
+
+	$: filteredPatterns = data.patterns.filter((p) => isPatternSelected(p.id));
 </script>
 
 <div class="comparison-view">
@@ -29,7 +45,7 @@
 				<label class="selector-item">
 					<input
 						type="checkbox"
-						checked={selectedPatterns.has(pattern.id)}
+						checked={isPatternSelected(pattern.id)}
 						on:change={() => togglePattern(pattern.id)}
 					/>
 					<div class="selector-content">
@@ -52,7 +68,7 @@
 				<thead>
 					<tr>
 						<th class="feature-column">機能</th>
-						{#each data.patterns.filter((p) => selectedPatterns.has(p.id)) as pattern}
+						{#each filteredPatterns as pattern}
 							<th class="pattern-column">{pattern.name}</th>
 						{/each}
 					</tr>
@@ -61,9 +77,9 @@
 					{#each data.featureComparison as feature}
 						<tr>
 							<td class="feature-name">{feature.name}</td>
-							{#each data.patterns.filter((p) => selectedPatterns.has(p.id)) as pattern}
+							{#each filteredPatterns as pattern}
 								<td class="feature-status">
-									{#if feature.support[pattern.id]}
+									{#if getFeatureSupport(feature, pattern.id)}
 										<span class="status-supported">✓</span>
 									{:else}
 										<span class="status-unsupported">—</span>
@@ -81,7 +97,7 @@
 	<section class="score-comparison">
 		<h3>評価スコア</h3>
 		<div class="scores-grid">
-			{#each data.patterns.filter((p) => selectedPatterns.has(p.id)) as pattern}
+			{#each filteredPatterns as pattern}
 				<div class="score-card">
 					<div class="score-card-header">
 						<div class="score-icon">{pattern.icon}</div>

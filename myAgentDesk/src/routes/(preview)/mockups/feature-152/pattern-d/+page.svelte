@@ -3,11 +3,31 @@
 
 	export let data: PageData;
 
+	type FeedbackKey =
+		| 'requirement_clarity'
+		| 'hypothesis_accuracy'
+		| 'response_naturalness'
+		| 'overall_satisfaction';
+
+	const feedbackKeys: FeedbackKey[] = [
+		'requirement_clarity',
+		'hypothesis_accuracy',
+		'response_naturalness',
+		'overall_satisfaction'
+	];
+
+	const labels: Record<FeedbackKey, string> = {
+		requirement_clarity: '要件明確化',
+		hypothesis_accuracy: '仮説精度',
+		response_naturalness: '応答自然さ',
+		overall_satisfaction: '総合満足度'
+	};
+
 	let selectedCandidate: string | null = null;
 	let feedbackSubmitted = false;
 	let activeView = 'selection';
 	let aiRecommendation = 'A';
-	let feedbackScores = {
+	let feedbackScores: Record<FeedbackKey, number> = {
 		requirement_clarity: 0,
 		hypothesis_accuracy: 0,
 		response_naturalness: 0,
@@ -172,17 +192,11 @@
 
 					<form on:submit|preventDefault={submitFeedback} class="futuristic-form">
 						<div class="feedback-items">
-							{#each Object.entries(feedbackScores) as [key, value]}
-								{@const labels = {
-									requirement_clarity: '要件明確化',
-									hypothesis_accuracy: '仮説精度',
-									response_naturalness: '応答自然さ',
-									overall_satisfaction: '総合満足度'
-								}}
+							{#each feedbackKeys as key (key)}
 								<div class="smart-score-item">
 									<div class="score-header">
 										<span class="score-label">{labels[key]}</span>
-										<span class="score-value-display">{value || '—'}/5</span>
+										<span class="score-value-display">{feedbackScores[key] || '—'}/5</span>
 									</div>
 									<input
 										type="range"
@@ -194,7 +208,7 @@
 									/>
 									<div class="slider-marks">
 										{#each [1, 2, 3, 4, 5] as mark}
-											<span class="mark" class:active={value >= mark}>{mark}</span>
+											<span class="mark" class:active={feedbackScores[key] >= mark}>{mark}</span>
 										{/each}
 									</div>
 								</div>
@@ -290,19 +304,18 @@
 						</div>
 
 						<div class="version-metrics">
-							{#each Object.entries(data.abTestResults.versionA.averageScores) as [key, value]}
-								{@const labels = {
-									requirement_clarity: '要件明確化',
-									hypothesis_accuracy: '仮説精度',
-									response_naturalness: '応答自然さ',
-									overall_satisfaction: '総合満足度'
-								}}
+							{#each feedbackKeys as key (key)}
 								<div class="metric-row">
 									<span class="metric-name">{labels[key]}</span>
 									<div class="metric-bar-container">
-										<div class="metric-bar" style="width: {value * 20}%"></div>
+										<div
+											class="metric-bar"
+											style="width: {data.abTestResults.versionA.averageScores[key] * 20}%"
+										></div>
 									</div>
-									<span class="metric-value">{value.toFixed(2)}</span>
+									<span class="metric-value"
+										>{data.abTestResults.versionA.averageScores[key].toFixed(2)}</span
+									>
 								</div>
 							{/each}
 						</div>
@@ -320,19 +333,18 @@
 						</div>
 
 						<div class="version-metrics">
-							{#each Object.entries(data.abTestResults.versionB.averageScores) as [key, value]}
-								{@const labels = {
-									requirement_clarity: '要件明確化',
-									hypothesis_accuracy: '仮説精度',
-									response_naturalness: '応答自然さ',
-									overall_satisfaction: '総合満足度'
-								}}
+							{#each feedbackKeys as key (key)}
 								<div class="metric-row">
 									<span class="metric-name">{labels[key]}</span>
 									<div class="metric-bar-container">
-										<div class="metric-bar version-b-bar" style="width: {value * 20}%"></div>
+										<div
+											class="metric-bar version-b-bar"
+											style="width: {data.abTestResults.versionB.averageScores[key] * 20}%"
+										></div>
 									</div>
-									<span class="metric-value">{value.toFixed(2)}</span>
+									<span class="metric-value"
+										>{data.abTestResults.versionB.averageScores[key].toFixed(2)}</span
+									>
 								</div>
 							{/each}
 						</div>
@@ -342,17 +354,20 @@
 				<div class="statistical-significance">
 					<h4>統計的有意性</h4>
 					<div class="significance-grid">
-						{#each Object.entries(data.abTestResults.statisticalSignificance) as [key, result]}
-							{@const labels = {
-								requirement_clarity: '要件明確化',
-								hypothesis_accuracy: '仮説精度',
-								response_naturalness: '応答自然さ',
-								overall_satisfaction: '総合満足度'
-							}}
-							<div class="significance-item" class:significant={result.significant}>
+						{#each feedbackKeys as key (key)}
+							<div
+								class="significance-item"
+								class:significant={data.abTestResults.statisticalSignificance[key].significant}
+							>
 								<span class="sig-label">{labels[key]}</span>
-								<span class="sig-pvalue">p = {result.pValue.toFixed(3)}</span>
-								<span class="sig-result">{result.significant ? '✓ 有意' : '— 有意でない'}</span>
+								<span class="sig-pvalue"
+									>p = {data.abTestResults.statisticalSignificance[key].pValue.toFixed(3)}</span
+								>
+								<span class="sig-result"
+									>{data.abTestResults.statisticalSignificance[key].significant
+										? '✓ 有意'
+										: '— 有意でない'}</span
+								>
 							</div>
 						{/each}
 					</div>
