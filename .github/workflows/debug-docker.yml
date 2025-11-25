@@ -35,7 +35,8 @@ jobs:
       - name: Test Docker image with debug
         run: |
           echo "🚀 Starting container..."
-          docker run --rm -d --name expertagent-test -p 8000:8000 expertagent:test
+          # Note: removed --rm to capture logs after container exits
+          docker run -d --name expertagent-test -p 8000:8000 expertagent:test
 
           echo "⏳ Waiting for container to start (checking every 2s for 30s)..."
           for i in {1..15}; do
