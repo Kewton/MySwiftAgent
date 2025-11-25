@@ -13,6 +13,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 
+from app.services.prompt_loader import PromptLoader
+
 
 def _load_yaml_config(filename: str) -> dict:
     """Load YAML configuration file from utils/config directory.
@@ -109,9 +111,28 @@ def _build_task_breakdown_system_prompt() -> str:
     Returns:
         Formatted task breakdown system prompt
     """
+    # Load prompt from YAML using PromptLoader
+    loader = PromptLoader.create_default()
+    prompt_data = loader.load_prompt("task_breakdown")
+
+    # Get base prompt from YAML
+    base_prompt = prompt_data.get("system_prompt", "")
+
+    # Get expert_agent_capabilities to replace placeholder
     expert_agent_capabilities = _build_expert_agent_capabilities()
 
-    return f"""あなたはワークフロー設計の専門家です。
+    # If YAML prompt is loaded, replace placeholder with capabilities
+    if base_prompt:
+        # Replace {expert_agent_capabilities} placeholder with actual capabilities
+        base_prompt = base_prompt.replace(
+            "{expert_agent_capabilities}", expert_agent_capabilities
+        )
+        return base_prompt
+
+    # If no YAML prompt loaded, use fallback
+    else:
+        # Fallback to original hardcoded prompt
+        return f"""あなたはワークフロー設計の専門家です。
 ユーザーの自然言語要求を、実行可能なタスクに分解します。
 
 以下の4原則に従ってタスク分解を行ってください：

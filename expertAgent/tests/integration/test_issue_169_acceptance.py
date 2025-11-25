@@ -64,7 +64,9 @@ class TestIssue169AcceptanceCriteria:
         )
 
         assert result is True, "Failed to save conversation"
-        assert await conversation_store_test.exists(conversation_id), "Conversation not found in Valkey"
+        assert await conversation_store_test.exists(conversation_id), (
+            "Conversation not found in Valkey"
+        )
 
     async def test_ac5_ttl_functionality(
         self,
@@ -135,7 +137,9 @@ class TestIssue169AcceptanceCriteria:
 
         assert conversation is not None, "Failed to retrieve conversation"
         assert conversation["metadata"]["trace_id"] == trace_id, "trace_id mismatch"
-        assert conversation["metadata"]["prompt_version"] == prompt_version, "prompt_version mismatch"
+        assert conversation["metadata"]["prompt_version"] == prompt_version, (
+            "prompt_version mismatch"
+        )
 
     def test_ac10_unit_test_coverage_90_percent(self):
         """AC10: Unit test coverage >= 90%."""
@@ -292,7 +296,9 @@ class TestIssue169Scenarios:
         )
         save_elapsed = (time.perf_counter() - start) * 1000
 
-        assert save_elapsed < 50, f"Conversation save took {save_elapsed:.2f}ms, expected <50ms"
+        assert save_elapsed < 50, (
+            f"Conversation save took {save_elapsed:.2f}ms, expected <50ms"
+        )
 
     async def test_scenario6_large_volume_processing(
         self,
@@ -351,7 +357,9 @@ class TestIssue169Scenarios:
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="Pending: dev-start.sh script not yet implemented (future iteration)")
+@pytest.mark.skip(
+    reason="Pending: dev-start.sh script not yet implemented (future iteration)"
+)
 class TestIssue169PendingScenarios:
     """Pending scenarios that require components not yet implemented."""
 

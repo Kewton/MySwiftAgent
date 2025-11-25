@@ -87,7 +87,9 @@ class Settings(BaseSettings):
         env_file = [".env", ".env.local"]  # .env.local takes precedence
         env_file_encoding = "utf-8"
         case_sensitive = False
-        extra = "ignore"  # Ignore extra fields from .env (e.g., Langfuse service config)
+        extra = (
+            "ignore"  # Ignore extra fields from .env (e.g., Langfuse service config)
+        )
 
 
 # インスタンス生成

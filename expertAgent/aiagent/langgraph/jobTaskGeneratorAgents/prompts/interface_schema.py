@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.services.prompt_loader import PromptLoader
+
 
 class InterfaceSchemaDefinition(BaseModel):
     """Interface schema for a single task."""
@@ -69,7 +71,14 @@ class InterfaceSchemaResponse(BaseModel):
     )
 
 
-INTERFACE_SCHEMA_SYSTEM_PROMPT = """あなたはAPI設計の専門家です。
+# Load prompt from YAML
+_loader = PromptLoader.create_default()
+_prompt_data = _loader.load_prompt("interface_schema")
+INTERFACE_SCHEMA_SYSTEM_PROMPT = _prompt_data.get("system_prompt", "")
+
+# Fallback to hardcoded prompt if YAML not found
+if not INTERFACE_SCHEMA_SYSTEM_PROMPT:
+    INTERFACE_SCHEMA_SYSTEM_PROMPT = """あなたはAPI設計の専門家です。
 各タスクのインターフェーススキーマ（入力・出力）をJSON Schema形式で定義します。
 
 ## JSON Schema の原則

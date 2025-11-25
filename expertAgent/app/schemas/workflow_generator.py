@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.prompt_config import PromptConfig
+
 
 class WorkflowGeneratorRequest(BaseModel):
     """Request schema for GraphAI Workflow Generator API.
@@ -11,6 +13,7 @@ class WorkflowGeneratorRequest(BaseModel):
     Attributes:
         job_master_id: JobMaster ID to generate workflows for all tasks (XOR with task_master_id)
         task_master_id: TaskMaster ID to generate workflow for single task (XOR with job_master_id)
+        prompt_configs: Optional list of prompt configurations for custom versions
     """
 
     job_master_id: int | str | None = Field(
@@ -22,6 +25,19 @@ class WorkflowGeneratorRequest(BaseModel):
         default=None,
         description="TaskMaster ID to generate workflow for single task (supports both int and ULID string)",
         examples=[456, "tm_01K8DXE601HMZWW0K5HR9FDYCQ"],
+    )
+    prompt_configs: list[PromptConfig] = Field(
+        default_factory=list,
+        description="Optional list of prompt configurations for custom versions",
+        examples=[
+            [
+                {
+                    "agent_type": "workflowGeneratorAgents",
+                    "prompt_name": "workflow_generation",
+                    "version": "v3.0",
+                }
+            ]
+        ],
     )
 
     @model_validator(mode="after")

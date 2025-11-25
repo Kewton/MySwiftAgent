@@ -1,0 +1,91 @@
+{
+  "issue_number": 177,
+  "iteration": 3,
+  "focus": "API integration and end-to-end scenario testing",
+  "acceptance_criteria": [
+    "リクエスト時にYAMLファイル名を指定可能（API拡張）",
+    "シナリオ1: 企業IR分析でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ2: WebサイトPDF抽出でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ3: Gmail検索ポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ4: キーワードポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ1: 企業IR分析のLLMワークフローが生成・実行可能",
+    "シナリオ2: WebサイトPDF抽出のLLMワークフローが生成・実行可能",
+    "シナリオ3: Gmail検索ポッドキャスト生成のLLMワークフローが生成・実行可能",
+    "シナリオ4: キーワードポッドキャスト生成のLLMワークフローが生成・実行可能"
+  ],
+  "implementation_tasks": [
+    "リクエスト時のYAMLファイル名指定機能（API拡張）",
+    "LangGraphエージェント統合",
+    "4シナリオでの動作確認（jobTaskGeneratorAgents）",
+    "4シナリオでの動作確認（workflowGeneratorAgents）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "3.1",
+      "description": "API拡張実装",
+      "estimated_hours": 3,
+      "deliverables": [
+        "expertAgent/app/api/v1/job_generator_endpoints.py",
+        "expertAgent/app/api/v1/workflow_generator_endpoints.py",
+        "expertAgent/app/schemas/prompt_config.py"
+      ],
+      "status": "pending"
+    },
+    {
+      "task_id": "3.2",
+      "description": "LangGraphエージェント統合",
+      "estimated_hours": 3,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/graph.py",
+        "expertAgent/aiagent/langgraph/workflowGeneratorAgents/graph.py"
+      ],
+      "status": "pending"
+    },
+    {
+      "task_id": "5.1",
+      "description": "シナリオテストスクリプト作成",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/scenarios/"],
+      "status": "pending"
+    },
+    {
+      "task_id": "5.2-5.3",
+      "description": "シナリオ検証実行",
+      "estimated_hours": 2,
+      "deliverables": ["シナリオ実行結果レポート"],
+      "status": "pending"
+    }
+  ],
+  "scenario_details": {
+    "scenario1": {
+      "name": "企業IR分析",
+      "description": "指定した企業とそのIR情報が掲載されているサイトから過去5年の売り上げとビジネスモデルの変化を分析してメール送信する"
+    },
+    "scenario2": {
+      "name": "WebサイトPDF抽出",
+      "description": "指定したWebサイトからすべてのPDFファイルを抽出し、各pdfファイルを指定したGoogle Driveのディレクトリにサブディレクトリを作成してアップロードしメールで通知する"
+    },
+    "scenario3": {
+      "name": "Gmail検索ポッドキャスト生成",
+      "description": "This workflow searches for a newsletter in Gmail using a keyword, summarizes it, converts it to an MP3 podcast"
+    },
+    "scenario4": {
+      "name": "キーワードポッドキャスト生成",
+      "description": "ユーザーがキーワード入力するとそれに関連するポッドキャストを生成してそのリンクをメール送信する"
+    }
+  },
+  "target_coverage": 90,
+  "previous_iterations_status": {
+    "iteration1": {
+      "coverage": 96.55,
+      "tests": 40,
+      "completed": ["PromptLoader", "PromptCache", "FileWatcher"]
+    },
+    "iteration2": {
+      "tests_added": 38,
+      "prompts_migrated": 6,
+      "completed": ["All YAML migrations"]
+    }
+  },
+  "final_iteration": true
+}

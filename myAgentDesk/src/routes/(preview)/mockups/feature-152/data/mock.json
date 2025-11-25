@@ -1,108 +1,108 @@
 {
-  "candidates": [
-    {
-      "id": "A",
-      "label": "シンプル型",
-      "description": "最小限の要件で実現するパターン",
-      "data_source": "CSVファイルからアップロード",
-      "process_description": "売上データを月別に集計し、基本的な統計を計算",
-      "output_format": "Excelレポート（月次集計表 + 簡単なグラフ）",
-      "schedule": "毎日深夜2時に実行",
-      "completeness": 0.8,
-      "recommended": true
-    },
-    {
-      "id": "B",
-      "label": "機能豊富型",
-      "description": "拡張機能を含む高度なパターン",
-      "data_source": "データベース（PostgreSQL）からリアルタイム取得",
-      "process_description": "売上データを月別・商品別・地域別に多次元集計し、トレンド分析・異常検知を実行",
-      "output_format": "インタラクティブダッシュボード（Webアプリ）+ PDF月次レポート",
-      "schedule": "リアルタイム更新（5分間隔）",
-      "completeness": 0.9,
-      "recommended": false
-    }
-  ],
-  "feedbackScores": [
-    { "name": "requirement_clarity", "label": "要件明確化の分かりやすさ", "value": 4 },
-    { "name": "hypothesis_accuracy", "label": "仮説の精度", "value": 5 },
-    { "name": "response_naturalness", "label": "応答の自然さ", "value": 4 },
-    { "name": "overall_satisfaction", "label": "総合満足度", "value": 4 }
-  ],
-  "metrics": {
-    "averageScores": {
-      "requirement_clarity": 4.2,
-      "hypothesis_accuracy": 4.5,
-      "response_naturalness": 3.8,
-      "overall_satisfaction": 4.1
-    },
-    "averageTurns": 3.5,
-    "completionRate": 0.87,
-    "averageCompletionTimeSeconds": 120,
-    "modelUsage": {
-      "gemini-2.5-flash": 0.85,
-      "gemini-1.5-pro": 0.15
-    },
-    "errorRate": 0.02
-  },
-  "diagnosticInfo": {
-    "conversationId": "conv_001",
-    "traceId": "trace_abc123",
-    "systemPrompt": "あなたは要件明確化のエキスパートです。ユーザーの曖昧な要求を4つの観点（データソース、処理内容、出力形式、スケジュール）で明確化してください。",
-    "turns": [
-      {
-        "turnNumber": 1,
-        "userMessage": "売上データを分析したい",
-        "llmResponse": "かしこまりました。売上データ分析のジョブを作成しますね。\n\n【データソース仮説】CSVファイルからアップロード\n【処理内容仮説】売上データを月別に集計\n【出力形式仮説】Excelレポート\n【スケジュール仮説】毎日実行\n\nこちらの解釈で合っていますか？",
-        "extractedState": {
-          "data_source": "CSVファイルからアップロード",
-          "process_description": "売上データを月別に集計",
-          "output_format": "Excelレポート",
-          "schedule": "毎日実行",
-          "completeness": 0.75
-        },
-        "model": "gemini-2.5-flash",
-        "inputTokens": 250,
-        "outputTokens": 180,
-        "executionTimeMs": 1200
-      }
-    ],
-    "langfuseTraceUrl": "https://langfuse.example.com/traces/trace_abc123"
-  },
-  "promptVersions": [
-    { "version": "v1", "label": "バージョン1（現行）", "active": true },
-    { "version": "v2", "label": "バージョン2（実験中）", "active": false }
-  ],
-  "abTestResults": {
-    "versionA": {
-      "version": "v1",
-      "sampleSize": 120,
-      "averageScores": {
-        "requirement_clarity": 4.2,
-        "hypothesis_accuracy": 4.5,
-        "response_naturalness": 3.8,
-        "overall_satisfaction": 4.1
-      },
-      "averageTurns": 3.5,
-      "completionRate": 0.87
-    },
-    "versionB": {
-      "version": "v2",
-      "sampleSize": 115,
-      "averageScores": {
-        "requirement_clarity": 4.4,
-        "hypothesis_accuracy": 4.6,
-        "response_naturalness": 4.0,
-        "overall_satisfaction": 4.3
-      },
-      "averageTurns": 3.2,
-      "completionRate": 0.91
-    },
-    "statisticalSignificance": {
-      "requirement_clarity": { "pValue": 0.03, "significant": true },
-      "hypothesis_accuracy": { "pValue": 0.12, "significant": false },
-      "response_naturalness": { "pValue": 0.01, "significant": true },
-      "overall_satisfaction": { "pValue": 0.02, "significant": true }
-    }
-  }
+	"candidates": [
+		{
+			"id": "A",
+			"label": "シンプル型",
+			"description": "最小限の要件で実現するパターン",
+			"data_source": "CSVファイルからアップロード",
+			"process_description": "売上データを月別に集計し、基本的な統計を計算",
+			"output_format": "Excelレポート（月次集計表 + 簡単なグラフ）",
+			"schedule": "毎日深夜2時に実行",
+			"completeness": 0.8,
+			"recommended": true
+		},
+		{
+			"id": "B",
+			"label": "機能豊富型",
+			"description": "拡張機能を含む高度なパターン",
+			"data_source": "データベース（PostgreSQL）からリアルタイム取得",
+			"process_description": "売上データを月別・商品別・地域別に多次元集計し、トレンド分析・異常検知を実行",
+			"output_format": "インタラクティブダッシュボード（Webアプリ）+ PDF月次レポート",
+			"schedule": "リアルタイム更新（5分間隔）",
+			"completeness": 0.9,
+			"recommended": false
+		}
+	],
+	"feedbackScores": [
+		{ "name": "requirement_clarity", "label": "要件明確化の分かりやすさ", "value": 4 },
+		{ "name": "hypothesis_accuracy", "label": "仮説の精度", "value": 5 },
+		{ "name": "response_naturalness", "label": "応答の自然さ", "value": 4 },
+		{ "name": "overall_satisfaction", "label": "総合満足度", "value": 4 }
+	],
+	"metrics": {
+		"averageScores": {
+			"requirement_clarity": 4.2,
+			"hypothesis_accuracy": 4.5,
+			"response_naturalness": 3.8,
+			"overall_satisfaction": 4.1
+		},
+		"averageTurns": 3.5,
+		"completionRate": 0.87,
+		"averageCompletionTimeSeconds": 120,
+		"modelUsage": {
+			"gemini-2.5-flash": 0.85,
+			"gemini-1.5-pro": 0.15
+		},
+		"errorRate": 0.02
+	},
+	"diagnosticInfo": {
+		"conversationId": "conv_001",
+		"traceId": "trace_abc123",
+		"systemPrompt": "あなたは要件明確化のエキスパートです。ユーザーの曖昧な要求を4つの観点（データソース、処理内容、出力形式、スケジュール）で明確化してください。",
+		"turns": [
+			{
+				"turnNumber": 1,
+				"userMessage": "売上データを分析したい",
+				"llmResponse": "かしこまりました。売上データ分析のジョブを作成しますね。\n\n【データソース仮説】CSVファイルからアップロード\n【処理内容仮説】売上データを月別に集計\n【出力形式仮説】Excelレポート\n【スケジュール仮説】毎日実行\n\nこちらの解釈で合っていますか？",
+				"extractedState": {
+					"data_source": "CSVファイルからアップロード",
+					"process_description": "売上データを月別に集計",
+					"output_format": "Excelレポート",
+					"schedule": "毎日実行",
+					"completeness": 0.75
+				},
+				"model": "gemini-2.5-flash",
+				"inputTokens": 250,
+				"outputTokens": 180,
+				"executionTimeMs": 1200
+			}
+		],
+		"langfuseTraceUrl": "https://langfuse.example.com/traces/trace_abc123"
+	},
+	"promptVersions": [
+		{ "version": "v1", "label": "バージョン1（現行）", "active": true },
+		{ "version": "v2", "label": "バージョン2（実験中）", "active": false }
+	],
+	"abTestResults": {
+		"versionA": {
+			"version": "v1",
+			"sampleSize": 120,
+			"averageScores": {
+				"requirement_clarity": 4.2,
+				"hypothesis_accuracy": 4.5,
+				"response_naturalness": 3.8,
+				"overall_satisfaction": 4.1
+			},
+			"averageTurns": 3.5,
+			"completionRate": 0.87
+		},
+		"versionB": {
+			"version": "v2",
+			"sampleSize": 115,
+			"averageScores": {
+				"requirement_clarity": 4.4,
+				"hypothesis_accuracy": 4.6,
+				"response_naturalness": 4.0,
+				"overall_satisfaction": 4.3
+			},
+			"averageTurns": 3.2,
+			"completionRate": 0.91
+		},
+		"statisticalSignificance": {
+			"requirement_clarity": { "pValue": 0.03, "significant": true },
+			"hypothesis_accuracy": { "pValue": 0.12, "significant": false },
+			"response_naturalness": { "pValue": 0.01, "significant": true },
+			"overall_satisfaction": { "pValue": 0.02, "significant": true }
+		}
+	}
 }

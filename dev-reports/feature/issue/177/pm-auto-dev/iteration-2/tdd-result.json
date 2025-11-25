@@ -1,0 +1,66 @@
+{
+  "status": "success",
+  "coverage": 100.0,
+  "unit_tests": {
+    "total": 68,
+    "passed": 68,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_changed": [
+    "expertAgent/prompts/requirement_clarification/default.yaml",
+    "expertAgent/prompts/task_breakdown/default.yaml",
+    "expertAgent/prompts/interface_schema/default.yaml",
+    "expertAgent/prompts/evaluation/default.yaml",
+    "expertAgent/prompts/validation_fix/default.yaml",
+    "expertAgent/prompts/workflow_generation/default.yaml",
+    "expertAgent/tests/unit/test_issue_177_prompt_migration.py"
+  ],
+  "commits": [
+    "ddbebd0: feat(issue/177): migrate all agent prompts to YAML format"
+  ],
+  "message": "TDD実装完了。すべての jobTaskGeneratorAgents (5プロンプト) と workflowGeneratorAgents (1プロンプト) のYAML移行が完了しました。",
+  "iteration": 2,
+  "acceptance_criteria_met": [
+    "jobTaskGeneratorAgents の全プロンプトがYAML化される",
+    "workflowGeneratorAgents の全プロンプトがYAML化される"
+  ],
+  "next_steps": [
+    "リクエスト時のYAMLファイル名指定機能（API拡張）の実装",
+    "LangGraphエージェント統合",
+    "4シナリオでの動作確認（jobTaskGeneratorAgents + ジョブマスタ登録確認）",
+    "4シナリオでの動作確認（workflowGeneratorAgents + ワークフロー生成・実行確認）"
+  ],
+  "detailed_results": {
+    "prompts_migrated": {
+      "jobTaskGeneratorAgents": [
+        "requirement_clarification",
+        "task_breakdown",
+        "interface_schema",
+        "evaluation",
+        "validation_fix"
+      ],
+      "workflowGeneratorAgents": [
+        "workflow_generation"
+      ]
+    },
+    "yaml_features": {
+      "system_prompt": "Full prompt content with Japanese/English support",
+      "metadata": "Description, version, agent_type, purpose fields",
+      "dynamic_content_support": "task_breakdown and evaluation support dynamic capability loading",
+      "versioning": "Compatible with PromptLoader versioning system"
+    },
+    "test_coverage": {
+      "existence_tests": 6,
+      "validity_tests": 6,
+      "system_prompt_tests": 6,
+      "loadability_tests": 6,
+      "metadata_tests": 6,
+      "content_quality_tests": 6,
+      "versioning_tests": 2
+    }
+  }
+}

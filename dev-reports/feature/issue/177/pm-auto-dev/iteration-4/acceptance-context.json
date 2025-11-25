@@ -1,0 +1,43 @@
+{
+  "issue_number": 177,
+  "iteration": 4,
+  "feature_summary": "Issue #177 残タスク実装（LangGraph統合、ドキュメント作成）",
+  "tasks_completed": [
+    "Task 3.2: LangGraphエージェント統合",
+    "Task 6.1: 技術ドキュメント作成",
+    "Task 6.2: 運用ドキュメント作成"
+  ],
+  "acceptance_criteria": [
+    "LangGraphエージェントがPromptLoaderを使用してYAMLプロンプトを読み込む",
+    "プレースホルダー置換が正しく動作する",
+    "フォールバック機能が動作する（YAML未定義時）",
+    "技術ドキュメントがexpertAgent/docs/prompt-management.mdに作成される",
+    "運用ドキュメントがdocs/ops/prompt-operations.mdに作成される",
+    "両ドキュメントが包括的で実用的である"
+  ],
+  "test_scenarios": [
+    "シナリオ1: LangGraphエージェントがYAMLプロンプトを正常に読み込む",
+    "シナリオ2: プレースホルダー（{expert_agent_capabilities}等）が正しく置換される",
+    "シナリオ3: YAML未定義時にハードコードプロンプトにフォールバックする",
+    "シナリオ4: 技術ドキュメントが開発者向けの適切な内容を含む",
+    "シナリオ5: 運用ドキュメントが運用チーム向けの実践的な内容を含む"
+  ],
+  "previous_iterations": {
+    "iteration_1": {
+      "focus": "基盤実装（PromptLoader, Cache, FileWatcher）",
+      "tests": 40,
+      "coverage": "96.55%"
+    },
+    "iteration_2": {
+      "focus": "YAML移行（全6プロンプト）",
+      "tests": 38,
+      "prompts_migrated": 6
+    },
+    "iteration_3": {
+      "focus": "API統合、シナリオテスト",
+      "tests": 18,
+      "api_extension": "completed"
+    }
+  },
+  "final_iteration": false
+}

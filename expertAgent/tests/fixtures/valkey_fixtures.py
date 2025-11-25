@@ -3,11 +3,12 @@
 Tests for Issue #169: Valkey persistence infrastructure implementation.
 """
 
-import pytest
 import asyncio
 from typing import AsyncGenerator
 
-from app.services.valkey_client import ValkeyClient
+import pytest
+
+from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
 from app.stores.conversation_store_valkey import ConversationStoreValkey
 
 
@@ -24,15 +25,19 @@ async def valkey_test_client() -> AsyncGenerator[ValkeyClient, None]:
     """Provide a ValkeyClient instance for integration tests.
 
     Uses a separate test database (db=15) to avoid conflicts with production data.
+    Skips tests if Valkey is not available (e.g., in CI without Valkey service).
     """
     client = ValkeyClient(host="localhost", port=6379, db=15)
-    await client.connect()
+    try:
+        await client.connect()
+    except ValkeyConnectionError as e:
+        pytest.skip(f"Valkey not available: {e}")
 
     # Clean up test data before tests
     try:
         # Clear all keys in test database
         await client._client.flushdb()
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
     yield client
@@ -40,7 +45,7 @@ async def valkey_test_client() -> AsyncGenerator[ValkeyClient, None]:
     # Clean up test data after tests
     try:
         await client._client.flushdb()
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
     await client.disconnect()
