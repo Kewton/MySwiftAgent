@@ -259,6 +259,6 @@ class TestFileWatcherErrorHandling:
             # If it succeeds (watchdog creates the directory), stop it
             if watcher.is_running():
                 await watcher.stop()
-        except Exception:
+        except Exception:  # noqa: S110
             # Expected if directory doesn't exist and can't be created
             pass
