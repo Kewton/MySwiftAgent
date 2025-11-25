@@ -1,0 +1,90 @@
+name: Debug Docker Build (expertAgent)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/issue/177'
+    paths:
+      - '.github/workflows/debug-docker.yml'
+
+jobs:
+  debug-docker:
+    name: Debug expertAgent Docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Build Docker image
+        working-directory: ./expertAgent
+        run: |
+          echo "🔨 Building Docker image..."
+          docker build -t expertagent:test .
+
+      - name: Test Docker image with debug
+        run: |
+          echo "🚀 Starting container..."
+          docker run --rm -d --name expertagent-test -p 8000:8000 expertagent:test
+
+          echo "⏳ Waiting for container to start (checking every 2s for 30s)..."
+          for i in {1..15}; do
+            echo "--- Attempt $i/15 ---"
+
+            # Check if container is still running
+            if ! docker ps | grep -q expertagent-test; then
+              echo "❌ Container stopped unexpectedly!"
+              echo "📋 Container logs:"
+              docker logs expertagent-test 2>&1 || true
+              exit 1
+            fi
+
+            # Try health check
+            if curl -sf http://localhost:8000/health; then
+              echo ""
+              echo "✅ Health check passed!"
+              break
+            fi
+
+            echo "Server not ready yet, waiting..."
+            sleep 2
+          done
+
+          # Final health check
+          echo ""
+          echo "🔍 Final health check..."
+          if curl -sf http://localhost:8000/health; then
+            echo "✅ Server is healthy!"
+
+            echo ""
+            echo "🔍 Testing API endpoints..."
+            curl -f http://localhost:8000/ || echo "Root endpoint failed"
+            curl -f http://localhost:8000/aiagent-api/v1/ || echo "API v1 endpoint failed"
+
+            echo ""
+            echo "📋 Container logs (success):"
+            docker logs expertagent-test 2>&1 | tail -50
+          else
+            echo "❌ Health check failed after 30 seconds"
+            echo ""
+            echo "📋 Container logs (failure):"
+            docker logs expertagent-test 2>&1
+            echo ""
+            echo "🔍 Container status:"
+            docker ps -a | grep expertagent || true
+            exit 1
+          fi
+
+          echo ""
+          echo "🛑 Stopping container..."
+          docker stop expertagent-test
