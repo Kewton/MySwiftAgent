@@ -11,7 +11,12 @@ Scenario 4: キーワードポッドキャスト生成
 Each scenario tests:
 - jobTaskGeneratorAgents creates JobMaster/TaskMaster/InterfaceMaster
 - workflowGeneratorAgents generates and executes LLM workflow
+
+Note: These tests require external API keys (ANTHROPIC_API_KEY) and are skipped
+in CI environments where these are not available.
 """
+
+import os
 
 import pytest
 
@@ -24,10 +29,19 @@ from aiagent.langgraph.workflowGeneratorAgents import generate_workflow
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration
 
+# Skip all tests if running in CI without API keys
+SKIP_REASON = "Skipped: requires ANTHROPIC_API_KEY for LLM invocation"
+requires_api_key = pytest.mark.skipif(
+    os.environ.get("CI") == "true"
+    and not os.environ.get("ANTHROPIC_API_KEY_REAL"),
+    reason=SKIP_REASON,
+)
+
 
 class TestScenario1_CorporateIRAnalysis:
     """Test Scenario 1: 企業IR分析 (Corporate IR Analysis)."""
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_job_task_generation(self):
         """Test JobMaster/TaskMaster creation for corporate IR analysis scenario."""
@@ -65,6 +79,7 @@ class TestScenario1_CorporateIRAnalysis:
         interface_definitions = final_state.get("interface_definitions", {})
         assert len(interface_definitions) > 0, "Interface definitions should be created"
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_workflow_generation(self):
         """Test workflow generation for corporate IR analysis scenario (mock TaskMaster)."""
@@ -114,6 +129,7 @@ class TestScenario1_CorporateIRAnalysis:
 class TestScenario2_WebsitePDFExtraction:
     """Test Scenario 2: WebサイトPDF抽出 (Website PDF Extraction)."""
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_job_task_generation(self):
         """Test JobMaster/TaskMaster creation for PDF extraction scenario."""
@@ -141,6 +157,7 @@ class TestScenario2_WebsitePDFExtraction:
 
         assert len(tasks) > 0
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_workflow_generation(self):
         """Test workflow generation for PDF extraction scenario."""
@@ -179,6 +196,7 @@ class TestScenario2_WebsitePDFExtraction:
 class TestScenario3_GmailPodcastGeneration:
     """Test Scenario 3: Gmail検索ポッドキャスト生成 (Gmail Search Podcast)."""
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_job_task_generation(self):
         """Test JobMaster/TaskMaster creation for Gmail podcast scenario."""
@@ -204,6 +222,7 @@ class TestScenario3_GmailPodcastGeneration:
 
         assert len(tasks) > 0
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_workflow_generation(self):
         """Test workflow generation for Gmail podcast scenario."""
@@ -242,6 +261,7 @@ class TestScenario3_GmailPodcastGeneration:
 class TestScenario4_KeywordPodcastGeneration:
     """Test Scenario 4: キーワードポッドキャスト生成 (Keyword Podcast Generation)."""
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_job_task_generation(self):
         """Test JobMaster/TaskMaster creation for keyword podcast scenario."""
@@ -267,6 +287,7 @@ class TestScenario4_KeywordPodcastGeneration:
 
         assert len(tasks) > 0
 
+    @requires_api_key
     @pytest.mark.asyncio
     async def test_workflow_generation(self):
         """Test workflow generation for keyword podcast scenario."""
