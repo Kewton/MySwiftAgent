@@ -6,41 +6,13 @@ for analyzing user messages and determining task complexity.
 
 from typing import Dict, List
 
-# Complexity keywords dictionary mapping complexity level to keywords
-COMPLEXITY_KEYWORDS: Dict[str, List[str]] = {
-    "simple": [
-        "集計",
-        "合計",
-        "平均",
-        "一覧",
-        "表示",
-        "出力",
-        "CSV",
-        "Excel",
-        "レポート",
-    ],
-    "medium": [
-        "比較",
-        "分析",
-        "グラフ",
-        "複数",
-        "条件",
-        "フィルタ",
-        "並べ替え",
-        "グループ",
-    ],
-    "complex": [
-        "予測",
-        "機械学習",
-        "AI",
-        "自動化",
-        "連携",
-        "API",
-        "リアルタイム",
-        "通知",
-        "自動",
-    ],
-}
+from app.services.recommendation.keyword_mapping import (
+    COMPLEXITY_KEYWORDS,
+    get_default_keyword_mapping,
+)
+
+# Re-export for backwards compatibility
+__all__ = ["KeywordAnalyzer", "extract_keywords", "COMPLEXITY_KEYWORDS"]
 
 
 class KeywordAnalyzer:
@@ -55,11 +27,8 @@ class KeywordAnalyzer:
     def __init__(self) -> None:
         """Initialize KeywordAnalyzer with complexity keywords."""
         self._keywords = COMPLEXITY_KEYWORDS
-        # Build reverse lookup: keyword -> complexity level
-        self._keyword_to_level: Dict[str, str] = {}
-        for level, keywords in self._keywords.items():
-            for kw in keywords:
-                self._keyword_to_level[kw.lower()] = level
+        # Use shared mapping utility (DRY principle)
+        self._keyword_to_level: Dict[str, str] = get_default_keyword_mapping()
 
     def extract_keywords(self, message: str) -> List[str]:
         """Extract recognized keywords from a message.

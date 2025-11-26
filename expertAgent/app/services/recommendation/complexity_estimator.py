@@ -7,10 +7,8 @@ detected keywords from user messages.
 from typing import Dict, List
 
 from app.schemas.recommendation import ComplexityLevel
-from app.services.recommendation.keyword_analyzer import (
-    COMPLEXITY_KEYWORDS,
-    KeywordAnalyzer,
-)
+from app.services.recommendation.keyword_analyzer import KeywordAnalyzer
+from app.services.recommendation.keyword_mapping import get_default_keyword_mapping
 
 
 class ComplexityEstimator:
@@ -25,12 +23,8 @@ class ComplexityEstimator:
     def __init__(self) -> None:
         """Initialize ComplexityEstimator."""
         self._keyword_analyzer = KeywordAnalyzer()
-        self._complexity_keywords = COMPLEXITY_KEYWORDS
-        # Build reverse lookup: keyword -> complexity level
-        self._keyword_to_level: Dict[str, str] = {}
-        for level, keywords in self._complexity_keywords.items():
-            for kw in keywords:
-                self._keyword_to_level[kw.lower()] = level
+        # Use shared mapping utility (DRY principle)
+        self._keyword_to_level: Dict[str, str] = get_default_keyword_mapping()
 
     def estimate(self, keywords: List[str]) -> ComplexityLevel:
         """Estimate complexity based on keywords.

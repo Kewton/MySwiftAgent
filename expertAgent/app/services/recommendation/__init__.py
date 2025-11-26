@@ -4,6 +4,7 @@ This package provides AI-based recommendation functionality for
 requirement interpretation candidates.
 
 Modules:
+- keyword_mapping: Shared keyword-to-level mapping utilities (DRY)
 - keyword_analyzer: Extract and classify keywords from user messages
 - complexity_estimator: Estimate task complexity based on keywords
 - confidence_calculator: Calculate recommendation confidence scores
@@ -23,9 +24,14 @@ from app.services.recommendation.confidence_calculator import (
     calculate_confidence,
 )
 from app.services.recommendation.keyword_analyzer import (
-    COMPLEXITY_KEYWORDS,
     KeywordAnalyzer,
     extract_keywords,
+)
+from app.services.recommendation.keyword_mapping import (
+    COMPLEXITY_KEYWORDS,
+    build_keyword_to_level_mapping,
+    get_default_keyword_mapping,
+    get_keyword_level,
 )
 
 __all__ = [
@@ -38,4 +44,7 @@ __all__ = [
     "KeywordAnalyzer",
     "extract_keywords",
     "COMPLEXITY_KEYWORDS",
+    "build_keyword_to_level_mapping",
+    "get_default_keyword_mapping",
+    "get_keyword_level",
 ]

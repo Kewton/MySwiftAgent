@@ -4,10 +4,10 @@ This module provides confidence score calculation functionality
 based on keywords, complexity, and message characteristics.
 """
 
-from typing import List
+from typing import Dict, List
 
 from app.schemas.recommendation import ComplexityLevel
-from app.services.recommendation.keyword_analyzer import COMPLEXITY_KEYWORDS
+from app.services.recommendation.keyword_mapping import get_default_keyword_mapping
 
 
 class ConfidenceCalculator:
@@ -21,12 +21,8 @@ class ConfidenceCalculator:
 
     def __init__(self) -> None:
         """Initialize ConfidenceCalculator."""
-        self._complexity_keywords = COMPLEXITY_KEYWORDS
-        # Build reverse lookup
-        self._keyword_to_level: dict[str, str] = {}
-        for level, keywords in self._complexity_keywords.items():
-            for kw in keywords:
-                self._keyword_to_level[kw.lower()] = level
+        # Use shared mapping utility (DRY principle)
+        self._keyword_to_level: Dict[str, str] = get_default_keyword_mapping()
 
     def calculate(
         self,
@@ -106,10 +102,8 @@ class ConfidenceCalculator:
                 if self._keyword_to_level[keyword_lower] == complexity_name:
                     matching_count += 1
 
-        # Ratio of matching keywords
-        if len(keywords) == 0:
-            return 0.0
-
+        # Calculate ratio of matching keywords
+        # Note: len(keywords) > 0 is guaranteed by the early return above
         ratio = matching_count / len(keywords)
         # Max bonus of 0.2 for perfect alignment
         return ratio * 0.2
