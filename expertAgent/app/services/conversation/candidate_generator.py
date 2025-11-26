@@ -12,7 +12,7 @@ Design decisions:
 
 import logging
 import os
-from typing import List
+from typing import Any, Dict, List, Literal
 
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.multi_candidate import (
     MULTI_CANDIDATE_SYSTEM_PROMPT,
@@ -26,6 +26,20 @@ from app.schemas.chat import (
     CandidateSelectionEvent,
     RequirementCandidate,
 )
+
+
+class CandidateGenerationError(Exception):
+    """Exception raised when candidate generation fails.
+
+    Attributes:
+        message: Error description
+        cause: Original exception that caused the failure
+    """
+
+    def __init__(self, message: str, cause: Exception | None = None):
+        super().__init__(message)
+        self.message = message
+        self.cause = cause
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +59,7 @@ async def generate_requirement_candidates(
         List of RequirementCandidate objects (typically 2)
 
     Raises:
-        Exception: If LLM invocation fails
+        CandidateGenerationError: If LLM invocation fails
 
     Example:
         >>> candidates = await generate_requirement_candidates("売上データを分析したい")
@@ -124,7 +138,32 @@ async def _invoke_llm_for_candidates(
 
     except StructuredLLMError as e:
         logger.error(f"LLM candidate generation failed: {e}")
-        raise Exception(f"LLM service unavailable: {e}") from e
+        raise CandidateGenerationError(
+            f"LLM service unavailable: {e}", cause=e
+        ) from e
+
+
+def _create_candidate_with_new_id(
+    candidate: RequirementCandidate, new_id: Literal["A", "B"]
+) -> RequirementCandidate:
+    """Create a new candidate with a different ID.
+
+    Args:
+        candidate: Original candidate
+        new_id: New candidate ID to assign
+
+    Returns:
+        New RequirementCandidate with updated ID
+    """
+    return RequirementCandidate(
+        candidate_id=new_id,
+        title=candidate.title,
+        data_source=candidate.data_source,
+        process_description=candidate.process_description,
+        output_format=candidate.output_format,
+        schedule=candidate.schedule,
+        confidence=candidate.confidence,
+    )
 
 
 def _ensure_candidate_ids(candidates: List[RequirementCandidate]) -> None:
@@ -135,31 +174,15 @@ def _ensure_candidate_ids(candidates: List[RequirementCandidate]) -> None:
     Args:
         candidates: List of candidates to validate/fix
     """
-    if len(candidates) >= 2:
-        # Ensure first candidate is A, second is B
-        if candidates[0].candidate_id != "A":
-            candidates[0] = RequirementCandidate(
-                candidate_id="A",
-                title=candidates[0].title,
-                data_source=candidates[0].data_source,
-                process_description=candidates[0].process_description,
-                output_format=candidates[0].output_format,
-                schedule=candidates[0].schedule,
-                confidence=candidates[0].confidence,
-            )
-        if candidates[1].candidate_id != "B":
-            candidates[1] = RequirementCandidate(
-                candidate_id="B",
-                title=candidates[1].title,
-                data_source=candidates[1].data_source,
-                process_description=candidates[1].process_description,
-                output_format=candidates[1].output_format,
-                schedule=candidates[1].schedule,
-                confidence=candidates[1].confidence,
-            )
+    expected_ids: List[Literal["A", "B"]] = ["A", "B"]
+    for i, expected_id in enumerate(expected_ids):
+        if i < len(candidates) and candidates[i].candidate_id != expected_id:
+            candidates[i] = _create_candidate_with_new_id(candidates[i], expected_id)
 
 
-def candidate_to_requirement_state_dict(candidate: RequirementCandidate) -> dict:
+def candidate_to_requirement_state_dict(
+    candidate: RequirementCandidate,
+) -> Dict[str, Any]:
     """Convert a RequirementCandidate to RequirementState dict.
 
     Args:

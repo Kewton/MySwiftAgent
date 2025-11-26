@@ -12,6 +12,7 @@ Endpoints:
 
 import json
 import logging
+from typing import Any, AsyncGenerator, Dict
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sse_starlette.sse import EventSourceResponse
@@ -76,7 +77,7 @@ async def requirement_definition(request: RequirementChatRequest):
         - data: {"type": "done"}
     """
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[Dict[str, Any], None]:
         """Generate SSE events for chat stream."""
         try:
             # Save user message to conversation history
@@ -359,14 +360,13 @@ async def select_candidate(request: CandidateSelectRequest):
                 detail=f"No candidates found for conversation: {request.conversation_id}",
             )
 
-        # Find selected candidate
-        selected_candidate = None
-        for candidate in stored_candidates:
-            if candidate.candidate_id == request.selected_candidate_id:
-                selected_candidate = candidate
-                break
+        # Find selected candidate using generator expression
+        selected_candidate = next(
+            (c for c in stored_candidates if c.candidate_id == request.selected_candidate_id),
+            None,
+        )
 
-        if not selected_candidate:
+        if selected_candidate is None:
             raise HTTPException(
                 status_code=400,
                 detail=f"Candidate '{request.selected_candidate_id}' not found. "
