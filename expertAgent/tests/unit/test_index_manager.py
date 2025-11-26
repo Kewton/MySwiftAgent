@@ -466,7 +466,7 @@ class TestIndexManagerDateRange:
         start = datetime(2025, 1, 30, tzinfo=timezone.utc)
         end = datetime(2025, 2, 2, tzinfo=timezone.utc)
 
-        result = await index_manager.get_by_date_range(start, end)
+        await index_manager.get_by_date_range(start, end)
 
         # Should have made 4 calls (Jan 30, 31, Feb 1, 2)
         assert mock_valkey_client._client.smembers.await_count == 4
@@ -481,7 +481,7 @@ class TestIndexManagerDateRange:
         start = datetime(2024, 12, 30, tzinfo=timezone.utc)
         end = datetime(2025, 1, 2, tzinfo=timezone.utc)
 
-        result = await index_manager.get_by_date_range(start, end)
+        await index_manager.get_by_date_range(start, end)
 
         # Should have made 4 calls (Dec 30, 31, Jan 1, 2)
         assert mock_valkey_client._client.smembers.await_count == 4
