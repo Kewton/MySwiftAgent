@@ -1,0 +1,35 @@
+{
+  "issue_number": 172,
+  "feature_summary": "要件定義API専用のフィードバック投稿API実装",
+  "acceptance_criteria": [
+    "APIエンドポイント `/v1/chat/feedback` が実装される",
+    "4種類のスコア（requirement_clarity, interpretation_accuracy, response_helpfulness, overall_satisfaction）が投稿できる",
+    "conversation_idとtrace_idが正しく紐づく",
+    "Langfuseにスコアが保存される",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "レスポンスタイム 500ms以内",
+    "正常系: フィードバック投稿成功",
+    "異常系: 無効なスコア値（1-5範囲外）でエラー",
+    "エッジケース: 同一会話への複数フィードバック"
+  ],
+  "test_scenarios": [
+    "シナリオ1: 正常系 - 全スコア有効値(1-5)でフィードバック投稿成功",
+    "シナリオ2: 正常系 - オプションのコメント付きでフィードバック投稿成功",
+    "シナリオ3: 異常系 - スコアが0の場合にバリデーションエラー",
+    "シナリオ4: 異常系 - スコアが6の場合にバリデーションエラー",
+    "シナリオ5: 異常系 - 存在しないconversation_idでエラー",
+    "シナリオ6: エッジケース - 同一会話に複数回フィードバック投稿可能",
+    "シナリオ7: スコア変換検証 - 1-5が0.0-1.0に正しく変換される",
+    "シナリオ8: Langfuse統合 - 4種類のスコアがLangfuseに送信される"
+  ],
+  "working_directory": "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent",
+  "test_commands": {
+    "unit_tests": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent && uv run pytest tests/unit/test_chat_feedback*.py tests/unit/test_feedback_service.py -v",
+    "integration_tests": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent && uv run pytest tests/integration/test_chat_feedback_flow.py -v",
+    "coverage": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent && uv run pytest tests/unit/test_chat_feedback*.py tests/unit/test_feedback_service.py --cov=app/schemas/chat --cov=app/services/feedback_service --cov-report=term-missing",
+    "static_analysis_ruff": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent && uv run ruff check app/schemas/chat.py app/services/feedback_service.py app/api/v1/chat_endpoints.py",
+    "static_analysis_mypy": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent && uv run mypy app/schemas/chat.py app/services/feedback_service.py app/api/v1/chat_endpoints.py"
+  }
+}
