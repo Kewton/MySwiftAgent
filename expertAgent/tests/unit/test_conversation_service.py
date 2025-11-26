@@ -5,7 +5,7 @@ Tests for conversation service data access layer.
 """
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -13,7 +13,6 @@ from app.schemas.conversation_metadata import ConversationMetadata
 from app.schemas.diagnostic import (
     DiagnosticInfo,
     DiagnosticListQuery,
-    DiagnosticListResponse,
 )
 from app.services.conversation_service import ConversationService
 
@@ -480,3 +479,180 @@ class TestConversationServiceBuildDiagnosticInfo:
 
         assert result.metadata["custom_field"] == "custom_value"
         assert result.metadata["another_field"] == 123
+
+
+class TestConversationServiceScanAllConversations:
+    """Tests for _scan_all_conversations method."""
+
+    @pytest.mark.unit
+    async def test_scan_all_conversations_success(self, mock_store):
+        """Test successful scanning of all conversations."""
+        service = ConversationService(store=mock_store)
+        mock_store._client._client.scan = AsyncMock(
+            return_value=(0, [b"conversation:conv-1", b"conversation:conv-2"])
+        )
+
+        result = await service._scan_all_conversations()
+
+        assert len(result) == 2
+        assert "conv-1" in result
+        assert "conv-2" in result
+
+    @pytest.mark.unit
+    async def test_scan_all_conversations_with_limit(self, mock_store):
+        """Test scanning with limit."""
+        service = ConversationService(store=mock_store)
+        # Mock to return 150 keys in first call
+        keys = [f"conversation:conv-{i}".encode() for i in range(150)]
+        mock_store._client._client.scan = AsyncMock(return_value=(0, keys))
+
+        result = await service._scan_all_conversations(limit=100)
+
+        assert len(result) == 100
+
+    @pytest.mark.unit
+    async def test_scan_all_conversations_multiple_pages(self, mock_store):
+        """Test scanning with multiple cursor iterations."""
+        service = ConversationService(store=mock_store)
+        call_count = 0
+
+        async def mock_scan(cursor, match, count):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (1, [b"conversation:conv-1", b"conversation:conv-2"])
+            else:
+                return (0, [b"conversation:conv-3"])
+
+        mock_store._client._client.scan = mock_scan
+
+        result = await service._scan_all_conversations()
+
+        assert len(result) == 3
+        assert "conv-1" in result
+        assert "conv-2" in result
+        assert "conv-3" in result
+
+    @pytest.mark.unit
+    async def test_scan_all_conversations_client_not_connected(self, mock_store):
+        """Test scanning when client is not connected."""
+        service = ConversationService(store=mock_store)
+        mock_store._client._client = None
+
+        result = await service._scan_all_conversations()
+
+        assert result == []
+
+    @pytest.mark.unit
+    async def test_scan_all_conversations_error(self, mock_store):
+        """Test scanning with error."""
+        service = ConversationService(store=mock_store)
+        mock_store._client._client.scan = AsyncMock(
+            side_effect=Exception("Connection error")
+        )
+
+        result = await service._scan_all_conversations()
+
+        assert result == []
+
+    @pytest.mark.unit
+    async def test_scan_all_conversations_string_keys(self, mock_store):
+        """Test scanning with string keys (not bytes)."""
+        service = ConversationService(store=mock_store)
+        mock_store._client._client.scan = AsyncMock(
+            return_value=(0, ["conversation:conv-1", "conversation:conv-2"])
+        )
+
+        result = await service._scan_all_conversations()
+
+        assert len(result) == 2
+        assert "conv-1" in result
+        assert "conv-2" in result
+
+
+class TestConversationServiceListDiagnosticsNoFilters:
+    """Tests for list_diagnostics without filters."""
+
+    @pytest.mark.unit
+    async def test_list_diagnostics_no_filters_no_index_manager(
+        self, mock_store, sample_conversation_data
+    ):
+        """Test listing without filters and without index manager."""
+        service = ConversationService(store=mock_store)
+        query = DiagnosticListQuery()
+
+        result = await service.list_diagnostics(query)
+
+        # Without index manager, should return empty results
+        assert result.total == 0
+        assert len(result.items) == 0
+
+    @pytest.mark.unit
+    async def test_list_diagnostics_no_filters_with_scan(
+        self, mock_store, mock_index_manager, sample_conversation_data
+    ):
+        """Test listing without filters triggers scan."""
+        service = ConversationService(
+            store=mock_store,
+            index_manager=mock_index_manager,
+        )
+        query = DiagnosticListQuery()
+
+        # Set up scan to return some conversations
+        mock_store._client._client.scan = AsyncMock(
+            return_value=(0, [b"conversation:conv-1", b"conversation:conv-2"])
+        )
+        mock_store.get_conversation = AsyncMock(return_value=sample_conversation_data)
+
+        result = await service.list_diagnostics(query)
+
+        assert result.total == 2
+
+
+class TestConversationServiceGetFilteredConversationIds:
+    """Tests for _get_filtered_conversation_ids method."""
+
+    @pytest.mark.unit
+    async def test_get_filtered_ids_no_index_manager(self, mock_store):
+        """Test getting filtered IDs without index manager returns empty."""
+        service = ConversationService(store=mock_store)
+        query = DiagnosticListQuery(job_id="job-123")
+
+        result = await service._get_filtered_conversation_ids(query)
+
+        assert result == []
+
+    @pytest.mark.unit
+    async def test_get_filtered_ids_with_filters(
+        self, mock_store, mock_index_manager
+    ):
+        """Test getting filtered IDs with filters uses intersection."""
+        service = ConversationService(
+            store=mock_store,
+            index_manager=mock_index_manager,
+        )
+        mock_index_manager.intersect_indexes = AsyncMock(
+            return_value={"conv-1", "conv-2"}
+        )
+        query = DiagnosticListQuery(job_id="job-123", user_id="user-456")
+
+        result = await service._get_filtered_conversation_ids(query)
+
+        assert len(result) == 2
+        mock_index_manager.intersect_indexes.assert_awaited_once()
+
+
+class TestConversationServiceParseNonStringValues:
+    """Tests for datetime parsing with non-string values."""
+
+    @pytest.mark.unit
+    def test_parse_datetime_integer(self, conversation_service):
+        """Test parsing integer returns None."""
+        result = conversation_service._parse_datetime(12345)
+        assert result is None
+
+    @pytest.mark.unit
+    def test_parse_datetime_list(self, conversation_service):
+        """Test parsing list returns None."""
+        result = conversation_service._parse_datetime([2025, 1, 15])
+        assert result is None

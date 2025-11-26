@@ -352,3 +352,242 @@ class TestConversationStoreValkeyConnection:
                 assert result is True
 
             mock_valkey_client.disconnect.assert_awaited_once()
+
+
+class TestConversationStoreValkeyListConversations:
+    """Test ConversationStoreValkey list_conversations method."""
+
+    @pytest.mark.unit
+    async def test_list_conversations_with_ids(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing conversations with specific IDs."""
+        mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations(
+                conversation_ids={"conv-1", "conv-2", "conv-3"},
+                limit=10,
+                offset=0,
+            )
+
+            assert len(result) == 3
+            assert mock_valkey_client.get.await_count == 3
+
+    @pytest.mark.unit
+    async def test_list_conversations_with_ids_pagination(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing conversations with IDs and pagination."""
+        mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations(
+                conversation_ids={"conv-1", "conv-2", "conv-3", "conv-4", "conv-5"},
+                limit=2,
+                offset=1,
+            )
+
+            assert len(result) == 2
+            assert mock_valkey_client.get.await_count == 2
+
+    @pytest.mark.unit
+    async def test_list_conversations_with_ids_some_missing(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing conversations where some IDs don't exist."""
+        call_count = 0
+
+        async def mock_get(key):
+            nonlocal call_count
+            call_count += 1
+            if "conv-2" in key:
+                return None  # This conversation doesn't exist
+            return sample_conversation_data
+
+        mock_valkey_client.get = mock_get
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations(
+                conversation_ids={"conv-1", "conv-2", "conv-3"},
+            )
+
+            # Only 2 conversations exist
+            assert len(result) == 2
+
+    @pytest.mark.unit
+    async def test_list_conversations_scan_all(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing all conversations using scan."""
+        mock_valkey_client._client = MagicMock()
+        mock_valkey_client._client.scan = AsyncMock(
+            return_value=(0, [b"conversation:conv-1", b"conversation:conv-2"])
+        )
+        mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations()
+
+            assert len(result) == 2
+
+    @pytest.mark.unit
+    async def test_list_conversations_scan_with_pagination(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing all conversations with pagination."""
+        mock_valkey_client._client = MagicMock()
+        mock_valkey_client._client.scan = AsyncMock(
+            return_value=(0, [
+                b"conversation:conv-1",
+                b"conversation:conv-2",
+                b"conversation:conv-3",
+                b"conversation:conv-4",
+            ])
+        )
+        mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations(limit=2, offset=1)
+
+            assert len(result) == 2
+
+    @pytest.mark.unit
+    async def test_list_conversations_scan_multiple_pages(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing conversations with multiple scan iterations."""
+        mock_valkey_client._client = MagicMock()
+        call_count = 0
+
+        async def mock_scan(cursor, match, count):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (1, [b"conversation:conv-1", b"conversation:conv-2"])
+            else:
+                return (0, [b"conversation:conv-3"])
+
+        mock_valkey_client._client.scan = mock_scan
+        mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations()
+
+            assert len(result) == 3
+
+    @pytest.mark.unit
+    async def test_list_conversations_scan_string_keys(
+        self, mock_valkey_client, sample_conversation_data
+    ):
+        """Test listing conversations with string keys (not bytes)."""
+        mock_valkey_client._client = MagicMock()
+        mock_valkey_client._client.scan = AsyncMock(
+            return_value=(0, ["conversation:conv-1", "conversation:conv-2"])
+        )
+        mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations()
+
+            assert len(result) == 2
+
+    @pytest.mark.unit
+    async def test_list_conversations_client_not_connected(self, mock_valkey_client):
+        """Test listing conversations when client not connected."""
+        mock_valkey_client._client = None
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations()
+
+            assert result == []
+
+    @pytest.mark.unit
+    async def test_list_conversations_scan_error(self, mock_valkey_client):
+        """Test listing conversations when scan fails."""
+        mock_valkey_client._client = MagicMock()
+        mock_valkey_client._client.scan = AsyncMock(
+            side_effect=Exception("Connection error")
+        )
+
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey()
+            await store.connect()
+
+            result = await store.list_conversations()
+
+            assert result == []
+
+
+class TestConversationStoreValkeyCustomTTLInSave:
+    """Test custom TTL parameter in save_conversation."""
+
+    @pytest.mark.unit
+    async def test_save_with_ttl_in_kwargs(self, mock_valkey_client):
+        """Test saving with TTL passed in kwargs."""
+        with patch(
+            "app.stores.conversation_store_valkey.ValkeyClient",
+            return_value=mock_valkey_client,
+        ):
+            store = ConversationStoreValkey(ttl=86400)  # Default 24h
+            await store.connect()
+
+            await store.save_conversation(
+                conversation_id="test-conv-123",
+                messages=[{"role": "user", "content": "Hello"}],
+                ttl=3600,  # Override to 1 hour
+            )
+
+            call_args = mock_valkey_client.set.call_args
+            assert call_args.kwargs.get("ttl") == 3600

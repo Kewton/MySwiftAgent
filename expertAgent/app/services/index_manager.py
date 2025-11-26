@@ -5,7 +5,7 @@ Manages Redis SET-based secondary indexes for efficient conversation lookup.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set
 
 from app.services.valkey_client import ValkeyClient
@@ -255,21 +255,8 @@ class IndexManager:
         while current <= end_date:
             date_set = await self.get_by_date(current)
             result.update(date_set)
-            current = datetime(
-                current.year,
-                current.month,
-                current.day + 1,
-                tzinfo=current.tzinfo,
-            )
-            # Handle month overflow
-            try:
-                current = current.replace(day=current.day)
-            except ValueError:
-                # Move to next month
-                if current.month == 12:
-                    current = current.replace(year=current.year + 1, month=1, day=1)
-                else:
-                    current = current.replace(month=current.month + 1, day=1)
+            # Use timedelta to properly handle month/year boundaries
+            current = current + timedelta(days=1)
 
         return result
 

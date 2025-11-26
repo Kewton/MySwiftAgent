@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from fastapi.testclient import TestClient
 
 from app.api.v1.diagnostic_endpoints import (
     get_conversation_service,
@@ -19,7 +18,6 @@ from app.api.v1.diagnostic_endpoints import (
 )
 from app.schemas.diagnostic import (
     DiagnosticInfo,
-    DiagnosticListQuery,
     DiagnosticListResponse,
 )
 from app.services.conversation_service import ConversationService
@@ -132,7 +130,7 @@ class TestListDiagnostics:
         )
         mock_conversation_service.list_diagnostics = AsyncMock(return_value=expected)
 
-        result = await list_diagnostics(
+        await list_diagnostics(
             job_id="job-123",
             user_id=None,
             project_id=None,
@@ -306,3 +304,134 @@ class TestRouterConfiguration:
     def test_router_tags(self):
         """Test router has correct tags."""
         assert "Diagnostics" in router.tags
+
+
+class TestGetConversationServiceSuccess:
+    """Tests for successful get_conversation_service dependency."""
+
+    @pytest.mark.unit
+    async def test_get_conversation_service_success(self):
+        """Test successful service creation."""
+        with patch(
+            "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
+        ) as mock_store_class, patch(
+            "app.api.v1.diagnostic_endpoints.ValkeyClient"
+        ) as mock_client_class, patch(
+            "app.api.v1.diagnostic_endpoints.IndexManager"
+        ) as mock_index_class:
+            # Set up mocks
+            mock_store = MagicMock()
+            mock_store.connect = AsyncMock()
+            mock_store_class.return_value = mock_store
+
+            mock_client = MagicMock()
+            mock_client.connect = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            mock_index = MagicMock()
+            mock_index_class.return_value = mock_index
+
+            service = await get_conversation_service()
+
+            assert service is not None
+            mock_store.connect.assert_awaited_once()
+            mock_client.connect.assert_awaited_once()
+
+
+class TestListDiagnosticsWithAllFilters:
+    """Tests for list_diagnostics with all filter combinations."""
+
+    @pytest.mark.unit
+    async def test_list_diagnostics_with_project_filter(
+        self, mock_conversation_service
+    ):
+        """Test listing with project_id filter."""
+        expected = DiagnosticListResponse(items=[], total=0)
+        mock_conversation_service.list_diagnostics = AsyncMock(return_value=expected)
+
+        await list_diagnostics(
+            job_id=None,
+            user_id=None,
+            project_id="project-123",
+            workflow_id=None,
+            start_date=None,
+            end_date=None,
+            limit=100,
+            offset=0,
+            service=mock_conversation_service,
+        )
+
+        call_args = mock_conversation_service.list_diagnostics.call_args
+        query = call_args[0][0]
+        assert query.project_id == "project-123"
+
+    @pytest.mark.unit
+    async def test_list_diagnostics_with_workflow_filter(
+        self, mock_conversation_service
+    ):
+        """Test listing with workflow_id filter."""
+        expected = DiagnosticListResponse(items=[], total=0)
+        mock_conversation_service.list_diagnostics = AsyncMock(return_value=expected)
+
+        await list_diagnostics(
+            job_id=None,
+            user_id=None,
+            project_id=None,
+            workflow_id="workflow-456",
+            start_date=None,
+            end_date=None,
+            limit=100,
+            offset=0,
+            service=mock_conversation_service,
+        )
+
+        call_args = mock_conversation_service.list_diagnostics.call_args
+        query = call_args[0][0]
+        assert query.workflow_id == "workflow-456"
+
+    @pytest.mark.unit
+    async def test_list_diagnostics_reraises_http_exception(
+        self, mock_conversation_service
+    ):
+        """Test that HTTPException is re-raised without wrapping."""
+        mock_conversation_service.list_diagnostics = AsyncMock(
+            side_effect=HTTPException(status_code=400, detail="Bad request")
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_diagnostics(
+                job_id=None,
+                user_id=None,
+                project_id=None,
+                workflow_id=None,
+                start_date=None,
+                end_date=None,
+                limit=100,
+                offset=0,
+                service=mock_conversation_service,
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "Bad request"
+
+
+class TestGetDiagnosticInfoReraisesException:
+    """Tests for get_diagnostic_info HTTP exception handling."""
+
+    @pytest.mark.unit
+    async def test_get_diagnostic_info_reraises_http_exception(
+        self, mock_conversation_service
+    ):
+        """Test that HTTPException is re-raised without wrapping."""
+        mock_conversation_service.get_diagnostic_info = AsyncMock(
+            side_effect=HTTPException(status_code=400, detail="Bad request")
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_diagnostic_info(
+                conversation_id="conv-123",
+                service=mock_conversation_service,
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "Bad request"
