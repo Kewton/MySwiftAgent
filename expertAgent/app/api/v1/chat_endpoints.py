@@ -8,6 +8,7 @@ Endpoints:
 - POST /chat/requirement-definition: Stream requirement clarification chat
 - POST /chat/create-job: Create job from clarified requirements
 - POST /chat/select-candidate: Select a candidate interpretation (Issue #173)
+- POST /chat/feedback: Submit feedback for requirement clarification (Issue #172)
 """
 
 import json
@@ -23,6 +24,8 @@ from app.schemas.chat import (
     CreateJobRequest,
     CreateJobResponse,
     RequirementChatRequest,
+    RequirementFeedbackRequest,
+    RequirementFeedbackResponse,
     RequirementState,
 )
 from app.schemas.job_generator import JobGeneratorRequest
@@ -31,6 +34,7 @@ from app.services.conversation.candidate_generator import (
 )
 from app.services.conversation.conversation_store import conversation_store
 from app.services.conversation.llm_service import stream_requirement_clarification
+from app.services.feedback_service import FeedbackService
 
 logger = logging.getLogger(__name__)
 
@@ -362,7 +366,11 @@ async def select_candidate(request: CandidateSelectRequest):
 
         # Find selected candidate using generator expression
         selected_candidate = next(
-            (c for c in stored_candidates if c.candidate_id == request.selected_candidate_id),
+            (
+                c
+                for c in stored_candidates
+                if c.candidate_id == request.selected_candidate_id
+            ),
             None,
         )
 
@@ -409,4 +417,103 @@ async def select_candidate(request: CandidateSelectRequest):
         )
         raise HTTPException(
             status_code=500, detail=f"候補の選択に失敗しました: {str(e)}"
+        ) from e
+
+
+# ============================================================================
+# Feedback Feature (Issue #172)
+# ============================================================================
+
+
+@router.post("/feedback", response_model=RequirementFeedbackResponse)
+async def submit_feedback(request: RequirementFeedbackRequest):
+    """Submit feedback for a requirement clarification conversation.
+
+    Allows users to submit 4 types of scores (1-5 scale) to evaluate
+    the quality of the requirement clarification conversation. Scores
+    are stored in Langfuse for observability and improvement analysis.
+
+    Args:
+        request: Feedback request with conversation_id and scores
+
+    Returns:
+        RequirementFeedbackResponse: Submission status with scores_submitted count
+
+    Raises:
+        HTTPException: If feedback submission fails
+
+    Example:
+        ```bash
+        curl -X POST http://localhost:8104/aiagent-api/v1/chat/feedback \\
+          -H "Content-Type: application/json" \\
+          -d '{
+            "conversation_id": "conv_001",
+            "requirement_clarity": 5,
+            "interpretation_accuracy": 4,
+            "response_helpfulness": 5,
+            "overall_satisfaction": 5,
+            "comment": "Very helpful!"
+          }'
+        ```
+
+    Response:
+        ```json
+        {
+          "success": true,
+          "message": "Feedback submitted successfully. 4 of 4 scores recorded.",
+          "feedback_id": null,
+          "scores_submitted": 4
+        }
+        ```
+
+    Score Mapping to Langfuse:
+        - requirement_clarity -> req_def_clarity (0.0-1.0)
+        - interpretation_accuracy -> req_def_accuracy (0.0-1.0)
+        - response_helpfulness -> req_def_helpfulness (0.0-1.0)
+        - overall_satisfaction -> req_def_overall (0.0-1.0)
+
+    Score Conversion:
+        - 1 -> 0.0
+        - 2 -> 0.25
+        - 3 -> 0.5
+        - 4 -> 0.75
+        - 5 -> 1.0
+    """
+    try:
+        logger.info(
+            f"Submitting feedback: "
+            f"conversation_id={request.conversation_id}, "
+            f"scores=[clarity={request.requirement_clarity}, "
+            f"accuracy={request.interpretation_accuracy}, "
+            f"helpfulness={request.response_helpfulness}, "
+            f"overall={request.overall_satisfaction}]"
+        )
+
+        feedback_service = FeedbackService()
+        response = await feedback_service.submit_feedback(request)
+
+        if not response.success:
+            raise HTTPException(
+                status_code=500,
+                detail=response.message,
+            )
+
+        logger.info(
+            f"Feedback submitted successfully: "
+            f"conversation_id={request.conversation_id}, "
+            f"scores_submitted={response.scores_submitted}"
+        )
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Failed to submit feedback: "
+            f"conversation_id={request.conversation_id}, error={e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail=f"フィードバックの送信に失敗しました: {str(e)}"
         ) from e

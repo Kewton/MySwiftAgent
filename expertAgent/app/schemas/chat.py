@@ -243,3 +243,82 @@ class CandidateSelectResponse(BaseModel):
         description="Confirmation message",
         examples=["候補Aを選択しました。追加の詳細を確認させてください。"],
     )
+
+
+# ============================================================================
+# Feedback Feature (Issue #172)
+# ============================================================================
+
+
+class RequirementFeedbackRequest(BaseModel):
+    """Request for submitting feedback on requirement clarification.
+
+    Allows users to submit 4 types of scores (1-5 scale) for the
+    requirement clarification conversation. Scores are stored in
+    Langfuse for observability and improvement analysis.
+
+    Score Mapping to Langfuse:
+    - requirement_clarity -> req_def_clarity
+    - interpretation_accuracy -> req_def_accuracy
+    - response_helpfulness -> req_def_helpfulness
+    - overall_satisfaction -> req_def_overall
+    """
+
+    conversation_id: str = Field(
+        ...,
+        description="Conversation session ID to associate feedback with",
+    )
+    requirement_clarity: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="How clear were the requirement questions? (1-5)",
+    )
+    interpretation_accuracy: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="How accurately were your requirements understood? (1-5)",
+    )
+    response_helpfulness: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="How helpful were the responses? (1-5)",
+    )
+    overall_satisfaction: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="Overall satisfaction with the conversation (1-5)",
+    )
+    comment: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Optional free-form feedback comment",
+    )
+
+
+class RequirementFeedbackResponse(BaseModel):
+    """Response after feedback submission.
+
+    Returns the status of feedback submission including how many
+    scores were successfully submitted to Langfuse.
+    """
+
+    success: bool = Field(
+        ...,
+        description="Whether feedback was successfully submitted",
+    )
+    message: str = Field(
+        ...,
+        description="Human-readable status message",
+    )
+    feedback_id: Optional[str] = Field(
+        None,
+        description="Feedback ID if available",
+    )
+    scores_submitted: int = Field(
+        ...,
+        description="Number of scores successfully submitted to Langfuse",
+    )
