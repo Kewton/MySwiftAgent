@@ -1,0 +1,105 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "シナリオ1: シンプルなメッセージ「売上データを月別に集計したい」で候補Aが推奨される",
+      "result": "passed",
+      "details": "test_recommend_simple_message_selects_simple_candidate: PASSED - 売上データを集計してCSVで出力してください -> 候補A (SIMPLE)"
+    },
+    {
+      "scenario": "シナリオ2: 複雑なメッセージ「機械学習で売上予測を自動化したい」で候補Bが推奨される",
+      "result": "passed",
+      "details": "test_recommend_complex_message_selects_complex_candidate: PASSED - 機械学習を使って売上を予測 -> 候補B (COMPLEX)"
+    },
+    {
+      "scenario": "シナリオ3: 空メッセージでデフォルトの推奨が返される",
+      "result": "passed",
+      "details": "test_recommend_empty_message: PASSED - 空メッセージでもAIRecommendationが返され、complexity=SIMPLE、confidence<0.5"
+    },
+    {
+      "scenario": "シナリオ4: 長文メッセージ（1000文字）で処理時間が100ms以内",
+      "result": "passed",
+      "details": "test_full_flow_long_message: PASSED - 1000文字超のメッセージで処理時間100ms未満を確認"
+    },
+    {
+      "scenario": "シナリオ5: 信頼度スコアが0.0-1.0の範囲内",
+      "result": "passed",
+      "details": "test_recommend_confidence_in_valid_range: PASSED - 全テストで0.0 <= confidence <= 1.0を確認"
+    },
+    {
+      "scenario": "シナリオ6: 推奨理由が人間に分かりやすいテキストで生成される",
+      "result": "passed",
+      "details": "test_recommendation_reason_quality: PASSED - reason長10-200文字、関連キーワード（簡易、シンプル、候補A等）を含む"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "キーワード分析が正しく動作",
+      "verified": true,
+      "evidence": "test_extract_simple_keywords, test_extract_complex_keywords等16テストPASSED - 集計、CSV、機械学習、API等のキーワードが正しく抽出"
+    },
+    {
+      "criterion": "複雑度推定が3段階で判定される（simple, medium, complex）",
+      "verified": true,
+      "evidence": "test_simple_complexity_detection, test_medium_complexity_detection, test_complex_complexity_detection: PASSED - ComplexityLevel.SIMPLE/MEDIUM/COMPLEXが正しく判定"
+    },
+    {
+      "criterion": "信頼度スコアが0-1の範囲で計算される",
+      "verified": true,
+      "evidence": "test_confidence_in_valid_range, test_calculate_confidence_returns_bounded_value: PASSED - 全ケースで0.0-1.0範囲内"
+    },
+    {
+      "criterion": "推奨理由が生成される",
+      "verified": true,
+      "evidence": "test_recommend_generates_reason, test_recommendation_reason_quality: PASSED - 意味のある推奨理由が10-200文字で生成"
+    },
+    {
+      "criterion": "単体テストカバレッジ 90%以上",
+      "verified": true,
+      "evidence": "pytest --cov結果: TOTAL 176 Stmts, 5 Miss, Coverage 97.16%"
+    },
+    {
+      "criterion": "Ruff/MyPy エラーゼロ",
+      "verified": true,
+      "evidence": "ruff check: All checks passed!, mypy: Success: no issues found in 6 source files"
+    },
+    {
+      "criterion": "推奨精度 80%以上（テストデータ）",
+      "verified": true,
+      "evidence": "test_recommend_accuracy_simple_cases, test_recommend_accuracy_complex_cases: PASSED - 両ケースで80%以上の精度を達成"
+    },
+    {
+      "criterion": "処理時間 100ms以内",
+      "verified": true,
+      "evidence": "test_recommend_performance_under_100ms, test_full_flow_long_message: PASSED - 全テスト実行時間0.12s (54 unit tests), 0.07s (11 integration tests)"
+    },
+    {
+      "criterion": "正常系: シンプル/複雑ケースの判定",
+      "verified": true,
+      "evidence": "test_full_flow_simple_message, test_full_flow_complex_message: PASSED - シンプル→候補A、複雑→候補Bを正しく判定"
+    },
+    {
+      "criterion": "異常系: 空メッセージ",
+      "verified": true,
+      "evidence": "test_recommend_empty_message, test_full_flow_empty_message: PASSED - 空メッセージでデフォルト推奨（SIMPLE、低信頼度）を返す"
+    },
+    {
+      "criterion": "エッジケース: 長文メッセージ（1000文字）",
+      "verified": true,
+      "evidence": "test_recommend_long_message, test_full_flow_long_message: PASSED - 1000文字超のメッセージを100ms以内で処理"
+    }
+  ],
+  "summary": {
+    "total_scenarios": 6,
+    "passed": 6,
+    "failed": 0
+  },
+  "evidence_files": [
+    "54 unit tests passed (tests/unit/test_keyword_analyzer.py, test_complexity_estimator.py, test_confidence_calculator.py, test_ai_recommendation_service.py)",
+    "11 integration tests passed (tests/integration/test_recommendation_flow.py)",
+    "Coverage: 97.16% (target: 90%+)",
+    "Ruff: All checks passed",
+    "MyPy: no issues found in 6 source files"
+  ],
+  "message": "すべての受入条件を満たしています。AI推奨システムは正常に動作しており、キーワード分析、複雑度推定、信頼度計算、推奨理由生成の全機能が期待通りに動作しています。"
+}
