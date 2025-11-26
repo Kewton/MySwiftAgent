@@ -1,0 +1,45 @@
+{
+  "status": "success",
+  "coverage": 97.16,
+  "unit_tests": {
+    "total": 54,
+    "passed": 54,
+    "failed": 0
+  },
+  "integration_tests": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_created": [
+    "expertAgent/app/schemas/recommendation.py",
+    "expertAgent/app/services/recommendation/__init__.py",
+    "expertAgent/app/services/recommendation/keyword_analyzer.py",
+    "expertAgent/app/services/recommendation/complexity_estimator.py",
+    "expertAgent/app/services/recommendation/confidence_calculator.py",
+    "expertAgent/app/services/recommendation/ai_recommendation_service.py",
+    "expertAgent/tests/unit/test_keyword_analyzer.py",
+    "expertAgent/tests/unit/test_complexity_estimator.py",
+    "expertAgent/tests/unit/test_confidence_calculator.py",
+    "expertAgent/tests/unit/test_ai_recommendation_service.py",
+    "expertAgent/tests/integration/test_recommendation_flow.py"
+  ],
+  "commits": [
+    "336fa2f: feat(issue/174): AI推奨システム実装 - TDD"
+  ],
+  "acceptance_criteria_met": {
+    "keyword_analysis_works": true,
+    "complexity_estimation_3_levels": true,
+    "confidence_score_0_to_1": true,
+    "recommendation_reason_generated": true,
+    "unit_test_coverage_90_plus": true,
+    "ruff_mypy_zero_errors": true,
+    "recommendation_accuracy_80_plus": true,
+    "processing_time_under_100ms": true
+  },
+  "message": "TDD実装完了。カバレッジ97.16%達成。全65テスト成功。静的解析エラーゼロ。"
+}

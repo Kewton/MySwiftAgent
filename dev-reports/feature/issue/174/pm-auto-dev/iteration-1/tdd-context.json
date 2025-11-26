@@ -1,0 +1,167 @@
+{
+  "issue_number": 174,
+  "title": "Issue #152-5: AI推奨システム実装",
+  "acceptance_criteria": [
+    "キーワード分析が正しく動作",
+    "複雑度推定が3段階で判定される",
+    "信頼度スコアが0-1の範囲で計算される",
+    "推奨理由が生成される",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "推奨精度 80%以上（テストデータ）",
+    "処理時間 100ms以内",
+    "正常系: シンプル/複雑ケースの判定",
+    "異常系: 空メッセージ",
+    "エッジケース: 長文メッセージ（1000文字）"
+  ],
+  "implementation_tasks": [
+    "AIRecommendationService実装",
+    "キーワード分析ロジック",
+    "複雑度推定アルゴリズム",
+    "信頼度計算機能",
+    "単体テスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "AI推奨スキーマ定義",
+      "estimated_hours": 1,
+      "deliverables": ["app/schemas/recommendation.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "サービスインターフェース設計",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "キーワード分析ロジック実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["app/services/recommendation/keyword_analyzer.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "複雑度推定アルゴリズム実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["app/services/recommendation/complexity_estimator.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "信頼度計算機能実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["app/services/recommendation/confidence_calculator.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "AIRecommendationService統合実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["app/services/recommendation/ai_recommendation_service.py"],
+      "dependencies": ["2.1", "2.2", "2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "候補生成との連携実装",
+      "estimated_hours": 1,
+      "deliverables": ["app/services/conversation/candidate_generator.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "SSEイベントへの推奨情報追加",
+      "estimated_hours": 1,
+      "deliverables": ["app/schemas/chat.py"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "単体テスト - キーワード分析",
+      "estimated_hours": 1,
+      "deliverables": ["tests/unit/test_keyword_analyzer.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "単体テスト - 複雑度推定",
+      "estimated_hours": 1,
+      "deliverables": ["tests/unit/test_complexity_estimator.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "単体テスト - 信頼度計算",
+      "estimated_hours": 1,
+      "deliverables": ["tests/unit/test_confidence_calculator.py"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "単体テスト - 統合サービス",
+      "estimated_hours": 1,
+      "deliverables": ["tests/unit/test_ai_recommendation_service.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "4.5",
+      "description": "結合テスト",
+      "estimated_hours": 1,
+      "deliverables": ["tests/integration/test_recommendation_flow.py"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "API仕様書更新",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/docs/API_REFERENCE.md"],
+      "dependencies": ["4.5"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "静的解析・フォーマット",
+      "estimated_hours": 0.5,
+      "deliverables": [],
+      "dependencies": ["4.5"]
+    }
+  ],
+  "deliverables_checklist": [
+    "app/schemas/recommendation.py",
+    "app/services/recommendation/__init__.py",
+    "app/services/recommendation/keyword_analyzer.py",
+    "app/services/recommendation/complexity_estimator.py",
+    "app/services/recommendation/confidence_calculator.py",
+    "app/services/recommendation/ai_recommendation_service.py",
+    "app/services/conversation/candidate_generator.py",
+    "app/schemas/chat.py",
+    "tests/unit/test_keyword_analyzer.py",
+    "tests/unit/test_complexity_estimator.py",
+    "tests/unit/test_confidence_calculator.py",
+    "tests/unit/test_ai_recommendation_service.py",
+    "tests/integration/test_recommendation_flow.py",
+    "expertAgent/docs/API_REFERENCE.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "推奨精度80%以上（テストデータ）",
+    "処理時間100ms以内",
+    "CI/CDグリーン（Ruff/MyPyエラーゼロ）",
+    "APIドキュメント更新完了"
+  ],
+  "target_coverage": 90,
+  "technical_design": {
+    "schema_design": {
+      "ComplexityLevel": "Enum - simple, medium, complex",
+      "AIRecommendation": "推奨結果モデル - recommended_candidate_id, confidence, complexity, reason, keywords_detected"
+    },
+    "complexity_keywords": {
+      "simple": ["集計", "合計", "平均", "一覧", "表示", "出力", "CSV", "Excel", "レポート"],
+      "medium": ["比較", "分析", "グラフ", "複数", "条件", "フィルタ", "並べ替え", "グループ"],
+      "complex": ["予測", "機械学習", "AI", "自動化", "連携", "API", "リアルタイム", "通知", "自動"]
+    }
+  }
+}
