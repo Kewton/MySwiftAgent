@@ -4,7 +4,6 @@ Issue #171: Diagnostic Information Retrieval API Implementation.
 Tests for end-to-end API functionality.
 """
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
