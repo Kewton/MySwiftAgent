@@ -240,6 +240,77 @@ class MetricsAggregationService(BaseService):
 
         return list(sessions_map.values())
 
+    def _extract_quality_scores(self, trace: dict[str, Any]) -> list[float]:
+        """Extract quality scores from a trace.
+
+        Args:
+            trace: Trace data with scores.
+
+        Returns:
+            List of quality score values.
+        """
+        scores = trace.get("scores", [])
+        return [
+            score.get("value", 0.0)
+            for score in scores
+            if score.get("name") == "quality_score"
+        ]
+
+    def _is_session_completed(self, trace: dict[str, Any]) -> bool:
+        """Check if a trace indicates session completion.
+
+        Args:
+            trace: Trace data with metadata.
+
+        Returns:
+            True if status is completed.
+        """
+        metadata = trace.get("metadata", {})
+        return bool(metadata.get("status") == "completed")
+
+    def _count_model_usage(
+        self, trace: dict[str, Any], model_counts: dict[str, int]
+    ) -> None:
+        """Count model usage from trace observations.
+
+        Args:
+            trace: Trace data with observations.
+            model_counts: Dictionary to update with counts.
+        """
+        observations = trace.get("observations", [])
+        for obs in observations:
+            if obs.get("type") == "generation":
+                model_name = obs.get("model", "unknown")
+                if model_name:
+                    model_counts[model_name] += 1
+
+    def _build_model_usage_list(
+        self, model_counts: dict[str, int]
+    ) -> list[ModelUsage]:
+        """Build sorted model usage list from counts.
+
+        Args:
+            model_counts: Dictionary of model name to usage count.
+
+        Returns:
+            Sorted list of ModelUsage objects.
+        """
+        total_model_usage = sum(model_counts.values())
+        model_usage = [
+            ModelUsage(
+                model_name=model_name,
+                usage_percentage=(
+                    (count / total_model_usage * 100)
+                    if total_model_usage > 0
+                    else 0.0
+                ),
+                usage_count=count,
+            )
+            for model_name, count in model_counts.items()
+        ]
+        model_usage.sort(key=lambda x: x.usage_percentage, reverse=True)
+        return model_usage
+
     def _calculate_metrics(
         self, sessions: list[dict[str, Any]]
     ) -> RequirementDefinitionMetrics:
@@ -260,7 +331,6 @@ class MetricsAggregationService(BaseService):
                 model_usage=[],
             )
 
-        # Collect all scores
         all_scores: list[float] = []
         total_turns = 0
         completed_sessions = 0
@@ -270,64 +340,28 @@ class MetricsAggregationService(BaseService):
             traces = session.get("traces", [])
             total_turns += len(traces)
 
-            # Check if session is completed (last trace has completed status)
             session_completed = False
             for trace in traces:
-                # Collect scores
-                scores = trace.get("scores", [])
-                for score in scores:
-                    if score.get("name") == "quality_score":
-                        all_scores.append(score.get("value", 0.0))
-
-                # Check completion status
-                metadata = trace.get("metadata", {})
-                if metadata.get("status") == "completed":
+                all_scores.extend(self._extract_quality_scores(trace))
+                if self._is_session_completed(trace):
                     session_completed = True
-
-                # Count model usage
-                observations = trace.get("observations", [])
-                for obs in observations:
-                    if obs.get("type") == "generation":
-                        model_name = obs.get("model", "unknown")
-                        if model_name:
-                            model_counts[model_name] += 1
+                self._count_model_usage(trace, model_counts)
 
             if session_completed:
                 completed_sessions += 1
 
-        # Calculate average score
         average_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
-
-        # Calculate completion rate
         total_sessions = len(sessions)
         completion_rate = (
             (completed_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
         )
-
-        # Calculate model usage percentages
-        total_model_usage = sum(model_counts.values())
-        model_usage = []
-        for model_name, count in model_counts.items():
-            percentage = (
-                (count / total_model_usage * 100) if total_model_usage > 0 else 0.0
-            )
-            model_usage.append(
-                ModelUsage(
-                    model_name=model_name,
-                    usage_percentage=percentage,
-                    usage_count=count,
-                )
-            )
-
-        # Sort by usage percentage descending
-        model_usage.sort(key=lambda x: x.usage_percentage, reverse=True)
 
         return RequirementDefinitionMetrics(
             average_score=average_score,
             total_turns=total_turns,
             completion_rate=completion_rate,
             total_sessions=total_sessions,
-            model_usage=model_usage,
+            model_usage=self._build_model_usage_list(model_counts),
         )
 
 

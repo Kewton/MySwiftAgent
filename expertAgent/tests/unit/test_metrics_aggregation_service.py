@@ -529,6 +529,69 @@ class TestValkeyCache:
     """Test Valkey cache integration."""
 
     @pytest.mark.unit
+    async def test_valkey_disabled_returns_none(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test _get_valkey_client returns None when Valkey is disabled."""
+        metrics_service._use_valkey = False
+        result = await metrics_service._get_valkey_client()
+        assert result is None
+
+    @pytest.mark.unit
+    async def test_valkey_client_creation_on_enabled(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test Valkey client creation when enabled."""
+        metrics_service._use_valkey = True
+        metrics_service._valkey_client = None
+
+        with patch(
+            "app.services.metrics_aggregation_service.ValkeyClient"
+        ) as MockValkeyClient:
+            mock_client = MagicMock()
+            mock_client.connect = AsyncMock()
+            MockValkeyClient.return_value = mock_client
+
+            with patch("app.services.metrics_aggregation_service.settings") as mock_settings:
+                mock_settings.VALKEY_HOST = "localhost"
+                mock_settings.VALKEY_PORT = 6379
+                mock_settings.VALKEY_DB = 0
+
+                result = await metrics_service._get_valkey_client()
+
+                assert result == mock_client
+                mock_client.connect.assert_awaited_once()
+
+    @pytest.mark.unit
+    async def test_valkey_connection_error_returns_none(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test Valkey connection error handling."""
+        from app.services.valkey_client import ValkeyConnectionError
+
+        metrics_service._use_valkey = True
+        metrics_service._valkey_client = None
+
+        with patch(
+            "app.services.metrics_aggregation_service.ValkeyClient"
+        ) as MockValkeyClient:
+            mock_client = MagicMock()
+            mock_client.connect = AsyncMock(
+                side_effect=ValkeyConnectionError("Connection failed")
+            )
+            MockValkeyClient.return_value = mock_client
+
+            with patch("app.services.metrics_aggregation_service.settings") as mock_settings:
+                mock_settings.VALKEY_HOST = "localhost"
+                mock_settings.VALKEY_PORT = 6379
+                mock_settings.VALKEY_DB = 0
+
+                result = await metrics_service._get_valkey_client()
+
+                assert result is None
+                assert metrics_service._valkey_client is None
+
+    @pytest.mark.unit
     async def test_valkey_cache_store(self, metrics_service: MetricsAggregationService):
         """Test storing metrics in Valkey cache."""
         mock_valkey = MagicMock()
@@ -622,3 +685,296 @@ class TestValkeyCache:
 
             assert result.cache_hit is False
             assert result.metrics is not None
+
+    @pytest.mark.unit
+    async def test_cache_retrieval_exception_handling(
+        self, metrics_service: MetricsAggregationService, sample_sessions: list
+    ):
+        """Test that cache retrieval exception is handled gracefully."""
+        with (
+            patch.object(
+                metrics_service,
+                "_get_from_cache",
+                side_effect=Exception("Cache error"),
+            ),
+            patch.object(
+                metrics_service, "_fetch_sessions", return_value=sample_sessions
+            ),
+            patch.object(metrics_service, "_store_in_cache", return_value=None),
+        ):
+            request = RequirementDefinitionMetricsRequest(
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+            )
+            result = await metrics_service.get_requirement_definition_metrics(request)
+
+            assert result.cache_hit is False
+            assert result.metrics is not None
+
+    @pytest.mark.unit
+    async def test_cache_storage_exception_handling(
+        self, metrics_service: MetricsAggregationService, sample_sessions: list
+    ):
+        """Test that cache storage exception is handled gracefully."""
+        with (
+            patch.object(metrics_service, "_get_from_cache", return_value=None),
+            patch.object(
+                metrics_service, "_fetch_sessions", return_value=sample_sessions
+            ),
+            patch.object(
+                metrics_service,
+                "_store_in_cache",
+                side_effect=Exception("Storage error"),
+            ),
+        ):
+            request = RequirementDefinitionMetricsRequest(
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+            )
+            result = await metrics_service.get_requirement_definition_metrics(request)
+
+            # Should still return valid result despite storage error
+            assert result is not None
+            assert result.cache_hit is False
+
+    @pytest.mark.unit
+    async def test_cache_parse_error_returns_none(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test that cache parse errors return None."""
+        mock_valkey = MagicMock()
+        mock_valkey.get = AsyncMock(return_value={"invalid": "data"})
+
+        with (
+            patch.object(metrics_service, "_valkey_client", mock_valkey),
+            patch.object(metrics_service, "_use_valkey", True),
+        ):
+            request = RequirementDefinitionMetricsRequest(
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+            )
+
+            result = await metrics_service._get_from_cache(request)
+
+            assert result is None
+
+    @pytest.mark.unit
+    async def test_cache_returns_none_when_no_cached_data(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test that _get_from_cache returns None when cache returns None."""
+        mock_valkey = MagicMock()
+        mock_valkey.get = AsyncMock(return_value=None)
+
+        with (
+            patch.object(metrics_service, "_valkey_client", mock_valkey),
+            patch.object(metrics_service, "_use_valkey", True),
+        ):
+            request = RequirementDefinitionMetricsRequest(
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+            )
+
+            result = await metrics_service._get_from_cache(request)
+
+            assert result is None
+
+    @pytest.mark.unit
+    async def test_store_in_cache_exception_handling(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test that store in cache exception is logged and handled."""
+        mock_valkey = MagicMock()
+        mock_valkey.set = AsyncMock(side_effect=Exception("Storage error"))
+
+        with (
+            patch.object(metrics_service, "_valkey_client", mock_valkey),
+            patch.object(metrics_service, "_use_valkey", True),
+        ):
+            response = RequirementDefinitionMetricsResponse(
+                metrics=RequirementDefinitionMetrics(
+                    average_score=0.85,
+                    total_turns=10,
+                    completion_rate=80.0,
+                    total_sessions=5,
+                    model_usage=[],
+                ),
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+                cache_hit=False,
+                generated_at=datetime.now(),
+            )
+            request = RequirementDefinitionMetricsRequest(
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+            )
+
+            # Should not raise exception
+            await metrics_service._store_in_cache(request, response)
+
+
+class TestLangfuseErrorHandling:
+    """Test Langfuse error handling."""
+
+    @pytest.mark.unit
+    async def test_langfuse_disabled_returns_empty_sessions(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test that disabled Langfuse returns empty metrics via exception."""
+        with (
+            patch.object(metrics_service, "_get_from_cache", return_value=None),
+            patch.object(metrics_service, "_store_in_cache", return_value=None),
+            patch(
+                "app.services.metrics_aggregation_service.trace_service"
+            ) as mock_trace_service,
+        ):
+            mock_trace_service._is_enabled.return_value = False
+
+            request = RequirementDefinitionMetricsRequest(
+                from_date=datetime(2025, 11, 1),
+                to_date=datetime(2025, 11, 30),
+            )
+            result = await metrics_service.get_requirement_definition_metrics(request)
+
+            assert result.metrics.total_sessions == 0
+            assert result.metrics.average_score == 0.0
+
+    @pytest.mark.unit
+    async def test_langfuse_returns_none_traces(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test handling when Langfuse returns None traces."""
+        with patch(
+            "app.services.metrics_aggregation_service.trace_service"
+        ) as mock_trace_service:
+            mock_trace_service._is_enabled.return_value = True
+            mock_trace_service.get_traces.return_value = None
+
+            sessions = await metrics_service._fetch_sessions(
+                from_date=datetime(2025, 11, 1), to_date=datetime(2025, 11, 30)
+            )
+
+            assert sessions == []
+
+
+class TestHelperMethods:
+    """Test extracted helper methods."""
+
+    @pytest.mark.unit
+    def test_extract_quality_scores_with_scores(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test extracting quality scores from trace."""
+        trace = {
+            "scores": [
+                {"name": "quality_score", "value": 0.85},
+                {"name": "other_score", "value": 0.90},
+                {"name": "quality_score", "value": 0.75},
+            ]
+        }
+        scores = metrics_service._extract_quality_scores(trace)
+        assert scores == [0.85, 0.75]
+
+    @pytest.mark.unit
+    def test_extract_quality_scores_empty(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test extracting quality scores from trace with no scores."""
+        trace = {"scores": []}
+        scores = metrics_service._extract_quality_scores(trace)
+        assert scores == []
+
+    @pytest.mark.unit
+    def test_extract_quality_scores_missing_value(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test extracting quality scores with missing value."""
+        trace = {"scores": [{"name": "quality_score"}]}
+        scores = metrics_service._extract_quality_scores(trace)
+        assert scores == [0.0]
+
+    @pytest.mark.unit
+    def test_is_session_completed_true(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test session completion check returns True."""
+        trace = {"metadata": {"status": "completed"}}
+        assert metrics_service._is_session_completed(trace) is True
+
+    @pytest.mark.unit
+    def test_is_session_completed_false(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test session completion check returns False."""
+        trace = {"metadata": {"status": "in_progress"}}
+        assert metrics_service._is_session_completed(trace) is False
+
+    @pytest.mark.unit
+    def test_is_session_completed_missing_metadata(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test session completion check with missing metadata."""
+        trace = {}
+        assert metrics_service._is_session_completed(trace) is False
+
+    @pytest.mark.unit
+    def test_count_model_usage(self, metrics_service: MetricsAggregationService):
+        """Test counting model usage from observations."""
+        from collections import defaultdict
+
+        trace = {
+            "observations": [
+                {"type": "generation", "model": "gpt-4o"},
+                {"type": "generation", "model": "gpt-4o"},
+                {"type": "generation", "model": "claude-haiku-4-5"},
+                {"type": "other", "model": "should-not-count"},
+            ]
+        }
+        model_counts: dict[str, int] = defaultdict(int)
+        metrics_service._count_model_usage(trace, model_counts)
+
+        assert model_counts["gpt-4o"] == 2
+        assert model_counts["claude-haiku-4-5"] == 1
+        assert "should-not-count" not in model_counts
+
+    @pytest.mark.unit
+    def test_count_model_usage_empty_model_name(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test counting model usage with empty model name."""
+        from collections import defaultdict
+
+        trace = {
+            "observations": [
+                {"type": "generation", "model": ""},
+                {"type": "generation", "model": None},
+            ]
+        }
+        model_counts: dict[str, int] = defaultdict(int)
+        metrics_service._count_model_usage(trace, model_counts)
+
+        assert len(model_counts) == 0
+
+    @pytest.mark.unit
+    def test_build_model_usage_list(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test building model usage list."""
+        model_counts = {"gpt-4o": 3, "claude-haiku-4-5": 1, "gpt-4o-mini": 1}
+        result = metrics_service._build_model_usage_list(model_counts)
+
+        assert len(result) == 3
+        # Should be sorted by usage percentage descending
+        assert result[0].model_name == "gpt-4o"
+        assert result[0].usage_percentage == 60.0
+        assert result[0].usage_count == 3
+
+    @pytest.mark.unit
+    def test_build_model_usage_list_empty(
+        self, metrics_service: MetricsAggregationService
+    ):
+        """Test building model usage list with empty counts."""
+        model_counts: dict[str, int] = {}
+        result = metrics_service._build_model_usage_list(model_counts)
+
+        assert result == []
