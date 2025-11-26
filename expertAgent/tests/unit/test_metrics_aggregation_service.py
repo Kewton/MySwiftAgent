@@ -552,7 +552,9 @@ class TestValkeyCache:
             mock_client.connect = AsyncMock()
             MockValkeyClient.return_value = mock_client
 
-            with patch("app.services.metrics_aggregation_service.settings") as mock_settings:
+            with patch(
+                "app.services.metrics_aggregation_service.settings"
+            ) as mock_settings:
                 mock_settings.VALKEY_HOST = "localhost"
                 mock_settings.VALKEY_PORT = 6379
                 mock_settings.VALKEY_DB = 0
@@ -581,7 +583,9 @@ class TestValkeyCache:
             )
             MockValkeyClient.return_value = mock_client
 
-            with patch("app.services.metrics_aggregation_service.settings") as mock_settings:
+            with patch(
+                "app.services.metrics_aggregation_service.settings"
+            ) as mock_settings:
                 mock_settings.VALKEY_HOST = "localhost"
                 mock_settings.VALKEY_PORT = 6379
                 mock_settings.VALKEY_DB = 0
@@ -956,9 +960,7 @@ class TestHelperMethods:
         assert len(model_counts) == 0
 
     @pytest.mark.unit
-    def test_build_model_usage_list(
-        self, metrics_service: MetricsAggregationService
-    ):
+    def test_build_model_usage_list(self, metrics_service: MetricsAggregationService):
         """Test building model usage list."""
         model_counts = {"gpt-4o": 3, "claude-haiku-4-5": 1, "gpt-4o-mini": 1}
         result = metrics_service._build_model_usage_list(model_counts)

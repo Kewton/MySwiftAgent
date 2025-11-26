@@ -1,0 +1,26 @@
+{
+  "issue_number": 175,
+  "refactor_targets": [
+    "expertAgent/app/services/metrics_aggregation_service.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90.62,
+    "complexity_score": 10
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "Dependency Injection"
+  ],
+  "improvement_goals": [
+    "カバレッジを95%以上に向上",
+    "重複コードの削除",
+    "テスト可読性の向上"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 90.62
+  },
+  "acceptance_result": {
+    "status": "passed"
+  }
+}

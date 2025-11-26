@@ -284,9 +284,7 @@ class MetricsAggregationService(BaseService):
                 if model_name:
                     model_counts[model_name] += 1
 
-    def _build_model_usage_list(
-        self, model_counts: dict[str, int]
-    ) -> list[ModelUsage]:
+    def _build_model_usage_list(self, model_counts: dict[str, int]) -> list[ModelUsage]:
         """Build sorted model usage list from counts.
 
         Args:
@@ -300,9 +298,7 @@ class MetricsAggregationService(BaseService):
             ModelUsage(
                 model_name=model_name,
                 usage_percentage=(
-                    (count / total_model_usage * 100)
-                    if total_model_usage > 0
-                    else 0.0
+                    (count / total_model_usage * 100) if total_model_usage > 0 else 0.0
                 ),
                 usage_count=count,
             )
