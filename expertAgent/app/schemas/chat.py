@@ -12,7 +12,7 @@ This module provides Pydantic models for the chat-based job creation flow:
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class RequirementState(BaseModel):
@@ -172,14 +172,7 @@ class RequirementCandidate(BaseModel):
         le=1.0,
         examples=[0.85, 0.75],
     )
-
-    @field_validator("candidate_id")
-    @classmethod
-    def validate_candidate_id(cls, v: str) -> str:
-        """Validate that candidate_id is 'A' or 'B'."""
-        if v not in ("A", "B"):
-            raise ValueError("candidate_id must be 'A' or 'B'")
-        return v
+    # Note: Literal["A", "B"] type already provides validation, no @field_validator needed
 
 
 class CandidateSelectionEvent(BaseModel):
@@ -217,14 +210,7 @@ class CandidateSelectRequest(BaseModel):
         description="Selected candidate identifier ('A' or 'B')",
         examples=["A", "B"],
     )
-
-    @field_validator("selected_candidate_id")
-    @classmethod
-    def validate_selected_candidate_id(cls, v: str) -> str:
-        """Validate that selected_candidate_id is 'A' or 'B'."""
-        if v not in ("A", "B"):
-            raise ValueError("selected_candidate_id must be 'A' or 'B'")
-        return v
+    # Note: Literal["A", "B"] type already provides validation, no @field_validator needed
 
 
 class CandidateSelectResponse(BaseModel):
