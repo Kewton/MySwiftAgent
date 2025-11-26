@@ -1,0 +1,43 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 90.62,
+    "after_coverage": 100.0,
+    "before_complexity": 15,
+    "after_complexity": 8
+  },
+  "refactorings_applied": [
+    "Extract _extract_quality_scores method from _calculate_metrics (SRP)",
+    "Extract _is_session_completed method from _calculate_metrics (SRP)",
+    "Extract _count_model_usage method from _calculate_metrics (SRP)",
+    "Extract _build_model_usage_list method from _calculate_metrics (SRP)",
+    "Add comprehensive unit tests for all edge cases"
+  ],
+  "files_changed": [
+    "expertAgent/app/services/metrics_aggregation_service.py",
+    "expertAgent/tests/unit/test_metrics_aggregation_service.py"
+  ],
+  "static_analysis": {
+    "ruff_errors_before": 0,
+    "ruff_errors_after": 0,
+    "mypy_errors_before": 0,
+    "mypy_errors_after": 0
+  },
+  "tests_passed": true,
+  "static_analysis_passed": true,
+  "commits": [
+    "f3c8250: refactor(issue/175): extract helper methods and improve test coverage"
+  ],
+  "complexity_details": {
+    "before_average": "B (5.1)",
+    "after_average": "A (3.7)",
+    "methods_refactored": [
+      "_calculate_metrics: C(15) -> B(8)"
+    ]
+  },
+  "test_count": {
+    "before": 19,
+    "after": 39
+  },
+  "message": "Refactoring completed successfully. Coverage improved from 90.62% to 100.00%. Cyclomatic complexity reduced from C(15) to B(8) by applying Single Responsibility Principle."
+}

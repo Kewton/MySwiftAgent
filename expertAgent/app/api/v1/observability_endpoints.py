@@ -4,31 +4,42 @@
 トレース一覧取得、詳細情報、フィードバック投稿などの機能を実装します。
 
 Issue #113: Langfuse Self-hosted統合 - Observability API
+Issue #175: 品質可視化API実装 - Requirement Definition Metrics
 """
 
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.exceptions import ServiceError
 from app.schemas.observability import (
+    RequirementDefinitionMetricsRequest,
+    RequirementDefinitionMetricsResponse,
     ScoreRequest,
     ScoreResponse,
     TraceDetail,
     TraceListRequest,
     TraceListResponse,
 )
+from app.services.metrics_aggregation_service import MetricsAggregationService
 from app.services.observability_service import ObservabilityService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["observability"], prefix="/observability")
 _observability_service = ObservabilityService()
+_metrics_aggregation_service = MetricsAggregationService()
 
 
 def get_observability_service() -> ObservabilityService:
     """Return the shared ObservabilityService instance."""
     return _observability_service
+
+
+def get_metrics_aggregation_service() -> MetricsAggregationService:
+    """Return the shared MetricsAggregationService instance."""
+    return _metrics_aggregation_service
 
 
 @router.get(
@@ -172,4 +183,54 @@ async def submit_score(
         raise HTTPException(status_code=500, detail=str(e)) from e
     except Exception:
         logger.exception("Unexpected error submitting score")
+        raise HTTPException(status_code=500, detail="Internal server error") from None
+
+
+@router.get(
+    "/requirement-definition-metrics",
+    response_model=RequirementDefinitionMetricsResponse,
+    summary="Get requirement definition metrics",
+    description="要件定義会話の品質メトリクスを取得します。平均スコア、対話ターン数、完了率、モデル使用率を集計します。",
+)
+async def get_requirement_definition_metrics(
+    from_date: datetime | None = Query(
+        None, description="Start date for metrics (default: 30 days ago)"
+    ),
+    to_date: datetime | None = Query(
+        None, description="End date for metrics (default: today)"
+    ),
+    service: MetricsAggregationService = Depends(get_metrics_aggregation_service),
+) -> RequirementDefinitionMetricsResponse:
+    """要件定義メトリクスを取得するエンドポイント.
+
+    Args:
+        from_date: 開始日（デフォルト: 30日前）
+        to_date: 終了日（デフォルト: 今日）
+        service: MetricsAggregationService dependency
+
+    Returns:
+        RequirementDefinitionMetricsResponse: 集計メトリクス
+
+    Raises:
+        HTTPException: エラー発生時
+    """
+    try:
+        # Create request with optional date overrides
+        request_data = {}
+        if from_date is not None:
+            request_data["from_date"] = from_date
+        if to_date is not None:
+            request_data["to_date"] = to_date
+
+        request = RequirementDefinitionMetricsRequest(**request_data)
+        return await service.get_requirement_definition_metrics(request)
+
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ServiceError as e:
+        logger.exception("Service error getting metrics")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    except Exception:
+        logger.exception("Unexpected error getting metrics")
         raise HTTPException(status_code=500, detail="Internal server error") from None

@@ -87,3 +87,83 @@ class ScoreResponse(BaseModel):
     success: bool = Field(..., description="Whether score was successfully submitted")
     score_id: str | None = Field(None, description="Score ID if available")
     message: str = Field(..., description="Response message")
+
+
+# ========================================
+# Issue #175: Requirement Definition Metrics Schemas
+# ========================================
+
+
+class ModelUsage(BaseModel):
+    """モデル使用率."""
+
+    model_name: str = Field(
+        ..., description="Model name (e.g., 'gpt-4o', 'claude-haiku-4-5')"
+    )
+    usage_percentage: float = Field(
+        ..., ge=0.0, le=100.0, description="Usage percentage (0.0 - 100.0)"
+    )
+    usage_count: int = Field(
+        default=0, ge=0, description="Number of times model was used"
+    )
+
+
+class RequirementDefinitionMetrics(BaseModel):
+    """要件定義メトリクス."""
+
+    average_score: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Average quality score (0.0 - 1.0)"
+    )
+    total_turns: int = Field(default=0, ge=0, description="Total dialogue turns")
+    completion_rate: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Completion rate percentage (0.0 - 100.0)",
+    )
+    total_sessions: int = Field(default=0, ge=0, description="Total number of sessions")
+    model_usage: list[ModelUsage] = Field(
+        default_factory=list, description="Model usage statistics"
+    )
+
+
+def _default_from_date() -> datetime:
+    """Return default from_date (30 days ago)."""
+    from datetime import timedelta
+
+    return datetime.now().replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ) - timedelta(days=30)
+
+
+def _default_to_date() -> datetime:
+    """Return default to_date (today)."""
+    return datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+class RequirementDefinitionMetricsRequest(BaseModel):
+    """要件定義メトリクスリクエスト."""
+
+    from_date: datetime = Field(
+        default_factory=_default_from_date,
+        description="Start date for metrics (default: 30 days ago)",
+    )
+    to_date: datetime = Field(
+        default_factory=_default_to_date,
+        description="End date for metrics (default: today)",
+    )
+
+
+class RequirementDefinitionMetricsResponse(BaseModel):
+    """要件定義メトリクスレスポンス."""
+
+    metrics: RequirementDefinitionMetrics = Field(..., description="Aggregated metrics")
+    from_date: datetime = Field(..., description="Start date used for query")
+    to_date: datetime = Field(..., description="End date used for query")
+    cache_hit: bool = Field(
+        default=False, description="Whether data was retrieved from cache"
+    )
+    generated_at: datetime = Field(
+        default_factory=datetime.now,
+        description="Timestamp when metrics were generated",
+    )
