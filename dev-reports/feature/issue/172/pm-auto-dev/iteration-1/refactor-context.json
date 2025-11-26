@@ -1,0 +1,35 @@
+{
+  "issue_number": 172,
+  "refactor_targets": [
+    "expertAgent/app/services/feedback_service.py",
+    "expertAgent/app/schemas/chat.py",
+    "expertAgent/app/api/v1/chat_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 95.65,
+    "complexity_score": 0
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "Dependency Injection (既に適用済み)",
+    "Service Layer Pattern (既に適用済み)"
+  ],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "不要なコードの削除",
+    "テストカバレッジの維持（90%以上）",
+    "DRY原則の遵守確認"
+  ],
+  "working_directory": "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-172/expertAgent",
+  "current_status": {
+    "unit_tests_passed": 46,
+    "integration_tests_passed": 8,
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "constraints": [
+    "既存テストが全てパスすること",
+    "API互換性を維持すること",
+    "静的解析エラーを発生させないこと"
+  ]
+}
