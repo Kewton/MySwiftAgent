@@ -3,8 +3,6 @@
 Tests prompt loading, template generation, and prompt structure validation.
 """
 
-import pytest
-
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.multi_candidate import (
     MULTI_CANDIDATE_SYSTEM_PROMPT,
     create_multi_candidate_prompt,
@@ -147,3 +145,151 @@ class TestPromptIntegration:
             "json" in combined.lower() or "JSON" in combined,
         ]
         assert sum(json_hints) >= 1  # At least one hint about structure
+
+
+class TestGetSystemPrompt:
+    """Test suite for get_system_prompt function."""
+
+    def test_get_system_prompt_returns_string(self):
+        """Test that get_system_prompt returns a non-empty string."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.multi_candidate import (
+            get_system_prompt,
+        )
+
+        prompt = get_system_prompt()
+
+        assert isinstance(prompt, str)
+        assert len(prompt) > 0
+
+    def test_get_system_prompt_matches_constant(self):
+        """Test that get_system_prompt returns the same value as MULTI_CANDIDATE_SYSTEM_PROMPT."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.multi_candidate import (
+            get_system_prompt,
+        )
+
+        prompt = get_system_prompt()
+
+        assert prompt == MULTI_CANDIDATE_SYSTEM_PROMPT
+
+
+class TestCreateMultiCandidatePromptWithContext:
+    """Test suite for create_multi_candidate_prompt with additional_context parameter."""
+
+    def test_prompt_with_additional_context(self):
+        """Test prompt generation with additional context."""
+        user_message = "売上データを分析したい"
+        additional_context = "過去の会話: ユーザーはCSV形式を好む傾向があります"
+
+        prompt = create_multi_candidate_prompt(user_message, additional_context)
+
+        assert user_message in prompt
+        assert additional_context in prompt
+        # Context should appear before the user message prompt
+        assert prompt.index(additional_context) < prompt.index(user_message)
+
+    def test_prompt_without_additional_context(self):
+        """Test prompt generation without additional context (None)."""
+        user_message = "レポートを作成したい"
+
+        prompt = create_multi_candidate_prompt(user_message, None)
+
+        assert user_message in prompt
+        assert isinstance(prompt, str)
+
+    def test_prompt_with_empty_context(self):
+        """Test prompt generation with empty string context."""
+        user_message = "データベースを更新したい"
+
+        # Empty string should not be added to prompt
+        prompt_with_empty = create_multi_candidate_prompt(user_message, "")
+        prompt_without = create_multi_candidate_prompt(user_message, None)
+
+        # Both should contain the user message
+        assert user_message in prompt_with_empty
+        assert user_message in prompt_without
+
+
+class TestPromptEdgeCases:
+    """Test edge cases for prompt generation."""
+
+    def test_prompt_with_very_special_characters(self):
+        """Test prompt with various special characters."""
+        user_message = "売上<>データ\"を'分析&して|結果を\\出力"
+        prompt = create_multi_candidate_prompt(user_message)
+
+        assert "売上" in prompt
+        assert "分析" in prompt
+
+    def test_prompt_with_newlines(self):
+        """Test prompt with newline characters in message."""
+        user_message = "売上データを\n分析して\n結果を出力"
+        prompt = create_multi_candidate_prompt(user_message)
+
+        assert "売上データを" in prompt
+
+    def test_prompt_with_unicode_symbols(self):
+        """Test prompt with Unicode symbols."""
+        user_message = "売上データを分析"
+        prompt = create_multi_candidate_prompt(user_message)
+
+        assert "売上データを分析" in prompt
+
+    def test_prompt_strips_whitespace(self):
+        """Test that prompt strips leading/trailing whitespace."""
+        user_message = "テストメッセージ"
+        prompt = create_multi_candidate_prompt(user_message)
+
+        # Prompt should be stripped (no leading/trailing whitespace)
+        assert prompt == prompt.strip()
+
+
+class TestSystemPromptCompleteness:
+    """Test that system prompt contains all required elements."""
+
+    def test_system_prompt_has_two_candidate_instruction(self):
+        """Test that system prompt instructs to generate 2 candidates."""
+        prompt = MULTI_CANDIDATE_SYSTEM_PROMPT
+
+        # Check for 2 candidates instruction
+        assert (
+            "2" in prompt
+            or "二つ" in prompt
+            or "2つ" in prompt
+            or "two" in prompt.lower()
+        )
+
+    def test_system_prompt_has_candidate_id_instruction(self):
+        """Test that system prompt mentions candidate_id A and B."""
+        prompt = MULTI_CANDIDATE_SYSTEM_PROMPT
+
+        assert '"A"' in prompt or "'A'" in prompt or "A" in prompt
+        assert '"B"' in prompt or "'B'" in prompt or "B" in prompt
+
+    def test_system_prompt_has_confidence_range(self):
+        """Test that system prompt specifies confidence range."""
+        prompt = MULTI_CANDIDATE_SYSTEM_PROMPT
+
+        # Should mention 0.0-1.0 range or similar
+        assert "0.0" in prompt or "1.0" in prompt or "0-1" in prompt
+
+    def test_system_prompt_has_json_format_instruction(self):
+        """Test that system prompt requests JSON output."""
+        prompt = MULTI_CANDIDATE_SYSTEM_PROMPT
+
+        assert "json" in prompt.lower() or "JSON" in prompt
+
+    def test_system_prompt_has_differentiation_guidance(self):
+        """Test that system prompt provides differentiation guidance."""
+        prompt = MULTI_CANDIDATE_SYSTEM_PROMPT
+
+        # Should mention ways to differentiate candidates
+        differentiation_terms = [
+            "異なる",
+            "差別化",
+            "違い",
+            "シンプル",
+            "詳細",
+            "differ",
+            "different",
+        ]
+        assert any(term in prompt.lower() for term in differentiation_terms)

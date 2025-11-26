@@ -91,7 +91,10 @@ def mock_llm_stream_after_selection():
 
     async def _stream(*args, **kwargs):
         yield {"type": "message", "data": {"content": "候補Aを選択いただきました。"}}
-        yield {"type": "message", "data": {"content": "追加の詳細を確認させてください。"}}
+        yield {
+            "type": "message",
+            "data": {"content": "追加の詳細を確認させてください。"},
+        }
         yield {
             "type": "requirement_update",
             "data": {
@@ -154,9 +157,7 @@ class TestInitialMessageWithCandidates:
                     events.append(data)
 
             # Verify candidate_selection event
-            candidate_events = [
-                e for e in events if e["type"] == "candidate_selection"
-            ]
+            candidate_events = [e for e in events if e["type"] == "candidate_selection"]
             assert len(candidate_events) == 1
 
             candidate_data = candidate_events[0]["data"]
@@ -195,9 +196,7 @@ class TestInitialMessageWithCandidates:
                     data = json.loads(line[6:])
                     events.append(data)
 
-            candidate_events = [
-                e for e in events if e["type"] == "candidate_selection"
-            ]
+            candidate_events = [e for e in events if e["type"] == "candidate_selection"]
             candidates = candidate_events[0]["data"]["candidates"]
 
             for candidate in candidates:
@@ -238,9 +237,7 @@ class TestInitialMessageWithCandidates:
                     data = json.loads(line[6:])
                     events.append(data)
 
-            candidate_events = [
-                e for e in events if e["type"] == "candidate_selection"
-            ]
+            candidate_events = [e for e in events if e["type"] == "candidate_selection"]
             candidates = candidate_events[0]["data"]["candidates"]
             candidate_ids = [c["candidate_id"] for c in candidates]
 
@@ -494,10 +491,357 @@ class TestPerformance:
             )
 
             # Consume the stream
-            async for line in response.aiter_lines():
+            async for _line in response.aiter_lines():
                 pass
 
             elapsed_time = time.time() - start_time
 
             # Should complete within 4 seconds (with mocked LLM)
             assert elapsed_time < 4.0, f"Response took {elapsed_time:.2f}s (> 4s limit)"
+
+
+@pytest.mark.asyncio
+class TestSSECandidateSelectionEvent:
+    """Test SSE candidate_selection event integration."""
+
+    async def test_sse_candidate_selection_event_structure(
+        self, mock_llm_stream_with_candidates
+    ):
+        """Test that SSE candidate_selection event has correct structure."""
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            request_data = {
+                "conversation_id": "test_conv_sse_001",
+                "user_message": "売上データを分析したい",
+                "context": {
+                    "previous_messages": [],
+                    "current_requirements": {
+                        "data_source": None,
+                        "process_description": None,
+                        "output_format": None,
+                        "schedule": None,
+                        "completeness": 0.0,
+                    },
+                },
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
+            )
+
+            events = []
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = json.loads(line[6:])
+                    events.append(data)
+
+            # Find candidate_selection event
+            candidate_events = [e for e in events if e["type"] == "candidate_selection"]
+            assert len(candidate_events) >= 1
+
+            event = candidate_events[0]
+            assert "type" in event
+            assert event["type"] == "candidate_selection"
+            assert "data" in event
+            assert "candidates" in event["data"]
+            assert "prompt_for_selection" in event["data"]
+
+    async def test_complete_flow_with_sse(self, mock_llm_stream_with_candidates):
+        """Test complete flow: SSE candidate_selection -> selection -> continuation."""
+        from app.services.conversation.conversation_store import conversation_store
+
+        transport = ASGITransport(app=app)
+
+        # Step 1: Initial message triggers candidate_selection SSE event
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            request_data = {
+                "conversation_id": "test_conv_complete_flow_001",
+                "user_message": "売上データを分析したい",
+                "context": {
+                    "previous_messages": [],
+                    "current_requirements": {
+                        "data_source": None,
+                        "process_description": None,
+                        "output_format": None,
+                        "schedule": None,
+                        "completeness": 0.0,
+                    },
+                },
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
+            )
+
+            assert response.status_code == 200
+
+            events = []
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = json.loads(line[6:])
+                    events.append(data)
+
+            # Verify candidate_selection event exists
+            candidate_events = [e for e in events if e["type"] == "candidate_selection"]
+            assert len(candidate_events) >= 1
+
+        # Step 2: Setup candidates in store for selection
+        candidate_a = RequirementCandidate(
+            candidate_id="A",
+            title="簡易分析",
+            data_source="CSVファイル",
+            process_description="基本的な売上集計",
+            output_format="Excelレポート",
+            schedule="オンデマンド",
+            confidence=0.85,
+        )
+        candidate_b = RequirementCandidate(
+            candidate_id="B",
+            title="詳細分析",
+            data_source="データベース",
+            process_description="詳細なトレンド分析",
+            output_format="PDFレポート",
+            schedule="毎日実行",
+            confidence=0.75,
+        )
+        conversation_store.save_candidates(
+            "test_conv_complete_flow_001", [candidate_a, candidate_b]
+        )
+
+        # Step 3: Select candidate A
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            select_request = {
+                "conversation_id": "test_conv_complete_flow_001",
+                "selected_candidate_id": "A",
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/select-candidate", json=select_request
+            )
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["selected_candidate_id"] == "A"
+            assert result["requirements"]["data_source"] == "CSVファイル"
+
+        # Cleanup
+        conversation_store.delete_conversation("test_conv_complete_flow_001")
+
+
+@pytest.mark.asyncio
+class TestErrorHandlingInSelectionFlow:
+    """Test error handling in candidate selection flow."""
+
+    async def test_select_candidate_not_found_conversation(self):
+        """Test error when selecting from non-existent conversation."""
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            request_data = {
+                "conversation_id": "non_existent_conversation_12345",
+                "selected_candidate_id": "A",
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/select-candidate", json=request_data
+            )
+
+            # Should return 404 for not found conversation
+            assert response.status_code == 404
+
+    async def test_select_candidate_not_in_list(self, setup_candidates_in_store):
+        """Test error when selected candidate not in stored candidates."""
+        from app.services.conversation.conversation_store import conversation_store
+
+        # Create a conversation with only candidate A
+        candidate_a = RequirementCandidate(
+            candidate_id="A",
+            title="候補A",
+            data_source="CSV",
+            process_description="処理",
+            output_format="Excel",
+            schedule="毎日",
+            confidence=0.8,
+        )
+        conversation_store.save_candidates(
+            "test_conv_single_candidate_001", [candidate_a]
+        )
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            request_data = {
+                "conversation_id": "test_conv_single_candidate_001",
+                "selected_candidate_id": "B",  # Not in list
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/select-candidate", json=request_data
+            )
+
+            # Should return 400 for candidate not found
+            assert response.status_code == 400
+
+        # Cleanup
+        conversation_store.delete_conversation("test_conv_single_candidate_001")
+
+    async def test_sse_error_event_on_exception(self):
+        """Test that SSE error event is sent on exception."""
+
+        async def _error_stream(*args, **kwargs):
+            raise Exception("Simulated error")
+
+        with patch(
+            "app.api.v1.chat_endpoints.stream_requirement_clarification",
+            side_effect=_error_stream,
+        ):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
+                request_data = {
+                    "conversation_id": "test_conv_error_sse_001",
+                    "user_message": "エラーテスト",
+                    "context": {
+                        "previous_messages": [],
+                        "current_requirements": {
+                            "data_source": None,
+                            "process_description": None,
+                            "output_format": None,
+                            "schedule": None,
+                            "completeness": 0.0,
+                        },
+                    },
+                }
+
+                response = await client.post(
+                    "/aiagent-api/v1/chat/requirement-definition", json=request_data
+                )
+
+                assert response.status_code == 200
+
+                events = []
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data = json.loads(line[6:])
+                        events.append(data)
+
+                # Should contain an error event
+                error_events = [e for e in events if e["type"] == "error"]
+                assert len(error_events) == 1
+                assert "message" in error_events[0]["data"]
+
+
+@pytest.mark.asyncio
+class TestConversationStoreIntegration:
+    """Test integration with conversation store."""
+
+    async def test_candidates_saved_to_store(self, setup_candidates_in_store):
+        """Test that candidates are saved to conversation store."""
+        from app.services.conversation.conversation_store import conversation_store
+
+        # Verify candidates exist in store
+        candidates = conversation_store.get_candidates("test_conv_select_001")
+        assert candidates is not None
+        assert len(candidates) == 2
+        assert candidates[0].candidate_id == "A"
+        assert candidates[1].candidate_id == "B"
+
+    async def test_selected_candidate_saved_to_store(self, setup_candidates_in_store):
+        """Test that selected candidate is saved to store."""
+        from app.services.conversation.conversation_store import conversation_store
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            request_data = {
+                "conversation_id": "test_conv_select_001",
+                "selected_candidate_id": "A",
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/select-candidate", json=request_data
+            )
+
+            assert response.status_code == 200
+
+        # Verify selected candidate is saved
+        selected = conversation_store.get_selected_candidate("test_conv_select_001")
+        assert selected == "A"
+
+    async def test_conversation_messages_saved(self, mock_llm_stream_after_selection):
+        """Test that conversation messages are saved to store."""
+        from app.services.conversation.conversation_store import conversation_store
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            request_data = {
+                "conversation_id": "test_conv_messages_001",
+                "user_message": "テストメッセージ",
+                "context": {
+                    "previous_messages": [],
+                    "current_requirements": {
+                        "data_source": None,
+                        "process_description": None,
+                        "output_format": None,
+                        "schedule": None,
+                        "completeness": 0.0,
+                    },
+                },
+            }
+
+            response = await client.post(
+                "/aiagent-api/v1/chat/requirement-definition", json=request_data
+            )
+
+            # Consume stream
+            async for _line in response.aiter_lines():
+                pass
+
+        # Verify message saved
+        messages = conversation_store.get_messages("test_conv_messages_001")
+        assert len(messages) >= 1
+        assert any(m["role"] == "user" for m in messages)
+
+        # Cleanup
+        conversation_store.delete_conversation("test_conv_messages_001")
+
+    async def test_select_candidate_internal_error(self):
+        """Test handling of internal error during candidate selection."""
+        from app.services.conversation.conversation_store import conversation_store
+
+        # Save candidates to the store
+        candidate_a = RequirementCandidate(
+            candidate_id="A",
+            title="候補A",
+            data_source="CSV",
+            process_description="処理",
+            output_format="Excel",
+            schedule="毎日",
+            confidence=0.8,
+        )
+        conversation_store.save_candidates(
+            "test_conv_internal_error_001", [candidate_a]
+        )
+
+        # Mock candidate_to_requirement_state_dict to raise an error
+        with patch(
+            "app.api.v1.chat_endpoints.candidate_to_requirement_state_dict",
+            side_effect=Exception("Internal processing error"),
+        ):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
+                request_data = {
+                    "conversation_id": "test_conv_internal_error_001",
+                    "selected_candidate_id": "A",
+                }
+
+                response = await client.post(
+                    "/aiagent-api/v1/chat/select-candidate", json=request_data
+                )
+
+                # Should return 500 internal server error
+                assert response.status_code == 500
+                assert "候補の選択に失敗しました" in response.json()["detail"]
+
+        # Cleanup
+        conversation_store.delete_conversation("test_conv_internal_error_001")
