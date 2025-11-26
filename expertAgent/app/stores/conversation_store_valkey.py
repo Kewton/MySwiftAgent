@@ -1,14 +1,18 @@
 """Valkey-backed conversation storage implementation.
 
 Issue #169: Valkey persistence infrastructure implementation.
+Issue #171: Extended with list_conversations and metadata support.
 Implements ConversationStore interface using Valkey for persistent storage.
 """
 
+import logging
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from app.services.valkey_client import ValkeyClient
 from app.stores.interfaces import ConversationStore
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationStoreValkey(ConversationStore):
@@ -161,6 +165,76 @@ class ConversationStoreValkey(ConversationStore):
             Full key name with prefix
         """
         return f"{self.key_prefix}{conversation_id}"
+
+    async def list_conversations(
+        self,
+        conversation_ids: Optional[Set[str]] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """List conversations with optional filtering by IDs.
+
+        Issue #171: Added for diagnostic API support.
+
+        Args:
+            conversation_ids: Optional set of conversation IDs to filter by
+            limit: Maximum number of conversations to return
+            offset: Number of conversations to skip
+
+        Returns:
+            List of conversation data dictionaries
+        """
+        conversations: List[Dict[str, Any]] = []
+
+        if conversation_ids:
+            # Fetch specific conversations
+            sorted_ids = sorted(conversation_ids, reverse=True)
+            paginated_ids = sorted_ids[offset : offset + limit]
+
+            for conv_id in paginated_ids:
+                conv = await self.get_conversation(conv_id)
+                if conv:
+                    conversations.append(conv)
+        else:
+            # Scan for all conversations
+            try:
+                client = self._client._client
+                if client is None:
+                    logger.error("Valkey client not connected")
+                    return []
+
+                pattern = f"{self.key_prefix}*"
+                cursor = 0
+                all_ids: List[str] = []
+
+                while True:
+                    cursor, keys = await client.scan(
+                        cursor=cursor, match=pattern, count=100
+                    )
+                    for key in keys:
+                        key_str = (
+                            key.decode("utf-8") if isinstance(key, bytes) else key
+                        )
+                        conv_id = key_str.replace(self.key_prefix, "")
+                        all_ids.append(conv_id)
+
+                    if cursor == 0:
+                        break
+
+                # Sort and paginate
+                sorted_ids = sorted(all_ids, reverse=True)
+                paginated_ids = sorted_ids[offset : offset + limit]
+
+                for conv_id in paginated_ids:
+                    conv = await self.get_conversation(conv_id)
+                    if conv:
+                        conversations.append(conv)
+
+            except Exception as e:
+                logger.error(f"Failed to list conversations: {e}")
+                return []
+
+        return conversations
 
     async def __aenter__(self) -> "ConversationStoreValkey":
         """Async context manager entry."""
