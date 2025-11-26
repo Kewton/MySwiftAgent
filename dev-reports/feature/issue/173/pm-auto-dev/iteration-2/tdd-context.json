@@ -1,0 +1,73 @@
+{
+  "issue_number": 173,
+  "iteration": 2,
+  "title": "Issue #152-4: 複数候補提示機能（基本実装）- カバレッジ改善",
+  "previous_iteration_summary": {
+    "tests_passed": 55,
+    "coverage": 72.1,
+    "status": "needs_improvement",
+    "low_coverage_files": [
+      {"file": "candidate_generator.py", "coverage": 56.8, "reason": "LLMパス未テスト"},
+      {"file": "multi_candidate.py", "coverage": 64.0, "reason": "エッジケース不足"},
+      {"file": "chat_endpoints.py", "coverage": 65.8, "reason": "エラーハンドリング未テスト"}
+    ]
+  },
+  "improvement_goals": [
+    "candidate_generator.pyのカバレッジを90%以上に改善",
+    "multi_candidate.pyのカバレッジを90%以上に改善",
+    "chat_endpoints.pyのカバレッジを90%以上に改善",
+    "SSE candidate_selectionイベントのstream_requirement_clarification()統合",
+    "エラーハンドリングテスト追加"
+  ],
+  "acceptance_criteria": [
+    "初回メッセージで2パターンが生成される",
+    "各候補に4つの観点が含まれる",
+    "SSEイベントが正しく送信される",
+    "候補選択後に対話が継続される",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "生成時間 4秒以内"
+  ],
+  "remaining_tasks": [
+    "stream_requirement_clarification()でのSSE candidate_selectionイベント統合",
+    "LLM呼び出しパスのテスト追加（モック使用）",
+    "エラーハンドリングテスト追加",
+    "エッジケーステスト追加（曖昧入力、タイムアウト等）"
+  ],
+  "target_coverage": 90,
+  "test_files_to_improve": [
+    {
+      "file": "expertAgent/tests/unit/test_candidate_generator.py",
+      "current_tests": 11,
+      "tests_to_add": [
+        "test_generate_candidates_llm_timeout",
+        "test_generate_candidates_invalid_response",
+        "test_generate_candidates_single_candidate_fallback",
+        "test_generate_candidates_malformed_json"
+      ]
+    },
+    {
+      "file": "expertAgent/tests/unit/test_multi_candidate_prompt.py",
+      "current_tests": 14,
+      "tests_to_add": [
+        "test_prompt_with_special_characters",
+        "test_prompt_with_long_input",
+        "test_system_prompt_completeness"
+      ]
+    },
+    {
+      "file": "expertAgent/tests/integration/test_candidate_selection_api.py",
+      "current_tests": 10,
+      "tests_to_add": [
+        "test_sse_candidate_selection_event",
+        "test_complete_flow_with_sse",
+        "test_error_handling_in_selection_flow"
+      ]
+    }
+  ],
+  "implementation_tasks": [
+    "SSE candidate_selectionイベントをstream_requirement_clarification()に統合",
+    "テストカバレッジ改善のための追加テスト作成"
+  ]
+}

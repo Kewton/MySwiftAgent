@@ -1,0 +1,191 @@
+{
+  "issue_number": 173,
+  "title": "Issue #152-4: 複数候補提示機能（基本実装）",
+  "acceptance_criteria": [
+    "初回メッセージで2パターンが生成される",
+    "各候補に4つの観点が含まれる",
+    "SSEイベントが正しく送信される",
+    "候補選択後に対話が継続される",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "生成時間 4秒以内",
+    "正常系: 2候補生成・選択・継続",
+    "異常系: LLM生成エラー",
+    "エッジケース: 曖昧なユーザー入力"
+  ],
+  "implementation_tasks": [
+    "MULTI_CANDIDATE_GENERATION_PROMPT作成",
+    "stream_requirement_clarification()拡張",
+    "SSE candidate_selectionイベント追加",
+    "候補選択ロジック実装",
+    "単体テスト作成",
+    "結合テスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "複数候補生成プロンプト作成",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/multi_candidate.py",
+        "expertAgent/config/prompts/multi_candidate.yaml"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "候補スキーマ定義",
+      "estimated_hours": 1,
+      "deliverables": [
+        "expertAgent/app/schemas/chat.py (拡張)"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3",
+      "description": "SSEイベント設計",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "複数候補生成ロジック実装",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/app/services/conversation/candidate_generator.py"
+      ],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "stream_requirement_clarification()拡張",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/app/services/conversation/llm_service.py (更新)"
+      ],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "候補選択エンドポイント実装",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "expertAgent/app/api/v1/chat_endpoints.py (更新)"
+      ],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "ルーター登録・統合",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "expertAgent/app/main.py (確認)"
+      ],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "単体テスト（プロンプト・スキーマ）",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "expertAgent/tests/unit/test_multi_candidate_prompt.py",
+        "expertAgent/tests/unit/test_candidate_schemas.py"
+      ],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "単体テスト（候補生成ロジック）",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "expertAgent/tests/unit/test_candidate_generator.py"
+      ],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "結合テスト",
+      "estimated_hours": 1,
+      "deliverables": [
+        "expertAgent/tests/integration/test_candidate_selection_api.py"
+      ],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "API仕様書更新",
+      "estimated_hours": 1,
+      "deliverables": [
+        "expertAgent/docs/API_REFERENCE.md (更新)"
+      ],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "PR準備・最終確認",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "dependencies": ["4.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/multi_candidate.py",
+    "expertAgent/config/prompts/multi_candidate.yaml",
+    "expertAgent/app/schemas/chat.py",
+    "expertAgent/app/services/conversation/candidate_generator.py",
+    "expertAgent/app/services/conversation/llm_service.py",
+    "expertAgent/app/api/v1/chat_endpoints.py",
+    "expertAgent/tests/unit/test_multi_candidate_prompt.py",
+    "expertAgent/tests/unit/test_candidate_schemas.py",
+    "expertAgent/tests/unit/test_candidate_generator.py",
+    "expertAgent/tests/integration/test_candidate_selection_api.py",
+    "expertAgent/docs/API_REFERENCE.md"
+  ],
+  "definition_of_done": [
+    "初回メッセージで2パターンが生成される",
+    "各候補に4つの観点が含まれる",
+    "SSE candidate_selection イベントが正しく送信される",
+    "候補選択後に対話が継続される",
+    "/chat/select-candidate エンドポイントが動作する",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "生成時間4秒以内",
+    "./scripts/pre-push-check-all.sh 成功",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "technical_context": {
+    "language": "Python",
+    "framework": "FastAPI",
+    "llm": "Gemini 2.5 Flash",
+    "communication": "Server-Sent Events (SSE)",
+    "existing_files": {
+      "chat_endpoints": "expertAgent/app/api/v1/chat_endpoints.py",
+      "llm_service": "expertAgent/app/services/conversation/llm_service.py",
+      "chat_schemas": "expertAgent/app/schemas/chat.py",
+      "requirement_prompts": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/requirement_clarification.py"
+    }
+  },
+  "schema_requirements": {
+    "RequirementCandidate": {
+      "candidate_id": "str - 'A' or 'B'",
+      "title": "str - 候補の簡潔なタイトル",
+      "data_source": "str - データソース",
+      "process_description": "str - 処理内容",
+      "output_format": "str - 出力形式",
+      "schedule": "str - スケジュール",
+      "confidence": "float - 解釈の確信度 (0.0-1.0)"
+    },
+    "CandidateSelectionEvent": {
+      "candidates": "List[RequirementCandidate]",
+      "prompt_for_selection": "str - 選択を促すメッセージ"
+    },
+    "CandidateSelectRequest": {
+      "conversation_id": "str",
+      "selected_candidate_id": "str - 'A' or 'B'"
+    }
+  }
+}

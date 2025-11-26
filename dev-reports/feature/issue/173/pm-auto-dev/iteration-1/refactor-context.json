@@ -1,0 +1,32 @@
+{
+  "issue_number": 173,
+  "refactor_targets": [
+    "expertAgent/app/services/conversation/candidate_generator.py",
+    "expertAgent/app/api/v1/chat_endpoints.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/multi_candidate.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 94.67,
+    "complexity_score": "TBD"
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "Error handling consistency",
+    "Type hint completeness"
+  ],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "重複コードの削除",
+    "エラーハンドリングの統一",
+    "docstringの充実（必要な箇所のみ）"
+  ],
+  "tdd_results": {
+    "tests_passed": 86,
+    "coverage": 94.67,
+    "static_analysis_errors": 0
+  },
+  "acceptance_results": {
+    "scenarios_passed": 10,
+    "criteria_verified": 11
+  }
+}
