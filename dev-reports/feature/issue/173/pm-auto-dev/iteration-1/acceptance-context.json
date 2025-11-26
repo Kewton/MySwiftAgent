@@ -1,0 +1,187 @@
+{
+  "issue_number": 173,
+  "feature_summary": "Issue #152-4: 複数候補提示機能（基本実装）",
+  "acceptance_criteria": [
+    "初回メッセージで2パターンが生成される",
+    "各候補に4つの観点が含まれる",
+    "SSEイベントが正しく送信される",
+    "候補選択後に対話が継続される",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "生成時間 4秒以内",
+    "正常系: 2候補生成・選択・継続",
+    "異常系: LLM生成エラー",
+    "エッジケース: 曖昧なユーザー入力"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-001",
+      "name": "初回メッセージで2候補生成",
+      "description": "初回メッセージを送信したとき、2つの要件解釈パターンが生成される",
+      "preconditions": [
+        "サービスが起動している",
+        "新規会話が開始される"
+      ],
+      "steps": [
+        "POST /requirement-definition を初回メッセージで呼び出す",
+        "SSEストリームをリッスンする",
+        "candidate_selectionイベントを受信する"
+      ],
+      "expected_results": [
+        "2つのRequirementCandidateが返される",
+        "各候補にcandidate_id (A/B)が含まれる",
+        "各候補にtitle, data_source, process_description, output_format, schedule, confidenceが含まれる"
+      ]
+    },
+    {
+      "id": "AC-002",
+      "name": "候補に4つの観点が含まれる",
+      "description": "生成された各候補に、データソース・処理内容・出力形式・スケジュールの4観点が含まれる",
+      "preconditions": [
+        "候補が生成されている"
+      ],
+      "steps": [
+        "生成された候補の構造を検証する"
+      ],
+      "expected_results": [
+        "data_sourceフィールドが存在し、空でない",
+        "process_descriptionフィールドが存在し、空でない",
+        "output_formatフィールドが存在し、空でない",
+        "scheduleフィールドが存在し、空でない"
+      ]
+    },
+    {
+      "id": "AC-003",
+      "name": "SSEイベントの正常送信",
+      "description": "candidate_selection SSEイベントが正しいフォーマットで送信される",
+      "preconditions": [
+        "SSE接続が確立されている"
+      ],
+      "steps": [
+        "初回メッセージを送信",
+        "SSEイベントを受信"
+      ],
+      "expected_results": [
+        "event: candidate_selection が送信される",
+        "dataフィールドにCandidateSelectionEventが含まれる",
+        "candidatesフィールドに2つの候補が含まれる",
+        "prompt_for_selectionフィールドに選択促進メッセージが含まれる"
+      ]
+    },
+    {
+      "id": "AC-004",
+      "name": "候補選択後の対話継続",
+      "description": "候補を選択した後、通常の対話フローが継続される",
+      "preconditions": [
+        "候補が提示されている",
+        "ユーザーが候補を選択可能な状態"
+      ],
+      "steps": [
+        "POST /chat/select-candidate で候補Aを選択",
+        "レスポンスを確認",
+        "POST /requirement-definition で継続対話を送信"
+      ],
+      "expected_results": [
+        "選択が正常に受け付けられる（200 OK）",
+        "選択された候補がRequirementStateに反映される",
+        "継続対話でSSEストリームが正常に動作する"
+      ]
+    },
+    {
+      "id": "AC-005",
+      "name": "テストカバレッジ検証",
+      "description": "単体テスト90%以上、結合テスト50%以上のカバレッジを達成",
+      "preconditions": [
+        "全テストが実行可能な状態"
+      ],
+      "steps": [
+        "pytest --cov を実行",
+        "カバレッジレポートを確認"
+      ],
+      "expected_results": [
+        "単体テストカバレッジ >= 90%",
+        "結合テストが存在し動作する"
+      ]
+    },
+    {
+      "id": "AC-006",
+      "name": "静的解析エラーゼロ",
+      "description": "Ruff/MyPyでエラーがないことを確認",
+      "preconditions": [
+        "コードが実装されている"
+      ],
+      "steps": [
+        "ruff check を実行",
+        "mypy を実行"
+      ],
+      "expected_results": [
+        "Ruffエラー: 0件",
+        "MyPyエラー: 0件"
+      ]
+    },
+    {
+      "id": "AC-007",
+      "name": "正常系フロー（E2E）",
+      "description": "2候補生成 → 選択 → 対話継続の完全フロー",
+      "preconditions": [
+        "全サービスが起動"
+      ],
+      "steps": [
+        "新規会話を開始",
+        "初回メッセージ送信",
+        "候補受信",
+        "候補選択",
+        "継続対話"
+      ],
+      "expected_results": [
+        "全ステップが正常に完了",
+        "対話が継続可能"
+      ]
+    },
+    {
+      "id": "AC-008",
+      "name": "異常系: LLM生成エラー",
+      "description": "LLM呼び出しがエラーになった場合のハンドリング",
+      "preconditions": [
+        "LLMがエラーを返す状態"
+      ],
+      "steps": [
+        "LLMエラーをシミュレート",
+        "エラーレスポンスを確認"
+      ],
+      "expected_results": [
+        "適切なエラーレスポンスが返される",
+        "システムがクラッシュしない"
+      ]
+    },
+    {
+      "id": "AC-009",
+      "name": "エッジケース: 曖昧なユーザー入力",
+      "description": "曖昧な入力でも適切に候補が生成される",
+      "preconditions": [
+        "サービスが起動"
+      ],
+      "steps": [
+        "曖昧なメッセージを送信（例: 「データ分析したい」）",
+        "候補を確認"
+      ],
+      "expected_results": [
+        "2つの異なる解釈が生成される",
+        "各解釈が明確に区別可能"
+      ]
+    }
+  ],
+  "tdd_results": {
+    "iteration_1": {
+      "tests_passed": 55,
+      "coverage": 72.1,
+      "status": "needs_improvement"
+    },
+    "iteration_2": {
+      "tests_passed": 86,
+      "coverage": 94.67,
+      "status": "success"
+    }
+  }
+}
