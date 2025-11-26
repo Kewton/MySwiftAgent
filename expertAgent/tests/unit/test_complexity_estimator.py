@@ -78,8 +78,7 @@ class TestComplexityEstimator:
         self, estimator: ComplexityEstimator
     ) -> None:
         """Test that unknown keywords default to simple."""
-        keywords = ["unknown1", "unknown2"]
-        result = estimator.estimate([])
+        result = estimator.estimate(["unknown1", "unknown2"])
         assert result == ComplexityLevel.SIMPLE
 
     def test_estimate_from_message(

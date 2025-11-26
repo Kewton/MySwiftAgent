@@ -133,8 +133,8 @@ class TestConfidenceCalculator:
             message_length=100,
         )
 
-        # Very long message
-        result_long = calculator.calculate(
+        # Very long message - verify it doesn't raise error
+        calculator.calculate(
             keywords=keywords,
             complexity=complexity,
             message_length=1000,
