@@ -7,6 +7,7 @@ via Server-Sent Events (SSE).
 Endpoints:
 - POST /chat/requirement-definition: Stream requirement clarification chat
 - POST /chat/create-job: Create job from clarified requirements
+- POST /chat/select-candidate: Select a candidate interpretation (Issue #173)
 """
 
 import json
@@ -16,12 +17,17 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from app.schemas.chat import (
+    CandidateSelectRequest,
+    CandidateSelectResponse,
     CreateJobRequest,
     CreateJobResponse,
     RequirementChatRequest,
     RequirementState,
 )
 from app.schemas.job_generator import JobGeneratorRequest
+from app.services.conversation.candidate_generator import (
+    candidate_to_requirement_state_dict,
+)
 from app.services.conversation.conversation_store import conversation_store
 from app.services.conversation.llm_service import stream_requirement_clarification
 
@@ -287,3 +293,120 @@ def _convert_requirements_to_job_request(
 """
 
     return JobGeneratorRequest(user_requirement=user_requirement.strip())
+
+
+# ============================================================================
+# Multi-Candidate Selection Feature (Issue #173)
+# ============================================================================
+
+
+@router.post("/select-candidate", response_model=CandidateSelectResponse)
+async def select_candidate(request: CandidateSelectRequest):
+    """Select a candidate interpretation.
+
+    After receiving candidate options via SSE candidate_selection event,
+    users call this endpoint to select their preferred interpretation.
+    The selected candidate's requirements are used for subsequent dialogue.
+
+    Args:
+        request: Selection request with conversation ID and selected candidate ID
+
+    Returns:
+        CandidateSelectResponse: Updated requirement state from selected candidate
+
+    Raises:
+        HTTPException: If selection fails or candidate not found
+
+    Example:
+        ```bash
+        curl -X POST http://localhost:8104/aiagent-api/v1/chat/select-candidate \\
+          -H "Content-Type: application/json" \\
+          -d '{
+            "conversation_id": "conv_001",
+            "selected_candidate_id": "A"
+          }'
+        ```
+
+    Response:
+        ```json
+        {
+          "conversation_id": "conv_001",
+          "selected_candidate_id": "A",
+          "requirements": {
+            "data_source": "CSVファイル",
+            "process_description": "売上データの月別集計",
+            "output_format": "Excelレポート",
+            "schedule": "オンデマンド",
+            "completeness": 0.75
+          },
+          "message": "候補Aを選択しました。追加の詳細を確認させてください。"
+        }
+        ```
+    """
+    try:
+        logger.info(
+            f"Selecting candidate: "
+            f"conversation_id={request.conversation_id}, "
+            f"selected_candidate_id={request.selected_candidate_id}"
+        )
+
+        # Get stored candidates for this conversation
+        stored_candidates = conversation_store.get_candidates(request.conversation_id)
+
+        if not stored_candidates:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No candidates found for conversation: {request.conversation_id}",
+            )
+
+        # Find selected candidate
+        selected_candidate = None
+        for candidate in stored_candidates:
+            if candidate.candidate_id == request.selected_candidate_id:
+                selected_candidate = candidate
+                break
+
+        if not selected_candidate:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Candidate '{request.selected_candidate_id}' not found. "
+                f"Available: {[c.candidate_id for c in stored_candidates]}",
+            )
+
+        # Convert candidate to requirement state
+        requirements_dict = candidate_to_requirement_state_dict(selected_candidate)
+        requirements = RequirementState(**requirements_dict)
+
+        # Save selection to conversation store
+        conversation_store.save_selected_candidate(
+            request.conversation_id, request.selected_candidate_id
+        )
+
+        # Generate confirmation message
+        message = f"候補{request.selected_candidate_id}（{selected_candidate.title}）を選択しました。追加の詳細を確認させてください。"
+
+        logger.info(
+            f"Candidate selected successfully: "
+            f"conversation_id={request.conversation_id}, "
+            f"candidate={request.selected_candidate_id}, "
+            f"completeness={requirements.completeness:.0%}"
+        )
+
+        return CandidateSelectResponse(
+            conversation_id=request.conversation_id,
+            selected_candidate_id=request.selected_candidate_id,
+            requirements=requirements,
+            message=message,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Failed to select candidate: "
+            f"conversation_id={request.conversation_id}, error={e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail=f"候補の選択に失敗しました: {str(e)}"
+        ) from e
