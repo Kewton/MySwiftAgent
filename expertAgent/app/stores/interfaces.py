@@ -1,11 +1,12 @@
 """Storage interface definitions.
 
 Issue #169: Valkey persistence infrastructure implementation.
+Issue #171: Extended with list_conversations for diagnostic API.
 Defines abstract interfaces for conversation storage backends.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 
 class ConversationStore(ABC):
@@ -13,6 +14,8 @@ class ConversationStore(ABC):
 
     Defines the contract that all conversation storage implementations must follow.
     Supports CRUD operations with metadata (trace_id, prompt_version, etc.).
+
+    Issue #171: Extended with list_conversations for diagnostic API filtering.
     """
 
     @abstractmethod
@@ -47,7 +50,7 @@ class ConversationStore(ABC):
             messages: List of conversation messages
             trace_id: Optional trace ID for observability
             prompt_version: Optional prompt version identifier
-            **kwargs: Additional metadata fields
+            **kwargs: Additional metadata fields (including job_id, user_id, etc.)
 
         Returns:
             True if successful
@@ -89,3 +92,25 @@ class ConversationStore(ABC):
             True if exists
         """
         ...
+
+    async def list_conversations(
+        self,
+        conversation_ids: Optional[Set[str]] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """List conversations with optional filtering by IDs.
+
+        Issue #171: Added for diagnostic API support.
+
+        Args:
+            conversation_ids: Optional set of conversation IDs to filter by
+            limit: Maximum number of conversations to return
+            offset: Number of conversations to skip
+
+        Returns:
+            List of conversation data dictionaries
+        """
+        # Default implementation returns empty list
+        # Subclasses should override for actual implementation
+        return []
