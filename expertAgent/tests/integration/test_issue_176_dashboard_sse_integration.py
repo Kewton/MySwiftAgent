@@ -7,10 +7,9 @@ These tests verify the end-to-end behavior of the SSE dashboard:
 - Concurrent client scenarios
 """
 
-import asyncio
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient

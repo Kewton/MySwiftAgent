@@ -10,17 +10,13 @@ Tests cover:
 - Concurrent client support (100 clients)
 """
 
-import asyncio
-import json
 from datetime import datetime
-from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.schemas.observability import (
     ModelUsage,
-    RequirementDefinitionMetrics,
 )
 
 
@@ -247,7 +243,6 @@ class TestSSEEndpoint:
 
     def test_sse_service_generates_events(self):
         """Test that SSE service can generate events correctly."""
-        from app.schemas.dashboard import SSEMetricsEvent
         from app.services.dashboard_sse_service import DashboardSSEService
 
         service = DashboardSSEService()
@@ -408,3 +403,448 @@ class TestDisconnectReconnect:
         is_new = True
         should_send_full = service.should_send_full_snapshot(is_new)
         assert should_send_full is True
+
+
+class TestConnectionManagerEdgeCases:
+    """Test edge cases for ConnectionManager to improve coverage."""
+
+    @pytest.mark.asyncio
+    async def test_reconnect_existing_client(self):
+        """Test reconnecting an existing client (lines 65-67)."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+        client_id = "client_reconnect"
+
+        # First connection
+        await manager.add_client(client_id)
+        first_queue = manager.get_client_queue(client_id)
+        assert first_queue is not None
+
+        # Put a message in the queue
+        await first_queue.put({"test": "message"})
+
+        # Reconnect same client
+        await manager.add_client(client_id)
+        second_queue = manager.get_client_queue(client_id)
+        assert second_queue is not None
+
+        # New queue should be empty (old queue was discarded)
+        assert second_queue.empty()
+        assert manager.get_client_count() == 1
+
+    @pytest.mark.asyncio
+    async def test_get_client_metadata_for_nonexistent_client(self):
+        """Test getting metadata for a client that doesn't exist (line 147)."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+
+        # Get metadata for non-existent client
+        metadata = manager.get_client_metadata("nonexistent_client")
+        assert metadata is None
+
+    @pytest.mark.asyncio
+    async def test_get_connection_start_time_for_nonexistent_client(self):
+        """Test getting connection start time for non-existent client."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+
+        # Get start time for non-existent client
+        start_time = manager.get_connection_start_time("nonexistent_client")
+        assert start_time is None
+
+    @pytest.mark.asyncio
+    async def test_remove_nonexistent_client(self):
+        """Test removing a client that doesn't exist."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+
+        # Should not raise an error
+        await manager.remove_client("nonexistent_client")
+        assert manager.get_client_count() == 0
+
+
+class TestBroadcastErrorHandling:
+    """Test broadcast error handling scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_broadcast_timeout_handling(self):
+        """Test broadcast handles timeout errors (lines 165-166)."""
+        from app.schemas.dashboard import DashboardStreamConfig
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        # Create manager with very small queue
+        config = DashboardStreamConfig(queue_max_size=10)
+        manager = ConnectionManager(config=config)
+
+        await manager.add_client("slow_client")
+        queue = manager.get_client_queue("slow_client")
+
+        # Fill the queue completely
+        for _ in range(10):
+            queue.put_nowait({"filler": True})
+
+        # Broadcast should handle timeout gracefully
+        # Note: This tests the timeout branch indirectly
+        await manager.broadcast({"test": "message"})
+
+        # Client should still be connected (timeout doesn't disconnect)
+        assert manager.get_client_count() == 1
+
+    @pytest.mark.asyncio
+    async def test_broadcast_updates_metadata(self):
+        """Test that broadcast updates client metadata correctly."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+        await manager.add_client("client_001")
+
+        # Get initial metadata
+        initial_metadata = manager.get_client_metadata("client_001")
+        assert initial_metadata["messages_sent"] == 0
+        assert initial_metadata["last_message_at"] is None
+
+        # Broadcast a message
+        await manager.broadcast({"test": "message"})
+
+        # Check updated metadata
+        updated_metadata = manager.get_client_metadata("client_001")
+        assert updated_metadata["messages_sent"] == 1
+        assert updated_metadata["last_message_at"] is not None
+
+
+class TestDifferentialUpdateGeneration:
+    """Test differential update generation scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_generate_metrics_event_with_changes(self):
+        """Test generating metrics event when data has changed (lines 330-337)."""
+        from unittest.mock import AsyncMock
+
+        from app.schemas.dashboard import DashboardMetricsSnapshot
+        from app.services.dashboard_sse_service import DashboardSSEService
+
+        service = DashboardSSEService()
+
+        # Set initial snapshot
+        initial_snapshot = DashboardMetricsSnapshot(
+            average_score=0.80,
+            total_turns=100,
+            completion_rate=70.0,
+            total_sessions=50,
+            model_usage=[],
+        )
+        service._last_snapshot = initial_snapshot
+
+        # Mock fetch to return changed data
+        new_snapshot = DashboardMetricsSnapshot(
+            average_score=0.85,
+            total_turns=110,
+            completion_rate=75.0,
+            total_sessions=55,
+            model_usage=[],
+        )
+
+        with patch.object(
+            service, "fetch_current_metrics", new=AsyncMock(return_value=new_snapshot)
+        ):
+            event = await service.generate_metrics_event(is_initial=False)
+
+        assert event is not None
+        assert event.event_type == "metrics_update"
+        assert event.data["is_full_snapshot"] is False
+        assert "changed_fields" in event.data
+
+    @pytest.mark.asyncio
+    async def test_generate_metrics_event_no_changes_returns_none(self):
+        """Test that no event is generated when metrics haven't changed."""
+        from unittest.mock import AsyncMock
+
+        from app.schemas.dashboard import DashboardMetricsSnapshot
+        from app.services.dashboard_sse_service import DashboardSSEService
+
+        service = DashboardSSEService()
+
+        # Set initial snapshot
+        snapshot = DashboardMetricsSnapshot(
+            average_score=0.80,
+            total_turns=100,
+            completion_rate=70.0,
+            total_sessions=50,
+            model_usage=[],
+        )
+        service._last_snapshot = snapshot
+
+        # Mock fetch to return same data
+        with patch.object(
+            service, "fetch_current_metrics", new=AsyncMock(return_value=snapshot)
+        ):
+            event = await service.generate_metrics_event(is_initial=False)
+
+        # Should return None when no changes
+        assert event is None
+
+
+class TestFetchMetricsErrorHandling:
+    """Test fetch_current_metrics error handling."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_metrics_handles_error(self):
+        """Test fetch_current_metrics returns empty snapshot on error (lines 299-302)."""
+        from unittest.mock import AsyncMock
+
+        from app.services.dashboard_sse_service import DashboardSSEService
+
+        service = DashboardSSEService()
+
+        # Mock the metrics service to raise an exception
+        with patch.object(
+            service._metrics_service,
+            "get_requirement_definition_metrics",
+            new=AsyncMock(side_effect=Exception("Test error")),
+        ):
+            snapshot = await service.fetch_current_metrics()
+
+        # Should return empty snapshot
+        assert snapshot is not None
+        assert snapshot.average_score == 0.0
+        assert snapshot.total_turns == 0
+
+
+class TestSSEConnectionInfo:
+    """Test SSEConnectionInfo schema."""
+
+    def test_sse_connection_info_schema(self):
+        """Test SSEConnectionInfo schema fields."""
+        from app.schemas.dashboard import SSEConnectionInfo
+
+        info = SSEConnectionInfo(
+            client_id="test_client",
+            connected_at=datetime.now(),
+            last_message_at=datetime.now(),
+            messages_sent=5,
+        )
+        assert info.client_id == "test_client"
+        assert info.messages_sent == 5
+
+    def test_sse_connection_info_defaults(self):
+        """Test SSEConnectionInfo default values."""
+        from app.schemas.dashboard import SSEConnectionInfo
+
+        info = SSEConnectionInfo(client_id="test_client")
+        assert info.messages_sent == 0
+        assert info.last_message_at is None
+
+
+class TestDashboardStreamConfig:
+    """Test DashboardStreamConfig schema."""
+
+    def test_dashboard_stream_config_defaults(self):
+        """Test DashboardStreamConfig default values."""
+        from app.schemas.dashboard import DashboardStreamConfig
+
+        config = DashboardStreamConfig()
+        assert config.update_interval_seconds == 5
+        assert config.heartbeat_interval_seconds == 30
+        assert config.max_connections == 100
+        assert config.queue_max_size == 50
+
+    def test_dashboard_stream_config_custom(self):
+        """Test DashboardStreamConfig custom values."""
+        from app.schemas.dashboard import DashboardStreamConfig
+
+        config = DashboardStreamConfig(
+            update_interval_seconds=10,
+            heartbeat_interval_seconds=60,
+            max_connections=200,
+            queue_max_size=100,
+        )
+        assert config.update_interval_seconds == 10
+        assert config.heartbeat_interval_seconds == 60
+        assert config.max_connections == 200
+        assert config.queue_max_size == 100
+
+
+class TestSnapshotToDict:
+    """Test DashboardMetricsSnapshot.to_dict method."""
+
+    def test_snapshot_to_dict_with_model_usage(self):
+        """Test to_dict with model usage data."""
+        from app.schemas.dashboard import DashboardMetricsSnapshot
+        from app.schemas.observability import ModelUsage
+
+        snapshot = DashboardMetricsSnapshot(
+            average_score=0.85,
+            total_turns=100,
+            completion_rate=75.0,
+            total_sessions=50,
+            model_usage=[
+                ModelUsage(
+                    model_name="gpt-4o", usage_percentage=60.0, usage_count=30
+                ),
+            ],
+        )
+
+        result = snapshot.to_dict()
+        assert result["average_score"] == 0.85
+        assert result["total_turns"] == 100
+        assert len(result["model_usage"]) == 1
+        assert result["model_usage"][0]["model_name"] == "gpt-4o"
+
+    def test_snapshot_to_dict_empty_model_usage(self):
+        """Test to_dict with empty model usage."""
+        from app.schemas.dashboard import DashboardMetricsSnapshot
+
+        snapshot = DashboardMetricsSnapshot(
+            average_score=0.0,
+            total_turns=0,
+            completion_rate=0.0,
+            total_sessions=0,
+            model_usage=[],
+        )
+
+        result = snapshot.to_dict()
+        assert result["model_usage"] == []
+
+
+class TestBroadcastExceptionHandling:
+    """Test broadcast exception and cleanup handling (lines 167-176)."""
+
+    @pytest.mark.asyncio
+    async def test_broadcast_exception_triggers_cleanup(self):
+        """Test that exceptions during broadcast trigger client cleanup."""
+
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+        await manager.add_client("error_client")
+
+        # Get the queue and make it raise an exception
+        queue = manager.get_client_queue("error_client")
+
+        # Replace the queue's put method to raise an exception
+        async def failing_put(*args, **kwargs):
+            raise RuntimeError("Simulated error")
+
+        with patch.object(queue, "put", side_effect=failing_put):
+            # Broadcast should handle the error
+            await manager.broadcast({"test": "message"})
+
+        # Client should be cleaned up after error
+        assert manager.get_client_count() == 0
+
+    @pytest.mark.asyncio
+    async def test_broadcast_cleans_up_multiple_errored_clients(self):
+        """Test that multiple errored clients are cleaned up."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+
+        # Add multiple clients
+        for i in range(3):
+            await manager.add_client(f"client_{i}")
+
+        assert manager.get_client_count() == 3
+
+        # Make all queues fail
+        for i in range(3):
+            queue = manager.get_client_queue(f"client_{i}")
+
+            async def failing_put(*args, **kwargs):
+                raise RuntimeError("Simulated error")
+
+            queue.put = failing_put
+
+        # Broadcast should clean up all errored clients
+        await manager.broadcast({"test": "message"})
+
+        # All clients should be removed
+        assert manager.get_client_count() == 0
+
+
+class TestBroadcastNoWaitEdgeCases:
+    """Test broadcast_no_wait edge cases (lines 197-198)."""
+
+    @pytest.mark.asyncio
+    async def test_broadcast_no_wait_handles_queue_empty_during_discard(self):
+        """Test broadcast_no_wait handles QueueEmpty during discard."""
+
+        from app.schemas.dashboard import DashboardStreamConfig
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        # Create manager with small queue
+        config = DashboardStreamConfig(queue_max_size=10)
+        manager = ConnectionManager(config=config)
+
+        await manager.add_client("edge_client")
+        queue = manager.get_client_queue("edge_client")
+
+        # Fill queue to capacity
+        for i in range(10):
+            queue.put_nowait({"msg": i})
+
+        assert queue.full()
+
+        # Now we need to simulate the race condition where:
+        # 1. put_nowait fails with QueueFull
+        # 2. get_nowait is called but queue is empty (race condition)
+        # This is hard to test directly, but we test that the code handles it gracefully
+
+        # Broadcast many messages to trigger the discard logic
+        for i in range(20):
+            await manager.broadcast_no_wait({"test": i})
+
+        # Queue should still be bounded
+        assert queue.qsize() <= 10
+
+    @pytest.mark.asyncio
+    async def test_broadcast_no_wait_updates_metadata(self):
+        """Test broadcast_no_wait updates client metadata."""
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        manager = ConnectionManager()
+        await manager.add_client("client_001")
+
+        # Initial state
+        metadata = manager.get_client_metadata("client_001")
+        assert metadata["messages_sent"] == 0
+
+        # Broadcast several messages
+        for i in range(5):
+            await manager.broadcast_no_wait({"count": i})
+
+        # Metadata should be updated
+        metadata = manager.get_client_metadata("client_001")
+        assert metadata["messages_sent"] == 5
+
+
+class TestConnectionManagerWithCustomConfig:
+    """Test ConnectionManager with custom configuration."""
+
+    @pytest.mark.asyncio
+    async def test_custom_queue_size(self):
+        """Test that custom queue size is respected."""
+        from app.schemas.dashboard import DashboardStreamConfig
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        config = DashboardStreamConfig(queue_max_size=25)
+        manager = ConnectionManager(config=config)
+
+        await manager.add_client("client_001")
+        queue = manager.get_client_queue("client_001")
+
+        assert queue.maxsize == 25
+
+    @pytest.mark.asyncio
+    async def test_custom_max_connections(self):
+        """Test that custom max connections is respected."""
+        from app.schemas.dashboard import DashboardStreamConfig
+        from app.services.dashboard_sse_service import ConnectionManager
+
+        config = DashboardStreamConfig(max_connections=50)
+        manager = ConnectionManager(config=config)
+
+        assert manager.max_connections == 50
