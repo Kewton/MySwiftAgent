@@ -1,0 +1,59 @@
+{
+  "issue_number": 170,
+  "feature_summary": "Issue #152-10: UI実装（フロントエンド統合）",
+  "acceptance_criteria": [
+    "全6機能のUIが実装される",
+    "APIとの通信が正常",
+    "レスポンシブデザイン対応",
+    "アクセシビリティ対応",
+    "E2Eテストカバレッジ 70%以上",
+    "Lighthouse スコア 90以上",
+    "TypeScriptエラー ゼロ",
+    "正常系: 全機能の操作フロー",
+    "異常系: API エラー処理",
+    "エッジケース: モバイル表示"
+  ],
+  "test_scenarios": [
+    "シナリオ1: 候補選択UI - 2つの候補が表示され、1つを選択できる",
+    "シナリオ2: フィードバックフォーム - 4種類のスコア入力ができ、送信できる",
+    "シナリオ3: ダッシュボード - リアルタイムメトリクスが表示される",
+    "シナリオ4: 診断情報ビュー - 会話履歴とプロンプトが表示される",
+    "シナリオ5: プロンプト管理 - バージョン一覧と詳細が表示される",
+    "シナリオ6: レスポンシブデザイン - モバイル/タブレット/デスクトップで正常表示",
+    "シナリオ7: アクセシビリティ - キーボードナビゲーションが可能",
+    "シナリオ8: APIエラー処理 - エラー時にトースト表示"
+  ],
+  "implemented_files": [
+    "myAgentDesk/src/lib/mlops/types/index.ts",
+    "myAgentDesk/src/lib/mlops/api/client.ts",
+    "myAgentDesk/src/lib/mlops/stores/realtimeStore.ts",
+    "myAgentDesk/src/lib/mlops/components/CandidateCard.svelte",
+    "myAgentDesk/src/lib/mlops/components/CandidateSelector.svelte",
+    "myAgentDesk/src/lib/mlops/components/ScoreSlider.svelte",
+    "myAgentDesk/src/lib/mlops/components/FeedbackForm.svelte",
+    "myAgentDesk/src/lib/mlops/components/FeedbackModal.svelte",
+    "myAgentDesk/src/lib/mlops/components/MetricsCard.svelte",
+    "myAgentDesk/src/lib/mlops/components/RealtimeChart.svelte",
+    "myAgentDesk/src/lib/mlops/components/ConversationTimeline.svelte",
+    "myAgentDesk/src/lib/mlops/components/PromptViewer.svelte",
+    "myAgentDesk/src/lib/mlops/components/PromptVersionList.svelte",
+    "myAgentDesk/src/lib/mlops/components/PromptEditor.svelte",
+    "myAgentDesk/src/routes/mlops/+layout.svelte",
+    "myAgentDesk/src/routes/mlops/+page.svelte",
+    "myAgentDesk/src/routes/mlops/chat/+page.svelte",
+    "myAgentDesk/src/routes/mlops/diagnostics/+page.svelte",
+    "myAgentDesk/src/routes/mlops/prompts/+page.svelte"
+  ],
+  "e2e_test_files": [
+    "myAgentDesk/tests/e2e/mlops/candidate-selection.spec.ts",
+    "myAgentDesk/tests/e2e/mlops/feedback.spec.ts",
+    "myAgentDesk/tests/e2e/mlops/dashboard.spec.ts",
+    "myAgentDesk/tests/e2e/mlops/responsive.spec.ts"
+  ],
+  "tech_stack": {
+    "framework": "SvelteKit 2.x",
+    "language": "TypeScript",
+    "ui": "TailwindCSS",
+    "testing": "Playwright"
+  }
+}
