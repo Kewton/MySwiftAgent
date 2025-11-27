@@ -64,6 +64,8 @@ dependencies = [
     "langfuse>=3.0.0",
     # Valkey/Redis persistence (Issue #169)
     "valkey>=6.0.0",
+    # Statistical analysis (Issue #178)
+    "scipy>=1.11.0",
 ]
 
 [project.optional-dependencies]
