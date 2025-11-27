@@ -1,0 +1,23 @@
+{
+  "issue_number": 176,
+  "refactor_targets": [
+    "expertAgent/app/schemas/dashboard.py",
+    "expertAgent/app/services/dashboard_sse_service.py",
+    "expertAgent/app/api/v1/observability_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90,
+    "complexity_score": 0
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern",
+    "Dependency Injection"
+  ],
+  "improvement_goals": [
+    "カバレッジを95%以上に向上",
+    "循環的複雑度を10以下に削減",
+    "重複コードの削除"
+  ],
+  "tdd_result_reference": "dev-reports/feature/issue/176/pm-auto-dev/iteration-1/tdd-result.json",
+  "acceptance_result_reference": "dev-reports/feature/issue/176/pm-auto-dev/iteration-1/acceptance-result.json"
+}
