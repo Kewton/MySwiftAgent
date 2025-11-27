@@ -794,6 +794,323 @@ class TestValkeyIntegration:
             retrieved = await service.get_test(test.id)
             assert retrieved.id == test.id
 
+    @pytest.mark.unit
+    async def test_get_test_valkey_path(self, sample_config):
+        """Test get_test retrieves from Valkey when available."""
+        service = ABTestService(use_valkey=True)
+
+        # Create mock Valkey client with data (need at least 2 variants)
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(
+            return_value={
+                "id": "test-123",
+                "name": "Test",
+                "description": "desc",
+                "variants": [
+                    {"name": "control", "prompt_version": "v1", "weight": 0.5},
+                    {"name": "treatment", "prompt_version": "v2", "weight": 0.5},
+                ],
+                "metadata": {},
+                "status": "draft",
+                "created_at": "2025-01-01T00:00:00",
+                "updated_at": "2025-01-01T00:00:00",
+            }
+        )
+
+        # Inject mock client
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            result = await service.get_test("test-123")
+            assert result.id == "test-123"
+            assert result.name == "Test"
+            mock_client.get.assert_called_once()
+
+    @pytest.mark.unit
+    async def test_get_test_valkey_exception_fallback(self, sample_config):
+        """Test get_test falls back to memory when Valkey raises exception."""
+        service = ABTestService(use_valkey=True)
+
+        # Create test in memory first
+        test = await service.create_test(sample_config)
+
+        # Create mock Valkey client that raises exception
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=Exception("Valkey error"))
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            # Should still return from memory
+            result = await service.get_test(test.id)
+            assert result.id == test.id
+
+    @pytest.mark.unit
+    async def test_get_assignment_valkey_path(self, sample_config):
+        """Test get_assignment retrieves from Valkey when available."""
+        service = ABTestService(use_valkey=True)
+
+        # Create mock Valkey client
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(
+            return_value={
+                "test_id": "test-123",
+                "session_id": "session-456",
+                "variant_name": "control",
+                "prompt_version": "v1.0",
+                "assigned_at": "2025-01-01T00:00:00",
+            }
+        )
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            result = await service.get_assignment("test-123", "session-456")
+            assert result is not None
+            assert result.variant_name == "control"
+
+    @pytest.mark.unit
+    async def test_get_assignment_valkey_exception_fallback(self, sample_config):
+        """Test get_assignment falls back to memory when Valkey raises exception."""
+        service = ABTestService(use_valkey=True)
+
+        # Create test and assignment in memory first
+        test = await service.create_test(sample_config)
+        assignment, _ = await service.assign_variant(test.id, "session-123")
+
+        # Create mock Valkey client that raises exception
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=Exception("Valkey error"))
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            # Should still return from memory
+            result = await service.get_assignment(test.id, "session-123")
+            assert result is not None
+            assert result.variant_name == assignment.variant_name
+
+    @pytest.mark.unit
+    async def test_delete_test_valkey_path(self, sample_config):
+        """Test delete_test deletes from Valkey when available."""
+        service = ABTestService(use_valkey=True)
+
+        # Create test
+        test = await service.create_test(sample_config)
+
+        # Create mock Valkey client
+        mock_client = MagicMock()
+        mock_client.delete = AsyncMock(return_value=True)
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            result = await service.delete_test(test.id)
+            assert result is True
+            mock_client.delete.assert_called_once()
+
+    @pytest.mark.unit
+    async def test_delete_test_valkey_exception_continues(self, sample_config):
+        """Test delete_test continues even when Valkey raises exception."""
+        service = ABTestService(use_valkey=True)
+
+        # Create test
+        test = await service.create_test(sample_config)
+
+        # Create mock Valkey client that raises exception
+        mock_client = MagicMock()
+        mock_client.delete = AsyncMock(side_effect=Exception("Valkey error"))
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            # Should still succeed (removing from memory)
+            result = await service.delete_test(test.id)
+            assert result is True
+
+    @pytest.mark.unit
+    async def test_store_test_valkey_exception_continues(self, sample_config):
+        """Test _store_test continues even when Valkey raises exception."""
+        service = ABTestService(use_valkey=True)
+
+        # Create mock Valkey client that raises exception on set
+        mock_client = MagicMock()
+        mock_client.set = AsyncMock(side_effect=Exception("Valkey error"))
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            # Should still create test (in memory)
+            test = await service.create_test(sample_config)
+            assert test.id is not None
+            # Verify in memory
+            assert test.id in service._tests
+
+    @pytest.mark.unit
+    async def test_store_assignment_valkey_exception_continues(self, sample_config):
+        """Test _store_assignment continues even when Valkey raises exception."""
+        service = ABTestService(use_valkey=True)
+
+        # Create test first
+        test = await service.create_test(sample_config)
+
+        # Create mock Valkey client that raises exception on set
+        mock_client = MagicMock()
+        mock_client.set = AsyncMock(side_effect=Exception("Valkey error"))
+
+        service._valkey_client = mock_client
+
+        with patch.object(service, "_get_valkey_client", return_value=mock_client):
+            # Should still assign variant (in memory)
+            assignment, is_new = await service.assign_variant(test.id, "session-123")
+            assert is_new is True
+            assert assignment.variant_name in ["control", "treatment"]
+            # Verify in memory
+            assert f"{test.id}:session-123" in service._assignments
+
+
+class TestEdgeCases:
+    """Test edge cases and exception paths."""
+
+    @pytest.mark.unit
+    def test_calculate_cohens_d_insufficient_samples(self, ab_service: ABTestService):
+        """Test Cohen's d raises error with insufficient samples."""
+        with pytest.raises(ABTestServiceError, match="at least 2 samples"):
+            ab_service.calculate_cohens_d([1], [1, 2, 3])
+
+        with pytest.raises(ABTestServiceError, match="at least 2 samples"):
+            ab_service.calculate_cohens_d([1, 2], [1])
+
+    @pytest.mark.unit
+    async def test_generate_report_exception_in_statistical_test(
+        self, ab_service: ABTestService, sample_config
+    ):
+        """Test generate_report handles exception in statistical test."""
+        test = await ab_service.create_test(sample_config)
+
+        # Add metrics directly with only 1 sample per variant (causes exception)
+        from app.schemas.ab_test import MetricDataPoint
+
+        ab_service._metrics[test.id] = [
+            MetricDataPoint(
+                session_id="control-1",
+                variant_name="control",
+                value=0.80,
+            ),
+            MetricDataPoint(
+                session_id="treatment-1",
+                variant_name="treatment",
+                value=0.85,
+            ),
+        ]
+
+        request = ABTestReportRequest(minimum_sample_size=1)
+        report = await ab_service.generate_report(test.id, request)
+
+        # Should have warning about insufficient data
+        assert any(
+            "insufficient" in w.lower() or "2 samples" in w.lower()
+            for w in report.warning_messages
+        )
+        assert report.t_test_result is None
+
+    @pytest.mark.unit
+    async def test_generate_report_t_test_exception_handled(
+        self, ab_service: ABTestService, sample_config
+    ):
+        """Test generate_report catches ABTestServiceError from t-test."""
+        test = await ab_service.create_test(sample_config)
+
+        # Add enough metrics for statistical test
+        from app.schemas.ab_test import MetricDataPoint
+
+        for i in range(10):
+            ab_service._metrics.setdefault(test.id, []).append(
+                MetricDataPoint(
+                    session_id=f"control-{i}",
+                    variant_name="control",
+                    value=0.80,
+                )
+            )
+            ab_service._metrics[test.id].append(
+                MetricDataPoint(
+                    session_id=f"treatment-{i}",
+                    variant_name="treatment",
+                    value=0.85,
+                )
+            )
+
+        # Mock perform_t_test to raise ABTestServiceError
+        with patch.object(
+            ab_service,
+            "perform_t_test",
+            side_effect=ABTestServiceError("Test error in t-test"),
+        ):
+            request = ABTestReportRequest(minimum_sample_size=1)
+            report = await ab_service.generate_report(test.id, request)
+
+            # Should have warning from the exception
+            assert any("Test error in t-test" in w for w in report.warning_messages)
+            assert report.t_test_result is None
+
+    @pytest.mark.unit
+    def test_parse_test_config_with_string_dates(self, ab_service: ABTestService):
+        """Test _parse_test_config handles string dates correctly."""
+        data = {
+            "id": "test-123",
+            "name": "Test",
+            "description": "desc",
+            "variants": [
+                {"name": "control", "prompt_version": "v1", "weight": 0.5},
+                {"name": "treatment", "prompt_version": "v2", "weight": 0.5},
+            ],
+            "metadata": {},
+            "status": "draft",
+            "created_at": "2025-01-15T10:30:00",
+            "updated_at": "2025-01-15T11:00:00",
+        }
+
+        result = ab_service._parse_test_config(data)
+
+        assert result.id == "test-123"
+        assert result.created_at.year == 2025
+        assert result.created_at.month == 1
+        assert result.created_at.day == 15
+        assert result.updated_at.hour == 11
+
+    @pytest.mark.unit
+    def test_parse_test_config_with_datetime_objects(self, ab_service: ABTestService):
+        """Test _parse_test_config handles datetime objects correctly."""
+        data = {
+            "id": "test-456",
+            "name": "Test 2",
+            "description": "desc",
+            "variants": [
+                {"name": "control", "prompt_version": "v1", "weight": 0.5},
+                {"name": "treatment", "prompt_version": "v2", "weight": 0.5},
+            ],
+            "metadata": {},
+            "status": "running",
+            "created_at": datetime(2025, 2, 20, 14, 30, 0),
+            "updated_at": datetime(2025, 2, 20, 15, 0, 0),
+        }
+
+        result = ab_service._parse_test_config(data)
+
+        assert result.id == "test-456"
+        assert result.created_at.month == 2
+        assert result.updated_at.hour == 15
+
+    @pytest.mark.unit
+    def test_variance_edge_cases(self, ab_service: ABTestService):
+        """Test _variance with edge cases."""
+        # Single value
+        assert ab_service._variance([5]) == 0.0
+        # Empty list
+        assert ab_service._variance([]) == 0.0
+        # Multiple identical values
+        assert ab_service._variance([5, 5, 5, 5]) == 0.0
+
 
 class TestStatisticalPrecision:
     """Test statistical calculation precision (Issue #178 requirement: 99.9%)."""
