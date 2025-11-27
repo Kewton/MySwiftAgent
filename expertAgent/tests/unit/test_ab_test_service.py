@@ -8,7 +8,6 @@ This module tests the AB test service with comprehensive coverage for:
 - Statistical analysis
 """
 
-import math
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,7 +15,6 @@ import pytest
 
 from app.schemas.ab_test import (
     ABTestConfigCreate,
-    ABTestMetrics,
     ABTestReportRequest,
     ABTestStatus,
     ABTestVariant,

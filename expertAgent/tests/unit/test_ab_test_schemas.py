@@ -4,8 +4,6 @@ Tests for Issue #178: AB Test Infrastructure Implementation.
 This module tests all AB test schema definitions with comprehensive coverage.
 """
 
-from datetime import datetime
-
 import pytest
 from pydantic import ValidationError
 
