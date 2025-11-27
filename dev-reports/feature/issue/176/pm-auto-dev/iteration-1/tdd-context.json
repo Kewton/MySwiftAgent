@@ -1,0 +1,32 @@
+{
+  "issue_number": 176,
+  "title": "Issue #152-7: リアルタイムダッシュボード実装",
+  "summary": "SSEを使用したリアルタイムメトリクス配信",
+  "acceptance_criteria": [
+    "SSEストリームが正常に動作",
+    "5秒ごとに更新される",
+    "ハートビートが30秒ごとに送信",
+    "差分データのみ送信される",
+    "結合テストカバレッジ 50%以上",
+    "メモリリークがない",
+    "同時接続 100クライアント対応",
+    "正常系: リアルタイム更新",
+    "異常系: 接続断・再接続",
+    "エッジケース: 長時間接続（1時間）"
+  ],
+  "implementation_tasks": [
+    "SSEストリーミングエンドポイント実装",
+    "差分データ取得ロジック",
+    "フロントエンド統合（SvelteKit）",
+    "リアルタイムグラフコンポーネント",
+    "結合テスト作成"
+  ],
+  "technical_stack": {
+    "backend": "Python/FastAPI/SSE",
+    "frontend": "SvelteKit/Chart.js"
+  },
+  "work_plan_tasks": [],
+  "deliverables_checklist": [],
+  "definition_of_done": [],
+  "target_coverage": 90
+}
