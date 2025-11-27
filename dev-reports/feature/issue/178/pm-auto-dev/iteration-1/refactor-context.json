@@ -1,0 +1,40 @@
+{
+  "issue_number": 178,
+  "refactor_targets": [
+    "expertAgent/app/services/ab_test_service.py",
+    "expertAgent/app/schemas/ab_test.py",
+    "expertAgent/app/api/v1/ab_test_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 89.54,
+    "schema_coverage": 100.0,
+    "service_coverage": 85.91,
+    "test_count": 146,
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (for Valkey persistence)",
+    "Strategy Pattern (for statistical tests)",
+    "Dependency Injection"
+  ],
+  "improvement_goals": [
+    "カバレッジを90%以上に向上（特にValkey永続化コードのテスト追加）",
+    "コードの重複削減",
+    "エラーハンドリングの一貫性確保",
+    "ドキュメントの充実"
+  ],
+  "current_implementation_quality": {
+    "solid_principles": {
+      "single_responsibility": "ABTestServiceが複数の責任を持っている（テスト管理、統計分析、永続化）。分割を検討",
+      "open_closed": "新しい統計テスト（例：ANOVA）を追加しやすい構造",
+      "liskov_substitution": "BaseServiceを継承、問題なし",
+      "interface_segregation": "問題なし",
+      "dependency_inversion": "ValkeyClientへの直接依存あり。インターフェース経由に変更可能"
+    },
+    "code_smells": [
+      "長いメソッド（generate_report約100行）",
+      "_store_test, _store_assignment等の重複パターン"
+    ]
+  }
+}
