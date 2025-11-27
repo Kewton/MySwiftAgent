@@ -1614,6 +1614,199 @@ curl -X POST http://localhost:8104/aiagent-api/v1/observability/scores \
 
 ---
 
+### Get Requirement Definition Metrics (Issue #175)
+
+**GET** `/v1/observability/requirement-definition-metrics`
+
+Get aggregated quality metrics for requirement definition conversations.
+
+#### Features
+
+- 平均スコア、対話ターン数、完了率の集計
+- モデル使用率の分析
+- 日付範囲によるフィルタリング
+- Langfuseデータの集計
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from_date` | datetime | No | 開始日（デフォルト: 30日前） |
+| `to_date` | datetime | No | 終了日（デフォルト: 今日） |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8004/v1/observability/requirement-definition-metrics?from_date=2025-11-01T00:00:00Z&to_date=2025-11-30T23:59:59Z"
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "metrics": {
+    "average_score": 0.78,
+    "total_turns": 1250,
+    "success_rate": 0.85,
+    "average_latency": 2.3,
+    "total_sessions": 156,
+    "completion_rate": 0.92
+  },
+  "model_usage": [
+    {"model": "gpt-4", "count": 450, "percentage": 36.0},
+    {"model": "gemini-2.5-flash", "count": 800, "percentage": 64.0}
+  ],
+  "period": {
+    "from_date": "2025-11-01T00:00:00Z",
+    "to_date": "2025-11-30T23:59:59Z"
+  },
+  "cache_hit": false
+}
+```
+
+---
+
+### Real-time Dashboard Stream (Issue #176)
+
+**GET** `/v1/observability/dashboard/stream`
+
+Stream real-time dashboard metrics using Server-Sent Events (SSE).
+
+#### Features
+
+- 5秒ごとにメトリクス更新
+- 30秒ごとにハートビート送信
+- 差分データのみ送信（帯域幅最適化）
+- 最大100クライアント同時接続対応
+
+#### SSE Event Types
+
+| Event Type | Description |
+|------------|-------------|
+| `connected` | 接続確立時に送信 |
+| `metrics_update` | メトリクス更新時に送信 |
+| `heartbeat` | 接続維持用（30秒ごと） |
+| `error` | エラー発生時に送信 |
+
+#### Request Example
+
+```bash
+curl -N "http://localhost:8004/v1/observability/dashboard/stream"
+```
+
+#### Response (SSE Stream)
+
+```
+event: message
+data: {"event_type": "connected", "timestamp": "2025-11-27T10:30:00Z", "data": {"client_id": "abc-123"}}
+
+event: message
+data: {"event_type": "metrics_update", "timestamp": "2025-11-27T10:30:05Z", "data": {"metrics": {"average_score": 0.78, "total_turns": 1250, "completion_rate": 0.92, "total_sessions": 156, "model_usage": [...]}, "is_full_snapshot": true}}
+
+event: message
+data: {"event_type": "heartbeat", "timestamp": "2025-11-27T10:30:30Z", "data": {}}
+```
+
+---
+
+## Diagnostic API (Issue #171)
+
+Diagnostic API provides endpoints for retrieving conversation diagnostic information from Valkey storage.
+
+### Get Diagnostic Info
+
+**GET** `/v1/chat/diagnostics/{conversation_id}`
+
+Get diagnostic information for a single conversation.
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `conversation_id` | string | Unique conversation identifier |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8004/v1/chat/diagnostics/conv-abc123"
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "conversation_id": "conv-abc123",
+  "user_id": "user-789",
+  "project_id": "project-456",
+  "job_id": "job-12345",
+  "workflow_id": "workflow-321",
+  "start_time": "2025-11-27T10:00:00Z",
+  "end_time": "2025-11-27T10:15:00Z",
+  "turn_count": 8,
+  "messages": [...],
+  "langfuse_trace_url": "http://localhost:3001/trace/trace_abc123",
+  "metadata": {
+    "model": "gpt-4",
+    "total_tokens": 2500
+  }
+}
+```
+
+#### Error Response (404 Not Found)
+
+```json
+{
+  "detail": "Conversation not found: conv-abc123"
+}
+```
+
+---
+
+### List Diagnostics
+
+**GET** `/v1/chat/diagnostics`
+
+List diagnostic information with optional filtering and pagination.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `job_id` | string | No | Filter by job ID |
+| `user_id` | string | No | Filter by user ID |
+| `project_id` | string | No | Filter by project ID |
+| `workflow_id` | string | No | Filter by workflow ID |
+| `start_date` | datetime | No | Filter by start date |
+| `end_date` | datetime | No | Filter by end date |
+| `limit` | int | No | Maximum results (default: 100, max: 1000) |
+| `offset` | int | No | Pagination offset (default: 0) |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8004/v1/chat/diagnostics?job_id=job-12345&limit=50"
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "items": [
+    {
+      "conversation_id": "conv-abc123",
+      "user_id": "user-789",
+      "start_time": "2025-11-27T10:00:00Z",
+      "turn_count": 8
+    }
+  ],
+  "total": 15,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+---
+
 ## AB Testing API
 
 AB Testing API provides endpoints for creating and managing A/B tests, assigning variants to users, collecting metrics, and generating statistical reports.
