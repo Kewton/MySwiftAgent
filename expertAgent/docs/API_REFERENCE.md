@@ -1265,6 +1265,151 @@ curl -X POST http://localhost:8104/aiagent-api/v1/chat/create-job \
 
 ---
 
+### Select Candidate (Issue #173)
+
+**POST** `/v1/chat/select-candidate`
+
+Select a candidate interpretation from multiple options presented during requirement clarification.
+
+#### Features
+
+- SSE candidate_selection イベントで提示された候補から選択
+- 選択した候補の要件が以降の対話に使用される
+- 候補の保存・追跡機能
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversation_id` | string | Yes | 会話セッションID |
+| `selected_candidate_id` | string | Yes | 選択する候補ID（A, B など） |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/chat/select-candidate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "conv_001",
+    "selected_candidate_id": "A"
+  }'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "conversation_id": "conv_001",
+  "selected_candidate_id": "A",
+  "requirements": {
+    "data_source": "CSVファイル",
+    "process_description": "売上データの月別集計",
+    "output_format": "Excelレポート",
+    "schedule": "オンデマンド",
+    "completeness": 0.75
+  },
+  "message": "候補A（売上データ集計）を選択しました。追加の詳細を確認させてください。"
+}
+```
+
+#### Error Response (404 Not Found)
+
+```json
+{
+  "detail": "No candidates found for conversation: conv_001"
+}
+```
+
+#### Error Response (400 Bad Request)
+
+```json
+{
+  "detail": "Candidate 'C' not found. Available: ['A', 'B']"
+}
+```
+
+---
+
+### Submit Feedback (Issue #172)
+
+**POST** `/v1/chat/feedback`
+
+Submit feedback scores for a requirement clarification conversation. Scores are stored in Langfuse for observability analysis.
+
+#### Features
+
+- 4種類のスコア（1-5段階）で会話品質を評価
+- Langfuseへのスコア送信・保存
+- オプションのコメント機能
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversation_id` | string | Yes | 会話セッションID |
+| `requirement_clarity` | int | No | 要件の明確さ（1-5） |
+| `interpretation_accuracy` | int | No | 解釈の正確さ（1-5） |
+| `response_helpfulness` | int | No | 回答の有用性（1-5） |
+| `overall_satisfaction` | int | No | 総合満足度（1-5） |
+| `comment` | string | No | 自由コメント |
+
+#### Score Mapping
+
+スコアは1-5からLangfuseの0.0-1.0スケールに変換されます:
+
+| Score (1-5) | Langfuse Value |
+|-------------|----------------|
+| 1 | 0.0 |
+| 2 | 0.25 |
+| 3 | 0.5 |
+| 4 | 0.75 |
+| 5 | 1.0 |
+
+#### Langfuse Score Names
+
+| Request Field | Langfuse Score Name |
+|---------------|---------------------|
+| requirement_clarity | req_def_clarity |
+| interpretation_accuracy | req_def_accuracy |
+| response_helpfulness | req_def_helpfulness |
+| overall_satisfaction | req_def_overall |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/chat/feedback \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "conv_001",
+    "requirement_clarity": 5,
+    "interpretation_accuracy": 4,
+    "response_helpfulness": 5,
+    "overall_satisfaction": 5,
+    "comment": "Very helpful!"
+  }'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Feedback submitted successfully. 4 of 4 scores recorded.",
+  "feedback_id": null,
+  "scores_submitted": 4
+}
+```
+
+#### Error Response (500 Internal Server Error)
+
+```json
+{
+  "detail": "フィードバックの送信に失敗しました: Langfuse is not enabled"
+}
+```
+
+---
+
 ## Marp Report API
 
 ### Generate Marp Presentation
