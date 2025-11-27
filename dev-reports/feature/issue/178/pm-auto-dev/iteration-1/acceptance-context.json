@@ -1,0 +1,60 @@
+{
+  "issue_number": 178,
+  "feature_summary": "Issue #152-9: ABテスト基盤実装",
+  "acceptance_criteria": [
+    "ランダムバージョン割り当て",
+    "バージョン別メトリクス集計",
+    "統計的有意性検定（p値）",
+    "効果サイズ（Cohen's d）計算",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "統計計算精度 99.9%",
+    "正常系: AB比較レポート生成",
+    "異常系: サンプル数不足",
+    "エッジケース: 有意差なし"
+  ],
+  "test_scenarios": [
+    {
+      "id": "S1",
+      "name": "ランダムバージョン割り当て",
+      "description": "ABテスト作成後、セッションIDに対してバリアントが重み付きランダムで割り当てられる",
+      "expected_behavior": "50/50の重みで割り当てた場合、十分なサンプル数で各バリアントが概ね50%ずつ割り当てられる"
+    },
+    {
+      "id": "S2",
+      "name": "バージョン別メトリクス集計",
+      "description": "各バリアントに割り当てられたセッションからメトリクスを収集し、バリアント別に集計する",
+      "expected_behavior": "バリアントごとにmean, std, sample_sizeが正しく計算される"
+    },
+    {
+      "id": "S3",
+      "name": "統計的有意性検定",
+      "description": "2つのバリアント間でWelch's t検定を実施し、p値を計算する",
+      "expected_behavior": "scipy.stats.ttest_indと同等の精度（99.9%以上）でp値が計算される"
+    },
+    {
+      "id": "S4",
+      "name": "効果サイズ計算",
+      "description": "Cohen's d効果サイズを計算し、解釈（negligible/small/medium/large）を提供する",
+      "expected_behavior": "Cohen's dが正しく計算され、|d|<0.2=negligible, 0.2-0.5=small, 0.5-0.8=medium, >=0.8=largeで解釈される"
+    },
+    {
+      "id": "S5",
+      "name": "正常系: AB比較レポート生成",
+      "description": "十分なデータがある場合、統計分析を含むレポートが生成される",
+      "expected_behavior": "レポートにt検定結果、効果サイズ、勝者バリアント、推奨事項が含まれる"
+    },
+    {
+      "id": "S6",
+      "name": "異常系: サンプル数不足",
+      "description": "最小サンプル数に満たない場合、警告メッセージが表示される",
+      "expected_behavior": "warning_messagesにサンプル数不足の警告が含まれる"
+    },
+    {
+      "id": "S7",
+      "name": "エッジケース: 有意差なし",
+      "description": "統計的に有意な差がない場合の処理",
+      "expected_behavior": "is_significant=False、winnerはNone、推奨事項で「もっとデータを集めることを推奨」"
+    }
+  ]
+}

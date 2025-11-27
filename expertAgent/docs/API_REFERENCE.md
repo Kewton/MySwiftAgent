@@ -1265,6 +1265,151 @@ curl -X POST http://localhost:8104/aiagent-api/v1/chat/create-job \
 
 ---
 
+### Select Candidate (Issue #173)
+
+**POST** `/v1/chat/select-candidate`
+
+Select a candidate interpretation from multiple options presented during requirement clarification.
+
+#### Features
+
+- SSE candidate_selection イベントで提示された候補から選択
+- 選択した候補の要件が以降の対話に使用される
+- 候補の保存・追跡機能
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversation_id` | string | Yes | 会話セッションID |
+| `selected_candidate_id` | string | Yes | 選択する候補ID（A, B など） |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/chat/select-candidate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "conv_001",
+    "selected_candidate_id": "A"
+  }'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "conversation_id": "conv_001",
+  "selected_candidate_id": "A",
+  "requirements": {
+    "data_source": "CSVファイル",
+    "process_description": "売上データの月別集計",
+    "output_format": "Excelレポート",
+    "schedule": "オンデマンド",
+    "completeness": 0.75
+  },
+  "message": "候補A（売上データ集計）を選択しました。追加の詳細を確認させてください。"
+}
+```
+
+#### Error Response (404 Not Found)
+
+```json
+{
+  "detail": "No candidates found for conversation: conv_001"
+}
+```
+
+#### Error Response (400 Bad Request)
+
+```json
+{
+  "detail": "Candidate 'C' not found. Available: ['A', 'B']"
+}
+```
+
+---
+
+### Submit Feedback (Issue #172)
+
+**POST** `/v1/chat/feedback`
+
+Submit feedback scores for a requirement clarification conversation. Scores are stored in Langfuse for observability analysis.
+
+#### Features
+
+- 4種類のスコア（1-5段階）で会話品質を評価
+- Langfuseへのスコア送信・保存
+- オプションのコメント機能
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversation_id` | string | Yes | 会話セッションID |
+| `requirement_clarity` | int | No | 要件の明確さ（1-5） |
+| `interpretation_accuracy` | int | No | 解釈の正確さ（1-5） |
+| `response_helpfulness` | int | No | 回答の有用性（1-5） |
+| `overall_satisfaction` | int | No | 総合満足度（1-5） |
+| `comment` | string | No | 自由コメント |
+
+#### Score Mapping
+
+スコアは1-5からLangfuseの0.0-1.0スケールに変換されます:
+
+| Score (1-5) | Langfuse Value |
+|-------------|----------------|
+| 1 | 0.0 |
+| 2 | 0.25 |
+| 3 | 0.5 |
+| 4 | 0.75 |
+| 5 | 1.0 |
+
+#### Langfuse Score Names
+
+| Request Field | Langfuse Score Name |
+|---------------|---------------------|
+| requirement_clarity | req_def_clarity |
+| interpretation_accuracy | req_def_accuracy |
+| response_helpfulness | req_def_helpfulness |
+| overall_satisfaction | req_def_overall |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/chat/feedback \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "conv_001",
+    "requirement_clarity": 5,
+    "interpretation_accuracy": 4,
+    "response_helpfulness": 5,
+    "overall_satisfaction": 5,
+    "comment": "Very helpful!"
+  }'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Feedback submitted successfully. 4 of 4 scores recorded.",
+  "feedback_id": null,
+  "scores_submitted": 4
+}
+```
+
+#### Error Response (500 Internal Server Error)
+
+```json
+{
+  "detail": "フィードバックの送信に失敗しました: Langfuse is not enabled"
+}
+```
+
+---
+
 ## Marp Report API
 
 ### Generate Marp Presentation
@@ -1611,6 +1756,480 @@ curl -X POST http://localhost:8104/aiagent-api/v1/observability/scores \
   "detail": "Score value must be between 0.0 and 1.0"
 }
 ```
+
+---
+
+### Get Requirement Definition Metrics (Issue #175)
+
+**GET** `/v1/observability/requirement-definition-metrics`
+
+Get aggregated quality metrics for requirement definition conversations.
+
+#### Features
+
+- 平均スコア、対話ターン数、完了率の集計
+- モデル使用率の分析
+- 日付範囲によるフィルタリング
+- Langfuseデータの集計
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from_date` | datetime | No | 開始日（デフォルト: 30日前） |
+| `to_date` | datetime | No | 終了日（デフォルト: 今日） |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8004/v1/observability/requirement-definition-metrics?from_date=2025-11-01T00:00:00Z&to_date=2025-11-30T23:59:59Z"
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "metrics": {
+    "average_score": 0.78,
+    "total_turns": 1250,
+    "success_rate": 0.85,
+    "average_latency": 2.3,
+    "total_sessions": 156,
+    "completion_rate": 0.92
+  },
+  "model_usage": [
+    {"model": "gpt-4", "count": 450, "percentage": 36.0},
+    {"model": "gemini-2.5-flash", "count": 800, "percentage": 64.0}
+  ],
+  "period": {
+    "from_date": "2025-11-01T00:00:00Z",
+    "to_date": "2025-11-30T23:59:59Z"
+  },
+  "cache_hit": false
+}
+```
+
+---
+
+### Real-time Dashboard Stream (Issue #176)
+
+**GET** `/v1/observability/dashboard/stream`
+
+Stream real-time dashboard metrics using Server-Sent Events (SSE).
+
+#### Features
+
+- 5秒ごとにメトリクス更新
+- 30秒ごとにハートビート送信
+- 差分データのみ送信（帯域幅最適化）
+- 最大100クライアント同時接続対応
+
+#### SSE Event Types
+
+| Event Type | Description |
+|------------|-------------|
+| `connected` | 接続確立時に送信 |
+| `metrics_update` | メトリクス更新時に送信 |
+| `heartbeat` | 接続維持用（30秒ごと） |
+| `error` | エラー発生時に送信 |
+
+#### Request Example
+
+```bash
+curl -N "http://localhost:8004/v1/observability/dashboard/stream"
+```
+
+#### Response (SSE Stream)
+
+```
+event: message
+data: {"event_type": "connected", "timestamp": "2025-11-27T10:30:00Z", "data": {"client_id": "abc-123"}}
+
+event: message
+data: {"event_type": "metrics_update", "timestamp": "2025-11-27T10:30:05Z", "data": {"metrics": {"average_score": 0.78, "total_turns": 1250, "completion_rate": 0.92, "total_sessions": 156, "model_usage": [...]}, "is_full_snapshot": true}}
+
+event: message
+data: {"event_type": "heartbeat", "timestamp": "2025-11-27T10:30:30Z", "data": {}}
+```
+
+---
+
+## Diagnostic API (Issue #171)
+
+Diagnostic API provides endpoints for retrieving conversation diagnostic information from Valkey storage.
+
+### Get Diagnostic Info
+
+**GET** `/v1/chat/diagnostics/{conversation_id}`
+
+Get diagnostic information for a single conversation.
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `conversation_id` | string | Unique conversation identifier |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8004/v1/chat/diagnostics/conv-abc123"
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "conversation_id": "conv-abc123",
+  "user_id": "user-789",
+  "project_id": "project-456",
+  "job_id": "job-12345",
+  "workflow_id": "workflow-321",
+  "start_time": "2025-11-27T10:00:00Z",
+  "end_time": "2025-11-27T10:15:00Z",
+  "turn_count": 8,
+  "messages": [...],
+  "langfuse_trace_url": "http://localhost:3001/trace/trace_abc123",
+  "metadata": {
+    "model": "gpt-4",
+    "total_tokens": 2500
+  }
+}
+```
+
+#### Error Response (404 Not Found)
+
+```json
+{
+  "detail": "Conversation not found: conv-abc123"
+}
+```
+
+---
+
+### List Diagnostics
+
+**GET** `/v1/chat/diagnostics`
+
+List diagnostic information with optional filtering and pagination.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `job_id` | string | No | Filter by job ID |
+| `user_id` | string | No | Filter by user ID |
+| `project_id` | string | No | Filter by project ID |
+| `workflow_id` | string | No | Filter by workflow ID |
+| `start_date` | datetime | No | Filter by start date |
+| `end_date` | datetime | No | Filter by end date |
+| `limit` | int | No | Maximum results (default: 100, max: 1000) |
+| `offset` | int | No | Pagination offset (default: 0) |
+
+#### Request Example
+
+```bash
+curl -X GET "http://localhost:8004/v1/chat/diagnostics?job_id=job-12345&limit=50"
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "items": [
+    {
+      "conversation_id": "conv-abc123",
+      "user_id": "user-789",
+      "start_time": "2025-11-27T10:00:00Z",
+      "turn_count": 8
+    }
+  ],
+  "total": 15,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+---
+
+## AB Testing API
+
+AB Testing API provides endpoints for creating and managing A/B tests, assigning variants to users, collecting metrics, and generating statistical reports.
+
+### Create AB Test
+
+**POST** `/v1/ab-tests`
+
+Create a new AB test configuration.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | テスト名 |
+| `description` | string | No | テストの説明 |
+| `variants` | array | Yes | バリアント定義（2つ以上必須） |
+| `variants[].name` | string | Yes | バリアント名（例: "control", "treatment"） |
+| `variants[].weight` | float | Yes | 割り当て重み（0.0〜1.0、合計1.0） |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/ab-tests \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "prompt_v2_test",
+    "description": "Test new prompt template",
+    "variants": [
+      {"name": "control", "weight": 0.5},
+      {"name": "treatment", "weight": 0.5}
+    ]
+  }'
+```
+
+#### Response (201 Created)
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "prompt_v2_test",
+  "description": "Test new prompt template",
+  "status": "draft",
+  "variants": [
+    {"name": "control", "weight": 0.5},
+    {"name": "treatment", "weight": 0.5}
+  ],
+  "created_at": "2025-11-27T10:30:00Z",
+  "updated_at": "2025-11-27T10:30:00Z"
+}
+```
+
+---
+
+### Get AB Test
+
+**GET** `/v1/ab-tests/{test_id}`
+
+Get details of a specific AB test.
+
+#### Response (200 OK)
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "prompt_v2_test",
+  "status": "running",
+  "variants": [...],
+  "created_at": "2025-11-27T10:30:00Z"
+}
+```
+
+---
+
+### List AB Tests
+
+**GET** `/v1/ab-tests`
+
+List all AB tests with optional filtering.
+
+#### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status (draft, running, paused, completed) |
+| `limit` | int | Maximum number of results (default: 100) |
+| `offset` | int | Pagination offset (default: 0) |
+
+#### Response (200 OK)
+
+```json
+{
+  "items": [...],
+  "total": 10,
+  "limit": 100,
+  "offset": 0
+}
+```
+
+---
+
+### Update AB Test Status
+
+**PUT** `/v1/ab-tests/{test_id}/status`
+
+Update the status of an AB test.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Yes | New status (running, paused, completed) |
+
+#### Request Example
+
+```bash
+curl -X PUT http://localhost:8004/v1/ab-tests/{test_id}/status \
+  -H "Content-Type: application/json" \
+  -d '{"status": "running"}'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "old_status": "draft",
+  "new_status": "running",
+  "updated_at": "2025-11-27T10:35:00Z"
+}
+```
+
+---
+
+### Assign Variant
+
+**POST** `/v1/ab-tests/{test_id}/assignment`
+
+Assign a variant to a session. Assignment is idempotent - the same session always gets the same variant.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `session_id` | string | Yes | Unique session identifier |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/ab-tests/{test_id}/assignment \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "user-session-123"}'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "test_id": "550e8400-e29b-41d4-a716-446655440000",
+  "session_id": "user-session-123",
+  "variant_name": "treatment",
+  "is_new": true,
+  "assigned_at": "2025-11-27T10:40:00Z"
+}
+```
+
+---
+
+### Collect Metrics
+
+**POST** `/v1/ab-tests/{test_id}/metrics`
+
+Record a metric value for a session.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | Session identifier (must have variant assignment) |
+| `value` | float | Yes | Metric value (e.g., quality score 0.0-1.0) |
+| `metric_name` | string | No | Metric name (default: "quality_score") |
+
+#### Request Example
+
+```bash
+curl -X POST "http://localhost:8004/v1/ab-tests/{test_id}/metrics?session_id=user-session-123&value=0.85&metric_name=quality_score"
+```
+
+#### Response (201 Created)
+
+```json
+{
+  "test_id": "550e8400-e29b-41d4-a716-446655440000",
+  "session_id": "user-session-123",
+  "variant_name": "treatment",
+  "metric_name": "quality_score",
+  "value": 0.85,
+  "recorded_at": "2025-11-27T10:45:00Z"
+}
+```
+
+---
+
+### Generate Report
+
+**POST** `/v1/ab-tests/{test_id}/report`
+
+Generate a statistical analysis report comparing variants.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `metric_name` | string | No | Metric to analyze (default: "quality_score") |
+| `confidence_level` | float | No | Statistical confidence level (default: 0.95) |
+
+#### Request Example
+
+```bash
+curl -X POST http://localhost:8004/v1/ab-tests/{test_id}/report \
+  -H "Content-Type: application/json" \
+  -d '{"metric_name": "quality_score", "confidence_level": 0.95}'
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "test_id": "550e8400-e29b-41d4-a716-446655440000",
+  "test_name": "prompt_v2_test",
+  "metric_name": "quality_score",
+  "metrics": {
+    "control": {
+      "sample_size": 100,
+      "mean": 0.72,
+      "std": 0.08,
+      "confidence_interval": [0.70, 0.74]
+    },
+    "treatment": {
+      "sample_size": 100,
+      "mean": 0.85,
+      "std": 0.06,
+      "confidence_interval": [0.84, 0.86]
+    }
+  },
+  "t_test_result": {
+    "t_statistic": -12.5,
+    "p_value": 0.00001,
+    "is_significant": true
+  },
+  "effect_size": {
+    "cohens_d": 1.84,
+    "interpretation": "large"
+  },
+  "winner": "treatment",
+  "recommendation": "Variant 'treatment' shows statistically significant improvement"
+}
+```
+
+#### Effect Size Interpretation
+
+| Cohen's d | Interpretation |
+|-----------|----------------|
+| < 0.2 | negligible |
+| 0.2 - 0.5 | small |
+| 0.5 - 0.8 | medium |
+| > 0.8 | large |
+
+---
+
+### Delete AB Test
+
+**DELETE** `/v1/ab-tests/{test_id}`
+
+Delete an AB test and all associated data.
+
+#### Response (204 No Content)
+
+No response body.
 
 ---
 

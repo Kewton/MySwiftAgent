@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1 import (
+    ab_test_endpoints,
     admin_endpoints,
     agent_endpoints,
     chat_endpoints,
@@ -170,6 +171,7 @@ app.include_router(admin_endpoints.router, prefix="/v1")
 app.include_router(google_auth_endpoints.router, prefix="/v1")
 app.include_router(observability_endpoints.router, prefix="/v1")
 app.include_router(diagnostic_endpoints.router, prefix="/v1", tags=["Diagnostics"])
+app.include_router(ab_test_endpoints.router, prefix="/v1", tags=["AB Tests"])
 
 
 @app.get("/health")
