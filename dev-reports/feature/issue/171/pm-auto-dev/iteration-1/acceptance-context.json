@@ -1,0 +1,100 @@
+{
+  "issue_number": 171,
+  "feature_summary": "診断情報取得API実装 - conversation_idからプロンプト・LLMレスポンス・トークン使用量を取得し、job/user/project/workflow単位での分析を可能にする",
+  "acceptance_criteria": [
+    "Valkeyメタデータにjob_id, user_id, project_id, workflow_idが保存される",
+    "セカンダリインデックスが正しく作成される（job_index:{job_id}, user_index:{user_id}等）",
+    "既存のconversation_idベース操作が引き続き動作する（後方互換性）",
+    "APIエンドポイント /v1/chat/diagnostics/{conversation_id} が実装される",
+    "APIエンドポイント /v1/chat/diagnostics （一覧取得）が実装される",
+    "システムプロンプト全文が取得できる",
+    "各ターンのユーザー/LLMメッセージが取得できる",
+    "トークン使用量が正確に記録される",
+    "Langfuseトレースリンクが生成される",
+    "job_idでフィルタリング可能",
+    "user_idでフィルタリング可能",
+    "project_idでフィルタリング可能",
+    "workflow_idでフィルタリング可能",
+    "日付範囲でフィルタリング可能（start_date, end_date）",
+    "ページネーション動作（limit, offset）",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "レスポンスタイム 1秒以内（単一取得）",
+    "レスポンスタイム 2秒以内（一覧取得、100件まで）"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-001",
+      "scenario": "正常系: 既存会話の診断情報取得（conversation_id）",
+      "description": "GET /v1/chat/diagnostics/{conversation_id} で単一の診断情報を取得",
+      "expected": "200 OK with DiagnosticInfo"
+    },
+    {
+      "id": "AC-002",
+      "scenario": "正常系: Job単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?job_id=xxx",
+      "expected": "200 OK with DiagnosticListResponse"
+    },
+    {
+      "id": "AC-003",
+      "scenario": "正常系: User単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?user_id=xxx",
+      "expected": "200 OK with DiagnosticListResponse"
+    },
+    {
+      "id": "AC-004",
+      "scenario": "正常系: Project単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?project_id=xxx",
+      "expected": "200 OK with DiagnosticListResponse"
+    },
+    {
+      "id": "AC-005",
+      "scenario": "正常系: Workflow単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?workflow_id=xxx",
+      "expected": "200 OK with DiagnosticListResponse"
+    },
+    {
+      "id": "AC-006",
+      "scenario": "正常系: 複合フィルタ（user_id + project_id + date_range）",
+      "description": "GET /v1/chat/diagnostics?user_id=xxx&project_id=yyy&start_date=2025-01-01&end_date=2025-12-31",
+      "expected": "200 OK with filtered results"
+    },
+    {
+      "id": "AC-007",
+      "scenario": "正常系: ページネーション（limit=10, offset=0）",
+      "description": "GET /v1/chat/diagnostics?limit=10&offset=0",
+      "expected": "200 OK with pagination metadata"
+    },
+    {
+      "id": "AC-008",
+      "scenario": "異常系: 存在しないconversation_id（404エラー）",
+      "description": "GET /v1/chat/diagnostics/non-existent-id",
+      "expected": "404 Not Found"
+    },
+    {
+      "id": "AC-009",
+      "scenario": "異常系: 無効なクエリパラメータ（400エラー）",
+      "description": "GET /v1/chat/diagnostics?limit=-1",
+      "expected": "400 Bad Request"
+    },
+    {
+      "id": "AC-010",
+      "scenario": "エッジケース: 長い会話（50ターン以上）",
+      "description": "50ターン以上の会話データが正しく取得できること",
+      "expected": "200 OK with all message turns"
+    },
+    {
+      "id": "AC-011",
+      "scenario": "エッジケース: 大量データ取得（1000件）",
+      "description": "一覧取得の上限テスト",
+      "expected": "200 OK with max 1000 items, response time < 2s"
+    }
+  ],
+  "tdd_result": {
+    "coverage": 95,
+    "unit_tests_passed": 95,
+    "integration_tests_passed": 19,
+    "static_analysis_errors": 0
+  }
+}

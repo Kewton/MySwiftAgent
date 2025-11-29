@@ -59,8 +59,13 @@ dependencies = [
     "pypdf>=4.0.0",
     "pyyaml>=6.0.3",
     "sse-starlette>=3.0.2",
+    "watchdog>=3.0.0",
     # Observability (Issue #113)
     "langfuse>=3.0.0",
+    # Valkey/Redis persistence (Issue #169)
+    "valkey>=6.0.0",
+    # Statistical analysis (Issue #178)
+    "scipy>=1.11.0",
 ]
 
 [project.optional-dependencies]

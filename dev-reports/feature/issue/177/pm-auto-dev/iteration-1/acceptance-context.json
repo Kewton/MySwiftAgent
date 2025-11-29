@@ -1,0 +1,45 @@
+{
+  "issue_number": 177,
+  "feature_summary": "全プロンプトを外部YAMLファイルで管理（複数バージョン対応）",
+  "acceptance_criteria": [
+    "expertAgent/prompts/ ディレクトリ構造が正しく作成される",
+    "プロンプト名ディレクトリ配下に複数YAMLファイルを配置可能",
+    "YAMLからプロンプトが読み込まれる（default.yaml自動フォールバック）",
+    "リクエスト時にYAMLファイル名を指定可能（API拡張）",
+    "バージョン切り替えが動作する",
+    "ホットリロードが機能する",
+    "キャッシュが正しく動作する",
+    "jobTaskGeneratorAgents の全プロンプトがYAML化される",
+    "workflowGeneratorAgents の全プロンプトがYAML化される",
+    "シナリオ1: 企業IR分析でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ2: WebサイトPDF抽出でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ3: Gmail検索ポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ4: キーワードポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "読み込み時間 100ms以内"
+  ],
+  "test_scenarios": [
+    "シナリオ1: PromptLoaderがYAMLファイルを正しく読み込む",
+    "シナリオ2: default.yamlへの自動フォールバックが動作する",
+    "シナリオ3: ホットリロードでファイル変更が検知される",
+    "シナリオ4: キャッシュが正しく動作する",
+    "シナリオ5: バージョン切り替えが正しく動作する"
+  ],
+  "current_status": {
+    "completed_features": [
+      "PromptLoaderクラス実装完了",
+      "PromptCacheクラス実装完了",
+      "FileWatcherクラス実装完了",
+      "単体テストカバレッジ93.59%達成",
+      "静的解析エラー0件"
+    ],
+    "pending_features": [
+      "jobTaskGeneratorAgents プロンプトのYAML化",
+      "workflowGeneratorAgents プロンプトのYAML化",
+      "API拡張（prompt_versionパラメータ）",
+      "LangGraphエージェント統合",
+      "4シナリオのエンドツーエンド検証"
+    ]
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "issue_number": 171,
+  "issue_title": "Issue #152-2: 診断情報取得API実装",
+  "acceptance_criteria": [
+    "Valkeyメタデータにjob_id, user_id, project_id, workflow_idが保存される",
+    "セカンダリインデックスが正しく作成される（job_index:{job_id}, user_index:{user_id}等）",
+    "既存のconversation_idベース操作が引き続き動作する（後方互換性）",
+    "APIエンドポイント /v1/chat/diagnostics/{conversation_id} が実装される",
+    "APIエンドポイント /v1/chat/diagnostics （一覧取得）が実装される",
+    "システムプロンプト全文が取得できる",
+    "各ターンのユーザー/LLMメッセージが取得できる",
+    "トークン使用量が正確に記録される",
+    "Langfuseトレースリンクが生成される",
+    "job_idでフィルタリング可能",
+    "user_idでフィルタリング可能",
+    "project_idでフィルタリング可能",
+    "workflow_idでフィルタリング可能",
+    "日付範囲でフィルタリング可能（start_date, end_date）",
+    "ページネーション動作（limit, offset）",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "レスポンスタイム 1秒以内（単一取得）",
+    "レスポンスタイム 2秒以内（一覧取得、100件まで）"
+  ],
+  "implementation_tasks": [
+    "Phase 1: Valkeyメタデータスキーマ拡張（job_id, user_id, project_id, workflow_id）",
+    "Phase 1: セカンダリインデックス実装（Redis SET使用）",
+    "Phase 1: ConversationStore拡張（list_conversations, フィルタリング, ページネーション）",
+    "Phase 2: DiagnosticInfo/DiagnosticListResponseスキーマ定義",
+    "Phase 2: データアクセス層実装（conversation_service.py）",
+    "Phase 2: GET /v1/chat/diagnostics/{conversation_id} エンドポイント実装",
+    "Phase 2: GET /v1/chat/diagnostics 一覧取得エンドポイント実装",
+    "Phase 3: Langfuseタグ付け機能実装（job_id, user_id, project_id, workflow_id）",
+    "Phase 3: トレースデータ取得拡張・トークン使用量集計",
+    "Phase 3: ルーター登録・main.py統合",
+    "Phase 4: 単体テスト作成（カバレッジ90%以上）",
+    "Phase 4: 結合テスト作成（カバレッジ50%以上）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Valkeyメタデータスキーマ拡張設計",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/schemas/conversation_metadata.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "セカンダリインデックス実装",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/stores/conversation_store_valkey.py", "expertAgent/app/services/index_manager.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ConversationStore拡張実装",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/stores/interfaces.py", "expertAgent/app/stores/conversation_store_valkey.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "スキーマ定義（DiagnosticInfo, DiagnosticListResponse）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/schemas/diagnostic.py"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "データアクセス層実装",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/services/conversation_service.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "エンドポイント実装（単一取得）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/api/v1/diagnostic_endpoints.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "エンドポイント実装（一覧取得）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/api/v1/diagnostic_endpoints.py"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Langfuseクライアント拡張",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/app/services/langfuse_service.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "トレースデータ取得拡張",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/services/langfuse_service.py", "expertAgent/app/services/diagnostic_aggregator.py"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "ルーター登録・main.py統合",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/app/main.py"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "単体テスト実装（インデックス・ストア）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/test_index_manager.py", "expertAgent/tests/unit/test_conversation_store_valkey_extended.py"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "単体テスト実装（サービス層・API）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/test_conversation_service.py", "expertAgent/tests/unit/test_langfuse_service_extended.py"],
+      "dependencies": ["4.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "結合テスト実装",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/integration/test_diagnostic_api.py"],
+      "dependencies": ["4.2"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "API仕様書更新",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/docs/API_REFERENCE.md", "expertAgent/docs/api/diagnostic-api.md"],
+      "dependencies": ["4.3"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "運用ドキュメント作成",
+      "estimated_hours": 1,
+      "deliverables": ["docs/ops/diagnostic-operations.md", "expertAgent/docs/analytics-guide.md"],
+      "dependencies": ["5.1"]
+    },
+    {
+      "task_id": "5.3",
+      "description": "PR準備・最終確認",
+      "estimated_hours": 0.5,
+      "deliverables": ["Pull Request"],
+      "dependencies": ["5.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/app/schemas/conversation_metadata.py",
+    "expertAgent/app/schemas/diagnostic.py",
+    "expertAgent/app/services/index_manager.py",
+    "expertAgent/app/stores/interfaces.py",
+    "expertAgent/app/stores/conversation_store_valkey.py",
+    "expertAgent/app/services/conversation_service.py",
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/app/services/diagnostic_aggregator.py",
+    "expertAgent/app/api/v1/diagnostic_endpoints.py",
+    "expertAgent/app/main.py",
+    "expertAgent/tests/unit/test_index_manager.py",
+    "expertAgent/tests/unit/test_conversation_store_valkey_extended.py",
+    "expertAgent/tests/unit/test_conversation_service.py",
+    "expertAgent/tests/unit/test_langfuse_service_extended.py",
+    "expertAgent/tests/integration/test_diagnostic_api.py",
+    "expertAgent/docs/API_REFERENCE.md",
+    "expertAgent/docs/api/diagnostic-api.md",
+    "docs/ops/diagnostic-operations.md",
+    "expertAgent/docs/analytics-guide.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "Ruff/MyPyエラーゼロ",
+    "CI/CDグリーン",
+    "APIエンドポイント /v1/chat/diagnostics/{conversation_id} が動作",
+    "APIエンドポイント /v1/chat/diagnostics が動作",
+    "フィルタリング機能（job_id, user_id, project_id, workflow_id, date_range）が動作",
+    "ページネーション（limit, offset）が動作",
+    "Langfuseトレースリンクが生成される",
+    "後方互換性維持（既存conversation_idベース操作が動作）"
+  ],
+  "target_coverage": 90,
+  "test_cases": [
+    {
+      "category": "正常系",
+      "name": "既存会話の診断情報取得（conversation_id）",
+      "description": "GET /v1/chat/diagnostics/{conversation_id} で診断情報を取得"
+    },
+    {
+      "category": "正常系",
+      "name": "Job単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?job_id=xxx"
+    },
+    {
+      "category": "正常系",
+      "name": "User単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?user_id=xxx"
+    },
+    {
+      "category": "正常系",
+      "name": "Project単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?project_id=xxx"
+    },
+    {
+      "category": "正常系",
+      "name": "Workflow単位での診断情報一覧取得",
+      "description": "GET /v1/chat/diagnostics?workflow_id=xxx"
+    },
+    {
+      "category": "正常系",
+      "name": "複合フィルタ（user_id + project_id + date_range）",
+      "description": "複数フィルタ条件の組み合わせ"
+    },
+    {
+      "category": "正常系",
+      "name": "ページネーション（limit=10, offset=0）",
+      "description": "ページネーションパラメータによる結果制御"
+    },
+    {
+      "category": "異常系",
+      "name": "存在しないconversation_id（404エラー）",
+      "description": "404 Not Found返却"
+    },
+    {
+      "category": "異常系",
+      "name": "無効なクエリパラメータ（400エラー）",
+      "description": "400 Bad Request返却"
+    },
+    {
+      "category": "エッジケース",
+      "name": "長い会話（50ターン以上）",
+      "description": "大量メッセージの会話データ取得"
+    },
+    {
+      "category": "エッジケース",
+      "name": "大量データ取得（1000件）",
+      "description": "一覧取得の上限テスト"
+    }
+  ],
+  "technical_stack": {
+    "language": "Python",
+    "framework": "FastAPI",
+    "external_services": ["Langfuse (Self-hosted)"],
+    "storage": "Valkey",
+    "index": "Redis SET (Secondary Index)"
+  }
+}

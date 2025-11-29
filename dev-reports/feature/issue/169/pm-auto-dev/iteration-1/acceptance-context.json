@@ -1,0 +1,59 @@
+{
+  "issue_number": 169,
+  "feature_summary": "Valkey永続化基盤の実装 - 現在インメモリで管理している会話データをValkeyに永続化し、expertAgentの拡張性と信頼性を向上させる",
+  "acceptance_criteria": [
+    "リポジトリ直下にvalkeyディレクトリが作成される",
+    "valkeyディレクトリ配下に設定ファイル・データファイルが格納される",
+    "Valkey接続が正常に確立される",
+    "会話データがValkeyに保存される",
+    "TTL機能が正しく動作する（24時間後に自動削除）",
+    "trace_id、prompt_versionが保存・取得できる",
+    "scripts/dev-start.sh からValkeyが起動可能",
+    "docker-compose up でValkeyが起動可能",
+    "worktree環境毎に独立したValkeyインスタンスが起動（ポート衝突なし）",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "読み書きレスポンスタイム 50ms以内"
+  ],
+  "test_scenarios": [
+    "シナリオ1: 基本的な会話データの保存と取得 - 新しい会話を作成し、Valkeyに保存後、正しく取得できることを確認",
+    "シナリオ2: TTL機能の動作確認 - TTLを設定した会話データが指定時間後に自動削除されることを確認",
+    "シナリオ3: メタデータの保存と取得 - trace_idとprompt_versionを含む会話データが正しく永続化されることを確認",
+    "シナリオ4: エラー時のフォールバック - Valkey接続エラー時に適切なエラーハンドリングが行われることを確認",
+    "シナリオ5: パフォーマンス - 読み書き操作が50ms以内に完了することを確認",
+    "シナリオ6: 大量データ処理 - 1000件の会話データを同時に処理できることを確認",
+    "シナリオ7: 環境変数による切り替え - CONVERSATION_STORE_TYPE環境変数でメモリ/Valkeyを切り替えられることを確認",
+    "シナリオ8: 開発環境での起動 - dev-start.shからValkeyが起動可能（pending: スクリプト未実装）",
+    "シナリオ9: Docker環境での起動 - docker-compose upでValkeyが起動可能（pending: docker-compose未更新）",
+    "シナリオ10: worktree環境での独立起動 - 複数worktreeで独立したValkeyインスタンスが起動（pending: スクリプト未実装）"
+  ],
+  "completed_deliverables": [
+    "valkey/config/valkey.conf",
+    "expertAgent/app/services/valkey_client.py",
+    "expertAgent/app/stores/conversation_store_valkey.py",
+    "expertAgent/app/stores/interfaces.py",
+    "expertAgent/core/config.py",
+    "expertAgent/.env.example",
+    "expertAgent/tests/unit/test_valkey_client.py",
+    "expertAgent/tests/unit/test_conversation_store_valkey.py",
+    "expertAgent/tests/integration/test_valkey_integration.py",
+    "expertAgent/tests/performance/test_valkey_performance.py",
+    "expertAgent/tests/fixtures/valkey_fixtures.py"
+  ],
+  "pending_deliverables": [
+    "docker-compose.yml",
+    "scripts/dev-start.sh",
+    "scripts/setup-valkey-worktree.sh",
+    "expertAgent/docs/valkey-integration.md",
+    "docs/ops/valkey-operations.md",
+    "README.md"
+  ],
+  "test_environment": {
+    "valkey_installed": false,
+    "docker_available": true,
+    "python_version": "3.11+",
+    "test_framework": "pytest",
+    "coverage_tool": "pytest-cov"
+  }
+}

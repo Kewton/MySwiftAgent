@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 from app.main import app
 from core.secrets import secrets_manager
 
+# Import Valkey fixtures to make them available to all tests
+pytest_plugins = ["tests.fixtures.valkey_fixtures"]
+
 
 @pytest.fixture(scope="session", autouse=True)
 def enable_myvault_for_ci():

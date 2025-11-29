@@ -1,0 +1,141 @@
+{
+  "issue_number": 172,
+  "title": "Issue #152-3: フィードバックAPI実装",
+  "acceptance_criteria": [
+    "APIエンドポイント `/v1/chat/feedback` が実装される",
+    "4種類のスコア（requirement_clarity等）が投稿できる",
+    "conversation_idとtrace_idが正しく紐づく",
+    "Langfuseにスコアが保存される",
+    "単体テストカバレッジ 90%以上",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "レスポンスタイム 500ms以内",
+    "正常系: フィードバック投稿成功",
+    "異常系: 無効なスコア値（1-5範囲外）",
+    "エッジケース: 同一会話への複数フィードバック"
+  ],
+  "implementation_tasks": [
+    "POST /v1/chat/feedback エンドポイント実装",
+    "RequirementFeedbackスキーマ定義",
+    "Langfuse scores投稿統合",
+    "単体テスト作成",
+    "結合テスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "RequirementFeedbackスキーマ定義",
+      "estimated_hours": 1,
+      "deliverables": ["app/schemas/chat.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "既存observabilityスキーマとの整合性確認",
+      "estimated_hours": 0.5,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "trace_id取得ロジック実装",
+      "estimated_hours": 1,
+      "deliverables": ["app/services/conversation/conversation_store.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "フィードバック投稿サービス実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["app/services/feedback_service.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "POST /v1/chat/feedback エンドポイント実装",
+      "estimated_hours": 1,
+      "deliverables": ["app/api/v1/chat_endpoints.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "単体テスト - スキーマ",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/unit/test_chat_feedback_schemas.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "単体テスト - サービス",
+      "estimated_hours": 1,
+      "deliverables": ["tests/unit/test_feedback_service.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "単体テスト - エンドポイント",
+      "estimated_hours": 1,
+      "deliverables": ["tests/unit/test_chat_feedback_endpoints.py"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "結合テスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/integration/test_chat_feedback_flow.py"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "API仕様書更新",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/docs/API_REFERENCE.md"],
+      "dependencies": ["3.4"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "静的解析・フォーマット",
+      "estimated_hours": 0.5,
+      "deliverables": [],
+      "dependencies": ["3.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "app/schemas/chat.py",
+    "app/services/feedback_service.py",
+    "app/api/v1/chat_endpoints.py",
+    "tests/unit/test_chat_feedback_schemas.py",
+    "tests/unit/test_feedback_service.py",
+    "tests/unit/test_chat_feedback_endpoints.py",
+    "tests/integration/test_chat_feedback_flow.py",
+    "expertAgent/docs/API_REFERENCE.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "CI/CDグリーン（Ruff/MyPyエラーゼロ）",
+    "APIドキュメント更新完了",
+    "レスポンスタイム500ms以内"
+  ],
+  "target_coverage": 90,
+  "technical_design": {
+    "schema_design": {
+      "request": "RequirementFeedbackRequest: conversation_id, requirement_clarity(1-5), interpretation_accuracy(1-5), response_helpfulness(1-5), overall_satisfaction(1-5), comment(optional)",
+      "response": "RequirementFeedbackResponse: success, message, feedback_id, scores_submitted"
+    },
+    "score_mapping": {
+      "requirement_clarity": "req_def_clarity",
+      "interpretation_accuracy": "req_def_accuracy",
+      "response_helpfulness": "req_def_helpfulness",
+      "overall_satisfaction": "req_def_overall"
+    },
+    "score_conversion": "(score - 1) / 4 で 1-5 を 0.0-1.0 に変換"
+  },
+  "existing_files_reference": [
+    "app/api/v1/observability_endpoints.py",
+    "app/schemas/observability.py",
+    "app/services/observability_service.py",
+    "app/services/langfuse_service.py"
+  ]
+}

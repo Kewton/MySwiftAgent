@@ -8,11 +8,15 @@ Design decisions:
 - TTL: 7 days (per user feedback)
 - Storage: Dict[conversation_id, conversation_data]
 - Cleanup: Lazy cleanup on access (no background tasks)
+- Issue #173: Added candidate storage for multi-candidate selection feature
 """
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from app.schemas.chat import RequirementCandidate
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +182,108 @@ class ConversationStore:
 
         if expired:
             logger.info(f"Cleaned up {len(expired)} expired conversations")
+
+    # ========================================================================
+    # Multi-Candidate Selection Feature (Issue #173)
+    # ========================================================================
+
+    def save_candidates(
+        self, conversation_id: str, candidates: List["RequirementCandidate"]
+    ) -> None:
+        """Save generated candidates for a conversation.
+
+        Stores candidates so they can be retrieved when user selects one.
+
+        Args:
+            conversation_id: Conversation session ID
+            candidates: List of RequirementCandidate objects
+
+        Example:
+            >>> store.save_candidates('conv_001', [candidate_a, candidate_b])
+        """
+        if conversation_id not in self._conversations:
+            self._conversations[conversation_id] = {
+                "messages": [],
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+            }
+
+        self._conversations[conversation_id]["candidates"] = candidates
+        self._conversations[conversation_id]["selected_candidate"] = None
+        self._conversations[conversation_id]["updated_at"] = datetime.now()
+
+        logger.debug(
+            f"Saved {len(candidates)} candidates to {conversation_id}: "
+            f"[{', '.join(c.candidate_id for c in candidates)}]"
+        )
+
+    def get_candidates(
+        self, conversation_id: str
+    ) -> Optional[List["RequirementCandidate"]]:
+        """Retrieve stored candidates for a conversation.
+
+        Args:
+            conversation_id: Conversation session ID
+
+        Returns:
+            List of RequirementCandidate objects, or None if not found
+
+        Example:
+            >>> candidates = store.get_candidates('conv_001')
+            >>> if candidates:
+            ...     print(f"Found {len(candidates)} candidates")
+        """
+        conv = self.get_conversation(conversation_id)
+        if not conv:
+            return None
+
+        candidates = conv.get("candidates")
+        if candidates:
+            logger.debug(
+                f"Retrieved {len(candidates)} candidates from {conversation_id}"
+            )
+        return candidates
+
+    def save_selected_candidate(self, conversation_id: str, candidate_id: str) -> None:
+        """Save the selected candidate ID.
+
+        Args:
+            conversation_id: Conversation session ID
+            candidate_id: Selected candidate ID ('A' or 'B')
+
+        Example:
+            >>> store.save_selected_candidate('conv_001', 'A')
+        """
+        if conversation_id not in self._conversations:
+            logger.warning(
+                f"Cannot save selected candidate: conversation not found: {conversation_id}"
+            )
+            return
+
+        self._conversations[conversation_id]["selected_candidate"] = candidate_id
+        self._conversations[conversation_id]["updated_at"] = datetime.now()
+
+        logger.debug(f"Saved selected candidate '{candidate_id}' to {conversation_id}")
+
+    def get_selected_candidate(self, conversation_id: str) -> Optional[str]:
+        """Get the selected candidate ID.
+
+        Args:
+            conversation_id: Conversation session ID
+
+        Returns:
+            Selected candidate ID ('A' or 'B'), or None if not selected
+
+        Example:
+            >>> selected = store.get_selected_candidate('conv_001')
+            >>> print(selected)
+            'A'
+        """
+        conv = self.get_conversation(conversation_id)
+        if not conv:
+            return None
+
+        return conv.get("selected_candidate")
 
 
 # Singleton instance for application-wide use

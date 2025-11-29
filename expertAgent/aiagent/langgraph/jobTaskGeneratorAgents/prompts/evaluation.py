@@ -13,6 +13,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
+from app.services.prompt_loader import PromptLoader
+
 
 def _load_yaml_config(filename: str) -> dict:
     """Load YAML configuration file from utils/config directory.
@@ -290,10 +292,32 @@ def _build_evaluation_system_prompt() -> str:
     Returns:
         Formatted evaluation system prompt
     """
+    # Load prompt from YAML using PromptLoader
+    loader = PromptLoader.create_default()
+    prompt_data = loader.load_prompt("evaluation")
+
+    # Get base prompt from YAML
+    base_prompt = prompt_data.get("system_prompt", "")
+
+    # Get capability lists to replace placeholders
     graphai_capabilities = _build_graphai_capabilities()
     expert_agent_capabilities = _build_expert_agent_capabilities()
     infeasible_tasks_table = _build_infeasible_tasks_table()
 
+    # If YAML prompt is loaded, replace placeholders
+    if base_prompt:
+        base_prompt = base_prompt.replace(
+            "{graphai_capabilities}", graphai_capabilities
+        )
+        base_prompt = base_prompt.replace(
+            "{expert_agent_capabilities}", expert_agent_capabilities
+        )
+        base_prompt = base_prompt.replace(
+            "{infeasible_tasks_table}", infeasible_tasks_table
+        )
+        return base_prompt
+
+    # Fallback to original hardcoded prompt
     return f"""あなたはワークフロー品質評価の専門家です。
 タスク分割結果を6つの観点で評価します。
 

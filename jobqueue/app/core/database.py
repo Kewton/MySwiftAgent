@@ -86,13 +86,23 @@ def get_session_maker() -> Any:
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Get database session."""
+    """Get database session.
+
+    Note: This function yields a session without auto-commit/rollback.
+    Endpoints must explicitly call await session.commit() to persist changes.
+    If an exception occurs, the session will be rolled back automatically.
+    """
     session_maker = get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    session = session_maker()
+    try:
+        yield session
+    except Exception:
+        # Rollback on exception
+        await session.rollback()
+        raise
+    finally:
+        # Close session (this does NOT rollback committed transactions)
+        await session.close()
 
 
 async def init_db() -> None:

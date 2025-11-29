@@ -19,10 +19,18 @@ from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
     invoke_structured_llm,
 )
 from app.schemas.chat import RequirementState
+from app.services.prompt_loader import PromptLoader
 
 logger = logging.getLogger(__name__)
 
-REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT = """
+# Load prompt from YAML
+_loader = PromptLoader.create_default()
+_prompt_data = _loader.load_prompt("requirement_clarification")
+REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT = _prompt_data.get("system_prompt", "")
+
+# Fallback to hardcoded prompt if YAML not found
+if not REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT:
+    REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT = """
 あなたはドメインエキスパート向けのジョブ作成アシスタントです。
 
 ## あなたの役割

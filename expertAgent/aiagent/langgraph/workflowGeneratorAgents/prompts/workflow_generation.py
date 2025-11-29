@@ -9,8 +9,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-# System prompt for workflow generation
-WORKFLOW_GENERATION_SYSTEM_PROMPT = """You are an expert GraphAI workflow YAML generator.
+from app.services.prompt_loader import PromptLoader
+
+# Load prompt from YAML
+_loader = PromptLoader.create_default()
+_prompt_data = _loader.load_prompt("workflow_generation")
+WORKFLOW_GENERATION_SYSTEM_PROMPT = _prompt_data.get("system_prompt", "")
+
+# Fallback to hardcoded prompt if YAML not found
+if not WORKFLOW_GENERATION_SYSTEM_PROMPT:
+    # System prompt for workflow generation
+    WORKFLOW_GENERATION_SYSTEM_PROMPT = """You are an expert GraphAI workflow YAML generator.
 
 Your role is to generate executable GraphAI workflow YAML files from TaskMaster metadata.
 

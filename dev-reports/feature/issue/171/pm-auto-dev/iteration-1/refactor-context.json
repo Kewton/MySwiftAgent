@@ -1,0 +1,47 @@
+{
+  "issue_number": 171,
+  "refactor_targets": [
+    "expertAgent/app/services/conversation_service.py",
+    "expertAgent/app/services/index_manager.py",
+    "expertAgent/app/api/v1/diagnostic_endpoints.py",
+    "expertAgent/app/stores/conversation_store_valkey.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 83.02,
+    "issue_171_files_coverage": {
+      "diagnostic_endpoints.py": 86.79,
+      "diagnostic.py": 100,
+      "conversation_service.py": 74.23,
+      "index_manager.py": 81.55,
+      "conversation_metadata.py": 94.59,
+      "conversation_store_valkey.py": 56.41
+    }
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (ConversationService)",
+    "Dependency Injection (ConversationStore)",
+    "Single Responsibility Principle"
+  ],
+  "improvement_goals": [
+    "カバレッジを90%以上に向上（特にconversation_service.py, index_manager.py）",
+    "循環的複雑度を10以下に維持",
+    "重複コードの削除",
+    "コードの可読性向上",
+    "SOLID原則の徹底"
+  ],
+  "constraints": [
+    "既存テストを壊さない",
+    "後方互換性を維持",
+    "パフォーマンス要件を維持（単一取得 < 1秒、一覧取得 < 2秒）"
+  ],
+  "tdd_result": {
+    "coverage": 95,
+    "unit_tests_passed": 95,
+    "integration_tests_passed": 19
+  },
+  "acceptance_result": {
+    "status": "passed",
+    "total_scenarios": 11,
+    "passed_scenarios": 11
+  }
+}

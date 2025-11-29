@@ -1,0 +1,33 @@
+{
+  "issue_number": 174,
+  "refactor_targets": [
+    "expertAgent/app/services/recommendation/keyword_analyzer.py",
+    "expertAgent/app/services/recommendation/complexity_estimator.py",
+    "expertAgent/app/services/recommendation/confidence_calculator.py",
+    "expertAgent/app/services/recommendation/ai_recommendation_service.py",
+    "expertAgent/app/schemas/recommendation.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 97.16,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Strategy Pattern (複雑度推定アルゴリズムの切り替え)",
+    "Dependency Injection (テスト容易性向上)"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持（97%以上）",
+    "循環的複雑度の確認と改善",
+    "重複コードの削除",
+    "SOLID原則の適用確認",
+    "型ヒントの完全性確認"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 97.16
+  },
+  "acceptance_result": {
+    "status": "passed",
+    "scenarios_passed": 6
+  }
+}

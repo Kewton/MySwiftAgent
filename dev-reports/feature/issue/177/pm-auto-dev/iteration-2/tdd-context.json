@@ -1,0 +1,97 @@
+{
+  "issue_number": 177,
+  "iteration": 2,
+  "focus": "Complete prompt migration and API integration",
+  "acceptance_criteria": [
+    "jobTaskGeneratorAgents の全プロンプトがYAML化される",
+    "workflowGeneratorAgents の全プロンプトがYAML化される",
+    "リクエスト時にYAMLファイル名を指定可能（API拡張）",
+    "シナリオ1: 企業IR分析でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ2: WebサイトPDF抽出でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ3: Gmail検索ポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される",
+    "シナリオ4: キーワードポッドキャスト生成でジョブマスタ・タスクマスタ・インタフェースマスタが登録される"
+  ],
+  "implementation_tasks": [
+    "jobTaskGeneratorAgents/prompts/ のYAML化（全プロンプト）",
+    "workflowGeneratorAgents/prompts/ のYAML化（全プロンプト）",
+    "リクエスト時のYAMLファイル名指定機能（API拡張）",
+    "LangGraphエージェント統合",
+    "4シナリオでの動作確認（jobTaskGeneratorAgents + ジョブマスタ登録確認）",
+    "4シナリオでの動作確認（workflowGeneratorAgents + ワークフロー生成・実行確認）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "2.1",
+      "description": "jobTaskGeneratorAgentsプロンプト移行",
+      "estimated_hours": 6,
+      "deliverables": ["expertAgent/prompts/job_task_generator/*.yaml"],
+      "status": "pending"
+    },
+    {
+      "task_id": "2.2",
+      "description": "workflowGeneratorAgentsプロンプト移行",
+      "estimated_hours": 6,
+      "deliverables": ["expertAgent/prompts/workflow_generator/*.yaml"],
+      "status": "pending"
+    },
+    {
+      "task_id": "3.1",
+      "description": "API拡張実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/api/v1/job_generator_endpoints.py", "expertAgent/app/api/v1/workflow_generator_endpoints.py"],
+      "status": "pending"
+    },
+    {
+      "task_id": "3.2",
+      "description": "LangGraphエージェント統合",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/graph.py", "expertAgent/aiagent/langgraph/workflowGeneratorAgents/graph.py"],
+      "status": "pending"
+    },
+    {
+      "task_id": "5.1",
+      "description": "シナリオテストスクリプト作成",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/scenarios/scenario*.py"],
+      "status": "pending"
+    },
+    {
+      "task_id": "5.2",
+      "description": "jobTaskGeneratorAgents検証",
+      "estimated_hours": 2,
+      "deliverables": ["シナリオ実行ログ"],
+      "status": "pending"
+    },
+    {
+      "task_id": "5.3",
+      "description": "workflowGeneratorAgents検証",
+      "estimated_hours": 2,
+      "deliverables": ["ワークフロー生成確認レポート"],
+      "status": "pending"
+    }
+  ],
+  "prompts_to_migrate": {
+    "jobTaskGeneratorAgents": [
+      "requirement_clarification",
+      "task_breakdown",
+      "interface_schema",
+      "evaluation",
+      "validation_fix",
+      "workflow_generation"
+    ],
+    "workflowGeneratorAgents": [
+      "workflow_generation"
+    ]
+  },
+  "target_coverage": 90,
+  "previous_iteration_status": {
+    "coverage": 96.55,
+    "tests_passed": 40,
+    "static_analysis_clean": true,
+    "completed_features": [
+      "PromptLoader",
+      "PromptCache",
+      "FileWatcher"
+    ]
+  }
+}

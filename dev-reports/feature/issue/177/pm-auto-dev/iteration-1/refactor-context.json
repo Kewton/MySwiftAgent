@@ -1,0 +1,40 @@
+{
+  "issue_number": 177,
+  "refactor_targets": [
+    "expertAgent/app/services/prompt_loader.py",
+    "expertAgent/app/services/prompt_cache.py",
+    "expertAgent/app/services/file_watcher.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 93.01,
+    "complexity_score": 8,
+    "code_duplication": "minimal"
+  },
+  "design_patterns_to_apply": [
+    "Strategy Pattern for different prompt loading strategies",
+    "Observer Pattern for file watching",
+    "Singleton Pattern for cache management",
+    "Factory Pattern for prompt loader instantiation"
+  ],
+  "improvement_goals": [
+    "カバレッジを95%以上に向上",
+    "エラーハンドリングの強化",
+    "型ヒントの完全性向上",
+    "ログ出力の改善",
+    "パフォーマンス最適化（キャッシュ戦略の改善）",
+    "コードの可読性向上"
+  ],
+  "specific_improvements": [
+    "prompt_loader.py の未カバー行（5行）をテスト追加でカバー",
+    "file_watcher.py の未カバー行（6行）をテスト追加でカバー",
+    "例外処理の統一化",
+    "ドキュメンテーションの充実",
+    "パフォーマンス測定用のメトリクス追加"
+  ],
+  "code_smell_fixes": [
+    "長すぎるメソッドの分割",
+    "重複コードの抽出",
+    "マジックナンバーの定数化",
+    "適切な例外型への置き換え"
+  ]
+}

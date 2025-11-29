@@ -413,13 +413,16 @@ class TestCreateJobEndpoint:
                 assert "ジョブの作成に失敗しました" in response.json()["detail"]
 
     async def test_job_generator_missing_job_ids(self):
-        """Test error when Job Generator doesn't return job IDs."""
+        """Test error when Job Generator returns empty job IDs."""
+        from app.schemas.job_generator import JobGeneratorResponse
 
-        async def _incomplete_job_generator(request):
-            return {
-                "status": "success",
-                # Missing job_id and job_master_id
-            }
+        async def _incomplete_job_generator(request, background_tasks):
+            # Returns valid response but with empty IDs
+            return JobGeneratorResponse(
+                status="success",
+                job_id="",  # Empty string - falsy
+                job_master_id="",  # Empty string - falsy
+            )
 
         with patch(
             "app.api.v1.job_generator_endpoints.generate_job_and_tasks",
@@ -445,6 +448,7 @@ class TestCreateJobEndpoint:
                 )
 
                 assert response.status_code == 500
+                assert "ジョブの作成に失敗しました" in response.json()["detail"]
 
     async def test_requirements_to_job_request_conversion(
         self, mock_job_generator_success

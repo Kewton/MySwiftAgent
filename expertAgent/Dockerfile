@@ -50,6 +50,9 @@ COPY aiagent/ ./aiagent/
 COPY mymcp/ ./mymcp/
 COPY core/ ./core/
 
+# Copy prompts directory (for YAML-based prompt management - Issue #177)
+COPY prompts/ ./prompts/
+
 # Create token directory
 RUN mkdir -p /app/token
 

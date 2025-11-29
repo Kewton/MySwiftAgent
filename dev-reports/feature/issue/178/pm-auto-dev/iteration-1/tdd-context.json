@@ -1,0 +1,154 @@
+{
+  "issue_number": 178,
+  "title": "Issue #152-9: ABテスト基盤実装",
+  "acceptance_criteria": [
+    "ランダムバージョン割り当て",
+    "バージョン別メトリクス集計",
+    "統計的有意性検定（p値）",
+    "効果サイズ（Cohen's d）計算",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "統計計算精度 99.9%",
+    "正常系: AB比較レポート生成",
+    "異常系: サンプル数不足",
+    "エッジケース: 有意差なし"
+  ],
+  "implementation_tasks": [
+    "ABTestService実装",
+    "バージョン割り当てロジック",
+    "統計検定機能（t検定）",
+    "ABテストAPIエンドポイント",
+    "単体テスト・結合テスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ABテストスキーマ定義",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/schemas/ab_test.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "統計結果スキーマ定義",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/schemas/ab_test.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ABTestService基本実装",
+      "estimated_hours": 4,
+      "deliverables": ["expertAgent/app/services/ab_test_service.py"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "バージョン割り当てロジック実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/services/ab_test_service.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "メトリクス収集ロジック実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/services/ab_test_service.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "統計検定機能実装（t検定）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/services/ab_test_service.py"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "ABテスト管理エンドポイント実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/api/v1/ab_test_endpoints.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "ABテストレポートエンドポイント実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/api/v1/ab_test_endpoints.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "スキーマ単体テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_ab_test_schemas.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "ABTestService単体テスト",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/tests/unit/test_ab_test_service.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "統計計算精度テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_ab_test_statistics.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "APIエンドポイント結合テスト",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/integration/test_ab_test_api.py"],
+      "dependencies": ["3.2", "4.2"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "E2Eフロー結合テスト",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/integration/test_ab_test_flow.py"],
+      "dependencies": ["5.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/app/schemas/ab_test.py",
+    "expertAgent/app/services/ab_test_service.py",
+    "expertAgent/app/api/v1/ab_test_endpoints.py",
+    "expertAgent/app/main.py（ルーター登録）",
+    "expertAgent/pyproject.toml（scipy依存追加）",
+    "expertAgent/tests/unit/test_ab_test_schemas.py",
+    "expertAgent/tests/unit/test_ab_test_service.py",
+    "expertAgent/tests/unit/test_ab_test_statistics.py",
+    "expertAgent/tests/integration/test_ab_test_api.py",
+    "expertAgent/tests/integration/test_ab_test_flow.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "Ruff/MyPyエラーゼロ",
+    "統計計算精度99.9%（既知データで検証）",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "technical_specifications": {
+    "language": "Python",
+    "framework": "FastAPI",
+    "statistics_library": "scipy.stats",
+    "cache": "Valkey",
+    "observability": "Langfuse",
+    "algorithms": {
+      "t_test": "Welch's t-test (scipy.stats.ttest_ind, equal_var=False)",
+      "effect_size": "Cohen's d",
+      "variant_assignment": "weighted random choice"
+    },
+    "valkey_keys": {
+      "ab_test": "ab_test:{test_id}",
+      "ab_assignment": "ab_assignment:{test_id}:{session_id}",
+      "ab_metrics_cache": "ab_metrics_cache:{test_id}"
+    }
+  }
+}

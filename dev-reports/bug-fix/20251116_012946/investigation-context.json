@@ -1,0 +1,28 @@
+{
+  "issue_description": "docker-compose up -d 実行時、commonUIコンテナから '[Load Secrets] Service MyVault is unavailable. Please check if it's running.' エラーが出力される",
+  "error_logs": [
+    "sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: secrets.created_at",
+    "[SQL: SELECT secrets.id AS secrets_id, secrets.project AS secrets_project, secrets.path AS secrets_path, secrets.encrypted_value AS secrets_encrypted_value, secrets.encryption_iv AS secrets_encryption_iv, secrets.encryption_tag AS secrets_encryption_tag, secrets.version AS secrets_version, secrets.created_at AS secrets_created_at, secrets.updated_at AS secrets_updated_at, secrets.updated_by AS secrets_updated_by FROM secrets WHERE secrets.project = ?]"
+  ],
+  "affected_files": [
+    "myVault/app/models/secret.py",
+    "myVault/app/api/secrets.py",
+    "docker-compose-data/myvault/myvault.db"
+  ],
+  "reproduction_steps": [
+    "1. docker-compose up -d を実行",
+    "2. commonUIがmyVaultのAPIを呼び出す",
+    "3. myVaultがsecretsテーブルからデータを取得しようとする",
+    "4. created_atカラムが存在しないためエラーが発生"
+  ],
+  "environment": {
+    "os": "macOS",
+    "python_version": "3.12",
+    "project": "myVault",
+    "branch": "develop",
+    "docker": true
+  },
+  "related_issue_number": null,
+  "severity_hint": "high",
+  "root_cause": "データベーススキーマとORMモデルの不一致。モデルではcreated_atフィールドが定義されているが、既存のデータベーススキーマにはcreated_atカラムが存在しない"
+}

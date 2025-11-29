@@ -1,0 +1,32 @@
+{
+  "bug_id": "20251116_014933",
+  "bug_description": "myVault APIでデータ型不整合によるAttributeError",
+  "selected_actions": [
+    {
+      "action_id": "1",
+      "title": "get_secret関数の修正",
+      "description": "get_secret関数の.hex()呼び出しを削除",
+      "files_to_modify": ["myVault/app/api/secrets.py"],
+      "estimated_effort": "15分"
+    },
+    {
+      "action_id": "2",
+      "title": "全API関数の確認と修正",
+      "description": "create_secret、update_secret等でも同様の問題がないか確認・修正",
+      "files_to_modify": ["myVault/app/api/secrets.py"],
+      "estimated_effort": "30分"
+    }
+  ],
+  "total_estimated_effort": "45分",
+  "deliverables": [
+    "myVault/app/api/secrets.py",
+    "tests/unit/test_secrets_api.py"
+  ],
+  "definition_of_done": [
+    "get_secret関数が正常動作する",
+    "全API関数でデータ型の扱いが一貫している",
+    "commonUIのEdit Secretで現在値が表示される",
+    "単体テストが通る",
+    "既存データとの互換性が保たれる"
+  ]
+}

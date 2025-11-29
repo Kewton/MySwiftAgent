@@ -1,0 +1,47 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 97.16,
+    "after_coverage": 97.79,
+    "before_complexity": null,
+    "after_complexity": null
+  },
+  "refactorings_applied": [
+    "DRY: Extract shared keyword_mapping.py module",
+    "Remove duplicate _keyword_to_level initialization from 3 classes",
+    "Fix type hint inconsistency (dict -> Dict from typing)",
+    "Remove redundant len(keywords) == 0 check",
+    "Add comprehensive tests for keyword_mapping module"
+  ],
+  "improvements_made": [
+    "Eliminated duplicate code in KeywordAnalyzer, ComplexityEstimator, and ConfidenceCalculator",
+    "Created reusable keyword-to-level mapping utilities",
+    "Improved type hint consistency across modules",
+    "Added 12 new unit tests for keyword_mapping module",
+    "Coverage increased from 97.16% to 97.79%"
+  ],
+  "files_changed": [
+    "expertAgent/app/services/recommendation/keyword_mapping.py (new)",
+    "expertAgent/app/services/recommendation/keyword_analyzer.py (modified)",
+    "expertAgent/app/services/recommendation/complexity_estimator.py (modified)",
+    "expertAgent/app/services/recommendation/confidence_calculator.py (modified)",
+    "expertAgent/app/services/recommendation/__init__.py (modified)",
+    "expertAgent/tests/unit/test_keyword_mapping.py (new)"
+  ],
+  "static_analysis": {
+    "ruff_errors_before": 0,
+    "ruff_errors_after": 0,
+    "mypy_errors_before": 0,
+    "mypy_errors_after": 0
+  },
+  "tests": {
+    "total_before": 65,
+    "total_after": 77,
+    "all_passed": true
+  },
+  "commits": [
+    "b61c1a3: refactor(issue/174): extract shared keyword mapping (DRY)"
+  ],
+  "skipped_reason": null,
+  "message": "リファクタリング完了。DRY原則を適用し、重複コードを排除。カバレッジ97.16%から97.79%に向上。全77テストPASSED。静的解析エラーゼロ。"
+}

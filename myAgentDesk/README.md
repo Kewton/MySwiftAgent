@@ -17,19 +17,19 @@
 
 ## Technology Stack
 
-| Component | Technology | Version |
-|-----------|------------|---------|
-| Frontend Framework | SvelteKit | 2.5.0 |
-| Language | TypeScript | 5.3.3 |
-| Styling | Tailwind CSS | 3.4.0 |
-| Build Tool | Vite | 5.0.10 |
-| Unit Testing | Vitest | 1.1.0 |
-| E2E Testing | Playwright | 1.40.0 |
-| Markdown Rendering | marked | 16.4.1 |
-| Code Highlighting | highlight.js | 11.11.1 |
-| Presentation Engine | @marp-team/marp-core | 4.2.0 |
-| Node Adapter | @sveltejs/adapter-node | 5.0.1 |
-| Runtime | Node.js | 20.x+ |
+| Component           | Technology             | Version |
+| ------------------- | ---------------------- | ------- |
+| Frontend Framework  | SvelteKit              | 2.5.0   |
+| Language            | TypeScript             | 5.3.3   |
+| Styling             | Tailwind CSS           | 3.4.0   |
+| Build Tool          | Vite                   | 5.0.10  |
+| Unit Testing        | Vitest                 | 1.1.0   |
+| E2E Testing         | Playwright             | 1.40.0  |
+| Markdown Rendering  | marked                 | 16.4.1  |
+| Code Highlighting   | highlight.js           | 11.11.1 |
+| Presentation Engine | @marp-team/marp-core   | 4.2.0   |
+| Node Adapter        | @sveltejs/adapter-node | 5.0.1   |
+| Runtime             | Node.js                | 20.x+   |
 
 ## Prerequisites
 
@@ -64,6 +64,7 @@ npm run dev
 ```
 
 **Development Features:**
+
 - Hot module replacement (HMR)
 - API proxy to expertAgent (`/aiagent-api` → `http://localhost:8114`)
 - TypeScript type checking in watch mode
@@ -82,6 +83,7 @@ npm run preview
 ```
 
 **Production Optimizations:**
+
 - Minified JavaScript/CSS
 - Pre-compressed assets (gzip/brotli)
 - Code splitting
@@ -104,6 +106,7 @@ docker run -p 8000:8000 \
 ```
 
 **Docker Features:**
+
 - Multi-stage build (optimized for size)
 - Non-root user execution (sveltekit:1001)
 - Health check endpoint (`/health`)
@@ -243,18 +246,18 @@ PUBLIC_AGENT_API_BASE=https://api.example.com/v1
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server (port 5173, hot reload) |
-| `npm run build` | Build for production (SSR + static assets) |
-| `npm run preview` | Preview production build (port 8000) |
-| `npm test` | Run unit tests (Vitest) |
-| `npm run test:e2e` | Run E2E tests (Playwright) |
-| `npm run check` | Run svelte-check (type checking + diagnostics) |
-| `npm run check:watch` | Run svelte-check in watch mode |
-| `npm run lint` | Run ESLint and Prettier checks |
-| `npm run format` | Format code with Prettier |
-| `npm run type-check` | TypeScript type checking only |
+| Script                | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `npm run dev`         | Start development server (port 5173, hot reload) |
+| `npm run build`       | Build for production (SSR + static assets)       |
+| `npm run preview`     | Preview production build (port 8000)             |
+| `npm test`            | Run unit tests (Vitest)                          |
+| `npm run test:e2e`    | Run E2E tests (Playwright)                       |
+| `npm run check`       | Run svelte-check (type checking + diagnostics)   |
+| `npm run check:watch` | Run svelte-check in watch mode                   |
+| `npm run lint`        | Run ESLint and Prettier checks                   |
+| `npm run format`      | Format code with Prettier                        |
+| `npm run type-check`  | TypeScript type checking only                    |
 
 ## Testing
 
@@ -277,6 +280,7 @@ npm run test -- src/lib/components/Button.test.ts
 ```
 
 **Test Coverage (as of 2025-01):**
+
 - **Overall Coverage**: 13.71%
 - **Component Coverage**: **71.59%** (main focus area)
 - **Total Tests**: 42 passing
@@ -290,18 +294,20 @@ import { describe, it, expect } from 'vitest';
 import Button from './Button.svelte';
 
 describe('Button', () => {
-  it('renders with label', () => {
-    render(Button, { label: 'Click Me' });
-    expect(screen.getByText('Click Me')).toBeTruthy();
-  });
+	it('renders with label', () => {
+		render(Button, { label: 'Click Me' });
+		expect(screen.getByText('Click Me')).toBeTruthy();
+	});
 
-  it('handles click events', async () => {
-    let clicked = false;
-    const { component } = render(Button, { label: 'Test' });
-    component.$on('click', () => { clicked = true; });
-    await screen.getByText('Test').click();
-    expect(clicked).toBe(true);
-  });
+	it('handles click events', async () => {
+		let clicked = false;
+		const { component } = render(Button, { label: 'Test' });
+		component.$on('click', () => {
+			clicked = true;
+		});
+		await screen.getByText('Test').click();
+		expect(clicked).toBe(true);
+	});
 });
 ```
 
@@ -440,18 +446,18 @@ Content-Type: application/json
 import { getApiBase } from './config';
 
 export async function sendMessage(message: string): Promise<string> {
-  const response = await fetch(`${getApiBase()}/aiagent/utility/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      user_input: message,
-      model_name: 'gpt-4o-mini'
-    })
-  });
+	const response = await fetch(`${getApiBase()}/aiagent/utility/action`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			user_input: message,
+			model_name: 'gpt-4o-mini'
+		})
+	});
 
-  if (!response.ok) throw new Error(`Chat API error: ${response.status}`);
-  const data = await response.json();
-  return data.result;
+	if (!response.ok) throw new Error(`Chat API error: ${response.status}`);
+	const data = await response.json();
+	return data.result;
 }
 ```
 
@@ -487,21 +493,21 @@ GET /api/v1/jobs/{job_id}/status
 import { getApiBase } from './config';
 
 export async function createJobAsync(jobData: JobCreationRequest): Promise<string> {
-  const response = await fetch(`${getApiBase()}/jobs/async`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(jobData)
-  });
+	const response = await fetch(`${getApiBase()}/jobs/async`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(jobData)
+	});
 
-  if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);
-  const data = await response.json();
-  return data.job_id; // Returns async job ID
+	if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);
+	const data = await response.json();
+	return data.job_id; // Returns async job ID
 }
 
 export async function getJobStatus(jobId: string): Promise<JobResult> {
-  const response = await fetch(`${getApiBase()}/jobs/${jobId}/status`);
-  if (!response.ok) throw new Error(`Failed to get job status: ${response.status}`);
-  return await response.json();
+	const response = await fetch(`${getApiBase()}/jobs/${jobId}/status`);
+	if (!response.ok) throw new Error(`Failed to get job status: ${response.status}`);
+	return await response.json();
 }
 ```
 
@@ -536,20 +542,20 @@ GET /aiagent-api/v1/marp/pngs/{conversation_id}
 import { getApiBase } from './config';
 
 export async function generateMarpPresentation(
-  conversationId: string,
-  title: string
+	conversationId: string,
+	title: string
 ): Promise<void> {
-  const response = await fetch(`${getApiBase()}/marp/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conversation_id: conversationId, title })
-  });
+	const response = await fetch(`${getApiBase()}/marp/generate`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ conversation_id: conversationId, title })
+	});
 
-  if (!response.ok) throw new Error(`Marp generation failed: ${response.status}`);
+	if (!response.ok) throw new Error(`Marp generation failed: ${response.status}`);
 }
 
 export async function getMarpPdfUrl(conversationId: string): Promise<string> {
-  return `${getApiBase()}/marp/pdf/${conversationId}`;
+	return `${getApiBase()}/marp/pdf/${conversationId}`;
 }
 ```
 
@@ -575,12 +581,12 @@ The job creation workflow uses a conversational interface to extract requirement
 import { writable } from 'svelte/store';
 
 export interface Conversation {
-  id: string;
-  title: string;
-  messages: Message[];
-  requirements: RequirementState;
-  createdAt: Date;
-  updatedAt: Date;
+	id: string;
+	title: string;
+	messages: Message[];
+	requirements: RequirementState;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export const conversationStore = writable<Conversation[]>([]);
@@ -595,11 +601,11 @@ Uses expertAgent's JSON Output Agent to extract structured requirements from cha
 
 ```typescript
 interface RequirementState {
-  data_source: string | null;          // Where to get data from
-  process_description: string | null;  // What to do with the data
-  output_format: string | null;        // How to format the output
-  schedule: string | null;             // When to run (cron or description)
-  completeness: number;                // 0-100 percentage
+	data_source: string | null; // Where to get data from
+	process_description: string | null; // What to do with the data
+	output_format: string | null; // How to format the output
+	schedule: string | null; // When to run (cron or description)
+	completeness: number; // 0-100 percentage
 }
 ```
 
@@ -634,25 +640,25 @@ The schedule editor provides both visual and text-based cron expression editing.
 ```svelte
 <!-- src/lib/components/create_job/CronEditor.svelte -->
 <script lang="ts">
-  export let cronExpression: string = '0 9 * * *';
+	export let cronExpression: string = '0 9 * * *';
 
-  function parseCron(cron: string) {
-    const [minute, hour, day, month, weekday] = cron.split(' ');
-    return { minute, hour, day, month, weekday };
-  }
+	function parseCron(cron: string) {
+		const [minute, hour, day, month, weekday] = cron.split(' ');
+		return { minute, hour, day, month, weekday };
+	}
 
-  function updateCron() {
-    cronExpression = `${minute} ${hour} ${day} ${month} ${weekday}`;
-  }
+	function updateCron() {
+		cronExpression = `${minute} ${hour} ${day} ${month} ${weekday}`;
+	}
 </script>
 
 <div class="cron-editor">
-  <select bind:value={minute} on:change={updateCron}>
-    {#each Array(60) as _, i}
-      <option value={i}>{i}</option>
-    {/each}
-  </select>
-  <!-- More selectors... -->
+	<select bind:value={minute} on:change={updateCron}>
+		{#each Array(60) as _, i}
+			<option value={i}>{i}</option>
+		{/each}
+	</select>
+	<!-- More selectors... -->
 </div>
 ```
 
@@ -673,11 +679,13 @@ theme: default
 ---
 
 ## Data Source
+
 OpenWeather API
 
 ---
 
 ## Process Description
+
 1. Fetch weather data
 2. Generate summary
 3. Send email
@@ -685,12 +693,14 @@ OpenWeather API
 ---
 
 ## Output Format
+
 Email to team@example.com
 
 ---
 
 ## Schedule
-Every day at 09:00 (0 9 * * *)
+
+Every day at 09:00 (0 9 \* \* \*)
 ```
 
 **Viewer Features:**
@@ -719,7 +729,7 @@ export const conversationStore = writable<Conversation[]>(initial);
 
 // Auto-save to localStorage
 conversationStore.subscribe((conversations) => {
-  localStorage.setItem('conversations', JSON.stringify(conversations));
+	localStorage.setItem('conversations', JSON.stringify(conversations));
 });
 ```
 
@@ -727,15 +737,15 @@ conversationStore.subscribe((conversations) => {
 
 ```typescript
 function groupConversationsByDate(conversations: Conversation[]) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+	const today = new Date();
+	const yesterday = new Date(today);
+	yesterday.setDate(yesterday.getDate() - 1);
 
-  return {
-    today: conversations.filter(c => isSameDay(c.updatedAt, today)),
-    yesterday: conversations.filter(c => isSameDay(c.updatedAt, yesterday)),
-    older: conversations.filter(c => c.updatedAt < yesterday)
-  };
+	return {
+		today: conversations.filter((c) => isSameDay(c.updatedAt, today)),
+		yesterday: conversations.filter((c) => isSameDay(c.updatedAt, yesterday)),
+		older: conversations.filter((c) => c.updatedAt < yesterday)
+	};
 }
 ```
 
@@ -885,7 +895,7 @@ Enable debug logging:
 const DEBUG = import.meta.env.VITE_DEBUG === 'true';
 
 if (DEBUG) {
-  console.log('[HTTP]', method, url, data);
+	console.log('[HTTP]', method, url, data);
 }
 ```
 
@@ -922,7 +932,7 @@ services:
   myagentdesk:
     build: ./myAgentDesk
     ports:
-      - "8000:8000"
+      - '8000:8000'
     environment:
       - NODE_ENV=production
       - PORT=8000
@@ -930,7 +940,13 @@ services:
     depends_on:
       - expertAgent
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:8000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+        ]
       interval: 30s
       timeout: 3s
       start_period: 5s
@@ -940,7 +956,7 @@ services:
   expertAgent:
     image: expertAgent:latest
     ports:
-      - "8103:8103"
+      - '8103:8103'
     restart: unless-stopped
 ```
 
@@ -1038,13 +1054,13 @@ MIT
 
 ## Related Projects
 
-| Project | Description |
-|---------|-------------|
-| [expertAgent](../expertAgent) | AI agent backend (LangGraph, MCP) |
-| [myScheduler](../myscheduler) | Job scheduling service (APScheduler) |
-| [graphAiServer](../graphAiServer) | Workflow execution engine (GraphAI) |
-| [myVault](../myVault) | Secret management service |
-| [commonUI](../commonUI) | Shared UI components library |
+| Project                           | Description                          |
+| --------------------------------- | ------------------------------------ |
+| [expertAgent](../expertAgent)     | AI agent backend (LangGraph, MCP)    |
+| [myScheduler](../myscheduler)     | Job scheduling service (APScheduler) |
+| [graphAiServer](../graphAiServer) | Workflow execution engine (GraphAI)  |
+| [myVault](../myVault)             | Secret management service            |
+| [commonUI](../commonUI)           | Shared UI components library         |
 
 ## Support
 

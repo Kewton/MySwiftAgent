@@ -248,7 +248,7 @@ jobs:
         run: |
           PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
           docker run --rm -d --name ${PROJECT_LOWER}-test -p 8000:8000 ${PROJECT_LOWER}:test
-          sleep 10
+          sleep 30
 
           # ヘルスチェック
           echo "🔍 Testing health endpoint..."

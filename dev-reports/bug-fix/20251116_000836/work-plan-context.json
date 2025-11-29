@@ -1,0 +1,47 @@
+{
+  "bug_id": "20251116_000836",
+  "bug_description": "dev-start.sh stopコマンドがPIDファイル不在により機能しない",
+  "selected_actions": [
+    {
+      "action_id": "1",
+      "title": "ポートベースのプロセス検出機能の追加",
+      "description": "stop_service関数を拡張し、PIDファイルがない場合でもポート番号でプロセスを検出・停止",
+      "files_to_modify": ["scripts/dev-start.sh"],
+      "estimated_effort": "2-3時間"
+    },
+    {
+      "action_id": "2",
+      "title": "PIDファイル作成の確実性向上",
+      "description": "nohup起動後、実際のサービスプロセスのPIDを確実に取得・記録",
+      "files_to_modify": ["scripts/dev-start.sh"],
+      "estimated_effort": "3-4時間"
+    },
+    {
+      "action_id": "3",
+      "title": "statusコマンドの改善",
+      "description": "PIDファイルに依存せず、ポートベースでサービス稼働状況を確認",
+      "files_to_modify": ["scripts/dev-start.sh"],
+      "estimated_effort": "1-2時間"
+    },
+    {
+      "action_id": "4",
+      "title": "Docker起動前チェックの強化",
+      "description": "Dockerデーモンの接続確認を強化、失敗時のフォールバック処理",
+      "files_to_modify": ["scripts/dev-start.sh"],
+      "estimated_effort": "2-3時間"
+    }
+  ],
+  "total_estimated_effort": "8-12時間",
+  "deliverables": [
+    "scripts/dev-start.sh（全対策実装済み）",
+    "tests/scripts/test_dev_start.sh（新規作成）"
+  ],
+  "definition_of_done": [
+    "PIDファイルなしでもstopコマンドが動作する",
+    "サービス起動時に確実にPIDファイルが作成される",
+    "statusコマンドがポートベースでも動作する",
+    "Docker未起動時でも適切なエラーメッセージが表示される",
+    "実行中のサービス（MyVault、CommonUI）が正常に停止できる",
+    "テストスクリプトですべてのシナリオが成功する"
+  ]
+}

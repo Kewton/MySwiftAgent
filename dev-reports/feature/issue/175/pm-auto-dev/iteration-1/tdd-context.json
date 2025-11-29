@@ -1,0 +1,53 @@
+{
+  "issue_number": 175,
+  "title": "Issue #152-6: 品質可視化API実装",
+  "acceptance_criteria": [
+    "平均スコアが正しく計算される",
+    "対話ターン数が集計される",
+    "完了率が算出される",
+    "モデル使用率が集計される",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "レスポンスタイム 1秒以内（1000会話）",
+    "キャッシュヒット率 80%以上",
+    "正常系: 30日間のメトリクス取得",
+    "異常系: データなし期間",
+    "エッジケース: 大量データ（10000会話）"
+  ],
+  "implementation_tasks": [
+    "GET /v1/observability/requirement-definition-metrics実装",
+    "メトリクス集計ロジック",
+    "キャッシュ機構実装",
+    "RequirementDefinitionMetricsスキーマ定義",
+    "単体テスト作成"
+  ],
+  "technical_stack": {
+    "language": "Python",
+    "framework": "FastAPI",
+    "external_services": ["Langfuse"],
+    "cache": "Valkey"
+  },
+  "existing_infrastructure": {
+    "observability_endpoints": "expertAgent/app/api/v1/observability_endpoints.py",
+    "observability_service": "expertAgent/app/services/observability_service.py",
+    "observability_schemas": "expertAgent/app/schemas/observability.py",
+    "trace_service": "expertAgent/app/services/trace_service.py",
+    "valkey_client": "expertAgent/app/services/valkey_client.py"
+  },
+  "target_coverage": 90,
+  "work_plan_tasks": [],
+  "deliverables_checklist": [
+    "expertAgent/app/schemas/observability.py - RequirementDefinitionMetricsスキーマ追加",
+    "expertAgent/app/services/metrics_aggregation_service.py - メトリクス集計サービス",
+    "expertAgent/app/api/v1/observability_endpoints.py - requirement-definition-metricsエンドポイント追加",
+    "expertAgent/tests/unit/test_metrics_aggregation_service.py - 単体テスト",
+    "expertAgent/tests/integration/test_requirement_definition_metrics_api.py - 結合テスト"
+  ],
+  "definition_of_done": [
+    "GET /v1/observability/requirement-definition-metrics エンドポイントが動作する",
+    "平均スコア、対話ターン数、完了率、モデル使用率が正しく集計される",
+    "Valkeyによるキャッシュが機能する",
+    "単体テストカバレッジ90%以上",
+    "Ruff/MyPyエラーゼロ"
+  ]
+}

@@ -21,6 +21,7 @@
 
 	const menuItems: MenuItem[] = [
 		{ id: 'create', icon: '✏️', label: 'Create Job', path: '/create_job' },
+		{ id: 'mlops', icon: '📊', label: 'MLOps Dashboard', path: '/mlops' },
 		{ id: 'settings', icon: '⚙️', label: 'Settings', path: '/settings' }
 	];
 

@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.prompt_config import PromptConfig
+
 
 class JobGeneratorRequest(BaseModel):
     """Request schema for Job/Task Auto-Generation API.
@@ -11,6 +13,7 @@ class JobGeneratorRequest(BaseModel):
     Attributes:
         user_requirement: User requirement in natural language
         max_retry: Maximum retry count for evaluation and validation (default: 5)
+        prompt_configs: Optional list of prompt configurations for custom versions
     """
 
     user_requirement: str = Field(
@@ -24,6 +27,19 @@ class JobGeneratorRequest(BaseModel):
         description="Maximum retry count for evaluation and validation",
         ge=1,
         le=10,
+    )
+    prompt_configs: list[PromptConfig] = Field(
+        default_factory=list,
+        description="Optional list of prompt configurations for custom versions",
+        examples=[
+            [
+                {
+                    "agent_type": "jobTaskGeneratorAgents",
+                    "prompt_name": "task_breakdown",
+                    "version": "v2.0",
+                }
+            ]
+        ],
     )
 
 
