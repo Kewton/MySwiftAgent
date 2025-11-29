@@ -283,28 +283,22 @@ install_service_deps() {
             return 1
         fi
 
-        if [[ -d "node_modules" ]]; then
-            print_info "$service: Node dependencies already installed, checking for updates..."
-            npm install >> "$SETUP_LOG" 2>&1 || {
-                print_error "$service: Failed to install Node dependencies"
+        if [[ -f "package-lock.json" ]]; then
+            # Always use npm ci for reproducible installs (fixes worktree node_modules issues)
+            # NODE_ENV=development ensures devDependencies are installed (vitest, etc.)
+            print_info "$service: Installing Node dependencies (npm ci)..."
+            NODE_ENV=development npm ci >> "$SETUP_LOG" 2>&1 || {
+                print_error "$service: Failed to run npm ci"
                 cd "$PROJECT_ROOT"
                 return 1
             }
         else
-            print_info "$service: Installing Node dependencies..."
-            if [[ -f "package-lock.json" ]]; then
-                npm ci >> "$SETUP_LOG" 2>&1 || {
-                    print_error "$service: Failed to run npm ci"
-                    cd "$PROJECT_ROOT"
-                    return 1
-                }
-            else
-                npm install >> "$SETUP_LOG" 2>&1 || {
-                    print_error "$service: Failed to run npm install"
-                    cd "$PROJECT_ROOT"
-                    return 1
-                }
-            fi
+            print_info "$service: Installing Node dependencies (npm install)..."
+            NODE_ENV=development npm install >> "$SETUP_LOG" 2>&1 || {
+                print_error "$service: Failed to run npm install"
+                cd "$PROJECT_ROOT"
+                return 1
+            }
         fi
 
         # Build TypeScript projects if needed
@@ -912,7 +906,8 @@ main() {
 
                 print_service "🖥️ " "MyAgentDesk" "Starting SvelteKit application..."
                 cd "$MYAGENTDESK_DIR"
-                nohup bash -c "PORT=$MYAGENTDESK_PORT npm run dev -- --port $MYAGENTDESK_PORT --host 0.0.0.0" > "$MYAGENTDESK_LOG" 2>&1 &
+                # EXPERT_AGENT_URL: dynamically set based on EXPERTAGENT_PORT for worktree compatibility
+                nohup bash -c "PORT=$MYAGENTDESK_PORT EXPERT_AGENT_URL='http://localhost:$EXPERTAGENT_PORT' npm run dev -- --port $MYAGENTDESK_PORT --host 0.0.0.0" > "$MYAGENTDESK_LOG" 2>&1 &
                 echo $! > "$MYAGENTDESK_PID"
                 cd "$PROJECT_ROOT"
 
