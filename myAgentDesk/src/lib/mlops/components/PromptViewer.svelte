@@ -94,24 +94,15 @@
 		style="max-height: {maxHeight}"
 	>
 		<div class="overflow-auto" style="max-height: {maxHeight}">
-			<pre class="p-4 text-sm font-mono">
-				<code>
-					{#each lines as line, index}
-						<div class="flex">
-							{#if showLineNumbers}
-								<span
-									class="select-none w-10 pr-4 text-right text-gray-400 dark:text-gray-500"
-									aria-hidden="true">
-									{index + 1}
-								</span>
-							{/if}
-							<span class="flex-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
-								{line || ' '}
-							</span>
-						</div>
-					{/each}
-				</code>
-			</pre>
+			<pre class="p-4 text-sm font-mono"><code
+					>{#each lines as line, index}<div class="flex">{#if showLineNumbers}<span
+									class="select-none w-10 pr-4 text-right text-gray-400 dark:text-gray-500 shrink-0"
+									aria-hidden="true">{index + 1}</span
+								>{/if}<span
+								class="flex-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words text-left"
+								>{line || ' '}</span
+							></div>{/each}</code
+				></pre>
 		</div>
 	</div>
 

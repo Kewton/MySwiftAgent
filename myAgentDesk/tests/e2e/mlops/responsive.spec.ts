@@ -20,9 +20,9 @@ test.describe('Responsive Design', () => {
 
 			// All nav items should be visible
 			await expect(page.getByTestId('nav-dashboard')).toBeVisible();
-			// Check nav item specifically (not the h1 which contains "MLOps Dashboard")
+			// Check nav item specifically - uses i18n key 'mlops.dashboard' which is 'MLOps Dashboard'
 			await expect(page.getByTestId('nav-dashboard').locator('span.font-medium')).toHaveText(
-				'Dashboard'
+				'MLOps Dashboard'
 			);
 		});
 

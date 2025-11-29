@@ -7,13 +7,20 @@
 	 * - Displays requirement preview
 	 * - Selection state handling
 	 * - Keyboard navigation support
+	 * - i18n support
 	 */
 
+	import { createEventDispatcher } from 'svelte';
 	import type { Candidate } from '../types';
+	import { t } from '$lib/stores/locale';
 
 	export let candidate: Candidate;
 	export let selected = false;
 	export let disabled = false;
+
+	const dispatch = createEventDispatcher<{
+		select: void;
+	}>();
 
 	function formatConfidence(confidence: number): string {
 		return `${(confidence * 100).toFixed(0)}%`;
@@ -23,13 +30,16 @@
 		return `${(completeness * 100).toFixed(0)}%`;
 	}
 
+	function handleClick() {
+		if (!disabled) {
+			dispatch('select');
+		}
+	}
+
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
-			if (!disabled) {
-				const element = event.currentTarget as HTMLElement;
-				element.click();
-			}
+			handleClick();
 		}
 	}
 </script>
@@ -45,7 +55,7 @@
 	aria-pressed={selected}
 	aria-disabled={disabled}
 	aria-label="Candidate {candidate.label}: {candidate.description}"
-	on:click
+	on:click={handleClick}
 	on:keydown={handleKeyDown}
 	data-testid="candidate-card-{candidate.id}"
 >
@@ -67,9 +77,10 @@
 		<div class="flex items-center gap-2">
 			<span
 				class="text-sm px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-				aria-label="Confidence: {formatConfidence(candidate.confidence)}"
+				aria-label="{t('mlops.confident')}: {formatConfidence(candidate.confidence)}"
 			>
-				{formatConfidence(candidate.confidence)} confident
+				{formatConfidence(candidate.confidence)}
+				{t('mlops.confident')}
 			</span>
 		</div>
 	</div>
@@ -78,7 +89,7 @@
 	<div class="grid grid-cols-2 gap-2 text-sm">
 		{#if candidate.requirements.data_source}
 			<div class="flex flex-col">
-				<span class="text-gray-500 dark:text-gray-400">Data Source</span>
+				<span class="text-gray-500 dark:text-gray-400">{t('mlops.dataSource')}</span>
 				<span class="text-gray-900 dark:text-gray-100 truncate">
 					{candidate.requirements.data_source}
 				</span>
@@ -87,7 +98,7 @@
 
 		{#if candidate.requirements.process_description}
 			<div class="flex flex-col">
-				<span class="text-gray-500 dark:text-gray-400">Process</span>
+				<span class="text-gray-500 dark:text-gray-400">{t('mlops.process')}</span>
 				<span class="text-gray-900 dark:text-gray-100 truncate">
 					{candidate.requirements.process_description}
 				</span>
@@ -96,7 +107,7 @@
 
 		{#if candidate.requirements.output_format}
 			<div class="flex flex-col">
-				<span class="text-gray-500 dark:text-gray-400">Output</span>
+				<span class="text-gray-500 dark:text-gray-400">{t('mlops.output')}</span>
 				<span class="text-gray-900 dark:text-gray-100 truncate">
 					{candidate.requirements.output_format}
 				</span>
@@ -105,7 +116,7 @@
 
 		{#if candidate.requirements.schedule}
 			<div class="flex flex-col">
-				<span class="text-gray-500 dark:text-gray-400">Schedule</span>
+				<span class="text-gray-500 dark:text-gray-400">{t('mlops.schedule')}</span>
 				<span class="text-gray-900 dark:text-gray-100 truncate">
 					{candidate.requirements.schedule}
 				</span>
@@ -116,7 +127,7 @@
 	<!-- Completeness Bar -->
 	<div class="mt-3">
 		<div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-			<span>Completeness</span>
+			<span>{t('mlops.completeness')}</span>
 			<span>{formatCompleteness(candidate.requirements.completeness)}</span>
 		</div>
 		<div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -141,7 +152,7 @@
 					clip-rule="evenodd"
 				/>
 			</svg>
-			<span class="text-sm font-medium">Selected</span>
+			<span class="text-sm font-medium">{t('mlops.selected')}</span>
 		</div>
 	{/if}
 </div>

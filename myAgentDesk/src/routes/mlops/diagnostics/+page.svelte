@@ -7,12 +7,14 @@
 	 * - Detailed conversation view
 	 * - Timeline visualization
 	 * - Langfuse trace link
+	 * - i18n support
 	 */
 
 	import { onMount } from 'svelte';
 	import ConversationTimeline from '$lib/mlops/components/ConversationTimeline.svelte';
 	import { listDiagnostics, getDiagnosticInfo } from '$lib/mlops/api/client';
 	import type { DiagnosticSummary, DiagnosticInfo, DiagnosticsQuery } from '$lib/mlops/types';
+	import { locale, t } from '$lib/stores/locale';
 
 	let diagnosticsList: DiagnosticSummary[] = [];
 	let selectedDiagnostic: DiagnosticInfo | null = null;
@@ -24,6 +26,22 @@
 	// Filters
 	let filterJobId = '';
 	let filterUserId = '';
+
+	// Demo data for testing/development
+	const demoData: DiagnosticSummary[] = [
+		{
+			conversation_id: 'conv-demo-001',
+			user_id: 'user-123',
+			start_time: new Date().toISOString(),
+			turn_count: 5
+		},
+		{
+			conversation_id: 'conv-demo-002',
+			user_id: 'user-456',
+			start_time: new Date(Date.now() - 3600000).toISOString(),
+			turn_count: 8
+		}
+	];
 
 	async function loadDiagnostics() {
 		loading = true;
@@ -39,23 +57,16 @@
 			const response = await listDiagnostics(query);
 			diagnosticsList = response.items;
 			total = response.total;
+
+			// If no data from API, use demo data for development
+			if (diagnosticsList.length === 0) {
+				diagnosticsList = demoData;
+				total = diagnosticsList.length;
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load diagnostics';
 			// Use demo data on error
-			diagnosticsList = [
-				{
-					conversation_id: 'conv-demo-001',
-					user_id: 'user-123',
-					start_time: new Date().toISOString(),
-					turn_count: 5
-				},
-				{
-					conversation_id: 'conv-demo-002',
-					user_id: 'user-456',
-					start_time: new Date(Date.now() - 3600000).toISOString(),
-					turn_count: 8
-				}
-			];
+			diagnosticsList = demoData;
 			total = diagnosticsList.length;
 		} finally {
 			loading = false;
@@ -133,9 +144,13 @@
 <div class="diagnostics-page" data-testid="mlops-diagnostics-page">
 	<!-- Header -->
 	<div class="mb-6">
-		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Conversation Diagnostics</h1>
+		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+			{t('mlops.conversationDiagnostics')}
+		</h1>
 		<p class="text-gray-600 dark:text-gray-400 mt-1">
-			View and analyze conversation diagnostic information
+			{$locale === 'ja'
+				? '会話診断情報の表示と分析'
+				: 'View and analyze conversation diagnostic information'}
 		</p>
 	</div>
 
@@ -157,7 +172,7 @@
 			<div class="mb-4 space-y-2">
 				<input
 					type="text"
-					placeholder="Filter by Job ID"
+					placeholder={t('mlops.filterJobId')}
 					bind:value={filterJobId}
 					class="w-full px-3 py-2 text-sm rounded-lg border
 						border-gray-300 dark:border-gray-600
@@ -167,7 +182,7 @@
 				/>
 				<input
 					type="text"
-					placeholder="Filter by User ID"
+					placeholder={t('mlops.filterUserId')}
 					bind:value={filterUserId}
 					class="w-full px-3 py-2 text-sm rounded-lg border
 						border-gray-300 dark:border-gray-600
@@ -182,7 +197,7 @@
 					on:click={handleFilter}
 					data-testid="apply-filter-button"
 				>
-					Apply Filters
+					{t('mlops.applyFilter')}
 				</button>
 			</div>
 
@@ -327,10 +342,7 @@
 							d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 						/>
 					</svg>
-					<p class="text-lg font-medium">Select a conversation</p>
-					<p class="mt-2">
-						Choose a conversation from the list to view its diagnostic information.
-					</p>
+					<p class="text-lg font-medium">{t('mlops.selectConversation')}</p>
 				</div>
 			{/if}
 		</div>

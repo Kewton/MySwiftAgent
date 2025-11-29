@@ -6,15 +6,18 @@
 	 * - Navigation sidebar
 	 * - Responsive design
 	 * - Dark mode support
+	 * - i18n support via locale store
 	 */
 
 	import { page } from '$app/stores';
+	import { t } from '$lib/stores/locale';
 
-	const navItems = [
-		{ href: '/mlops', label: 'Dashboard', icon: 'dashboard' },
-		{ href: '/mlops/chat', label: 'Chat', icon: 'chat' },
-		{ href: '/mlops/diagnostics', label: 'Diagnostics', icon: 'diagnostics' },
-		{ href: '/mlops/prompts', label: 'Prompts', icon: 'prompts' }
+	// Reactive nav items based on locale
+	$: navItems = [
+		{ href: '/mlops', label: t('mlops.dashboard'), icon: 'dashboard' },
+		{ href: '/mlops/chat', label: t('mlops.chat'), icon: 'chat' },
+		{ href: '/mlops/diagnostics', label: t('mlops.diagnostics'), icon: 'diagnostics' },
+		{ href: '/mlops/prompts', label: t('mlops.prompts'), icon: 'prompts' }
 	];
 
 	function isActive(href: string, pathname: string): boolean {
@@ -32,7 +35,9 @@
 		aria-label="MLOps navigation"
 	>
 		<div class="p-4">
-			<h1 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">MLOps Dashboard</h1>
+			<h1 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+				{t('mlops.dashboard')}
+			</h1>
 
 			<nav class="space-y-1">
 				{#each navItems as item}

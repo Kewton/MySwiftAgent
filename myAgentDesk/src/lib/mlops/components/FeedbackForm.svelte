@@ -7,11 +7,13 @@
 	 * - Optional comment field
 	 * - Validation
 	 * - Loading state
+	 * - i18n support
 	 */
 
 	import { createEventDispatcher } from 'svelte';
 	import ScoreSlider from './ScoreSlider.svelte';
 	import type { FeedbackScores } from '../types';
+	import { t } from '$lib/stores/locale';
 
 	export let conversationId: string;
 	export let loading = false;
@@ -55,8 +57,8 @@
 		<!-- Requirement Clarity -->
 		<ScoreSlider
 			id="requirement-clarity"
-			label="Requirement Clarity"
-			description="How clear were the clarified requirements?"
+			label={t('mlops.requirementClarity')}
+			description={t('mlops.requirementClarityDesc')}
 			value={scores.requirement_clarity}
 			{disabled}
 			on:change={(e) => handleScoreChange('requirement_clarity', e.detail.value)}
@@ -65,8 +67,8 @@
 		<!-- Interpretation Accuracy -->
 		<ScoreSlider
 			id="interpretation-accuracy"
-			label="Interpretation Accuracy"
-			description="How accurately did the AI understand your intent?"
+			label={t('mlops.interpretationAccuracy')}
+			description={t('mlops.interpretationAccuracyDesc')}
 			value={scores.interpretation_accuracy}
 			{disabled}
 			on:change={(e) => handleScoreChange('interpretation_accuracy', e.detail.value)}
@@ -75,8 +77,8 @@
 		<!-- Response Helpfulness -->
 		<ScoreSlider
 			id="response-helpfulness"
-			label="Response Helpfulness"
-			description="How helpful were the AI's responses?"
+			label={t('mlops.responseHelpfulness')}
+			description={t('mlops.responseHelpfulnessDesc')}
 			value={scores.response_helpfulness}
 			{disabled}
 			on:change={(e) => handleScoreChange('response_helpfulness', e.detail.value)}
@@ -85,8 +87,8 @@
 		<!-- Overall Satisfaction -->
 		<ScoreSlider
 			id="overall-satisfaction"
-			label="Overall Satisfaction"
-			description="Your overall experience with this conversation"
+			label={t('mlops.overallSatisfaction')}
+			description={t('mlops.overallSatisfactionDesc')}
 			value={scores.overall_satisfaction}
 			{disabled}
 			on:change={(e) => handleScoreChange('overall_satisfaction', e.detail.value)}
@@ -98,7 +100,7 @@
 				for="feedback-comment"
 				class="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2"
 			>
-				Additional Comments (Optional)
+				{t('mlops.additionalComments')}
 			</label>
 			<textarea
 				id="feedback-comment"
@@ -110,7 +112,7 @@
 					text-gray-900 dark:text-gray-100
 					focus:ring-2 focus:ring-blue-500 focus:border-blue-500
 					disabled:opacity-50 disabled:cursor-not-allowed"
-				placeholder="Share any additional feedback..."
+				placeholder={t('mlops.commentPlaceholder')}
 				disabled={disabled || loading}
 				data-testid="feedback-comment"
 			></textarea>
@@ -130,7 +132,7 @@
 			on:click={handleCancel}
 			data-testid="feedback-cancel"
 		>
-			Cancel
+			{t('mlops.cancel')}
 		</button>
 		<button
 			type="submit"
@@ -158,10 +160,10 @@
 							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 						></path>
 					</svg>
-					Submitting...
+					{t('mlops.submitting')}
 				</span>
 			{:else}
-				Submit Feedback
+				{t('mlops.submitFeedback')}
 			{/if}
 		</button>
 	</div>

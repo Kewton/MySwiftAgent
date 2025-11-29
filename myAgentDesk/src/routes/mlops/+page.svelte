@@ -7,6 +7,7 @@
 	 * - Quality metrics cards
 	 * - Model usage chart
 	 * - Connection status indicator
+	 * - i18n support
 	 */
 
 	import { onMount, onDestroy } from 'svelte';
@@ -20,6 +21,7 @@
 	} from '$lib/mlops/stores/realtimeStore';
 	import { getMetrics } from '$lib/mlops/api/client';
 	import type { QualityMetrics, ModelUsage } from '$lib/mlops/types';
+	import { t } from '$lib/stores/locale';
 
 	let loading = true;
 	let error: string | null = null;
@@ -34,8 +36,14 @@
 				? {
 						averageScore: `${(staticMetrics.average_score * 100).toFixed(1)}%`,
 						totalTurns: staticMetrics.total_turns.toLocaleString(),
-						successRate: `${(staticMetrics.success_rate * 100).toFixed(1)}%`,
-						averageLatency: `${staticMetrics.average_latency.toFixed(2)}s`,
+						successRate:
+							staticMetrics.success_rate !== undefined
+								? `${(staticMetrics.success_rate * 100).toFixed(1)}%`
+								: '-',
+						averageLatency:
+							staticMetrics.average_latency !== undefined
+								? `${staticMetrics.average_latency.toFixed(2)}s`
+								: '-',
 						totalSessions: staticMetrics.total_sessions.toLocaleString(),
 						completionRate: `${(staticMetrics.completion_rate * 100).toFixed(1)}%`
 					}
@@ -51,7 +59,8 @@
 		try {
 			const response = await getMetrics();
 			staticMetrics = response.metrics;
-			staticModelUsage = response.model_usage;
+			// model_usage is inside metrics object from API
+			staticModelUsage = response.metrics.model_usage || [];
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load metrics';
 		} finally {
@@ -71,7 +80,7 @@
 <div class="dashboard" data-testid="mlops-dashboard">
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">MLOps Dashboard</h1>
+		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('mlops.dashboard')}</h1>
 
 		<!-- Connection Status -->
 		<div
@@ -87,7 +96,11 @@
 					: 'bg-gray-400'}"
 				aria-hidden="true"
 			></span>
-			<span>{$connectionStatus.isConnected ? 'Live' : 'Offline'}</span>
+			<span
+				>{$connectionStatus.isConnected
+					? t('mlops.connectionLive')
+					: t('mlops.connectionOffline')}</span
+			>
 		</div>
 	</div>
 
@@ -98,7 +111,7 @@
 			role="alert"
 			data-testid="error-message"
 		>
-			<p class="font-medium">Error loading metrics</p>
+			<p class="font-medium">{t('mlops.errorLoading')}</p>
 			<p class="text-sm mt-1">{error}</p>
 		</div>
 	{/if}
@@ -106,46 +119,46 @@
 	<!-- Metrics Grid -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
 		<MetricsCard
-			label="Average Score"
+			label={t('mlops.averageScore')}
 			value={metrics?.averageScore || '-'}
-			sublabel="Quality score average"
+			sublabel={t('mlops.qualityScoreAverage')}
 			variant="success"
 			loading={loading && !metrics}
 		/>
 
 		<MetricsCard
-			label="Total Turns"
+			label={t('mlops.totalTurns')}
 			value={metrics?.totalTurns || '-'}
-			sublabel="Conversation turns"
+			sublabel={t('mlops.conversationTurns')}
 			loading={loading && !metrics}
 		/>
 
 		<MetricsCard
-			label="Success Rate"
+			label={t('mlops.successRate')}
 			value={metrics?.successRate || '-'}
-			sublabel="Successful completions"
+			sublabel={t('mlops.successfulCompletions')}
 			variant="success"
 			loading={loading && !metrics}
 		/>
 
 		<MetricsCard
-			label="Avg Latency"
+			label={t('mlops.avgLatency')}
 			value={metrics?.averageLatency || '-'}
-			sublabel="Response time"
+			sublabel={t('mlops.responseTime')}
 			loading={loading && !metrics}
 		/>
 
 		<MetricsCard
-			label="Total Sessions"
+			label={t('mlops.totalSessions')}
 			value={metrics?.totalSessions || '-'}
-			sublabel="Unique sessions"
+			sublabel={t('mlops.uniqueSessions')}
 			loading={loading && !metrics}
 		/>
 
 		<MetricsCard
-			label="Completion Rate"
+			label={t('mlops.completionRate')}
 			value={metrics?.completionRate || '-'}
-			sublabel="Requirements completed"
+			sublabel={t('mlops.requirementsCompleted')}
 			variant="success"
 			loading={loading && !metrics}
 		/>
@@ -155,7 +168,7 @@
 	<div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
 		<RealtimeChart
 			data={modelUsage}
-			title="Model Usage Distribution"
+			title={t('mlops.modelUsage')}
 			loading={loading && modelUsage.length === 0}
 		/>
 	</div>
@@ -163,7 +176,7 @@
 	<!-- Last Update -->
 	{#if $connectionStatus.lastUpdate}
 		<div class="mt-4 text-xs text-gray-500 dark:text-gray-400 text-right">
-			Last updated: {new Date($connectionStatus.lastUpdate).toLocaleTimeString()}
+			{t('mlops.lastUpdated')}: {new Date($connectionStatus.lastUpdate).toLocaleTimeString()}
 		</div>
 	{/if}
 </div>

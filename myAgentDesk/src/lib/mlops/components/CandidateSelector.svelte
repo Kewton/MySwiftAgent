@@ -7,11 +7,13 @@
 	 * - Single selection handling
 	 * - Loading state
 	 * - Confirmation action
+	 * - i18n support
 	 */
 
 	import { createEventDispatcher } from 'svelte';
 	import CandidateCard from './CandidateCard.svelte';
 	import type { Candidate } from '../types';
+	import { t } from '$lib/stores/locale';
 
 	export let candidates: Candidate[] = [];
 	export let selectedId: string | null = null;
@@ -78,10 +80,11 @@
 >
 	<!-- Header -->
 	<div class="mb-4">
-		<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Select an Interpretation</h3>
+		<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+			{t('mlops.selectInterpretation')}
+		</h3>
 		<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-			We found multiple ways to interpret your request. Please select the one that best matches your
-			intent.
+			{t('mlops.selectInterpretationDesc')}
 		</p>
 	</div>
 
@@ -91,7 +94,7 @@
 			class="text-center py-8 text-gray-500 dark:text-gray-400"
 			data-testid="no-candidates-message"
 		>
-			No candidates available
+			{t('mlops.noCandidates')}
 		</div>
 	{:else}
 		<div class="space-y-3" role="group">
@@ -105,7 +108,7 @@
 						{candidate}
 						selected={selectedId === candidate.id}
 						disabled={disabled || loading}
-						on:click={() => handleSelect(candidate.id)}
+						on:select={() => handleSelect(candidate.id)}
 					/>
 				</div>
 			{/each}
@@ -148,10 +151,10 @@
 								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 							></path>
 						</svg>
-						Confirming...
+						{t('mlops.confirming')}
 					</span>
 				{:else}
-					Confirm Selection
+					{t('mlops.confirmSelection')}
 				{/if}
 			</button>
 		</div>

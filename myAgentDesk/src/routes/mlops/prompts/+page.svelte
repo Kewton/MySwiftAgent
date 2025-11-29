@@ -7,6 +7,7 @@
 	 * - Version history
 	 * - Prompt editor
 	 * - Version activation
+	 * - i18n support
 	 */
 
 	import { onMount } from 'svelte';
@@ -20,6 +21,7 @@
 		activatePromptVersion
 	} from '$lib/mlops/api/client';
 	import type { PromptTemplate, PromptVersion } from '$lib/mlops/types';
+	import { locale, t } from '$lib/stores/locale';
 
 	let prompts: PromptTemplate[] = [];
 	let selectedPrompt: PromptTemplate | null = null;
@@ -251,9 +253,13 @@ Output a structured job definition in JSON format.`,
 <div class="prompts-page" data-testid="mlops-prompts-page">
 	<!-- Header -->
 	<div class="mb-6">
-		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Prompt Management</h1>
+		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+			{t('mlops.promptManagement')}
+		</h1>
 		<p class="text-gray-600 dark:text-gray-400 mt-1">
-			Manage and version control your prompt templates
+			{$locale === 'ja'
+				? 'プロンプトテンプレートの管理とバージョン管理'
+				: 'Manage and version control your prompt templates'}
 		</p>
 	</div>
 
@@ -281,7 +287,9 @@ Output a structured job definition in JSON format.`,
 	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 		<!-- Prompt List -->
 		<div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-			<h2 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Templates</h2>
+			<h2 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+				{t('mlops.promptTemplates')}
+			</h2>
 
 			{#if loading}
 				<div class="space-y-2 animate-pulse">
@@ -331,7 +339,7 @@ Output a structured job definition in JSON format.`,
 				/>
 			{:else}
 				<div class="text-center py-8 text-gray-500 dark:text-gray-400">
-					Select a template to view versions
+					{t('mlops.selectPrompt')}
 				</div>
 			{/if}
 		</div>
@@ -351,12 +359,13 @@ Output a structured job definition in JSON format.`,
 					<div class="flex items-center justify-between mb-4">
 						<div>
 							<h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-								Version {selectedVersion.version}
+								{$locale === 'ja' ? 'バージョン' : 'Version'}
+								{selectedVersion.version}
 								{#if selectedVersion.is_active}
 									<span
 										class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
 									>
-										Active
+										{t('mlops.active')}
 									</span>
 								{/if}
 							</h3>
@@ -372,7 +381,7 @@ Output a structured job definition in JSON format.`,
 							on:click={startEdit}
 							data-testid="edit-button"
 						>
-							Create New Version
+							{$locale === 'ja' ? '新バージョン作成' : 'Create New Version'}
 						</button>
 					</div>
 
@@ -404,8 +413,8 @@ Output a structured job definition in JSON format.`,
 							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 						/>
 					</svg>
-					<p class="text-lg font-medium">Select a prompt template</p>
-					<p class="mt-2">Choose a template and version to view or edit.</p>
+					<p class="text-lg font-medium">{t('mlops.selectPrompt')}</p>
+					<p class="mt-2">{t('mlops.selectVersion')}</p>
 				</div>
 			{/if}
 		</div>

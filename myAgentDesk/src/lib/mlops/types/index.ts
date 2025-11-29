@@ -109,10 +109,11 @@ export function createEmptyRequirementState(): RequirementState {
 export interface QualityMetrics {
 	average_score: number;
 	total_turns: number;
-	success_rate: number;
-	average_latency: number;
+	success_rate?: number; // Optional - not always present
+	average_latency?: number; // Optional - not always present
 	total_sessions: number;
 	completion_rate: number;
+	model_usage?: ModelUsage[]; // May be nested in metrics object
 }
 
 /**

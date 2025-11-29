@@ -17,7 +17,7 @@ export default defineConfig({
 			},
 			// expertAgent API proxy (worktree-aware)
 			'/aiagent-api': {
-				target: process.env.EXPERT_AGENT_URL || 'http://localhost:8114',
+				target: process.env.EXPERT_AGENT_URL || 'http://localhost:8004',
 				changeOrigin: true
 			}
 		}

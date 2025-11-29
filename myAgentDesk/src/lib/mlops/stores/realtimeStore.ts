@@ -224,8 +224,8 @@ export const formattedMetrics = derived(realtimeStore, ($store) => {
 	return {
 		averageScore: `${(m.average_score * 100).toFixed(1)}%`,
 		totalTurns: m.total_turns.toLocaleString(),
-		successRate: `${(m.success_rate * 100).toFixed(1)}%`,
-		averageLatency: `${m.average_latency.toFixed(2)}s`,
+		successRate: m.success_rate !== undefined ? `${(m.success_rate * 100).toFixed(1)}%` : '-',
+		averageLatency: m.average_latency !== undefined ? `${m.average_latency.toFixed(2)}s` : '-',
 		totalSessions: m.total_sessions.toLocaleString(),
 		completionRate: `${(m.completion_rate * 100).toFixed(1)}%`
 	};
