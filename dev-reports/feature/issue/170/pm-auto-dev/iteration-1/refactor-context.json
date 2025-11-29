@@ -1,0 +1,31 @@
+{
+  "issue_number": 170,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/mlops/api/client.ts",
+    "myAgentDesk/src/lib/mlops/stores/realtimeStore.ts",
+    "myAgentDesk/src/routes/mlops/+page.svelte",
+    "myAgentDesk/src/routes/mlops/chat/+page.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 77,
+    "typescript_errors": 0,
+    "eslint_errors": 0,
+    "e2e_tests_count": 77
+  },
+  "design_patterns_to_apply": [
+    "Error Boundary Pattern",
+    "Loading State Pattern",
+    "Retry Logic Pattern"
+  ],
+  "improvement_goals": [
+    "コードの重複を削減",
+    "エラーハンドリングの一貫性向上",
+    "コンポーネント間の責務分離改善",
+    "テストの可読性向上"
+  ],
+  "tech_stack": {
+    "framework": "SvelteKit 2.x",
+    "language": "TypeScript",
+    "ui": "TailwindCSS"
+  }
+}

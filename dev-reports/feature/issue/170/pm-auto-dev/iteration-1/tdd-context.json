@@ -1,0 +1,237 @@
+{
+  "issue_number": 170,
+  "title": "Issue #152-10: UI実装（フロントエンド統合）",
+  "acceptance_criteria": [
+    "全6機能のUIが実装される",
+    "APIとの通信が正常",
+    "レスポンシブデザイン対応",
+    "アクセシビリティ対応",
+    "E2Eテストカバレッジ 70%以上",
+    "Lighthouse スコア 90以上",
+    "TypeScriptエラー ゼロ",
+    "正常系: 全機能の操作フロー",
+    "異常系: API エラー処理",
+    "エッジケース: モバイル表示"
+  ],
+  "implementation_tasks": [
+    "候補選択UI実装",
+    "フィードバックフォーム実装",
+    "ダッシュボード画面実装",
+    "診断情報ビュー実装",
+    "プロンプト管理画面実装",
+    "E2Eテスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ディレクトリ構造設計・作成",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/routes/mlops/", "myAgentDesk/src/lib/mlops/"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "TypeScript型定義",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/types/index.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "APIクライアント実装",
+      "estimated_hours": 2.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/api/client.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "CandidateCard コンポーネント",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/CandidateCard.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "CandidateSelector コンポーネント",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/CandidateSelector.svelte"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "チャットページ統合",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/routes/mlops/chat/+page.svelte"],
+      "dependencies": ["2.2", "1.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "ScoreSlider コンポーネント",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/ScoreSlider.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "FeedbackForm コンポーネント",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/FeedbackForm.svelte"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "フィードバックモーダル統合",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/FeedbackModal.svelte"],
+      "dependencies": ["3.2", "1.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "MetricsCard コンポーネント",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/MetricsCard.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "RealtimeChart コンポーネント",
+      "estimated_hours": 2.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/RealtimeChart.svelte"],
+      "dependencies": ["4.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "ダッシュボードページ実装",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/routes/mlops/+page.svelte"],
+      "dependencies": ["4.1", "4.2", "1.3"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "SSEストリーム統合",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/stores/realtimeStore.ts"],
+      "dependencies": ["4.3"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "ConversationTimeline コンポーネント",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/ConversationTimeline.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "PromptViewer コンポーネント",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/PromptViewer.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "5.3",
+      "description": "診断情報ページ実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"],
+      "dependencies": ["5.1", "5.2", "1.3"]
+    },
+    {
+      "task_id": "6.1",
+      "description": "PromptVersionList コンポーネント",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/PromptVersionList.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "6.2",
+      "description": "PromptEditor コンポーネント",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/lib/mlops/components/PromptEditor.svelte"],
+      "dependencies": ["6.1"]
+    },
+    {
+      "task_id": "6.3",
+      "description": "プロンプト管理ページ実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["myAgentDesk/src/routes/mlops/prompts/+page.svelte"],
+      "dependencies": ["6.1", "6.2", "1.3"]
+    },
+    {
+      "task_id": "7.1",
+      "description": "Playwright設定・基盤",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/tests/e2e/mlops.spec.ts"],
+      "dependencies": ["2.3", "3.3", "4.4", "5.3", "6.3"]
+    },
+    {
+      "task_id": "7.2",
+      "description": "候補選択E2Eテスト",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/tests/e2e/mlops/candidate-selection.spec.ts"],
+      "dependencies": ["7.1"]
+    },
+    {
+      "task_id": "7.3",
+      "description": "フィードバックE2Eテスト",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/tests/e2e/mlops/feedback.spec.ts"],
+      "dependencies": ["7.1"]
+    },
+    {
+      "task_id": "7.4",
+      "description": "ダッシュボードE2Eテスト",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/tests/e2e/mlops/dashboard.spec.ts"],
+      "dependencies": ["7.1"]
+    },
+    {
+      "task_id": "7.5",
+      "description": "レスポンシブ・アクセシビリティテスト",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/tests/e2e/mlops/responsive.spec.ts"],
+      "dependencies": ["7.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "myAgentDesk/src/lib/mlops/components/CandidateCard.svelte",
+    "myAgentDesk/src/lib/mlops/components/CandidateSelector.svelte",
+    "myAgentDesk/src/lib/mlops/components/ScoreSlider.svelte",
+    "myAgentDesk/src/lib/mlops/components/FeedbackForm.svelte",
+    "myAgentDesk/src/lib/mlops/components/FeedbackModal.svelte",
+    "myAgentDesk/src/lib/mlops/components/MetricsCard.svelte",
+    "myAgentDesk/src/lib/mlops/components/RealtimeChart.svelte",
+    "myAgentDesk/src/lib/mlops/components/ConversationTimeline.svelte",
+    "myAgentDesk/src/lib/mlops/components/PromptViewer.svelte",
+    "myAgentDesk/src/lib/mlops/components/PromptVersionList.svelte",
+    "myAgentDesk/src/lib/mlops/components/PromptEditor.svelte",
+    "myAgentDesk/src/routes/mlops/+layout.svelte",
+    "myAgentDesk/src/routes/mlops/+page.svelte",
+    "myAgentDesk/src/routes/mlops/chat/+page.svelte",
+    "myAgentDesk/src/routes/mlops/diagnostics/+page.svelte",
+    "myAgentDesk/src/routes/mlops/prompts/+page.svelte",
+    "myAgentDesk/src/lib/mlops/types/index.ts",
+    "myAgentDesk/src/lib/mlops/api/client.ts",
+    "myAgentDesk/src/lib/mlops/stores/realtimeStore.ts",
+    "myAgentDesk/tests/e2e/mlops/candidate-selection.spec.ts",
+    "myAgentDesk/tests/e2e/mlops/feedback.spec.ts",
+    "myAgentDesk/tests/e2e/mlops/dashboard.spec.ts",
+    "myAgentDesk/tests/e2e/mlops/responsive.spec.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "全6機能のUIが実装される",
+    "APIとの通信が正常",
+    "レスポンシブデザイン対応（モバイル/タブレット/デスクトップ）",
+    "アクセシビリティ対応（キーボードナビゲーション、ARIA）",
+    "E2Eテストカバレッジ70%以上",
+    "Lighthouseスコア90以上",
+    "TypeScriptエラーゼロ",
+    "ESLintエラーゼロ",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 70,
+  "tech_stack": {
+    "framework": "SvelteKit 2.x",
+    "language": "TypeScript",
+    "ui": "TailwindCSS"
+  }
+}
