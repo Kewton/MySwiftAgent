@@ -212,17 +212,69 @@ check_dependencies() {
     return 0
 }
 
+# Get main repository path (for worktree environments)
+get_main_repo_path() {
+    if [[ -f "$PROJECT_ROOT/.git" ]]; then
+        # This is a worktree - read the gitdir path and resolve to main repo
+        local gitdir=$(cat "$PROJECT_ROOT/.git" | sed 's/gitdir: //')
+        # gitdir points to .git/worktrees/<name>, go up 3 levels to get main repo
+        echo "$(cd "$gitdir/../../.." && pwd)"
+    else
+        # This is the main repository
+        echo "$PROJECT_ROOT"
+    fi
+}
+
+# Check if running in a worktree environment
+is_worktree() {
+    [[ -f "$PROJECT_ROOT/.git" ]]
+}
+
 # Setup development environment files
 setup_dev_environment() {
     print_step "Setting up development environment..."
 
-    # Special handling for myVault: link to main repository's .env if in worktree
-    if [[ -d "$PROJECT_ROOT/.git/worktrees" ]] || [[ -f "$PROJECT_ROOT/.git" ]]; then
-        # This is a worktree environment
-        local main_repo_path="/Users/maenokota/share/work/github_kewton/MySwiftAgent"
+    local main_repo_path
+    main_repo_path=$(get_main_repo_path)
+
+    # Worktree-specific setup
+    if is_worktree; then
+        print_info "Detected worktree environment"
+        print_info "Main repository: $main_repo_path"
+
+        # === MyVault .env symlink ===
+        # Link to main repository's .env for shared secrets configuration
         if [[ -f "$main_repo_path/myVault/.env" ]] && [[ ! -e "$PROJECT_ROOT/myVault/.env" ]]; then
             print_info "Linking myVault/.env to main repository (worktree mode)"
             ln -s "$main_repo_path/myVault/.env" "$PROJECT_ROOT/myVault/.env"
+        fi
+
+        # === MyVault data directory symlink ===
+        # Share the secrets database across all worktrees
+        # This allows all worktrees to access the same API keys and secrets
+        if [[ -d "$main_repo_path/myVault/data" ]] && [[ ! -L "$PROJECT_ROOT/myVault/data" ]]; then
+            if [[ -d "$PROJECT_ROOT/myVault/data" ]]; then
+                # Backup existing data directory if it contains files other than .gitkeep
+                local file_count=$(find "$PROJECT_ROOT/myVault/data" -type f ! -name ".gitkeep" | wc -l | tr -d ' ')
+                if [[ "$file_count" -gt 0 ]]; then
+                    print_warning "Backing up existing myVault/data to myVault/data.bak.worktree"
+                    mv "$PROJECT_ROOT/myVault/data" "$PROJECT_ROOT/myVault/data.bak.worktree"
+                else
+                    rm -rf "$PROJECT_ROOT/myVault/data"
+                fi
+            fi
+            print_info "Linking myVault/data to main repository (shared secrets database)"
+            ln -s "$main_repo_path/myVault/data" "$PROJECT_ROOT/myVault/data"
+        fi
+
+        # === ExpertAgent token configuration ===
+        # Read the correct token from main repository's myVault/.env
+        if [[ -f "$main_repo_path/myVault/.env" ]]; then
+            local expertagent_token=$(grep -E "^TOKEN_expertagent=" "$main_repo_path/myVault/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+            if [[ -n "$expertagent_token" && "$expertagent_token" != "CHANGE_THIS_TO_SECURE_TOKEN" ]]; then
+                export MYVAULT_SERVICE_TOKEN_EXPERTAGENT="$expertagent_token"
+                print_info "Loaded ExpertAgent token from myVault configuration"
+            fi
         fi
     fi
 
@@ -249,6 +301,72 @@ setup_dev_environment() {
     echo "MYSCHEDULER_TOKEN=$DEV_MYSCHEDULER_TOKEN" >> "$LOG_DIR/dev_tokens.txt"
 
     print_success "Development environment setup complete"
+}
+
+# Validate environment configuration before starting services
+validate_environment() {
+    print_step "Validating environment configuration..."
+
+    local warnings=0
+    local main_repo_path
+    main_repo_path=$(get_main_repo_path)
+
+    # === Check MyVault data directory ===
+    if [[ ! -d "$PROJECT_ROOT/myVault/data" ]] && [[ ! -L "$PROJECT_ROOT/myVault/data" ]]; then
+        print_warning "MyVault data directory not found: $PROJECT_ROOT/myVault/data"
+        print_warning "  → Secrets will not be available. Run setup first or create the directory."
+        ((warnings++))
+    elif [[ -L "$PROJECT_ROOT/myVault/data" ]]; then
+        local link_target=$(readlink "$PROJECT_ROOT/myVault/data")
+        if [[ ! -d "$link_target" ]]; then
+            print_warning "MyVault data symlink points to non-existent directory: $link_target"
+            ((warnings++))
+        else
+            print_info "MyVault data: symlinked to $link_target"
+        fi
+    fi
+
+    # === Check MyVault .env ===
+    if [[ ! -f "$PROJECT_ROOT/myVault/.env" ]] && [[ ! -L "$PROJECT_ROOT/myVault/.env" ]]; then
+        print_warning "MyVault .env not found: $PROJECT_ROOT/myVault/.env"
+        print_warning "  → Service tokens will not be configured. Copy from .env.example."
+        ((warnings++))
+    fi
+
+    # === Check ExpertAgent token ===
+    local expertagent_token="${MYVAULT_SERVICE_TOKEN_EXPERTAGENT:-}"
+    if [[ -z "$expertagent_token" ]]; then
+        expertagent_token=$(grep -E "^MYVAULT_SERVICE_TOKEN=" "$EXPERTAGENT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+    fi
+
+    if [[ -z "$expertagent_token" || "$expertagent_token" == "CHANGE_THIS_TO_YOUR_EXPERTAGENT_TOKEN" ]]; then
+        print_warning "ExpertAgent MyVault token not configured properly"
+        print_warning "  → API calls requiring secrets will fail (401 Unauthorized)"
+        print_warning "  → Set TOKEN_expertagent in myVault/.env"
+        ((warnings++))
+    fi
+
+    # === Check if secrets database has data ===
+    local myvault_db="$PROJECT_ROOT/myVault/data/myvault.db"
+    if [[ -L "$PROJECT_ROOT/myVault/data" ]]; then
+        myvault_db="$(readlink "$PROJECT_ROOT/myVault/data")/myvault.db"
+    fi
+
+    if [[ ! -f "$myvault_db" ]]; then
+        print_warning "MyVault database not found: $myvault_db"
+        print_warning "  → No secrets are stored. Use CommonUI to add API keys."
+        ((warnings++))
+    fi
+
+    # === Summary ===
+    if [[ $warnings -gt 0 ]]; then
+        print_warning "Found $warnings configuration warning(s). Services may not work correctly."
+        echo ""
+    else
+        print_success "Environment configuration validated"
+    fi
+
+    return 0
 }
 
 # Install dependencies for a service
@@ -996,6 +1114,7 @@ main() {
         start)
             check_dependencies || exit 1
             setup_dev_environment
+            validate_environment
 
             print_step "Installing dependencies and starting services..."
             echo ""
@@ -1083,10 +1202,29 @@ main() {
                 install_service_deps "ExpertAgent" "$EXPERTAGENT_DIR" || exit 1
                 # Load expertagent-specific LOG_LEVEL from expertAgent/.env
                 local expertagent_log_level=$(grep -E "^LOG_LEVEL=" "$EXPERTAGENT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "INFO")
+
+                # Get MyVault service token for ExpertAgent
+                # Priority: 1) Token loaded from myVault/.env in setup_dev_environment
+                #           2) Token from expertAgent/.env
+                #           3) Default placeholder (will fail auth)
+                local expertagent_token="${MYVAULT_SERVICE_TOKEN_EXPERTAGENT:-}"
+                if [[ -z "$expertagent_token" ]]; then
+                    expertagent_token=$(grep -E "^MYVAULT_SERVICE_TOKEN=" "$EXPERTAGENT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+                fi
+
+                # Get default project for MyVault
+                # Use 'default_project' as it's the standard project name where secrets are stored
+                local myvault_default_project="default_project"
+
                 # Note: Most env vars are loaded from expertAgent/.env
-                # Override MYVAULT_BASE_URL, LOG_DIR, LOG_LEVEL and PORT here
+                # Override critical settings here to ensure worktree compatibility:
+                # - MYVAULT_BASE_URL: Point to local MyVault service
+                # - MYVAULT_SERVICE_TOKEN: Use correct token from myVault/.env
+                # - MYVAULT_DEFAULT_PROJECT: Use 'default_project' where secrets are stored
+                # - LOG_DIR: Use local logs directory (not Docker's /app/logs)
+                # - LOG_LEVEL: Configurable log level
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' LOG_DIR='$LOG_DIR' LOG_LEVEL='$expertagent_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
+                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' MYVAULT_SERVICE_TOKEN='$expertagent_token' MYVAULT_DEFAULT_PROJECT='$myvault_default_project' LOG_DIR='$LOG_DIR' LOG_LEVEL='$expertagent_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
             fi
 
             # Start GraphAiServer

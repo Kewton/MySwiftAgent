@@ -183,7 +183,8 @@ async def make_graph(
         "MYVAULT_SERVICE_NAME": settings.MYVAULT_SERVICE_NAME,
         "MYVAULT_SERVICE_TOKEN": settings.MYVAULT_SERVICE_TOKEN,
         # Logging configuration for MCP subprocess
-        "LOG_DIR": settings.LOG_DIR,
+        # Use environment variable if set (dev-start.sh), fallback to settings
+        "LOG_DIR": os.getenv("LOG_DIR", settings.LOG_DIR),
         "LOG_LEVEL": "DEBUG",  # Force DEBUG for MCP subprocess
         "MCP_LOG_FILE": "mcp_stdio.log",
     }
@@ -358,7 +359,8 @@ async def make_utility_graph(
         "MYVAULT_SERVICE_NAME": settings.MYVAULT_SERVICE_NAME,
         "MYVAULT_SERVICE_TOKEN": settings.MYVAULT_SERVICE_TOKEN,
         # Logging configuration for MCP subprocess
-        "LOG_DIR": settings.LOG_DIR,
+        # Use environment variable if set (dev-start.sh), fallback to settings
+        "LOG_DIR": os.getenv("LOG_DIR", settings.LOG_DIR),
         "LOG_LEVEL": "DEBUG",  # Force DEBUG for MCP subprocess
         "MCP_LOG_FILE": "mcp_stdio.log",
     }

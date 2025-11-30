@@ -21,8 +21,10 @@ def setup_logging(log_file_name: str = "expertagent.log"):
         マルチワーカーモード対応のため、logging.basicConfig(force=True)を使用。
         各ワーカープロセスで確実にログ設定が適用されます。
     """
-    log_level = settings.LOG_LEVEL
-    log_dir = settings.LOG_DIR
+    # Environment variables take precedence over .env file settings
+    # This allows dev-start.sh to override Docker-specific paths like /app/logs
+    log_level = os.getenv("LOG_LEVEL", settings.LOG_LEVEL)
+    log_dir = os.getenv("LOG_DIR", settings.LOG_DIR)
 
     # ディレクトリが存在しない場合は作成
     log_dir_path = Path(log_dir)
