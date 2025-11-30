@@ -95,11 +95,12 @@ services:
       - NODE_ENV=production
       - PORT=5173
       - TZ=Asia/Tokyo
-      # Agent layer service URLs
-      - EXPERTAGENT_BASE_URL=http://expertagent:8000
+      # Service API URLs (using correct environment variable names)
       # Platform layer service URLs
       - MYVAULT_BASE_URL=http://myvault:8000
       - JOBQUEUE_BASE_URL=http://jobqueue:8000
+      # Agent layer service URLs
+      - EXPERTAGENT_BASE_URL=http://expertagent:8000
       # Logging
       - LOG_DIR=/app/logs
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
