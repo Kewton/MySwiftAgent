@@ -90,10 +90,11 @@ services:
     profiles:
       - production
     ports:
-      - "5173:5173"
+      - "${MYAGENTDESK_PORT:-5173}:5173"
     environment:
       - NODE_ENV=production
       - PORT=5173
+      - HOST=0.0.0.0
       - TZ=Asia/Tokyo
       # Service API URLs (using correct environment variable names)
       # Platform layer service URLs
@@ -110,7 +111,7 @@ services:
     networks:
       - myswiftagent
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/health"]
       interval: 30s
       timeout: 10s
       retries: 3
