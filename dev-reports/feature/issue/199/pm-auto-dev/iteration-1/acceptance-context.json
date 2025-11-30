@@ -1,0 +1,65 @@
+{
+  "issue_number": 199,
+  "feature_summary": "[Agent] docker-compose.agent.yml 作成",
+  "acceptance_criteria": [
+    "docker compose -f docker-compose.agent.yml config がエラーなく実行される",
+    "Platform層起動後、docker compose -f docker-compose.agent.yml up -d で起動する",
+    "expertagent が /health で200を返す",
+    "graphaiserver が /health で200を返す",
+    "YAMLシンタックスエラーなし",
+    "全サービスに healthcheck が定義されている",
+    "環境変数でPlatformサービスURLが設定されている"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC001",
+      "name": "YAML設定検証（自動検証）",
+      "description": "docker compose -f docker-compose.agent.yml config がエラーなく実行されること",
+      "type": "automated",
+      "command": "docker compose -f docker-compose.agent.yml config"
+    },
+    {
+      "id": "AC002",
+      "name": "healthcheck定義確認（自動検証）",
+      "description": "expertagent, graphaiserverの両サービスにhealthcheckが定義されていること",
+      "type": "automated",
+      "verification": "grep -A 5 'healthcheck:' docker-compose.agent.yml"
+    },
+    {
+      "id": "AC003",
+      "name": "Platform接続環境変数確認（自動検証）",
+      "description": "myvault, valkey, jobqueue, myscheduler等のPlatformサービスURLが環境変数で設定されていること",
+      "type": "automated",
+      "verification": "grep -E '(MYVAULT_BASE_URL|VALKEY_URL|JOBQUEUE_BASE_URL|MYSCHEDULER_BASE_URL)' docker-compose.agent.yml"
+    },
+    {
+      "id": "AC004",
+      "name": "外部ネットワーク設定確認（自動検証）",
+      "description": "myswiftagent-networkへのexternal: true設定が正しく構成されていること",
+      "type": "automated",
+      "verification": "grep -A 2 'networks:' docker-compose.agent.yml | grep -E '(external|myswiftagent)'"
+    },
+    {
+      "id": "AC005",
+      "name": "Platform起動後のAgent層起動（手動検証）",
+      "description": "Platform層起動後、docker compose -f docker-compose.agent.yml up -d で起動すること",
+      "type": "manual",
+      "note": "実際のDocker環境での起動テストが必要"
+    },
+    {
+      "id": "AC006",
+      "name": "expertagent healthエンドポイント（手動検証）",
+      "description": "expertagent が /health で200を返すこと",
+      "type": "manual",
+      "note": "実際のDocker環境での起動後にcurl http://localhost:8004/healthで確認"
+    },
+    {
+      "id": "AC007",
+      "name": "graphaiserver healthエンドポイント（手動検証）",
+      "description": "graphaiserver が /health で200を返すこと",
+      "type": "manual",
+      "note": "実際のDocker環境での起動後にcurl http://localhost:8005/healthで確認"
+    }
+  ],
+  "notes": "手動検証項目（AC005-AC007）は実際のDocker環境での起動テストが必要。CI/CD環境またはユーザーによる手動検証が必要。"
+}

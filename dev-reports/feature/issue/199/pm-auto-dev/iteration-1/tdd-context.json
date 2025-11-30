@@ -1,0 +1,52 @@
+{
+  "issue_number": 199,
+  "issue_title": "[Agent] docker-compose.agent.yml 作成",
+  "description": "AIエージェントレイヤ（expertagent, graphaiserver）のdocker-compose定義ファイルを作成",
+  "acceptance_criteria": [
+    "docker compose -f docker-compose.agent.yml config がエラーなく実行される",
+    "Platform層起動後、docker compose -f docker-compose.agent.yml up -d で起動する",
+    "expertagent が /health で200を返す",
+    "graphaiserver が /health で200を返す",
+    "YAMLシンタックスエラーなし",
+    "全サービスに healthcheck が定義されている",
+    "環境変数でPlatformサービスURLが設定されている"
+  ],
+  "implementation_tasks": [
+    "現行docker-compose.ymlからAgentサービスを抽出",
+    "docker-compose.agent.yml を作成",
+    "Platform層への接続設定（サービス名解決）",
+    "healthcheck設定の確認",
+    "Platform起動状態での単体起動テスト"
+  ],
+  "test_scenarios": [
+    {
+      "id": "TC001",
+      "name": "YAML設定検証",
+      "description": "docker compose -f docker-compose.agent.yml config がエラーなく実行されること"
+    },
+    {
+      "id": "TC002",
+      "name": "healthcheck定義確認",
+      "description": "全サービス（expertagent, graphaiserver）にhealthcheckが定義されていること"
+    },
+    {
+      "id": "TC003",
+      "name": "Platform接続環境変数確認",
+      "description": "myvault, valkey等のPlatformサービスURLが環境変数で設定されていること"
+    },
+    {
+      "id": "TC004",
+      "name": "外部ネットワーク設定確認",
+      "description": "myswiftagent-networkへの接続設定が正しいこと"
+    }
+  ],
+  "source_files": {
+    "docker-compose.yml": "現行の統合docker-composeファイル（抽出元）",
+    "docker-compose.platform.yml": "Platform層定義（参照）"
+  },
+  "target_files": [
+    "docker-compose.agent.yml"
+  ],
+  "target_coverage": 90,
+  "notes": "このタスクはインフラ設定ファイル作成のため、コードカバレッジではなくYAML設定検証とDocker動作確認がテスト対象"
+}
