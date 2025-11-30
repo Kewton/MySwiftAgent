@@ -1,0 +1,124 @@
+# Docker Compose configuration for MySwiftAgent Frontend Layer
+# This file contains frontend UI services (commonui, myagentdesk).
+#
+# Frontend services include:
+# - commonui: Web interface (Streamlit) - Always started
+# - myagentdesk: Web interface (SvelteKit) - Only with production profile
+#
+# Prerequisites:
+#   1. Platform layer must be running:
+#      docker compose -f docker-compose.platform.yml up -d
+#   2. Agent layer must be running:
+#      docker compose -f docker-compose.agent.yml up -d
+#   3. Network must exist:
+#      docker network create myswiftagent-network
+#
+# Usage:
+#   # Start only commonui (default):
+#   docker compose -f docker-compose.frontend.yml up -d
+#
+#   # Start both commonui and myagentdesk (production):
+#   docker compose -f docker-compose.frontend.yml --profile production up -d
+#
+# Note: This compose file uses an external network (myswiftagent-network).
+#       Platform and Agent services must be running.
+
+services:
+  # ============================================================================
+  # Frontend UI Services
+  # ============================================================================
+
+  # CommonUI Service - Web interface (Streamlit)
+  commonui:
+    env_file:
+      - .env.docker
+    image: myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}
+    build:
+      context: ./commonUI
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}"
+    container_name: myswiftagent-commonui
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Tokyo
+      # Service API URLs (using correct environment variable names for config.py)
+      # Platform layer service URLs
+      - JOBQUEUE_BASE_URL=http://jobqueue:8000
+      - MYSCHEDULER_BASE_URL=http://myscheduler:8000
+      - MYVAULT_BASE_URL=http://myvault:8000
+      # Agent layer service URLs
+      - EXPERTAGENT_BASE_URL=http://expertagent:8000
+      - GRAPHAISERVER_BASE_URL=http://graphaiserver:8000
+      # Service authentication tokens
+      - JOBQUEUE_API_TOKEN=${JOBQUEUE_API_TOKEN:-}
+      - MYSCHEDULER_API_TOKEN=${MYSCHEDULER_API_TOKEN:-}
+      - MYVAULT_SERVICE_NAME=commonui
+      - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_COMMONUI}
+      - EXPERTAGENT_ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN:-}
+      - GRAPHAISERVER_ADMIN_TOKEN=${GRAPHAISERVER_ADMIN_TOKEN:-}
+      # Logging
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./docker-compose-data/commonUI:/app/data
+      - ./docker-compose-data/commonUI/logs:/app/logs
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # MyAgentDesk Service - Web interface (SvelteKit)
+  # Only started with --profile production
+  myagentdesk:
+    env_file:
+      - .env.docker
+    image: myswiftagent-myagentdesk:${MYAGENTDESK_VERSION:-0.1.0}
+    build:
+      context: ./myAgentDesk
+      dockerfile: Dockerfile
+      tags:
+        - "myswiftagent-myagentdesk:${MYAGENTDESK_VERSION:-0.1.0}"
+    container_name: myswiftagent-myagentdesk
+    profiles:
+      - production
+    ports:
+      - "${MYAGENTDESK_PORT:-5173}:5173"
+    environment:
+      - NODE_ENV=production
+      - PORT=5173
+      - HOST=0.0.0.0
+      - TZ=Asia/Tokyo
+      # Service API URLs (using correct environment variable names)
+      # Platform layer service URLs
+      - MYVAULT_BASE_URL=http://myvault:8000
+      - JOBQUEUE_BASE_URL=http://jobqueue:8000
+      # Agent layer service URLs
+      - EXPERTAGENT_BASE_URL=http://expertagent:8000
+      # Logging
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./docker-compose-data/myAgentDesk:/app/data
+      - ./docker-compose-data/myAgentDesk/logs:/app/logs
+    networks:
+      - myswiftagent
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  myswiftagent:
+    external: true
+    name: myswiftagent-network
