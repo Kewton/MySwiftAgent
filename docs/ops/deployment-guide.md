@@ -140,6 +140,117 @@ docker compose down
 docker compose down -v
 ```
 
+### レイヤ別Docker Composeでのデプロイ
+
+サービスをレイヤ別に分離して起動できます。これにより、必要なサービスのみを選択的に起動でき、リソースの最適化や開発効率の向上が可能です。
+
+#### レイヤ構成
+
+| レイヤ | Composeファイル | 含まれるサービス | ポート |
+|--------|----------------|-----------------|--------|
+| **Platform** | `docker-compose.platform.yml` | valkey, jobqueue, myscheduler, myvault, langfuse-* | 6381, 8001-8003, 3001, 5433, 9001-9002 |
+| **Agent** | `docker-compose.agent.yml` | expertagent, graphaiserver | 8004-8005 (予定) |
+| **Frontend** | `docker-compose.frontend.yml` | commonui, myagentdesk | 8501, 5173 (予定) |
+
+#### 1. 共有ネットワークの作成
+
+レイヤ間通信には共有ネットワークを使用します。**初回のみ**作成が必要です。
+
+```bash
+docker network create myswiftagent-network
+```
+
+#### 2. Platform層の起動
+
+Platform層は他のレイヤの基盤となるサービスを含みます。
+
+```bash
+# Platform層を起動
+docker compose -f docker-compose.platform.yml up -d
+
+# サービス状態を確認
+docker compose -f docker-compose.platform.yml ps
+
+# ヘルスチェック
+curl -sf http://localhost:8001/health && echo " - jobqueue: OK"
+curl -sf http://localhost:8002/health && echo " - myscheduler: OK"
+curl -sf http://localhost:8003/health && echo " - myvault: OK"
+curl -sf http://localhost:3001/api/public/health && echo " - langfuse: OK"
+```
+
+**Platform層サービス詳細**:
+
+| サービス | ポート | 役割 | Healthcheck |
+|---------|--------|------|-------------|
+| valkey | 6381 | インメモリデータストア (Redis互換) | `valkey-cli PING` |
+| jobqueue | 8001 | ジョブキュー管理API | `curl /health` |
+| myscheduler | 8002 | ジョブスケジューリング | `curl /health` |
+| myvault | 8003 | シークレット管理 | `curl /health` |
+| langfuse-db | 5433 | PostgreSQL (Langfuse用) | `pg_isready` |
+| langfuse-clickhouse | 8123, 9000 | 分析DB | `wget /ping` |
+| langfuse-redis | 6380 | Langfuse用キャッシュ | `redis-cli ping` |
+| langfuse-minio | 9002, 9001 | オブジェクトストレージ | `curl /minio/health/live` |
+| langfuse-worker | 3030 | バックグラウンドワーカー | `wget /api/health` |
+| langfuse-server | 3001 | LLM Observability UI | `wget /api/public/health` |
+
+#### 3. 複数レイヤの起動（将来対応）
+
+```bash
+# Platform層 + Agent層を起動
+docker compose -f docker-compose.platform.yml -f docker-compose.agent.yml up -d
+
+# 全レイヤを起動
+docker compose -f docker-compose.platform.yml \
+               -f docker-compose.agent.yml \
+               -f docker-compose.frontend.yml up -d
+```
+
+#### 4. レイヤ別停止
+
+```bash
+# Platform層のみ停止
+docker compose -f docker-compose.platform.yml down
+
+# 全レイヤ停止（複数起動時）
+docker compose -f docker-compose.platform.yml \
+               -f docker-compose.agent.yml \
+               -f docker-compose.frontend.yml down
+```
+
+#### レイヤ別デプロイメントフロー
+
+```mermaid
+graph TD
+    A[共有ネットワーク作成] --> B[Platform層起動]
+    B --> C{Platform層 Healthy?}
+    C -->|成功| D[Agent層起動]
+    C -->|失敗| E[ログ確認・修正]
+    E --> B
+    D --> F{Agent層 Healthy?}
+    F -->|成功| G[Frontend層起動]
+    F -->|失敗| H[ログ確認・修正]
+    H --> D
+    G --> I[デプロイ完了]
+```
+
+#### トラブルシューティング
+
+**ネットワーク未作成エラー**:
+```
+Error response from daemon: network myswiftagent-network not found
+```
+→ `docker network create myswiftagent-network` を実行
+
+**コンテナ名の衝突**:
+```
+The container name "/myswiftagent-valkey" is already in use
+```
+→ 既存のコンテナを停止・削除してから再起動:
+```bash
+docker stop $(docker ps -a --filter "name=myswiftagent" -q)
+docker rm $(docker ps -a --filter "name=myswiftagent" -q)
+```
+
 #### デプロイメントフロー
 
 ```mermaid
@@ -1146,6 +1257,15 @@ kubectl set env deployment/expertagent -n myswiftagent-prod LOG_LEVEL=DEBUG
 
 ## 変更履歴
 
+### Issue #198 関連改善
+
+| 項目 | 変更内容 | 関連Issue |
+|------|---------|----------|
+| レイヤ別Docker Compose | `docker-compose.platform.yml` によるPlatform層分離 | [#198](https://github.com/kewton/MySwiftAgent/issues/198) |
+| 共有ネットワーク | `myswiftagent-network` による外部ネットワーク構成 | #198 |
+| サービス分類 | Core Platform (4) + Langfuse Stack (6) の10サービス | #198 |
+| ヘルスチェック | 全10サービスにhealthcheck定義 | #198 |
+
 ### Issue #140 関連改善
 
 | 項目 | 変更内容 | 関連Issue |
@@ -1164,4 +1284,4 @@ kubectl set env deployment/expertagent -n myswiftagent-prod LOG_LEVEL=DEBUG
 
 ---
 
-_最終更新: 2025-11-12_
+_最終更新: 2025-11-30_
