@@ -1,0 +1,94 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "AC001: YAML設定検証（自動検証）",
+      "description": "docker compose -f docker-compose.agent.yml config がエラーなく実行されること",
+      "result": "passed",
+      "evidence": "docker compose -f docker-compose.agent.yml config コマンドが正常に実行され、expertagent と graphaiserver の2サービスが正しく設定されていることを確認。YAML構文エラーなし。"
+    },
+    {
+      "scenario": "AC002: healthcheck定義確認（自動検証）",
+      "description": "expertagent, graphaiserverの両サービスにhealthcheckが定義されていること",
+      "result": "passed",
+      "evidence": "両サービスにhealthcheckが定義されている: expertagent (curl -f http://localhost:8000/health), graphaiserver (wget --no-verbose --tries=1 --spider http://localhost:8000/health)。両方とも interval: 30s, timeout: 10s, retries: 3, start_period: 10s で設定。"
+    },
+    {
+      "scenario": "AC003: Platform接続環境変数確認（自動検証）",
+      "description": "myvault, valkey, jobqueue, myscheduler等のPlatformサービスURLが環境変数で設定されていること",
+      "result": "passed",
+      "evidence": "Platform層接続環境変数が確認された: VALKEY_URL=redis://valkey:6379 (expertagent), MYVAULT_BASE_URL=http://myvault:8000 (expertagent, graphaiserver), JOBQUEUE_BASE_URL=http://jobqueue:8000 (graphaiserver), MYSCHEDULER_BASE_URL=http://myscheduler:8000 (graphaiserver)"
+    },
+    {
+      "scenario": "AC004: 外部ネットワーク設定確認（自動検証）",
+      "description": "myswiftagent-networkへのexternal: true設定が正しく構成されていること",
+      "result": "passed",
+      "evidence": "networks セクションで myswiftagent ネットワークが external: true, name: myswiftagent-network と正しく設定されている。両サービスがこのネットワークに接続する設定になっている。"
+    },
+    {
+      "scenario": "AC005: Platform起動後のAgent層起動（手動検証）",
+      "description": "Platform層起動後、docker compose -f docker-compose.agent.yml up -d で起動すること",
+      "result": "skipped",
+      "evidence": "手動検証が必要。実際のDocker環境での起動テストが必要です。"
+    },
+    {
+      "scenario": "AC006: expertagent healthエンドポイント（手動検証）",
+      "description": "expertagent が /health で200を返すこと",
+      "result": "skipped",
+      "evidence": "手動検証が必要。実際のDocker環境での起動後に curl http://localhost:8004/health で確認してください。"
+    },
+    {
+      "scenario": "AC007: graphaiserver healthエンドポイント（手動検証）",
+      "description": "graphaiserver が /health で200を返すこと",
+      "result": "skipped",
+      "evidence": "手動検証が必要。実際のDocker環境での起動後に curl http://localhost:8005/health で確認してください。"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "docker compose -f docker-compose.agent.yml config がエラーなく実行される",
+      "verified": true
+    },
+    {
+      "criterion": "YAMLシンタックスエラーなし",
+      "verified": true
+    },
+    {
+      "criterion": "全サービスに healthcheck が定義されている",
+      "verified": true
+    },
+    {
+      "criterion": "環境変数でPlatformサービスURLが設定されている",
+      "verified": true
+    },
+    {
+      "criterion": "外部ネットワーク設定が正しい（myswiftagent-network, external: true）",
+      "verified": true
+    },
+    {
+      "criterion": "Platform層起動後、docker compose -f docker-compose.agent.yml up -d で起動する",
+      "verified": "manual_required"
+    },
+    {
+      "criterion": "expertagent が /health で200を返す",
+      "verified": "manual_required"
+    },
+    {
+      "criterion": "graphaiserver が /health で200を返す",
+      "verified": "manual_required"
+    }
+  ],
+  "summary": {
+    "total_test_cases": 7,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 3
+  },
+  "evidence_files": [],
+  "message": "自動検証可能な全ての受入基準（AC001-AC004）を満たしています。AC005-AC007は実際のDocker環境での手動検証が必要です。",
+  "manual_verification_notes": [
+    "AC005: Platform層を先に起動（docker compose -f docker-compose.platform.yml up -d）してから、Agent層を起動（docker compose -f docker-compose.agent.yml up -d）してください。",
+    "AC006: curl http://localhost:8004/health で expertagent のヘルスチェックを確認してください。",
+    "AC007: curl http://localhost:8005/health で graphaiserver のヘルスチェックを確認してください。"
+  ]
+}

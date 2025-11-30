@@ -1,0 +1,22 @@
+{
+  "issue_number": 199,
+  "refactor_targets": [
+    "docker-compose.agent.yml"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": "N/A (YAML configuration file)"
+  },
+  "design_patterns_to_apply": [
+    "docker-compose.platform.ymlとの一貫性維持",
+    "コメントによる設定説明の充実",
+    "環境変数のグループ化と整理"
+  ],
+  "improvement_goals": [
+    "docker-compose.platform.ymlとの設定スタイル一貫性確認",
+    "ドキュメントコメントの追加確認",
+    "不要な設定の削除確認",
+    "セキュリティ設定の確認"
+  ],
+  "notes": "docker-compose設定ファイルのため、コードリファクタリングではなく設定ファイル品質確認を実施"
+}

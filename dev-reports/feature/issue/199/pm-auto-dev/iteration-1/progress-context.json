@@ -1,0 +1,51 @@
+{
+  "issue_number": 199,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "tests_passed": 4,
+      "tests_total": 4
+    },
+    "acceptance": {
+      "status": "passed",
+      "automated_passed": 4,
+      "manual_required": 3,
+      "total": 7
+    },
+    "refactor": {
+      "status": "success",
+      "changes_needed": false,
+      "message": "File already meets quality standards"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": false,
+    "planned_tasks": [],
+    "deliverables_status": [
+      {"file": "docker-compose.agent.yml", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "docker compose -f docker-compose.agent.yml config がエラーなく実行される", "verified": true},
+      {"criterion": "YAMLシンタックスエラーなし", "verified": true},
+      {"criterion": "全サービスに healthcheck が定義されている", "verified": true},
+      {"criterion": "環境変数でPlatformサービスURLが設定されている", "verified": true},
+      {"criterion": "外部ネットワーク設定が正しい", "verified": true},
+      {"criterion": "Platform層起動後にAgent層起動", "verified": "manual_required"},
+      {"criterion": "expertagent /health 200応答", "verified": "manual_required"},
+      {"criterion": "graphaiserver /health 200応答", "verified": "manual_required"}
+    ]
+  },
+  "commits": [
+    "f5b77e4: feat(issue/199): create docker-compose.agent.yml for AI agent layer"
+  ],
+  "files_created": [
+    "docker-compose.agent.yml"
+  ],
+  "manual_verification_notes": [
+    "AC005: Platform層を先に起動（docker compose -f docker-compose.platform.yml up -d）してから、Agent層を起動（docker compose -f docker-compose.agent.yml up -d）",
+    "AC006: curl http://localhost:8004/health で expertagent のヘルスチェックを確認",
+    "AC007: curl http://localhost:8005/health で graphaiserver のヘルスチェックを確認"
+  ]
+}
