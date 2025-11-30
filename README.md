@@ -94,6 +94,34 @@ curl http://localhost:8105/health  # MyVault
 # CommonUI: http://localhost:8501
 ```
 
+### 方法1b: レイヤ別Docker Compose（選択的起動）
+
+サービスをレイヤ別に起動できます。リソースを節約したい場合や、特定のレイヤのみ必要な場合に便利です。
+
+```bash
+# 1. 共有ネットワーク作成（初回のみ）
+docker network create myswiftagent-network
+
+# 2. Platform層のみ起動（valkey, jobqueue, myscheduler, myvault, langfuse群）
+docker compose -f docker-compose.platform.yml up -d
+
+# 3. 動作確認
+curl http://localhost:8001/health  # JobQueue
+curl http://localhost:8002/health  # MyScheduler
+curl http://localhost:8003/health  # MyVault
+curl http://localhost:3001/api/public/health  # Langfuse
+
+# 4. 停止
+docker compose -f docker-compose.platform.yml down
+```
+
+**レイヤ構成**:
+| レイヤ | Composeファイル | 含まれるサービス |
+|--------|----------------|-----------------|
+| Platform | `docker-compose.platform.yml` | valkey, jobqueue, myscheduler, myvault, langfuse-* |
+| Agent | `docker-compose.agent.yml` | expertagent, graphaiserver (予定) |
+| Frontend | `docker-compose.frontend.yml` | commonui, myagentdesk (予定) |
+
 ### 方法2: 開発用スクリプト
 
 ```bash

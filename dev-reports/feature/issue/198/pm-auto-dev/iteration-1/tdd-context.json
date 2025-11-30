@@ -1,0 +1,96 @@
+{
+  "issue_number": 198,
+  "title": "[Platform] docker-compose.platform.yml 作成",
+  "acceptance_criteria": [
+    "docker compose -f docker-compose.platform.yml config がエラーなく実行される",
+    "docker compose -f docker-compose.platform.yml up -d で全サービスが起動する",
+    "以下のサービスがhealthyになる: valkey, jobqueue, myscheduler, myvault",
+    "langfuse-server が起動し /api/public/health が200を返す",
+    "YAMLシンタックスエラーなし",
+    "全サービスに healthcheck が定義されている",
+    "networks.myswiftagent が external: true で定義されている"
+  ],
+  "implementation_tasks": [
+    "現行docker-compose.ymlからPlatformサービスを抽出",
+    "docker-compose.platform.yml を作成",
+    "共有ネットワーク設定（external: true）",
+    "healthcheck設定の確認・追加",
+    "単体起動テスト"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1",
+      "description": "共有ネットワーク設計確認",
+      "estimated_minutes": 10,
+      "deliverables": ["設計確認"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2",
+      "description": "docker-compose.platform.yml 作成",
+      "estimated_minutes": 60,
+      "deliverables": ["docker-compose.platform.yml"],
+      "dependencies": ["1"]
+    },
+    {
+      "task_id": "3",
+      "description": "healthcheck設定の最適化",
+      "estimated_minutes": 20,
+      "deliverables": ["healthcheck定義"],
+      "dependencies": ["2"]
+    },
+    {
+      "task_id": "4",
+      "description": "単体起動テスト",
+      "estimated_minutes": 30,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["3"]
+    },
+    {
+      "task_id": "5",
+      "description": "統合テスト（既存composeとの整合性）",
+      "estimated_minutes": 20,
+      "deliverables": ["検証結果"],
+      "dependencies": ["4"]
+    },
+    {
+      "task_id": "6",
+      "description": "ドキュメント作成",
+      "estimated_minutes": 30,
+      "deliverables": ["README更新、コメント"],
+      "dependencies": ["5"]
+    },
+    {
+      "task_id": "7",
+      "description": "コードレビュー対応",
+      "estimated_minutes": 10,
+      "deliverables": ["最終版"],
+      "dependencies": ["6"]
+    }
+  ],
+  "deliverables_checklist": [
+    "docker-compose.platform.yml",
+    "dev-reports/feature/issue/198/implementation-notes.md"
+  ],
+  "definition_of_done": [
+    "docker compose -f docker-compose.platform.yml config がエラーなく実行される",
+    "全サービスがhealthy状態で起動する",
+    "YAMLシンタックスエラーなし",
+    "全サービスにhealthcheck定義あり",
+    "ネットワークがexternal: trueで定義されている"
+  ],
+  "target_services": [
+    "valkey",
+    "jobqueue",
+    "myscheduler",
+    "myvault",
+    "langfuse-db",
+    "langfuse-clickhouse",
+    "langfuse-redis",
+    "langfuse-minio",
+    "langfuse-worker",
+    "langfuse-server"
+  ],
+  "target_coverage": 90,
+  "notes": "This is an infrastructure configuration task, not application code. TDD approach focuses on YAML validation and service health verification rather than unit tests."
+}

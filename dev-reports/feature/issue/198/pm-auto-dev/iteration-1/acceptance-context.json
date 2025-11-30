@@ -1,0 +1,66 @@
+{
+  "issue_number": 198,
+  "feature_summary": "[Platform] docker-compose.platform.yml 作成",
+  "acceptance_criteria": [
+    "docker compose -f docker-compose.platform.yml config がエラーなく実行される",
+    "docker compose -f docker-compose.platform.yml up -d で全サービスが起動する",
+    "以下のサービスがhealthyになる: valkey, jobqueue, myscheduler, myvault",
+    "langfuse-server が起動し /api/public/health が200を返す",
+    "YAMLシンタックスエラーなし",
+    "全サービスに healthcheck が定義されている",
+    "networks.myswiftagent が external: true で定義されている"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-1",
+      "name": "YAML構文検証",
+      "description": "docker compose -f docker-compose.platform.yml config を実行し、エラーなく完了することを確認",
+      "steps": [
+        "docker compose -f docker-compose.platform.yml config を実行",
+        "終了コード0を確認"
+      ],
+      "expected_result": "コマンドがエラーなく完了"
+    },
+    {
+      "id": "AC-2",
+      "name": "Healthcheck定義確認",
+      "description": "全10サービスにhealthcheck定義があることを確認",
+      "steps": [
+        "docker-compose.platform.ymlのYAML構造を解析",
+        "各サービスにhealthcheckセクションがあることを確認"
+      ],
+      "expected_result": "10サービス全てにhealthcheck定義あり"
+    },
+    {
+      "id": "AC-3",
+      "name": "ネットワーク設定確認",
+      "description": "networks.myswiftagent が external: true で定義されていることを確認",
+      "steps": [
+        "docker-compose.platform.ymlのnetworksセクションを確認",
+        "external: trueが設定されていることを確認"
+      ],
+      "expected_result": "myswiftagent ネットワークが external: true で定義"
+    },
+    {
+      "id": "AC-4",
+      "name": "サービス定義確認",
+      "description": "Platform層の10サービスが全て定義されていることを確認",
+      "steps": [
+        "docker-compose.platform.ymlのservicesセクションを確認",
+        "valkey, jobqueue, myscheduler, myvault, langfuse-db, langfuse-clickhouse, langfuse-redis, langfuse-minio, langfuse-worker, langfuse-serverの定義を確認"
+      ],
+      "expected_result": "10サービス全てが定義されている"
+    },
+    {
+      "id": "AC-5",
+      "name": "既存compose.ymlとの互換性確認",
+      "description": "既存のdocker-compose.ymlがまだ動作することを確認",
+      "steps": [
+        "docker compose -f docker-compose.yml config を実行",
+        "エラーなく完了することを確認"
+      ],
+      "expected_result": "既存のdocker-compose.ymlも正常に動作"
+    }
+  ],
+  "notes": "This is an infrastructure configuration task. Docker service startup tests (up -d) are excluded from automated acceptance testing due to resource requirements. Manual verification is recommended for service startup and health check endpoints."
+}
