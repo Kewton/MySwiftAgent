@@ -25,7 +25,7 @@ services:
     image: valkey/valkey:latest
     container_name: myswiftagent-valkey
     ports:
-      - "6381:6379"  # Host port 6381 to avoid conflict with langfuse-redis (6380)
+      - "${VALKEY_PORT:-6381}:6379"  # Host port configurable via VALKEY_PORT
     volumes:
       - ./valkey/data:/data
       - ./valkey/config/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
@@ -52,7 +52,7 @@ services:
         - "myswiftagent-jobqueue:${JOBQUEUE_VERSION:-0.1.0}"
     container_name: myswiftagent-jobqueue
     ports:
-      - "8001:8000"
+      - "${JOBQUEUE_PORT:-8001}:8000"
     environment:
       - PYTHONPATH=/app
       - JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db
@@ -84,7 +84,7 @@ services:
         - "myswiftagent-myscheduler:${MYSCHEDULER_VERSION:-0.2.0}"
     container_name: myswiftagent-myscheduler
     ports:
-      - "8002:8000"
+      - "${MYSCHEDULER_PORT:-8002}:8000"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
@@ -120,7 +120,7 @@ services:
         - "myswiftagent-myvault:${MYVAULT_VERSION:-0.1.0}"
     container_name: myswiftagent-myvault
     ports:
-      - "8003:8000"
+      - "${MYVAULT_PORT:-8003}:8000"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo

@@ -40,7 +40,7 @@ services:
         - "myswiftagent-commonui:${COMMONUI_VERSION:-0.2.0}"
     container_name: myswiftagent-commonui
     ports:
-      - "8501:8501"
+      - "${COMMONUI_PORT:-8501}:8501"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo

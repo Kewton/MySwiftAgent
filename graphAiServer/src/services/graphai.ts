@@ -56,25 +56,38 @@ const agents_2 = Object.fromEntries(
  * YAMLデータ内のURL環境変数プレースホルダーを置換
  *
  * 対応プレースホルダー:
- * - ${EXPERTAGENT_BASE_URL} → process.env.EXPERTAGENT_BASE_URL または http://localhost:8104
- * - ${GRAPHAISERVER_BASE_URL} → process.env.GRAPHAISERVER_BASE_URL または http://localhost:8105
- * - ${MYVAULT_BASE_URL} → process.env.MYVAULT_BASE_URL または http://localhost:8103
- * - ${JOBQUEUE_BASE_URL} → process.env.JOBQUEUE_BASE_URL または http://localhost:8101
- * - ${MYSCHEDULER_BASE_URL} → process.env.MYSCHEDULER_BASE_URL または http://localhost:8102
+ * - ${EXPERTAGENT_BASE_URL} → process.env.EXPERTAGENT_BASE_URL または http://localhost:${EXPERTAGENT_PORT}
+ * - ${GRAPHAISERVER_BASE_URL} → process.env.GRAPHAISERVER_BASE_URL または http://localhost:${GRAPHAISERVER_PORT}
+ * - ${MYVAULT_BASE_URL} → process.env.MYVAULT_BASE_URL または http://localhost:${MYVAULT_PORT}
+ * - ${JOBQUEUE_BASE_URL} → process.env.JOBQUEUE_BASE_URL または http://localhost:${JOBQUEUE_PORT}
+ * - ${MYSCHEDULER_BASE_URL} → process.env.MYSCHEDULER_BASE_URL または http://localhost:${MYSCHEDULER_PORT}
+ *
+ * ポートのデフォルト値（.env.example参照）:
+ * - EXPERTAGENT_PORT: 8004
+ * - GRAPHAISERVER_PORT: 8005
+ * - MYVAULT_PORT: 8003
+ * - JOBQUEUE_PORT: 8001
+ * - MYSCHEDULER_PORT: 8002
  *
  * 環境による自動切り替え:
- * - quick-start.sh: localhost:810x
- * - dev-start.sh: localhost:800x
- * - docker-compose: {service}:8000
+ * - docker-compose: {service}:8000 (内部通信)
+ * - ローカル開発: localhost:${PORT} (外部公開ポート)
  */
 function resolveEnvVariables(graph_data: GraphData): void {
-  // 環境変数のデフォルト値（quick-start.sh環境を想定）
+  // デフォルトポート（.env.exampleと整合性を保つ）
+  const EXPERTAGENT_PORT = process.env.EXPERTAGENT_PORT || '8004';
+  const GRAPHAISERVER_PORT = process.env.GRAPHAISERVER_PORT || '8005';
+  const MYVAULT_PORT = process.env.MYVAULT_PORT || '8003';
+  const JOBQUEUE_PORT = process.env.JOBQUEUE_PORT || '8001';
+  const MYSCHEDULER_PORT = process.env.MYSCHEDULER_PORT || '8002';
+
+  // 環境変数のデフォルト値（ポート環境変数を参照）
   const replacements: Record<string, string> = {
-    '${EXPERTAGENT_BASE_URL}': process.env.EXPERTAGENT_BASE_URL || 'http://localhost:8104',
-    '${GRAPHAISERVER_BASE_URL}': process.env.GRAPHAISERVER_BASE_URL || 'http://localhost:8105',
-    '${MYVAULT_BASE_URL}': process.env.MYVAULT_BASE_URL || 'http://localhost:8103',
-    '${JOBQUEUE_BASE_URL}': process.env.JOBQUEUE_BASE_URL || 'http://localhost:8101',
-    '${MYSCHEDULER_BASE_URL}': process.env.MYSCHEDULER_BASE_URL || 'http://localhost:8102',
+    '${EXPERTAGENT_BASE_URL}': process.env.EXPERTAGENT_BASE_URL || `http://localhost:${EXPERTAGENT_PORT}`,
+    '${GRAPHAISERVER_BASE_URL}': process.env.GRAPHAISERVER_BASE_URL || `http://localhost:${GRAPHAISERVER_PORT}`,
+    '${MYVAULT_BASE_URL}': process.env.MYVAULT_BASE_URL || `http://localhost:${MYVAULT_PORT}`,
+    '${JOBQUEUE_BASE_URL}': process.env.JOBQUEUE_BASE_URL || `http://localhost:${JOBQUEUE_PORT}`,
+    '${MYSCHEDULER_BASE_URL}': process.env.MYSCHEDULER_BASE_URL || `http://localhost:${MYSCHEDULER_PORT}`,
   };
 
   for (const [nodeId, nodeConfig] of Object.entries(graph_data.nodes) as [string, GraphNodeConfig][]) {

@@ -38,7 +38,7 @@ export const settings: Settings = {
   MODEL_BASE_PATH: process.env.MODEL_BASE_PATH || './config/graphai/',
 
   MYVAULT_ENABLED: process.env.MYVAULT_ENABLED === 'true',
-  MYVAULT_BASE_URL: process.env.MYVAULT_BASE_URL || 'http://localhost:8000',
+  MYVAULT_BASE_URL: process.env.MYVAULT_BASE_URL || `http://localhost:${process.env.MYVAULT_PORT || '8003'}`,
   MYVAULT_SERVICE_NAME: process.env.MYVAULT_SERVICE_NAME || 'graphaiserver-service',
   MYVAULT_SERVICE_TOKEN: process.env.MYVAULT_SERVICE_TOKEN || '',
   MYVAULT_DEFAULT_PROJECT: process.env.MYVAULT_DEFAULT_PROJECT || 'default_project',
