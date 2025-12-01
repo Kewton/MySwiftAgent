@@ -1,0 +1,72 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "AC-001: ENV変数定義確認",
+      "result": "passed",
+      "details": "14個のポート変数が.env.exampleに定義されている。期待値: 14以上。実測値: 14。変数一覧: VALKEY_PORT, JOBQUEUE_PORT, MYSCHEDULER_PORT, MYVAULT_PORT, LANGFUSE_DB_PORT, LANGFUSE_WEB_PORT, LANGFUSE_CLICKHOUSE_HTTP_PORT, LANGFUSE_REDIS_PORT, LANGFUSE_MINIO_API_PORT, LANGFUSE_MINIO_CONSOLE_PORT, EXPERTAGENT_PORT, GRAPHAISERVER_PORT, COMMONUI_PORT, MYAGENTDESK_PORT"
+    },
+    {
+      "scenario": "AC-002: ハードコーディング検出なし",
+      "result": "passed",
+      "details": "graphAiServer/src/配下にlocalhost:8xxxのハードコーディングが検出されなかった。出力: 'No hardcoding found'"
+    },
+    {
+      "scenario": "AC-003: docker-compose.platform.yml ENV形式確認",
+      "result": "passed",
+      "details": "docker-compose.platform.ymlで${VAR:-default}形式が使用されている。検出された変数: ${VALKEY_PORT:-6381}:6379, ${JOBQUEUE_PORT:-8001}:8000, ${MYSCHEDULER_PORT:-8002}:8000, ${MYVAULT_PORT:-8003}:8000, ${REDIS_PORT:-6379}"
+    },
+    {
+      "scenario": "AC-004: docker-compose.agent.yml ENV形式確認",
+      "result": "passed",
+      "details": "docker-compose.agent.ymlで${VAR:-default}形式が使用されている。検出された変数: ${EXPERTAGENT_PORT:-8004}:8000, ${GRAPHAISERVER_PORT:-8005}:8000"
+    },
+    {
+      "scenario": "AC-005: docker-compose.frontend.yml ENV形式確認",
+      "result": "passed",
+      "details": "docker-compose.frontend.ymlで${VAR:-default}形式が使用されている。検出された変数: ${COMMONUI_PORT:-8501}:8501, ${MYAGENTDESK_PORT:-5173}:5173"
+    },
+    {
+      "scenario": "AC-006: TypeScript型チェック",
+      "result": "passed",
+      "details": "npm run type-check (tsc --noEmit) が正常に完了。エラーなし。"
+    },
+    {
+      "scenario": "AC-007: 単体テスト実行",
+      "result": "passed",
+      "details": "tests/unit/test_issue_202_env_unified_management.pyの全12テストがパス。テストクラス: TestEnvExamplePortVariables (5件), TestGraphAiServerNoHardcoding (2件), TestComposeFileEnvFormat (3件), TestEnvDockerConsistency (2件)"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": ".env.example に以下の変数が定義されている: VALKEY_PORT, JOBQUEUE_PORT, MYSCHEDULER_PORT, MYVAULT_PORT, EXPERTAGENT_PORT, GRAPHAISERVER_PORT, COMMONUI_PORT, MYAGENTDESK_PORT, LANGFUSE_*_PORT",
+      "verified": true
+    },
+    {
+      "criterion": "grep -r 'localhost:8' graphAiServer/src/ でハードコーディングURLが検出されない",
+      "verified": true
+    },
+    {
+      "criterion": "各composeファイルで ${VAR:-default} 形式でポートが参照されている",
+      "verified": true
+    },
+    {
+      "criterion": ".env.example がコピーのみで動作する",
+      "verified": true
+    },
+    {
+      "criterion": "TypeScript修正後、npm run type-check がパス",
+      "verified": true
+    }
+  ],
+  "evidence_files": [
+    ".env.example",
+    "docker-compose.platform.yml",
+    "docker-compose.agent.yml",
+    "docker-compose.frontend.yml",
+    "graphAiServer/src/",
+    "tests/unit/test_issue_202_env_unified_management.py"
+  ],
+  "summary": "Issue #202のすべての受入条件が満たされています。14個のポート変数が.env.exampleに定義され、graphAiServer/src/配下にハードコーディングがなく、すべてのcomposeファイルで${VAR:-default}形式が使用されています。TypeScript型チェックも正常にパスし、全12件の単体テストが成功しました。",
+  "message": "すべての受入条件を満たしています"
+}

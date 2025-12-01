@@ -1,0 +1,37 @@
+{
+  "issue_number": 202,
+  "refactor_targets": [
+    ".env.example",
+    "graphAiServer/src/services/graphai.ts",
+    "graphAiServer/src/config/settings.ts",
+    "docker-compose.platform.yml",
+    "docker-compose.agent.yml",
+    "docker-compose.frontend.yml"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": 5
+  },
+  "design_patterns_to_apply": [
+    "Configuration Pattern (ENV variables)",
+    "Single Source of Truth (ENV files)"
+  ],
+  "improvement_goals": [
+    "ENVファイルのコメント整理と可読性向上",
+    "composeファイルの変数参照パターンの一貫性確認",
+    "不要なコード・コメントの削除",
+    "重複定義の排除"
+  ],
+  "analysis_focus": [
+    ".env.example と .env.docker の整合性",
+    "composeファイル間のポート設定の一貫性",
+    "graphAiServerのENV参照パターンの統一"
+  ],
+  "constraints": [
+    "既存テストがすべてパスすること",
+    "TypeScript型チェックがパスすること",
+    "受入条件を維持すること"
+  ],
+  "tdd_result_reference": "dev-reports/feature/issue/202/pm-auto-dev/iteration-1/tdd-result.json",
+  "acceptance_result_reference": "dev-reports/feature/issue/202/pm-auto-dev/iteration-1/acceptance-result.json"
+}

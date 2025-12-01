@@ -1,0 +1,63 @@
+{
+  "issue_number": 202,
+  "feature_summary": "[Backend] ENV統一管理（.env.example更新・ハードコーディング除去）",
+  "acceptance_criteria": [
+    ".env.example に以下の変数が定義されている: VALKEY_PORT, JOBQUEUE_PORT, MYSCHEDULER_PORT, MYVAULT_PORT, EXPERTAGENT_PORT, GRAPHAISERVER_PORT, COMMONUI_PORT, MYAGENTDESK_PORT, LANGFUSE_*_PORT",
+    "grep -r 'localhost:8' graphAiServer/src/ でハードコーディングURLが検出されない",
+    "各composeファイルで ${VAR:-default} 形式でポートが参照されている",
+    ".env.example がコピーのみで動作する",
+    "TypeScript修正後、npm run type-check がパス"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-001",
+      "scenario": "ENV変数定義確認",
+      "description": ".env.exampleに必要なすべてのポート変数が定義されていることを確認",
+      "verification_command": "grep -E '^(VALKEY|JOBQUEUE|MYSCHEDULER|MYVAULT|EXPERTAGENT|GRAPHAISERVER|COMMONUI|MYAGENTDESK|LANGFUSE_[A-Z_]+)_PORT' .env.example | wc -l",
+      "expected_result": "14以上の変数が存在"
+    },
+    {
+      "id": "AC-002",
+      "scenario": "ハードコーディング検出なし",
+      "description": "graphAiServer/src/配下にlocalhost:8xxxのハードコーディングがないことを確認",
+      "verification_command": "grep -r 'localhost:8[0-9]' graphAiServer/src/ || echo 'No hardcoding found'",
+      "expected_result": "検出なし"
+    },
+    {
+      "id": "AC-003",
+      "scenario": "docker-compose.platform.yml ENV形式確認",
+      "description": "docker-compose.platform.ymlでポートが${VAR:-default}形式で参照されていることを確認",
+      "verification_command": "grep -E '\\$\\{[A-Z_]+_PORT:-[0-9]+\\}' docker-compose.platform.yml",
+      "expected_result": "VALKEY_PORT, JOBQUEUE_PORT, MYSCHEDULER_PORT, MYVAULT_PORT が存在"
+    },
+    {
+      "id": "AC-004",
+      "scenario": "docker-compose.agent.yml ENV形式確認",
+      "description": "docker-compose.agent.ymlでポートが${VAR:-default}形式で参照されていることを確認",
+      "verification_command": "grep -E '\\$\\{[A-Z_]+_PORT:-[0-9]+\\}' docker-compose.agent.yml",
+      "expected_result": "EXPERTAGENT_PORT, GRAPHAISERVER_PORT が存在"
+    },
+    {
+      "id": "AC-005",
+      "scenario": "docker-compose.frontend.yml ENV形式確認",
+      "description": "docker-compose.frontend.ymlでポートが${VAR:-default}形式で参照されていることを確認",
+      "verification_command": "grep -E '\\$\\{[A-Z_]+_PORT:-[0-9]+\\}' docker-compose.frontend.yml",
+      "expected_result": "COMMONUI_PORT, MYAGENTDESK_PORT が存在"
+    },
+    {
+      "id": "AC-006",
+      "scenario": "TypeScript型チェック",
+      "description": "graphAiServerのTypeScript型チェックがエラーなしでパスすることを確認",
+      "verification_command": "cd graphAiServer && npm run type-check",
+      "expected_result": "エラーなし"
+    },
+    {
+      "id": "AC-007",
+      "scenario": "単体テスト実行",
+      "description": "Issue #202用の単体テストがすべてパスすることを確認",
+      "verification_command": "python -m pytest tests/unit/test_issue_202_env_unified_management.py -v",
+      "expected_result": "全テストパス"
+    }
+  ],
+  "tdd_result_reference": "dev-reports/feature/issue/202/pm-auto-dev/iteration-1/tdd-result.json"
+}
