@@ -34,7 +34,7 @@ services:
         - "myswiftagent-expertagent:${EXPERTAGENT_VERSION:-0.1.2}"
     container_name: myswiftagent-expertagent
     ports:
-      - "8004:8000"
+      - "${EXPERTAGENT_PORT:-8004}:8000"
     environment:
       - PYTHONPATH=/app
       - TZ=Asia/Tokyo
@@ -104,7 +104,7 @@ services:
         - "myswiftagent-graphaiserver:${GRAPHAISERVER_VERSION:-0.1.0}"
     container_name: myswiftagent-graphaiserver
     ports:
-      - "8005:8000"
+      - "${GRAPHAISERVER_PORT:-8005}:8000"
     environment:
       - NODE_ENV=production
       - PORT=8000

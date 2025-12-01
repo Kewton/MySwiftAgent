@@ -1,0 +1,125 @@
+{
+  "issue_number": 202,
+  "issue_title": "[Backend] ENV統一管理（.env.example更新・ハードコーディング除去）",
+  "acceptance_criteria": [
+    ".env.example に以下の変数が定義されている: VALKEY_PORT, JOBQUEUE_PORT, MYSCHEDULER_PORT, MYVAULT_PORT, EXPERTAGENT_PORT, GRAPHAISERVER_PORT, COMMONUI_PORT, MYAGENTDESK_PORT, LANGFUSE_*_PORT",
+    "grep -r 'localhost:8' graphAiServer/src/ でハードコーディングURLが検出されない",
+    "各composeファイルで ${VAR:-default} 形式でポートが参照されている",
+    ".env.example がコピーのみで動作する",
+    "TypeScript修正後、npm run type-check がパス"
+  ],
+  "implementation_tasks": [
+    "現状調査（ハードコーディング箇所特定）",
+    ".env.example 更新（レイヤ別ポート設定追加）",
+    "graphAiServer ハードコーディング修正",
+    "compose ファイルでのENV参照確認",
+    ".env.docker との整合性確認",
+    "デフォルトポートでの起動テスト",
+    "カスタムポートでの起動テスト",
+    "ドキュメント作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1",
+      "description": "現状調査（ハードコーディング箇所特定）",
+      "estimated_minutes": 20,
+      "deliverables": ["調査結果"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2",
+      "description": ".env.example 更新",
+      "estimated_minutes": 25,
+      "deliverables": [".env.example"],
+      "dependencies": ["1"]
+    },
+    {
+      "task_id": "3",
+      "description": "graphAiServer ハードコーディング修正",
+      "estimated_minutes": 40,
+      "deliverables": ["graphAiServer/src/*.ts"],
+      "dependencies": ["2"]
+    },
+    {
+      "task_id": "4",
+      "description": "compose ファイルでのENV参照確認",
+      "estimated_minutes": 20,
+      "deliverables": ["確認結果"],
+      "dependencies": ["2"]
+    },
+    {
+      "task_id": "5",
+      "description": ".env.docker との整合性確認",
+      "estimated_minutes": 15,
+      "deliverables": ["整合性確認"],
+      "dependencies": ["4"]
+    },
+    {
+      "task_id": "6",
+      "description": "デフォルトポートでの起動テスト",
+      "estimated_minutes": 25,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["5"]
+    },
+    {
+      "task_id": "7",
+      "description": "カスタムポートでの起動テスト",
+      "estimated_minutes": 25,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["6"]
+    },
+    {
+      "task_id": "8",
+      "description": "ドキュメント作成",
+      "estimated_minutes": 20,
+      "deliverables": ["dev-reports/feature/issue/202/implementation-notes.md"],
+      "dependencies": ["7"]
+    }
+  ],
+  "env_variables_to_add": {
+    "platform_layer": {
+      "VALKEY_PORT": "6381",
+      "JOBQUEUE_PORT": "8001",
+      "MYSCHEDULER_PORT": "8002",
+      "MYVAULT_PORT": "8003"
+    },
+    "langfuse": {
+      "LANGFUSE_DB_PORT": "5433",
+      "LANGFUSE_WEB_PORT": "3001",
+      "LANGFUSE_CLICKHOUSE_HTTP_PORT": "8123",
+      "LANGFUSE_REDIS_PORT": "6380",
+      "LANGFUSE_MINIO_API_PORT": "9002",
+      "LANGFUSE_MINIO_CONSOLE_PORT": "9001"
+    },
+    "agent_layer": {
+      "EXPERTAGENT_PORT": "8004",
+      "GRAPHAISERVER_PORT": "8005"
+    },
+    "frontend_layer": {
+      "COMMONUI_PORT": "8501",
+      "MYAGENTDESK_PORT": "5173"
+    }
+  },
+  "deliverables_checklist": [
+    ".env.example（レイヤ別ポート設定追加）",
+    "graphAiServer/src/*.ts（ハードコーディング除去）",
+    "dev-reports/feature/issue/202/implementation-notes.md"
+  ],
+  "definition_of_done": [
+    "すべてのENV変数が.env.exampleに定義されている",
+    "graphAiServerにハードコーディングURLがない",
+    "composeファイルで${VAR:-default}形式を使用",
+    "npm run type-check がパス",
+    "デフォルトポート・カスタムポートで起動確認"
+  ],
+  "target_coverage": 90,
+  "technical_notes": {
+    "graphAiServer_pattern": "const URL = process.env.VAR_NAME || 'http://localhost:PORT'",
+    "compose_pattern": "\"${VAR_PORT:-default}:container_port\"",
+    "verification_commands": [
+      "grep -E '^(VALKEY|JOBQUEUE|MYSCHEDULER|MYVAULT|EXPERTAGENT|GRAPHAISERVER|COMMONUI|MYAGENTDESK)_PORT' .env.example",
+      "grep -r 'localhost:8' graphAiServer/src/",
+      "cd graphAiServer && npm run type-check"
+    ]
+  }
+}
