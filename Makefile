@@ -1,0 +1,282 @@
+# =============================================================================
+# MySwiftAgent Root Makefile - Layer-based Development Commands
+# =============================================================================
+#
+# This Makefile provides layer-based Docker Compose orchestration for the
+# MySwiftAgent microservices architecture.
+#
+# Architecture Layers:
+#   Platform  - Core infrastructure (valkey, jobqueue, myscheduler, myvault, langfuse)
+#   Agent     - AI services (expertagent, graphaiserver)
+#   Frontend  - UI applications (commonui, myagentdesk)
+#
+# Usage:
+#   make help           # Show available commands
+#   make dev-all        # Start all services
+#   make down           # Stop all services
+#
+# =============================================================================
+
+# Shell and Make settings
+SHELL := /bin/bash
+.DEFAULT_GOAL := help
+
+# =============================================================================
+# Configuration Variables
+# =============================================================================
+
+# Docker Compose files
+COMPOSE_PLATFORM := docker-compose.platform.yml
+COMPOSE_AGENT := docker-compose.agent.yml
+COMPOSE_FRONTEND := docker-compose.frontend.yml
+
+# Network configuration
+NETWORK_NAME := myswiftagent-network
+
+# Port configuration for health checks
+MYVAULT_PORT := 8003
+JOBQUEUE_PORT := 8001
+EXPERTAGENT_PORT := 8004
+
+# Health check timeouts (seconds)
+HEALTH_CHECK_TIMEOUT := 60
+HEALTH_CHECK_INTERVAL := 5
+
+# Docker Compose command (v2 syntax)
+DOCKER_COMPOSE := docker compose
+
+# =============================================================================
+# PHONY Targets Declaration
+# =============================================================================
+
+.PHONY: help
+.PHONY: dev-platform dev-agent dev-frontend dev-all
+.PHONY: down down-platform down-agent down-frontend
+.PHONY: logs logs-platform logs-agent logs-frontend
+.PHONY: status rebuild clean network
+.PHONY: _check-platform _check-agent _wait-platform _wait-agent
+
+# =============================================================================
+# Help Target (Default)
+# =============================================================================
+
+help: ## Show this help message
+	@echo ""
+	@echo "MySwiftAgent Development Commands"
+	@echo "================================="
+	@echo ""
+	@echo "Startup Commands:"
+	@grep -E '^dev-[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Shutdown Commands:"
+	@grep -E '^down[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Log Commands:"
+	@grep -E '^logs[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Utility Commands:"
+	@grep -E '^(status|rebuild|clean|network):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Layer Dependencies:"
+	@echo "  Platform -> Agent -> Frontend"
+	@echo ""
+
+# =============================================================================
+# Network Target
+# =============================================================================
+
+network: ## Create Docker network if not exists
+	@if ! docker network inspect $(NETWORK_NAME) >/dev/null 2>&1; then \
+		echo "Creating network: $(NETWORK_NAME)"; \
+		docker network create $(NETWORK_NAME); \
+	else \
+		echo "Network $(NETWORK_NAME) already exists"; \
+	fi
+
+# =============================================================================
+# Startup Targets
+# =============================================================================
+
+dev-platform: network ## Start Platform layer (valkey, jobqueue, myscheduler, myvault, langfuse)
+	@echo "Starting Platform layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) up -d
+	@echo "Platform layer started successfully"
+
+dev-agent: _check-platform ## Start Agent layer (expertagent, graphaiserver) - requires Platform
+	@echo "Starting Agent layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) up -d
+	@echo "Agent layer started successfully"
+
+dev-frontend: _check-agent ## Start Frontend layer (commonui, myagentdesk) - requires Agent
+	@echo "Starting Frontend layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) up -d
+	@echo "Frontend layer started successfully"
+
+dev-all: network ## Start all layers in order (Platform -> Agent -> Frontend)
+	@echo "Starting all services..."
+	@echo ""
+	@echo "[1/3] Starting Platform layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) up -d
+	@echo ""
+	@echo "[2/3] Waiting for Platform services to be healthy..."
+	@$(MAKE) _wait-platform
+	@echo ""
+	@echo "[3/3] Starting Agent layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) up -d
+	@echo ""
+	@echo "[4/4] Waiting for Agent services to be healthy..."
+	@$(MAKE) _wait-agent
+	@echo ""
+	@echo "[5/5] Starting Frontend layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) up -d
+	@echo ""
+	@echo "All services started successfully!"
+
+# =============================================================================
+# Shutdown Targets
+# =============================================================================
+
+down: ## Stop all services (all layers)
+	@echo "Stopping all services..."
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) down
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) down
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) down
+	@echo "All services stopped"
+
+down-platform: ## Stop Platform layer
+	@echo "Stopping Platform layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) down
+	@echo "Platform layer stopped"
+
+down-agent: ## Stop Agent layer
+	@echo "Stopping Agent layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) down
+	@echo "Agent layer stopped"
+
+down-frontend: ## Stop Frontend layer
+	@echo "Stopping Frontend layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) down
+	@echo "Frontend layer stopped"
+
+# =============================================================================
+# Log Targets
+# =============================================================================
+
+logs: ## Show logs for all services (follow mode)
+	@echo "Showing logs for all services (Ctrl+C to exit)..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) -f $(COMPOSE_AGENT) -f $(COMPOSE_FRONTEND) logs -f
+
+logs-platform: ## Show logs for Platform layer (follow mode)
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) logs -f
+
+logs-agent: ## Show logs for Agent layer (follow mode)
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) logs -f
+
+logs-frontend: ## Show logs for Frontend layer (follow mode)
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) logs -f
+
+# =============================================================================
+# Utility Targets
+# =============================================================================
+
+status: ## Show status of all services
+	@echo ""
+	@echo "MySwiftAgent Service Status"
+	@echo "==========================="
+	@echo ""
+	@echo "Platform Layer:"
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) ps 2>/dev/null || echo "  (not running)"
+	@echo ""
+	@echo "Agent Layer:"
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) ps 2>/dev/null || echo "  (not running)"
+	@echo ""
+	@echo "Frontend Layer:"
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) ps 2>/dev/null || echo "  (not running)"
+	@echo ""
+
+rebuild: ## Rebuild all Docker images (no cache)
+	@echo "Rebuilding all Docker images..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) build --no-cache
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) build --no-cache
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) build --no-cache
+	@echo "All images rebuilt successfully"
+
+clean: down ## Stop all services and remove volumes/orphans
+	@echo "Cleaning up..."
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) down -v --remove-orphans
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) down -v --remove-orphans
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) down -v --remove-orphans
+	@echo "Cleanup complete"
+
+# =============================================================================
+# Internal Targets (Dependency Checks)
+# =============================================================================
+
+_check-platform: ## [Internal] Check if Platform layer is running
+	@echo "Checking Platform layer dependencies..."
+	@if ! curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1; then \
+		echo ""; \
+		echo "ERROR: Platform layer is not running!"; \
+		echo ""; \
+		echo "MyVault health check failed (port $(MYVAULT_PORT))"; \
+		echo "Please start Platform layer first:"; \
+		echo "  make dev-platform"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@if ! curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then \
+		echo ""; \
+		echo "ERROR: Platform layer is not fully running!"; \
+		echo ""; \
+		echo "JobQueue health check failed (port $(JOBQUEUE_PORT))"; \
+		echo "Please wait for Platform services to be healthy or restart:"; \
+		echo "  make dev-platform"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "Platform layer is running"
+
+_check-agent: _check-platform ## [Internal] Check if Agent layer is running (implies Platform check)
+	@echo "Checking Agent layer dependencies..."
+	@if ! curl -sf http://localhost:$(EXPERTAGENT_PORT)/health >/dev/null 2>&1; then \
+		echo ""; \
+		echo "ERROR: Agent layer is not running!"; \
+		echo ""; \
+		echo "ExpertAgent health check failed (port $(EXPERTAGENT_PORT))"; \
+		echo "Please start Agent layer first:"; \
+		echo "  make dev-agent"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "Agent layer is running"
+
+_wait-platform: ## [Internal] Wait for Platform services to be healthy
+	@echo "Waiting for Platform services..."
+	@timeout=$(HEALTH_CHECK_TIMEOUT); \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1 && \
+		   curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then \
+			echo "Platform services are healthy"; \
+			exit 0; \
+		fi; \
+		echo "  Waiting... ($$timeout seconds remaining)"; \
+		sleep $(HEALTH_CHECK_INTERVAL); \
+		timeout=$$((timeout - $(HEALTH_CHECK_INTERVAL))); \
+	done; \
+	echo "ERROR: Timeout waiting for Platform services"; \
+	exit 1
+
+_wait-agent: ## [Internal] Wait for Agent services to be healthy
+	@echo "Waiting for Agent services..."
+	@timeout=$(HEALTH_CHECK_TIMEOUT); \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -sf http://localhost:$(EXPERTAGENT_PORT)/health >/dev/null 2>&1; then \
+			echo "Agent services are healthy"; \
+			exit 0; \
+		fi; \
+		echo "  Waiting... ($$timeout seconds remaining)"; \
+		sleep $(HEALTH_CHECK_INTERVAL); \
+		timeout=$$((timeout - $(HEALTH_CHECK_INTERVAL))); \
+	done; \
+	echo "ERROR: Timeout waiting for Agent services"; \
+	exit 1
