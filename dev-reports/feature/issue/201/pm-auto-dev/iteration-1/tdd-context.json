@@ -1,0 +1,138 @@
+{
+  "issue_number": 201,
+  "title": "[DevOps] Makefile作成（レイヤ別開発コマンド）",
+  "acceptance_criteria": [
+    "`make help` がエラーなく実行され、利用可能コマンド一覧が表示される",
+    "`make network` で `myswiftagent-network` が作成される",
+    "`make dev-platform` でPlatform層が起動する",
+    "`make dev-agent` でAgent層が起動する（Platform依存チェック）",
+    "`make dev-frontend` でFrontend層が起動する（Agent依存チェック）",
+    "`make dev-all` で全サービスが起動する",
+    "`make down` で全サービスが停止する",
+    "`make status` でサービス状態が表示される",
+    "Makefileシンタックスエラーなし（`make -n` で確認）",
+    "全ターゲットが `.PHONY` で宣言されている",
+    "依存チェック失敗時に適切なエラーメッセージ"
+  ],
+  "implementation_tasks": [
+    "Makefile基本構造作成（シェル設定、変数定義、PHONYターゲット宣言）",
+    "レイヤ別起動ターゲット実装（dev-platform, dev-agent, dev-frontend, dev-all）",
+    "依存チェック・待機ロジック実装（_check-*, _wait-*）",
+    "停止ターゲット実装（down, down-platform, down-agent, down-frontend）",
+    "ユーティリティターゲット実装（logs, status, rebuild, clean, network）",
+    "helpターゲット実装（自動生成ヘルプ）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1",
+      "description": "設計方針の確認・調整",
+      "estimated_hours": 0.25,
+      "deliverables": ["設計確認"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2",
+      "description": "Makefile基本構造作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["Makefile（骨格）"],
+      "dependencies": ["1"]
+    },
+    {
+      "task_id": "3",
+      "description": "レイヤ別起動ターゲット実装",
+      "estimated_hours": 0.75,
+      "deliverables": ["dev-* ターゲット"],
+      "dependencies": ["2"]
+    },
+    {
+      "task_id": "4",
+      "description": "依存チェック・待機ロジック実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["_check-*, _wait-* ターゲット"],
+      "dependencies": ["3"]
+    },
+    {
+      "task_id": "5",
+      "description": "停止ターゲット実装",
+      "estimated_hours": 0.33,
+      "deliverables": ["down-* ターゲット"],
+      "dependencies": ["2"]
+    },
+    {
+      "task_id": "6",
+      "description": "ユーティリティターゲット実装",
+      "estimated_hours": 0.42,
+      "deliverables": ["logs, status, rebuild, clean, network ターゲット"],
+      "dependencies": ["2"]
+    },
+    {
+      "task_id": "7",
+      "description": "helpターゲット実装",
+      "estimated_hours": 0.33,
+      "deliverables": ["helpターゲット（自動生成）"],
+      "dependencies": ["6"]
+    },
+    {
+      "task_id": "8",
+      "description": "単体テスト（各ターゲット）",
+      "estimated_hours": 0.75,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["7"]
+    },
+    {
+      "task_id": "9",
+      "description": "統合テスト（全レイヤ連携）",
+      "estimated_hours": 0.5,
+      "deliverables": ["検証結果"],
+      "dependencies": ["8"]
+    },
+    {
+      "task_id": "10",
+      "description": "ドキュメント作成",
+      "estimated_hours": 0.33,
+      "deliverables": ["コメント、実装メモ"],
+      "dependencies": ["9"]
+    }
+  ],
+  "deliverables_checklist": [
+    "Makefile",
+    "dev-reports/feature/issue/201/implementation-notes.md"
+  ],
+  "definition_of_done": [
+    "すべてのターゲットが正常に実行可能",
+    "シンタックスエラーなし",
+    "依存チェックが正しく動作",
+    "helpが全ターゲットを表示",
+    "統合テストが成功"
+  ],
+  "target_coverage": 90,
+  "technology_stack": ["GNU Make 3.81+", "Bash", "Docker Compose"],
+  "test_type": "shell_integration_tests",
+  "test_cases": [
+    {
+      "name": "シンタックスチェック",
+      "command": "make -n dev-all",
+      "expected": "エラーなし"
+    },
+    {
+      "name": "helpターゲット",
+      "command": "make help",
+      "expected": "ターゲット一覧表示"
+    },
+    {
+      "name": "networkターゲット",
+      "command": "make network",
+      "expected": "ネットワーク作成"
+    },
+    {
+      "name": "異常系: Platform未起動でAgent",
+      "command": "make dev-agent",
+      "expected": "エラーメッセージ、exit 1"
+    },
+    {
+      "name": "異常系: Agent未起動でFrontend",
+      "command": "make dev-frontend",
+      "expected": "エラーメッセージ、exit 1"
+    }
+  ]
+}
