@@ -1,0 +1,90 @@
+{
+  "issue_number": 201,
+  "feature_summary": "[DevOps] Makefile作成（レイヤ別開発コマンド）",
+  "acceptance_criteria": [
+    "`make help` がエラーなく実行され、利用可能コマンド一覧が表示される",
+    "`make network` で `myswiftagent-network` が作成される",
+    "`make dev-platform` でPlatform層が起動する",
+    "`make dev-agent` でAgent層が起動する（Platform依存チェック）",
+    "`make dev-frontend` でFrontend層が起動する（Agent依存チェック）",
+    "`make dev-all` で全サービスが起動する",
+    "`make down` で全サービスが停止する",
+    "`make status` でサービス状態が表示される",
+    "Makefileシンタックスエラーなし（`make -n` で確認）",
+    "全ターゲットが `.PHONY` で宣言されている",
+    "依存チェック失敗時に適切なエラーメッセージ"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-001",
+      "name": "make help 表示テスト",
+      "description": "make help がエラーなく実行され、利用可能コマンド一覧が表示される",
+      "type": "automatic",
+      "command": "make help",
+      "expected_output": "レイヤ別起動、停止、ユーティリティの各セクションが表示される"
+    },
+    {
+      "id": "AC-002",
+      "name": "ネットワーク作成テスト",
+      "description": "make network で myswiftagent-network が作成される",
+      "type": "automatic",
+      "commands": [
+        "docker network rm myswiftagent-network 2>/dev/null || true",
+        "make network",
+        "docker network ls | grep myswiftagent-network"
+      ],
+      "expected": "ネットワークが正常に作成される"
+    },
+    {
+      "id": "AC-003",
+      "name": "シンタックスチェック（ドライラン）",
+      "description": "make -n dev-all がエラーなく実行される",
+      "type": "automatic",
+      "command": "make -n dev-all",
+      "expected": "exit code 0"
+    },
+    {
+      "id": "AC-004",
+      "name": "PHONYターゲット宣言確認",
+      "description": "全ターゲットが .PHONY で宣言されている",
+      "type": "automatic",
+      "command": "grep -E '^\\.PHONY:' Makefile",
+      "expected": "すべてのターゲットがPHONY宣言に含まれる"
+    },
+    {
+      "id": "AC-005",
+      "name": "依存チェック異常系（Platform未起動でAgent）",
+      "description": "Platform層が起動していない状態でmake dev-agentを実行するとエラー",
+      "type": "automatic",
+      "precondition": "全サービス停止状態",
+      "command": "make dev-agent 2>&1 || true",
+      "expected_output_contains": "Platform layer is not running"
+    },
+    {
+      "id": "AC-006",
+      "name": "依存チェック異常系（Agent未起動でFrontend）",
+      "description": "Agent層が起動していない状態でmake dev-frontendを実行するとエラー",
+      "type": "automatic",
+      "precondition": "全サービス停止状態",
+      "command": "make dev-frontend 2>&1 || true",
+      "expected_output_contains": "Platform layer is not running"
+    },
+    {
+      "id": "AC-007",
+      "name": "statusコマンドテスト",
+      "description": "make status でサービス状態が表示される",
+      "type": "automatic",
+      "command": "make status",
+      "expected_output_contains": ["Platform Layer", "Agent Layer", "Frontend Layer"]
+    },
+    {
+      "id": "AC-008",
+      "name": "downコマンドテスト",
+      "description": "make down がエラーなく実行される",
+      "type": "automatic",
+      "command": "make down",
+      "expected": "exit code 0"
+    }
+  ],
+  "integration_test_note": "実際のDocker環境での起動テスト(AC-003からAC-006の実行)はDocker環境が必要です。シンタックスチェックとPHONY宣言確認は静的に検証可能です。"
+}
