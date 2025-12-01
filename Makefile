@@ -115,16 +115,16 @@ dev-frontend: _check-agent ## Start Frontend layer (commonui, myagentdesk) - req
 dev-all: network ## Start all layers in order (Platform -> Agent -> Frontend)
 	@echo "Starting all services..."
 	@echo ""
-	@echo "[1/3] Starting Platform layer..."
+	@echo "[1/5] Starting Platform layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) up -d
 	@echo ""
-	@echo "[2/3] Waiting for Platform services to be healthy..."
+	@echo "[2/5] Waiting for Platform services to be healthy..."
 	@$(MAKE) _wait-platform
 	@echo ""
-	@echo "[3/3] Starting Agent layer..."
+	@echo "[3/5] Starting Agent layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) up -d
 	@echo ""
-	@echo "[4/4] Waiting for Agent services to be healthy..."
+	@echo "[4/5] Waiting for Agent services to be healthy..."
 	@$(MAKE) _wait-agent
 	@echo ""
 	@echo "[5/5] Starting Frontend layer..."
