@@ -1,0 +1,33 @@
+{
+  "issue_number": 211,
+  "refactor_targets": [
+    "tests/integration/python/conftest.py",
+    "tests/integration/python/platform/conftest.py",
+    "tests/integration/python/agent/conftest.py"
+  ],
+  "quality_metrics": {
+    "before_ruff_errors": 0,
+    "before_mypy_errors": 411,
+    "tests_passed": 22,
+    "tests_collected": 119,
+    "collection_errors": 25
+  },
+  "design_patterns_to_apply": [
+    "DRY - 重複フィクスチャの統合",
+    "Single Responsibility - conftest.pyの責務分離"
+  ],
+  "improvement_goals": [
+    "conftest.py内の重複コード削除",
+    "フィクスチャの命名規則統一",
+    "不要なインポートの削除"
+  ],
+  "constraints": [
+    "既存の22テストがパスすること",
+    "Ruffエラーがゼロのまま維持",
+    "conftest.py階層構造を維持（L0/L1/L2）"
+  ],
+  "notes": [
+    "MyPyエラーは今回のスコープ外（移行元テストがタイプされていないため）",
+    "大規模なリファクタリングは不要 - 軽微な改善のみ"
+  ]
+}
