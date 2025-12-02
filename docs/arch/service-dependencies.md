@@ -1294,9 +1294,9 @@ echo "✅ Dependency validation complete"
 
 ## 参考資料
 
-- [アーキテクチャ概要](./architecture-overview.md)
-- [環境変数設定](./environment-variables.md)
-- [myVault統合ガイド](./myvault-integration.md)
+- [アーキテクチャ概要](../design/architecture-overview.md)
+- [環境変数設定](../design/environment-variables.md)
+- [myVault統合ガイド](../design/myvault-integration.md)
 - [開発フロー](../claude/01-development-workflow.md)
 - [GraphAIワークフロー生成ルール](../../graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)
 
