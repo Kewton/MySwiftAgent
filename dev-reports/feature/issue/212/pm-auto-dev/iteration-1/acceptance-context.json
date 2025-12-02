@@ -1,0 +1,22 @@
+{
+  "issue_number": 212,
+  "feature_summary": "TypeScript結合テストのリポジトリ直下移行",
+  "acceptance_criteria": [
+    "`tests/integration/typescript/` ディレクトリが存在する",
+    "`npm test` が正常に実行される",
+    "既存の結合テストが全てパスする",
+    "ESLint/TypeScript エラーゼロ",
+    "vitest.config.tsが適切に設定されている",
+    "正常系: API結合テスト実行",
+    "異常系: サービス未起動時のスキップ動作"
+  ],
+  "test_scenarios": [
+    "シナリオ1: ディレクトリ構造の確認 - tests/integration/typescript/ ディレクトリと必要なファイルが存在するか",
+    "シナリオ2: npm test の実行 - cd tests/integration/typescript && npm test が正常終了するか",
+    "シナリオ3: テスト結果の確認 - 全24テストがパスするか",
+    "シナリオ4: 静的解析の確認 - ESLint/TypeScriptエラーがゼロか",
+    "シナリオ5: vitest.config.ts設定の確認 - globals: true, environment: node が設定されているか",
+    "シナリオ6: 移行元deprecation警告の確認 - graphAiServer/tests/integration/README.md にdeprecation警告があるか",
+    "シナリオ7: README.mdの確認 - tests/integration/typescript/README.md が適切なドキュメントを含むか"
+  ]
+}
