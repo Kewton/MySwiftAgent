@@ -1,0 +1,21 @@
+{
+  "issue_number": 212,
+  "refactor_targets": [
+    "tests/integration/typescript/api/graphaiserver-api.test.ts",
+    "tests/integration/typescript/api/graphaiserver-workflow.test.ts",
+    "tests/integration/typescript/helpers/test-utils.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": 5
+  },
+  "design_patterns_to_apply": [
+    "DRY - 重複コードの削除",
+    "共通テストヘルパーの活用"
+  ],
+  "improvement_goals": [
+    "テストヘルパーの活用を最適化",
+    "テストの可読性向上",
+    "重複コードの削減"
+  ]
+}

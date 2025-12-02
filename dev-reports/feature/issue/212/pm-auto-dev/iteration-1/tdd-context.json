@@ -1,0 +1,140 @@
+{
+  "issue_number": 212,
+  "title": "Issue #209-2: TypeScript結合テストのリポジトリ直下移行",
+  "acceptance_criteria": [
+    "`tests/integration/typescript/` ディレクトリが存在する",
+    "`npm test` が正常に実行される",
+    "既存の結合テストが全てパスする",
+    "ESLint/TypeScript エラーゼロ",
+    "vitest.config.tsが適切に設定されている",
+    "正常系: API結合テスト実行",
+    "異常系: サービス未起動時のスキップ動作"
+  ],
+  "implementation_tasks": [
+    "`tests/integration/typescript/` ディレクトリ構造作成",
+    "`vitest.config.ts` 設定ファイル作成",
+    "`package.json` 依存関係定義",
+    "既存結合テストの移行（graphAiServer app.test.ts, workflow.test.ts）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ディレクトリ作成",
+      "estimated_hours": 0.08,
+      "deliverables": ["tests/integration/typescript/api/"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "package.json作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/integration/typescript/package.json"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "vitest.config.ts作成",
+      "estimated_hours": 0.33,
+      "deliverables": ["tests/integration/typescript/vitest.config.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "tsconfig.json作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/integration/typescript/tsconfig.json"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "セットアップファイル作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/integration/typescript/setup.ts"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "graphAiServer app.test.ts移行 (Jest → Vitest)",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/integration/typescript/api/graphaiserver-api.test.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "graphAiServer workflow.test.ts移行 (Jest → Vitest)",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/integration/typescript/api/graphaiserver-workflow.test.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "共通ヘルパー作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/integration/typescript/helpers/"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "npm install実行・依存解決",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["2.1", "2.2", "2.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "テスト実行検証",
+      "estimated_hours": 0.33,
+      "deliverables": [],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "静的解析（ESLint/TypeScript）",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "移行元へのdeprecation警告",
+      "estimated_hours": 0.17,
+      "deliverables": ["graphAiServer/tests/integration/README.md"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "README.md作成",
+      "estimated_hours": 0.33,
+      "deliverables": ["tests/integration/typescript/README.md"],
+      "dependencies": ["4.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "tests/integration/typescript/package.json",
+    "tests/integration/typescript/vitest.config.ts",
+    "tests/integration/typescript/tsconfig.json",
+    "tests/integration/typescript/setup.ts",
+    "tests/integration/typescript/api/graphaiserver-api.test.ts",
+    "tests/integration/typescript/api/graphaiserver-workflow.test.ts",
+    "tests/integration/typescript/helpers/",
+    "tests/integration/typescript/README.md",
+    "graphAiServer/tests/integration/README.md"
+  ],
+  "definition_of_done": [
+    "`tests/integration/typescript/` ディレクトリが存在する",
+    "`npm test` が正常に実行される",
+    "既存の結合テストが全てパスする",
+    "ESLint/TypeScript エラーゼロ",
+    "vitest.config.tsが適切に設定されている"
+  ],
+  "target_coverage": 90,
+  "migration_info": {
+    "source_framework": "Jest",
+    "target_framework": "Vitest",
+    "source_files": [
+      "graphAiServer/tests/integration/app.test.ts",
+      "graphAiServer/tests/integration/workflow.test.ts"
+    ],
+    "target_directory": "tests/integration/typescript/api/"
+  }
+}

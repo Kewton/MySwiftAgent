@@ -1,0 +1,122 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "シナリオ1: ディレクトリ構造の確認",
+      "result": "passed",
+      "details": "All required files exist: package.json, vitest.config.ts, tsconfig.json, setup.ts, api/graphaiserver-api.test.ts, api/graphaiserver-workflow.test.ts, helpers/index.ts, helpers/test-utils.ts, README.md",
+      "evidence": [
+        "tests/integration/typescript/package.json - EXISTS",
+        "tests/integration/typescript/vitest.config.ts - EXISTS",
+        "tests/integration/typescript/tsconfig.json - EXISTS",
+        "tests/integration/typescript/setup.ts - EXISTS",
+        "tests/integration/typescript/api/graphaiserver-api.test.ts - EXISTS",
+        "tests/integration/typescript/api/graphaiserver-workflow.test.ts - EXISTS",
+        "tests/integration/typescript/helpers/index.ts - EXISTS",
+        "tests/integration/typescript/helpers/test-utils.ts - EXISTS",
+        "tests/integration/typescript/README.md - EXISTS",
+        "graphAiServer/tests/integration/README.md - EXISTS"
+      ]
+    },
+    {
+      "scenario": "シナリオ2: npm test の実行",
+      "result": "passed",
+      "details": "npm test executed successfully with exit code 0",
+      "evidence": "vitest run completed: Test Files 2 passed (2), Tests 24 passed (24), Duration 459ms"
+    },
+    {
+      "scenario": "シナリオ3: テスト結果の確認",
+      "result": "passed",
+      "details": "All 24 tests passed",
+      "evidence": "api/graphaiserver-api.test.ts (12 tests) PASSED, api/graphaiserver-workflow.test.ts (12 tests) PASSED"
+    },
+    {
+      "scenario": "シナリオ4: 静的解析の確認",
+      "result": "passed",
+      "details": "ESLint and TypeScript type check completed with zero errors",
+      "evidence": "npm run lint: exit code 0, npm run typecheck: exit code 0"
+    },
+    {
+      "scenario": "シナリオ5: vitest.config.ts設定の確認",
+      "result": "passed",
+      "details": "vitest.config.ts contains all required settings",
+      "evidence": {
+        "globals": true,
+        "environment": "node",
+        "include": ["**/*.test.ts"],
+        "setupFiles": ["./setup.ts"],
+        "testTimeout": 30000
+      }
+    },
+    {
+      "scenario": "シナリオ6: 移行元deprecation警告の確認",
+      "result": "passed",
+      "details": "graphAiServer/tests/integration/README.md contains deprecation warning",
+      "evidence": "WARNING: These tests are deprecated. Integration tests have been migrated to tests/integration/typescript/. Migration Date: 2025-12-03, Issue: #212"
+    },
+    {
+      "scenario": "シナリオ7: README.mdの確認",
+      "result": "passed",
+      "details": "tests/integration/typescript/README.md contains test execution instructions and directory structure explanation",
+      "evidence": {
+        "sections_found": [
+          "Overview",
+          "Directory Structure",
+          "Getting Started",
+          "Prerequisites",
+          "Installation",
+          "Running Tests",
+          "Test Files",
+          "Migration Notes",
+          "Important Notes",
+          "Troubleshooting",
+          "Contributing"
+        ],
+        "commands_documented": ["npm test", "npm run test:watch", "npm run test:coverage", "npm run typecheck", "npm run lint"]
+      }
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "`tests/integration/typescript/` ディレクトリが存在する",
+      "verified": true
+    },
+    {
+      "criterion": "`npm test` が正常に実行される",
+      "verified": true
+    },
+    {
+      "criterion": "既存の結合テストが全てパスする",
+      "verified": true
+    },
+    {
+      "criterion": "ESLint/TypeScript エラーゼロ",
+      "verified": true
+    },
+    {
+      "criterion": "vitest.config.tsが適切に設定されている",
+      "verified": true
+    },
+    {
+      "criterion": "正常系: API結合テスト実行",
+      "verified": true
+    },
+    {
+      "criterion": "異常系: サービス未起動時のスキップ動作",
+      "verified": true
+    }
+  ],
+  "evidence_files": [
+    "tests/integration/typescript/package.json",
+    "tests/integration/typescript/vitest.config.ts",
+    "tests/integration/typescript/tsconfig.json",
+    "tests/integration/typescript/setup.ts",
+    "tests/integration/typescript/api/graphaiserver-api.test.ts",
+    "tests/integration/typescript/api/graphaiserver-workflow.test.ts",
+    "tests/integration/typescript/helpers/index.ts",
+    "tests/integration/typescript/helpers/test-utils.ts",
+    "tests/integration/typescript/README.md",
+    "graphAiServer/tests/integration/README.md"
+  ],
+  "message": "すべての受入条件を満たしています。TypeScript結合テストのリポジトリ直下移行が正常に完了しました。"
+}
