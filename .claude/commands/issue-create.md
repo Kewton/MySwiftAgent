@@ -2,7 +2,7 @@
 title: "Issue一括作成"
 description: "Issue分割計画書からGitHub Issueを一括作成し、親子関係を設定"
 tags: ["issue", "github", "automation", "project-management"]
-model: sonnet
+model: opus
 ---
 
 # Issue一括作成スキル

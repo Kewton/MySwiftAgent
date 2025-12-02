@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "テスト駆動開発で高品質コードを実装"
 phase: "8. 開発（TDD実装）"
 session: "worktree"

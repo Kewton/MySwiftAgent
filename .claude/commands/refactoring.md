@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "コード品質改善、設計パターン適用、技術的負債解消"
 phase: "10. リファクタリング"
 session: "worktree"

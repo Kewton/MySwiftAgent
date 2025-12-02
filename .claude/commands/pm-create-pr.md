@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "Pull Request自動作成、タイトル・説明自動生成"
 phase: "12. PR作成"
 session: "worktree"

@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "Issue要件に基づく自動受入テスト実行"
 phase: "9. テスト（受入テスト）"
 session: "worktree"

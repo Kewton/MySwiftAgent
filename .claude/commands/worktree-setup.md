@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "Issue番号からgit worktree環境を自動構築"
 phase: "7. ブランチ作成"
 session: "main → worktree"

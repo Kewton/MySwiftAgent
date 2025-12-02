@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "SvelteKitで4つのインタラクティブなUIプロトタイプを生成"
 phase: "2. UIモックアップ"
 session: "main"

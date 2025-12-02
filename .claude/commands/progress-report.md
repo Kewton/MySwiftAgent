@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "開発進捗サマリ作成、ブロッカー報告"
 phase: "11. 進捗管理"
 session: "worktree"

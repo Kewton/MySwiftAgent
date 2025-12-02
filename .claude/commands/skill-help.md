@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 description: "Claude Code Skills の使用方法とガイド"
 phase: "ヘルプ"
 session: "any"
