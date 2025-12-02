@@ -1,0 +1,218 @@
+{
+  "status": "failed",
+  "test_cases": [
+    {
+      "id": "AC-001",
+      "scenario": "README.md Section Verification",
+      "description": "Verify README.md contains required sections",
+      "result": "passed",
+      "evidence": {
+        "sections_found": [
+          {
+            "section": "Makeコマンド一覧",
+            "line": 76,
+            "content": "## Makeコマンド一覧"
+          },
+          {
+            "section": "よく使う開発パターン",
+            "line": 119,
+            "content": "## よく使う開発パターン"
+          },
+          {
+            "section": "レイヤ別Docker Compose",
+            "line": 208,
+            "content": "### 方法1b: レイヤ別Docker Compose（選択的起動）"
+          }
+        ]
+      }
+    },
+    {
+      "id": "AC-002",
+      "scenario": "docker-compose.yml include検証",
+      "description": "docker-compose.yml uses include directive for 3 layer files",
+      "result": "passed",
+      "evidence": {
+        "include_directive_found": true,
+        "files_included": [
+          "docker-compose.platform.yml",
+          "docker-compose.agent.yml",
+          "docker-compose.frontend.yml"
+        ],
+        "docker_compose_yml_lines": "26-32"
+      }
+    },
+    {
+      "id": "AC-003",
+      "scenario": "docker compose config検証",
+      "description": "docker compose config executes without errors",
+      "result": "passed",
+      "evidence": {
+        "command": "docker compose config",
+        "exit_code": 0,
+        "services_parsed": [
+          "commonui",
+          "expertagent",
+          "graphaiserver",
+          "jobqueue",
+          "langfuse-clickhouse",
+          "langfuse-db",
+          "langfuse-minio",
+          "langfuse-redis",
+          "langfuse-server",
+          "langfuse-worker",
+          "myscheduler",
+          "myvault",
+          "valkey"
+        ]
+      }
+    },
+    {
+      "id": "AC-004",
+      "scenario": "Markdownリンク検証",
+      "description": "Check all internal links are valid",
+      "result": "failed",
+      "evidence": {
+        "readme_links_valid": true,
+        "service_dependencies_links": {
+          "valid": [
+            "../claude/01-development-workflow.md",
+            "../../graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md"
+          ],
+          "broken": [
+            {
+              "link": "./architecture-overview.md",
+              "correct_path": "../design/architecture-overview.md"
+            },
+            {
+              "link": "./environment-variables.md",
+              "correct_path": "../design/environment-variables.md"
+            },
+            {
+              "link": "./myvault-integration.md",
+              "correct_path": "../design/myvault-integration.md"
+            }
+          ]
+        }
+      },
+      "error": "3 broken links found in docs/arch/service-dependencies.md"
+    },
+    {
+      "id": "AC-005",
+      "scenario": "コードブロック言語指定確認",
+      "description": "Verify all code blocks have language specification",
+      "result": "passed",
+      "evidence": {
+        "total_code_blocks": 56,
+        "blocks_with_language": 54,
+        "blocks_without_language": 2,
+        "blocks_without_language_details": [
+          {
+            "line": 15,
+            "content": "Project directory tree structure (plain text)",
+            "acceptable": true
+          },
+          {
+            "line": 537,
+            "content": "Error message output (plain text)",
+            "acceptable": true
+          }
+        ],
+        "note": "Two blocks without language spec are intentionally plain text outputs, not code"
+      }
+    },
+    {
+      "id": "AC-006",
+      "scenario": "service-dependencies.md更新確認",
+      "description": "Verify Docker Compose layer structure section exists",
+      "result": "passed",
+      "evidence": {
+        "section_found": "Docker Composeレイヤ構成",
+        "section_line": 82,
+        "layer_files_referenced": [
+          "docker-compose.platform.yml",
+          "docker-compose.agent.yml",
+          "docker-compose.frontend.yml"
+        ],
+        "include_example_shown": true
+      }
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "README.md に「レイヤ別docker-compose」セクションが存在する",
+      "verified": true
+    },
+    {
+      "criterion": "README.md に「Makeコマンド一覧」セクションが存在する",
+      "verified": true
+    },
+    {
+      "criterion": "既存docker-compose.yml が `include` で3ファイルを参照している",
+      "verified": true
+    },
+    {
+      "criterion": "`docker compose up -d` （既存コマンド）が引き続き動作する",
+      "verified": true,
+      "note": "docker compose config validates successfully"
+    },
+    {
+      "criterion": "Markdownリンクが有効（壊れたリンクなし）",
+      "verified": false,
+      "failed_items": [
+        "docs/arch/service-dependencies.md has 3 broken links to docs/design/ files"
+      ]
+    },
+    {
+      "criterion": "コードブロックの言語指定が正しい",
+      "verified": true,
+      "note": "2 blocks without language spec are intentionally plain text (acceptable)"
+    }
+  ],
+  "files_verified": [
+    {
+      "file": "README.md",
+      "exists": true,
+      "status": "passed"
+    },
+    {
+      "file": "docker-compose.yml",
+      "exists": true,
+      "status": "passed"
+    },
+    {
+      "file": "docker-compose.platform.yml",
+      "exists": true,
+      "status": "passed"
+    },
+    {
+      "file": "docker-compose.agent.yml",
+      "exists": true,
+      "status": "passed"
+    },
+    {
+      "file": "docker-compose.frontend.yml",
+      "exists": true,
+      "status": "passed"
+    },
+    {
+      "file": "docs/arch/service-dependencies.md",
+      "exists": true,
+      "status": "failed",
+      "issues": ["broken internal links"]
+    }
+  ],
+  "error": "AC-004 failed: 3 broken internal links in docs/arch/service-dependencies.md",
+  "message": "Acceptance tests failed. 5 out of 6 criteria passed. Fix broken links in docs/arch/service-dependencies.md (lines 1297-1299) to correct paths in ../design/ directory.",
+  "recommendations": [
+    {
+      "file": "docs/arch/service-dependencies.md",
+      "action": "Fix broken links in reference section",
+      "changes": [
+        "Line 1297: Change `./architecture-overview.md` to `../design/architecture-overview.md`",
+        "Line 1298: Change `./environment-variables.md` to `../design/environment-variables.md`",
+        "Line 1299: Change `./myvault-integration.md` to `../design/myvault-integration.md`"
+      ]
+    }
+  ],
+  "timestamp": "2025-12-02T23:15:00+09:00"
+}

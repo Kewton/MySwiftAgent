@@ -1,0 +1,55 @@
+{
+  "issue_number": 203,
+  "iteration": 2,
+  "feature_summary": "[Docs] ドキュメント・CI更新 - リンク修正後の再検証",
+  "acceptance_criteria": [
+    "README.md に「レイヤ別docker-compose」セクションが存在する",
+    "README.md に「Makeコマンド一覧」セクションが存在する",
+    "既存docker-compose.yml が `include` で3ファイルを参照している",
+    "`docker compose up -d` （既存コマンド）が引き続き動作する",
+    "Markdownリンクが有効（壊れたリンクなし）",
+    "コードブロックの言語指定が正しい"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-001",
+      "scenario": "README.md セクション確認",
+      "description": "README.mdに必要セクションが存在することを確認"
+    },
+    {
+      "id": "AC-002",
+      "scenario": "docker-compose.yml include検証",
+      "description": "docker-compose.ymlがinclude方式で3ファイルを参照していることを確認"
+    },
+    {
+      "id": "AC-003",
+      "scenario": "docker compose config検証",
+      "description": "docker compose configコマンドがエラーなしで完了することを確認"
+    },
+    {
+      "id": "AC-004",
+      "scenario": "Markdownリンク検証（重点）",
+      "description": "修正された3つのリンクが有効であることを確認",
+      "focus_items": [
+        "../design/architecture-overview.md",
+        "../design/environment-variables.md",
+        "../design/myvault-integration.md"
+      ]
+    },
+    {
+      "id": "AC-005",
+      "scenario": "コードブロック言語指定確認",
+      "description": "コードブロックに適切な言語指定があることを確認"
+    },
+    {
+      "id": "AC-006",
+      "scenario": "service-dependencies.md更新確認",
+      "description": "レイヤ構造情報が追加されていることを確認"
+    }
+  ],
+  "previous_iteration_failure": {
+    "id": "AC-004",
+    "description": "3 broken links in docs/arch/service-dependencies.md",
+    "fix_applied": true
+  }
+}

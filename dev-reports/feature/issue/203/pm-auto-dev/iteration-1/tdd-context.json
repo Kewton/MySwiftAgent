@@ -1,0 +1,95 @@
+{
+  "issue_number": 203,
+  "title": "[Docs] ドキュメント・CI更新",
+  "acceptance_criteria": [
+    "README.md に「レイヤ別docker-compose」セクションが存在する",
+    "README.md に「Makeコマンド一覧」セクションが存在する",
+    "既存docker-compose.yml が `include` で3ファイルを参照している",
+    "`docker compose up -d` （既存コマンド）が引き続き動作する",
+    "Markdownリンクが有効（壊れたリンクなし）",
+    "コードブロックの言語指定が正しい"
+  ],
+  "implementation_tasks": [
+    "README.md に「Makeコマンド一覧」セクション追加",
+    "README.md に「よく使う開発パターン」セクション追加",
+    "既存セクション統合・整理",
+    "docker-compose.yml を include 方式へ移行",
+    "docs/arch/service-dependencies.md 更新",
+    "CI/CD（GitHub Actions）の確認・更新"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Makeコマンド一覧セクション追加",
+      "estimated_minutes": 30,
+      "deliverables": ["README.md（セクション追加）"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "よく使う開発パターンセクション追加",
+      "estimated_minutes": 30,
+      "deliverables": ["README.md（セクション追加）"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "既存セクション統合・整理",
+      "estimated_minutes": 30,
+      "deliverables": ["README.md（整理完了）"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "include方式への移行",
+      "estimated_minutes": 30,
+      "deliverables": ["docker-compose.yml更新"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "互換性テスト",
+      "estimated_minutes": 15,
+      "deliverables": ["テスト結果確認"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "レイヤ構造セクション追加",
+      "estimated_minutes": 20,
+      "deliverables": ["docs/arch/service-dependencies.md更新"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "リンク確認",
+      "estimated_minutes": 10,
+      "deliverables": ["リンク検証完了"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "GitHub Actions確認",
+      "estimated_minutes": 15,
+      "deliverables": ["CI/CD検証結果"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "README.md - 「Makeコマンド一覧」セクション追加",
+    "README.md - 「よく使う開発パターン」セクション追加",
+    "README.md - 既存セクション統合・整理",
+    "docker-compose.yml - include方式への移行",
+    "docs/arch/service-dependencies.md - レイヤ構造反映"
+  ],
+  "definition_of_done": [
+    "README.md に「Makeコマンド一覧」セクションが存在する",
+    "README.md に「よく使う開発パターン」セクションが存在する",
+    "既存docker-compose.yml が `include` で3ファイルを参照している",
+    "`docker compose config` がエラーなしで完了する",
+    "Markdownリンクが有効（壊れたリンクなし）",
+    "コードブロックの言語指定が正しい"
+  ],
+  "target_coverage": 90,
+  "note": "このIssueはドキュメント更新が主なタスクのため、カバレッジ目標は関連する検証スクリプトに適用"
+}

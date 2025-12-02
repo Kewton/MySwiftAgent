@@ -1,0 +1,64 @@
+{
+  "issue_number": 203,
+  "feature_summary": "[Docs] ドキュメント・CI更新 - README.md更新、既存docker-compose.yml非推奨化、CI/CD対応",
+  "acceptance_criteria": [
+    "README.md に「レイヤ別docker-compose」セクションが存在する",
+    "README.md に「Makeコマンド一覧」セクションが存在する",
+    "既存docker-compose.yml が `include` で3ファイルを参照している",
+    "`docker compose up -d` （既存コマンド）が引き続き動作する",
+    "Markdownリンクが有効（壊れたリンクなし）",
+    "コードブロックの言語指定が正しい"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-001",
+      "scenario": "README.md セクション確認",
+      "description": "README.mdに「レイヤ別docker-compose」「Makeコマンド一覧」「よく使う開発パターン」セクションが存在することを確認",
+      "verification_method": "grep検索とファイル内容確認",
+      "expected_result": "3つのセクションすべてが存在"
+    },
+    {
+      "id": "AC-002",
+      "scenario": "docker-compose.yml include検証",
+      "description": "docker-compose.ymlがinclude方式で3つのレイヤファイルを参照していることを確認",
+      "verification_method": "ファイル内容確認",
+      "expected_result": "include:ディレクティブで3ファイル（platform, agent, frontend）を参照"
+    },
+    {
+      "id": "AC-003",
+      "scenario": "docker compose config検証",
+      "description": "docker compose configコマンドがエラーなしで完了することを確認",
+      "verification_method": "コマンド実行",
+      "expected_result": "終了コード0、エラー出力なし"
+    },
+    {
+      "id": "AC-004",
+      "scenario": "Markdownリンク検証",
+      "description": "更新されたMarkdownファイル内のリンクが有効であることを確認",
+      "verification_method": "リンク先ファイル存在確認",
+      "expected_result": "すべての内部リンクが有効"
+    },
+    {
+      "id": "AC-005",
+      "scenario": "コードブロック言語指定確認",
+      "description": "README.md内のコードブロックに適切な言語指定があることを確認",
+      "verification_method": "正規表現検索",
+      "expected_result": "すべてのコードブロックに言語指定あり"
+    },
+    {
+      "id": "AC-006",
+      "scenario": "service-dependencies.md更新確認",
+      "description": "docs/arch/service-dependencies.mdにレイヤ構造情報が追加されていることを確認",
+      "verification_method": "ファイル内容確認",
+      "expected_result": "Docker Composeレイヤ構造セクションが存在"
+    }
+  ],
+  "files_to_verify": [
+    "README.md",
+    "docker-compose.yml",
+    "docs/arch/service-dependencies.md",
+    "docker-compose.platform.yml",
+    "docker-compose.agent.yml",
+    "docker-compose.frontend.yml"
+  ]
+}
