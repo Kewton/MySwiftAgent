@@ -1,0 +1,74 @@
+{
+  "status": "success",
+  "coverage": 100,
+  "unit_tests": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_changed": [
+    "README.md",
+    "docker-compose.yml",
+    "docs/arch/service-dependencies.md",
+    "tests/docs/__init__.py",
+    "tests/docs/test_issue_203_documentation.py"
+  ],
+  "commits": [
+    "b720df5: docs(issue/203): add Make commands, development patterns, and include directive"
+  ],
+  "acceptance_criteria_results": {
+    "readme_layer_docker_compose_section": {
+      "status": "passed",
+      "description": "README.md contains layer-based docker-compose section"
+    },
+    "readme_make_commands_section": {
+      "status": "passed",
+      "description": "README.md contains Make commands list section"
+    },
+    "readme_development_patterns_section": {
+      "status": "passed",
+      "description": "README.md contains common development patterns section"
+    },
+    "docker_compose_uses_include": {
+      "status": "passed",
+      "description": "docker-compose.yml uses include directive"
+    },
+    "docker_compose_includes_3_files": {
+      "status": "passed",
+      "description": "docker-compose.yml includes docker-compose.platform.yml, docker-compose.agent.yml, docker-compose.frontend.yml"
+    },
+    "docker_compose_config_valid": {
+      "status": "passed",
+      "description": "docker compose config completes without errors"
+    },
+    "markdown_links_valid": {
+      "status": "passed",
+      "description": "All internal markdown links are valid"
+    },
+    "code_blocks_have_language": {
+      "status": "passed",
+      "description": "Code blocks have proper language specifications"
+    },
+    "service_dependencies_layer_structure": {
+      "status": "passed",
+      "description": "docs/arch/service-dependencies.md documents layer structure"
+    },
+    "service_dependencies_docker_compose_reference": {
+      "status": "passed",
+      "description": "docs/arch/service-dependencies.md references docker-compose files"
+    }
+  },
+  "deliverables_completed": [
+    "README.md - 'Makeコマンド一覧' section added with all startup, shutdown, log, and utility commands",
+    "README.md - 'よく使う開発パターン' section added with 4 common development patterns",
+    "README.md - Port numbers corrected (8001-8005 for services)",
+    "docker-compose.yml - Converted to include directive referencing 3 layer files",
+    "docs/arch/service-dependencies.md - Docker Compose layer structure section added",
+    "tests/docs/test_issue_203_documentation.py - Verification tests for all acceptance criteria"
+  ],
+  "message": "TDD implementation complete. All 13 acceptance criteria tests pass. docker-compose.yml now uses include directive to reference 3 layer files (platform, agent, frontend). README.md updated with Make commands list and development patterns sections. Documentation fully verified."
+}

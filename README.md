@@ -73,6 +73,113 @@ docker-compose up -d valkey
 
 詳細は[Valkey統合ガイド](expertAgent/docs/valkey-integration.md)および[運用ガイド](docs/ops/valkey-operations.md)を参照してください。
 
+## 🛠️ Makeコマンド一覧
+
+Makefileを使用してレイヤ別にサービスを起動・管理できます。
+
+### 起動コマンド
+
+| コマンド | 説明 |
+|---------|------|
+| `make dev-platform` | Platform層を起動（valkey, jobqueue, myscheduler, myvault, langfuse） |
+| `make dev-agent` | Agent層を起動（expertagent, graphaiserver）※Platform層が必要 |
+| `make dev-frontend` | Frontend層を起動（commonui, myagentdesk）※Agent層が必要 |
+| `make dev-all` | 全レイヤを依存順に起動 |
+
+### 停止コマンド
+
+| コマンド | 説明 |
+|---------|------|
+| `make down` | 全サービスを停止 |
+| `make down-platform` | Platform層のみ停止 |
+| `make down-agent` | Agent層のみ停止 |
+| `make down-frontend` | Frontend層のみ停止 |
+
+### ログ・ステータス
+
+| コマンド | 説明 |
+|---------|------|
+| `make logs` | 全サービスのログを表示 |
+| `make logs-platform` | Platform層のログを表示 |
+| `make logs-agent` | Agent層のログを表示 |
+| `make logs-frontend` | Frontend層のログを表示 |
+| `make status` | 全サービスのステータスを表示 |
+
+### ユーティリティ
+
+| コマンド | 説明 |
+|---------|------|
+| `make network` | Dockerネットワークを作成 |
+| `make rebuild` | 全イメージをキャッシュなしで再ビルド |
+| `make clean` | 全サービスを停止しボリューム・孤立コンテナを削除 |
+| `make help` | ヘルプを表示 |
+
+---
+
+## 🔧 よく使う開発パターン
+
+### パターン1: Platform層のみで開発（リソース節約）
+
+AI機能が不要な場合、Platform層のみ起動してリソースを節約できます。
+
+```bash
+# Platform層のみ起動
+make dev-platform
+
+# 動作確認
+curl http://localhost:8001/health  # JobQueue
+curl http://localhost:8002/health  # MyScheduler
+curl http://localhost:8003/health  # MyVault
+```
+
+### パターン2: 特定サービスのローカル開発
+
+特定のサービスをローカルで開発しながら、他はDockerで起動する場合：
+
+```bash
+# Platform層をDockerで起動
+make dev-platform
+
+# expertAgentをローカルで開発
+cd expertAgent
+uv sync
+uv run uvicorn app.main:app --reload --port 8004
+
+# GraphAiServerをDockerで起動（expertAgentのURLをlocalhost:8004に変更）
+docker compose -f docker-compose.agent.yml up -d graphaiserver
+```
+
+### パターン3: フルスタック開発
+
+全サービスを起動して統合テストを行う場合：
+
+```bash
+# 全サービスを依存順に起動
+make dev-all
+
+# 全サービスのステータス確認
+make status
+
+# ログを監視
+make logs
+```
+
+### パターン4: Langfuse（LLM Observability）の利用
+
+LLMの実行トレースを可視化する場合：
+
+```bash
+# Platform層を起動（Langfuse含む）
+make dev-platform
+
+# Langfuse Web UI
+# http://localhost:3001
+
+# 初回ログイン情報は .env.docker の LANGFUSE_INIT_* 変数を確認
+```
+
+---
+
 ## 🚀 クイックスタート
 
 ### 方法1: Docker Compose（推奨）
@@ -82,16 +189,20 @@ docker-compose up -d valkey
 cp .env.example .env
 # .envファイルを編集してAPIキー等を設定
 
-# 2. サービス起動
+# 2. ネットワーク作成（初回のみ）
+docker network create myswiftagent-network
+
+# 3. サービス起動
 docker compose up -d
 
-# 3. 動作確認
-curl http://localhost:8102/health  # MyScheduler
-curl http://localhost:8101/health  # JobQueue
-curl http://localhost:8103/health  # ExpertAgent
-curl http://localhost:8104/health  # GraphAiServer
-curl http://localhost:8105/health  # MyVault
+# 4. 動作確認
+curl http://localhost:8001/health  # JobQueue
+curl http://localhost:8002/health  # MyScheduler
+curl http://localhost:8003/health  # MyVault
+curl http://localhost:8004/health  # ExpertAgent
+curl http://localhost:8005/health  # GraphAiServer
 # CommonUI: http://localhost:8501
+# Langfuse: http://localhost:3001
 ```
 
 ### 方法1b: レイヤ別Docker Compose（選択的起動）
@@ -119,8 +230,11 @@ docker compose -f docker-compose.platform.yml down
 | レイヤ | Composeファイル | 含まれるサービス |
 |--------|----------------|-----------------|
 | Platform | `docker-compose.platform.yml` | valkey, jobqueue, myscheduler, myvault, langfuse-* |
-| Agent | `docker-compose.agent.yml` | expertagent, graphaiserver (予定) |
-| Frontend | `docker-compose.frontend.yml` | commonui, myagentdesk (予定) |
+| Agent | `docker-compose.agent.yml` | expertagent, graphaiserver |
+| Frontend | `docker-compose.frontend.yml` | commonui, myagentdesk |
+
+> **Note**: `docker-compose.yml` は上記3つのレイヤファイルを `include` で参照しています。
+> 詳細は [docs/arch/service-dependencies.md](./docs/arch/service-dependencies.md) を参照してください。
 
 ### 方法2: 開発用スクリプト
 
@@ -133,11 +247,11 @@ cp .env.example .env
 ./scripts/quick-start.sh
 
 # 3. 動作確認
-curl http://localhost:8102/health  # MyScheduler
-curl http://localhost:8101/health  # JobQueue
-curl http://localhost:8103/health  # ExpertAgent
-curl http://localhost:8104/health  # GraphAiServer
-curl http://localhost:8105/health  # MyVault
+curl http://localhost:8001/health  # JobQueue
+curl http://localhost:8002/health  # MyScheduler
+curl http://localhost:8003/health  # MyVault
+curl http://localhost:8004/health  # ExpertAgent
+curl http://localhost:8005/health  # GraphAiServer
 # CommonUI: http://localhost:8501
 ```
 

@@ -1,0 +1,22 @@
+{
+  "issue_number": 203,
+  "iteration": 2,
+  "previous_iteration_issues": [
+    {
+      "id": "AC-004",
+      "description": "Markdownリンク検証失敗",
+      "failed_items": [
+        "docs/arch/service-dependencies.md has 3 broken links to docs/design/ files"
+      ],
+      "fix_applied": "Fixed broken links in reference section (lines 1297-1299)"
+    }
+  ],
+  "fix_details": {
+    "file": "docs/arch/service-dependencies.md",
+    "changes": [
+      "Line 1297: Changed `./architecture-overview.md` to `../design/architecture-overview.md`",
+      "Line 1298: Changed `./environment-variables.md` to `../design/environment-variables.md`",
+      "Line 1299: Changed `./myvault-integration.md` to `../design/myvault-integration.md`"
+    ]
+  }
+}
