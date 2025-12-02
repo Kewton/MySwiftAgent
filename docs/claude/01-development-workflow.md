@@ -37,18 +37,18 @@ graph LR
 |---------|-----------|--------|----------|-----------|------|
 | **1. Feature定義** | 要件定義 | Opus | `/requirements` | メイン | ユーザーストーリー、受入条件作成 |
 | **2. UIモックアップ** 🆕 | UIデザイン | Opus | `/ui-mockup` | メイン | UI必要時のみ、4パターン生成 |
-| **3. 仕様ドラフト** | 設計方針 | Opus | `/design` | メイン | アーキテクチャ設計、技術選定 |
-| **4. レビュー・承認** | アーキテクチャレビュー | Opus | `/review-arch` | メイン | 設計レビュー、リスク評価 |
+| **3. 仕様ドラフト** | 設計方針 | Opus | `/design-policy` | メイン | アーキテクチャ設計、技術選定 |
+| **4. レビュー・承認** | アーキテクチャレビュー | Opus | `/architecture-review` | メイン | 設計レビュー、リスク評価 |
 | **5. Issue分割** | Issue分割 | Opus | `/issue-split` | メイン | FeatureをIssueに分割（計画書作成） |
 | **6. Issue登録** 🆕 | Issue一括作成 | Opus | `/issue-create` | メイン | GitHub Issueに一括登録、親子関連付け |
 | **7. 作業計画** | 作業計画 | Opus | `/work-plan` | メイン | Issue単位の詳細作業計画 |
 | **8. ブランチ作成** | Worktree自動セットアップ | Opus | `/worktree-setup` | **→ worktree** | Issue番号から自動でworktree環境構築 |
 | **9. 開発（TDD実装）** | TDD実装 | Opus | `/tdd-impl` または `/pm-auto-dev` | worktree | テスト駆動開発による実装 |
 | **10. 品質保証** | 受入テスト | Opus | `/acceptance-test` または `/pm-auto-dev` | worktree | 受入テスト実行・分析 |
-| **11. リファクタリング** | リファクタリング | Opus | `/refactor` または `/pm-auto-dev` | worktree | コード品質改善（必要時） |
-| **12. 進捗管理** | 進捗報告 | Opus | `/progress` または `/pm-auto-dev` | worktree | 進捗サマリ、ブロッカー報告 |
+| **11. リファクタリング** | リファクタリング | Opus | `/refactoring` または `/pm-auto-dev` | worktree | コード品質改善（必要時） |
+| **12. 進捗管理** | 進捗報告 | Opus | `/progress-report` または `/pm-auto-dev` | worktree | 進捗サマリ、ブロッカー報告 |
 | **13. PR作成** | - | Opus | - | worktree | Pull Request作成（手動作業） |
-| **14. コードレビュー** | アーキテクチャレビュー | Opus | `/review-arch` | worktree | コードレビュー支援（必要時） |
+| **14. コードレビュー** | アーキテクチャレビュー | Opus | `/architecture-review` | worktree | コードレビュー支援（必要時） |
 | **15. CI/CD実行** | - | Opus | - | worktree | 自動テスト・ビルド（自動処理） |
 | **16. マージ** | - | Opus | - | worktree | developブランチへマージ（手動作業） |
 | 🏁 **Featureクローズ処理** ||||| |
@@ -66,7 +66,7 @@ graph LR
 
 | 項目 | パターンA: 個別実行 | パターンB: 一括委託 |
 |------|-------------------|-------------------|
-| **実行方法** | 各スラッシュコマンドを手動実行<br/>`/tdd-impl` → `/acceptance-test` → `/refactor` → `/progress` | PM Auto-Devに一括委託<br/>`/pm-auto-dev [Issue番号]` |
+| **実行方法** | 各スラッシュコマンドを手動実行<br/>`/tdd-impl` → `/acceptance-test` → `/refactoring` → `/progress-report` | PM Auto-Devに一括委託<br/>`/pm-auto-dev [Issue番号]` |
 | **制御方法** | ユーザーがフェーズごとに判断・実行 | PM Auto-Devが自動でフェーズを進行 |
 | **エラー時** | ユーザーが対処を判断 | 最大3回まで自動リトライ |
 | **適用場面** | 複雑なIssue、実験的な実装 | 標準的なIssue、定型的な実装 |
@@ -79,9 +79,9 @@ graph LR
 # 結果確認後、手動で次へ
 /acceptance-test [Issue番号]
 # 結果確認後、手動で次へ
-/refactor [Issue番号]
+/refactoring [Issue番号]
 # 結果確認後、手動で次へ
-/progress [Issue番号]
+/progress-report [Issue番号]
 ```
 
 **メリット**:
@@ -136,10 +136,10 @@ graph LR
     U1 -->|OK| B["受入テスト<br/>/acceptance-test"]
     U1 -->|NG| A
     B --> U2{ユーザー<br/>判断}
-    U2 -->|Pass| C["リファクタリング<br/>/refactor"]
+    U2 -->|Pass| C["リファクタリング<br/>/refactoring"]
     U2 -->|Fail| A
     C --> U3{ユーザー<br/>判断}
-    U3 -->|OK| D["進捗報告<br/>/progress"]
+    U3 -->|OK| D["進捗報告<br/>/progress-report"]
 
     style A fill:#fff3e0
     style B fill:#e3f2fd
@@ -230,9 +230,9 @@ graph TD
     Start[新機能要求] --> Req["要件定義<br/>(/requirements - Opus)"]
     Req --> UICheck{UI開発<br/>必要?}
     UICheck -->|Yes| Mockup["UIモックアップ<br/>(/ui-mockup - Opus)<br/>4パターン生成"]
-    UICheck -->|No| Design["設計方針<br/>(/design - Opus)"]
+    UICheck -->|No| Design["設計方針<br/>(/design-policy - Opus)"]
     Mockup --> Design
-    Design --> Review1["設計レビュー<br/>(/review-arch - Opus)"]
+    Design --> Review1["設計レビュー<br/>(/architecture-review - Opus)"]
     Review1 -->|承認| IssueSplit["Issue分割<br/>(/issue-split - Opus)<br/>計画書作成"]
     Review1 -->|要修正| Design
     IssueSplit --> IssueCreate["Issue登録<br/>(/issue-create - Opus)<br/>GitHub一括作成"]
@@ -246,13 +246,13 @@ graph TD
     QA --> QAResult{テスト<br/>合格?}
     QAResult -->|No| Dev
     QAResult -->|Yes| Refactor{"リファクタ<br/>必要?"}
-    Refactor -->|Yes| RefactorExec["リファクタリング<br/>(/refactor - Opus)"]
-    Refactor -->|No| Progress["進捗報告<br/>(/progress - Opus)"]
+    Refactor -->|Yes| RefactorExec["リファクタリング<br/>(/refactoring - Opus)"]
+    Refactor -->|No| Progress["進捗報告<br/>(/progress-report - Opus)"]
     RefactorExec --> Progress
     Progress --> Done{完了?}
     Done -->|No| Dev
     Done -->|Yes| PR["PR作成<br/>(手動 - Opus)"]
-    PR --> Review2["コードレビュー<br/>(/review-arch - Opus)"]
+    PR --> Review2["コードレビュー<br/>(/architecture-review - Opus)"]
     Review2 --> CI["CI/CD<br/>(自動 - Opus)"]
     CI --> Merge["マージ<br/>(手動 - Opus)"]
 
