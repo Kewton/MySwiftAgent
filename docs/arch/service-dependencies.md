@@ -5,6 +5,7 @@ MySwiftAgentのマイクロサービス間の依存関係、通信フロー、�
 ## 目次
 
 - [サービス一覧](#サービス一覧)
+- [Docker Composeレイヤ構成](#docker-composeレイヤ構成)
 - [依存関係マトリクス](#依存関係マトリクス)
 - [アーキテクチャ図](#アーキテクチャ図)
 - [通信フロー](#通信フロー)
@@ -75,6 +76,63 @@ MySwiftAgentは7つのマイクロサービスで構成されています。各�
 - 役割: Streamlit製管理画面
 - 特徴: 運用ツール、シークレット管理UI
 - 依存: jobqueue, myscheduler, myVault, expertAgent, graphAiServer
+
+---
+
+## Docker Composeレイヤ構成
+
+サービスは3つのレイヤに分割されたDocker Composeファイルで管理されています。
+`docker-compose.yml` は `include` ディレクティブを使用してこれらのファイルを統合しています。
+
+### レイヤファイル構成
+
+| レイヤ | ファイル | 含まれるサービス | 依存関係 |
+|--------|---------|-----------------|----------|
+| **Platform** | `docker-compose.platform.yml` | valkey, jobqueue, myscheduler, myvault, langfuse-* | なし（基盤レイヤ） |
+| **Agent** | `docker-compose.agent.yml` | expertagent, graphaiserver | Platform層 |
+| **Frontend** | `docker-compose.frontend.yml` | commonui, myagentdesk | Agent層 |
+
+### 統合ファイル (docker-compose.yml)
+
+```yaml
+# docker-compose.yml
+include:
+  - path: docker-compose.platform.yml
+    project_directory: .
+  - path: docker-compose.agent.yml
+    project_directory: .
+  - path: docker-compose.frontend.yml
+    project_directory: .
+```
+
+### レイヤ別起動
+
+Makefileを使用してレイヤ別に起動できます：
+
+```bash
+# Platform層のみ起動
+make dev-platform
+
+# Agent層を追加起動（Platform層が必要）
+make dev-agent
+
+# Frontend層を追加起動（Agent層が必要）
+make dev-frontend
+
+# 全レイヤを依存順に起動
+make dev-all
+```
+
+### ネットワーク構成
+
+全レイヤは共通の外部ネットワーク `myswiftagent-network` を使用します：
+
+```bash
+# ネットワーク作成（初回のみ）
+docker network create myswiftagent-network
+# または
+make network
+```
 
 ---
 
