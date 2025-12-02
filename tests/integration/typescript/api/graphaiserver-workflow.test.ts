@@ -14,13 +14,17 @@ import request from 'supertest';
 import fs from 'fs';
 import path from 'path';
 import app from '../../../../graphAiServer/src/app.js';
+import { createFileCleanup, YAML_TEMPLATES } from '../helpers/test-utils.js';
 
 // The workflow directory that will be created during tests (relative to cwd)
 // Since app uses process.cwd(), and tests run from tests/integration/typescript/,
 // workflows are created in tests/integration/typescript/config/graphai/
-const ACTUAL_WORKFLOW_DIR = path.resolve(process.cwd(), 'config/graphai');
+const WORKFLOW_DIR = path.resolve(process.cwd(), 'config/graphai');
 
-// Test workflow names to clean up
+// Create file cleanup manager with tracked workflow names
+const fileCleanup = createFileCleanup({ baseDir: WORKFLOW_DIR, extension: '.yml' });
+
+// Track all test workflow names for cleanup
 const TEST_WORKFLOW_NAMES = [
   'test_workflow',
   'test_overwrite',
@@ -29,65 +33,31 @@ const TEST_WORKFLOW_NAMES = [
   'complex_workflow',
   'test_workflow_conflict',
 ];
-
-/**
- * Clean up test workflow files
- */
-function cleanupTestFiles(): void {
-  TEST_WORKFLOW_NAMES.forEach((name) => {
-    const filePath = path.join(ACTUAL_WORKFLOW_DIR, `${name}.yml`);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  });
-}
-
-/**
- * Remove test config directory if empty
- */
-function cleanupTestDirectory(): void {
-  if (fs.existsSync(ACTUAL_WORKFLOW_DIR)) {
-    try {
-      const files = fs.readdirSync(ACTUAL_WORKFLOW_DIR);
-      if (files.length === 0) {
-        fs.rmdirSync(ACTUAL_WORKFLOW_DIR);
-        const parentDir = path.dirname(ACTUAL_WORKFLOW_DIR);
-        if (fs.existsSync(parentDir) && fs.readdirSync(parentDir).length === 0) {
-          fs.rmdirSync(parentDir);
-        }
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
-}
+TEST_WORKFLOW_NAMES.forEach((name) => fileCleanup.track(name));
 
 describe('POST /api/v1/workflows/register', () => {
   // Clean up before all tests to ensure a clean state
   beforeAll(() => {
-    cleanupTestFiles();
+    fileCleanup.cleanup();
   });
 
   // Clean up after each test to prevent conflicts between tests
   afterEach(() => {
-    cleanupTestFiles();
+    fileCleanup.cleanup();
   });
 
   // Final cleanup after all tests
   afterAll(() => {
-    cleanupTestFiles();
-    cleanupTestDirectory();
+    fileCleanup.cleanup();
+    fileCleanup.cleanupDirectory();
   });
 
   describe('Success cases', () => {
     it('should register a valid workflow', async () => {
+      const yamlContent = YAML_TEMPLATES.simple('Hello World');
       const requestBody = {
         workflow_name: 'test_workflow',
-        yaml_content: `version: 0.5
-nodes:
-  test_node:
-    value: "Hello World"
-`,
+        yaml_content: yamlContent,
       };
 
       const response = await request(app)
@@ -107,38 +77,24 @@ nodes:
 
       // Verify file content
       const fileContent = fs.readFileSync(filePath, 'utf8');
-      expect(fileContent).toBe(requestBody.yaml_content);
+      expect(fileContent).toBe(yamlContent);
     });
 
     it('should allow alphanumeric, underscores, and hyphens in workflow_name', async () => {
-      const requestBody = {
-        workflow_name: 'test-workflow_123',
-        yaml_content: `version: 0.5
-nodes:
-  test_node:
-    value: "Test"
-`,
-      };
-
       const response = await request(app)
         .post('/api/v1/workflows/register')
-        .send(requestBody);
+        .send({
+          workflow_name: 'test-workflow_123',
+          yaml_content: YAML_TEMPLATES.simple(),
+        });
 
       expect(response.status).toBe(200);
       expect(response.body.status).toBe('success');
     });
 
     it('should overwrite existing workflow when overwrite=true', async () => {
-      const initialContent = `version: 0.5
-nodes:
-  initial_node:
-    value: "Initial"
-`;
-      const updatedContent = `version: 0.5
-nodes:
-  updated_node:
-    value: "Updated"
-`;
+      const initialContent = YAML_TEMPLATES.simple('Initial');
+      const updatedContent = YAML_TEMPLATES.simple('Updated');
 
       // First request: create workflow
       const firstResponse = await request(app)
@@ -269,11 +225,7 @@ nodes:
     });
 
     it('should return 409 if workflow already exists and overwrite=false', async () => {
-      const yamlContent = `version: 0.5
-nodes:
-  test_node:
-    value: "Test"
-`;
+      const yamlContent = YAML_TEMPLATES.simple();
 
       // First request: create workflow
       const firstResponse = await request(app)
@@ -302,27 +254,11 @@ nodes:
 
   describe('Complex YAML validation', () => {
     it('should accept complex GraphAI workflow', async () => {
-      const complexYaml = `version: 0.5
-nodes:
-  source:
-    value: {}
-  llm_node:
-    agent: openAIAgent
-    params:
-      model: gpt-4
-    inputs:
-      - :source
-  output_node:
-    agent: copyAgent
-    inputs:
-      - :llm_node
-`;
-
       const response = await request(app)
         .post('/api/v1/workflows/register')
         .send({
           workflow_name: 'complex_workflow',
-          yaml_content: complexYaml,
+          yaml_content: YAML_TEMPLATES.complex,
         });
 
       expect(response.status).toBe(200);
