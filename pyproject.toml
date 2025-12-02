@@ -43,6 +43,16 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --strict-markers --no-cov"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: mark test as integration test",
+    "e2e: mark test as end-to-end test",
+    "llm_required: mark test as requiring LLM API access",
+    "production: mark test as production-critical",
+    "critical: mark test as critical path",
+    "slow: mark test as slow-running",
+]
 
 [tool.coverage.run]
 source = ["cli"]
@@ -76,6 +86,11 @@ disallow_untyped_defs = true
 dev = [
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
+    "pytest-asyncio>=0.23.0",
     "pyyaml>=6.0.3",
     "ruff>=0.14.7",
+    "httpx>=0.27.0",
+    "aiosqlite>=0.19.0",
+    "fastapi>=0.115.0",
+    "sqlalchemy>=2.0.0",
 ]

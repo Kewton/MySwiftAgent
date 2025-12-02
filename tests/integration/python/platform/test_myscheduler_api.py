@@ -1,0 +1,237 @@
+from datetime import datetime, timedelta
+
+import pytest
+from app.core.config import settings
+from fastapi.testclient import TestClient
+
+
+class TestHealthAPI:
+    @pytest.mark.production
+    @pytest.mark.critical
+    def test_health_check(self, client: TestClient):
+        """ヘルスチェックAPIのテスト"""
+        response = client.get("/health")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "message" in data
+        assert "timezone" in data
+        assert "version" in data
+        assert data["timezone"] == str(settings.tz)
+
+
+class TestJobsAPI:
+    @pytest.mark.production
+    def test_create_cron_job(self, client: TestClient):
+        """cronジョブ作成のテスト"""
+        job_data = {
+            "schedule_type": "cron",
+            "cron": {"hour": "10", "minute": "30"},
+            "target_url": "https://example.com/api/test",
+            "method": "POST",
+            "headers": {"Authorization": "Bearer test"},
+            "body": {"test": "data"},
+        }
+
+        response = client.post("/api/v1/jobs/", json=job_data)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "job_id" in data
+        assert data["status"] == "scheduled"
+
+    def test_create_interval_job(self, client: TestClient):
+        """intervalジョブ作成のテスト"""
+        job_data = {
+            "schedule_type": "interval",
+            "interval": {"minutes": 5},
+            "target_url": "https://example.com/health",
+            "method": "GET",
+        }
+
+        response = client.post("/api/v1/jobs/", json=job_data)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "job_id" in data
+        assert data["status"] == "scheduled"
+
+    def test_create_date_job(self, client: TestClient):
+        """dateジョブ作成のテスト"""
+        future_time = datetime.now(settings.tz) + timedelta(hours=1)
+
+        job_data = {
+            "schedule_type": "date",
+            "run_at": future_time.isoformat(),
+            "target_url": "https://example.com/one-time",
+            "method": "POST",
+            "body": {"event": "scheduled"},
+        }
+
+        response = client.post("/api/v1/jobs/", json=job_data)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "job_id" in data
+        assert data["status"] == "scheduled"
+
+    @pytest.mark.production
+    @pytest.mark.critical
+    def test_list_jobs_empty(self, client: TestClient):
+        """空のジョブリストのテスト"""
+        response = client.get("/api/v1/jobs/")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "jobs" in data
+        assert len(data["jobs"]) == 0
+
+    def test_list_jobs_with_data(self, client: TestClient):
+        """ジョブが存在する場合のリストテスト"""
+        # まずジョブを作成
+        job_data = {
+            "schedule_type": "interval",
+            "interval": {"minutes": 1},
+            "target_url": "https://example.com/test",
+            "method": "GET",
+        }
+
+        create_response = client.post("/api/v1/jobs/", json=job_data)
+        assert create_response.status_code == 200
+        job_id = create_response.json()["job_id"]
+
+        # ジョブリストを取得
+        response = client.get("/api/v1/jobs/")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert len(data["jobs"]) == 1
+
+        job_info = data["jobs"][0]
+        assert job_info["job_id"] == job_id
+        assert job_info["id"] == job_id  # CommonUI互換性のために追加されたフィールド
+        assert "next_run_time" in job_info
+        assert "trigger" in job_info
+
+    def test_delete_job(self, client: TestClient):
+        """ジョブ削除のテスト"""
+        # まずジョブを作成
+        job_data = {
+            "schedule_type": "interval",
+            "interval": {"seconds": 30},
+            "target_url": "https://example.com/test",
+            "method": "GET",
+        }
+
+        create_response = client.post("/api/v1/jobs/", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # ジョブを削除
+        delete_response = client.delete(f"/api/v1/jobs/{job_id}")
+        assert delete_response.status_code == 200
+
+        data = delete_response.json()
+        assert data["job_id"] == job_id
+        assert data["status"] == "deleted"
+
+    def test_pause_and_resume_job(self, client: TestClient):
+        """ジョブ一時停止・再開のテスト"""
+        # まずジョブを作成
+        job_data = {
+            "schedule_type": "interval",
+            "interval": {"minutes": 1},
+            "target_url": "https://example.com/test",
+            "method": "GET",
+        }
+
+        create_response = client.post("/api/v1/jobs/", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # ジョブを一時停止
+        pause_response = client.post(f"/api/v1/jobs/{job_id}/pause")
+        assert pause_response.status_code == 200
+
+        data = pause_response.json()
+        assert data["job_id"] == job_id
+        assert data["status"] == "paused"
+
+        # ジョブを再開
+        resume_response = client.post(f"/api/v1/jobs/{job_id}/resume")
+        assert resume_response.status_code == 200
+
+        data = resume_response.json()
+        assert data["job_id"] == job_id
+        assert data["status"] == "resumed"
+
+    def test_get_job_detail(self, client: TestClient):
+        """ジョブ詳細取得のテスト"""
+        # まずジョブを作成
+        job_data = {
+            "schedule_type": "cron",
+            "cron": {"hour": "9", "minute": "0"},
+            "target_url": "https://api.example.com/webhook",
+            "method": "POST",
+            "headers": {"Content-Type": "application/json"},
+            "body": {"message": "test"},
+            "timeout_sec": 60,
+            "max_retries": 2,
+            "retry_backoff_sec": 2.0,
+        }
+
+        create_response = client.post("/api/v1/jobs/", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # ジョブ詳細を取得
+        detail_response = client.get(f"/api/v1/jobs/{job_id}")
+        assert detail_response.status_code == 200
+
+        detail_data = detail_response.json()
+        assert detail_data["job_id"] == job_id
+        assert detail_data["status"] in ["running", "paused", "completed"]
+        assert detail_data["trigger"] is not None
+        assert detail_data["target_url"] == "https://api.example.com/webhook"
+        assert detail_data["method"] == "POST"
+        assert detail_data["headers"]["Content-Type"] == "application/json"
+        assert detail_data["body"]["message"] == "test"
+        assert detail_data["timeout_sec"] == 60
+        assert detail_data["max_retries"] == 2
+        assert detail_data["retry_backoff_sec"] == 2.0
+        assert "trigger_info" in detail_data
+        assert "next_run_time" in detail_data
+
+    def test_get_nonexistent_job(self, client: TestClient):
+        """存在しないジョブの詳細取得テスト"""
+        response = client.get("/api/v1/jobs/nonexistent-id")
+        assert response.status_code == 404
+
+    def test_invalid_schedule_type(self, client: TestClient):
+        """無効なスケジュールタイプのテスト"""
+        job_data = {
+            "schedule_type": "invalid",
+            "target_url": "https://example.com/test",
+            "method": "GET",
+        }
+
+        response = client.post("/api/v1/jobs/", json=job_data)
+        assert response.status_code == 422  # Validation error
+
+    def test_missing_cron_schedule(self, client: TestClient):
+        """cronスケジュール情報が不足している場合のテスト"""
+        job_data = {
+            "schedule_type": "cron",
+            "target_url": "https://example.com/test",
+            "method": "GET",
+        }
+
+        response = client.post("/api/v1/jobs/", json=job_data)
+        assert response.status_code == 400
+
+    def test_delete_nonexistent_job(self, client: TestClient):
+        """存在しないジョブの削除テスト"""
+        response = client.delete("/api/v1/jobs/nonexistent-id")
+        assert response.status_code == 404
+
+    def test_pause_nonexistent_job(self, client: TestClient):
+        """存在しないジョブの一時停止テスト"""
+        response = client.post("/api/v1/jobs/nonexistent-id/pause")
+        assert response.status_code == 404
