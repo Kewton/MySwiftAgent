@@ -286,7 +286,193 @@ def test_client(docker_services) -> Generator[httpx.AsyncClient, None, None]:
         yield client
 ```
 
-### 3.4 環境切り替えパターン（Environment Switching）
+### 3.4 conftest.py共通化戦略
+
+#### 3.4.1 階層構造と責任分担
+
+```
+tests/
+├── conftest.py                          # [L0] 全テスト共通
+│   └─ pytest設定、共通マーカー定義
+│
+├── integration/
+│   └── python/
+│       ├── conftest.py                  # [L1] Python結合テスト共通
+│       │   └─ docker_services, test_client
+│       ├── platform/conftest.py         # [L2] Platform層固有
+│       │   └─ myvault_client, jobqueue_client
+│       └── agent/conftest.py            # [L2] Agent層固有
+│           └─ expertagent_client, mock_myvault
+│
+└── acceptance/
+    └── python/
+        ├── conftest.py                  # [L1] Python受入テスト共通
+        │   └─ env_config, requires_api_key
+        ├── platform/conftest.py         # [L2] Platform層固有
+        ├── agent/conftest.py            # [L2] Agent層固有
+        └── e2e/conftest.py              # [L2] E2E固有
+            └─ full_stack_services
+```
+
+#### 3.4.2 共通フィクスチャ定義
+
+```python
+# tests/conftest.py [L0: ルートレベル]
+"""
+全テスト共通のpytest設定とマーカー定義
+"""
+import pytest
+
+def pytest_configure(config):
+    """カスタムマーカーの登録"""
+    config.addinivalue_line("markers", "slow: マークされたテストは低速")
+    config.addinivalue_line("markers", "requires_api_key: 外部APIキーが必要")
+    config.addinivalue_line("markers", "platform: Platform層テスト")
+    config.addinivalue_line("markers", "agent: Agent層テスト")
+    config.addinivalue_line("markers", "frontend: Frontend層テスト")
+
+@pytest.fixture(scope="session")
+def project_root() -> str:
+    """プロジェクトルートパスを返す"""
+    import os
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+```
+
+```python
+# tests/integration/python/conftest.py [L1: 結合テスト共通]
+"""
+Python結合テスト共通フィクスチャ
+"""
+import pytest
+import httpx
+from typing import Generator, Dict, Any
+
+# L0からの継承は自動
+# project_root, マーカーなどが利用可能
+
+@pytest.fixture(scope="session")
+def service_urls() -> Dict[str, str]:
+    """サービスURLの定義（CI環境用デフォルト値）"""
+    return {
+        "myvault": "http://localhost:8103",
+        "jobqueue": "http://localhost:8001",
+        "myscheduler": "http://localhost:8002",
+        "expertagent": "http://localhost:8104",
+        "graphaiserver": "http://localhost:8105",
+    }
+
+@pytest.fixture(scope="session")
+def docker_compose_up(service_urls):
+    """Docker Composeサービス起動（CIでは事前起動を想定）"""
+    import subprocess
+    import time
+
+    # ヘルスチェック待機のみ（起動はCI側で実施）
+    max_retries = 30
+    for i in range(max_retries):
+        try:
+            response = httpx.get(f"{service_urls['myvault']}/health", timeout=5)
+            if response.status_code == 200:
+                break
+        except httpx.RequestError:
+            pass
+        time.sleep(2)
+    else:
+        pytest.skip("Required services not available")
+
+    yield service_urls
+
+@pytest.fixture
+async def async_client() -> Generator[httpx.AsyncClient, None, None]:
+    """非同期HTTPクライアント"""
+    async with httpx.AsyncClient(timeout=30) as client:
+        yield client
+```
+
+```python
+# tests/acceptance/python/conftest.py [L1: 受入テスト共通]
+"""
+Python受入テスト共通フィクスチャ
+"""
+import pytest
+import os
+from typing import Dict, Any
+from functools import wraps
+
+@pytest.fixture(scope="session")
+def env_config() -> Dict[str, Any]:
+    """環境変数からの設定読み込み"""
+    return {
+        "MYVAULT_URL": os.getenv("MYVAULT_URL", "http://localhost:8103"),
+        "EXPERTAGENT_URL": os.getenv("EXPERTAGENT_URL", "http://localhost:8104"),
+        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+    }
+
+def requires_api_key(key_name: str):
+    """APIキーが必要なテストをスキップするデコレータ"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not os.getenv(key_name):
+                pytest.skip(f"{key_name} not set in environment")
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@pytest.fixture(scope="session")
+def ensure_services_running(env_config):
+    """受入テスト用サービス起動確認"""
+    import subprocess
+
+    # make dev-platform または make dev-agent を実行
+    # （呼び出し元のMakefileターゲットで制御）
+    yield env_config
+```
+
+#### 3.4.3 フィクスチャ継承ルール
+
+| レベル | 配置場所 | 責任範囲 | 継承元 |
+|--------|----------|----------|--------|
+| L0 | `tests/conftest.py` | 全テスト共通設定 | なし |
+| L1 | `tests/{type}/python/conftest.py` | テスト種別共通 | L0 |
+| L2 | `tests/{type}/python/{layer}/conftest.py` | レイヤー固有 | L1, L0 |
+
+#### 3.4.4 フィクスチャ重複回避ルール
+
+```python
+# ❌ Bad: 同じフィクスチャを複数箇所で定義
+# tests/integration/python/platform/conftest.py
+@pytest.fixture
+def async_client():  # L1で既に定義済み
+    ...
+
+# ✅ Good: 上位レベルのフィクスチャを再利用
+# tests/integration/python/platform/conftest.py
+@pytest.fixture
+def myvault_client(async_client, service_urls):  # L1のフィクスチャを利用
+    """MyVault専用クライアント"""
+    return MyVaultTestClient(async_client, service_urls["myvault"])
+```
+
+#### 3.4.5 プロジェクト内conftest.pyとの関係
+
+```
+【プロジェクト内（単体テスト用）】
+expertAgent/tests/conftest.py
+  └─ プロジェクト固有のモック、ファクトリー
+  └─ 独立して動作（リポジトリ直下のconftest.pyに依存しない）
+
+【リポジトリ直下（結合・受入テスト用）】
+tests/conftest.py
+  └─ 結合・受入テスト専用
+  └─ プロジェクト内conftest.pyとは独立
+```
+
+**重要**: プロジェクト内のconftest.pyとリポジトリ直下のconftest.pyは**相互に独立**。
+単体テスト実行時にリポジトリ直下のconftest.pyが読み込まれないようにする。
+
+### 3.5 環境切り替えパターン（Environment Switching）
 
 ```python
 # tests/acceptance/python/conftest.py
@@ -784,9 +970,320 @@ TEST_RETRY_COUNT=3
 
 ---
 
-## 10. CLAUDE.md/docs/claude更新方針
+## 10. テスト品質向上施策
 
-### 10.1 CLAUDE.md更新箇所
+### 10.1 エラーハンドリング標準化（SF-1）
+
+#### 10.1.1 テストエラー出力フォーマット
+
+```python
+# tests/integration/python/conftest.py
+
+import pytest
+from typing import Optional
+
+class TestErrorFormatter:
+    """テストエラーの標準フォーマッター"""
+
+    @staticmethod
+    def format_api_error(
+        endpoint: str,
+        expected_status: int,
+        actual_status: int,
+        response_body: Optional[dict] = None
+    ) -> str:
+        """API呼び出しエラーのフォーマット"""
+        return f"""
+=== API Test Failure ===
+Endpoint: {endpoint}
+Expected Status: {expected_status}
+Actual Status: {actual_status}
+Response Body: {response_body}
+========================
+"""
+
+    @staticmethod
+    def format_timeout_error(
+        operation: str,
+        timeout_seconds: int,
+        context: Optional[str] = None
+    ) -> str:
+        """タイムアウトエラーのフォーマット"""
+        return f"""
+=== Timeout Error ===
+Operation: {operation}
+Timeout: {timeout_seconds}s
+Context: {context or 'N/A'}
+=====================
+"""
+
+@pytest.fixture
+def error_formatter():
+    """エラーフォーマッターフィクスチャ"""
+    return TestErrorFormatter()
+```
+
+#### 10.1.2 共通例外ハンドラー
+
+```python
+# tests/integration/python/conftest.py
+
+import functools
+import httpx
+import pytest
+
+def handle_test_errors(func):
+    """テストエラーハンドリングデコレータ"""
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except httpx.TimeoutException as e:
+            pytest.fail(f"HTTP Timeout: {e}")
+        except httpx.ConnectError as e:
+            pytest.fail(f"Connection Error (is the service running?): {e}")
+        except AssertionError:
+            raise  # アサーションエラーはそのまま伝播
+        except Exception as e:
+            pytest.fail(f"Unexpected error: {type(e).__name__}: {e}")
+    return wrapper
+```
+
+#### 10.1.3 エラーメッセージガイドライン
+
+| エラー種別 | 必須情報 | 例 |
+|-----------|----------|-----|
+| API失敗 | エンドポイント、期待値、実際値、レスポンス | `POST /api/v1/jobs failed: expected 201, got 500` |
+| タイムアウト | 操作名、タイムアウト値、コンテキスト | `Service health check timed out after 30s` |
+| バリデーション | フィールド名、期待値、実際値 | `job.status: expected 'completed', got 'pending'` |
+| 接続エラー | サービス名、URL、原因 | `Cannot connect to myVault at http://localhost:8103` |
+
+### 10.2 テストデータ管理戦略（SF-2）
+
+#### 10.2.1 フィクスチャファイル構造
+
+```
+tests/
+├── fixtures/                    # 共通テストデータ
+│   ├── __init__.py
+│   ├── api_responses/           # APIレスポンスモック
+│   │   ├── myvault/
+│   │   │   ├── secrets_response.json
+│   │   │   └── health_response.json
+│   │   └── expertagent/
+│   │       ├── job_result.json
+│   │       └── workflow_result.json
+│   │
+│   ├── test_data/               # テスト入力データ
+│   │   ├── job_requests/
+│   │   │   ├── valid_job.json
+│   │   │   ├── invalid_job.json
+│   │   │   └── edge_case_job.json
+│   │   └── workflows/
+│   │       └── sample_workflow.json
+│   │
+│   └── factories/               # テストデータファクトリ
+│       ├── job_factory.py
+│       └── user_factory.py
+│
+├── integration/
+│   └── python/
+│       └── conftest.py          # fixtures/への参照設定
+│
+└── acceptance/
+    └── python/
+        └── conftest.py          # fixtures/への参照設定
+```
+
+#### 10.2.2 テストデータファクトリ
+
+```python
+# tests/fixtures/factories/job_factory.py
+
+from dataclasses import dataclass, field
+from typing import Optional, List
+from datetime import datetime
+import uuid
+
+@dataclass
+class JobFactory:
+    """ジョブテストデータファクトリ"""
+
+    @staticmethod
+    def create_valid_job(
+        title: str = "Test Job",
+        description: str = "Test Description",
+        tasks: Optional[List[dict]] = None
+    ) -> dict:
+        """有効なジョブデータを生成"""
+        return {
+            "title": title,
+            "description": description,
+            "tasks": tasks or [{"name": "task1", "type": "simple"}],
+            "created_at": datetime.now().isoformat(),
+            "request_id": str(uuid.uuid4())
+        }
+
+    @staticmethod
+    def create_invalid_job() -> dict:
+        """無効なジョブデータを生成（バリデーションテスト用）"""
+        return {
+            "title": "",  # 空タイトル（無効）
+            "description": None,
+            "tasks": []  # 空タスク（無効）
+        }
+
+    @staticmethod
+    def create_edge_case_job() -> dict:
+        """エッジケースジョブデータを生成"""
+        return {
+            "title": "A" * 1000,  # 最大長タイトル
+            "description": "Test" * 500,
+            "tasks": [{"name": f"task_{i}", "type": "simple"} for i in range(100)]
+        }
+```
+
+#### 10.2.3 データクリーンアップ戦略
+
+```python
+# tests/integration/python/conftest.py
+
+import pytest
+from typing import List
+
+@pytest.fixture
+def cleanup_jobs(async_client, service_urls):
+    """テスト後のジョブデータクリーンアップ"""
+    created_job_ids: List[str] = []
+
+    def register_job(job_id: str):
+        created_job_ids.append(job_id)
+        return job_id
+
+    yield register_job
+
+    # クリーンアップ
+    for job_id in created_job_ids:
+        try:
+            await async_client.delete(
+                f"{service_urls['jobqueue']}/api/v1/jobs/{job_id}"
+            )
+        except Exception:
+            pass  # クリーンアップ失敗は無視
+```
+
+### 10.3 パフォーマンス計測基盤（SF-3）
+
+#### 10.3.1 テスト実行時間計測
+
+```python
+# tests/conftest.py
+
+import pytest
+import time
+from typing import Dict, List
+from dataclasses import dataclass, field
+
+@dataclass
+class TestMetrics:
+    """テストメトリクス収集クラス"""
+    test_times: Dict[str, float] = field(default_factory=dict)
+    slow_tests: List[str] = field(default_factory=list)
+    slow_threshold_seconds: float = 5.0
+
+    def record(self, test_name: str, duration: float):
+        self.test_times[test_name] = duration
+        if duration > self.slow_threshold_seconds:
+            self.slow_tests.append(f"{test_name}: {duration:.2f}s")
+
+    def report(self) -> str:
+        if not self.slow_tests:
+            return "All tests completed within threshold"
+        return f"Slow tests detected:\n" + "\n".join(self.slow_tests)
+
+_metrics = TestMetrics()
+
+@pytest.fixture(autouse=True)
+def measure_test_time(request):
+    """各テストの実行時間を計測"""
+    start = time.time()
+    yield
+    duration = time.time() - start
+    _metrics.record(request.node.name, duration)
+
+def pytest_sessionfinish(session, exitstatus):
+    """セッション終了時にメトリクスレポート"""
+    print("\n" + "=" * 50)
+    print("Test Performance Report")
+    print("=" * 50)
+    print(_metrics.report())
+```
+
+#### 10.3.2 API応答時間計測
+
+```python
+# tests/integration/python/conftest.py
+
+import httpx
+import time
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def timed_request(client: httpx.AsyncClient, method: str, url: str, **kwargs):
+    """API呼び出しの応答時間を計測"""
+    start = time.time()
+    try:
+        response = await getattr(client, method)(url, **kwargs)
+        duration = time.time() - start
+        response.headers["X-Test-Duration"] = str(duration)
+        yield response
+    finally:
+        pass
+
+@pytest.fixture
+def api_timer():
+    """API応答時間計測フィクスチャ"""
+    return timed_request
+```
+
+#### 10.3.3 パフォーマンスしきい値定義
+
+```python
+# tests/conftest.py
+
+# パフォーマンスしきい値（秒）
+PERFORMANCE_THRESHOLDS = {
+    "unit_test": 0.5,          # 単体テストは0.5秒以内
+    "integration_test": 5.0,    # 結合テストは5秒以内
+    "acceptance_test": 30.0,    # 受入テストは30秒以内
+    "api_response": 2.0,        # API応答は2秒以内
+    "health_check": 1.0,        # ヘルスチェックは1秒以内
+}
+
+def check_performance(test_type: str, duration: float) -> bool:
+    """パフォーマンスしきい値チェック"""
+    threshold = PERFORMANCE_THRESHOLDS.get(test_type, 10.0)
+    return duration <= threshold
+```
+
+#### 10.3.4 CI用パフォーマンスレポート
+
+```yaml
+# .github/workflows/ci-feature.yml (追加セクション)
+
+- name: Generate performance report
+  if: always()
+  run: |
+    echo "## Test Performance Summary" >> $GITHUB_STEP_SUMMARY
+    echo "" >> $GITHUB_STEP_SUMMARY
+    # pytest-benchmark等の結果をサマリーに追加
+```
+
+---
+
+## 11. CLAUDE.md/docs/claude更新方針
+
+### 11.1 CLAUDE.md更新箇所
 
 ```markdown
 # 追加セクション
@@ -815,7 +1312,7 @@ make acceptance-test-all
 ```
 ```
 
-### 10.2 docs/claude/04-quality-standards.md更新
+### 11.2 docs/claude/04-quality-standards.md更新
 
 ```markdown
 # 追加セクション
@@ -839,7 +1336,7 @@ make acceptance-test-all
 - `test-only`: テストコードのみの変更
 ```
 
-### 10.3 docs/claude/08-issue-split.md更新
+### 11.3 docs/claude/08-issue-split.md更新
 
 ```markdown
 # 追加セクション
@@ -869,7 +1366,135 @@ make acceptance-test-all
 
 ---
 
-## 11. 承認
+## 12. tests/README.md設計（テスト実行場所ガイド）
+
+### 12.1 README.md内容
+
+```markdown
+# MySwiftAgent Tests
+
+このディレクトリには結合テストと受入テストが配置されています。
+
+## 📍 テスト場所クイックリファレンス
+
+| テスト種別 | 場所 | 実行環境 | コマンド |
+|-----------|------|----------|----------|
+| 単体テスト | `{project}/tests/unit/` | CI + ローカル | プロジェクト内で実行 |
+| 結合テスト | `tests/integration/` | CI + ローカル | `make test-integration` |
+| 受入テスト | `tests/acceptance/` | **ローカルのみ** | `make acceptance-test-{layer}` |
+
+## 🚀 クイックスタート
+
+### 単体テスト（プロジェクト内）
+
+```bash
+# expertAgentの単体テスト
+cd expertAgent && uv run pytest tests/unit/ -v
+
+# myVaultの単体テスト
+cd myVault && uv run pytest tests/unit/ -v
+
+# TypeScriptプロジェクト
+cd myAgentDesk && npm test
+```
+
+### 結合テスト（CI対象）
+
+```bash
+# 全結合テスト
+make test-integration
+
+# Python結合テストのみ
+cd tests/integration/python && uv run pytest . -v
+
+# TypeScript結合テストのみ
+cd tests/integration/typescript && npm test
+```
+
+### 受入テスト（ローカルのみ）
+
+```bash
+# Platform層
+make acceptance-test-platform
+
+# Agent層
+make acceptance-test-agent
+
+# Frontend層（Playwright）
+make acceptance-test-frontend
+
+# 全受入テスト
+make acceptance-test-all
+```
+
+## 📁 ディレクトリ構造
+
+```
+tests/
+├── README.md                 # このファイル
+│
+├── integration/              # 結合テスト（CI対象）
+│   ├── python/
+│   │   ├── conftest.py       # 共通フィクスチャ
+│   │   ├── platform/         # Platform層結合テスト
+│   │   ├── agent/            # Agent層結合テスト
+│   │   └── cross_layer/      # レイヤー間テスト
+│   │
+│   └── typescript/
+│       └── api/              # API結合テスト
+│
+└── acceptance/               # 受入テスト（ローカルのみ）
+    ├── python/
+    │   ├── conftest.py       # 共通フィクスチャ
+    │   ├── platform/         # Platform層受入テスト
+    │   ├── agent/            # Agent層受入テスト
+    │   └── e2e/              # E2Eシナリオ
+    │
+    └── typescript/           # Playwrightテスト
+        ├── ui/               # UIテスト
+        └── e2e/              # E2Eテスト
+```
+
+## ⚠️ 重要な注意事項
+
+### CIでは受入テストが実行されません
+
+`tests/acceptance/` 配下のテストはCIでは実行されません。
+PRをマージする前に、ローカルで受入テストを実行してください。
+
+```bash
+# PRマージ前チェックリスト
+make acceptance-test-{変更したレイヤー}
+```
+
+### APIキーが必要なテスト
+
+受入テストには外部APIキーが必要な場合があります。
+`.env.example` を参考に `.env` ファイルを作成してください。
+
+```bash
+cp tests/acceptance/.env.example tests/acceptance/.env
+# .envファイルを編集してAPIキーを設定
+```
+
+## 🔗 関連ドキュメント
+
+- [品質基準](../docs/claude/04-quality-standards.md)
+- [開発ワークフロー](../docs/claude/01-development-workflow.md)
+- [Makeコマンド一覧](../README.md#makeコマンド一覧)
+```
+
+### 12.2 配置と更新タイミング
+
+| タイミング | アクション |
+|-----------|-----------|
+| #209-3完了時 | `tests/README.md` 初版作成 |
+| 新テスト追加時 | ディレクトリ構造セクション更新 |
+| コマンド変更時 | クイックスタートセクション更新 |
+
+---
+
+## 13. 承認
 
 | 役割 | 承認者 | 日付 | ステータス |
 |------|--------|------|----------|
