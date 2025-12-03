@@ -1,0 +1,216 @@
+{
+  "issue_number": 213,
+  "issue_title": "Issue #209-3: 受入テストディレクトリ構造作成",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "unit_tests": {
+        "total": 37,
+        "passed": 37,
+        "failed": 0
+      },
+      "static_analysis": {
+        "ruff_errors": 0,
+        "mypy_errors": 0
+      }
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": 5,
+      "test_cases_passed": 5,
+      "acceptance_criteria": 7,
+      "acceptance_criteria_verified": 7
+    },
+    "refactor": {
+      "status": "success",
+      "refactorings_applied": 7,
+      "coverage_maintained": true,
+      "tests_maintained": true
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "work_plan_file": "dev-reports/feature/issue/213/work-plan.md",
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "基本ディレクトリ作成",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "Python受入テストディレクトリ作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.3",
+        "description": "TypeScript受入テストディレクトリ作成",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.4",
+        "description": "テストフィクスチャディレクトリ作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.5",
+        "description": ".gitkeepファイル配置",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.1",
+        "description": "L0 conftest.py拡張",
+        "estimated_hours": 0.33,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.2",
+        "description": "L1 Python受入テストconftest.py作成",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.3",
+        "description": "L2 Platform conftest.py作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.4",
+        "description": "L2 Agent conftest.py作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.5",
+        "description": "L2 E2E conftest.py作成",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.1",
+        "description": "Python pytest.ini作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.2",
+        "description": "Python requirements.txt作成",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.3",
+        "description": "TypeScript playwright.config.ts作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.4",
+        "description": "TypeScript package.json作成",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.5",
+        "description": "TypeScript tsconfig.json作成",
+        "estimated_hours": 0.17,
+        "status": "completed"
+      },
+      {
+        "task_id": "4.1",
+        "description": ".env.example作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "4.2",
+        "description": "tests/README.md作成",
+        "estimated_hours": 0.75,
+        "status": "completed"
+      },
+      {
+        "task_id": "4.3",
+        "description": "フィクスチャ__init__.py作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "5.1",
+        "description": "ディレクトリ構造検証",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "5.2",
+        "description": "conftest.py継承検証",
+        "estimated_hours": 0.33,
+        "status": "completed"
+      },
+      {
+        "task_id": "5.3",
+        "description": "静的解析（Ruff/MyPy）",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      }
+    ],
+    "deliverables_status": [
+      {"file": "tests/acceptance/python/", "created": true},
+      {"file": "tests/acceptance/python/platform/", "created": true},
+      {"file": "tests/acceptance/python/agent/", "created": true},
+      {"file": "tests/acceptance/python/e2e/", "created": true},
+      {"file": "tests/acceptance/typescript/", "created": true},
+      {"file": "tests/acceptance/typescript/ui/", "created": true},
+      {"file": "tests/acceptance/typescript/e2e/", "created": true},
+      {"file": "tests/fixtures/", "created": true},
+      {"file": "tests/fixtures/api_responses/", "created": true},
+      {"file": "tests/fixtures/test_data/", "created": true},
+      {"file": "tests/fixtures/factories/", "created": true},
+      {"file": "tests/conftest.py (L0拡張)", "created": true},
+      {"file": "tests/acceptance/python/conftest.py (L1)", "created": true},
+      {"file": "tests/acceptance/python/platform/conftest.py (L2)", "created": true},
+      {"file": "tests/acceptance/python/agent/conftest.py (L2)", "created": true},
+      {"file": "tests/acceptance/python/e2e/conftest.py (L2)", "created": true},
+      {"file": "tests/acceptance/python/pytest.ini", "created": true},
+      {"file": "tests/acceptance/python/requirements.txt", "created": true},
+      {"file": "tests/acceptance/typescript/playwright.config.ts", "created": true},
+      {"file": "tests/acceptance/typescript/package.json", "created": true},
+      {"file": "tests/acceptance/typescript/tsconfig.json", "created": true},
+      {"file": "tests/.env.example", "created": true},
+      {"file": "tests/README.md", "created": true},
+      {"file": "tests/fixtures/__init__.py", "created": true},
+      {"file": "tests/fixtures/factories/__init__.py", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "すべてのディレクトリ・ファイルが作成されている", "verified": true},
+      {"criterion": "conftest.py階層（L0 → L1 → L2）が正しく継承される", "verified": true},
+      {"criterion": "pytest --collect-only tests/acceptance/python/ が成功する", "verified": true},
+      {"criterion": "Ruff/MyPy エラーゼロ", "verified": true},
+      {"criterion": "README.mdにテスト実行ガイドが含まれる", "verified": true}
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 6,
+      "actual": "N/A (automated by pm-auto-dev)",
+      "variance": "N/A"
+    }
+  },
+  "commits": [
+    {
+      "hash": "5efffdb",
+      "message": "feat(issue/213): create acceptance test directory structure"
+    }
+  ],
+  "blockers": [],
+  "next_steps": [
+    "PR作成 (main <- feature/issue/213)",
+    "Issue #214 (CI除外設定) の着手準備",
+    "Issue #215 (Python受入テスト実行スクリプト) の着手準備"
+  ]
+}
