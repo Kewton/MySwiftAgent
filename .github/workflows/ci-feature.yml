@@ -13,6 +13,8 @@ on:
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
+      # acceptance tests are excluded from CI (local execution only)
+      - '!tests/acceptance/**'
   push:
     branches:
       - 'feature/**'
@@ -29,6 +31,8 @@ on:
       - '.github/workflows/**'
       # docs changes are handled by separate docs workflow
       - '!docs/**'
+      # acceptance tests are excluded from CI (local execution only)
+      - '!tests/acceptance/**'
 
 # defaults:
 #   run:
