@@ -1,0 +1,110 @@
+{
+  "issue_number": 214,
+  "title": "Issue #209-4: CI除外設定の追加",
+  "acceptance_criteria": [
+    "ci-feature.yml に tests/acceptance/** の除外設定が存在する",
+    "pytest.ini に norecursedirs = tests/acceptance が設定されている",
+    "CIで tests/acceptance/ 配下のテストが実行されない",
+    "既存のCI単体テスト・結合テストが引き続き実行される",
+    "YAMLシンタックスエラーなし"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: ci-feature.yml paths-ignore追加 (paths除外設定追加)",
+    "Task 1.2: cd-develop.yml確認・更新 (develop統合時の除外設定)",
+    "Task 1.3: ci-main.yml確認・更新 (main統合時の除外設定)",
+    "Task 2.1: ルートpytest.ini更新 (norecursedirs設定追加)",
+    "Task 2.2: tests/integration/python/pytest.ini確認",
+    "Task 2.3: 各プロジェクトpytest.ini確認",
+    "Task 3.1: YAMLシンタックス検証",
+    "Task 3.2: pytest collect検証 (受入テスト除外確認)",
+    "Task 3.3: 既存テスト実行検証",
+    "Task 3.4: CI実行時間確認準備"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ci-feature.yml paths-ignore追加",
+      "estimated_minutes": 20,
+      "deliverables": [".github/workflows/ci-feature.yml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "cd-develop.yml確認・更新",
+      "estimated_minutes": 15,
+      "deliverables": [".github/workflows/cd-develop.yml"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ci-main.yml確認・更新",
+      "estimated_minutes": 10,
+      "deliverables": [".github/workflows/ci-main.yml"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ルートpytest.ini更新",
+      "estimated_minutes": 15,
+      "deliverables": ["pytest.ini"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "tests/integration/python/pytest.ini確認",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "各プロジェクトpytest.ini確認",
+      "estimated_minutes": 5,
+      "deliverables": [],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "YAMLシンタックス検証",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["1.1", "1.2", "1.3", "2.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "pytest collect検証",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "既存テスト実行検証",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "CI実行時間確認準備",
+      "estimated_minutes": 5,
+      "deliverables": [],
+      "dependencies": ["3.3"]
+    }
+  ],
+  "deliverables_checklist": [
+    ".github/workflows/ci-feature.yml",
+    ".github/workflows/cd-develop.yml",
+    ".github/workflows/ci-main.yml",
+    "pytest.ini"
+  ],
+  "definition_of_done": [
+    "ci-feature.yml に tests/acceptance/** の除外設定が存在する",
+    "pytest.ini に norecursedirs = tests/acceptance が設定されている",
+    "YAMLシンタックスエラーなし",
+    "pytest --collect-only で受入テストが収集されない",
+    "既存テストが全てパスする"
+  ],
+  "target_coverage": 90,
+  "notes": "このIssueは設定ファイルの変更が主であり、コードのテストカバレッジよりも設定の正確性を重視"
+}

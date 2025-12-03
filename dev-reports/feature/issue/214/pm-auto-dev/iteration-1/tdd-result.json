@@ -1,0 +1,45 @@
+{
+  "status": "success",
+  "tasks_completed": [
+    "Task 1.1: ci-feature.yml paths-ignore追加 - Added '!tests/acceptance/**' to both pull_request and push paths sections",
+    "Task 1.2: cd-develop.yml確認・更新 - Added '!tests/acceptance/**' to paths section",
+    "Task 1.3: ci-main.yml確認・更新 - Added '!tests/acceptance/**' to paths section",
+    "Task 2.1: ルートpytest.ini更新 - Added norecursedirs setting with tests/acceptance and common exclusions",
+    "Task 2.2: tests/integration/python/pytest.ini確認 - No pytest.ini exists in this directory (not needed)",
+    "Task 2.3: 各プロジェクトpytest.ini確認 - Only tests/acceptance/python/pytest.ini exists (already configured)",
+    "Task 3.1: YAMLシンタックス検証 - All 3 workflow files validated successfully",
+    "Task 3.2: pytest collect検証 - Confirmed 0 tests collected from tests/acceptance/",
+    "Task 3.3: 既存テスト実行検証 - All 14 verification tests pass"
+  ],
+  "verification_results": {
+    "yaml_syntax": "passed",
+    "pytest_exclusion": "passed",
+    "existing_tests": "passed"
+  },
+  "files_modified": [
+    ".github/workflows/ci-feature.yml",
+    ".github/workflows/cd-develop.yml",
+    ".github/workflows/ci-main.yml",
+    "pytest.ini"
+  ],
+  "files_created": [
+    "tests/unit/config/__init__.py",
+    "tests/unit/config/test_issue_214_ci_exclusion.py"
+  ],
+  "unit_tests": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": "N/A (config files only)"
+  },
+  "commits": [
+    "2acbe5f: feat(issue/214): add CI exclusion settings for acceptance tests"
+  ],
+  "coverage": null,
+  "coverage_note": "Not applicable - this issue involves configuration file changes only, not application code",
+  "errors": [],
+  "message": "TDD implementation completed successfully. All CI workflow files updated with acceptance test exclusions. pytest.ini configured with norecursedirs. All verification tests pass."
+}

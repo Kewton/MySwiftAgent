@@ -1,0 +1,23 @@
+{
+  "issue_number": 214,
+  "refactor_targets": [
+    "tests/unit/config/test_issue_214_ci_exclusion.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": null,
+    "complexity_score": "N/A - configuration changes only",
+    "note": "This Issue involves configuration file changes. The test file may benefit from minor improvements."
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "テストの構造化",
+    "重複コードの削減（該当する場合）",
+    "静的解析エラーの解消（該当する場合）"
+  ],
+  "constraints": [
+    "設定ファイル変更のためコードカバレッジは適用外",
+    "テストファイルのみが対象",
+    "大規模なリファクタリングは不要"
+  ]
+}
