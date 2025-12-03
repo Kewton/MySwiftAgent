@@ -55,6 +55,8 @@ DOCKER_COMPOSE := docker compose
 .PHONY: logs logs-platform logs-agent logs-frontend
 .PHONY: status rebuild clean network
 .PHONY: _check-platform _check-agent _wait-platform _wait-agent
+.PHONY: acceptance-test-platform acceptance-test-agent acceptance-test-e2e
+.PHONY: acceptance-test-python acceptance-test-all
 
 # =============================================================================
 # Help Target (Default)
@@ -76,6 +78,9 @@ help: ## Show this help message
 	@echo ""
 	@echo "Utility Commands:"
 	@grep -E '^(status|rebuild|clean|network):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Acceptance Test Commands:"
+	@grep -E '^acceptance-test[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Layer Dependencies:"
 	@echo "  Platform -> Agent -> Frontend"
@@ -280,3 +285,25 @@ _wait-agent: ## [Internal] Wait for Agent services to be healthy
 	done; \
 	echo "ERROR: Timeout waiting for Agent services"; \
 	exit 1
+
+# =============================================================================
+# Acceptance Test Targets
+# =============================================================================
+
+acceptance-test-platform: ## Run Platform layer acceptance tests
+	@echo "Running Platform layer acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --layer platform
+
+acceptance-test-agent: ## Run Agent layer acceptance tests
+	@echo "Running Agent layer acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --layer agent
+
+acceptance-test-e2e: ## Run E2E acceptance tests
+	@echo "Running E2E acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --layer e2e
+
+acceptance-test-python: ## Run all Python acceptance tests (platform + agent + e2e)
+	@echo "Running all Python acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --all
+
+acceptance-test-all: acceptance-test-python ## Alias for acceptance-test-python
