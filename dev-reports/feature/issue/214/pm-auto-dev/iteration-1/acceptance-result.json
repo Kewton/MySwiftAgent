@@ -1,0 +1,97 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario_id": "AC-214-001",
+      "scenario": "ci-feature.yml除外設定検証",
+      "result": "passed",
+      "details": "ci-feature.yml に '!tests/acceptance/**' が存在 (line 17, 35)",
+      "evidence": "paths:\n  - '!tests/acceptance/**'"
+    },
+    {
+      "scenario_id": "AC-214-002",
+      "scenario": "cd-develop.yml除外設定検証",
+      "result": "passed",
+      "details": "cd-develop.yml に '!tests/acceptance/**' が存在 (line 16)",
+      "evidence": "paths:\n  - '!tests/acceptance/**'"
+    },
+    {
+      "scenario_id": "AC-214-003",
+      "scenario": "ci-main.yml除外設定検証",
+      "result": "passed",
+      "details": "ci-main.yml に '!tests/acceptance/**' が存在 (line 12)",
+      "evidence": "paths:\n  - '!tests/acceptance/**'"
+    },
+    {
+      "scenario_id": "AC-214-004",
+      "scenario": "pytest.ini norecursedirs設定検証",
+      "result": "passed",
+      "details": "pytest.ini の norecursedirs に 'tests/acceptance' が含まれる (line 12-13)",
+      "evidence": "norecursedirs =\n    tests/acceptance"
+    },
+    {
+      "scenario_id": "AC-214-005",
+      "scenario": "pytest収集除外検証",
+      "result": "passed",
+      "details": "pytest --collect-only tests/acceptance/ で 'collected 0 items' - 受入テストが収集されない",
+      "evidence": "collected 0 items - no tests collected in 0.06s"
+    },
+    {
+      "scenario_id": "AC-214-006",
+      "scenario": "YAML構文検証",
+      "result": "passed",
+      "details": "すべてのYAMLファイルが有効な構文",
+      "evidence": "python3 yaml.safe_load() - All YAML files are valid"
+    },
+    {
+      "scenario_id": "AC-214-007",
+      "scenario": "既存テスト実行検証",
+      "result": "passed",
+      "details": "tests/unit/config/test_issue_214_ci_exclusion.py の全14テストがパス",
+      "evidence": "14 passed in 0.09s"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "ci-feature.yml に tests/acceptance/** の除外設定が存在する",
+      "verified": true,
+      "evidence": "Line 17, 35: '!tests/acceptance/**' in paths configuration"
+    },
+    {
+      "criterion": "cd-develop.yml に tests/acceptance/** の除外設定が存在する",
+      "verified": true,
+      "evidence": "Line 16: '!tests/acceptance/**' in paths configuration"
+    },
+    {
+      "criterion": "ci-main.yml に tests/acceptance/** の除外設定が存在する",
+      "verified": true,
+      "evidence": "Line 12: '!tests/acceptance/**' in paths configuration"
+    },
+    {
+      "criterion": "pytest.ini に norecursedirs = tests/acceptance が設定されている",
+      "verified": true,
+      "evidence": "Line 12-13: norecursedirs = tests/acceptance"
+    },
+    {
+      "criterion": "CIで tests/acceptance/ 配下のテストが実行されない",
+      "verified": true,
+      "evidence": "pytest --collect-only tests/acceptance/ returned 'collected 0 items'"
+    },
+    {
+      "criterion": "YAMLシンタックスエラーなし",
+      "verified": true,
+      "evidence": "yaml.safe_load() succeeded for all 3 workflow files"
+    },
+    {
+      "criterion": "既存のCI単体テストが引き続き実行される",
+      "verified": true,
+      "evidence": "14 unit tests passed in test_issue_214_ci_exclusion.py"
+    }
+  ],
+  "summary": {
+    "total_scenarios": 7,
+    "passed": 7,
+    "failed": 0
+  },
+  "message": "すべての受入条件を満たしています。Issue #214 の CI除外設定が正常に適用されています。"
+}

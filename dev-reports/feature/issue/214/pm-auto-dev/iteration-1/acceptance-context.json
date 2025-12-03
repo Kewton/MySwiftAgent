@@ -1,0 +1,69 @@
+{
+  "issue_number": 214,
+  "feature_summary": "CI除外設定の追加 - tests/acceptance/ をCIから除外",
+  "acceptance_criteria": [
+    "ci-feature.yml に tests/acceptance/** の除外設定が存在する",
+    "pytest.ini に norecursedirs = tests/acceptance が設定されている",
+    "CIで tests/acceptance/ 配下のテストが実行されない",
+    "既存のCI単体テスト・結合テストが引き続き実行される",
+    "YAMLシンタックスエラーなし"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-214-001",
+      "name": "ci-feature.yml除外設定検証",
+      "description": "ci-feature.ymlにtests/acceptance/**の除外設定が存在することを確認",
+      "verification_type": "file_content",
+      "target_file": ".github/workflows/ci-feature.yml",
+      "expected_content": "!tests/acceptance/**"
+    },
+    {
+      "id": "AC-214-002",
+      "name": "cd-develop.yml除外設定検証",
+      "description": "cd-develop.ymlにtests/acceptance/**の除外設定が存在することを確認",
+      "verification_type": "file_content",
+      "target_file": ".github/workflows/cd-develop.yml",
+      "expected_content": "!tests/acceptance/**"
+    },
+    {
+      "id": "AC-214-003",
+      "name": "ci-main.yml除外設定検証",
+      "description": "ci-main.ymlにtests/acceptance/**の除外設定が存在することを確認",
+      "verification_type": "file_content",
+      "target_file": ".github/workflows/ci-main.yml",
+      "expected_content": "!tests/acceptance/**"
+    },
+    {
+      "id": "AC-214-004",
+      "name": "pytest.ini norecursedirs設定検証",
+      "description": "pytest.iniにnorecursedirs = tests/acceptanceが設定されていることを確認",
+      "verification_type": "file_content",
+      "target_file": "pytest.ini",
+      "expected_content": "tests/acceptance"
+    },
+    {
+      "id": "AC-214-005",
+      "name": "pytest収集除外検証",
+      "description": "pytest --collect-onlyでtests/acceptance/が収集されないことを確認",
+      "verification_type": "command",
+      "command": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-214 && uv run pytest --collect-only tests/acceptance/ 2>&1 || true",
+      "expected_result": "no tests collected or error"
+    },
+    {
+      "id": "AC-214-006",
+      "name": "YAML構文検証",
+      "description": "すべてのワークフローYAMLファイルが有効な構文であることを確認",
+      "verification_type": "command",
+      "command": "python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci-feature.yml'))\" && python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/cd-develop.yml'))\" && python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci-main.yml'))\"",
+      "expected_result": "no errors"
+    },
+    {
+      "id": "AC-214-007",
+      "name": "既存テスト実行検証",
+      "description": "Issue #214の検証テストが正常に実行されることを確認",
+      "verification_type": "command",
+      "command": "cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-214 && uv run pytest tests/unit/config/test_issue_214_ci_exclusion.py -v",
+      "expected_result": "all tests pass"
+    }
+  ]
+}
