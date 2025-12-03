@@ -1,12 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
+import {
+  ServiceUrls,
+  Timeouts,
+  Viewports,
+  FeatureFlags,
+} from './config/test-config';
 
 /**
  * Playwright configuration for TypeScript acceptance tests.
  *
- * These tests are NOT run in CI - they require running services
+ * This configuration file sets up Playwright for running acceptance tests
+ * against myAgentDesk and related services.
+ *
+ * **Note**: These tests are NOT run in CI - they require running services
  * and potentially API keys for full E2E scenarios.
  *
+ * @module playwright.config
  * @see https://playwright.dev/docs/test-configuration
+ * @see ./config/test-config.ts for centralized configuration values
  */
 export default defineConfig({
   // Test directory
@@ -16,21 +27,21 @@ export default defineConfig({
   testMatch: ['**/*.spec.ts', '**/*.test.ts'],
 
   // Timeout for each test
-  timeout: 60 * 1000, // 60 seconds
+  timeout: Timeouts.TEST,
 
   // Expect timeout
   expect: {
-    timeout: 10 * 1000, // 10 seconds
+    timeout: Timeouts.EXPECT,
   },
 
   // Fail the build on CI if you accidentally left test.only in the source code
-  forbidOnly: !!process.env.CI,
+  forbidOnly: FeatureFlags.IS_CI,
 
   // Retry on CI only
-  retries: process.env.CI ? 2 : 0,
+  retries: FeatureFlags.IS_CI ? 2 : 0,
 
   // Opt out of parallel tests on CI
-  workers: process.env.CI ? 1 : undefined,
+  workers: FeatureFlags.IS_CI ? 1 : undefined,
 
   // Reporter to use
   reporter: [
@@ -40,8 +51,8 @@ export default defineConfig({
 
   // Shared settings for all projects
   use: {
-    // Base URL for navigation
-    baseURL: process.env.MYAGENTDESK_URL || 'http://localhost:5173',
+    // Base URL for navigation (from centralized config)
+    baseURL: ServiceUrls.MYAGENTDESK,
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -52,14 +63,14 @@ export default defineConfig({
     // Video recording
     video: 'retain-on-failure',
 
-    // Browser viewport
-    viewport: { width: 1280, height: 720 },
+    // Browser viewport (from centralized config)
+    viewport: Viewports.DESKTOP,
 
-    // Action timeout
-    actionTimeout: 15 * 1000,
+    // Action timeout (from centralized config)
+    actionTimeout: Timeouts.ACTION,
 
-    // Navigation timeout
-    navigationTimeout: 30 * 1000,
+    // Navigation timeout (from centralized config)
+    navigationTimeout: Timeouts.NAVIGATION,
   },
 
   // Configure projects for different browsers

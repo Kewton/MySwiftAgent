@@ -2,13 +2,15 @@
  * E2E Smoke Tests
  *
  * End-to-end smoke tests that verify basic user workflows.
- * These tests require all services to be running.
+ * These tests focus on fundamental UI interactions and responsive design.
  *
- * @requires myAgentDesk running on port 5173
+ * @module e2e/smoke
+ * @requires myAgentDesk running on port 5173 (or MYAGENTDESK_URL env var)
  * @requires Backend services (optional for full E2E)
  */
 
 import { test, expect } from '@playwright/test';
+import { Viewports } from '../config/test-config';
 
 test.describe('E2E Smoke Tests', () => {
   test.describe('Initial Load', () => {
@@ -75,7 +77,7 @@ test.describe('E2E Smoke Tests', () => {
 
   test.describe('Responsive Design', () => {
     test('should render correctly on desktop viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 1280, height: 720 });
+      await page.setViewportSize(Viewports.DESKTOP);
       await page.goto('/');
 
       const body = page.locator('body');
@@ -83,7 +85,7 @@ test.describe('E2E Smoke Tests', () => {
     });
 
     test('should render correctly on mobile viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 });
+      await page.setViewportSize(Viewports.MOBILE);
       await page.goto('/');
 
       const body = page.locator('body');
@@ -91,7 +93,7 @@ test.describe('E2E Smoke Tests', () => {
     });
 
     test('should render correctly on tablet viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 768, height: 1024 });
+      await page.setViewportSize(Viewports.TABLET);
       await page.goto('/');
 
       const body = page.locator('body');

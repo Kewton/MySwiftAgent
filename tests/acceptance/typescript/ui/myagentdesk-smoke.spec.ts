@@ -2,12 +2,20 @@
  * myAgentDesk Smoke Test
  *
  * Basic smoke tests to verify that myAgentDesk is running and accessible.
- * These tests should be run with myAgentDesk service started.
+ * These tests focus on fundamental availability and functionality checks.
  *
+ * Test Categories:
+ * - Page Loading: Verifies basic page load functionality
+ * - Basic Navigation: Checks for JavaScript errors
+ * - Service Availability: Performance and response time checks
+ * - Error Scenarios: Documents expected error handling behavior
+ *
+ * @module ui/myagentdesk-smoke
  * @requires myAgentDesk running on port 5173 (or MYAGENTDESK_URL env var)
  */
 
 import { test, expect } from '@playwright/test';
+import { Timeouts } from '../config/test-config';
 
 test.describe('myAgentDesk Smoke Tests', () => {
   test.describe('Page Loading', () => {
@@ -74,8 +82,8 @@ test.describe('myAgentDesk Smoke Tests', () => {
       await page.goto('/');
       const loadTime = Date.now() - startTime;
 
-      // Page should load within 10 seconds
-      expect(loadTime).toBeLessThan(10000);
+      // Page should load within maximum acceptable time
+      expect(loadTime).toBeLessThan(Timeouts.PAGE_LOAD_MAX);
     });
   });
 });
@@ -91,7 +99,7 @@ test.describe('Error Scenarios', () => {
     const unreachableUrl = 'http://localhost:59999';
 
     try {
-      await page.goto(unreachableUrl, { timeout: 5000 });
+      await page.goto(unreachableUrl, { timeout: Timeouts.SHORT });
       // If we get here, the page somehow loaded - unexpected
       test.fail();
     } catch (error) {
