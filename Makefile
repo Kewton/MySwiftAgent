@@ -55,6 +55,7 @@ DOCKER_COMPOSE := docker compose
 .PHONY: logs logs-platform logs-agent logs-frontend
 .PHONY: status rebuild clean network
 .PHONY: _check-platform _check-agent _wait-platform _wait-agent
+.PHONY: acceptance-test-frontend acceptance-test-all
 
 # =============================================================================
 # Help Target (Default)
@@ -76,6 +77,9 @@ help: ## Show this help message
 	@echo ""
 	@echo "Utility Commands:"
 	@grep -E '^(status|rebuild|clean|network):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Acceptance Test Commands:"
+	@grep -E '^acceptance-test[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Layer Dependencies:"
 	@echo "  Platform -> Agent -> Frontend"
@@ -280,3 +284,36 @@ _wait-agent: ## [Internal] Wait for Agent services to be healthy
 	done; \
 	echo "ERROR: Timeout waiting for Agent services"; \
 	exit 1
+
+# =============================================================================
+# Acceptance Test Targets
+# =============================================================================
+
+# TypeScript/Playwright acceptance test directory
+ACCEPTANCE_TS_DIR := tests/acceptance/typescript
+
+acceptance-test-frontend: ## Run Frontend acceptance tests (Playwright)
+	@echo "Running Frontend acceptance tests..."
+	@echo ""
+	@if [ ! -d "$(ACCEPTANCE_TS_DIR)/node_modules" ]; then \
+		echo "Installing npm dependencies..."; \
+		cd $(ACCEPTANCE_TS_DIR) && npm install; \
+	fi
+	@cd $(ACCEPTANCE_TS_DIR) && npx playwright test
+	@echo ""
+	@echo "Frontend acceptance tests completed!"
+
+acceptance-test-all: ## Run all acceptance tests (Python + TypeScript)
+	@echo "Running all acceptance tests..."
+	@echo ""
+	@echo "[1/2] Running Python acceptance tests..."
+	@if [ -f "tests/acceptance/python/pytest.ini" ]; then \
+		cd tests/acceptance/python && uv run pytest -v || true; \
+	else \
+		echo "  Python tests not configured, skipping..."; \
+	fi
+	@echo ""
+	@echo "[2/2] Running Frontend acceptance tests..."
+	@$(MAKE) acceptance-test-frontend
+	@echo ""
+	@echo "All acceptance tests completed!"

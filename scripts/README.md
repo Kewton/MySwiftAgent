@@ -8,15 +8,16 @@ JobQueue、MyScheduler、MyVault、ExpertAgent、GraphAiServer、CommonUIの全�
 
 | スクリプト | 用途 | 概要 |
 |-----------|------|------|
-| `unified-start.sh` | **🎯 統一起動** | 全サービスの一括起動・停止（Phase 1 MVP） |
-| `quick-start.sh` | **🚀 クイック起動** | 一発で全サービス起動（代替ポート使用） |
-| `dev-start.sh` | **🔧 開発環境管理** | 包括的なサービス管理（標準ポート使用） |
-| `health-check.sh` | **🔍 ヘルスチェック** | サービス監視・診断 |
-| `pre-push-check.sh` | **✅ 品質チェック** | コミット前の品質検証 |
-| `restart-myvault.sh` | **🔐 MyVault再起動** | MyVault設定リロード |
-| `restart-graphaiserver.sh` | **🔄 GraphAiServer再起動** | GraphAiServer設定リロード |
-| `reload-secrets.sh` | **🔑 Secrets更新** | MyVaultシークレット再読み込み |
-| `build-images.sh` | **🐳 Docker Build** | バージョンタグ付きイメージビルド |
+| `unified-start.sh` | **統一起動** | 全サービスの一括起動・停止（Phase 1 MVP） |
+| `quick-start.sh` | **クイック起動** | 一発で全サービス起動（代替ポート使用） |
+| `dev-start.sh` | **開発環境管理** | 包括的なサービス管理（標準ポート使用） |
+| `health-check.sh` | **ヘルスチェック** | サービス監視・診断 |
+| `pre-push-check.sh` | **品質チェック** | コミット前の品質検証 |
+| `restart-myvault.sh` | **MyVault再起動** | MyVault設定リロード |
+| `restart-graphaiserver.sh` | **GraphAiServer再起動** | GraphAiServer設定リロード |
+| `reload-secrets.sh` | **Secrets更新** | MyVaultシークレット再読み込み |
+| `build-images.sh` | **Docker Build** | バージョンタグ付きイメージビルド |
+| `install-playwright.sh` | **Playwright導入** | TypeScript受入テスト用Playwright環境構築 |
 
 ## 🚀 クイックスタート
 
