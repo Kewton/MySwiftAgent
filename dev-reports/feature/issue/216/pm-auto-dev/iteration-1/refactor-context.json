@@ -1,0 +1,44 @@
+{
+  "issue_number": 216,
+  "refactor_targets": [
+    "tests/acceptance/typescript/playwright.config.ts",
+    "tests/acceptance/typescript/ui/myagentdesk-smoke.spec.ts",
+    "tests/acceptance/typescript/ui/health-check.spec.ts",
+    "tests/acceptance/typescript/e2e/smoke.spec.ts",
+    "scripts/install-playwright.sh"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": 5
+  },
+  "design_patterns_to_apply": [
+    "Page Object Model (POM) - テストの再利用性向上のため準備",
+    "Environment Configuration Pattern - 環境変数の一元管理",
+    "Test Fixture Pattern - 共通セットアップの抽出"
+  ],
+  "improvement_goals": [
+    "テストコードの可読性向上",
+    "環境変数設定の一元化",
+    "共通ユーティリティの抽出（必要な場合）",
+    "ドキュメントコメントの追加"
+  ],
+  "constraints": [
+    "既存のテスト動作を変更しない",
+    "ESLint/TypeScriptエラーゼロを維持",
+    "カバレッジ100%を維持"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 100,
+    "tests_passed": 23
+  },
+  "acceptance_result": {
+    "status": "passed",
+    "scenarios_passed": 5,
+    "criteria_verified": 7
+  },
+  "notes": {
+    "scope": "本Issueは環境構築がメインのため、大規模なリファクタリングは不要。軽微な改善のみ実施",
+    "future_consideration": "テストケース増加時にPage Object Modelの導入を検討"
+  }
+}

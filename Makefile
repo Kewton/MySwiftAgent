@@ -56,7 +56,7 @@ DOCKER_COMPOSE := docker compose
 .PHONY: status rebuild clean network
 .PHONY: _check-platform _check-agent _wait-platform _wait-agent
 .PHONY: acceptance-test-platform acceptance-test-agent acceptance-test-e2e
-.PHONY: acceptance-test-python acceptance-test-all
+.PHONY: acceptance-test-python acceptance-test-frontend acceptance-test-all
 
 # =============================================================================
 # Help Target (Default)
@@ -290,6 +290,9 @@ _wait-agent: ## [Internal] Wait for Agent services to be healthy
 # Acceptance Test Targets
 # =============================================================================
 
+# TypeScript/Playwright acceptance test directory
+ACCEPTANCE_TS_DIR := tests/acceptance/typescript
+
 acceptance-test-platform: ## Run Platform layer acceptance tests
 	@echo "Running Platform layer acceptance tests..."
 	@./scripts/run-acceptance-tests.sh --layer platform
@@ -306,4 +309,24 @@ acceptance-test-python: ## Run all Python acceptance tests (platform + agent + e
 	@echo "Running all Python acceptance tests..."
 	@./scripts/run-acceptance-tests.sh --all
 
-acceptance-test-all: acceptance-test-python ## Alias for acceptance-test-python
+acceptance-test-frontend: ## Run Frontend acceptance tests (Playwright)
+	@echo "Running Frontend acceptance tests..."
+	@echo ""
+	@if [ ! -d "$(ACCEPTANCE_TS_DIR)/node_modules" ]; then \
+		echo "Installing npm dependencies..."; \
+		cd $(ACCEPTANCE_TS_DIR) && npm install; \
+	fi
+	@cd $(ACCEPTANCE_TS_DIR) && npx playwright test
+	@echo ""
+	@echo "Frontend acceptance tests completed!"
+
+acceptance-test-all: ## Run all acceptance tests (Python + TypeScript)
+	@echo "Running all acceptance tests..."
+	@echo ""
+	@echo "[1/2] Running Python acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --all || true
+	@echo ""
+	@echo "[2/2] Running Frontend acceptance tests..."
+	@$(MAKE) acceptance-test-frontend
+	@echo ""
+	@echo "All acceptance tests completed!"

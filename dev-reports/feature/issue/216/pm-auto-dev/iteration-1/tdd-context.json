@@ -1,0 +1,213 @@
+{
+  "issue_number": 216,
+  "title": "Issue #209-6: Playwright受入テスト環境構築",
+  "acceptance_criteria": [
+    "playwright.config.ts が存在し、適切に設定されている",
+    "npm install が正常に完了する",
+    "npx playwright test が正常に実行される",
+    "スモークテストがパスする",
+    "make acceptance-test-frontend が正常に実行される",
+    "ESLint/TypeScript エラーゼロ",
+    "playwright.config.tsにタイムアウト設定がある"
+  ],
+  "implementation_tasks": [
+    "tests/acceptance/typescript/playwright.config.ts 作成",
+    "tests/acceptance/typescript/package.json 作成",
+    "スモークテスト作成（smoke.spec.ts）",
+    "Makefile に acceptance-test-frontend ターゲット追加",
+    "Playwright インストールスクリプト作成"
+  ],
+  "test_cases": [
+    "正常系: myAgentDeskのスモークテスト",
+    "正常系: ページタイトル検証",
+    "異常系: サービス未起動時のエラーメッセージ"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ディレクトリ作成",
+      "estimated_minutes": 5,
+      "deliverables": ["tests/acceptance/typescript/ui/", "tests/acceptance/typescript/e2e/"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "package.json作成",
+      "estimated_minutes": 20,
+      "deliverables": ["tests/acceptance/typescript/package.json"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "tsconfig.json作成",
+      "estimated_minutes": 15,
+      "deliverables": ["tests/acceptance/typescript/tsconfig.json"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "playwright.config.ts作成",
+      "estimated_minutes": 40,
+      "deliverables": ["tests/acceptance/typescript/playwright.config.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.5",
+      "description": ".gitignore作成",
+      "estimated_minutes": 5,
+      "deliverables": ["tests/acceptance/typescript/.gitignore"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.6",
+      "description": "npm install実行",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.7",
+      "description": "Playwrightブラウザインストール",
+      "estimated_minutes": 20,
+      "deliverables": [],
+      "dependencies": ["1.6"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "myAgentDeskスモークテスト",
+      "estimated_minutes": 40,
+      "deliverables": ["tests/acceptance/typescript/ui/myagentdesk-smoke.spec.ts"],
+      "dependencies": ["1.7"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "ヘルスチェックテスト",
+      "estimated_minutes": 25,
+      "deliverables": ["tests/acceptance/typescript/ui/health-check.spec.ts"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "E2Eスモークテスト",
+      "estimated_minutes": 25,
+      "deliverables": ["tests/acceptance/typescript/e2e/smoke.spec.ts"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Playwrightインストールスクリプト作成",
+      "estimated_minutes": 30,
+      "deliverables": ["scripts/install-playwright.sh"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "acceptance-test-frontend Makefileターゲット",
+      "estimated_minutes": 25,
+      "deliverables": [],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "run-acceptance-tests.sh Frontend対応",
+      "estimated_minutes": 45,
+      "deliverables": ["scripts/run-acceptance-tests.sh"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "acceptance-test-all ターゲット更新",
+      "estimated_minutes": 20,
+      "deliverables": [],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "npm install検証",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["3.4"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "ESLint/TypeScript検証",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["4.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "スモークテスト実行（ヘッドレス）",
+      "estimated_minutes": 20,
+      "deliverables": [],
+      "dependencies": ["4.2"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "スモークテスト実行（ヘッドモード）",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["4.3"]
+    },
+    {
+      "task_id": "4.5",
+      "description": "Makefileターゲット検証",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["4.4"]
+    },
+    {
+      "task_id": "4.6",
+      "description": "レポート出力確認",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["4.5"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "README.md作成",
+      "estimated_minutes": 30,
+      "deliverables": ["tests/acceptance/typescript/README.md"],
+      "dependencies": ["4.6"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "scripts/README.md更新",
+      "estimated_minutes": 15,
+      "deliverables": ["scripts/README.md"],
+      "dependencies": ["5.1"]
+    },
+    {
+      "task_id": "5.3",
+      "description": "myAgentDesk E2Eへのdeprecation警告",
+      "estimated_minutes": 15,
+      "deliverables": ["myAgentDesk/tests/e2e/README.md"],
+      "dependencies": ["5.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "tests/acceptance/typescript/package.json",
+    "tests/acceptance/typescript/tsconfig.json",
+    "tests/acceptance/typescript/playwright.config.ts",
+    "tests/acceptance/typescript/.gitignore",
+    "tests/acceptance/typescript/ui/myagentdesk-smoke.spec.ts",
+    "tests/acceptance/typescript/ui/health-check.spec.ts",
+    "tests/acceptance/typescript/e2e/smoke.spec.ts",
+    "tests/acceptance/typescript/README.md",
+    "scripts/install-playwright.sh"
+  ],
+  "definition_of_done": [
+    "全タスクが完了",
+    "npm install が正常に完了",
+    "npx playwright test が正常に実行",
+    "ESLint/TypeScript エラーゼロ",
+    "make acceptance-test-frontend が正常に実行"
+  ],
+  "target_coverage": 90,
+  "technical_notes": {
+    "playwright_version": "^1.40.0",
+    "typescript_version": "^5.3.3",
+    "myagentdesk_port_default": "5173",
+    "test_timeout_default_ms": 30000
+  }
+}
