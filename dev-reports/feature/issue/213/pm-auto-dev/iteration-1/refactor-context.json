@@ -1,0 +1,44 @@
+{
+  "issue_number": 213,
+  "refactor_targets": [
+    "tests/conftest.py",
+    "tests/acceptance/python/conftest.py",
+    "tests/acceptance/python/platform/conftest.py",
+    "tests/acceptance/python/agent/conftest.py",
+    "tests/acceptance/python/e2e/conftest.py",
+    "tests/fixtures/__init__.py",
+    "tests/fixtures/factories/__init__.py",
+    "tests/unit/test_issue_213_acceptance_test_structure.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": "N/A - infrastructure code",
+    "static_analysis_errors": 0
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle - ensure each conftest.py focuses on its level",
+    "DRY - avoid code duplication across conftest.py files",
+    "Clean Code - consistent naming, docstrings, type hints"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持（100%）",
+    "コード重複の確認と削除",
+    "型アノテーションの一貫性確認",
+    "docstringの一貫性確認"
+  ],
+  "notes": [
+    "本Issueは主にディレクトリ構造とconftest.pyのセットアップであり、複雑なビジネスロジックは含まれない",
+    "リファクタリングは主にコードの整理と一貫性の確認に焦点を当てる",
+    "既存テスト（37件）がすべてパスすることを維持する"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 100,
+    "unit_tests_passed": 37
+  },
+  "acceptance_result": {
+    "status": "passed",
+    "scenarios_passed": 5,
+    "criteria_verified": 7
+  }
+}

@@ -8,7 +8,7 @@ This module provides fixtures specific to Agent layer acceptance tests:
 
 Hierarchy:
 - Inherits from L0 (tests/conftest.py): project_root, markers
-- Inherits from L1 (tests/acceptance/python/conftest.py): env_config, service_urls
+- Inherits from L1 (tests/acceptance/python/conftest.py): env_config, service_urls, check_services_health
 """
 
 import os
@@ -19,6 +19,8 @@ from unittest.mock import AsyncMock, MagicMock
 import httpx
 import pytest
 import pytest_asyncio
+
+from tests.acceptance.python.conftest import check_services_health
 
 
 @pytest_asyncio.fixture
@@ -154,33 +156,18 @@ def agent_services() -> list[str]:
 @pytest.fixture
 def check_agent_health(
     service_urls: dict[str, str],
+    agent_services: list[str],
 ) -> dict[str, Any]:
     """Check health status of all Agent services.
 
+    Uses the shared check_services_health helper from L1 conftest
+    to avoid code duplication with platform/conftest.py.
+
     Args:
         service_urls: Dictionary of service URLs.
+        agent_services: List of agent service names.
 
     Returns:
-        dict: Health status of each Agent service.
+        dict[str, Any]: Health status of each Agent service.
     """
-    results: dict[str, Any] = {}
-    agent_services = ["expertagent", "graphaiserver"]
-
-    for service in agent_services:
-        url = service_urls.get(service)
-        if url:
-            try:
-                response = httpx.get(f"{url}/health", timeout=5.0)
-                results[service] = {
-                    "status": "healthy" if response.status_code == 200 else "unhealthy",
-                    "status_code": response.status_code,
-                }
-            except httpx.RequestError as e:
-                results[service] = {
-                    "status": "unavailable",
-                    "error": str(e),
-                }
-        else:
-            results[service] = {"status": "not_configured"}
-
-    return results
+    return check_services_health(service_urls, agent_services)

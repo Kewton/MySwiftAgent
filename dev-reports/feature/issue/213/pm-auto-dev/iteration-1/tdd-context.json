@@ -1,0 +1,219 @@
+{
+  "issue_number": 213,
+  "issue_title": "Issue #209-3: 受入テストディレクトリ構造作成",
+  "acceptance_criteria": [
+    "tests/acceptance/python/ ディレクトリが存在する",
+    "tests/acceptance/typescript/ ディレクトリが存在する",
+    "tests/conftest.py がL0共通フィクスチャを提供する（新マーカー: platform, agent, frontend, requires_api_key, acceptance）",
+    "tests/README.md が存在し、テスト場所クイックリファレンスを含む",
+    "tests/.env.example が存在し、必要な環境変数がドキュメント化されている",
+    "conftest.py階層がdesign-policy.md 3.4に準拠（L0 → L1 → L2継承）",
+    "Ruff/MyPy エラーゼロ"
+  ],
+  "implementation_tasks": [
+    "Phase 1: ディレクトリ構造作成（tests/acceptance/, tests/fixtures/）",
+    "Phase 2: conftest.py階層作成（L0拡張、L1作成、L2作成）",
+    "Phase 3: 設定ファイル作成（pytest.ini, requirements.txt, playwright.config.ts, package.json, tsconfig.json）",
+    "Phase 4: 環境設定・ドキュメント（.env.example, README.md, __init__.py）",
+    "Phase 5: 検証（ディレクトリ構造、conftest.py継承、静的解析）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "基本ディレクトリ作成（tests/acceptance/, tests/fixtures/）",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/acceptance/", "tests/fixtures/"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "Python受入テストディレクトリ作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/acceptance/python/{platform,agent,e2e}/"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "TypeScript受入テストディレクトリ作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/acceptance/typescript/{ui,e2e}/"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "テストフィクスチャディレクトリ作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/fixtures/{api_responses,test_data,factories}/"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.5",
+      "description": ".gitkeepファイル配置",
+      "estimated_hours": 0.17,
+      "deliverables": ["各空ディレクトリに.gitkeep"],
+      "dependencies": ["1.2", "1.3", "1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "L0 conftest.py拡張（新マーカー追加）",
+      "estimated_hours": 0.33,
+      "deliverables": ["tests/conftest.py更新"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "L1 Python受入テストconftest.py作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/acceptance/python/conftest.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "L2 Platform conftest.py作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/acceptance/python/platform/conftest.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "L2 Agent conftest.py作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/acceptance/python/agent/conftest.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.5",
+      "description": "L2 E2E conftest.py作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/acceptance/python/e2e/conftest.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Python pytest.ini作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/acceptance/python/pytest.ini"],
+      "dependencies": ["2.3", "2.4", "2.5"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "Python requirements.txt作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/acceptance/python/requirements.txt"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.3",
+      "description": "TypeScript playwright.config.ts作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/acceptance/typescript/playwright.config.ts"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "TypeScript package.json作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/acceptance/typescript/package.json"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "3.5",
+      "description": "TypeScript tsconfig.json作成",
+      "estimated_hours": 0.17,
+      "deliverables": ["tests/acceptance/typescript/tsconfig.json"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": ".env.example作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/.env.example"],
+      "dependencies": []
+    },
+    {
+      "task_id": "4.2",
+      "description": "tests/README.md作成",
+      "estimated_hours": 0.75,
+      "deliverables": ["tests/README.md"],
+      "dependencies": ["3.1", "3.5"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "フィクスチャ__init__.py作成",
+      "estimated_hours": 0.25,
+      "deliverables": ["tests/fixtures/__init__.py", "tests/fixtures/factories/__init__.py"],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "ディレクトリ構造検証",
+      "estimated_hours": 0.25,
+      "deliverables": ["検証結果"],
+      "dependencies": ["4.2"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "conftest.py継承検証（pytest --collect-only）",
+      "estimated_hours": 0.33,
+      "deliverables": ["pytest collect結果"],
+      "dependencies": ["5.1"]
+    },
+    {
+      "task_id": "5.3",
+      "description": "静的解析（Ruff/MyPy）",
+      "estimated_hours": 0.25,
+      "deliverables": ["Ruff/MyPyパス"],
+      "dependencies": ["5.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "tests/acceptance/python/",
+    "tests/acceptance/python/platform/",
+    "tests/acceptance/python/agent/",
+    "tests/acceptance/python/e2e/",
+    "tests/acceptance/python/e2e/scenarios/",
+    "tests/acceptance/typescript/",
+    "tests/acceptance/typescript/ui/",
+    "tests/acceptance/typescript/e2e/",
+    "tests/fixtures/",
+    "tests/fixtures/api_responses/",
+    "tests/fixtures/api_responses/myvault/",
+    "tests/fixtures/api_responses/expertagent/",
+    "tests/fixtures/test_data/",
+    "tests/fixtures/test_data/job_requests/",
+    "tests/fixtures/test_data/workflows/",
+    "tests/fixtures/factories/",
+    "tests/conftest.py",
+    "tests/acceptance/python/conftest.py",
+    "tests/acceptance/python/platform/conftest.py",
+    "tests/acceptance/python/agent/conftest.py",
+    "tests/acceptance/python/e2e/conftest.py",
+    "tests/acceptance/python/pytest.ini",
+    "tests/acceptance/python/requirements.txt",
+    "tests/acceptance/typescript/playwright.config.ts",
+    "tests/acceptance/typescript/package.json",
+    "tests/acceptance/typescript/tsconfig.json",
+    "tests/.env.example",
+    "tests/README.md",
+    "tests/fixtures/__init__.py",
+    "tests/fixtures/factories/__init__.py"
+  ],
+  "definition_of_done": [
+    "すべてのディレクトリ・ファイルが作成されている",
+    "conftest.py階層（L0 → L1 → L2）が正しく継承される",
+    "pytest --collect-only tests/acceptance/python/ が成功する",
+    "Ruff/MyPy エラーゼロ",
+    "README.mdにテスト実行ガイドが含まれる"
+  ],
+  "target_coverage": 90,
+  "existing_structure": {
+    "tests/conftest.py": "exists - L0 level with basic markers",
+    "tests/integration/python/": "exists - with conftest.py",
+    "tests/integration/typescript/": "exists - with vitest config"
+  },
+  "notes": [
+    "本IssueはディレクトリとファイルのSetupが中心のため、単体テストは構造検証テストが主体",
+    "既存のacceptanceテスト（tests/integration/test_issue_*_acceptance.py）の移行は本Issueでは行わない",
+    "Playwrightの詳細設定はIssue #216で実施"
+  ]
+}

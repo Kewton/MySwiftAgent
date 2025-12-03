@@ -1,0 +1,115 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "S1: ディレクトリ構造の存在確認",
+      "result": "passed",
+      "details": "全ディレクトリが存在することを確認",
+      "evidence": [
+        "tests/acceptance/python/ - 存在 (conftest.py, pytest.ini, requirements.txt含む)",
+        "tests/acceptance/python/platform/ - 存在 (conftest.py, .gitkeep含む)",
+        "tests/acceptance/python/agent/ - 存在 (conftest.py, .gitkeep含む)",
+        "tests/acceptance/python/e2e/ - 存在 (conftest.py, scenarios/含む)",
+        "tests/acceptance/typescript/ - 存在 (playwright.config.ts, package.json, tsconfig.json含む)",
+        "tests/acceptance/typescript/ui/ - 存在 (.gitkeep含む)",
+        "tests/acceptance/typescript/e2e/ - 存在 (.gitkeep含む)",
+        "tests/fixtures/api_responses/ - 存在 (myvault/, expertagent/含む)",
+        "tests/fixtures/test_data/ - 存在 (job_requests/, workflows/含む)",
+        "tests/fixtures/factories/ - 存在 (__init__.py含む)"
+      ]
+    },
+    {
+      "scenario": "S2: conftest.py階層継承の検証",
+      "result": "passed",
+      "details": "L0 -> L1 -> L2 の継承が正しく機能",
+      "evidence": [
+        "L0 (tests/conftest.py): 新マーカー定義済み - platform, agent, frontend, requires_api_key, acceptance",
+        "L1 (tests/acceptance/python/conftest.py): env_config, service_urls, requires_api_key, async_client フィクスチャ提供",
+        "L2 Platform (tests/acceptance/python/platform/conftest.py): myvault_client, jobqueue_client, myscheduler_client 提供",
+        "L2 Agent (tests/acceptance/python/agent/conftest.py): expertagent_client, graphaiserver_client, llm_api_key 提供",
+        "L2 E2E (tests/acceptance/python/e2e/conftest.py): full_stack_services, e2e_test_data, cleanup_test_data 提供",
+        "pytest --collect-only tests/acceptance/python/ 成功 (collected 0 items - テストファイル未作成のため正常)"
+      ]
+    },
+    {
+      "scenario": "S3: 設定ファイルの存在と内容確認",
+      "result": "passed",
+      "details": "全設定ファイルが存在し内容が正しい",
+      "evidence": [
+        "tests/acceptance/python/pytest.ini - 存在 (asyncio_mode=auto, markers定義, addopts設定)",
+        "tests/acceptance/python/requirements.txt - 存在 (pytest>=7.0.0, httpx>=0.25.0等)",
+        "tests/acceptance/typescript/playwright.config.ts - 存在 (baseURL, timeout, projects設定)",
+        "tests/acceptance/typescript/package.json - 存在 (@playwright/test ^1.40.0, scripts定義)",
+        "tests/acceptance/typescript/tsconfig.json - 存在 (ES2022, strict:true)"
+      ]
+    },
+    {
+      "scenario": "S4: ドキュメントの存在と内容確認",
+      "result": "passed",
+      "details": "README.mdと.env.exampleが正しく作成されている",
+      "evidence": [
+        "tests/README.md - 存在 (180行)",
+        "  - Quick Reference - Test Locations テーブル含む",
+        "  - Directory Structure セクション含む",
+        "  - conftest.py Hierarchy セクション含む",
+        "  - Markers テーブル含む",
+        "tests/.env.example - 存在 (77行)",
+        "  - API Keys セクション (GOOGLE_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY)",
+        "  - Service URLs セクション (MYVAULT_URL, EXPERTAGENT_URL等)",
+        "  - Test Configuration セクション (TEST_TIMEOUT, TEST_RETRY_COUNT)"
+      ]
+    },
+    {
+      "scenario": "S5: 静的解析の検証",
+      "result": "passed",
+      "details": "Ruff/MyPy エラーゼロ",
+      "evidence": [
+        "Ruff: 'All checks passed!'",
+        "MyPy: 'Success: no issues found in 7 source files' (--explicit-package-bases オプション使用)"
+      ]
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "tests/acceptance/python/ ディレクトリが存在する",
+      "verified": true,
+      "evidence": "ls -la tests/acceptance/python/ で確認: conftest.py, pytest.ini, requirements.txt, platform/, agent/, e2e/ が存在"
+    },
+    {
+      "criterion": "tests/acceptance/typescript/ ディレクトリが存在する",
+      "verified": true,
+      "evidence": "ls -la tests/acceptance/typescript/ で確認: playwright.config.ts, package.json, tsconfig.json, ui/, e2e/ が存在"
+    },
+    {
+      "criterion": "tests/conftest.py がL0共通フィクスチャを提供する（新マーカー: platform, agent, frontend, requires_api_key, acceptance）",
+      "verified": true,
+      "evidence": "tests/conftest.py 内容確認: pytest_configure()で5つの新マーカーが定義されている (lines 22-26)"
+    },
+    {
+      "criterion": "tests/README.md が存在し、テスト場所クイックリファレンスを含む",
+      "verified": true,
+      "evidence": "tests/README.md 存在確認: 'Quick Reference - Test Locations' テーブルがlines 7-11に存在"
+    },
+    {
+      "criterion": "tests/.env.example が存在し、必要な環境変数がドキュメント化されている",
+      "verified": true,
+      "evidence": "tests/.env.example 存在確認: API Keys, Service URLs, Test Configuration セクションで全環境変数がドキュメント化"
+    },
+    {
+      "criterion": "conftest.py階層がdesign-policy.md 3.4に準拠（L0 -> L1 -> L2継承）",
+      "verified": true,
+      "evidence": "3階層のconftest.py確認: L0(tests/conftest.py) -> L1(tests/acceptance/python/conftest.py) -> L2(platform/, agent/, e2e/ の各conftest.py)"
+    },
+    {
+      "criterion": "Ruff/MyPy エラーゼロ",
+      "verified": true,
+      "evidence": "ruff check: 'All checks passed!', mypy --explicit-package-bases: 'Success: no issues found in 7 source files'"
+    }
+  ],
+  "evidence_files": [],
+  "summary": "Issue #213 の全ての受入条件が満たされています。ディレクトリ構造、conftest.py階層、設定ファイル、ドキュメント、静的解析の全てが設計通りに実装されています。",
+  "notes": [
+    "pytest --collect-only は exit code 5 (no tests collected) を返しますが、これはテストファイルがまだ作成されていないための正常な動作です。conftest.py のフィクスチャ定義は正しく読み込まれています。",
+    "MyPyは --explicit-package-bases オプションを使用することで、複数のconftest.pyファイル（同名モジュール）を正しく処理できます。"
+  ]
+}

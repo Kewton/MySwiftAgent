@@ -79,6 +79,49 @@ def is_service_available(url: str, timeout: float = 5.0) -> bool:
         return False
 
 
+def check_services_health(
+    service_urls: dict[str, str],
+    services: list[str],
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    """Check health status of specified services.
+
+    This is a shared helper function to avoid code duplication
+    in L2 conftest files (platform, agent).
+
+    Args:
+        service_urls: Dictionary of service URLs.
+        services: List of service names to check.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        dict[str, Any]: Health status of each service with keys:
+            - status: 'healthy', 'unhealthy', 'unavailable', or 'not_configured'
+            - status_code: HTTP status code (if available)
+            - error: Error message (if unavailable)
+    """
+    results: dict[str, Any] = {}
+
+    for service in services:
+        url = service_urls.get(service)
+        if url:
+            try:
+                response = httpx.get(f"{url}/health", timeout=timeout)
+                results[service] = {
+                    "status": "healthy" if response.status_code == 200 else "unhealthy",
+                    "status_code": response.status_code,
+                }
+            except httpx.RequestError as e:
+                results[service] = {
+                    "status": "unavailable",
+                    "error": str(e),
+                }
+        else:
+            results[service] = {"status": "not_configured"}
+
+    return results
+
+
 @pytest.fixture(scope="session")
 def ensure_services_running(
     service_urls: dict[str, str],

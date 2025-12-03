@@ -15,13 +15,24 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture
+def tests_root(project_root: Path) -> Path:
+    """Get the tests root directory.
+
+    This is a module-level fixture to avoid duplication across test classes.
+    Following DRY principle - defined once and reused.
+
+    Args:
+        project_root: The project root path from L0 conftest.
+
+    Returns:
+        Path: The absolute path to the tests directory.
+    """
+    return project_root / "tests"
+
+
 class TestAcceptanceDirectoryStructure:
     """Test acceptance test directory structure existence."""
-
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
 
     def test_acceptance_python_directory_exists(self, tests_root: Path) -> None:
         """Verify tests/acceptance/python/ directory exists."""
@@ -75,11 +86,6 @@ class TestAcceptanceDirectoryStructure:
 class TestFixturesDirectoryStructure:
     """Test fixtures directory structure existence."""
 
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
-
     def test_fixtures_directory_exists(self, tests_root: Path) -> None:
         """Verify tests/fixtures/ directory exists."""
         fixtures_dir = tests_root / "fixtures"
@@ -132,11 +138,6 @@ class TestFixturesDirectoryStructure:
 class TestConftestPyFiles:
     """Test conftest.py file existence at all levels."""
 
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
-
     def test_l0_conftest_exists(self, tests_root: Path) -> None:
         """Verify L0 conftest.py exists at tests/conftest.py."""
         conftest = tests_root / "conftest.py"
@@ -170,11 +171,6 @@ class TestConftestPyFiles:
 
 class TestConftestMarkers:
     """Test that conftest.py contains required markers."""
-
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
 
     def test_l0_conftest_has_platform_marker(self, tests_root: Path) -> None:
         """Verify L0 conftest.py defines 'platform' marker."""
@@ -210,11 +206,6 @@ class TestConftestMarkers:
 class TestConfigurationFiles:
     """Test configuration file existence."""
 
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
-
     def test_acceptance_python_pytest_ini_exists(self, tests_root: Path) -> None:
         """Verify tests/acceptance/python/pytest.ini exists."""
         pytest_ini = tests_root / "acceptance" / "python" / "pytest.ini"
@@ -249,11 +240,6 @@ class TestConfigurationFiles:
 class TestDocumentationFiles:
     """Test documentation file existence."""
 
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
-
     def test_readme_md_exists(self, tests_root: Path) -> None:
         """Verify tests/README.md exists."""
         readme = tests_root / "README.md"
@@ -286,11 +272,6 @@ class TestDocumentationFiles:
 
 class TestInitFiles:
     """Test __init__.py file existence."""
-
-    @pytest.fixture
-    def tests_root(self, project_root: Path) -> Path:
-        """Get the tests root directory."""
-        return project_root / "tests"
 
     def test_fixtures_init_py_exists(self, tests_root: Path) -> None:
         """Verify tests/fixtures/__init__.py exists."""

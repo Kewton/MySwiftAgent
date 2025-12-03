@@ -8,7 +8,7 @@ This module provides fixtures specific to Platform layer acceptance tests:
 
 Hierarchy:
 - Inherits from L0 (tests/conftest.py): project_root, markers
-- Inherits from L1 (tests/acceptance/python/conftest.py): env_config, service_urls
+- Inherits from L1 (tests/acceptance/python/conftest.py): env_config, service_urls, check_services_health
 """
 
 from collections.abc import AsyncGenerator
@@ -17,6 +17,8 @@ from typing import Any
 import httpx
 import pytest
 import pytest_asyncio
+
+from tests.acceptance.python.conftest import check_services_health
 
 
 @pytest_asyncio.fixture
@@ -92,33 +94,20 @@ def platform_services() -> list[str]:
 @pytest.fixture
 def check_platform_health(
     service_urls: dict[str, str],
+    platform_services: list[str],
 ) -> dict[str, Any]:
     """Check health status of all Platform services.
 
+    Uses the shared check_services_health helper from L1 conftest
+    to avoid code duplication with agent/conftest.py.
+
     Args:
         service_urls: Dictionary of service URLs.
+        platform_services: List of platform service names.
 
     Returns:
-        dict: Health status of each Platform service.
+        dict[str, Any]: Health status of each Platform service.
     """
-    results: dict[str, Any] = {}
-    platform_services = ["myvault", "jobqueue", "myscheduler"]
-
-    for service in platform_services:
-        url = service_urls.get(service)
-        if url:
-            try:
-                response = httpx.get(f"{url}/health", timeout=5.0)
-                results[service] = {
-                    "status": "healthy" if response.status_code == 200 else "unhealthy",
-                    "status_code": response.status_code,
-                }
-            except httpx.RequestError as e:
-                results[service] = {
-                    "status": "unavailable",
-                    "error": str(e),
-                }
-        else:
-            results[service] = {"status": "not_configured"}
-
-    return results
+    # Filter to only HTTP services (exclude valkey, langfuse which have different health endpoints)
+    http_services = [s for s in platform_services if s in service_urls]
+    return check_services_health(service_urls, http_services)

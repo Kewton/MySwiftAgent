@@ -1,0 +1,47 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 100,
+    "after_coverage": 100,
+    "before_complexity": "N/A - infrastructure code",
+    "after_complexity": "N/A - infrastructure code",
+    "lines_changed": {
+      "insertions": 81,
+      "deletions": 81
+    }
+  },
+  "refactorings_applied": [
+    "DRY: tests_root fixtureを7つの重複定義からモジュールレベルの単一定義に統合",
+    "DRY: check_services_health共通ヘルパー関数をL1 conftestに追加",
+    "DRY: check_platform_healthをcheck_services_health利用に書き換え",
+    "DRY: check_agent_healthをcheck_services_health利用に書き換え",
+    "docstring強化: tests_root fixtureにArgs/Returnsセクション追加",
+    "docstring強化: check_services_healthに詳細なドキュメント追加",
+    "階層ドキュメント更新: L2 conftestのHierarchyセクションにcheck_services_health参照追加"
+  ],
+  "tests_status": {
+    "total": 37,
+    "passed": 37,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_modified": [
+    "tests/unit/test_issue_213_acceptance_test_structure.py",
+    "tests/acceptance/python/conftest.py",
+    "tests/acceptance/python/platform/conftest.py",
+    "tests/acceptance/python/agent/conftest.py"
+  ],
+  "design_patterns_applied": [
+    "Single Responsibility Principle: 各conftest.pyはそのレベルの責務に特化",
+    "DRY: 共通ロジックをL1に集約し、L2から再利用",
+    "Clean Code: 一貫したdocstringフォーマットと型アノテーション"
+  ],
+  "notes": [
+    "本Issueはインフラストラクチャコードのため、複雑度メトリクスは該当なし",
+    "コード行数は変わらず（+81/-81）、重複コードを共通化",
+    "全37テストがパスし、カバレッジ100%を維持"
+  ]
+}
