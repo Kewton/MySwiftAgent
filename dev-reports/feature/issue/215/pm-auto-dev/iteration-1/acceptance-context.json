@@ -1,0 +1,30 @@
+{
+  "issue_number": 215,
+  "feature_summary": "Python受入テスト実行スクリプト作成",
+  "acceptance_criteria": [
+    "scripts/run-acceptance-tests.sh が存在し、実行可能",
+    "make acceptance-test-platform が正常に実行される",
+    "make acceptance-test-agent が正常に実行される",
+    "make help に受入テストコマンドが表示される",
+    "依存コンテナが自動起動される",
+    "ShellCheck エラーゼロ",
+    "スクリプトにヘルプオプション（-h, --help）が実装されている"
+  ],
+  "test_scenarios": [
+    "シナリオ1: スクリプトのヘルプオプション確認 - ./scripts/run-acceptance-tests.sh --help が使用方法を表示する",
+    "シナリオ2: Platform層テスト実行 - ./scripts/run-acceptance-tests.sh --layer platform --skip-health が正常終了する",
+    "シナリオ3: Agent層テスト実行 - ./scripts/run-acceptance-tests.sh --layer agent --skip-health が正常終了する",
+    "シナリオ4: Makefileヘルプ確認 - make help が受入テストコマンドを表示する",
+    "シナリオ5: ShellCheck検証 - shellcheck scripts/run-acceptance-tests.sh がエラーゼロ",
+    "シナリオ6: スクリプト実行権限確認 - scripts/run-acceptance-tests.sh が実行可能ファイルである"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "functional_tests": {
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    "shellcheck_errors": 0
+  }
+}

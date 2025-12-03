@@ -1,0 +1,153 @@
+{
+  "issue_number": 215,
+  "title": "Issue #209-5: Python受入テスト実行スクリプト作成",
+  "acceptance_criteria": [
+    "scripts/run-acceptance-tests.sh が存在し、実行可能",
+    "make acceptance-test-platform が正常に実行される",
+    "make acceptance-test-agent が正常に実行される",
+    "make help に受入テストコマンドが表示される",
+    "依存コンテナが自動起動される",
+    "ShellCheck エラーゼロ",
+    "スクリプトにヘルプオプション（-h, --help）が実装されている"
+  ],
+  "implementation_tasks": [
+    "scripts/run-acceptance-tests.sh 作成",
+    "Makefile に受入テストターゲット追加（acceptance-test-platform, acceptance-test-agent, acceptance-test-python, acceptance-test-all）",
+    "依存コンテナ自動起動機能",
+    "ヘルスチェック待機機能",
+    "テストレポート出力機能"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "スクリプトスケルトン作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["scripts/run-acceptance-tests.sh"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "設定変数・デフォルト値設定",
+      "estimated_hours": 0.33,
+      "deliverables": ["scripts/run-acceptance-tests.sh (設定セクション)"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ヘルスチェック関数実装",
+      "estimated_hours": 0.67,
+      "deliverables": ["check_health, wait_for_health 関数"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "サービス起動関数実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["start_services, stop_services 関数"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "ログ・レポート出力関数",
+      "estimated_hours": 0.5,
+      "deliverables": ["setup_logging, output_report 関数"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "pytest実行関数実装",
+      "estimated_hours": 0.67,
+      "deliverables": ["run_pytest 関数"],
+      "dependencies": ["1.4", "1.5"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "レイヤー別テスト関数実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["test_platform, test_agent, test_e2e 関数"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "全体テスト実行関数",
+      "estimated_hours": 0.5,
+      "deliverables": ["run_all_tests 関数"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "メイン処理フロー実装",
+      "estimated_hours": 0.33,
+      "deliverables": ["main 関数"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "acceptance-test-platform ターゲット",
+      "estimated_hours": 0.33,
+      "deliverables": ["Makefile (acceptance-test-platform)"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "acceptance-test-agent ターゲット",
+      "estimated_hours": 0.25,
+      "deliverables": ["Makefile (acceptance-test-agent)"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "acceptance-test-python ターゲット",
+      "estimated_hours": 0.25,
+      "deliverables": ["Makefile (acceptance-test-python)"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "acceptance-test-all ターゲット",
+      "estimated_hours": 0.25,
+      "deliverables": ["Makefile (acceptance-test-all)"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "3.5",
+      "description": "help出力更新",
+      "estimated_hours": 0.25,
+      "deliverables": ["Makefile (help更新)"],
+      "dependencies": ["3.4"]
+    },
+    {
+      "task_id": "3.6",
+      "description": "PHONY宣言追加",
+      "estimated_hours": 0.17,
+      "deliverables": ["Makefile (PHONY)"],
+      "dependencies": ["3.5"]
+    }
+  ],
+  "deliverables_checklist": [
+    "scripts/run-acceptance-tests.sh",
+    "Makefile (受入テストターゲット追加)",
+    "test-reports/acceptance/.gitkeep"
+  ],
+  "definition_of_done": [
+    "scripts/run-acceptance-tests.sh が存在し実行可能",
+    "--help オプションで使用方法が表示される",
+    "--layer platform でPlatform層テストが実行される",
+    "--layer agent でAgent層テストが実行される",
+    "Makefileに acceptance-test-* ターゲットが存在する",
+    "shellcheck でエラーゼロ",
+    "Makefile構文エラーなし"
+  ],
+  "target_coverage": 90,
+  "technical_stack": {
+    "languages": ["Bash", "Make"],
+    "tools": ["Docker Compose", "curl", "pytest"]
+  },
+  "existing_structure": {
+    "test_base_dir": "tests/acceptance/python",
+    "platform_dir": "tests/acceptance/python/platform",
+    "agent_dir": "tests/acceptance/python/agent",
+    "e2e_dir": "tests/acceptance/python/e2e",
+    "report_dir": "test-reports/acceptance"
+  }
+}

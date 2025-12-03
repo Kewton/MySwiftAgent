@@ -1,0 +1,37 @@
+{
+  "status": "success",
+  "issue_number": 215,
+  "coverage": "N/A (Bash script - coverage not applicable)",
+  "functional_tests": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0
+  },
+  "static_analysis": {
+    "shellcheck_errors": 0,
+    "makefile_syntax_errors": 0
+  },
+  "files_changed": [
+    "scripts/run-acceptance-tests.sh",
+    "Makefile",
+    "test-reports/acceptance/.gitkeep",
+    "tests/scripts/test_run_acceptance_tests.sh"
+  ],
+  "commits": [
+    "653fc46: feat(issue/215): Python受入テスト実行スクリプト作成"
+  ],
+  "acceptance_criteria_verified": {
+    "scripts/run-acceptance-tests.sh exists and executable": true,
+    "make acceptance-test-platform works": true,
+    "make acceptance-test-agent works": true,
+    "make help shows acceptance test commands": true,
+    "ShellCheck zero errors": true,
+    "Help option (-h, --help) implemented": true
+  },
+  "deliverables": {
+    "scripts/run-acceptance-tests.sh": "Created - Python acceptance test runner with layer support",
+    "Makefile targets": "Added acceptance-test-platform, acceptance-test-agent, acceptance-test-e2e, acceptance-test-python, acceptance-test-all",
+    "test-reports/acceptance/.gitkeep": "Created - Report directory placeholder"
+  },
+  "message": "TDD implementation completed successfully. All 12 functional tests passed. ShellCheck reports 0 errors. Script supports --layer (platform/agent/e2e), --help, --auto-start, and --skip-health options."
+}
