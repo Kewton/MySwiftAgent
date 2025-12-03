@@ -55,7 +55,8 @@ DOCKER_COMPOSE := docker compose
 .PHONY: logs logs-platform logs-agent logs-frontend
 .PHONY: status rebuild clean network
 .PHONY: _check-platform _check-agent _wait-platform _wait-agent
-.PHONY: acceptance-test-frontend acceptance-test-all
+.PHONY: acceptance-test-platform acceptance-test-agent acceptance-test-e2e
+.PHONY: acceptance-test-python acceptance-test-frontend acceptance-test-all
 
 # =============================================================================
 # Help Target (Default)
@@ -292,6 +293,22 @@ _wait-agent: ## [Internal] Wait for Agent services to be healthy
 # TypeScript/Playwright acceptance test directory
 ACCEPTANCE_TS_DIR := tests/acceptance/typescript
 
+acceptance-test-platform: ## Run Platform layer acceptance tests
+	@echo "Running Platform layer acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --layer platform
+
+acceptance-test-agent: ## Run Agent layer acceptance tests
+	@echo "Running Agent layer acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --layer agent
+
+acceptance-test-e2e: ## Run E2E acceptance tests
+	@echo "Running E2E acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --layer e2e
+
+acceptance-test-python: ## Run all Python acceptance tests (platform + agent + e2e)
+	@echo "Running all Python acceptance tests..."
+	@./scripts/run-acceptance-tests.sh --all
+
 acceptance-test-frontend: ## Run Frontend acceptance tests (Playwright)
 	@echo "Running Frontend acceptance tests..."
 	@echo ""
@@ -307,11 +324,7 @@ acceptance-test-all: ## Run all acceptance tests (Python + TypeScript)
 	@echo "Running all acceptance tests..."
 	@echo ""
 	@echo "[1/2] Running Python acceptance tests..."
-	@if [ -f "tests/acceptance/python/pytest.ini" ]; then \
-		cd tests/acceptance/python && uv run pytest -v || true; \
-	else \
-		echo "  Python tests not configured, skipping..."; \
-	fi
+	@./scripts/run-acceptance-tests.sh --all || true
 	@echo ""
 	@echo "[2/2] Running Frontend acceptance tests..."
 	@$(MAKE) acceptance-test-frontend
