@@ -1,0 +1,74 @@
+{
+  "issue_number": 213,
+  "feature_summary": "受入テストディレクトリ構造作成 - tests/acceptance/ ディレクトリ構造と共通フィクスチャを作成",
+  "acceptance_criteria": [
+    "tests/acceptance/python/ ディレクトリが存在する",
+    "tests/acceptance/typescript/ ディレクトリが存在する",
+    "tests/conftest.py がL0共通フィクスチャを提供する（新マーカー: platform, agent, frontend, requires_api_key, acceptance）",
+    "tests/README.md が存在し、テスト場所クイックリファレンスを含む",
+    "tests/.env.example が存在し、必要な環境変数がドキュメント化されている",
+    "conftest.py階層がdesign-policy.md 3.4に準拠（L0 → L1 → L2継承）",
+    "Ruff/MyPy エラーゼロ"
+  ],
+  "test_scenarios": [
+    {
+      "scenario": "S1: ディレクトリ構造の存在確認",
+      "description": "作成されたディレクトリ構造が設計通りであることを確認",
+      "steps": [
+        "tests/acceptance/python/ の存在確認",
+        "tests/acceptance/python/{platform,agent,e2e}/ の存在確認",
+        "tests/acceptance/typescript/ の存在確認",
+        "tests/acceptance/typescript/{ui,e2e}/ の存在確認",
+        "tests/fixtures/{api_responses,test_data,factories}/ の存在確認"
+      ],
+      "expected_result": "全ディレクトリが存在すること"
+    },
+    {
+      "scenario": "S2: conftest.py階層継承の検証",
+      "description": "L0 → L1 → L2 の継承が正しく機能することを確認",
+      "steps": [
+        "tests/conftest.py にplatform, agent, frontend, requires_api_key, acceptanceマーカーが定義されていることを確認",
+        "tests/acceptance/python/conftest.py でenv_configフィクスチャが定義されていることを確認",
+        "pytest --collect-only tests/acceptance/python/ が成功することを確認"
+      ],
+      "expected_result": "conftest.py継承が正しく機能し、pytestが正常にテストを収集できること"
+    },
+    {
+      "scenario": "S3: 設定ファイルの存在と内容確認",
+      "description": "Python/TypeScript設定ファイルが正しく作成されていることを確認",
+      "steps": [
+        "tests/acceptance/python/pytest.ini の存在確認",
+        "tests/acceptance/python/requirements.txt の存在確認",
+        "tests/acceptance/typescript/playwright.config.ts の存在確認",
+        "tests/acceptance/typescript/package.json の存在確認",
+        "tests/acceptance/typescript/tsconfig.json の存在確認"
+      ],
+      "expected_result": "全設定ファイルが存在すること"
+    },
+    {
+      "scenario": "S4: ドキュメントの存在と内容確認",
+      "description": "README.md と .env.example が正しく作成されていることを確認",
+      "steps": [
+        "tests/README.md が存在し、テスト場所クイックリファレンスを含むことを確認",
+        "tests/.env.example が存在し、環境変数がドキュメント化されていることを確認"
+      ],
+      "expected_result": "ドキュメントが存在し、必要な情報が含まれていること"
+    },
+    {
+      "scenario": "S5: 静的解析の検証",
+      "description": "作成したPythonコードがRuff/MyPy基準を満たすことを確認",
+      "steps": [
+        "uv run ruff check tests/ を実行",
+        "uv run mypy tests/ を実行"
+      ],
+      "expected_result": "Ruff/MyPy エラーゼロ"
+    }
+  ],
+  "tdd_result_summary": {
+    "status": "success",
+    "coverage": 100,
+    "unit_tests_passed": 37,
+    "unit_tests_failed": 0,
+    "static_analysis_errors": 0
+  }
+}
