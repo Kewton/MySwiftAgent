@@ -1,0 +1,133 @@
+{
+  "issue_number": 217,
+  "title": "CLAUDE.md 開発プロセス更新",
+  "acceptance_criteria": [
+    "CLAUDE.mdに「テスト構造」セクションが存在する",
+    "テストの種類と実行場所の表が含まれている",
+    "make acceptance-test-* コマンド例が記載されている",
+    "Markdownシンタックスエラーがない",
+    "リンクが全て有効",
+    "コードブロックの言語指定が正しい",
+    "正常系: Markdownレンダリングが正常"
+  ],
+  "implementation_tasks": [
+    "「テスト構造」セクション追加",
+    "テストの種類と実行場所の表追加",
+    "受入テスト実行方法のコマンド例追加",
+    "開発時チェックリストの更新"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "追加セクションの構成設計",
+      "estimated_minutes": 20,
+      "deliverables": [],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "テスト種別一覧表の設計",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "コマンド例の整理",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "「🧪 テスト構造」セクション作成",
+      "estimated_minutes": 30,
+      "deliverables": ["CLAUDE.md"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "テスト種別一覧表の作成",
+      "estimated_minutes": 20,
+      "deliverables": ["CLAUDE.md"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "受入テスト実行方法セクション",
+      "estimated_minutes": 15,
+      "deliverables": ["CLAUDE.md"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "開発時チェックリスト更新",
+      "estimated_minutes": 10,
+      "deliverables": ["CLAUDE.md"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Markdown構文検証",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "リンク有効性確認",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "表レンダリング確認",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "全体バランス確認",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "セルフレビュー",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["3.4"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "最終調整",
+      "estimated_minutes": 5,
+      "deliverables": ["CLAUDE.md"],
+      "dependencies": ["4.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "CLAUDE.md"
+  ],
+  "definition_of_done": [
+    "CLAUDE.mdに「テスト構造」セクションが存在する",
+    "テストの種類と実行場所の表が含まれている",
+    "make acceptance-test-* コマンド例が記載されている",
+    "Markdownシンタックスエラーがない",
+    "リンクが全て有効",
+    "コードブロックの言語指定が正しい"
+  ],
+  "target_coverage": 90,
+  "technical_stack": ["Markdown"],
+  "section_to_add": {
+    "location": "「品質基準」の後、「開発ワークフロー」の前",
+    "content_template": {
+      "section_title": "### 🧪 テスト構造",
+      "test_types_table": "| テスト種別 | 場所 | 実行環境 | カバレッジ目標 |",
+      "acceptance_test_commands": ["make acceptance-test-platform", "make acceptance-test-agent", "make acceptance-test-frontend", "make acceptance-test-all"]
+    }
+  }
+}

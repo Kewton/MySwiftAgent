@@ -1,0 +1,96 @@
+{
+  "issue_number": 217,
+  "issue_title": "CLAUDE.md 開発プロセス更新",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "unit_tests": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0
+      },
+      "static_analysis": {
+        "ruff_errors": 0,
+        "mypy_errors": 0,
+        "markdown_errors": 0
+      },
+      "changes_made": [
+        "Added '### テスト構造' section after '品質基準' section",
+        "Added test types table with columns: テスト種別, 場所, 実行環境, カバレッジ目標",
+        "Added '#### 受入テスト実行方法' subsection with make commands",
+        "Added acceptance test checklist item to development checklist",
+        "Fixed typo: '90%以上◊' -> '90%以上'"
+      ],
+      "commit": "eb9eb366: docs(issue/217): add test structure section to CLAUDE.md"
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": [
+        {"scenario": "AT-001: テスト構造セクション存在確認", "result": "passed"},
+        {"scenario": "AT-002: テスト種別一覧表存在確認", "result": "passed"},
+        {"scenario": "AT-003: 受入テストコマンド例存在確認", "result": "passed"},
+        {"scenario": "AT-004: Markdown構文検証", "result": "passed"},
+        {"scenario": "AT-005: リンク有効性確認", "result": "passed"},
+        {"scenario": "AT-006: コードブロック言語指定確認", "result": "passed"},
+        {"scenario": "AT-007: 開発時チェックリスト更新確認", "result": "passed"}
+      ],
+      "acceptance_criteria_verified": 7,
+      "acceptance_criteria_total": 7
+    },
+    "refactor": {
+      "status": "success",
+      "refactorings_applied": [
+        "Emoji consistency: Added emoji to '### テスト構造' section header"
+      ],
+      "quality_metrics": {
+        "before_coverage": 100,
+        "after_coverage": 100
+      }
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "work_plan_path": "dev-reports/feature/issue/217/work-plan.md",
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "追加セクションの構成設計", "status": "completed"},
+      {"task_id": "1.2", "description": "テスト種別一覧表の設計", "status": "completed"},
+      {"task_id": "1.3", "description": "コマンド例の整理", "status": "completed"},
+      {"task_id": "2.1", "description": "「🧪 テスト構造」セクション作成", "status": "completed"},
+      {"task_id": "2.2", "description": "テスト種別一覧表の作成", "status": "completed"},
+      {"task_id": "2.3", "description": "受入テスト実行方法セクション", "status": "completed"},
+      {"task_id": "2.4", "description": "開発時チェックリスト更新", "status": "completed"},
+      {"task_id": "3.1", "description": "Markdown構文検証", "status": "completed"},
+      {"task_id": "3.2", "description": "リンク有効性確認", "status": "completed"},
+      {"task_id": "3.3", "description": "表レンダリング確認", "status": "completed"},
+      {"task_id": "3.4", "description": "全体バランス確認", "status": "completed"},
+      {"task_id": "4.1", "description": "セルフレビュー", "status": "completed"},
+      {"task_id": "4.2", "description": "最終調整", "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "CLAUDE.md", "created": true, "updated": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "CLAUDE.mdに「テスト構造」セクションが存在する", "verified": true},
+      {"criterion": "テストの種類と実行場所の表が含まれている", "verified": true},
+      {"criterion": "make acceptance-test-* コマンド例が記載されている", "verified": true},
+      {"criterion": "Markdownシンタックスエラーがない", "verified": true},
+      {"criterion": "リンクが全て有効", "verified": true},
+      {"criterion": "コードブロックの言語指定が正しい", "verified": true}
+    ],
+    "estimated_vs_actual": {
+      "estimated_hours": 3,
+      "actual_iterations": 1,
+      "variance": "Within estimate - completed in 1 iteration"
+    }
+  },
+  "files_changed": [
+    "CLAUDE.md"
+  ],
+  "blockers": [],
+  "next_steps": [
+    "PRの作成とレビュー依頼",
+    "後続Issue (#218, #219, #220) の着手"
+  ]
+}

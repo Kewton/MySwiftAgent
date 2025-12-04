@@ -1,0 +1,97 @@
+{
+  "issue_number": 217,
+  "feature_summary": "CLAUDE.md 開発プロセス更新 - テスト構造セクション追加",
+  "acceptance_criteria": [
+    "CLAUDE.mdに「テスト構造」セクションが存在する",
+    "テストの種類と実行場所の表が含まれている",
+    "make acceptance-test-* コマンド例が記載されている",
+    "Markdownシンタックスエラーがない",
+    "リンクが全て有効",
+    "コードブロックの言語指定が正しい",
+    "正常系: Markdownレンダリングが正常"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AT-001",
+      "name": "テスト構造セクション存在確認",
+      "description": "CLAUDE.mdに「### テスト構造」セクションが存在することを確認",
+      "steps": [
+        "CLAUDE.mdを読み込む",
+        "「### テスト構造」または「テスト構造」見出しが存在することを確認"
+      ],
+      "expected": "セクションが存在する"
+    },
+    {
+      "id": "AT-002",
+      "name": "テスト種別一覧表存在確認",
+      "description": "テストの種類と実行場所の表が含まれていることを確認",
+      "steps": [
+        "CLAUDE.mdを読み込む",
+        "テスト種別、場所、実行環境、カバレッジ目標の列を持つ表が存在することを確認"
+      ],
+      "expected": "表が存在し、単体テスト・結合テスト・受入テストの3行がある"
+    },
+    {
+      "id": "AT-003",
+      "name": "受入テストコマンド例存在確認",
+      "description": "make acceptance-test-* コマンド例が記載されていることを確認",
+      "steps": [
+        "CLAUDE.mdを読み込む",
+        "make acceptance-test-platform, make acceptance-test-agent, make acceptance-test-frontend, make acceptance-test-all が存在することを確認"
+      ],
+      "expected": "全4つのコマンドが記載されている"
+    },
+    {
+      "id": "AT-004",
+      "name": "Markdown構文検証",
+      "description": "Markdownシンタックスエラーがないことを確認",
+      "steps": [
+        "CLAUDE.mdをMarkdownパーサーで検証",
+        "構文エラーがないことを確認"
+      ],
+      "expected": "構文エラーなし"
+    },
+    {
+      "id": "AT-005",
+      "name": "リンク有効性確認",
+      "description": "ドキュメント内の全リンクが有効であることを確認",
+      "steps": [
+        "CLAUDE.md内の全リンクを抽出",
+        "各リンク先ファイルが存在することを確認"
+      ],
+      "expected": "全リンクが有効"
+    },
+    {
+      "id": "AT-006",
+      "name": "コードブロック言語指定確認",
+      "description": "コードブロックの言語指定が正しいことを確認",
+      "steps": [
+        "CLAUDE.md内の全コードブロックを抽出",
+        "各コードブロックに言語指定があることを確認"
+      ],
+      "expected": "全コードブロックに言語指定がある"
+    },
+    {
+      "id": "AT-007",
+      "name": "開発時チェックリスト更新確認",
+      "description": "開発時チェックリストに受入テスト項目が追加されていることを確認",
+      "steps": [
+        "CLAUDE.mdの開発時チェックリストセクションを確認",
+        "受入テストに関する項目が存在することを確認"
+      ],
+      "expected": "受入テスト実行に関するチェック項目が存在する"
+    }
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 100,
+    "validation_results": {
+      "test_structure_section_exists": true,
+      "test_types_table_exists": true,
+      "acceptance_commands_exist": true,
+      "markdown_syntax_valid": true,
+      "links_valid": true,
+      "code_blocks_valid": true
+    }
+  }
+}
