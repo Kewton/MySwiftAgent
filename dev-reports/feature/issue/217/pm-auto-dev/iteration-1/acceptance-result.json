@@ -1,0 +1,74 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "AT-001: テスト構造セクション存在確認",
+      "result": "passed",
+      "details": "CLAUDE.md の37行目に「### テスト構造」セクションが存在することを確認。セクション説明「テストは3層構造で、実行環境が異なります」も含まれている。"
+    },
+    {
+      "scenario": "AT-002: テスト種別一覧表存在確認",
+      "result": "passed",
+      "details": "41-45行目にテスト種別一覧表が存在。テスト種別・場所・実行環境・カバレッジ目標の4列を持ち、単体テスト・結合テスト・受入テストの3行が含まれている。"
+    },
+    {
+      "scenario": "AT-003: 受入テストコマンド例存在確認",
+      "result": "passed",
+      "details": "51-63行目のbashコードブロックに以下の4コマンドが記載されていることを確認: make acceptance-test-platform, make acceptance-test-agent, make acceptance-test-frontend, make acceptance-test-all"
+    },
+    {
+      "scenario": "AT-004: Markdown構文検証",
+      "result": "passed",
+      "details": "コードブロックが51行目で開始(```bash)、63行目で閉じられている(```)。表構文も正しく、ヘッダー行・区切り行・データ行の形式が正しい。"
+    },
+    {
+      "scenario": "AT-005: リンク有効性確認",
+      "result": "passed",
+      "details": "CLAUDE.md内の全ドキュメントリンク(21件)が有効であることを確認。docs/claude/, docs/procedures/, docs/design/, docs/ops/, docs/spec/, docs/arch/, expertAgent/docs/, graphAiServer/docs/, myAgentDesk/README.md の全ファイルが存在。特に新規追加の acceptance-testing.md (docs/spec/acceptance-testing.md) も存在確認済み。"
+    },
+    {
+      "scenario": "AT-006: コードブロック言語指定確認",
+      "result": "passed",
+      "details": "51行目のコードブロックに「bash」言語指定があることを確認(```bash)。"
+    },
+    {
+      "scenario": "AT-007: 開発時チェックリスト更新確認",
+      "result": "passed",
+      "details": "173行目に「受入テストが必要な機能の場合、ローカルで受入テストを実行している」チェック項目が存在することを確認。"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "CLAUDE.mdに「テスト構造」セクションが存在する",
+      "verified": true
+    },
+    {
+      "criterion": "テストの種類と実行場所の表が含まれている",
+      "verified": true
+    },
+    {
+      "criterion": "make acceptance-test-* コマンド例が記載されている",
+      "verified": true
+    },
+    {
+      "criterion": "Markdownシンタックスエラーがない",
+      "verified": true
+    },
+    {
+      "criterion": "リンクが全て有効",
+      "verified": true
+    },
+    {
+      "criterion": "コードブロックの言語指定が正しい",
+      "verified": true
+    },
+    {
+      "criterion": "正常系: Markdownレンダリングが正常",
+      "verified": true
+    }
+  ],
+  "evidence_files": [
+    "CLAUDE.md (lines 37-67, 173)"
+  ],
+  "summary": "All 7 test scenarios passed. All 7 acceptance criteria verified. CLAUDE.md has been properly updated with the test structure section including: 3-tier test structure table, acceptance test execution commands (4 make targets), and updated development checklist with acceptance test item."
+}

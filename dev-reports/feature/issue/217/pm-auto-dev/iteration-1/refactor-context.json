@@ -1,0 +1,43 @@
+{
+  "issue_number": 217,
+  "refactor_targets": [
+    "CLAUDE.md"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": 0,
+    "documentation_type": true
+  },
+  "design_patterns_to_apply": [
+    "Documentation Consistency Pattern",
+    "Clear Information Hierarchy"
+  ],
+  "improvement_goals": [
+    "セクション構造の一貫性確認",
+    "絵文字使用の一貫性確認",
+    "リンク形式の統一",
+    "表記ゆれの修正"
+  ],
+  "previous_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "changes_made": [
+        "Added '### テスト構造' section",
+        "Added test types table",
+        "Added acceptance test commands",
+        "Added checklist item"
+      ]
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases_passed": 7,
+      "test_cases_total": 7
+    }
+  },
+  "constraints": [
+    "既存のドキュメント構造を大幅に変更しない",
+    "受入条件を満たす変更は維持する",
+    "テストに影響を与える変更は避ける"
+  ]
+}
