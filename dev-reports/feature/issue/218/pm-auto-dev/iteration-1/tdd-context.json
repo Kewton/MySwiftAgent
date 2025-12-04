@@ -1,0 +1,85 @@
+{
+  "issue_number": 218,
+  "issue_type": "documentation",
+  "target_file": "docs/claude/04-quality-standards.md",
+  "acceptance_criteria": [
+    "「テスト方針」セクションが更新されている",
+    "テスト階層表が含まれている",
+    "スキップ条件ラベル（docs-only, internal, test-only）が記載されている",
+    "Markdownシンタックスエラーがない",
+    "既存のセクションとの整合性が取れている"
+  ],
+  "implementation_tasks": [
+    "「テスト方針（更新）」セクション追加",
+    "テスト階層表（Level 1-4）追加",
+    "受入テストのスキップ条件追加",
+    "PO受入テストが必要なPRの判定基準追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "テスト階層表の設計",
+      "estimated_minutes": 15,
+      "deliverables": ["表構造設計"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "スキップ条件の整理",
+      "estimated_minutes": 15,
+      "deliverables": ["スキップ条件リスト"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "テスト階層セクション追加",
+      "estimated_minutes": 25,
+      "deliverables": ["04-quality-standards.md更新"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "受入テストスキップ条件セクション",
+      "estimated_minutes": 20,
+      "deliverables": ["04-quality-standards.md更新"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "PO受入テスト判定基準追加",
+      "estimated_minutes": 15,
+      "deliverables": ["04-quality-standards.md更新"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Markdown構文検証",
+      "estimated_minutes": 10,
+      "deliverables": ["検証結果"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "既存セクションとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "CLAUDE.mdとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "docs/claude/04-quality-standards.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "Markdownシンタックスエラーがない",
+    "既存セクションとの整合性"
+  ],
+  "target_coverage": null
+}
