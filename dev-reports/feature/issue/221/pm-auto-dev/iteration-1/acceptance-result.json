@@ -1,0 +1,66 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "S1 - テスト確認セクション存在",
+      "result": "passed",
+      "details": "## テスト確認 section found at line 22. Contains 3 subsections: CI自動テスト（L1単体、L2結合）(line 24), 開発者受入テスト（L3）(line 30), PO受入テスト（L4、該当時のみ）(line 41)"
+    },
+    {
+      "scenario": "S2 - CI自動テストチェックボックス",
+      "result": "passed",
+      "details": "Found 3 checkboxes: L1単体テスト(line 26), L2結合テスト(line 27), 静的解析Ruff/MyPy(line 28). Coverage requirements: 90% unit, 50% integration."
+    },
+    {
+      "scenario": "S3 - 開発者受入テスト（L3）",
+      "result": "passed",
+      "details": "L3 acceptance test checkbox found at line 32. Skip reason options found: docs-only(line 36), internal(line 37), test-only(line 38), ci-only(line 39)."
+    },
+    {
+      "scenario": "S4 - PO受入テスト（L4）",
+      "result": "passed",
+      "details": "L4 PO acceptance test checkbox found at line 43. N/A option for non-user-facing changes found at line 44."
+    },
+    {
+      "scenario": "S5 - レイヤー確認セクション",
+      "result": "passed",
+      "details": "Layer confirmation section found at line 46. Single-layer checkbox(line 49), cross-layer checkbox with label requirement(line 50), cross-layer reason field(line 53)."
+    },
+    {
+      "scenario": "S6 - Markdown構文検証",
+      "result": "passed",
+      "details": "No syntax errors detected. All checkboxes follow '- [ ]' format. Headers properly formatted with ## and ###. Table syntax correct (lines 58-60)."
+    },
+    {
+      "scenario": "S7 - 04-quality-standards.md整合性",
+      "result": "passed",
+      "details": "Test levels L1-L4 match (lines 110-115 in standards doc). Coverage requirements match: unit 90%, integration 50% (lines 77-80). Skip conditions match: docs-only, internal, test-only, ci-only (lines 137-144)."
+    },
+    {
+      "scenario": "S8 - 08-issue-split.md整合性",
+      "result": "passed",
+      "details": "Layer definitions match: Platform(myVault,jobqueue), Agent(expertAgent,graphAiServer), Frontend(myAgentDesk,commonUI), Docs (lines 332-337 in split doc). Cross-layer handling aligns with guidelines (lines 394-428)."
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "「テスト確認」セクションが存在する",
+      "verified": true
+    },
+    {
+      "criterion": "3種類のチェックボックス（CI、開発者受入、PO受入）が含まれている",
+      "verified": true
+    },
+    {
+      "criterion": "Markdownシンタックスエラーがない",
+      "verified": true
+    },
+    {
+      "criterion": "既存のPRテンプレートとの整合性",
+      "verified": true
+    }
+  ],
+  "evidence_files": [],
+  "notes": "All 8 test scenarios passed. PR template at .github/PULL_REQUEST_TEMPLATE.md fully meets Issue #221 requirements. The template includes: (1) Test confirmation section with L1-L4 test levels matching 04-quality-standards.md, (2) Skip reason options matching both quality standards and issue split guide, (3) Layer confirmation section matching 08-issue-split.md layer definitions, (4) Valid Markdown syntax throughout.",
+  "message": "すべての受入条件を満たしています"
+}

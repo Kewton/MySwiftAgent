@@ -1,0 +1,95 @@
+{
+  "issue_number": 221,
+  "feature_summary": "PRテンプレート更新 - テスト確認チェックリスト追加",
+  "acceptance_criteria": [
+    "「テスト確認」セクションが存在する",
+    "3種類のチェックボックス（CI、開発者受入、PO受入）が含まれている",
+    "Markdownシンタックスエラーがない",
+    "既存のPRテンプレートとの整合性"
+  ],
+  "test_scenarios": [
+    {
+      "id": "S1",
+      "scenario": "テスト確認セクションの存在確認",
+      "steps": [
+        ".github/PULL_REQUEST_TEMPLATE.md を開く",
+        "「## テスト確認」セクションが存在することを確認",
+        "セクション内に3つのサブセクションがあることを確認"
+      ],
+      "expected": "テスト確認セクションが存在し、CI/L3/L4の3つのサブセクションを含む"
+    },
+    {
+      "id": "S2",
+      "scenario": "CI自動テストチェックボックスの確認",
+      "steps": [
+        "テスト確認セクション内の「CI自動テスト」サブセクションを確認",
+        "L1単体テスト、L2結合テスト、静的解析のチェックボックスが存在することを確認"
+      ],
+      "expected": "3つのチェックボックス（L1、L2、静的解析）が存在"
+    },
+    {
+      "id": "S3",
+      "scenario": "開発者受入テスト（L3）チェックボックスの確認",
+      "steps": [
+        "「開発者受入テスト（L3）」サブセクションを確認",
+        "L3受入テストのチェックボックスが存在することを確認",
+        "スキップ理由オプション（docs-only, internal, test-only, ci-only）が存在することを確認"
+      ],
+      "expected": "L3チェックボックスとスキップ理由オプションが存在"
+    },
+    {
+      "id": "S4",
+      "scenario": "PO受入テスト（L4）チェックボックスの確認",
+      "steps": [
+        "「PO受入テスト（L4）」サブセクションを確認",
+        "L4受入テストのチェックボックスが存在することを確認",
+        "N/Aオプションが存在することを確認"
+      ],
+      "expected": "L4チェックボックスとN/Aオプションが存在"
+    },
+    {
+      "id": "S5",
+      "scenario": "レイヤー確認セクションの確認",
+      "steps": [
+        "「## レイヤー確認」セクションを確認",
+        "単一レイヤーチェックボックスが存在することを確認",
+        "cross-layerラベル関連のチェックボックスが存在することを確認"
+      ],
+      "expected": "レイヤー確認セクションが単一/複数レイヤーのオプションを含む"
+    },
+    {
+      "id": "S6",
+      "scenario": "Markdown構文検証",
+      "steps": [
+        "markdownlint または同等のツールで構文検証",
+        "致命的なエラーがないことを確認"
+      ],
+      "expected": "Markdownシンタックスエラーなし"
+    },
+    {
+      "id": "S7",
+      "scenario": "04-quality-standards.mdとの整合性確認",
+      "steps": [
+        "docs/claude/04-quality-standards.md を参照",
+        "テストレベル（L1-L4）の定義が一致していることを確認",
+        "カバレッジ要件（単体90%、結合50%）が一致していることを確認"
+      ],
+      "expected": "品質基準ドキュメントとの整合性あり"
+    },
+    {
+      "id": "S8",
+      "scenario": "08-issue-split.mdとの整合性確認",
+      "steps": [
+        "docs/claude/08-issue-split.md を参照",
+        "レイヤー定義が一致していることを確認",
+        "スキップ条件（docs-only等）が一致していることを確認"
+      ],
+      "expected": "Issue分割ガイドとの整合性あり"
+    }
+  ],
+  "target_file": ".github/PULL_REQUEST_TEMPLATE.md",
+  "reference_docs": [
+    "docs/claude/04-quality-standards.md",
+    "docs/claude/08-issue-split.md"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "issue_number": 221,
+  "issue_title": "Issue #209-11: PRテンプレート更新",
+  "issue_type": "documentation",
+  "acceptance_criteria": [
+    "「テスト確認」セクションが存在する",
+    "3種類のチェックボックス（CI、開発者受入、PO受入）が含まれている",
+    "Markdownシンタックスエラーがない",
+    "既存のPRテンプレートとの整合性"
+  ],
+  "implementation_tasks": [
+    "PULL_REQUEST_TEMPLATE.md作成（基本構成、テスト確認セクション）",
+    "レイヤールール確認セクション追加",
+    "使用ガイドコメント追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "PRテンプレート構成設計",
+      "estimated_minutes": 15,
+      "deliverables": ["セクション構成案"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "テスト確認セクション設計",
+      "estimated_minutes": 15,
+      "deliverables": ["チェックボックス設計"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "PULL_REQUEST_TEMPLATE.md作成",
+      "estimated_minutes": 30,
+      "deliverables": [".github/PULL_REQUEST_TEMPLATE.md"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "レイヤールール確認セクション追加",
+      "estimated_minutes": 15,
+      "deliverables": [".github/PULL_REQUEST_TEMPLATE.md更新"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "使用ガイドコメント追加",
+      "estimated_minutes": 15,
+      "deliverables": [".github/PULL_REQUEST_TEMPLATE.md更新"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Markdown構文検証",
+      "estimated_minutes": 10,
+      "deliverables": ["検証結果"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "GitHub上での表示確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "関連ドキュメントとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    ".github/PULL_REQUEST_TEMPLATE.md"
+  ],
+  "definition_of_done": [
+    "「テスト確認」セクションが存在する",
+    "3種類のチェックボックス（CI、開発者受入、PO受入）が含まれている",
+    "Markdownシンタックスエラーがない",
+    "既存の関連ドキュメント（04-quality-standards.md, 08-issue-split.md）との整合性"
+  ],
+  "target_coverage": 0,
+  "notes": "ドキュメントのみの変更のため、コードテストは不要。Markdown構文検証と受入基準の確認が主な品質基準。",
+  "template_design": {
+    "required_sections": [
+      "概要",
+      "関連Issue",
+      "変更種別",
+      "変更内容",
+      "テスト確認（CI、L3、L4）",
+      "レイヤー確認",
+      "チェックリスト"
+    ],
+    "test_confirmation_subsections": [
+      "CI自動テスト（L1単体、L2結合）",
+      "開発者受入テスト（L3）",
+      "PO受入テスト（L4、該当時のみ）"
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "status": "success",
+  "coverage": null,
+  "coverage_note": "Documentation-only issue - code coverage not applicable",
+  "unit_tests": null,
+  "static_analysis": {
+    "markdown_lint": "passed with minor stylistic warnings (acceptable for PR template)",
+    "ruff_errors": null,
+    "mypy_errors": null
+  },
+  "files_created": [
+    ".github/PULL_REQUEST_TEMPLATE.md"
+  ],
+  "files_changed": [],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "Test Confirmation section exists",
+      "verified": true,
+      "details": "Section '## Test Confirmation' with 3 subsections created"
+    },
+    {
+      "criterion": "3 types of checkboxes (CI, Developer acceptance, PO acceptance) included",
+      "verified": true,
+      "details": "L1/L2 CI tests, L3 Developer acceptance test, L4 PO acceptance test subsections created"
+    },
+    {
+      "criterion": "No Markdown syntax errors",
+      "verified": true,
+      "details": "markdownlint passed (minor stylistic warnings are acceptable)"
+    },
+    {
+      "criterion": "Consistency with existing documentation (04-quality-standards.md, 08-issue-split.md)",
+      "verified": true,
+      "details": "Test levels (L1-L4), skip conditions (docs-only, internal, test-only, ci-only), and layer rules aligned"
+    },
+    {
+      "criterion": "Required sections exist",
+      "verified": true,
+      "details": "All required sections present: Overview, Related Issue, Change Type, Changes, Test Confirmation, Layer Confirmation, Screenshots, Reviewer Notes, Checklist"
+    },
+    {
+      "criterion": "Skip reason options for L3 test",
+      "verified": true,
+      "details": "docs-only, internal, test-only, ci-only options included"
+    },
+    {
+      "criterion": "Layer confirmation with cross-layer support",
+      "verified": true,
+      "details": "Single-layer checkbox and cross-layer with label requirement included"
+    },
+    {
+      "criterion": "HTML comments for user guidance",
+      "verified": true,
+      "details": "HTML comments added for each section to guide users"
+    }
+  ],
+  "commits": [
+    "db778ae: docs(issue/221): add PR template with test confirmation sections"
+  ],
+  "notes": "TDD implementation completed for documentation-only Issue #221. PR template created with all required sections including the 3-tier test confirmation structure (CI/L3/L4) aligned with quality standards and issue split guidelines. Code coverage is not applicable for this documentation-only change."
+}
