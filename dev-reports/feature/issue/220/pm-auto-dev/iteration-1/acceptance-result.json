@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "AC-1",
+      "description": "単一レイヤー改修ルールセクション検証",
+      "result": "passed",
+      "evidence": "Line 324: '## 🏗️ 単一レイヤー改修ルール' セクションが存在。Line 326: '### 原則: 1 Issue = 1 Layer' が明記されている。Lines 328-329: 「各Issueは原則として単一のレイヤー内での変更に限定します」と原則が説明されている。"
+    },
+    {
+      "scenario": "AC-2",
+      "description": "レイヤー定義表検証",
+      "result": "passed",
+      "evidence": "Lines 333-338: Markdownテーブル形式でレイヤー定義表が存在。4レイヤー定義: Platform層(myVault, jobqueue, myscheduler, valkey, langfuse), Agent層(expertAgent, graphAiServer), Frontend層(myAgentDesk, commonUI), Docs層(docs/, CLAUDE.md, *.md)。各レイヤーに役割とテスト責任が明記されている。"
+    },
+    {
+      "scenario": "AC-3",
+      "description": "例外処理手順検証",
+      "result": "passed",
+      "evidence": "Lines 400-409: cross-layerラベルの使用条件がテーブル形式で記載(API契約変更、データベース移行、E2Eバグ修正の3条件)。Lines 412-427: 判定フロー(Mermaid図)が存在し、複数レイヤー変更時の分割可否判断フローを可視化。Lines 429-435: レビュー要件(2名以上のレビュアー、変更理由の明記、影響範囲の明示、ロールバック手順の準備)がチェックリスト形式で記載。"
+    },
+    {
+      "scenario": "AC-4",
+      "description": "Markdownシンタックス検証",
+      "result": "passed",
+      "evidence": "コードブロック: 28個のマーカー(```), 14ペアで完全にバランス。Mermaid図: 3つ存在(Line 225, 342, 412)、全て'graph TD'で開始し正しい構文。テーブル構文: レイヤー定義表(Lines 333-338)、cross-layer条件表(Lines 404-409)等、全てパイプ文字で正しく区切られている。"
+    },
+    {
+      "scenario": "AC-5",
+      "description": "既存内容との整合性検証",
+      "result": "passed",
+      "evidence": "縦割り原則との関係: Lines 384-394で「縦割り原則との関係」セクションとして明確に説明。「縦割り原則は機能単位での分割、レイヤールールは技術層単位での制約」と補完関係を明示。チェックリスト更新: Lines 535-539に「レイヤールール」セクションが追加され、3つのチェック項目(単一レイヤー確認、cross-layerラベル、分割不可能理由)が追加されている。"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "「単一レイヤー改修ルール」セクションが存在する",
+      "verified": true
+    },
+    {
+      "criterion": "レイヤー定義表が含まれている",
+      "verified": true
+    },
+    {
+      "criterion": "例外処理手順が記載されている",
+      "verified": true
+    },
+    {
+      "criterion": "Markdownシンタックスエラーがない",
+      "verified": true
+    },
+    {
+      "criterion": "既存のIssue分割ガイドとの整合性",
+      "verified": true
+    }
+  ],
+  "issues_found": [],
+  "summary": "Issue #220 の全5つの受入条件が検証され、全てPASSEDとなりました。docs/claude/08-issue-split.md に「単一レイヤー改修ルール」セクションが正しく追加され、レイヤー定義表(Platform/Agent/Frontend/Docs)、例外処理手順(cross-layerラベル条件、判定フロー、レビュー要件)、および既存の縦割り原則との関係説明が含まれています。Markdownシンタックスは全て正しく、コードブロック、Mermaid図、テーブルの構文に問題はありません。"
+}

@@ -1,0 +1,64 @@
+{
+  "issue_number": 220,
+  "feature_summary": "Issue分割ガイド更新（レイヤールール）",
+  "target_file": "docs/claude/08-issue-split.md",
+  "acceptance_criteria": [
+    "「単一レイヤー改修ルール」セクションが存在する",
+    "レイヤー定義表が含まれている",
+    "例外処理手順が記載されている",
+    "Markdownシンタックスエラーがない",
+    "既存のIssue分割ガイドとの整合性"
+  ],
+  "test_scenarios": [
+    {
+      "scenario_id": "AC-1",
+      "description": "単一レイヤー改修ルールセクション検証",
+      "steps": [
+        "08-issue-split.mdファイルを読み込む",
+        "「## 単一レイヤー改修ルール」または「## 🏗️ 単一レイヤー改修ルール」セクションが存在することを確認",
+        "「1 Issue = 1 Layer」原則の説明が含まれていることを確認"
+      ],
+      "expected_result": "セクションが存在し、原則が説明されている"
+    },
+    {
+      "scenario_id": "AC-2",
+      "description": "レイヤー定義表検証",
+      "steps": [
+        "レイヤー定義表がMarkdownテーブル形式で存在することを確認",
+        "Platform/Agent/Frontend/Docsの4レイヤーが定義されていることを確認",
+        "各レイヤーに属するプロジェクトが明記されていることを確認"
+      ],
+      "expected_result": "4レイヤーの定義表が正しく存在する"
+    },
+    {
+      "scenario_id": "AC-3",
+      "description": "例外処理手順検証",
+      "steps": [
+        "cross-layerラベルの使用条件が記載されていることを確認",
+        "判定フロー（Mermaid図）が存在することを確認",
+        "レビュー要件が記載されていることを確認"
+      ],
+      "expected_result": "例外処理手順が完備されている"
+    },
+    {
+      "scenario_id": "AC-4",
+      "description": "Markdownシンタックス検証",
+      "steps": [
+        "markdownlintまたは同等のツールで構文チェック",
+        "コードブロックのバランス確認",
+        "Mermaid図の構文確認"
+      ],
+      "expected_result": "構文エラーがない"
+    },
+    {
+      "scenario_id": "AC-5",
+      "description": "既存内容との整合性検証",
+      "steps": [
+        "既存の「縦割り原則」との関係が説明されていることを確認",
+        "既存のチェックリストにレイヤールール項目が追加されていることを確認",
+        "他のセクションとの矛盾がないことを確認"
+      ],
+      "expected_result": "既存内容と矛盾なく統合されている"
+    }
+  ]
+}
