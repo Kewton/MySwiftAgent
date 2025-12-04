@@ -321,6 +321,153 @@ graph TD
 
 ---
 
+## 🏗️ 単一レイヤー改修ルール
+
+### 原則: 1 Issue = 1 Layer
+
+各Issueは原則として**単一のレイヤー**内での変更に限定します。
+これは「縦割り（Vertical Slice）優先」原則と補完関係にあり、**機能単位**での分割後に**技術層単位**での制約を適用します。
+
+### レイヤー定義
+
+| レイヤー | プロジェクト | 役割 | テスト責任 |
+|---------|-------------|------|-----------|
+| **Platform層** | myVault, jobqueue, myscheduler, valkey, langfuse | インフラ・基盤サービス | 単体+結合 |
+| **Agent層** | expertAgent, graphAiServer | AIエージェント・ワークフロー | 単体+結合+受入 |
+| **Frontend層** | myAgentDesk, commonUI | ユーザーインターフェース | 単体+E2E |
+| **Docs層** | docs/, CLAUDE.md, *.md | ドキュメント | 構文チェック |
+
+### レイヤー間依存関係
+
+```mermaid
+graph TD
+    subgraph "Frontend層"
+        MAD[myAgentDesk]
+        CUI[commonUI]
+    end
+
+    subgraph "Agent層"
+        EA[expertAgent]
+        GS[graphAiServer]
+    end
+
+    subgraph "Platform層"
+        MV[myVault]
+        JQ[jobqueue]
+        MS[myscheduler]
+    end
+
+    MAD --> EA
+    MAD --> GS
+    CUI --> EA
+    EA --> MV
+    EA --> JQ
+    GS --> MV
+    MS --> JQ
+
+    style MAD fill:#e3f2fd
+    style CUI fill:#e3f2fd
+    style EA fill:#fff3e0
+    style GS fill:#fff3e0
+    style MV fill:#c8e6c9
+    style JQ fill:#c8e6c9
+    style MS fill:#c8e6c9
+```
+
+### なぜ単一レイヤーか？
+
+1. **テスト戦略の明確化**: レイヤーごとにテスト責任が異なる
+2. **レビューの効率化**: レビュアーが担当レイヤーに集中できる
+3. **デプロイリスクの最小化**: 変更範囲が限定される
+4. **並列開発の促進**: 異なるレイヤーは同時に作業可能
+
+### 縦割り原則との関係
+
+現在の「縦割り（Vertical Slice）優先」原則は**機能単位**での分割を推奨します。
+「単一レイヤー改修ルール」は**技術層単位**での制約を追加します。
+
+両者は矛盾せず、以下のように補完関係にあります：
+
+- **縦割り原則**: 「何を実装するか」の単位（ユーザー登録機能など）
+- **レイヤールール**: 「どこを変更するか」の制約（Agent層のみなど）
+
+つまり、「ユーザー登録機能」というFeatureを「API実装（Agent層）」「UI実装（Frontend層）」のように**レイヤーごとのIssue**に分割するのが推奨アプローチです。
+
+---
+
+### レイヤー跨ぎの例外処理
+
+#### cross-layerラベルの使用条件
+
+以下の場合のみ `cross-layer` ラベルを付与できます：
+
+| 条件 | 例 | 対応 |
+|------|-----|------|
+| **API契約変更** | Request/Responseスキーマ変更 | 必須: 両レイヤーの同時変更 |
+| **データベース移行** | スキーマ変更+API変更 | 推奨: 別Issue分割を検討 |
+| **E2Eバグ修正** | UI+API両方の修正が必要 | 許容: 単一Issue |
+
+#### 判定フロー
+
+```mermaid
+graph TD
+    Start[Issueの変更内容] --> Q1{複数レイヤーの<br/>変更が必要?}
+    Q1 -->|No| Single[単一レイヤーIssue<br/>通常処理]
+    Q1 -->|Yes| Q2{分割可能?}
+
+    Q2 -->|Yes| Split[レイヤーごとに<br/>Issue分割]
+    Q2 -->|No| CrossLayer[cross-layerラベル付与]
+
+    CrossLayer --> Review[レビュー強化<br/>2名以上必須]
+
+    style Single fill:#c8e6c9
+    style Split fill:#c8e6c9
+    style CrossLayer fill:#fff3e0
+    style Review fill:#fce4ec
+```
+
+#### cross-layer Issue のレビュー要件
+
+- [ ] 2名以上のレビュアー（各レイヤーから1名）
+- [ ] 変更理由の明記（なぜ分割できないか）
+- [ ] 影響範囲の明示（両レイヤーへの影響）
+- [ ] ロールバック手順の準備
+
+---
+
+### 良い例・悪い例
+
+**良い例**: 単一レイヤー内の変更
+
+```markdown
+Issue: expertAgentにログ出力機能を追加
+- 変更対象: expertAgent/app/logging/
+- レイヤー: Agent層のみ
+- テスト: expertAgent/tests/unit/
+```
+
+**悪い例**: レイヤー跨ぎの変更（分割すべき）
+
+```markdown
+Issue: ユーザー登録機能の追加
+- 変更対象:
+  - expertAgent/app/api/users.py (Agent層)
+  - myAgentDesk/src/routes/users/ (Frontend層)
+  - myVault/app/models/users.py (Platform層)
+→ 3つのIssueに分割すべき
+```
+
+**許容される例**: cross-layer（分割不可能）
+
+```markdown
+Issue: API契約変更（RequestスキーマとUI同時更新）
+- ラベル: cross-layer
+- 理由: スキーマ変更は両側同時でないと動作しない
+- レビュー: Backend担当1名 + Frontend担当1名
+```
+
+---
+
 ## 🚨 よくある落とし穴と対策
 
 ### 1. Issue が大きすぎる
@@ -384,6 +531,11 @@ graph TD
 ### テスト
 - [ ] テストケースが定義できるか
 - [ ] カバレッジ目標が明確か（単体90%、統合50%）
+
+### レイヤールール
+- [ ] 単一レイヤー内の変更か
+- [ ] 複数レイヤーの場合 `cross-layer` ラベルが付与されているか
+- [ ] cross-layerの場合、分割不可能な理由が明記されているか
 
 ---
 
