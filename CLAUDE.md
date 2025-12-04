@@ -29,10 +29,41 @@
 - **DRY** - Don't Repeat Yourself
 
 #### 品質基準
-- 単体テストカバレッジ: **90%以上◊**
+- 単体テストカバレッジ: **90%以上**
 - 結合テストカバレッジ: **50%以上**
 - 静的解析: **Ruff/MyPyエラーゼロ**
 - プッシュ前: `./scripts/pre-push-check-all.sh` 実行
+
+### テスト構造
+
+テストは3層構造で、実行環境が異なります：
+
+| テスト種別 | 場所 | 実行環境 | カバレッジ目標 |
+|-----------|------|---------|--------------|
+| **単体テスト** | `{project}/tests/unit/` | CI (GitHub Actions) | 90%以上 |
+| **結合テスト** | `tests/integration/` | CI (GitHub Actions) | 50%以上 |
+| **受入テスト** | `tests/acceptance/` | ローカルのみ | - |
+
+#### 受入テスト実行方法
+
+受入テストはAPIキーや実サービス接続が必要なため、**ローカル環境でのみ実行**します：
+
+```bash
+# Platform層テスト（myVault, jobqueue等）
+make acceptance-test-platform
+
+# Agent層テスト（expertAgent, graphAiServer）
+make acceptance-test-agent
+
+# Frontend層テスト（myAgentDesk - Playwright）
+make acceptance-test-frontend
+
+# 全受入テスト実行
+make acceptance-test-all
+```
+
+> **注意**: 受入テストの実行には環境変数（APIキー等）の設定が必要です。
+> 詳細は [acceptance-testing.md](./docs/spec/acceptance-testing.md) を参照してください。
 
 #### 開発ワークフロー
 1. 対策案を提示する
@@ -139,6 +170,7 @@
 - [ ] PRラベルを正しく設定している
 - [ ] コミット前に `./scripts/pre-push-check-all.sh` を実行している
 - [ ] 必要なドキュメントを `./dev-reports/{branch_path}/` に作成している
+- [ ] 受入テストが必要な機能の場合、ローカルで受入テストを実行している
 
 ---
 
