@@ -403,6 +403,59 @@ graph LR
 
 **最大イテレーション**: 3回（超過時はエスカレーション）
 
+## 🧪 Issue種別ごとのテストフロー
+
+### Issue種別判定
+
+Issueの内容に応じて、適用するテストレベルが異なります：
+
+```mermaid
+graph TD
+    Start[Issueの変更内容] --> Q1{ユーザーに見える<br/>変更か？}
+    Q1 -->|Yes| Q2{UI/UXの<br/>変更か？}
+    Q1 -->|No| LabelCheck{ラベルを<br/>確認}
+
+    Q2 -->|Yes| L4[L4: PO受入テスト必須]
+    Q2 -->|No| L3[L3: 開発者受入テスト]
+
+    LabelCheck -->|docs-only| Skip[受入テストスキップ]
+    LabelCheck -->|internal| Skip
+    LabelCheck -->|test-only| Skip
+    LabelCheck -->|ci-only| Skip
+    LabelCheck -->|その他| L3
+
+    style L4 fill:#fce4ec
+    style L3 fill:#e3f2fd
+    style Skip fill:#c8e6c9
+```
+
+### スキップ条件ラベル
+
+| ラベル | 説明 | 受入テスト |
+|-------|------|-----------|
+| `docs-only` | ドキュメントのみの変更 | スキップ可 |
+| `internal` | 内部リファクタリング | スキップ可 |
+| `test-only` | テストコードのみの変更 | スキップ可 |
+| `ci-only` | CI/CD設定のみの変更 | スキップ可 |
+| （上記以外） | 機能変更、バグ修正など | 必須 |
+
+> **注意**: スキップ可能であっても、影響範囲が不明確な場合はL3テストを推奨
+
+### 通常Issue と 重要Issue
+
+**通常Issue**（L3テストで完了）:
+- バックエンドAPIの内部ロジック変更
+- パフォーマンス改善
+- エラーハンドリング追加
+- ログ出力の改善
+
+**重要Issue**（L4テスト必須）:
+- UI/UX変更（ボタン追加、レイアウト変更）
+- 新機能の追加
+- ユーザーフローの変更
+- エラーメッセージの変更
+- 課金・認証に関わる変更
+
 ## 📝 Issue管理
 
 ### Issue分割の原則
@@ -487,6 +540,44 @@ graph LR
 - リポジトリ: `.wiki.git` (別管理)
 - 編集方法: ローカルclone + VS Code（Web UI非推奨）
 - 構成: `_Sidebar.md`でナビゲーション整備
+
+### Feature完了時のPO最終受入テスト
+
+全Issueがdevelopにマージされた後、Feature全体としてのPO受入テストを実施します：
+
+```mermaid
+graph TD
+    subgraph "Issue開発（worktreeセッション）"
+        I1[Issue #1] --> PR1[PR #1]
+        I2[Issue #2] --> PR2[PR #2]
+        I3[Issue #3] --> PR3[PR #3]
+    end
+
+    PR1 --> Develop[develop<br/>ブランチ]
+    PR2 --> Develop
+    PR3 --> Develop
+
+    Develop --> POTest[PO最終受入テスト<br/>Feature全体]
+
+    POTest --> Pass{合格?}
+    Pass -->|Yes| Wiki[Wiki文書化]
+    Pass -->|No| Hotfix[Hotfix Issue作成]
+    Hotfix --> I4[修正Issue]
+    I4 --> PR4[修正PR]
+    PR4 --> Develop
+
+    Wiki --> Close[Feature Close]
+
+    style POTest fill:#fce4ec
+    style Wiki fill:#e0f2f1
+    style Close fill:#c8e6c9
+```
+
+**PO最終受入テストの確認項目**:
+- [ ] 全Issue機能が統合されて動作する
+- [ ] ユーザージャーニー全体を通したテスト
+- [ ] 実際のデータでの動作確認
+- [ ] 他機能への影響がないこと
 
 ### Feature完了時の必須タスク
 
