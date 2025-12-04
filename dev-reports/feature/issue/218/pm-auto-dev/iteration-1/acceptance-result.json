@@ -1,0 +1,58 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "シナリオ1: テスト階層表（Level 1-4）確認",
+      "result": "passed",
+      "details": "L1（単体テスト）、L2（結合テスト）、L3（受入テスト・開発者）、L4（受入テスト・PO）が全て記載されている。Test Pyramid図も lines 117-133 に存在する。"
+    },
+    {
+      "scenario": "シナリオ2: スキップ条件ラベル確認",
+      "result": "passed",
+      "details": "docs-only、internal、test-only、ci-only の4種類全てが lines 139-144 の表に記載されている。"
+    },
+    {
+      "scenario": "シナリオ3: PO受入テスト判定基準確認",
+      "result": "passed",
+      "details": "必須条件リスト（UI/UX影響、新機能追加、ユーザーフロー変更、エラーメッセージ変更、課金・認証関連）が lines 153-158 に記載。判定フロー図が lines 160-170 に存在する。"
+    },
+    {
+      "scenario": "シナリオ4: Markdown構文確認",
+      "result": "passed",
+      "details": "全ての表構文が正しい（ヘッダー行と区切り行あり）。コードブロックは全て正しく開閉されている。見出しレベルは適切な階層構造を保っている。"
+    },
+    {
+      "scenario": "シナリオ5: CLAUDE.mdとの整合性確認",
+      "result": "passed",
+      "details": "テスト階層の場所（{project}/tests/unit/, tests/integration/, tests/acceptance/）、実行環境（CI/ローカル）、カバレッジ目標（90%/50%）が CLAUDE.md の「テスト構造」セクションと一致している。"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "「テスト方針」セクションが更新されている",
+      "verified": true,
+      "evidence": "Lines 75-106 にテスト方針セクションが存在し、Lines 108-133 にテスト階層セクションが追加されている"
+    },
+    {
+      "criterion": "テスト階層表が含まれている",
+      "verified": true,
+      "evidence": "Lines 110-115 に Level 1-4 の階層表、Lines 117-133 に Test Pyramid 図が存在"
+    },
+    {
+      "criterion": "スキップ条件ラベル（docs-only, internal, test-only, ci-only）が記載されている",
+      "verified": true,
+      "evidence": "Lines 135-148 に「受入テストのスキップ条件」セクションとして4種類のラベルが表形式で記載"
+    },
+    {
+      "criterion": "Markdownシンタックスエラーがない",
+      "verified": true,
+      "evidence": "全ての表、コードブロック、見出しが正しい構文で記述されている"
+    },
+    {
+      "criterion": "既存のセクションとの整合性が取れている",
+      "verified": true,
+      "evidence": "CLAUDE.md のテスト構造セクションと 04-quality-standards.md の内容が一致している"
+    }
+  ],
+  "notes": "全てのテストシナリオと受入条件が満たされています。04-quality-standards.md は Issue #218 の要件に従って正しく更新されています。Test Pyramid の ASCII アート図も含まれており、視覚的にも理解しやすい構成になっています。"
+}

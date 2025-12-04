@@ -1,0 +1,19 @@
+{
+  "issue_number": 218,
+  "feature_summary": "品質基準ドキュメント更新 - テスト階層と受入テストスキップ条件を追加",
+  "acceptance_criteria": [
+    "「テスト方針」セクションが更新されている",
+    "テスト階層表が含まれている",
+    "スキップ条件ラベル（docs-only, internal, test-only, ci-only）が記載されている",
+    "Markdownシンタックスエラーがない",
+    "既存のセクションとの整合性が取れている"
+  ],
+  "test_scenarios": [
+    "シナリオ1: テスト階層表（Level 1-4）が正しく記載されているか確認",
+    "シナリオ2: スキップ条件ラベル4種類が全て記載されているか確認",
+    "シナリオ3: PO受入テスト判定基準が記載されているか確認",
+    "シナリオ4: Markdown構文エラーがないか確認",
+    "シナリオ5: CLAUDE.mdのテスト構造セクションと整合しているか確認"
+  ],
+  "target_file": "docs/claude/04-quality-standards.md"
+}

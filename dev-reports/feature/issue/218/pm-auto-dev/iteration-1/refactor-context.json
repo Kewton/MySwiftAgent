@@ -1,0 +1,26 @@
+{
+  "issue_number": 218,
+  "issue_type": "documentation",
+  "refactor_targets": [
+    "docs/claude/04-quality-standards.md"
+  ],
+  "quality_metrics": {
+    "before_lines": 285,
+    "added_sections": 3,
+    "markdown_valid": true
+  },
+  "improvement_goals": [
+    "文章の簡潔性確認",
+    "表の整合性確認",
+    "既存セクションとのスタイル統一"
+  ],
+  "design_patterns_to_apply": [
+    "ドキュメント構造の一貫性",
+    "情報の階層化"
+  ],
+  "constraints": [
+    "既存内容の意味を変更しない",
+    "追加された情報を維持する",
+    "Markdown構文を保持する"
+  ]
+}
