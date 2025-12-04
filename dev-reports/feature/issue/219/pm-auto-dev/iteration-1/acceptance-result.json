@@ -1,0 +1,58 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "TS1",
+      "name": "Issue種別テストフローセクション検証",
+      "result": "passed",
+      "details": "セクション「## Issue種別ごとのテストフロー」が行406に存在。Mermaidフロー図（graph TD）が行412-430に正しい構文で記述。スキップ条件ラベル表が行434-441に存在。"
+    },
+    {
+      "scenario": "TS2",
+      "name": "通常Issue/重要Issue区分検証",
+      "result": "passed",
+      "details": "「通常Issue と 重要Issue」サブセクションが行444に存在。通常Issue（L3テスト）の説明が行446-451に記載。重要Issue（L4テスト必須）の説明が行453-458に記載。各Issue種別の具体例も含まれている。"
+    },
+    {
+      "scenario": "TS3",
+      "name": "Feature完了時PO受入テストセクション検証",
+      "result": "passed",
+      "details": "「### Feature完了時のPO最終受入テスト」セクションが行544に存在。Mermaidフロー図（graph TD）が行548-575に正しい構文で記述。確認項目チェックリストが行576-580に4項目存在。"
+    },
+    {
+      "scenario": "TS4",
+      "name": "ドキュメント整合性検証",
+      "result": "passed",
+      "details": "既存セクション（開発フロー概要、Feature管理、Issue管理、ブランチ戦略等）の構造が維持されている。新規セクションはIssue管理セクション内およびドキュメント管理セクション内の適切な位置に追加。フッターリンク（CLAUDE.md、02-slash-commands.md、08-issue-split.md）が正常に機能。"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "AC1",
+      "description": "テストフロー図（Mermaid）が含まれている",
+      "verified": true,
+      "evidence": "複数のMermaidダイアグラムが存在: 開発フロー概要(行7-25)、パターンA/B実行フロー(行133-178)、スキル実行フロー(行228-286)、フィードバックループ(行386-397)、Issue種別判定フロー(行412-430)、PO最終受入テストフロー(行548-575)"
+    },
+    {
+      "criterion": "AC2",
+      "description": "通常Issueと重要Issueの区別が記載されている",
+      "verified": true,
+      "evidence": "行444-458に明確な区分が記載。通常Issue（L3テスト）: バックエンドAPI内部ロジック変更、パフォーマンス改善等。重要Issue（L4テスト必須）: UI/UX変更、新機能追加、ユーザーフロー変更等。"
+    },
+    {
+      "criterion": "AC3",
+      "description": "Markdownシンタックスエラーがない",
+      "verified": true,
+      "evidence": "見出し（##, ###）が正しくフォーマット。テーブルが適切に|区切りで定義。リストが正しくインデント。コードブロック（```mermaid, ```markdown）が正しく開閉。リンク構文が正常。"
+    },
+    {
+      "criterion": "AC4",
+      "description": "Mermaidダイアグラムがレンダリングされる",
+      "verified": true,
+      "evidence": "全Mermaidコードブロックが有効な構文を使用: graph TD/LR ディレクティブ、ノード定義（角括弧、中括弧）、矢印接続（-->, -->|label|）、サブグラフ定義、スタイル定義がすべて正しい構文。"
+    }
+  ],
+  "summary": "Issue #219の受入テストが全て合格しました。docs/claude/01-development-workflow.mdに対する更新内容は全ての受入条件を満たしています。(1) Issue種別テストフローセクションが追加され、Mermaidフロー図とスキップ条件表が含まれています。(2) 通常Issueと重要Issueの区別が明確に記載され、具体例も含まれています。(3) Feature完了時のPO最終受入テストセクションが追加され、フロー図とチェックリストが含まれています。(4) 既存のドキュメント構造は維持され、新規セクションは適切な位置に配置されています。",
+  "evidence_files": [],
+  "message": "すべての受入条件を満たしています"
+}

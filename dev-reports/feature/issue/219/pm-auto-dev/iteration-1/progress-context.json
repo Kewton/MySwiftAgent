@@ -1,0 +1,59 @@
+{
+  "issue_number": 219,
+  "issue_title": "開発ワークフロードキュメント更新",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "files_modified": ["docs/claude/01-development-workflow.md"],
+      "sections_added": ["Issue種別ごとのテストフロー", "Feature完了時のPO最終受入テスト"],
+      "mermaid_diagrams": 2,
+      "static_analysis": {
+        "mermaid_errors": 0,
+        "markdown_errors": 0
+      }
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases_passed": 4,
+      "test_cases_failed": 0,
+      "acceptance_criteria_verified": 4
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "Document already meets quality standards"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "Issue種別ごとのテストフロー設計", "estimated_minutes": 15, "status": "completed"},
+      {"task_id": "1.2", "description": "Feature完了時テストフロー設計", "estimated_minutes": 15, "status": "completed"},
+      {"task_id": "2.1", "description": "Issue種別テストフローセクション追加", "estimated_minutes": 25, "status": "completed"},
+      {"task_id": "2.2", "description": "スキップ条件ラベル説明追加", "estimated_minutes": 15, "status": "completed"},
+      {"task_id": "2.3", "description": "Feature完了時テストフロー追加", "estimated_minutes": 20, "status": "completed"},
+      {"task_id": "3.1", "description": "Mermaid構文検証", "estimated_minutes": 10, "status": "completed"},
+      {"task_id": "3.2", "description": "既存フローとの整合性確認", "estimated_minutes": 10, "status": "completed"},
+      {"task_id": "3.3", "description": "CLAUDE.md/04-quality-standards.mdとの整合性確認", "estimated_minutes": 10, "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "docs/claude/01-development-workflow.md", "status": "updated"}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "Issue種別ごとのテストフローセクションが追加されている", "verified": true},
+      {"criterion": "スキップ条件ラベル（docs-only, internal, test-only, ci-only）が記載されている", "verified": true},
+      {"criterion": "Mermaidフロー図が正しく表示される", "verified": true},
+      {"criterion": "Markdownシンタックスエラーがない", "verified": true},
+      {"criterion": "既存のセクションとの整合性が取れている", "verified": true}
+    ],
+    "estimated_vs_actual": {
+      "estimated_hours": 2,
+      "iteration": 1
+    }
+  },
+  "commits": [
+    "8fff25e: docs(issue/219): add acceptance test flow sections to development workflow"
+  ],
+  "blockers": []
+}
