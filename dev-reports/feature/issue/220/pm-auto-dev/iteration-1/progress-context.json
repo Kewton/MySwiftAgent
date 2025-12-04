@@ -1,0 +1,83 @@
+{
+  "issue_number": 220,
+  "title": "Issue分割ガイド更新（レイヤールール）",
+  "iteration": 1,
+  "max_iterations": 3,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "changes_made": [
+        "「単一レイヤー改修ルール」セクション追加（1 Issue = 1 Layer原則）",
+        "レイヤー定義表追加（Platform/Agent/Frontend/Docs 4層）",
+        "レイヤー間依存関係図（Mermaid）追加",
+        "例外処理手順追加（cross-layerラベル使用条件、判定フロー）",
+        "Issue分割チェックリストにレイヤールール項目追加",
+        "良い例・悪い例・許容される例を追加"
+      ],
+      "lines_added": 152,
+      "commit": "93b55ef: docs(issue/220): Issue分割ガイド更新 - 単一レイヤー改修ルール追加"
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases_passed": 5,
+      "test_cases_total": 5,
+      "acceptance_criteria_verified": 5
+    },
+    "refactor": {
+      "status": "success",
+      "before_lines": 553,
+      "after_lines": 546,
+      "lines_reduced": 7,
+      "improvements": [
+        "DRY: 重複説明を削除",
+        "KISS: 冗長な説明をテーブル形式に変換",
+        "Consistency: Mermaidカラースキーム統一"
+      ]
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "work_plan_file": "dev-reports/feature/issue/220/work-plan.md",
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "レイヤー定義表の設計", "estimated_minutes": 15, "status": "completed"},
+      {"task_id": "1.2", "description": "例外処理手順の設計", "estimated_minutes": 15, "status": "completed"},
+      {"task_id": "2.1", "description": "単一レイヤー改修ルールセクション追加", "estimated_minutes": 20, "status": "completed"},
+      {"task_id": "2.2", "description": "例外処理手順セクション追加", "estimated_minutes": 20, "status": "completed"},
+      {"task_id": "2.3", "description": "Issue分割チェックリスト更新", "estimated_minutes": 15, "status": "completed"},
+      {"task_id": "2.4", "description": "コード例・悪い例の追加", "estimated_minutes": 5, "status": "completed"},
+      {"task_id": "3.1", "description": "Markdown構文検証", "estimated_minutes": 10, "status": "completed"},
+      {"task_id": "3.2", "description": "既存セクションとの整合性確認", "estimated_minutes": 10, "status": "completed"},
+      {"task_id": "3.3", "description": "design-policy.mdとの整合性確認", "estimated_minutes": 10, "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "docs/claude/08-issue-split.md - 単一レイヤー改修ルールセクション", "created": true},
+      {"file": "docs/claude/08-issue-split.md - レイヤー定義表", "created": true},
+      {"file": "docs/claude/08-issue-split.md - レイヤー間依存関係図（Mermaid）", "created": true},
+      {"file": "docs/claude/08-issue-split.md - 例外処理手順", "created": true},
+      {"file": "docs/claude/08-issue-split.md - cross-layerラベルの使用方法", "created": true},
+      {"file": "docs/claude/08-issue-split.md - チェックリスト更新", "created": true},
+      {"file": "docs/claude/08-issue-split.md - 良い例・悪い例", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "「単一レイヤー改修ルール」セクションが存在する", "verified": true},
+      {"criterion": "レイヤー定義表が含まれている", "verified": true},
+      {"criterion": "例外処理手順が記載されている", "verified": true},
+      {"criterion": "Markdownシンタックスエラーがない", "verified": true},
+      {"criterion": "既存のIssue分割ガイドとの整合性", "verified": true}
+    ],
+    "estimated_vs_actual": {
+      "estimated_minutes": 120,
+      "description": "2時間の見積もり"
+    }
+  },
+  "files_changed": [
+    "docs/claude/08-issue-split.md"
+  ],
+  "blockers": [],
+  "next_steps": [
+    "手動検証: ルールが実際の開発プロセスに適用可能か確認",
+    "手動検証: 例外処理が現実的か確認",
+    "ブロック対象Issue: #221 (PRテンプレート更新) の作業開始可能",
+    "ブロック対象Issue: #222 (PR自動チェック機能) の作業開始可能"
+  ]
+}

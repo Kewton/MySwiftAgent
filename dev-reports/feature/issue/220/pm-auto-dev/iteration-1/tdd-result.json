@@ -1,0 +1,55 @@
+{
+  "status": "success",
+  "issue_number": 220,
+  "title": "Issue分割ガイド更新（レイヤールール）",
+  "changes_made": [
+    "「単一レイヤー改修ルール」セクション追加（1 Issue = 1 Layer原則）",
+    "レイヤー定義表追加（Platform/Agent/Frontend/Docs 4層）",
+    "レイヤー間依存関係図（Mermaid）追加",
+    "例外処理手順追加（cross-layerラベル使用条件、判定フロー）",
+    "Issue分割チェックリストにレイヤールール項目追加",
+    "良い例・悪い例・許容される例を追加"
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "「単一レイヤー改修ルール」セクションが存在する",
+      "verified": true,
+      "evidence": "Line 324: ## 単一レイヤー改修ルール"
+    },
+    {
+      "criterion": "レイヤー定義表が含まれている",
+      "verified": true,
+      "evidence": "Line 333-338: Platform/Agent/Frontend/Docs 4層の定義表"
+    },
+    {
+      "criterion": "例外処理手順が記載されている",
+      "verified": true,
+      "evidence": "Line 398-434: cross-layerラベル使用条件、判定フロー、レビュー要件"
+    },
+    {
+      "criterion": "Markdownシンタックスエラーがない",
+      "verified": true,
+      "evidence": "28 code blocks (balanced), 3 Mermaid diagrams, proper table syntax"
+    },
+    {
+      "criterion": "既存のIssue分割ガイドとの整合性",
+      "verified": true,
+      "evidence": "縦割り原則との関係を明記（Line 384-394）、既存チェックリストにレイヤールール追加（Line 535-538）"
+    }
+  ],
+  "markdown_validation": {
+    "syntax_errors": 0,
+    "warnings": [],
+    "code_blocks_balanced": true,
+    "mermaid_diagrams": 3,
+    "tables_count": 3
+  },
+  "files_changed": [
+    "docs/claude/08-issue-split.md"
+  ],
+  "lines_added": 152,
+  "commits": [
+    "93b55ef: docs(issue/220): Issue分割ガイド更新 - 単一レイヤー改修ルール追加"
+  ],
+  "message": "TDD実装完了。全5件の受入条件を満たしました。ドキュメントの単一レイヤー改修ルールセクション、レイヤー定義表、例外処理手順、チェックリスト更新、良い例・悪い例を追加しました。"
+}

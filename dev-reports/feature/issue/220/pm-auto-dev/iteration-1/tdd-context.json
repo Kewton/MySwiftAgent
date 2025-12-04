@@ -1,0 +1,105 @@
+{
+  "issue_number": 220,
+  "title": "Issue分割ガイド更新（レイヤールール）",
+  "layer": "Docs",
+  "acceptance_criteria": [
+    "「単一レイヤー改修ルール」セクションが存在する",
+    "レイヤー定義表が含まれている",
+    "例外処理手順が記載されている",
+    "Markdownシンタックスエラーがない",
+    "既存のIssue分割ガイドとの整合性"
+  ],
+  "implementation_tasks": [
+    "「単一レイヤー改修ルール」セクション追加",
+    "レイヤー定義表追加（Platform/Agent/Frontend/Docs）",
+    "レイヤー跨ぎの例外処理手順追加",
+    "cross-layerラベルの使用方法追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "レイヤー定義表の設計",
+      "estimated_minutes": 15,
+      "deliverables": ["表構造設計"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "例外処理手順の設計",
+      "estimated_minutes": 15,
+      "deliverables": ["フローチャート設計"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単一レイヤー改修ルールセクション追加",
+      "estimated_minutes": 20,
+      "deliverables": ["docs/claude/08-issue-split.md更新"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "例外処理手順セクション追加",
+      "estimated_minutes": 20,
+      "deliverables": ["docs/claude/08-issue-split.md更新"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "Issue分割チェックリスト更新",
+      "estimated_minutes": 15,
+      "deliverables": ["docs/claude/08-issue-split.md更新"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "コード例・悪い例の追加",
+      "estimated_minutes": 5,
+      "deliverables": ["docs/claude/08-issue-split.md更新"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Markdown構文検証",
+      "estimated_minutes": 10,
+      "deliverables": ["検証結果"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "既存セクションとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "design-policy.mdとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "docs/claude/08-issue-split.md - 単一レイヤー改修ルールセクション",
+    "docs/claude/08-issue-split.md - レイヤー定義表",
+    "docs/claude/08-issue-split.md - レイヤー間依存関係図（Mermaid）",
+    "docs/claude/08-issue-split.md - 例外処理手順（判定フロー）",
+    "docs/claude/08-issue-split.md - cross-layerラベルの使用方法",
+    "docs/claude/08-issue-split.md - チェックリスト更新",
+    "docs/claude/08-issue-split.md - 良い例・悪い例"
+  ],
+  "definition_of_done": [
+    "「単一レイヤー改修ルール」セクションが存在する",
+    "レイヤー定義表が含まれている",
+    "例外処理手順が記載されている",
+    "Markdownシンタックスエラーがない",
+    "既存のIssue分割ガイドとの整合性"
+  ],
+  "target_file": "docs/claude/08-issue-split.md",
+  "work_plan_file": "dev-reports/feature/issue/220/work-plan.md",
+  "content_to_add": {
+    "section_title": "## 🏗️ 単一レイヤー改修ルール",
+    "insert_location": "「## 🚨 よくある落とし穴と対策」の前（行324付近）"
+  }
+}
