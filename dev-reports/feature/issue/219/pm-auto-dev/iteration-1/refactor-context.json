@@ -1,0 +1,24 @@
+{
+  "issue_number": 219,
+  "refactor_targets": [
+    "docs/claude/01-development-workflow.md"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "documentation_type": true,
+    "mermaid_diagrams": 7,
+    "sections": 15
+  },
+  "design_patterns_to_apply": [
+    "Consistent formatting",
+    "Clear section hierarchy",
+    "Logical content flow"
+  ],
+  "improvement_goals": [
+    "Mermaidダイアグラムのスタイル統一",
+    "セクション見出しの一貫性確認",
+    "テーブルフォーマットの統一",
+    "冗長な表現の削除"
+  ],
+  "notes": "ドキュメント専用Issueのため、コードリファクタリングではなくドキュメント品質の向上を行う。追加したセクションが既存セクションと一貫したスタイルであることを確認する。"
+}

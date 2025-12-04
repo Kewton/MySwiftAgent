@@ -1,0 +1,75 @@
+{
+  "issue_number": 219,
+  "feature_summary": "開発ワークフロードキュメント更新 - 受入テストフローをdocs/claude/01-development-workflow.mdに追加",
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "description": "テストフロー図（Mermaid）が含まれている",
+      "verification_method": "Mermaidコードブロックの存在確認",
+      "is_automated": true
+    },
+    {
+      "id": "AC2",
+      "description": "通常Issueと重要Issueの区別が記載されている",
+      "verification_method": "セクション内容の存在確認",
+      "is_automated": true
+    },
+    {
+      "id": "AC3",
+      "description": "Markdownシンタックスエラーがない",
+      "verification_method": "Markdown lint",
+      "is_automated": true
+    },
+    {
+      "id": "AC4",
+      "description": "Mermaidダイアグラムがレンダリングされる",
+      "verification_method": "Mermaid構文検証",
+      "is_automated": true
+    }
+  ],
+  "test_scenarios": [
+    {
+      "id": "TS1",
+      "name": "Issue種別テストフローセクション検証",
+      "steps": [
+        "01-development-workflow.mdファイルを読み込む",
+        "「## 🧪 Issue種別ごとのテストフロー」セクションが存在することを確認",
+        "Mermaidフロー図が正しい構文であることを確認",
+        "スキップ条件ラベル表が存在することを確認"
+      ],
+      "expected_result": "セクションが存在し、Mermaid構文が正しい"
+    },
+    {
+      "id": "TS2",
+      "name": "通常Issue/重要Issue区分検証",
+      "steps": [
+        "「通常Issue と 重要Issue」サブセクションが存在することを確認",
+        "L3テスト（通常Issue）の説明があることを確認",
+        "L4テスト（重要Issue）の説明があることを確認"
+      ],
+      "expected_result": "Issue種別の区分が明確に記載されている"
+    },
+    {
+      "id": "TS3",
+      "name": "Feature完了時PO受入テストセクション検証",
+      "steps": [
+        "「### Feature完了時のPO最終受入テスト」セクションが存在することを確認",
+        "Mermaidフロー図が正しい構文であることを確認",
+        "確認項目チェックリストが存在することを確認"
+      ],
+      "expected_result": "セクションが存在し、Mermaid構文が正しい"
+    },
+    {
+      "id": "TS4",
+      "name": "ドキュメント整合性検証",
+      "steps": [
+        "既存セクションの構造が維持されていることを確認",
+        "新規セクションが適切な位置に追加されていることを確認",
+        "リンクや参照が破損していないことを確認"
+      ],
+      "expected_result": "ドキュメント全体の整合性が保たれている"
+    }
+  ],
+  "target_file": "docs/claude/01-development-workflow.md",
+  "labels": ["documentation", "feature"]
+}

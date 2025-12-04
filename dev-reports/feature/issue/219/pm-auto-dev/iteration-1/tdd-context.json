@@ -1,0 +1,87 @@
+{
+  "issue_number": 219,
+  "issue_title": "Issue #209-9: 開発ワークフロードキュメント更新",
+  "issue_type": "documentation",
+  "acceptance_criteria": [
+    "テストフロー図（Mermaid）が含まれている",
+    "通常Issueと重要Issueの区別が記載されている",
+    "Markdownシンタックスエラーがない",
+    "Mermaidダイアグラムがレンダリングされる"
+  ],
+  "implementation_tasks": [
+    "Issue種別ごとのテストフロー図追加",
+    "通常Issue vs 重要Issue のフロー説明",
+    "Feature完了時のPO最終受入テストフロー追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Issue種別ごとのテストフロー設計",
+      "estimated_minutes": 15,
+      "deliverables": ["Mermaidフロー図設計"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "Feature完了時テストフロー設計",
+      "estimated_minutes": 15,
+      "deliverables": ["Mermaidフロー図設計"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "Issue種別テストフローセクション追加",
+      "estimated_minutes": 25,
+      "deliverables": ["docs/claude/01-development-workflow.md更新"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "スキップ条件ラベル説明追加",
+      "estimated_minutes": 15,
+      "deliverables": ["docs/claude/01-development-workflow.md更新"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "Feature完了時テストフロー追加",
+      "estimated_minutes": 20,
+      "deliverables": ["docs/claude/01-development-workflow.md更新"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Mermaid構文検証",
+      "estimated_minutes": 10,
+      "deliverables": ["検証結果"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "既存フローとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "CLAUDE.md/04-quality-standards.mdとの整合性確認",
+      "estimated_minutes": 10,
+      "deliverables": ["確認結果"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "docs/claude/01-development-workflow.md"
+  ],
+  "definition_of_done": [
+    "Issue種別ごとのテストフローセクションが追加されている",
+    "スキップ条件ラベル（docs-only, internal, test-only, ci-only）が記載されている",
+    "Mermaidフロー図が正しく表示される",
+    "Markdownシンタックスエラーがない",
+    "既存のセクションとの整合性が取れている"
+  ],
+  "target_file": "docs/claude/01-development-workflow.md",
+  "target_coverage": 100,
+  "notes": "ドキュメント専用Issueのため、コードテストではなくMarkdown/Mermaid構文検証を行う"
+}
