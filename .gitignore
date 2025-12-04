@@ -144,7 +144,7 @@ cython_debug/
 # ===================================================================
 
 # UV package manager (primary for this project)
-uv.lock
+# Note: uv.lock files ARE tracked in Git to ensure reproducible builds across platforms
 .venv/
 venv/
 
