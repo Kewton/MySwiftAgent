@@ -1,0 +1,33 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 100,
+    "after_coverage": 100,
+    "before_complexity": 8,
+    "after_complexity": 6
+  },
+  "refactorings_applied": [
+    "DRY: Extracted common file reading logic into pytest fixtures (workflow_content, workflow_data)",
+    "DRY: Extracted helper function get_trigger_key() for YAML 'on' key handling",
+    "DRY: Consolidated layer detection logic into module-level functions (detect_layer, detect_layers, is_cross_layer)",
+    "DRY: Replaced repeated for-loop layer pattern matching with single iterative loop over LAYER_DEFINITIONS",
+    "DRY: Used set comprehension with walrus operator for detect_layers function",
+    "Improved test organization: Added section comments for test categories (Single Layer, Multi-Layer, Docs, Layer Detection, Non-Layer)",
+    "Improved testability: Used pytest.mark.parametrize for directory layer tests instead of manual loops",
+    "Added comprehensive docstrings with Args/Returns to helper functions"
+  ],
+  "files_modified": [
+    "tests/unit/issue_222/test_pr_layer_check.py"
+  ],
+  "tests_verified": true,
+  "static_analysis": {
+    "ruff_errors_before": 0,
+    "ruff_errors_after": 0
+  },
+  "test_results": {
+    "passed": 28,
+    "skipped": 1,
+    "failed": 0
+  },
+  "message": "Refactoring completed successfully. Applied DRY principle by extracting fixtures for file reading (reduced 7 redundant file reads to 2 fixtures), consolidated layer detection logic into reusable module-level functions, and improved test organization with pytest.mark.parametrize. All 28 tests pass. The workflow YAML file was already well-structured and did not require changes."
+}
