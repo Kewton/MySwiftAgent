@@ -1,0 +1,106 @@
+{
+  "issue_number": 221,
+  "issue_title": "Issue #209-11: PRテンプレート更新",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": null,
+      "coverage_note": "Documentation-only issue - code coverage not applicable",
+      "files_created": [".github/PULL_REQUEST_TEMPLATE.md"],
+      "acceptance_criteria_verified": 8,
+      "acceptance_criteria_total": 8
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases_passed": 8,
+      "test_cases_total": 8,
+      "all_criteria_met": true
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "Template already well-structured - no changes needed",
+      "quality_rating": "high"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "work_plan_path": "dev-reports/feature/issue/221/work-plan.md",
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "PRテンプレート構成設計",
+        "estimated_minutes": 15,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "テスト確認セクション設計",
+        "estimated_minutes": 15,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.1",
+        "description": "PULL_REQUEST_TEMPLATE.md作成",
+        "estimated_minutes": 30,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.2",
+        "description": "レイヤールール確認セクション追加",
+        "estimated_minutes": 15,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.3",
+        "description": "使用ガイドコメント追加",
+        "estimated_minutes": 15,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.1",
+        "description": "Markdown構文検証",
+        "estimated_minutes": 10,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.2",
+        "description": "GitHub上での表示確認",
+        "estimated_minutes": 10,
+        "status": "pending_manual_verification"
+      },
+      {
+        "task_id": "3.3",
+        "description": "関連ドキュメントとの整合性確認",
+        "estimated_minutes": 10,
+        "status": "completed"
+      }
+    ],
+    "deliverables_status": [
+      {"file": ".github/PULL_REQUEST_TEMPLATE.md", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "「テスト確認」セクションが存在する", "verified": true},
+      {"criterion": "3種類のチェックボックス（CI、開発者受入、PO受入）が含まれている", "verified": true},
+      {"criterion": "Markdownシンタックスエラーがない", "verified": true},
+      {"criterion": "既存のPRテンプレートとの整合性", "verified": true}
+    ],
+    "estimated_vs_actual": {
+      "estimated_minutes": 120,
+      "actual_minutes": null,
+      "notes": "Automated development via pm-auto-dev"
+    }
+  },
+  "commits": [
+    {
+      "hash": "db778ae",
+      "message": "docs(issue/221): add PR template with test confirmation sections"
+    }
+  ],
+  "blockers": [],
+  "next_steps": [
+    "PR作成（/pm-create-pr）",
+    "手動でGitHub上での表示確認（Task 3.2）",
+    "レビュー依頼"
+  ]
+}

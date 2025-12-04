@@ -1,0 +1,10 @@
+{
+  "status": "skipped",
+  "quality_metrics": {
+    "before_quality": "good",
+    "after_quality": "good",
+    "readability_score": "high"
+  },
+  "refactorings_applied": [],
+  "notes": "PR template is already well-structured. Analysis summary:\n\n1. **Readability**: HTML comments are clear and helpful. Section order is logical (Overview -> Related Issue -> Change Type -> Changes -> Testing -> Screenshots -> Reviewer Notes -> Checklist). Instructions are easy to follow.\n\n2. **Consistency**: Checkbox formats are consistent (all use `- [ ]`). Header levels are consistent (`##` for main sections, `###` for subsections). Terminology aligns with 04-quality-standards.md and 08-issue-split.md.\n\n3. **Whitespace and formatting**: Clean formatting with appropriate spacing. No unnecessary blank lines detected.\n\n4. **Content completeness**: All necessary sections included. Skip conditions (docs-only, internal, test-only, ci-only) match 04-quality-standards.md. Test hierarchy (L1-L4) properly documented. Layer confirmation section aligns with 08-issue-split.md single-layer rule. Cross-layer label guidance included.\n\n5. **Alignment verification**: Unit test 90% threshold matches docs. Integration test 50% threshold matches docs. PO acceptance test (L4) conditions documented. Skip reasons match quality standards.\n\nNo changes needed as the template meets all quality criteria and maintains consistency with related documentation."
+}

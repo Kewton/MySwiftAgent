@@ -1,0 +1,25 @@
+{
+  "issue_number": 221,
+  "issue_type": "documentation",
+  "refactor_targets": [
+    ".github/PULL_REQUEST_TEMPLATE.md"
+  ],
+  "quality_metrics": {
+    "before_coverage": null,
+    "complexity_score": null,
+    "documentation_quality": "good"
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "テンプレートの可読性向上",
+    "HTMLコメントの改善",
+    "セクション間の一貫性確認",
+    "不要な空白やフォーマットの修正"
+  ],
+  "constraints": [
+    "既存の受入条件を満たし続けること",
+    "Markdown構文エラーを導入しないこと",
+    "04-quality-standards.md, 08-issue-split.mdとの整合性を維持すること"
+  ],
+  "notes": "ドキュメントのみの変更のため、コードリファクタリングは不要。テンプレートの品質と可読性の向上に焦点を当てる。"
+}
