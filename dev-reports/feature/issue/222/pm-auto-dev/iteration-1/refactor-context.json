@@ -1,0 +1,28 @@
+{
+  "issue_number": 222,
+  "refactor_targets": [
+    ".github/workflows/pr-layer-check.yml",
+    "tests/unit/issue_222/test_pr_layer_check.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "yaml_lines": 220,
+    "test_lines": 0
+  },
+  "design_patterns_to_apply": [
+    "DRY (Don't Repeat Yourself)",
+    "Clear separation of concerns",
+    "Consistent error handling"
+  ],
+  "improvement_goals": [
+    "コードの重複を削除（もしあれば）",
+    "コメントの一貫性確認",
+    "エラーハンドリングの改善",
+    "テストコードの整理"
+  ],
+  "notes": [
+    "This is a GitHub Actions workflow (YAML), so traditional code coverage doesn't apply",
+    "The workflow is already well-structured with clear comments",
+    "Focus on any potential improvements to maintainability"
+  ]
+}

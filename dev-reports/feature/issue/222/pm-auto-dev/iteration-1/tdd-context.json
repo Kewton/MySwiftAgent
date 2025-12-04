@@ -1,0 +1,140 @@
+{
+  "issue_number": 222,
+  "title": "PR自動チェック機能（Optional）",
+  "acceptance_criteria": [
+    "ワークフローファイル .github/workflows/pr-layer-check.yml が存在する",
+    "単一レイヤー変更PRで警告が出ない",
+    "複数レイヤー変更PRで警告コメントが出る",
+    "cross-layer ラベルが自動付与される",
+    "YAMLシンタックスエラーなし",
+    "ワークフロー実行時間が1分以内"
+  ],
+  "implementation_tasks": [
+    ".github/workflows/pr-layer-check.yml 作成",
+    "変更ファイルからレイヤーを検出するロジック実装",
+    "複数レイヤー検出時のPRコメント警告機能実装",
+    "cross-layer ラベル自動付与機能実装"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "レイヤー検出ロジック設計",
+      "estimated_hours": 0.5,
+      "deliverables": ["ロジック設計"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "ワークフロー構成設計",
+      "estimated_hours": 0.5,
+      "deliverables": ["ワークフロー設計"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ワークフローファイル作成",
+      "estimated_hours": 1,
+      "deliverables": [".github/workflows/pr-layer-check.yml"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "レイヤー検出ロジック実装",
+      "estimated_hours": 1,
+      "deliverables": [".github/workflows/pr-layer-check.yml 更新"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "警告コメント・ラベル付与実装",
+      "estimated_hours": 1,
+      "deliverables": [".github/workflows/pr-layer-check.yml 更新"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "YAML構文検証",
+      "estimated_hours": 0.25,
+      "deliverables": ["検証結果"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "単一レイヤーテスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "複数レイヤーテスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "Docs層テスト",
+      "estimated_hours": 0.25,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "ワークフロー説明追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["ドキュメント更新"],
+      "dependencies": ["3.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    ".github/workflows/pr-layer-check.yml"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "YAMLシンタックスエラーなし",
+    "単一レイヤーで誤警告なし",
+    "複数レイヤーで正しく検出"
+  ],
+  "target_coverage": 90,
+  "test_scenarios": [
+    {
+      "name": "単一レイヤー（Platform）",
+      "changed_files": ["myVault/app/main.py"],
+      "expected_result": "警告なし"
+    },
+    {
+      "name": "単一レイヤー（Agent）",
+      "changed_files": ["expertAgent/app/api.py"],
+      "expected_result": "警告なし"
+    },
+    {
+      "name": "複数レイヤー",
+      "changed_files": ["expertAgent/app/api.py", "myAgentDesk/src/+page.svelte"],
+      "expected_result": "警告あり、ラベル付与"
+    },
+    {
+      "name": "Docsのみ",
+      "changed_files": ["docs/README.md"],
+      "expected_result": "警告なし"
+    },
+    {
+      "name": "Docs + コード",
+      "changed_files": ["docs/README.md", "expertAgent/app/api.py"],
+      "expected_result": "警告なし（Docs除外）"
+    }
+  ],
+  "layer_definitions": {
+    "Platform": ["myVault/**", "jobqueue/**", "myscheduler/**"],
+    "Agent": ["expertAgent/**", "graphAiServer/**"],
+    "Frontend": ["myAgentDesk/**", "commonUI/**"],
+    "Docs": ["docs/**", "*.md"]
+  },
+  "workflow_design": {
+    "trigger": "pull_request (opened, synchronize, reopened) to develop",
+    "permissions": ["contents: read", "pull-requests: write", "issues: write"],
+    "job_name": "Check Modified Layers",
+    "runner": "ubuntu-latest"
+  },
+  "technical_stack": ["GitHub Actions", "Bash", "actions/github-script"]
+}

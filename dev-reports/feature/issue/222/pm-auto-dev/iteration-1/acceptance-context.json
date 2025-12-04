@@ -1,0 +1,106 @@
+{
+  "issue_number": 222,
+  "feature_summary": "PR自動チェック機能 - 複数レイヤー変更を検出してPRに警告を表示するGitHub Actionsワークフロー",
+  "acceptance_criteria": [
+    "ワークフローファイル .github/workflows/pr-layer-check.yml が存在する",
+    "単一レイヤー変更PRで警告が出ない",
+    "複数レイヤー変更PRで警告コメントが出る",
+    "cross-layer ラベルが自動付与される",
+    "YAMLシンタックスエラーなし",
+    "ワークフロー実行時間が1分以内"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-1",
+      "name": "ワークフローファイル存在確認",
+      "description": ".github/workflows/pr-layer-check.yml が存在し、有効なYAMLであること",
+      "type": "automated",
+      "validation": "file_exists + yaml_valid"
+    },
+    {
+      "id": "AC-2",
+      "name": "単一レイヤー変更テスト（Platform）",
+      "description": "myVault/のみの変更で警告が出ないこと",
+      "type": "logic_test",
+      "input": ["myVault/app/main.py"],
+      "expected": "is_cross_layer=false"
+    },
+    {
+      "id": "AC-3",
+      "name": "単一レイヤー変更テスト（Agent）",
+      "description": "expertAgent/のみの変更で警告が出ないこと",
+      "type": "logic_test",
+      "input": ["expertAgent/app/api.py"],
+      "expected": "is_cross_layer=false"
+    },
+    {
+      "id": "AC-4",
+      "name": "単一レイヤー変更テスト（Frontend）",
+      "description": "myAgentDesk/のみの変更で警告が出ないこと",
+      "type": "logic_test",
+      "input": ["myAgentDesk/src/+page.svelte"],
+      "expected": "is_cross_layer=false"
+    },
+    {
+      "id": "AC-5",
+      "name": "複数レイヤー変更テスト（Platform + Agent）",
+      "description": "Platform層とAgent層の両方を変更した場合に警告が出ること",
+      "type": "logic_test",
+      "input": ["myVault/app/main.py", "expertAgent/app/api.py"],
+      "expected": "is_cross_layer=true"
+    },
+    {
+      "id": "AC-6",
+      "name": "複数レイヤー変更テスト（Agent + Frontend）",
+      "description": "Agent層とFrontend層の両方を変更した場合に警告が出ること",
+      "type": "logic_test",
+      "input": ["expertAgent/app/api.py", "myAgentDesk/src/+page.svelte"],
+      "expected": "is_cross_layer=true"
+    },
+    {
+      "id": "AC-7",
+      "name": "Docsのみ変更テスト",
+      "description": "docs/のみの変更で警告が出ないこと",
+      "type": "logic_test",
+      "input": ["docs/README.md"],
+      "expected": "is_cross_layer=false"
+    },
+    {
+      "id": "AC-8",
+      "name": "Docs + 単一レイヤー変更テスト",
+      "description": "Docs層と他1レイヤーの変更で警告が出ないこと（Docs除外）",
+      "type": "logic_test",
+      "input": ["docs/README.md", "expertAgent/app/api.py"],
+      "expected": "is_cross_layer=false"
+    },
+    {
+      "id": "AC-9",
+      "name": "3レイヤー変更テスト",
+      "description": "3つのレイヤーすべてを変更した場合に警告が出ること",
+      "type": "logic_test",
+      "input": ["myVault/app/main.py", "expertAgent/app/api.py", "myAgentDesk/src/+page.svelte"],
+      "expected": "is_cross_layer=true"
+    },
+    {
+      "id": "AC-10",
+      "name": "警告コメント形式確認",
+      "description": "警告コメントに必要な情報が含まれていること",
+      "type": "content_check",
+      "expected_content": ["Cross-Layer Change Detected", "複数のレイヤー", "Issue分割の検討"]
+    },
+    {
+      "id": "AC-11",
+      "name": "ラベル付与機能確認",
+      "description": "cross-layerラベルを付与するコードが存在すること",
+      "type": "content_check",
+      "expected_content": ["cross-layer", "addLabels"]
+    }
+  ],
+  "tdd_result_summary": {
+    "status": "success",
+    "coverage": 100,
+    "tests_passed": 24,
+    "tests_failed": 0,
+    "tests_skipped": 1
+  }
+}

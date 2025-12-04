@@ -1,0 +1,219 @@
+# PR Layer Check Workflow
+# Issue #222 - Detects cross-layer changes in PRs and warns developers
+#
+# Layer Definitions:
+# - Platform: myVault, jobqueue, myscheduler
+# - Agent: expertAgent, graphAiServer
+# - Frontend: myAgentDesk, commonUI
+# - Docs: docs/, *.md (excluded from cross-layer detection)
+#
+# When a PR modifies multiple layers (Platform/Agent/Frontend),
+# this workflow posts a warning comment and adds a 'cross-layer' label.
+
+name: PR Layer Check
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  check-layers:
+    name: Check Modified Layers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Detect layers
+        id: detect
+        run: |
+          echo "Detecting modified layers..."
+
+          # Initialize layer flags
+          PLATFORM=false
+          AGENT=false
+          FRONTEND=false
+          DOCS_ONLY=true
+
+          # Get all changed files
+          CHANGED_FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          echo "Changed files: $CHANGED_FILES"
+
+          # Detect layers from changed files
+          for file in $CHANGED_FILES; do
+            echo "Checking file: $file"
+
+            case "$file" in
+              myVault/*|jobqueue/*|myscheduler/*)
+                PLATFORM=true
+                DOCS_ONLY=false
+                echo "  -> Platform layer"
+                ;;
+              expertAgent/*|graphAiServer/*)
+                AGENT=true
+                DOCS_ONLY=false
+                echo "  -> Agent layer"
+                ;;
+              myAgentDesk/*|commonUI/*)
+                FRONTEND=true
+                DOCS_ONLY=false
+                echo "  -> Frontend layer"
+                ;;
+              docs/*|*.md)
+                echo "  -> Docs (excluded from cross-layer check)"
+                ;;
+              *)
+                # Other files (e.g., .github/, scripts/, etc.) don't count
+                echo "  -> Other (not counted)"
+                ;;
+            esac
+          done
+
+          # Count how many layers are modified (excluding Docs)
+          LAYER_COUNT=0
+          LAYERS=""
+
+          if [ "$PLATFORM" = true ]; then
+            LAYER_COUNT=$((LAYER_COUNT + 1))
+            LAYERS="${LAYERS}Platform,"
+          fi
+
+          if [ "$AGENT" = true ]; then
+            LAYER_COUNT=$((LAYER_COUNT + 1))
+            LAYERS="${LAYERS}Agent,"
+          fi
+
+          if [ "$FRONTEND" = true ]; then
+            LAYER_COUNT=$((LAYER_COUNT + 1))
+            LAYERS="${LAYERS}Frontend,"
+          fi
+
+          # Remove trailing comma
+          LAYERS="${LAYERS%,}"
+
+          echo "Layer count: $LAYER_COUNT"
+          echo "Layers modified: $LAYERS"
+
+          # Determine if this is a cross-layer change
+          if [ "$LAYER_COUNT" -gt 1 ]; then
+            echo "is_cross_layer=true" >> $GITHUB_OUTPUT
+            echo "Cross-layer change detected!"
+          else
+            echo "is_cross_layer=false" >> $GITHUB_OUTPUT
+            echo "Single layer or docs-only change."
+          fi
+
+          # Output layer details
+          echo "platform=$PLATFORM" >> $GITHUB_OUTPUT
+          echo "agent=$AGENT" >> $GITHUB_OUTPUT
+          echo "frontend=$FRONTEND" >> $GITHUB_OUTPUT
+          echo "layers=$LAYERS" >> $GITHUB_OUTPUT
+          echo "layer_count=$LAYER_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Add comment and label if cross-layer
+        if: steps.detect.outputs.is_cross_layer == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const layers = [];
+            if ('${{ steps.detect.outputs.platform }}' === 'true') layers.push('Platform');
+            if ('${{ steps.detect.outputs.agent }}' === 'true') layers.push('Agent');
+            if ('${{ steps.detect.outputs.frontend }}' === 'true') layers.push('Frontend');
+
+            const layerList = layers.map(l => `- **${l}**`).join('\n');
+
+            const body = `## Cross-Layer Change Detected
+
+            This PR modifies multiple layers:
+            ${layerList}
+
+            ### Action Required
+
+            1. **Consider splitting**: If possible, split this PR into separate PRs for each layer
+            2. **If splitting is not possible**:
+               - Add a comment explaining why this PR cannot be split
+               - Request reviewers from each affected layer (at least 2 reviewers)
+
+            ### References
+            - [Issue Split Guide - Layer Rules](docs/claude/08-issue-split.md#single-layer-modification-rule)
+            - [Development Workflow](docs/claude/01-development-workflow.md)
+
+            ---
+            *This comment was automatically generated by PR Layer Check workflow.*`;
+
+            // Post comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+            // Add label
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['cross-layer']
+              });
+              console.log('Added cross-layer label');
+            } catch (error) {
+              // Label might not exist, create it first
+              if (error.status === 404) {
+                console.log('Creating cross-layer label...');
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'cross-layer',
+                  color: 'FFA500',
+                  description: 'PR changes multiple layers (Platform/Agent/Frontend)'
+                });
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: ['cross-layer']
+                });
+              } else {
+                throw error;
+              }
+            }
+
+            console.log('Cross-layer warning posted successfully');
+
+      - name: Summary
+        run: |
+          echo "## PR Layer Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.detect.outputs.is_cross_layer }}" = "true" ]; then
+            echo "### Cross-Layer Change Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This PR modifies **${{ steps.detect.outputs.layer_count }}** layers: ${{ steps.detect.outputs.layers }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "A warning comment and \`cross-layer\` label have been added." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Single Layer Change" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ -n "${{ steps.detect.outputs.layers }}" ]; then
+              echo "This PR modifies only the **${{ steps.detect.outputs.layers }}** layer." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "This PR only modifies documentation or other non-layer files." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No action required." >> $GITHUB_STEP_SUMMARY
+          fi

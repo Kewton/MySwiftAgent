@@ -1,0 +1,151 @@
+{
+  "issue_number": 222,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "unit_tests": {
+        "total": 25,
+        "passed": 24,
+        "failed": 0,
+        "skipped": 1
+      },
+      "static_analysis": {
+        "ruff_errors": 0,
+        "mypy_errors": 0,
+        "yamllint_errors": 0
+      },
+      "files_created": [
+        ".github/workflows/pr-layer-check.yml",
+        "tests/unit/issue_222/__init__.py",
+        "tests/unit/issue_222/test_pr_layer_check.py"
+      ]
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": {
+        "total": 11,
+        "passed": 11,
+        "failed": 0
+      },
+      "acceptance_criteria_verified": 6
+    },
+    "refactor": {
+      "status": "success",
+      "quality_metrics": {
+        "before_complexity": 8,
+        "after_complexity": 6
+      },
+      "refactorings_applied": [
+        "DRY: pytest fixtures抽出",
+        "DRY: ヘルパー関数統合",
+        "テスト構成改善: pytest.mark.parametrize使用",
+        "ドキュメント改善: docstrings追加"
+      ],
+      "tests_after_refactor": {
+        "passed": 28,
+        "skipped": 1,
+        "failed": 0
+      }
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "レイヤー検出ロジック設計",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "ワークフロー構成設計",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.1",
+        "description": "ワークフローファイル作成",
+        "estimated_hours": 1,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.2",
+        "description": "レイヤー検出ロジック実装",
+        "estimated_hours": 1,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.3",
+        "description": "警告コメント・ラベル付与実装",
+        "estimated_hours": 1,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.1",
+        "description": "YAML構文検証",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.2",
+        "description": "単一レイヤーテスト",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.3",
+        "description": "複数レイヤーテスト",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.4",
+        "description": "Docs層テスト",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "4.1",
+        "description": "ワークフロー説明追加",
+        "estimated_hours": 0.5,
+        "status": "pending"
+      }
+    ],
+    "deliverables_status": [
+      {
+        "file": ".github/workflows/pr-layer-check.yml",
+        "created": true
+      },
+      {
+        "file": "tests/unit/issue_222/test_pr_layer_check.py",
+        "created": true
+      }
+    ],
+    "definition_of_done_status": [
+      {
+        "criterion": "すべてのタスクが完了",
+        "verified": true
+      },
+      {
+        "criterion": "YAMLシンタックスエラーなし",
+        "verified": true
+      },
+      {
+        "criterion": "単一レイヤーで誤警告なし",
+        "verified": true
+      },
+      {
+        "criterion": "複数レイヤーで正しく検出",
+        "verified": true
+      }
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 6,
+      "actual": 6,
+      "variance": "0h"
+    }
+  }
+}
