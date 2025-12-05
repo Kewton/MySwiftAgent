@@ -27,6 +27,9 @@ from app.api.v1 import (
     workflow_generator_endpoints,
 )
 from app.middleware import MethodValidatorMiddleware, ResponseValidatorMiddleware
+from app.services.job_creation_state import job_state_manager
+from app.services.valkey_client import ValkeyClient
+from core.config import settings
 from core.logger import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -37,8 +40,27 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup: Initialize logging
     setup_logging()
+
+    # Initialize Valkey connection for JobCreationStateManager (Issue #244)
+    if settings.VALKEY_ENABLED:
+        logger.info(
+            f"Initializing Valkey connection: {settings.VALKEY_HOST}:{settings.VALKEY_PORT}"
+        )
+        valkey_client = ValkeyClient(
+            host=settings.VALKEY_HOST,
+            port=settings.VALKEY_PORT,
+            db=settings.VALKEY_DB,
+        )
+        job_state_manager.configure_valkey(valkey_client, settings.VALKEY_TTL)
+        await job_state_manager.connect_valkey()
+    else:
+        logger.info("Valkey disabled - JobCreationStateManager using L1 cache only")
+
     yield
-    # Shutdown: cleanup if needed
+
+    # Shutdown: cleanup Valkey connection
+    if settings.VALKEY_ENABLED:
+        await job_state_manager.disconnect_valkey()
 
 
 app = FastAPI(
@@ -175,9 +197,20 @@ app.include_router(ab_test_endpoints.router, prefix="/v1", tags=["AB Tests"])
 
 
 @app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint (used by CI/CD)."""
-    return {"status": "healthy", "service": "expertAgent"}
+async def health_check() -> dict[str, Any]:
+    """Health check endpoint (used by CI/CD).
+
+    Returns:
+        Health status including Valkey connection state (Issue #244)
+    """
+    return {
+        "status": "healthy",
+        "service": "expertAgent",
+        "valkey": {
+            "enabled": settings.VALKEY_ENABLED,
+            "connected": job_state_manager.is_valkey_connected,
+        },
+    }
 
 
 @app.get("/")

@@ -10,7 +10,14 @@ class TestHealthAPI:
         """Test health check endpoint returns healthy status."""
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy", "service": "expertAgent"}
+        data = response.json()
+        # Core health check fields
+        assert data["status"] == "healthy"
+        assert data["service"] == "expertAgent"
+        # Valkey status fields (Issue #244)
+        assert "valkey" in data
+        assert "enabled" in data["valkey"]
+        assert "connected" in data["valkey"]
 
 
 class TestRootAPI:

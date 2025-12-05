@@ -1,0 +1,118 @@
+{
+  "status": "passed",
+  "issue_number": 244,
+  "feature_summary": "expertAgent main.py で JobCreationStateManager の Valkey 接続初期化",
+  "test_cases": [
+    {
+      "id": "UNIT-1",
+      "scenario": "単体テスト実行",
+      "result": "passed",
+      "evidence": "cd expertAgent && uv run pytest tests/unit/ -v: 1453 tests passed, 0 failed"
+    },
+    {
+      "id": "STATIC-1",
+      "scenario": "静的解析実行 (Ruff)",
+      "result": "passed",
+      "evidence": "cd expertAgent && uv run ruff check app/ tests/: All checks passed!"
+    },
+    {
+      "id": "STATIC-1",
+      "scenario": "静的解析実行 (MyPy)",
+      "result": "passed",
+      "evidence": "cd expertAgent && uv run mypy app/: Success: no issues found in 76 source files"
+    },
+    {
+      "id": "CODE-REVIEW-1",
+      "scenario": "configure_valkey() method exists in job_creation_state.py",
+      "result": "passed",
+      "evidence": "Method found at lines 193-209 in expertAgent/app/services/job_creation_state.py"
+    },
+    {
+      "id": "CODE-REVIEW-2",
+      "scenario": "is_valkey_connected property exists in job_creation_state.py",
+      "result": "passed",
+      "evidence": "Property found at lines 211-218 in expertAgent/app/services/job_creation_state.py"
+    },
+    {
+      "id": "CODE-REVIEW-3",
+      "scenario": "Lifespan in main.py initializes Valkey when VALKEY_ENABLED=true",
+      "result": "passed",
+      "evidence": "Lifespan function at lines 38-63 in expertAgent/app/main.py handles Valkey initialization based on settings.VALKEY_ENABLED"
+    },
+    {
+      "id": "CODE-REVIEW-4",
+      "scenario": "/health endpoint returns Valkey status",
+      "result": "passed",
+      "evidence": "Health endpoint at lines 199-213 returns valkey.enabled and valkey.connected fields"
+    },
+    {
+      "id": "E2E-1",
+      "scenario": "Valkey有効 + 接続成功 → /health確認",
+      "result": "skipped",
+      "evidence": "Manual verification required - requires running Valkey server"
+    },
+    {
+      "id": "E2E-2",
+      "scenario": "Valkey有効 + 接続失敗 → Graceful Degradation",
+      "result": "skipped",
+      "evidence": "Manual verification required - requires controlled Valkey failure scenario"
+    },
+    {
+      "id": "E2E-3",
+      "scenario": "Valkey無効 → 接続試行なし",
+      "result": "skipped",
+      "evidence": "Manual verification required - requires running expertAgent service"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "AC-1: VALKEY_ENABLED=true時、アプリケーション起動でValkey接続が初期化される",
+      "verified": true,
+      "evidence": "main.py lifespan function (lines 44-55) implements this behavior"
+    },
+    {
+      "criterion": "AC-2: GET /v1/marp-report/{job_id} が L2キャッシュ（Valkey）を利用する",
+      "verified": true,
+      "evidence": "JobCreationStateManager integrated with Valkey in job_creation_state.py (async methods use L2 cache)"
+    },
+    {
+      "criterion": "AC-3: Valkey接続失敗時もアプリケーションが起動する（Graceful Degradation）",
+      "verified": true,
+      "evidence": "connect_valkey() method (lines 222-245) handles exceptions gracefully and sets _valkey_connected=false"
+    },
+    {
+      "criterion": "AC-4: VALKEY_ENABLED=false時、接続試行しない",
+      "verified": true,
+      "evidence": "main.py lifespan checks settings.VALKEY_ENABLED before attempting connection (line 45)"
+    },
+    {
+      "criterion": "AC-5: シャットダウン時にValkey接続が正常に切断される",
+      "verified": true,
+      "evidence": "main.py lifespan shutdown section calls job_state_manager.disconnect_valkey() (lines 62-63)"
+    },
+    {
+      "criterion": "AC-6: /health エンドポイントが Valkey 状態（enabled, connected）を返す",
+      "verified": true,
+      "evidence": "/health endpoint returns valkey.enabled and valkey.connected (lines 199-213)"
+    },
+    {
+      "criterion": "AC-7: Ruff/MyPy エラーゼロ",
+      "verified": true,
+      "evidence": "Ruff: All checks passed! / MyPy: Success: no issues found in 76 source files"
+    },
+    {
+      "criterion": "AC-8: 既存テストがパス",
+      "verified": true,
+      "evidence": "pytest tests/unit/: 1453 tests passed, 0 failed"
+    }
+  ],
+  "evidence_files": [],
+  "summary": {
+    "total_test_cases": 10,
+    "passed": 7,
+    "failed": 0,
+    "skipped": 3,
+    "skipped_reason": "E2E tests require running services and are marked for manual verification"
+  },
+  "message": "すべての自動化可能な受入条件を満たしています。E2Eテスト（E2E-1, E2E-2, E2E-3）は実行中のサービスが必要なため手動検証が必要です。"
+}

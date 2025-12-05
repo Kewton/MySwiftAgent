@@ -1,0 +1,78 @@
+{
+  "issue_number": 244,
+  "feature_summary": "expertAgent main.py で JobCreationStateManager の Valkey 接続初期化",
+  "acceptance_criteria": [
+    "AC-1: VALKEY_ENABLED=true時、アプリケーション起動でValkey接続が初期化される",
+    "AC-2: GET /v1/marp-report/{job_id} が L2キャッシュ（Valkey）を利用する",
+    "AC-3: Valkey接続失敗時もアプリケーションが起動する（Graceful Degradation）",
+    "AC-4: VALKEY_ENABLED=false時、接続試行しない",
+    "AC-5: シャットダウン時にValkey接続が正常に切断される",
+    "AC-6: /health エンドポイントが Valkey 状態（enabled, connected）を返す",
+    "AC-7: Ruff/MyPy エラーゼロ",
+    "AC-8: 既存テストがパス"
+  ],
+  "test_scenarios": [
+    {
+      "id": "E2E-1",
+      "scenario": "Valkey有効 + 接続成功 → /health確認",
+      "preconditions": ["VALKEY_ENABLED=true", "Valkeyサーバー起動中"],
+      "steps": [
+        "1. expertAgentアプリケーションを起動",
+        "2. GET /health を呼び出し",
+        "3. レスポンスに valkey.enabled=true, valkey.connected=true が含まれることを確認"
+      ],
+      "expected": "valkey.enabled=true, valkey.connected=true"
+    },
+    {
+      "id": "E2E-2",
+      "scenario": "Valkey有効 + 接続失敗 → Graceful Degradation",
+      "preconditions": ["VALKEY_ENABLED=true", "Valkeyサーバー停止中"],
+      "steps": [
+        "1. expertAgentアプリケーションを起動",
+        "2. アプリケーションが正常に起動することを確認",
+        "3. GET /health を呼び出し",
+        "4. レスポンスに valkey.enabled=true, valkey.connected=false が含まれることを確認"
+      ],
+      "expected": "アプリ起動成功、valkey.enabled=true, valkey.connected=false"
+    },
+    {
+      "id": "E2E-3",
+      "scenario": "Valkey無効 → 接続試行なし",
+      "preconditions": ["VALKEY_ENABLED=false"],
+      "steps": [
+        "1. expertAgentアプリケーションを起動",
+        "2. GET /health を呼び出し",
+        "3. レスポンスに valkey.enabled=false, valkey.connected=false が含まれることを確認"
+      ],
+      "expected": "valkey.enabled=false, valkey.connected=false"
+    },
+    {
+      "id": "UNIT-1",
+      "scenario": "単体テスト実行",
+      "preconditions": [],
+      "steps": [
+        "1. cd expertAgent && uv run pytest tests/unit/ -v を実行",
+        "2. 全テストがパスすることを確認"
+      ],
+      "expected": "全テストパス、失敗0"
+    },
+    {
+      "id": "STATIC-1",
+      "scenario": "静的解析実行",
+      "preconditions": [],
+      "steps": [
+        "1. cd expertAgent && uv run ruff check app/ tests/ を実行",
+        "2. cd expertAgent && uv run mypy app/ を実行",
+        "3. エラーが0件であることを確認"
+      ],
+      "expected": "Ruffエラー0件、MyPyエラー0件"
+    }
+  ],
+  "verification_commands": {
+    "unit_tests": "cd expertAgent && uv run pytest tests/unit/ -v",
+    "static_analysis_ruff": "cd expertAgent && uv run ruff check app/ tests/",
+    "static_analysis_mypy": "cd expertAgent && uv run mypy app/",
+    "health_check": "curl -s http://localhost:8104/health | jq"
+  },
+  "project_path": "expertAgent"
+}
