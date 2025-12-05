@@ -61,9 +61,9 @@ async def create_project(
         encryption_key_secret = Secret(
             project=project.name,
             path="GOOGLE_CREDS_ENCRYPTION_KEY",
-            encrypted_value=encrypted_value,
-            encryption_iv=iv,
-            encryption_tag=tag,
+            encrypted_value=bytes.fromhex(encrypted_value),
+            encryption_iv=bytes.fromhex(iv),
+            encryption_tag=bytes.fromhex(tag),
             version=1,
             updated_by="system",
         )
