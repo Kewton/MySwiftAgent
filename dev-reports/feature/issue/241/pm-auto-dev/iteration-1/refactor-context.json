@@ -1,0 +1,19 @@
+{
+  "issue_number": 241,
+  "refactor_targets": [
+    "expertAgent/app/api/v1/job_generator_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 75.6,
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの可読性確認",
+    "不要なコメントの削除確認",
+    "命名規則の一貫性確認"
+  ],
+  "scope": "minimal",
+  "note": "今回の変更は同期→非同期への単純な置き換えのため、大規模なリファクタリングは不要。コードレビューレベルの確認のみ実施。"
+}

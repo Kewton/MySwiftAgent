@@ -8,11 +8,14 @@ from fastapi import BackgroundTasks, HTTPException
 
 from app.api.v1.job_generator_endpoints import (
     _build_response_from_state,
+    _create_job_in_background,
     generate_job_and_tasks,
+    get_job_creation_status,
 )
 from app.schemas.job_generator import (
     JobGeneratorRequest,
 )
+from app.services.job_creation_state import JobCreationStatus
 
 
 class TestBuildResponseFromState:
@@ -332,3 +335,163 @@ class TestGenerateJobAndTasks:
         assert result.job_id is not None  # job_id is generated upfront
         assert result.job_master_id is None  # Not set until background task completes
         assert "Job creation started" in result.error_message
+
+
+class TestGetJobCreationStatus:
+    """Test get_job_creation_status endpoint with async mock."""
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.job_generator_endpoints.job_state_manager")
+    async def test_get_job_creation_status_success(self, mock_state_manager):
+        """Test successful job status retrieval using get_status_async."""
+        from datetime import datetime
+
+        # Setup mock for get_status_async
+        mock_status = JobCreationStatus(
+            job_id="test-job-id",
+            status="creating",
+            progress=50,
+            start_time=datetime.now(),
+        )
+        mock_state_manager.get_status_async = AsyncMock(return_value=mock_status)
+
+        # Execute
+        result = await get_job_creation_status("test-job-id")
+
+        # Assert
+        mock_state_manager.get_status_async.assert_called_once_with("test-job-id")
+        assert result["job_id"] == "test-job-id"
+        assert result["status"] == "creating"
+        assert result["progress"] == 50
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.job_generator_endpoints.job_state_manager")
+    async def test_get_job_creation_status_not_found(self, mock_state_manager):
+        """Test job status not found raises HTTPException."""
+        # Setup mock to return None (not found)
+        mock_state_manager.get_status_async = AsyncMock(return_value=None)
+
+        # Execute and assert
+        with pytest.raises(HTTPException) as exc_info:
+            await get_job_creation_status("nonexistent-job-id")
+
+        assert exc_info.value.status_code == 404
+        assert "nonexistent-job-id" in exc_info.value.detail
+
+
+class TestCreateJobInBackground:
+    """Test _create_job_in_background function with async mocks."""
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.job_generator_endpoints.job_state_manager")
+    @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
+    @patch("app.api.v1.job_generator_endpoints.create_initial_state")
+    async def test_create_job_in_background_success(
+        self, mock_create_state, mock_create_agent, mock_state_manager
+    ):
+        """Test successful background job creation uses async methods."""
+        # Setup mocks
+        mock_create_state.return_value = {"user_requirement": "Test requirement"}
+
+        mock_agent = AsyncMock()
+        mock_agent.ainvoke = AsyncMock(
+            return_value={
+                "job_id": "test-job-id",
+                "job_master_id": "123",
+                "task_breakdown": [{"task_id": "task_1", "name": "Test Task"}],
+                "evaluation_result": {
+                    "is_valid": True,
+                    "all_tasks_feasible": True,
+                    "infeasible_tasks": [],
+                    "alternative_proposals": [],
+                    "api_extension_proposals": [],
+                },
+                "validation_result": {"is_valid": True, "errors": []},
+            }
+        )
+        mock_create_agent.return_value = mock_agent
+
+        # Setup async mocks for job_state_manager
+        mock_state_manager.update_progress_async = AsyncMock()
+        mock_state_manager.mark_completed_async = AsyncMock()
+        mock_state_manager.mark_failed_async = AsyncMock()
+
+        # Execute
+        await _create_job_in_background(
+            job_id="test-job-id",
+            user_requirement="Test requirement",
+            max_retry=5,
+        )
+
+        # Assert async methods were called
+        assert mock_state_manager.update_progress_async.call_count == 3
+        mock_state_manager.update_progress_async.assert_any_call("test-job-id", 10)
+        mock_state_manager.update_progress_async.assert_any_call("test-job-id", 20)
+        mock_state_manager.update_progress_async.assert_any_call("test-job-id", 90)
+        mock_state_manager.mark_completed_async.assert_called_once()
+        mock_state_manager.mark_failed_async.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.job_generator_endpoints.job_state_manager")
+    @patch("app.api.v1.job_generator_endpoints.create_job_task_generator_agent")
+    @patch("app.api.v1.job_generator_endpoints.create_initial_state")
+    async def test_create_job_in_background_failure(
+        self, mock_create_state, mock_create_agent, mock_state_manager
+    ):
+        """Test failed background job creation uses mark_failed_async."""
+        # Setup mocks
+        mock_create_state.return_value = {"user_requirement": "Test requirement"}
+
+        mock_agent = AsyncMock()
+        mock_agent.ainvoke = AsyncMock(side_effect=Exception("LLM timeout error"))
+        mock_create_agent.return_value = mock_agent
+
+        # Setup async mocks for job_state_manager
+        mock_state_manager.update_progress_async = AsyncMock()
+        mock_state_manager.mark_completed_async = AsyncMock()
+        mock_state_manager.mark_failed_async = AsyncMock()
+
+        # Execute
+        await _create_job_in_background(
+            job_id="test-job-id",
+            user_requirement="Test requirement",
+            max_retry=5,
+        )
+
+        # Assert mark_failed_async was called with error
+        mock_state_manager.mark_failed_async.assert_called_once()
+        call_args = mock_state_manager.mark_failed_async.call_args
+        assert call_args[1]["job_id"] == "test-job-id"
+        assert "LLM timeout error" in call_args[1]["error_message"]
+        mock_state_manager.mark_completed_async.assert_not_called()
+
+
+class TestGenerateJobAndTasksAsync:
+    """Test generate_job_and_tasks endpoint uses async create_job_async."""
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.job_generator_endpoints.job_state_manager")
+    @patch("app.api.v1.job_generator_endpoints.secrets_manager.get_secret")
+    async def test_generate_job_and_tasks_uses_create_job_async(
+        self, mock_get_secret, mock_state_manager
+    ):
+        """Test generate_job_and_tasks uses create_job_async."""
+        # Mock secrets manager
+        mock_get_secret.return_value = "test-anthropic-api-key"
+
+        # Setup async mock for create_job_async
+        mock_state_manager.create_job_async = AsyncMock()
+
+        # Create request
+        request = JobGeneratorRequest(user_requirement="Test requirement", max_retry=5)
+
+        # Create mock BackgroundTasks
+        background_tasks = BackgroundTasks()
+
+        # Execute
+        result = await generate_job_and_tasks(request, background_tasks)
+
+        # Assert create_job_async was called
+        mock_state_manager.create_job_async.assert_called_once()
+        assert result.status == "creating"
+        assert result.job_id is not None

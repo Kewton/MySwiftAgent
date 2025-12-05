@@ -1,0 +1,131 @@
+{
+  "issue_number": 241,
+  "title": "job_generator_endpoints の非同期対応",
+  "acceptance_criteria": [
+    "ジョブ作成フローが非同期メソッドを使用して動作する",
+    "ジョブ作成完了時に Valkey に永続化される",
+    "既存のジョブ作成機能が正常に動作する",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "get_job_creation_status() で get_status_async() を使用",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 96,
+      "before": "status = job_state_manager.get_status(job_id)",
+      "after": "status = await job_state_manager.get_status_async(job_id)"
+    },
+    {
+      "task_id": "1.2",
+      "description": "generate_job_and_tasks() で create_job_async() を使用",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 162,
+      "before": "job_state_manager.create_job(job_id)",
+      "after": "await job_state_manager.create_job_async(job_id)"
+    },
+    {
+      "task_id": "1.3",
+      "description": "_create_job_in_background() の update_progress を非同期化 (10%)",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 216,
+      "before": "job_state_manager.update_progress(job_id, 10)",
+      "after": "await job_state_manager.update_progress_async(job_id, 10)"
+    },
+    {
+      "task_id": "1.4",
+      "description": "_create_job_in_background() の update_progress を非同期化 (20%)",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 223,
+      "before": "job_state_manager.update_progress(job_id, 20)",
+      "after": "await job_state_manager.update_progress_async(job_id, 20)"
+    },
+    {
+      "task_id": "1.5",
+      "description": "_create_job_in_background() の update_progress を非同期化 (90%)",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 232,
+      "before": "job_state_manager.update_progress(job_id, 90)",
+      "after": "await job_state_manager.update_progress_async(job_id, 90)"
+    },
+    {
+      "task_id": "1.6",
+      "description": "_create_job_in_background() の mark_completed を非同期化",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 241,
+      "before": "job_state_manager.mark_completed(...)",
+      "after": "await job_state_manager.mark_completed_async(...)"
+    },
+    {
+      "task_id": "1.7",
+      "description": "_create_job_in_background() の mark_failed を非同期化",
+      "file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "line": 251,
+      "before": "job_state_manager.mark_failed(...)",
+      "after": "await job_state_manager.mark_failed_async(...)"
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テストの非同期モック対応",
+      "file": "expertAgent/tests/unit/test_job_generator_endpoints.py",
+      "changes": [
+        "job_state_manager.get_status → get_status_async モック (AsyncMock)",
+        "job_state_manager.create_job → create_job_async モック (AsyncMock)",
+        "必要に応じてテストケースを更新"
+      ]
+    }
+  ],
+  "test_scenarios": [
+    {
+      "name": "正常系: ジョブ作成 → 進捗更新 → 完了マーク → Valkey 永続化",
+      "description": "ジョブ作成から完了までの一連のフローが非同期メソッドで動作することを確認"
+    },
+    {
+      "name": "正常系: ジョブ作成状態の取得（L1 ヒット）",
+      "description": "get_status_async() でジョブ状態が正しく取得できることを確認"
+    },
+    {
+      "name": "異常系: ジョブ作成失敗時のエラーハンドリング",
+      "description": "mark_failed_async() が正しく呼び出されることを確認"
+    }
+  ],
+  "target_coverage": 90,
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "get_job_creation_status() の非同期対応",
+      "estimated_minutes": 15
+    },
+    {
+      "task_id": "1.2",
+      "description": "generate_job_and_tasks() の非同期対応",
+      "estimated_minutes": 15
+    },
+    {
+      "task_id": "1.3",
+      "description": "_create_job_in_background() の非同期対応",
+      "estimated_minutes": 30
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テストの非同期モック対応",
+      "estimated_minutes": 45
+    },
+    {
+      "task_id": "2.2",
+      "description": "テスト実行と品質確認",
+      "estimated_minutes": 15
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/app/api/v1/job_generator_endpoints.py (7箇所の非同期呼び出し変更)",
+    "expertAgent/tests/unit/test_job_generator_endpoints.py (モックの非同期対応)"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "CI/CD グリーン"
+  ]
+}

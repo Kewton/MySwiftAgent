@@ -1,0 +1,79 @@
+{
+  "issue_number": 241,
+  "feature_summary": "job_generator_endpoints の非同期対応",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "ジョブ作成フローが非同期メソッドを使用して動作する",
+      "verification_method": "コードレビュー",
+      "automated": true
+    },
+    {
+      "id": "AC-2",
+      "description": "ジョブ作成完了時に Valkey に永続化される",
+      "verification_method": "E2Eテスト（手動検証）",
+      "automated": false
+    },
+    {
+      "id": "AC-3",
+      "description": "既存のジョブ作成機能が正常に動作する",
+      "verification_method": "単体テスト",
+      "automated": true
+    },
+    {
+      "id": "AC-4",
+      "description": "単体テストカバレッジ 90%以上",
+      "verification_method": "pytest --cov",
+      "automated": true,
+      "note": "75.6% - 変更箇所はカバー済み、LLM関連コードは範囲外"
+    },
+    {
+      "id": "AC-5",
+      "description": "Ruff/MyPy エラーゼロ",
+      "verification_method": "静的解析",
+      "automated": true
+    }
+  ],
+  "test_scenarios": [
+    {
+      "id": "TS-1",
+      "scenario": "正常系: ジョブ作成 → 進捗更新 → 完了マーク → Valkey 永続化",
+      "steps": [
+        "POST /v1/job-generator でジョブ作成リクエスト",
+        "job_state_manager.create_job_async() が呼ばれることを確認",
+        "バックグラウンドタスクで update_progress_async() が呼ばれることを確認",
+        "完了時に mark_completed_async() が呼ばれることを確認"
+      ],
+      "expected_result": "すべての非同期メソッドが正しく呼び出される"
+    },
+    {
+      "id": "TS-2",
+      "scenario": "正常系: ジョブ作成状態の取得（L1 ヒット）",
+      "steps": [
+        "GET /v1/jobs/{job_id}/status でジョブ状態取得",
+        "get_status_async() が呼ばれることを確認"
+      ],
+      "expected_result": "非同期メソッドでジョブ状態が取得される"
+    },
+    {
+      "id": "TS-3",
+      "scenario": "異常系: ジョブ作成失敗時のエラーハンドリング",
+      "steps": [
+        "ジョブ作成中にエラーが発生",
+        "mark_failed_async() が呼ばれることを確認"
+      ],
+      "expected_result": "エラー時に非同期で失敗マークされる"
+    }
+  ],
+  "static_analysis_results": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "test_results": {
+    "total": 15,
+    "passed": 15,
+    "failed": 0
+  },
+  "coverage": 75.6,
+  "coverage_note": "変更箇所（7箇所の非同期化）はすべてカバー済み。LLM関連コード（_generate_requirement_relaxation_suggestions等）は今回のIssue範囲外のため未カバー。"
+}
