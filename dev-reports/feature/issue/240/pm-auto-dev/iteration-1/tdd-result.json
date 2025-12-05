@@ -1,0 +1,49 @@
+{
+  "status": "success",
+  "coverage": 94.31,
+  "unit_tests": {
+    "total": 26,
+    "passed": 26,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_changed": [
+    "expertAgent/app/api/v1/marp_report_endpoints.py",
+    "expertAgent/tests/unit/test_marp_report_endpoints.py"
+  ],
+  "commits": [
+    "4306051: fix(expertAgent): async migration for get_marp_report_by_job_id endpoint"
+  ],
+  "implementation_summary": {
+    "changes_made": [
+      {
+        "file": "expertAgent/app/api/v1/marp_report_endpoints.py",
+        "line": 290,
+        "change": "Changed job_state_manager.get_status(job_id) to await job_state_manager.get_status_async(job_id)"
+      },
+      {
+        "file": "expertAgent/app/api/v1/marp_report_endpoints.py",
+        "lines": "293-295",
+        "change": "Improved 404 error message to 'Job not found or expired. Job results are kept for 24 hours.' and added DEBUG log"
+      }
+    ],
+    "tests_added": [
+      "test_get_marp_report_by_job_id_success",
+      "test_get_marp_report_by_job_id_not_found",
+      "test_get_marp_report_by_job_id_not_completed",
+      "test_get_marp_report_by_job_id_no_result",
+      "test_get_marp_report_by_job_id_template_error"
+    ]
+  },
+  "acceptance_criteria_verified": {
+    "async_call": true,
+    "improved_error_message": true,
+    "existing_behavior_maintained": true,
+    "coverage_90_percent": true,
+    "ruff_mypy_zero_errors": true
+  },
+  "message": "TDD implementation completed successfully. Coverage 94.31% exceeds 90% target. All 5 test cases for get_marp_report_by_job_id added."
+}

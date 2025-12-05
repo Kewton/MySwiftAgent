@@ -286,11 +286,12 @@ async def get_marp_report_by_job_id(
     """
     start_time = time.time()
 
-    # Get job status from state manager
-    job_status = job_state_manager.get_status(job_id)
+    # Get job status from state manager (async for 2-layer cache support)
+    job_status = await job_state_manager.get_status_async(job_id)
 
     if not job_status:
-        msg = f"Job ID not found: {job_id}"
+        msg = "Job not found or expired. Job results are kept for 24 hours."
+        logger.debug(f"Job not found: job_id={job_id}")
         raise HTTPException(status_code=404, detail=msg)
 
     if job_status.status != "completed":
