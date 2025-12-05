@@ -188,6 +188,35 @@ class JobCreationStateManager:
         status.end_time = datetime.now()
         status.error_message = error_message
 
+    # ----- Public Configuration Methods (Issue #244) -----
+
+    def configure_valkey(
+        self,
+        client: "ValkeyClient",
+        ttl_seconds: int = DEFAULT_TTL_SECONDS,
+    ) -> None:
+        """Configure Valkey client for L2 cache.
+
+        This method allows configuring the Valkey client after initialization,
+        which is useful for lifespan-based initialization in main.py.
+
+        Args:
+            client: ValkeyClient instance for L2 cache operations
+            ttl_seconds: TTL for Valkey cache in seconds (default: 24 hours)
+        """
+        self._valkey_client = client
+        self._ttl_seconds = ttl_seconds
+        logger.info(f"Valkey client configured (TTL: {ttl_seconds}s)")
+
+    @property
+    def is_valkey_connected(self) -> bool:
+        """Check if Valkey is currently connected.
+
+        Returns:
+            True if Valkey client is configured and connected
+        """
+        return self._valkey_connected
+
     # ----- Connection Management -----
 
     async def connect_valkey(self) -> None:
