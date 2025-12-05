@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -13,8 +13,10 @@ from app.api.v1.marp_report_endpoints import (
     _extract_template_data,
     _load_job_result,
     generate_marp_report,
+    get_marp_report_by_job_id,
 )
 from app.schemas.marp_report import MarpReportRequest, MarpReportResponse
+from app.services.job_creation_state import JobCreationStatus
 
 
 class TestLoadJobResult:
@@ -333,5 +335,173 @@ class TestGenerateMarpReport:
         with pytest.raises(HTTPException) as exc_info:
             await generate_marp_report(request)
 
+        assert exc_info.value.status_code == 500
+        assert "internal server error" in str(exc_info.value.detail).lower()
+
+
+class TestGetMarpReportByJobId:
+    """Test get_marp_report_by_job_id endpoint."""
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.marp_report_endpoints.job_state_manager")
+    @patch("app.api.v1.marp_report_endpoints.jinja_env")
+    async def test_get_marp_report_by_job_id_success(
+        self, mock_jinja_env: MagicMock, mock_state_manager: MagicMock
+    ):
+        """Test successful retrieval of completed job's Marp report."""
+        from datetime import datetime
+
+        # Setup mock job status with completed state
+        mock_status = JobCreationStatus(
+            job_id="test-job-123",
+            status="completed",
+            progress=100,
+            start_time=datetime.now(),
+            result={
+                "status": "failed",
+                "error_message": "Job generation did not complete successfully.",
+                "infeasible_tasks": [{"task_id": "task_1", "task_name": "Test Task"}],
+                "requirement_relaxation_suggestions": [
+                    {
+                        "relaxation_type": "automation_level_reduction",
+                        "original_requirement": "Original task",
+                        "relaxed_requirement": "Relaxed task",
+                        "feasibility_after_relaxation": "High",
+                        "recommendation_level": "Highly Recommended",
+                    }
+                ],
+                "job_id": "test-job-123",
+            },
+        )
+
+        # Mock async method
+        mock_state_manager.get_status_async = AsyncMock(return_value=mock_status)
+
+        # Mock template rendering
+        mock_template = MagicMock()
+        mock_template.render.return_value = "---\nmarp: true\n---\n# Test Report"
+        mock_jinja_env.get_template.return_value = mock_template
+
+        result = await get_marp_report_by_job_id("test-job-123")
+
+        # Verify async method was called
+        mock_state_manager.get_status_async.assert_called_once_with("test-job-123")
+
+        # Verify response
+        assert result.job_id == "test-job-123"
+        assert result.markdown == "---\nmarp: true\n---\n# Test Report"
+        assert result.slide_count > 0
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.marp_report_endpoints.job_state_manager")
+    async def test_get_marp_report_by_job_id_not_found(
+        self, mock_state_manager: MagicMock
+    ):
+        """Test 404 error with improved message when job not found."""
+        # Mock async method returning None (job not found)
+        mock_state_manager.get_status_async = AsyncMock(return_value=None)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_marp_report_by_job_id("nonexistent-job-id")
+
+        # Verify async method was called
+        mock_state_manager.get_status_async.assert_called_once_with("nonexistent-job-id")
+
+        # Verify error response
+        assert exc_info.value.status_code == 404
+        assert "Job not found or expired" in str(exc_info.value.detail)
+        assert "24 hours" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.marp_report_endpoints.job_state_manager")
+    async def test_get_marp_report_by_job_id_not_completed(
+        self, mock_state_manager: MagicMock
+    ):
+        """Test 400 error when job is not yet completed."""
+        from datetime import datetime
+
+        # Setup mock job status with 'creating' state
+        mock_status = JobCreationStatus(
+            job_id="in-progress-job",
+            status="creating",
+            progress=50,
+            start_time=datetime.now(),
+        )
+
+        mock_state_manager.get_status_async = AsyncMock(return_value=mock_status)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_marp_report_by_job_id("in-progress-job")
+
+        # Verify async method was called
+        mock_state_manager.get_status_async.assert_called_once_with("in-progress-job")
+
+        # Verify error response
+        assert exc_info.value.status_code == 400
+        assert "not completed" in str(exc_info.value.detail).lower()
+        assert "creating" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.marp_report_endpoints.job_state_manager")
+    async def test_get_marp_report_by_job_id_no_result(
+        self, mock_state_manager: MagicMock
+    ):
+        """Test 404 error when job completed but has no result data."""
+        from datetime import datetime
+
+        # Setup mock job status with completed state but no result
+        mock_status = JobCreationStatus(
+            job_id="job-no-result",
+            status="completed",
+            progress=100,
+            start_time=datetime.now(),
+            result=None,  # No result available
+        )
+
+        mock_state_manager.get_status_async = AsyncMock(return_value=mock_status)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_marp_report_by_job_id("job-no-result")
+
+        # Verify async method was called
+        mock_state_manager.get_status_async.assert_called_once_with("job-no-result")
+
+        # Verify error response
+        assert exc_info.value.status_code == 404
+        assert "job-no-result" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.marp_report_endpoints.job_state_manager")
+    @patch("app.api.v1.marp_report_endpoints.jinja_env")
+    async def test_get_marp_report_by_job_id_template_error(
+        self, mock_jinja_env: MagicMock, mock_state_manager: MagicMock
+    ):
+        """Test 500 error when template rendering fails."""
+        from datetime import datetime
+
+        # Setup mock job status with completed state
+        mock_status = JobCreationStatus(
+            job_id="job-template-error",
+            status="completed",
+            progress=100,
+            start_time=datetime.now(),
+            result={
+                "status": "failed",
+                "infeasible_tasks": [],
+                "requirement_relaxation_suggestions": [],
+            },
+        )
+
+        mock_state_manager.get_status_async = AsyncMock(return_value=mock_status)
+
+        # Mock template to raise exception
+        mock_template = MagicMock()
+        mock_template.render.side_effect = Exception("Template rendering failed")
+        mock_jinja_env.get_template.return_value = mock_template
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_marp_report_by_job_id("job-template-error")
+
+        # Verify error response
         assert exc_info.value.status_code == 500
         assert "internal server error" in str(exc_info.value.detail).lower()
