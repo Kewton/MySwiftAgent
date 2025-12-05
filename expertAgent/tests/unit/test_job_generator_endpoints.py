@@ -483,9 +483,7 @@ class TestGenerateJobAndTasksAsync:
         mock_state_manager.create_job_async = AsyncMock()
 
         # Create request
-        request = JobGeneratorRequest(
-            user_requirement="Test requirement", max_retry=5
-        )
+        request = JobGeneratorRequest(user_requirement="Test requirement", max_retry=5)
 
         # Create mock BackgroundTasks
         background_tasks = BackgroundTasks()
