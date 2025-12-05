@@ -93,7 +93,7 @@ async def get_job_creation_status(job_id: str) -> dict[str, Any]:
     """
     logger.info(f"Status check requested for job_id: {job_id}")
 
-    status = job_state_manager.get_status(job_id)
+    status = await job_state_manager.get_status_async(job_id)
     if not status:
         logger.warning(f"Job ID {job_id} not found")
         raise HTTPException(
@@ -159,7 +159,7 @@ async def generate_job_and_tasks(
         logger.info(f"Generated job_id: {job_id}")
 
         # Create job creation tracking entry
-        job_state_manager.create_job(job_id)
+        await job_state_manager.create_job_async(job_id)
 
         # Start background job creation
         background_tasks.add_task(
@@ -213,14 +213,14 @@ async def _create_job_in_background(
         )
 
         # Update progress: 10% - Initial state created
-        job_state_manager.update_progress(job_id, 10)
+        await job_state_manager.update_progress_async(job_id, 10)
 
         # Create and invoke LangGraph agent
         logger.info(f"[BG:{job_id}] Creating Job/Task Generator Agent")
         agent = create_job_task_generator_agent()
 
         # Update progress: 20% - Agent created
-        job_state_manager.update_progress(job_id, 20)
+        await job_state_manager.update_progress_async(job_id, 20)
 
         logger.info(f"[BG:{job_id}] Invoking LangGraph agent")
         # Phase 8: Set recursion_limit to 100 (increased due to multiple LLM calls and evaluations)
@@ -229,7 +229,7 @@ async def _create_job_in_background(
         )
 
         # Update progress: 90% - Agent execution completed
-        job_state_manager.update_progress(job_id, 90)
+        await job_state_manager.update_progress_async(job_id, 90)
 
         logger.info(f"[BG:{job_id}] LangGraph agent execution completed")
         logger.debug(f"[BG:{job_id}] Final state keys: {final_state.keys()}")
@@ -238,7 +238,7 @@ async def _create_job_in_background(
         response = _build_response_from_state(final_state)
 
         # Update progress: 100% - Completed
-        job_state_manager.mark_completed(
+        await job_state_manager.mark_completed_async(
             job_id=job_id,
             job_master_id=response.job_master_id,
             result=response.model_dump(),
@@ -248,7 +248,7 @@ async def _create_job_in_background(
 
     except Exception as e:
         logger.error(f"[BG:{job_id}] Job creation failed: {e}", exc_info=True)
-        job_state_manager.mark_failed(
+        await job_state_manager.mark_failed_async(
             job_id=job_id,
             error_message=f"Job creation failed: {str(e)}",
         )
