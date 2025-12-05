@@ -1,0 +1,22 @@
+{
+  "issue_number": 240,
+  "refactor_targets": [
+    "expertAgent/app/api/v1/marp_report_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 94.31,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの簡潔性を維持",
+    "不要な重複を削除（該当があれば）",
+    "SOLID原則への準拠確認"
+  ],
+  "constraints": [
+    "既存テストが引き続きパスすること",
+    "カバレッジが90%以上を維持すること",
+    "静的解析エラーが0件であること"
+  ],
+  "notes": "変更は軽微（非同期呼び出しとエラーメッセージ改善のみ）のため、大規模なリファクタリングは不要。コード品質の確認が主目的。"
+}

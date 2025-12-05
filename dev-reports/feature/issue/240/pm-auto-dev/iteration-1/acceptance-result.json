@@ -1,0 +1,133 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario_id": "AC-1",
+      "scenario": "Async Method Call - get_marp_report_by_job_id uses await job_state_manager.get_status_async(job_id)",
+      "type": "code_review",
+      "result": "passed",
+      "evidence": "Line 290-291 in marp_report_endpoints.py: 'job_status = await job_state_manager.get_status_async(job_id)'"
+    },
+    {
+      "scenario_id": "AC-2",
+      "scenario": "Improved Error Message - 404 error message is 'Job not found or expired. Job results are kept for 24 hours.'",
+      "type": "code_review",
+      "result": "passed",
+      "evidence": "Line 293 in marp_report_endpoints.py: msg = \"Job not found or expired. Job results are kept for 24 hours.\""
+    },
+    {
+      "scenario_id": "AC-PRACTICAL-1",
+      "scenario": "Practical API Test - 404 Error with Improved Message via Real HTTP Request",
+      "type": "practical_api_test",
+      "command": "curl -s http://localhost:8104/v1/marp-report/nonexistent-job-id-12345",
+      "result": "passed",
+      "evidence": "HTTP 404 returned with response: {\"detail\":\"Job not found or expired. Job results are kept for 24 hours.\",\"is_json_guaranteed\":true,\"middleware_layer\":\"http_exception_handler\"}"
+    },
+    {
+      "scenario_id": "AC-PRACTICAL-2",
+      "scenario": "Practical API Test - DEBUG Log Output for 404 Case",
+      "type": "practical_api_test",
+      "result": "passed",
+      "evidence": "Server log shows: '[DEBUG] Job not found: job_id=nonexistent-job-id-12345'"
+    },
+    {
+      "scenario_id": "AC-PRACTICAL-3",
+      "scenario": "Practical API Test - Async Method Invocation via L1/L2 Cache Logs",
+      "type": "practical_api_test",
+      "result": "passed",
+      "evidence": "Server log shows async cache flow: 'L1 cache miss: job nonexistent-job-id-12345, checking L2' and 'L2 read: skipped (Valkey unavailable)'"
+    },
+    {
+      "scenario_id": "AC-3",
+      "scenario": "Unit Tests - All tests pass",
+      "type": "test_execution",
+      "command": "cd expertAgent && uv run pytest tests/unit/test_marp_report_endpoints.py -v",
+      "result": "passed",
+      "evidence": "26 passed, 0 failed in 0.04s"
+    },
+    {
+      "scenario_id": "AC-4",
+      "scenario": "Coverage Check - 90%+ coverage",
+      "type": "coverage_check",
+      "command": "cd expertAgent && uv run pytest tests/unit/test_marp_report_endpoints.py -v --cov=app.api.v1.marp_report_endpoints --cov-report=term-missing",
+      "result": "passed",
+      "evidence": "Coverage: 94.31% (123 statements, 7 missed). Missing lines: 68-75, 126, 130, 162, 342"
+    },
+    {
+      "scenario_id": "AC-5",
+      "scenario": "Static Analysis (Ruff) - 0 errors",
+      "type": "static_analysis",
+      "command": "cd expertAgent && uv run ruff check app/api/v1/marp_report_endpoints.py tests/unit/test_marp_report_endpoints.py",
+      "result": "passed",
+      "evidence": "All checks passed!"
+    },
+    {
+      "scenario_id": "AC-6",
+      "scenario": "Type Check (MyPy) - 0 errors",
+      "type": "static_analysis",
+      "command": "cd expertAgent && uv run mypy app/api/v1/marp_report_endpoints.py",
+      "result": "passed",
+      "evidence": "Success: no issues found in 1 source file"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "GET /v1/marp-report/{job_id} uses async JobCreationStateManager call",
+      "verified": true,
+      "evidence": "Code uses 'await job_state_manager.get_status_async(job_id)' at line 290"
+    },
+    {
+      "criterion": "404 error message is 'Job not found or expired. Job results are kept for 24 hours.'",
+      "verified": true,
+      "evidence": "Error message correctly set at line 293"
+    },
+    {
+      "criterion": "Existing normal operation is maintained",
+      "verified": true,
+      "evidence": "All 26 unit tests passed including success path tests"
+    }
+  ],
+  "quality_criteria_status": [
+    {
+      "criterion": "Unit test coverage 90%+",
+      "verified": true,
+      "evidence": "Coverage is 94.31%"
+    },
+    {
+      "criterion": "Ruff/MyPy errors zero",
+      "verified": true,
+      "evidence": "Ruff: All checks passed. MyPy: no issues found"
+    }
+  ],
+  "evidence_files": [
+    "expertAgent/app/api/v1/marp_report_endpoints.py",
+    "expertAgent/tests/unit/test_marp_report_endpoints.py"
+  ],
+  "summary": {
+    "total_test_cases": 9,
+    "passed": 9,
+    "failed": 0,
+    "coverage": 94.31,
+    "tests_passed": 26,
+    "tests_failed": 0,
+    "practical_api_tests": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    }
+  },
+  "practical_test_summary": {
+    "test_date": "2025-12-05T11:40:50+09:00",
+    "service_port": 8104,
+    "tests_performed": [
+      "HTTP 404 response with improved error message",
+      "DEBUG log output verification",
+      "Async cache flow verification (L1/L2)"
+    ],
+    "limitations": [
+      "Full E2E test with completed job requires graphAiServer and jobqueue services",
+      "Valkey unavailable in test environment - L2 cache skipped"
+    ]
+  },
+  "message": "All acceptance criteria verified successfully including 3 practical API tests. Issue #240 implementation is complete and meets all quality standards."
+}

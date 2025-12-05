@@ -1,0 +1,61 @@
+{
+  "issue_number": 240,
+  "feature_summary": "marp_report_endpoints の非同期対応",
+  "acceptance_criteria": [
+    "GET /v1/marp-report/{job_id} が非同期で JobCreationStateManager を呼び出す",
+    "404 エラー時のメッセージが「Job not found or expired. Job results are kept for 24 hours.」に変更される",
+    "既存の正常系動作が維持される"
+  ],
+  "quality_criteria": [
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ"
+  ],
+  "test_scenarios": [
+    {
+      "scenario_id": "AC-1",
+      "description": "非同期メソッド呼び出しの確認",
+      "type": "code_review",
+      "verification": "get_marp_report_by_job_id関数でawait job_state_manager.get_status_async(job_id)が呼び出されていること"
+    },
+    {
+      "scenario_id": "AC-2",
+      "description": "404エラーメッセージの確認",
+      "type": "code_review",
+      "verification": "404エラー時のメッセージが 'Job not found or expired. Job results are kept for 24 hours.' であること"
+    },
+    {
+      "scenario_id": "AC-3",
+      "description": "単体テストの実行",
+      "type": "test_execution",
+      "command": "cd expertAgent && uv run pytest tests/unit/test_marp_report_endpoints.py -v",
+      "expected_result": "全テストがパス"
+    },
+    {
+      "scenario_id": "AC-4",
+      "description": "カバレッジの確認",
+      "type": "coverage_check",
+      "command": "cd expertAgent && uv run pytest tests/unit/test_marp_report_endpoints.py -v --cov=app/api/v1/marp_report_endpoints --cov-report=term-missing",
+      "expected_result": "90%以上"
+    },
+    {
+      "scenario_id": "AC-5",
+      "description": "静的解析（Ruff）",
+      "type": "static_analysis",
+      "command": "cd expertAgent && uv run ruff check app/api/v1/marp_report_endpoints.py tests/unit/test_marp_report_endpoints.py",
+      "expected_result": "エラー0件"
+    },
+    {
+      "scenario_id": "AC-6",
+      "description": "型チェック（MyPy）",
+      "type": "static_analysis",
+      "command": "cd expertAgent && uv run mypy app/api/v1/marp_report_endpoints.py",
+      "expected_result": "エラー0件"
+    }
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 94.31,
+    "tests_passed": 26,
+    "tests_failed": 0
+  }
+}
