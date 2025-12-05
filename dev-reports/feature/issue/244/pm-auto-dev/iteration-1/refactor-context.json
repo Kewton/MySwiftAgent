@@ -1,0 +1,27 @@
+{
+  "issue_number": 244,
+  "refactor_targets": [
+    "expertAgent/app/main.py",
+    "expertAgent/app/services/job_creation_state.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 82.97,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle - lifespan function already delegates to existing methods",
+    "Dependency Injection - ValkeyClient is injected via configure_valkey()"
+  ],
+  "improvement_goals": [
+    "Review code for potential improvements",
+    "Ensure no code duplication",
+    "Verify proper error handling",
+    "Check for unused imports or variables"
+  ],
+  "constraints": [
+    "Minimal changes - Issue #244 is XS size (1 Story Point)",
+    "Do not over-engineer",
+    "Keep existing API contracts"
+  ],
+  "notes": "This is a small issue focused on initialization. Major refactoring not expected. Focus on code quality review and minor improvements if any."
+}
