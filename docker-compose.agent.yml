@@ -43,6 +43,12 @@ services:
       # Valkey Configuration (Conversation persistence) - Platform service
       - VALKEY_URL=redis://valkey:6379
       - CONVERSATION_STORE_TYPE=${CONVERSATION_STORE_TYPE:-valkey}
+      # Valkey for JobCreationStateManager persistence (Issue #244)
+      - VALKEY_ENABLED=${VALKEY_ENABLED:-true}
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+      - VALKEY_DB=0
+      - VALKEY_TTL=86400
       # MyVault Configuration (Priority for secrets management) - Platform service
       - MYVAULT_ENABLED=${MYVAULT_ENABLED:-true}
       - MYVAULT_BASE_URL=http://myvault:8000

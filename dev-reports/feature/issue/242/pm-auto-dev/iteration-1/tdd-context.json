@@ -1,0 +1,98 @@
+{
+  "issue_number": 242,
+  "acceptance_criteria": [
+    "結合テストが Valkey コンテナを使用して実行される",
+    "サーバー再起動後もジョブ状態が取得できることを検証",
+    "結合テストカバレッジ 50%以上"
+  ],
+  "implementation_tasks": [
+    "結合テスト作成 - Valkey を使用した永続化テスト",
+    "結合テスト作成 - サーバー再起動シミュレーションテスト",
+    "受入テストシナリオ作成 - ジョブ作成 → サーバー再起動 → スライド表示",
+    "受入テストシナリオ作成 - ジョブ作成 → 24時間経過 → スライド表示失敗"
+  ],
+  "test_cases": [
+    "正常系: ジョブ作成 → Valkey 永続化 → インメモリクリア → Valkey から復元",
+    "正常系: マルチインスタンスシミュレーション（異なるマネージャーインスタンスからアクセス）",
+    "異常系: Valkey ダウン時のフォールバック動作"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "テストファイル作成と基本構造",
+      "estimated_hours": 0.33,
+      "deliverables": ["expertAgent/tests/integration/test_marp_report_persistence.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "L1/L2 キャッシュ永続化テスト",
+      "estimated_hours": 0.5,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "サーバー再起動シミュレーションテスト",
+      "estimated_hours": 0.5,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "マルチインスタンスシミュレーションテスト",
+      "estimated_hours": 0.33,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "Valkey ダウン時フォールバックテスト",
+      "estimated_hours": 0.33,
+      "deliverables": [],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "受入テストスクリプト作成",
+      "estimated_hours": 0.67,
+      "deliverables": ["tests/acceptance/test_issue_193_acceptance.sh"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "受入テストドキュメント作成",
+      "estimated_hours": 0.33,
+      "deliverables": ["tests/acceptance/README_issue_193.md"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "結合テスト実行・確認",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["1.2", "1.3", "1.4", "1.5"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "静的解析・品質チェック",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["2.2", "3.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/tests/integration/test_marp_report_persistence.py",
+    "tests/acceptance/test_issue_193_acceptance.sh",
+    "tests/acceptance/README_issue_193.md"
+  ],
+  "definition_of_done": [
+    "すべての結合テストがパス",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "CI/CD グリーン",
+    "受入テストスクリプト作成完了",
+    "受入テストドキュメント作成完了"
+  ],
+  "target_coverage": 50
+}
