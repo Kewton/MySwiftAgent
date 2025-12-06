@@ -202,4 +202,73 @@ git push
 
 ---
 
+## 🐳 Docker操作のベストプラクティス
+
+### ⚠️ 禁止事項
+
+| 操作 | リスク | 代替手段 |
+|------|--------|---------|
+| `docker rm -f <container>` | データ消失、設定喪失 | `make down` または `make stop` |
+| `docker volume rm` | 永続データ完全消失 | `make clean`（確認プロンプト付き） |
+| `docker system prune -a` | 全イメージ・ボリューム削除 | 個別に `docker image prune` |
+
+### ✅ 推奨手順
+
+#### コンテナ名競合が発生した場合
+
+```bash
+# ❌ 禁止: 強制削除（データ消失リスク）
+docker rm -f myswiftagent-myvault
+
+# ✅ 推奨: docker compose で安全に停止
+make down
+# または
+make stop  # コンテナを停止（削除せず保持）
+```
+
+#### コンテナの状態確認
+
+```bash
+# 起動中のコンテナ確認
+make status
+
+# 停止中のコンテナも含めて確認
+docker ps -a | grep myswiftagent
+```
+
+#### 既存コンテナの再利用
+
+```bash
+# 停止中のコンテナがある場合は再起動
+docker start myswiftagent-myvault
+
+# または make で全体を起動
+make dev-all
+```
+
+### 📋 Docker操作チェックリスト
+
+コンテナを削除する前に必ず確認：
+
+- [ ] `docker ps -a` で停止状態のコンテナを確認
+- [ ] 重要なデータがボリュームマウントされているか確認
+- [ ] `make stop` で停止のみ可能か検討
+- [ ] 削除が必要な場合は `make down` を使用
+
+### 🔄 データ永続化の確認
+
+```bash
+# ボリュームマウント先の確認
+ls -la docker-compose-data/
+
+# 各サービスのデータ
+docker-compose-data/
+├── myvault/       # APIキー、シークレット
+├── jobqueue/      # ジョブキューデータ
+├── expertagent/   # トークン、ログ
+└── valkey/        # キャッシュデータ（./valkey/data/）
+```
+
+---
+
 [← 並列開発環境](./05-worktree-guide.md) | [CLAUDE.md](../../CLAUDE.md) | [次: ドキュメント管理 →](./07-documentation-rules.md)

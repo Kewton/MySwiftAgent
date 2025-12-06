@@ -52,8 +52,9 @@ DOCKER_COMPOSE := docker compose
 .PHONY: help
 .PHONY: dev-platform dev-agent dev-frontend dev-all
 .PHONY: down down-platform down-agent down-frontend
+.PHONY: stop stop-platform stop-agent stop-frontend
 .PHONY: logs logs-platform logs-agent logs-frontend
-.PHONY: status rebuild clean network
+.PHONY: status rebuild clean clean-safe network
 .PHONY: _check-platform _check-agent _wait-platform _wait-agent
 .PHONY: acceptance-test-platform acceptance-test-agent acceptance-test-e2e
 .PHONY: acceptance-test-python acceptance-test-frontend acceptance-test-all
@@ -73,11 +74,14 @@ help: ## Show this help message
 	@echo "Shutdown Commands:"
 	@grep -E '^down[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
+	@echo "Safe Stop Commands (Data Preserved):"
+	@grep -E '^stop[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
 	@echo "Log Commands:"
 	@grep -E '^logs[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Utility Commands:"
-	@grep -E '^(status|rebuild|clean|network):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^(status|rebuild|clean|clean-safe|network):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Acceptance Test Commands:"
 	@grep -E '^acceptance-test[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -164,6 +168,32 @@ down-frontend: ## Stop Frontend layer
 	@echo "Frontend layer stopped"
 
 # =============================================================================
+# Safe Stop Targets (Containers preserved, data retained)
+# =============================================================================
+
+stop: ## Stop all containers without removing (data preserved)
+	@echo "Stopping all containers (preserving data)..."
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) stop
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) stop
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) stop
+	@echo "All containers stopped (use 'make dev-all' to restart)"
+
+stop-platform: ## Stop Platform containers without removing
+	@echo "Stopping Platform containers..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) stop
+	@echo "Platform containers stopped"
+
+stop-agent: ## Stop Agent containers without removing
+	@echo "Stopping Agent containers..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) stop
+	@echo "Agent containers stopped"
+
+stop-frontend: ## Stop Frontend containers without removing
+	@echo "Stopping Frontend containers..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) stop
+	@echo "Frontend containers stopped"
+
+# =============================================================================
 # Log Targets
 # =============================================================================
 
@@ -206,7 +236,20 @@ rebuild: ## Rebuild all Docker images (no cache)
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) build --no-cache
 	@echo "All images rebuilt successfully"
 
-clean: down ## Stop all services and remove volumes/orphans
+clean-safe: down ## Stop all services and remove orphans (preserve volumes)
+	@echo "Cleaning up (preserving volumes)..."
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) down --remove-orphans
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) down --remove-orphans
+	-$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) down --remove-orphans
+	@echo "Cleanup complete (volumes preserved)"
+
+clean: ## Stop all services and remove volumes/orphans (WARNING: data loss)
+	@echo ""
+	@echo "⚠️  WARNING: This will remove all containers AND volumes!"
+	@echo "   Data in docker-compose-data/ will be preserved (host mounts)."
+	@echo "   Named volumes (if any) will be DELETED."
+	@echo ""
+	@read -p "Are you sure you want to continue? [y/N] " confirm && [ "$$confirm" = "y" ] || (echo "Aborted." && exit 1)
 	@echo "Cleaning up..."
 	-$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) down -v --remove-orphans
 	-$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) down -v --remove-orphans
