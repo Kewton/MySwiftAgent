@@ -1,0 +1,20 @@
+{
+  "issue_number": 242,
+  "refactor_targets": [
+    "expertAgent/tests/integration/test_marp_report_persistence.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 50,
+    "complexity_score": 5
+  },
+  "design_patterns_to_apply": [
+    "Arrange-Act-Assert pattern in tests",
+    "Fixture reusability"
+  ],
+  "improvement_goals": [
+    "テストコードの可読性向上",
+    "重複コードの削減",
+    "テストフィクスチャの最適化"
+  ],
+  "note": "This is a test-only Issue. Refactoring scope is limited to test code quality improvements."
+}

@@ -1,0 +1,32 @@
+{
+  "issue_number": 242,
+  "feature_summary": "結合テスト・受入テスト作成 - サーバー再起動後のスライド表示、ページリロード後の動作を検証",
+  "acceptance_criteria": [
+    "結合テストが Valkey コンテナを使用して実行される",
+    "サーバー再起動後もジョブ状態が取得できることを検証",
+    "結合テストカバレッジ 50%以上"
+  ],
+  "test_scenarios": [
+    "シナリオ1: ジョブ作成 → Valkey 永続化 → インメモリクリア → Valkey から復元",
+    "シナリオ2: 異なる StateManager インスタンスからのアクセス（マルチインスタンスシミュレーション）",
+    "シナリオ3: Valkey ダウン時のフォールバック動作"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "integration_tests": {
+      "total": 10,
+      "passed": 4,
+      "skipped": 6,
+      "failed": 0
+    },
+    "static_analysis": {
+      "ruff_errors": 0,
+      "mypy_errors": 0
+    }
+  },
+  "files_to_verify": [
+    "expertAgent/tests/integration/test_marp_report_persistence.py",
+    "tests/acceptance/test_issue_193_acceptance.sh",
+    "tests/acceptance/README_issue_193.md"
+  ]
+}
