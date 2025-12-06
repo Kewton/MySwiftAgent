@@ -9,6 +9,8 @@ This module tests job state persistence scenarios:
 - Valkey down fallback behavior
 """
 
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -18,7 +20,50 @@ from app.services.job_creation_state import (
 )
 from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
 
+# ============================================================================
+# Test Constants
+# ============================================================================
+DEFAULT_TTL_SECONDS = 3600
+TEST_KEY_PREFIX = "test:job:"
 
+
+# ============================================================================
+# Helper Functions / Context Managers
+# ============================================================================
+@asynccontextmanager
+async def create_test_manager(
+    valkey_client: ValkeyClient,
+    key_prefix: str = TEST_KEY_PREFIX,
+    ttl_seconds: int = DEFAULT_TTL_SECONDS,
+) -> AsyncGenerator[JobCreationStateManager, None]:
+    """Create a JobCreationStateManager for testing with automatic cleanup.
+
+    This context manager handles connection and disconnection automatically,
+    reducing boilerplate in tests and ensuring proper cleanup.
+
+    Args:
+        valkey_client: ValkeyClient instance for L2 cache.
+        key_prefix: Redis key prefix for test isolation.
+        ttl_seconds: TTL for cached entries.
+
+    Yields:
+        JobCreationStateManager: Configured and connected manager instance.
+    """
+    manager = JobCreationStateManager(
+        valkey_client=valkey_client,
+        ttl_seconds=ttl_seconds,
+        key_prefix=key_prefix,
+    )
+    await manager.connect_valkey()
+    try:
+        yield manager
+    finally:
+        await manager.disconnect_valkey()
+
+
+# ============================================================================
+# Test Classes
+# ============================================================================
 @pytest.mark.integration
 class TestJobStatePersistence:
     """Test job state persistence with Valkey (L1/L2 cache)."""
@@ -28,33 +73,24 @@ class TestJobStatePersistence:
         valkey_test_client: ValkeyClient,
     ) -> None:
         """Test job creation is persisted to Valkey (L2 cache)."""
-        # Arrange: Create manager with Valkey client
-        manager = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=3600,
-            key_prefix="test:job:",
-        )
-        await manager.connect_valkey()
-
+        # Arrange
         job_id = "persistence-test-001"
 
-        # Act: Create job using async method
-        await manager.create_job_async(job_id)
+        async with create_test_manager(valkey_test_client) as manager:
+            # Act: Create job using async method
+            await manager.create_job_async(job_id)
 
-        # Assert: Job exists in L1 cache
-        assert job_id in manager._storage
-        l1_status = manager._storage[job_id]
-        assert l1_status.status == "creating"
-        assert l1_status.progress == 0
+            # Assert: Job exists in L1 cache
+            assert job_id in manager._storage
+            l1_status = manager._storage[job_id]
+            assert l1_status.status == "creating"
+            assert l1_status.progress == 0
 
-        # Assert: Job exists in L2 cache (Valkey)
-        valkey_data = await valkey_test_client.get(f"test:job:{job_id}")
-        assert valkey_data is not None
-        assert valkey_data["job_id"] == job_id
-        assert valkey_data["status"] == "creating"
-
-        # Cleanup
-        await manager.disconnect_valkey()
+            # Assert: Job exists in L2 cache (Valkey)
+            valkey_data = await valkey_test_client.get(f"{TEST_KEY_PREFIX}{job_id}")
+            assert valkey_data is not None
+            assert valkey_data["job_id"] == job_id
+            assert valkey_data["status"] == "creating"
 
     async def test_job_restore_from_valkey_after_memory_clear(
         self,
@@ -67,49 +103,42 @@ class TestJobStatePersistence:
         2. Clear L1 (in-memory) cache
         3. Retrieve job -> should restore from L2 (Valkey)
         """
-        # Arrange: Create manager and job
-        manager = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=3600,
-            key_prefix="test:job:",
-        )
-        await manager.connect_valkey()
-
+        # Arrange
         job_id = "restore-test-001"
-        await manager.create_job_async(job_id)
+        expected_result = {"workflow_id": "wf-test-456"}
+        expected_job_master_id = "jm-test-123"
 
-        # Act: Update progress and mark completed
-        await manager.update_progress_async(job_id, 50)
-        await manager.mark_completed_async(
-            job_id,
-            job_master_id="jm-test-123",
-            result={"workflow_id": "wf-test-456"},
-        )
+        async with create_test_manager(valkey_test_client) as manager:
+            # Setup: Create and complete job
+            await manager.create_job_async(job_id)
+            await manager.update_progress_async(job_id, 50)
+            await manager.mark_completed_async(
+                job_id,
+                job_master_id=expected_job_master_id,
+                result=expected_result,
+            )
 
-        # Verify L1 cache has the data
-        assert job_id in manager._storage
-        assert manager._storage[job_id].status == "completed"
+            # Verify L1 cache has the data
+            assert job_id in manager._storage
+            assert manager._storage[job_id].status == "completed"
 
-        # Simulate server restart: Clear L1 cache
-        manager._storage.clear()
-        assert job_id not in manager._storage
+            # Act: Simulate server restart by clearing L1 cache
+            manager._storage.clear()
+            assert job_id not in manager._storage
 
-        # Act: Retrieve job (should fetch from L2)
-        restored_status = await manager.get_status_async(job_id)
+            # Act: Retrieve job (should fetch from L2)
+            restored_status = await manager.get_status_async(job_id)
 
-        # Assert: Job was restored from Valkey
-        assert restored_status is not None
-        assert restored_status.job_id == job_id
-        assert restored_status.status == "completed"
-        assert restored_status.progress == 100
-        assert restored_status.job_master_id == "jm-test-123"
-        assert restored_status.result == {"workflow_id": "wf-test-456"}
+            # Assert: Job was restored from Valkey
+            assert restored_status is not None
+            assert restored_status.job_id == job_id
+            assert restored_status.status == "completed"
+            assert restored_status.progress == 100
+            assert restored_status.job_master_id == expected_job_master_id
+            assert restored_status.result == expected_result
 
-        # Assert: L1 cache was populated
-        assert job_id in manager._storage
-
-        # Cleanup
-        await manager.disconnect_valkey()
+            # Assert: L1 cache was repopulated
+            assert job_id in manager._storage
 
     async def test_multi_instance_access_via_valkey(
         self,
@@ -121,55 +150,43 @@ class TestJobStatePersistence:
         - Instance A creates a job
         - Instance B retrieves the job via Valkey
         """
-        # Arrange: Create two separate manager instances (simulating different servers)
+        # Arrange
         key_prefix = "test:multi:"
-
-        # Instance A
-        manager_a = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=3600,
-            key_prefix=key_prefix,
-        )
-        await manager_a.connect_valkey()
-
-        # Instance B (same Valkey client for test, different manager instance)
-        manager_b = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=3600,
-            key_prefix=key_prefix,
-        )
-        await manager_b.connect_valkey()
-
         job_id = "multi-instance-001"
+        expected_result = {"slides": ["slide1.html", "slide2.html"]}
+        expected_job_master_id = "jm-multi-123"
 
-        # Act: Instance A creates and completes a job
-        await manager_a.create_job_async(job_id)
-        await manager_a.update_progress_async(job_id, 75)
-        await manager_a.mark_completed_async(
-            job_id,
-            job_master_id="jm-multi-123",
-            result={"slides": ["slide1.html", "slide2.html"]},
-        )
+        # Use nested context managers for both instances
+        async with create_test_manager(
+            valkey_test_client, key_prefix=key_prefix
+        ) as manager_a:
+            async with create_test_manager(
+                valkey_test_client, key_prefix=key_prefix
+            ) as manager_b:
+                # Act: Instance A creates and completes a job
+                await manager_a.create_job_async(job_id)
+                await manager_a.update_progress_async(job_id, 75)
+                await manager_a.mark_completed_async(
+                    job_id,
+                    job_master_id=expected_job_master_id,
+                    result=expected_result,
+                )
 
-        # Instance B has no L1 cache for this job
-        assert job_id not in manager_b._storage
+                # Verify: Instance B has no L1 cache for this job
+                assert job_id not in manager_b._storage
 
-        # Act: Instance B retrieves the job
-        status_from_b = await manager_b.get_status_async(job_id)
+                # Act: Instance B retrieves the job
+                status_from_b = await manager_b.get_status_async(job_id)
 
-        # Assert: Instance B got the job from Valkey
-        assert status_from_b is not None
-        assert status_from_b.job_id == job_id
-        assert status_from_b.status == "completed"
-        assert status_from_b.job_master_id == "jm-multi-123"
-        assert status_from_b.result == {"slides": ["slide1.html", "slide2.html"]}
+                # Assert: Instance B got the job from Valkey
+                assert status_from_b is not None
+                assert status_from_b.job_id == job_id
+                assert status_from_b.status == "completed"
+                assert status_from_b.job_master_id == expected_job_master_id
+                assert status_from_b.result == expected_result
 
-        # Assert: Instance B's L1 cache was populated
-        assert job_id in manager_b._storage
-
-        # Cleanup
-        await manager_a.disconnect_valkey()
-        await manager_b.disconnect_valkey()
+                # Assert: Instance B's L1 cache was populated
+                assert job_id in manager_b._storage
 
 
 @pytest.mark.integration
@@ -178,32 +195,28 @@ class TestValkeyFallbackBehavior:
 
     async def test_create_job_without_valkey(self) -> None:
         """Test job creation works without Valkey (L1 only mode)."""
-        # Arrange: Manager without Valkey client
+        # Arrange
         manager = JobCreationStateManager()
         job_id = "no-valkey-001"
 
-        # Act: Create job
+        # Act
         await manager.create_job_async(job_id)
 
         # Assert: Job exists in L1 cache only
         assert job_id in manager._storage
-        status = manager._storage[job_id]
-        assert status.status == "creating"
+        assert manager._storage[job_id].status == "creating"
 
-        # Get status should work
+        # Assert: Status retrieval works
         retrieved = await manager.get_status_async(job_id)
         assert retrieved is not None
         assert retrieved.job_id == job_id
 
     async def test_valkey_connection_failure_graceful_degradation(self) -> None:
         """Test graceful degradation when Valkey connection fails."""
-        # Arrange: Mock Valkey client that fails to connect
-        mock_client = MagicMock(spec=ValkeyClient)
-        mock_client.connect = AsyncMock(
-            side_effect=ValkeyConnectionError("Connection refused")
-        )
-
+        # Arrange
+        mock_client = _create_mock_valkey_client_with_connection_failure()
         manager = JobCreationStateManager(valkey_client=mock_client)
+        job_id = "fallback-001"
 
         # Act: Try to connect (should not raise)
         await manager.connect_valkey()
@@ -212,7 +225,6 @@ class TestValkeyFallbackBehavior:
         assert manager._valkey_connected is False
 
         # Act: Operations should still work with L1 only
-        job_id = "fallback-001"
         await manager.create_job_async(job_id)
 
         # Assert: Job is in L1 cache
@@ -223,16 +235,11 @@ class TestValkeyFallbackBehavior:
 
     async def test_valkey_write_failure_continues_operation(self) -> None:
         """Test operations continue even when Valkey write fails."""
-        # Arrange: Mock Valkey client that fails on set
-        mock_client = MagicMock(spec=ValkeyClient)
-        mock_client.connect = AsyncMock()
-        mock_client.set = AsyncMock(side_effect=Exception("Write failed"))
-        mock_client.get = AsyncMock(return_value=None)
-
+        # Arrange
+        mock_client = _create_mock_valkey_client_with_write_failure()
         manager = JobCreationStateManager(valkey_client=mock_client)
         await manager.connect_valkey()
         manager._valkey_connected = True  # Force connected state for test
-
         job_id = "write-fail-001"
 
         # Act: Create job (Valkey write will fail, but operation should complete)
@@ -250,11 +257,8 @@ class TestValkeyFallbackBehavior:
 
     async def test_valkey_read_failure_returns_none(self) -> None:
         """Test L2 read failure returns None gracefully."""
-        # Arrange: Mock Valkey client that fails on get
-        mock_client = MagicMock(spec=ValkeyClient)
-        mock_client.connect = AsyncMock()
-        mock_client.get = AsyncMock(side_effect=Exception("Read failed"))
-
+        # Arrange
+        mock_client = _create_mock_valkey_client_with_read_failure()
         manager = JobCreationStateManager(valkey_client=mock_client)
         await manager.connect_valkey()
         manager._valkey_connected = True
@@ -266,9 +270,41 @@ class TestValkeyFallbackBehavior:
         assert status is None
 
 
+# ============================================================================
+# Mock Factory Functions for Valkey Fallback Tests
+# ============================================================================
+def _create_mock_valkey_client_with_connection_failure() -> MagicMock:
+    """Create a mock ValkeyClient that fails to connect."""
+    mock_client = MagicMock(spec=ValkeyClient)
+    mock_client.connect = AsyncMock(
+        side_effect=ValkeyConnectionError("Connection refused")
+    )
+    return mock_client
+
+
+def _create_mock_valkey_client_with_write_failure() -> MagicMock:
+    """Create a mock ValkeyClient that fails on write operations."""
+    mock_client = MagicMock(spec=ValkeyClient)
+    mock_client.connect = AsyncMock()
+    mock_client.set = AsyncMock(side_effect=Exception("Write failed"))
+    mock_client.get = AsyncMock(return_value=None)
+    return mock_client
+
+
+def _create_mock_valkey_client_with_read_failure() -> MagicMock:
+    """Create a mock ValkeyClient that fails on read operations."""
+    mock_client = MagicMock(spec=ValkeyClient)
+    mock_client.connect = AsyncMock()
+    mock_client.get = AsyncMock(side_effect=Exception("Read failed"))
+    return mock_client
+
+
 @pytest.mark.integration
 class TestJobStateLifecycle:
     """Test complete job state lifecycle with persistence."""
+
+    # Test data for lifecycle tests
+    PROGRESS_STEPS = [25, 50, 75]
 
     async def test_full_lifecycle_with_persistence(
         self,
@@ -276,50 +312,45 @@ class TestJobStateLifecycle:
     ) -> None:
         """Test full job lifecycle: creating -> progress updates -> completed."""
         # Arrange
-        manager = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=3600,
-            key_prefix="test:lifecycle:",
-        )
-        await manager.connect_valkey()
-
+        key_prefix = "test:lifecycle:"
         job_id = "lifecycle-001"
-
-        # Step 1: Create job
-        await manager.create_job_async(job_id)
-        status = await manager.get_status_async(job_id)
-        assert status is not None
-        assert status.status == "creating"
-        assert status.progress == 0
-
-        # Step 2: Update progress multiple times
-        for progress in [25, 50, 75]:
-            await manager.update_progress_async(job_id, progress)
-            status = await manager.get_status_async(job_id)
-            assert status is not None
-            assert status.progress == progress
-
-        # Step 3: Complete job
         result_data = {
             "job_master_id": "jm-lifecycle-123",
             "slides_count": 10,
             "output_path": "/tmp/slides/output.html",
         }
-        await manager.mark_completed_async(
-            job_id,
-            job_master_id="jm-lifecycle-123",
-            result=result_data,
-        )
 
-        status = await manager.get_status_async(job_id)
-        assert status is not None
-        assert status.status == "completed"
-        assert status.progress == 100
-        assert status.end_time is not None
-        assert status.result == result_data
+        async with create_test_manager(
+            valkey_test_client, key_prefix=key_prefix
+        ) as manager:
+            # Step 1: Create job
+            await manager.create_job_async(job_id)
+            status = await manager.get_status_async(job_id)
+            assert status is not None
+            assert status.status == "creating"
+            assert status.progress == 0
 
-        # Cleanup
-        await manager.disconnect_valkey()
+            # Step 2: Update progress multiple times
+            for progress in self.PROGRESS_STEPS:
+                await manager.update_progress_async(job_id, progress)
+                status = await manager.get_status_async(job_id)
+                assert status is not None
+                assert status.progress == progress
+
+            # Step 3: Complete job
+            await manager.mark_completed_async(
+                job_id,
+                job_master_id="jm-lifecycle-123",
+                result=result_data,
+            )
+
+            # Assert: Final status is completed
+            status = await manager.get_status_async(job_id)
+            assert status is not None
+            assert status.status == "completed"
+            assert status.progress == 100
+            assert status.end_time is not None
+            assert status.result == result_data
 
     async def test_failed_job_persisted(
         self,
@@ -327,71 +358,62 @@ class TestJobStateLifecycle:
     ) -> None:
         """Test failed job state is persisted to Valkey."""
         # Arrange
-        manager = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=3600,
-            key_prefix="test:failed:",
-        )
-        await manager.connect_valkey()
-
+        key_prefix = "test:failed:"
         job_id = "failed-job-001"
         error_message = "Marp conversion failed: Invalid markdown syntax"
 
-        # Act: Create and fail job
-        await manager.create_job_async(job_id)
-        await manager.update_progress_async(job_id, 30)
-        await manager.mark_failed_async(job_id, error_message)
+        async with create_test_manager(
+            valkey_test_client, key_prefix=key_prefix
+        ) as manager:
+            # Act: Create and fail job
+            await manager.create_job_async(job_id)
+            await manager.update_progress_async(job_id, 30)
+            await manager.mark_failed_async(job_id, error_message)
 
-        # Assert: L1 cache has failed status
-        status = manager._storage[job_id]
-        assert status.status == "failed"
-        assert status.error_message == error_message
+            # Assert: L1 cache has failed status
+            status = manager._storage[job_id]
+            assert status.status == "failed"
+            assert status.error_message == error_message
 
-        # Verify in Valkey
-        valkey_data = await valkey_test_client.get(f"test:failed:{job_id}")
-        assert valkey_data is not None
-        assert valkey_data["status"] == "failed"
-        assert valkey_data["error_message"] == error_message
+            # Assert: Verify in Valkey (L2 cache)
+            valkey_data = await valkey_test_client.get(f"{key_prefix}{job_id}")
+            assert valkey_data is not None
+            assert valkey_data["status"] == "failed"
+            assert valkey_data["error_message"] == error_message
 
-        # Simulate server restart: Clear L1, restore from L2
-        manager._storage.clear()
-        restored = await manager.get_status_async(job_id)
+            # Act: Simulate server restart by clearing L1 cache
+            manager._storage.clear()
+            restored = await manager.get_status_async(job_id)
 
-        assert restored is not None
-        assert restored.status == "failed"
-        assert restored.error_message == error_message
-
-        # Cleanup
-        await manager.disconnect_valkey()
+            # Assert: Job was restored from L2 with failed status
+            assert restored is not None
+            assert restored.status == "failed"
+            assert restored.error_message == error_message
 
 
 @pytest.mark.integration
 class TestTTLBehavior:
     """Test TTL expiration behavior for job state."""
 
+    # TTL tolerance for test execution time variance
+    TTL_TOLERANCE_SECONDS = 5
+
     async def test_job_ttl_is_set(
         self,
         valkey_test_client: ValkeyClient,
     ) -> None:
         """Test that job entries have TTL set in Valkey."""
-        # Arrange: Manager with 1 hour TTL
-        ttl_seconds = 3600
-        manager = JobCreationStateManager(
-            valkey_client=valkey_test_client,
-            ttl_seconds=ttl_seconds,
-            key_prefix="test:ttl:",
-        )
-        await manager.connect_valkey()
-
+        # Arrange
+        key_prefix = "test:ttl:"
         job_id = "ttl-test-001"
 
-        # Act: Create job
-        await manager.create_job_async(job_id)
+        async with create_test_manager(
+            valkey_test_client, key_prefix=key_prefix
+        ) as manager:
+            # Act: Create job
+            await manager.create_job_async(job_id)
 
-        # Assert: TTL is set correctly
-        ttl = await valkey_test_client.get_ttl(f"test:ttl:{job_id}")
-        # Allow 5 second variance for test execution time
-        assert ttl_seconds - 5 <= ttl <= ttl_seconds
-
-        # Cleanup
-        await manager.disconnect_valkey()
+            # Assert: TTL is set correctly (with tolerance for test execution time)
+            ttl = await valkey_test_client.get_ttl(f"{key_prefix}{job_id}")
+            min_expected_ttl = DEFAULT_TTL_SECONDS - self.TTL_TOLERANCE_SECONDS
+            assert min_expected_ttl <= ttl <= DEFAULT_TTL_SECONDS
