@@ -258,6 +258,10 @@ class SecretsManager:
 
     # ========== Connection Config Methods (Issue #250) ==========
 
+    # Boolean conversion value sets (class-level constants for reusability)
+    _BOOL_TRUTHY_VALUES = frozenset({"true", "1", "yes", "on"})
+    _BOOL_FALSY_VALUES = frozenset({"false", "0", "no", "off"})
+
     def _convert_type(self, value: str, value_type: type) -> Any:
         """Convert string value to the specified type.
 
@@ -278,18 +282,30 @@ class SecretsManager:
             return int(value)
 
         if value_type is bool:
-            truthy_values = {"true", "1", "yes", "on"}
-            falsy_values = {"false", "0", "no", "off"}
-            lower_value = value.lower()
-
-            if lower_value in truthy_values:
-                return True
-            if lower_value in falsy_values:
-                return False
-
-            raise ValueError(f"Cannot convert '{value}' to bool")
+            return self._convert_to_bool(value)
 
         raise ValueError(f"Unsupported type: {value_type}")
+
+    def _convert_to_bool(self, value: str) -> bool:
+        """Convert string value to boolean.
+
+        Args:
+            value: String value to convert
+
+        Returns:
+            Boolean value
+
+        Raises:
+            ValueError: If value is not a valid boolean string
+        """
+        lower_value = value.lower()
+
+        if lower_value in self._BOOL_TRUTHY_VALUES:
+            return True
+        if lower_value in self._BOOL_FALSY_VALUES:
+            return False
+
+        raise ValueError(f"Cannot convert '{value}' to bool")
 
     def _validate_connection_config(
         self, key: str, value: Any, value_type: type

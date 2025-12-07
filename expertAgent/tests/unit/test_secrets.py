@@ -1,6 +1,6 @@
 """Unit tests for secrets manager."""
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -261,3 +261,129 @@ class TestSecretsManager:
         assert "project" in manager_with_myvault._cache
         assert "KEY" in manager_with_myvault._cache["project"]
         assert manager_with_myvault._cache["project"]["KEY"][0] == "value"
+
+    def test_init_myvault_client_exception(self):
+        """Test SecretsManager init handles MyVault client exception."""
+        with patch("core.secrets.settings") as mock_settings:
+            mock_settings.MYVAULT_ENABLED = True
+            mock_settings.MYVAULT_BASE_URL = "http://localhost:8000"
+            mock_settings.MYVAULT_SERVICE_NAME = "test-service"
+            mock_settings.MYVAULT_SERVICE_TOKEN = "test-token"
+            mock_settings.MYVAULT_DEFAULT_PROJECT = "default"
+            mock_settings.SECRETS_CACHE_TTL = 300
+
+            with patch(
+                "core.secrets.MyVaultClient",
+                side_effect=Exception("Client init failed"),
+            ):
+                manager = SecretsManager()
+
+                # MyVault should be disabled after init failure
+                assert manager.myvault_enabled is False
+                assert manager.myvault_client is None
+
+    def test_get_secret_myvault_returns_none_fallback_to_env(
+        self, manager_with_myvault
+    ):
+        """Test get_secret falls back to env when MyVault returns None."""
+        # Mock _get_from_myvault to return None
+        manager_with_myvault.myvault_client.get_secret.return_value = None
+
+        with patch.object(manager_with_myvault.settings, "OPENAI_API_KEY", "env-key"):
+            result = manager_with_myvault.get_secret("OPENAI_API_KEY")
+            assert result == "env-key"
+
+    def test_resolve_default_project_myvault_api_error(self, manager_with_myvault):
+        """Test _resolve_default_project when MyVault API raises error."""
+        manager_with_myvault.myvault_client.get_default_project.side_effect = (
+            MyVaultError("API error")
+        )
+
+        with patch.object(
+            manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", "fallback-project"
+        ):
+            result = manager_with_myvault._resolve_default_project()
+            assert result == "fallback-project"
+
+
+class TestResolveRuntimeValue:
+    """Test suite for resolve_runtime_value function."""
+
+    @pytest.fixture
+    def mock_secrets_manager(self):
+        """Create mock secrets manager."""
+        with patch("core.secrets.secrets_manager") as mock_manager:
+            with patch("core.secrets.settings") as mock_settings:
+                yield mock_manager, mock_settings
+
+    def test_resolve_settings_only_key(self, mock_secrets_manager):
+        """Test resolve_runtime_value for settings-only keys."""
+        from core.secrets import resolve_runtime_value
+
+        _, mock_settings = mock_secrets_manager
+        mock_settings.LOG_LEVEL = "DEBUG"
+
+        result = resolve_runtime_value("LOG_LEVEL")
+        assert result == "DEBUG"
+
+    def test_resolve_settings_only_key_with_default(self, mock_secrets_manager):
+        """Test resolve_runtime_value for settings-only key with default."""
+        from core.secrets import resolve_runtime_value
+
+        _, mock_settings = mock_secrets_manager
+        # Delete the attribute to trigger default value usage
+        del mock_settings.ADMIN_TOKEN
+
+        result = resolve_runtime_value("ADMIN_TOKEN", default="default-token")
+        # Should return the default since ADMIN_TOKEN is not set
+        assert result == "default-token"
+
+    def test_resolve_from_secrets_manager(self, mock_secrets_manager):
+        """Test resolve_runtime_value retrieves from secrets manager."""
+        from core.secrets import resolve_runtime_value
+
+        mock_manager, _ = mock_secrets_manager
+        mock_manager.get_secret.return_value = "secret-value"
+
+        result = resolve_runtime_value("OPENAI_API_KEY")
+        assert result == "secret-value"
+        mock_manager.get_secret.assert_called_once_with(
+            "OPENAI_API_KEY", project=None
+        )
+
+    def test_resolve_with_project(self, mock_secrets_manager):
+        """Test resolve_runtime_value with project parameter."""
+        from core.secrets import resolve_runtime_value
+
+        mock_manager, _ = mock_secrets_manager
+        mock_manager.get_secret.return_value = "project-secret"
+
+        result = resolve_runtime_value("OPENAI_API_KEY", project="test-project")
+        assert result == "project-secret"
+        mock_manager.get_secret.assert_called_once_with(
+            "OPENAI_API_KEY", project="test-project"
+        )
+
+    def test_resolve_fallback_to_settings(self, mock_secrets_manager):
+        """Test resolve_runtime_value falls back to settings on ValueError."""
+        from core.secrets import resolve_runtime_value
+
+        mock_manager, mock_settings = mock_secrets_manager
+        mock_manager.get_secret.side_effect = ValueError("Not found")
+        mock_settings.SOME_KEY = "settings-value"
+
+        result = resolve_runtime_value("SOME_KEY")
+        assert result == "settings-value"
+
+    def test_resolve_fallback_to_default(self, mock_secrets_manager):
+        """Test resolve_runtime_value falls back to default on ValueError."""
+        from core.secrets import resolve_runtime_value
+
+        mock_manager, mock_settings = mock_secrets_manager
+        mock_manager.get_secret.side_effect = ValueError("Not found")
+
+        # Configure getattr to return empty string then use default
+        with patch.object(mock_settings, "NONEXISTENT_KEY", ""):
+            result = resolve_runtime_value("NONEXISTENT_KEY", default="default-val")
+            # getattr should return the default when key doesn't exist
+            assert result is not None

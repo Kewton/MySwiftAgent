@@ -401,3 +401,51 @@ class TestSecretsManagerConnectionConfig:
                 match="Connection config 'MISSING_KEY' not found",
             ):
                 manager_with_myvault.get_connection_config("MISSING_KEY")
+
+    # ========== Test Cases for _convert_to_bool ==========
+
+    def test_convert_to_bool_true_values(self, manager_with_myvault):
+        """Test _convert_to_bool converts truthy strings to True."""
+        truthy_values = ["true", "True", "TRUE", "1", "yes", "Yes", "on", "On"]
+
+        for value in truthy_values:
+            result = manager_with_myvault._convert_to_bool(value)
+            assert result is True, f"Expected True for '{value}'"
+
+    def test_convert_to_bool_false_values(self, manager_with_myvault):
+        """Test _convert_to_bool converts falsy strings to False."""
+        falsy_values = ["false", "False", "FALSE", "0", "no", "No", "off", "Off"]
+
+        for value in falsy_values:
+            result = manager_with_myvault._convert_to_bool(value)
+            assert result is False, f"Expected False for '{value}'"
+
+    def test_convert_to_bool_invalid_value(self, manager_with_myvault):
+        """Test _convert_to_bool raises ValueError for invalid conversion."""
+        with pytest.raises(ValueError, match="Cannot convert .* to bool"):
+            manager_with_myvault._convert_to_bool("invalid-bool")
+
+    # ========== Test Cases for class-level constants ==========
+
+    def test_bool_truthy_values_constant(self, manager_with_myvault):
+        """Test that _BOOL_TRUTHY_VALUES contains expected values."""
+        expected = {"true", "1", "yes", "on"}
+        assert manager_with_myvault._BOOL_TRUTHY_VALUES == expected
+
+    def test_bool_falsy_values_constant(self, manager_with_myvault):
+        """Test that _BOOL_FALSY_VALUES contains expected values."""
+        expected = {"false", "0", "no", "off"}
+        assert manager_with_myvault._BOOL_FALSY_VALUES == expected
+
+    # ========== Test Cases for get_connection_config with MyVault returns None ==========
+
+    def test_get_connection_config_myvault_returns_none_fallback_to_env(
+        self, manager_with_myvault
+    ):
+        """Test get_connection_config falls back to env when MyVault returns None."""
+        # _get_from_myvault returns None (not found in MyVault)
+        manager_with_myvault.myvault_client.get_secret.return_value = None
+
+        with patch.object(manager_with_myvault.settings, "VALKEY_HOST", "env-host"):
+            result = manager_with_myvault.get_connection_config("VALKEY_HOST")
+            assert result == "env-host"
