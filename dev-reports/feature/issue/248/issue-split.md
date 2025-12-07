@@ -463,10 +463,45 @@ curl -X POST "http://localhost:8103/api/v1/secrets/expertagent/default_project/V
 
 ---
 
+## 🔗 作成されたGitHub Issue
+
+### 親Issue
+
+- **#248**: 他サービスの接続情報の管理のmyVaultへの集約
+  - URL: https://github.com/Kewton/MySwiftAgent/issues/248
+
+### 子Issue
+
+#### Phase 1: 基盤構築
+
+| 計画番号 | GitHub Issue | タイトル | サイズ | 優先度 |
+|---------|-------------|---------|--------|--------|
+| #248-1 | **#250** | [SecretsManager 拡張（get_connection_config）](https://github.com/Kewton/MySwiftAgent/issues/250) | S | High |
+| #248-2 | **#251** | [resolve_runtime_value 型変換対応](https://github.com/Kewton/MySwiftAgent/issues/251) | XS | Medium |
+
+#### Phase 2: サービス統合
+
+| 計画番号 | GitHub Issue | タイトル | サイズ | 優先度 |
+|---------|-------------|---------|--------|--------|
+| #248-3 | **#252** | [Valkey 初期化の myVault 対応](https://github.com/Kewton/MySwiftAgent/issues/252) | S | High |
+| #248-4 | **#253** | [Langfuse HOST の myVault 対応](https://github.com/Kewton/MySwiftAgent/issues/253) | XS | High |
+
+#### Phase 3: テスト・品質保証
+
+| 計画番号 | GitHub Issue | タイトル | サイズ | 優先度 |
+|---------|-------------|---------|--------|--------|
+| #248-5 | **#254** | [結合テスト・受入テスト作成](https://github.com/Kewton/MySwiftAgent/issues/254) | S | Medium |
+
+### 作成日時
+
+2025-12-07
+
+---
+
 ## 次のステップ
 
-1. **Issue作成**: `/issue-create 248` で GitHub Issue を一括作成
-2. **ブランチ作成**: `fix/issue/248-1` から順次作成
+1. ~~**Issue作成**: `/issue-create 248` で GitHub Issue を一括作成~~ ✅ 完了
+2. **ブランチ作成**: `fix/issue/250` から順次作成
 3. **TDD実装**: 各Issueで `/tdd-impl` を実行
 4. **PR作成**: 各Issue完了後 `/pm-create-pr` を実行
 
