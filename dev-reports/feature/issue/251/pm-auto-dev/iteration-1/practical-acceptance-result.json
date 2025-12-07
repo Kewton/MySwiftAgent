@@ -1,0 +1,137 @@
+{
+  "status": "passed",
+  "execution_date": "2025-12-08T00:02:00+09:00",
+  "test_file": "tests/acceptance/python/platform/test_resolve_runtime_value_issue251.py",
+  "test_summary": {
+    "total": 15,
+    "passed": 15,
+    "failed": 0,
+    "errors": 0
+  },
+  "test_categories": {
+    "TestResolveRuntimeValueAcceptance": {
+      "description": "Real service integration tests",
+      "tests": [
+        {
+          "name": "test_myvault_service_health",
+          "status": "passed",
+          "evidence": "HTTP GET http://localhost:8103/health returned 200 OK, status=healthy"
+        },
+        {
+          "name": "test_string_from_real_myvault",
+          "status": "passed",
+          "evidence": "MAIL_TO retrieved from MyVault (default_project), type=str"
+        },
+        {
+          "name": "test_backward_compatibility_returns_string",
+          "status": "passed",
+          "evidence": "OPENAI_API_KEY retrieved from MyVault, type=str (backward compatible)"
+        },
+        {
+          "name": "test_backward_compatibility_model_config",
+          "status": "passed",
+          "evidence": "OLLAMA_DEF_SMALL_MODEL retrieved from MyVault, type=str"
+        },
+        {
+          "name": "test_env_fallback_with_type_conversion",
+          "status": "passed",
+          "evidence": "VALKEY_PORT not in MyVault, fallback to env var, converted to int"
+        },
+        {
+          "name": "test_default_value_when_not_found",
+          "status": "passed",
+          "evidence": "NONEXISTENT_KEY_251 not found anywhere, default value returned"
+        }
+      ]
+    },
+    "TestExistingCallSitesCompatibility": {
+      "description": "Verify existing call sites still work",
+      "tests": [
+        {
+          "name": "test_stdio_action_mail_to",
+          "status": "passed",
+          "evidence": "Simulates mymcp/stdio_action.py line 150 - MAIL_TO returns str"
+        },
+        {
+          "name": "test_chatollama_model_config",
+          "status": "passed",
+          "evidence": "Simulates mymcp/utils/chatollama.py - OLLAMA_DEF_SMALL_MODEL returns str"
+        },
+        {
+          "name": "test_openai_api_key",
+          "status": "passed",
+          "evidence": "Simulates mymcp/tool/file_reader_processors.py - OPENAI_API_KEY returns str"
+        }
+      ]
+    },
+    "TestTypeConversionEdgeCases": {
+      "description": "Edge case tests for type conversion",
+      "tests": [
+        {
+          "name": "test_int_conversion_with_whitespace",
+          "status": "passed",
+          "evidence": "_convert_runtime_type('42', int) == 42"
+        },
+        {
+          "name": "test_bool_conversion_variations",
+          "status": "passed",
+          "evidence": "All true values (true, True, 1, yes, on) -> True, all false values -> False"
+        },
+        {
+          "name": "test_unsupported_type_raises_error",
+          "status": "passed",
+          "evidence": "ValueError raised for unsupported type (list)"
+        }
+      ]
+    },
+    "TestRealWorldScenarios": {
+      "description": "Real-world usage scenarios",
+      "tests": [
+        {
+          "name": "test_valkey_port_scenario",
+          "status": "passed",
+          "evidence": "VALKEY_PORT retrieved with value_type=int, used in connection string"
+        },
+        {
+          "name": "test_feature_flag_scenario",
+          "status": "passed",
+          "evidence": "DEBUG retrieved with value_type=bool, used in conditional"
+        },
+        {
+          "name": "test_timeout_configuration_scenario",
+          "status": "passed",
+          "evidence": "SECRETS_CACHE_TTL retrieved with value_type=int, used in config dict"
+        }
+      ]
+    }
+  },
+  "practical_aspects": {
+    "real_service_communication": true,
+    "myvault_integration": {
+      "health_check": "verified",
+      "secret_retrieval": "verified (MAIL_TO, OPENAI_API_KEY, OLLAMA_DEF_SMALL_MODEL)",
+      "project_support": "verified (default_project)"
+    },
+    "env_fallback": {
+      "tested": true,
+      "evidence": "VALKEY_PORT, DEBUG, SECRETS_CACHE_TTL fall back to env when not in MyVault"
+    },
+    "type_conversion": {
+      "int_conversion": "verified (VALKEY_PORT, SECRETS_CACHE_TTL)",
+      "bool_conversion": "verified (DEBUG)",
+      "str_conversion": "verified (default, backward compatible)"
+    },
+    "backward_compatibility": {
+      "tested": true,
+      "existing_call_sites_verified": [
+        "mymcp/stdio_action.py",
+        "mymcp/utils/chatollama.py",
+        "mymcp/tool/file_reader_processors.py"
+      ]
+    }
+  },
+  "limitations": {
+    "myvault_write_permission": "Test service doesn't have write permission to create test data",
+    "workaround": "Used existing MyVault data for integration tests"
+  }
+}

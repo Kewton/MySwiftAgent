@@ -1,0 +1,32 @@
+{
+  "issue_number": 251,
+  "refactor_targets": [
+    "expertAgent/core/secrets.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 92.48,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Type-safe conversion pattern",
+    "Default parameter pattern for backward compatibility"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持または向上",
+    "コードの可読性向上",
+    "ドキュメント整備確認"
+  ],
+  "current_implementation": {
+    "file": "expertAgent/core/secrets.py",
+    "functions": [
+      "_convert_runtime_type(value: str, value_type: type) -> Any",
+      "resolve_runtime_value(key: str, project: Optional[str] = None, *, default: Optional[Any] = None, value_type: type = str) -> Any"
+    ]
+  },
+  "test_file": "expertAgent/tests/unit/test_resolve_runtime_value.py",
+  "test_results": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0
+  }
+}
