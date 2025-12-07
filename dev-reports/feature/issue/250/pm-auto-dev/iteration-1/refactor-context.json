@@ -1,0 +1,36 @@
+{
+  "issue_number": 250,
+  "refactor_targets": [
+    "expertAgent/core/secrets.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90.70,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "DRY (Don't Repeat Yourself)"
+  ],
+  "improvement_goals": [
+    "カバレッジを95%以上に向上",
+    "コードの可読性向上",
+    "重複コードの削除（あれば）"
+  ],
+  "current_status": {
+    "unit_tests": {
+      "total": 53,
+      "passed": 53,
+      "failed": 0
+    },
+    "static_analysis": {
+      "ruff_errors": 0,
+      "mypy_errors": 0
+    }
+  },
+  "added_methods": [
+    "_convert_type()",
+    "_validate_connection_config()",
+    "_log_config_retrieval()",
+    "get_connection_config()"
+  ]
+}

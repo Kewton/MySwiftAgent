@@ -3,7 +3,6 @@
 Tests for the shared keyword-to-level mapping functionality.
 """
 
-import pytest
 
 from app.services.recommendation.keyword_mapping import (
     COMPLEXITY_KEYWORDS,

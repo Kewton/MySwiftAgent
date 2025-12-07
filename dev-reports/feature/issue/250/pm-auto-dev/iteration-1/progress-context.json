@@ -1,0 +1,99 @@
+{
+  "issue_number": 250,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 90.70,
+      "unit_tests": {
+        "total": 53,
+        "passed": 53,
+        "failed": 0
+      },
+      "static_analysis": {
+        "ruff_errors": 0,
+        "mypy_errors": 0
+      }
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    "refactor": {
+      "status": "success",
+      "before_coverage": 90.70,
+      "after_coverage": 97.13,
+      "before_tests": 53,
+      "after_tests": 68
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "_convert_type() ヘルパーメソッド実装",
+        "estimated_hours": 0.33,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "_validate_connection_config() バリデーション実装",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.3",
+        "description": "get_connection_config() メインメソッド実装",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.4",
+        "description": "_log_config_retrieval() ログ出力メソッド実装",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.1",
+        "description": "単体テスト作成",
+        "estimated_hours": 0.75,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.2",
+        "description": "テスト実行・カバレッジ確認",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.1",
+        "description": "静的解析（Ruff/MyPy）",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      }
+    ],
+    "deliverables_status": [
+      {"file": "expertAgent/core/secrets.py", "created": true, "note": "4メソッド追加"},
+      {"file": "expertAgent/tests/unit/test_secrets_connection_config.py", "created": true, "note": "32テストケース"}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "すべてのタスクが完了", "verified": true},
+      {"criterion": "単体テストカバレッジ 90%以上", "verified": true, "note": "97.13%達成"},
+      {"criterion": "Ruff/MyPy エラーゼロ", "verified": true},
+      {"criterion": "CI/CD グリーン", "verified": true}
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 2.58,
+      "actual": null,
+      "variance": null,
+      "note": "自動実行のため実績時間は計測なし"
+    }
+  },
+  "commits": [
+    "fb22da9: feat(expertAgent): add get_connection_config() method to SecretsManager",
+    "f7d55e8: refactor(expertAgent): improve code quality and test coverage for secrets.py"
+  ]
+}
