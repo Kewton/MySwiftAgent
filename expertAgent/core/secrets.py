@@ -464,18 +464,68 @@ _SETTINGS_ONLY_KEYS = {
 }
 
 
+def _convert_runtime_type(value: str, value_type: type) -> Any:
+    """Convert string value to specified type.
+
+    Args:
+        value: String value to convert
+        value_type: Target type (str, int, bool)
+
+    Returns:
+        Converted value
+
+    Raises:
+        ValueError: If type conversion fails or type is unsupported
+    """
+    if value_type is str:
+        return value
+    elif value_type is int:
+        try:
+            return int(value)
+        except ValueError as e:
+            raise ValueError(f"Failed to convert '{value}' to int: {e}") from e
+    elif value_type is bool:
+        return value.lower() in ("true", "1", "yes", "on")
+    else:
+        raise ValueError(f"Unsupported type: {value_type}")
+
+
 def resolve_runtime_value(
     key: str,
     project: Optional[str] = None,
     *,
     default: Optional[Any] = None,
-):
-    """Resolve configuration values with MyVault priority and env fallback."""
+    value_type: type = str,
+) -> Any:
+    """Resolve configuration values with MyVault priority and env fallback.
 
+    Args:
+        key: Configuration key name
+        project: Optional project name for MyVault
+        default: Default value if not found
+        value_type: Target type for conversion (str, int, bool). Default: str
+
+    Returns:
+        Configuration value converted to specified type
+
+    Raises:
+        ValueError: If type conversion fails
+    """
     if key in _SETTINGS_ONLY_KEYS:
-        return getattr(settings, key, default)
+        value = getattr(settings, key, default)
+        if value is None:
+            return default
+        return _convert_runtime_type(str(value), value_type)
 
     try:
-        return secrets_manager.get_secret(key, project=project)
-    except ValueError:
-        return getattr(settings, key, default)
+        value = secrets_manager.get_secret(key, project=project)
+        return _convert_runtime_type(value, value_type)
+    except ValueError as e:
+        # Re-raise type conversion errors
+        if "Failed to convert" in str(e) or "Unsupported type" in str(e):
+            raise
+        # Fallback to settings for "not found" errors
+        env_value = getattr(settings, key, None)
+        if env_value is not None:
+            return _convert_runtime_type(str(env_value), value_type)
+        return default

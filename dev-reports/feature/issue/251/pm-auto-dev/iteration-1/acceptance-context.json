@@ -1,0 +1,85 @@
+{
+  "issue_number": 251,
+  "feature_summary": "resolve_runtime_value 型変換対応",
+  "acceptance_criteria": [
+    "resolve_runtime_value(\"VALKEY_PORT\", value_type=int) が整数を返す",
+    "value_type 未指定時は従来通り文字列を返す（後方互換性）",
+    "既存の10ファイルでの呼び出しが正常動作",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "既存テスト全パス"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-1",
+      "description": "resolve_runtime_value('VALKEY_PORT', value_type=int) が整数を返す",
+      "type": "functional",
+      "verification_method": "unit_test",
+      "test_file": "expertAgent/tests/unit/test_resolve_runtime_value.py::TestResolveRuntimeValue::test_int_conversion_from_myvault"
+    },
+    {
+      "id": "AC-2",
+      "description": "value_type 未指定時は従来通り文字列を返す（後方互換性）",
+      "type": "functional",
+      "verification_method": "unit_test",
+      "test_file": "expertAgent/tests/unit/test_resolve_runtime_value.py::TestResolveRuntimeValue::test_default_returns_string"
+    },
+    {
+      "id": "AC-3",
+      "description": "既存の10ファイルでの呼び出しが正常動作",
+      "type": "backward_compatibility",
+      "verification_method": "static_analysis",
+      "affected_files": [
+        "expertAgent/mymcp/stdio_action.py",
+        "expertAgent/mymcp/specializedtool/generate_melmaga_script.py",
+        "expertAgent/mymcp/utils/chatollama.py",
+        "expertAgent/mymcp/tool/file_reader_processors.py",
+        "expertAgent/mymcp/tool/google_search_by_serper.py",
+        "expertAgent/mymcp/utils/generate_subject_from_text.py",
+        "expertAgent/mymcp/utils/extract_knowledge_from_text.py",
+        "expertAgent/mymcp/stdioall.py",
+        "expertAgent/mymcp/tts/tts.py"
+      ]
+    },
+    {
+      "id": "AC-4",
+      "description": "単体テストカバレッジ 90%以上",
+      "type": "quality",
+      "verification_method": "coverage_report",
+      "target": 90,
+      "actual": 92.48
+    },
+    {
+      "id": "AC-5",
+      "description": "Ruff/MyPy エラーゼロ",
+      "type": "quality",
+      "verification_method": "static_analysis",
+      "commands": [
+        "cd expertAgent && uv run ruff check core/secrets.py",
+        "cd expertAgent && uv run mypy core/secrets.py"
+      ]
+    },
+    {
+      "id": "AC-6",
+      "description": "既存テスト全パス",
+      "type": "regression",
+      "verification_method": "test_execution",
+      "commands": [
+        "cd expertAgent && uv run pytest tests/unit/ -v --ignore=tests/unit/test_resolve_runtime_value.py"
+      ]
+    }
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 92.48,
+    "unit_tests": {
+      "total": 16,
+      "passed": 16,
+      "failed": 0
+    },
+    "static_analysis": {
+      "ruff_errors": 0,
+      "mypy_errors": 0
+    }
+  }
+}

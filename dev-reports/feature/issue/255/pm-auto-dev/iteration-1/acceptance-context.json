@@ -1,0 +1,42 @@
+{
+  "issue_number": 255,
+  "feature_summary": "myvault_secrets.yaml 更新（Langfuse/Valkey 接続情報追加）",
+  "acceptance_criteria": [
+    "commonUI/data/myvault_secrets.yaml に全7項目（LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, VALKEY_HOST, VALKEY_PORT, VALKEY_DB, VALKEY_TTL）が定義されている",
+    "expertAgent/myvault_secrets.yaml に全7項目が定義されている",
+    "YAML 構文が正しい（パースエラーなし）",
+    "既存の設定項目との整合性確保（既存項目が壊れていない）"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC001",
+      "scenario": "commonUI YAMLファイルに全7項目が存在することを確認",
+      "type": "automated",
+      "command": "grep -c 'LANGFUSE_HOST\\|LANGFUSE_PUBLIC_KEY\\|LANGFUSE_SECRET_KEY\\|VALKEY_HOST\\|VALKEY_PORT\\|VALKEY_DB\\|VALKEY_TTL' commonUI/data/myvault_secrets.yaml"
+    },
+    {
+      "id": "AC002",
+      "scenario": "expertAgent YAMLファイルに全7項目が存在することを確認",
+      "type": "automated",
+      "command": "grep -c 'LANGFUSE_HOST\\|LANGFUSE_PUBLIC_KEY\\|LANGFUSE_SECRET_KEY\\|VALKEY_HOST\\|VALKEY_PORT\\|VALKEY_DB\\|VALKEY_TTL' expertAgent/myvault_secrets.yaml"
+    },
+    {
+      "id": "AC003",
+      "scenario": "commonUI YAMLファイルがパース可能であることを確認",
+      "type": "automated",
+      "command": "python -c \"import yaml; yaml.safe_load(open('commonUI/data/myvault_secrets.yaml'))\""
+    },
+    {
+      "id": "AC004",
+      "scenario": "expertAgent YAMLファイルがパース可能であることを確認",
+      "type": "automated",
+      "command": "python -c \"import yaml; yaml.safe_load(open('expertAgent/myvault_secrets.yaml'))\""
+    },
+    {
+      "id": "AC005",
+      "scenario": "既存項目（OPENAI_API_KEY等）が存在することを確認",
+      "type": "automated",
+      "command": "grep -q 'OPENAI_API_KEY' commonUI/data/myvault_secrets.yaml && echo 'Found'"
+    }
+  ]
+}

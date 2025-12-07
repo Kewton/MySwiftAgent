@@ -418,6 +418,9 @@ docs/build/
 !**/tests/**/test_*key*
 !**/tests/**/test_*token*
 
+# Exception for myvault_secrets.yaml (contains secret key NAMES, not VALUES)
+!**/myvault_secrets.yaml
+
 # Certificate files
 *.pem
 *.key

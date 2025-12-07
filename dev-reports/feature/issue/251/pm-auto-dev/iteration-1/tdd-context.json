@@ -1,0 +1,103 @@
+{
+  "issue_number": 251,
+  "title": "resolve_runtime_value 型変換対応",
+  "acceptance_criteria": [
+    "resolve_runtime_value(\"VALKEY_PORT\", value_type=int) が整数を返す",
+    "value_type 未指定時は従来通り文字列を返す（後方互換性）",
+    "既存の10ファイルでの呼び出しが正常動作",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "既存テスト全パス"
+  ],
+  "implementation_tasks": [
+    "resolve_runtime_value() に value_type パラメータ追加",
+    "_convert_runtime_type() ヘルパー関数実装",
+    "型ヒント・import 更新",
+    "単体テスト作成 (10テストケース)",
+    "既存テストの動作確認"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "resolve_runtime_value() 関数の拡張",
+      "estimated_minutes": 30,
+      "deliverables": ["expertAgent/core/secrets.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.2",
+      "description": "_convert_runtime_type() ヘルパー関数実装",
+      "estimated_minutes": 15,
+      "deliverables": ["expertAgent/core/secrets.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3",
+      "description": "型ヒント・import 更新",
+      "estimated_minutes": 15,
+      "deliverables": ["expertAgent/core/secrets.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト作成",
+      "estimated_minutes": 30,
+      "deliverables": ["expertAgent/tests/unit/test_resolve_runtime_value.py"],
+      "dependencies": ["1.1", "1.2", "1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "既存テストの動作確認",
+      "estimated_minutes": 15,
+      "deliverables": [],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "静的解析",
+      "estimated_minutes": 10,
+      "deliverables": [],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "後方互換性確認",
+      "estimated_minutes": 5,
+      "deliverables": [],
+      "dependencies": ["3.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/core/secrets.py (関数修正、約30行追加)",
+    "expertAgent/tests/unit/test_resolve_runtime_value.py (10テストケース)"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "既存の10ファイルでの呼び出しが正常動作（後方互換性）",
+    "単体テストカバレッジ 90%以上",
+    "Ruff/MyPy エラーゼロ",
+    "既存テスト全パス"
+  ],
+  "target_coverage": 90,
+  "technical_details": {
+    "target_file": "expertAgent/core/secrets.py",
+    "affected_files": [
+      "expertAgent/mymcp/stdio_action.py",
+      "expertAgent/mymcp/specializedtool/generate_melmaga_script.py",
+      "expertAgent/mymcp/utils/chatollama.py",
+      "expertAgent/mymcp/tool/file_reader_processors.py",
+      "expertAgent/mymcp/tool/google_search_by_serper.py",
+      "expertAgent/mymcp/utils/generate_subject_from_text.py",
+      "expertAgent/mymcp/utils/extract_knowledge_from_text.py",
+      "expertAgent/mymcp/stdioall.py",
+      "expertAgent/mymcp/tts/tts.py"
+    ],
+    "existing_function_location": "expertAgent/core/secrets.py line 289-303",
+    "test_commands": [
+      "cd expertAgent && uv run pytest tests/unit/test_resolve_runtime_value.py -v",
+      "cd expertAgent && uv run pytest tests/unit/test_resolve_runtime_value.py --cov=core/secrets --cov-report=term-missing",
+      "cd expertAgent && uv run ruff check core/secrets.py",
+      "cd expertAgent && uv run mypy core/secrets.py"
+    ]
+  }
+}
