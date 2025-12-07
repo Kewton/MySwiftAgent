@@ -53,9 +53,7 @@ class SecretsManager:
                 logger.error(f"❌ Failed to initialize MyVault client: {e}")
                 self.myvault_enabled = False
         else:
-            logger.warning(
-                "⚠ MyVault is disabled - using environment variables only"
-            )
+            logger.warning("⚠ MyVault is disabled - using environment variables only")
 
     def get_secret(self, key: str, project: Optional[str] = None) -> str:
         """Get secret value with MyVault priority.
@@ -81,9 +79,7 @@ class SecretsManager:
                 value = self._get_from_myvault(key, project)
                 if value:
                     project_name = (
-                        project
-                        or self.settings.MYVAULT_DEFAULT_PROJECT
-                        or "default"
+                        project or self.settings.MYVAULT_DEFAULT_PROJECT or "default"
                     )
                     logger.info(
                         "✓ Secret '%s' retrieved from MyVault (project: %s)",
@@ -109,9 +105,7 @@ class SecretsManager:
             f"Secret '{key}' not found in MyVault or environment variables"
         )
 
-    def get_secrets_for_project(
-        self, project: Optional[str] = None
-    ) -> Dict[str, str]:
+    def get_secrets_for_project(self, project: Optional[str] = None) -> Dict[str, str]:
         """Get all secrets for a project (or default project).
 
         Args:
@@ -128,9 +122,7 @@ class SecretsManager:
             project_name = project or self._resolve_default_project()
             return self._get_project_secrets(project_name)
         except MyVaultError:
-            logger.warning(
-                "Failed to get secrets from MyVault, using env vars"
-            )
+            logger.warning("Failed to get secrets from MyVault, using env vars")
             return self._get_all_env_secrets()
 
     def clear_cache(self, project: Optional[str] = None):
@@ -146,9 +138,7 @@ class SecretsManager:
             self._cache.clear()
             logger.info("All cache cleared")
 
-    def _get_from_myvault(
-        self, key: str, project: Optional[str]
-    ) -> Optional[str]:
+    def _get_from_myvault(self, key: str, project: Optional[str]) -> Optional[str]:
         """Get secret from MyVault with cache."""
         if not self.myvault_client:
             return None
@@ -156,9 +146,7 @@ class SecretsManager:
         # Resolve project name
         project_name = project or self._resolve_default_project()
         if not project_name:
-            raise MyVaultError(
-                "No project specified and no default project found"
-            )
+            raise MyVaultError("No project specified and no default project found")
 
         # Check cache
         if self._is_cache_valid(project_name, key):
@@ -215,9 +203,7 @@ class SecretsManager:
                     )
                     return default_project
             except MyVaultError as e:
-                logger.warning(
-                    "Failed to get default project from MyVault API: %s", e
-                )
+                logger.warning("Failed to get default project from MyVault API: %s", e)
                 # Continue to fallback
 
         # 2. Fallback to env var override (special cases only)
@@ -269,6 +255,182 @@ class SecretsManager:
             self._cache[project] = {}
 
         self._cache[project][key] = (value, time.time())
+
+    # ========== Connection Config Methods (Issue #250) ==========
+
+    def _convert_type(self, value: str, value_type: type) -> Any:
+        """Convert string value to the specified type.
+
+        Args:
+            value: String value to convert
+            value_type: Target type (str, int, bool)
+
+        Returns:
+            Converted value
+
+        Raises:
+            ValueError: If conversion fails or type is unsupported
+        """
+        if value_type is str:
+            return value
+
+        if value_type is int:
+            return int(value)
+
+        if value_type is bool:
+            truthy_values = {"true", "1", "yes", "on"}
+            falsy_values = {"false", "0", "no", "off"}
+            lower_value = value.lower()
+
+            if lower_value in truthy_values:
+                return True
+            if lower_value in falsy_values:
+                return False
+
+            raise ValueError(f"Cannot convert '{value}' to bool")
+
+        raise ValueError(f"Unsupported type: {value_type}")
+
+    def _validate_connection_config(
+        self, key: str, value: Any, value_type: type
+    ) -> None:
+        """Validate connection configuration value.
+
+        Args:
+            key: Configuration key name
+            value: Value to validate
+            value_type: Type of the value
+
+        Raises:
+            ValueError: If validation fails
+        """
+        # Port number validation
+        if "PORT" in key.upper() and value_type is int:
+            if not (1 <= value <= 65535):
+                raise ValueError(
+                    f"Port number for '{key}' ({value}) must be between 1 and 65535"
+                )
+
+        # Hostname validation
+        if "HOST" in key.upper() and value_type is str:
+            if not (1 <= len(value) <= 255):
+                raise ValueError(
+                    f"Hostname length for '{key}' must be between 1 and 255 characters"
+                )
+
+    def _log_config_retrieval(self, key: str, source: str, value: Any) -> None:
+        """Log configuration retrieval with appropriate masking.
+
+        Args:
+            key: Configuration key name
+            source: Source of the value (e.g., "myvault", "env")
+            value: Retrieved value
+        """
+        upper_key = key.upper()
+
+        # Port numbers are logged without masking
+        if "PORT" in upper_key:
+            logger.info(
+                "Config '%s' retrieved from %s: %s",
+                key,
+                source,
+                value,
+            )
+        # Hostnames are partially masked
+        elif "HOST" in upper_key:
+            if isinstance(value, str) and len(value) > 3:
+                masked_value = value[:3] + "***"
+            else:
+                masked_value = "***"
+            logger.info(
+                "Config '%s' retrieved from %s: %s",
+                key,
+                source,
+                masked_value,
+            )
+        # Other values are fully masked
+        else:
+            logger.info(
+                "Config '%s' retrieved from %s: ****",
+                key,
+                source,
+            )
+
+    def get_connection_config(
+        self,
+        key: str,
+        project: Optional[str] = None,
+        *,
+        default: Optional[Any] = None,
+        value_type: type = str,
+    ) -> Any:
+        """Get connection configuration value with type conversion.
+
+        Retrieves configuration values from MyVault (priority) or environment
+        variables (fallback), with automatic type conversion.
+
+        Args:
+            key: Configuration key name (e.g., "VALKEY_PORT")
+            project: Optional project name (uses default if not specified)
+            default: Default value if not found (must match value_type)
+            value_type: Expected value type (str, int, bool)
+
+        Returns:
+            Configuration value converted to value_type
+
+        Raises:
+            ValueError: If value not found and no default provided,
+                       or if type conversion fails
+        """
+        raw_value: Optional[str] = None
+        source: str = ""
+
+        # 1. Try MyVault first (priority)
+        if self.myvault_enabled and self.myvault_client:
+            try:
+                raw_value = self._get_from_myvault(key, project)
+                if raw_value:
+                    source = "myvault"
+            except MyVaultError as e:
+                logger.warning(f"MyVault retrieval failed for '{key}': {e}")
+                # Continue to fallback
+
+        # 2. Fallback to environment variable
+        if raw_value is None:
+            env_value = getattr(self.settings, key, "")
+            if env_value:
+                raw_value = str(env_value)
+                source = "env"
+
+        # 3. Use default if provided
+        if raw_value is None:
+            if default is not None:
+                logger.info(
+                    "Config '%s' using default value",
+                    key,
+                )
+                return default
+
+            # 4. Not found anywhere
+            raise ValueError(
+                f"Connection config '{key}' not found in MyVault or environment variables"
+            )
+
+        # Convert type
+        try:
+            converted_value = self._convert_type(raw_value, value_type)
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to convert '{key}' value '{raw_value}' to {value_type.__name__}: {e}"
+            ) from e
+
+        # Validate
+        self._validate_connection_config(key, converted_value, value_type)
+
+        # Log retrieval
+        self._log_config_retrieval(key, source, converted_value)
+
+        return converted_value
 
 
 # Global instance

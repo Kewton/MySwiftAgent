@@ -413,6 +413,11 @@ docs/build/
 *credential*
 *password*
 
+# Exceptions for test files
+!**/tests/**/test_*secret*
+!**/tests/**/test_*key*
+!**/tests/**/test_*token*
+
 # Certificate files
 *.pem
 *.key
