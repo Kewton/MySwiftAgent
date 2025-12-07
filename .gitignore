@@ -413,6 +413,9 @@ docs/build/
 *credential*
 *password*
 
+# Exception for myvault_secrets.yaml (contains secret key NAMES, not VALUES)
+!**/myvault_secrets.yaml
+
 # Certificate files
 *.pem
 *.key
