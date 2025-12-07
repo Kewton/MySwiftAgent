@@ -61,11 +61,14 @@ jobs:
             echo "expertAgent=false" >> $GITHUB_OUTPUT
           fi
 
-          if git diff --name-only HEAD~1 HEAD | grep -q "^commonUI/"; then
+          # commonUI tests only run for code changes, not data/config changes
+          # data/ contains YAML config files that don't require Python tests
+          if git diff --name-only HEAD~1 HEAD | grep -E "^commonUI/" | grep -Ev "^commonUI/(data|dev-reports)/" | grep -q .; then
             echo "commonUI=true" >> $GITHUB_OUTPUT
-            echo "✅ Changes detected in commonUI"
+            echo "✅ Changes detected in commonUI (code)"
           else
             echo "commonUI=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ commonUI changes are data/config only - skipping tests"
           fi
 
   test:
