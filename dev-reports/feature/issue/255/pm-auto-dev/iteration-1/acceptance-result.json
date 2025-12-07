@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "AC001: commonUI YAMLファイルに全7項目が存在することを確認",
+      "result": "passed",
+      "details": "LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, VALKEY_HOST, VALKEY_PORT, VALKEY_DB, VALKEY_TTL - all 7 keys found in commonUI/data/myvault_secrets.yaml"
+    },
+    {
+      "scenario": "AC002: expertAgent YAMLファイルに全7項目が存在することを確認",
+      "result": "passed",
+      "details": "LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, VALKEY_HOST, VALKEY_PORT, VALKEY_DB, VALKEY_TTL - all 7 keys found in expertAgent/myvault_secrets.yaml"
+    },
+    {
+      "scenario": "AC003: commonUI YAMLファイルがパース可能であることを確認",
+      "result": "passed",
+      "details": "python yaml.safe_load() executed successfully - no parse errors"
+    },
+    {
+      "scenario": "AC004: expertAgent YAMLファイルがパース可能であることを確認",
+      "result": "passed",
+      "details": "python yaml.safe_load() executed successfully - no parse errors"
+    },
+    {
+      "scenario": "AC005: 既存項目（OPENAI_API_KEY等）が存在することを確認",
+      "result": "passed",
+      "details": "OPENAI_API_KEY, ANTHROPIC_API_KEY found in commonUI; api_keys, service_config categories preserved in expertAgent"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "commonUI/data/myvault_secrets.yaml に全7項目（LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, VALKEY_HOST, VALKEY_PORT, VALKEY_DB, VALKEY_TTL）が定義されている",
+      "verified": true
+    },
+    {
+      "criterion": "expertAgent/myvault_secrets.yaml に全7項目が定義されている",
+      "verified": true
+    },
+    {
+      "criterion": "YAML 構文が正しい（パースエラーなし）",
+      "verified": true
+    },
+    {
+      "criterion": "既存の設定項目との整合性確保（既存項目が壊れていない）",
+      "verified": true
+    }
+  ],
+  "evidence_files": [
+    "commonUI/data/myvault_secrets.yaml - 7 new keys added (lines 45-65)",
+    "expertAgent/myvault_secrets.yaml - 7 keys distributed across api_keys and service_config categories"
+  ],
+  "summary": "Issue #255 受入テスト完了。全7項目（Langfuse 3項目、Valkey 4項目）が両ファイルに正しく追加されており、YAML構文も有効。既存の設定項目も保持されています。",
+  "message": "すべての受入条件を満たしています"
+}
