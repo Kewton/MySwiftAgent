@@ -1,0 +1,65 @@
+{
+  "issue_number": 255,
+  "title": "Issue #248-6: myvault_secrets.yaml 更新（Langfuse/Valkey 接続情報追加）",
+  "acceptance_criteria": [
+    "commonUI/data/myvault_secrets.yaml に全7項目（LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, VALKEY_HOST, VALKEY_PORT, VALKEY_DB, VALKEY_TTL）が定義されている",
+    "expertAgent/myvault_secrets.yaml に全7項目が定義されている",
+    "YAML 構文が正しい（yamllint でエラーなし）",
+    "既存の設定項目との整合性確保"
+  ],
+  "implementation_tasks": [
+    "commonUI/data/myvault_secrets.yaml に Langfuse 接続情報を追加（LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY）",
+    "commonUI/data/myvault_secrets.yaml に Valkey 接続情報を追加（VALKEY_HOST, VALKEY_PORT, VALKEY_DB, VALKEY_TTL）",
+    "expertAgent/myvault_secrets.yaml を新規作成し Langfuse/Valkey 接続情報を追加",
+    "YAML 構文検証（両ファイル）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "commonUI Langfuse 項目追加",
+      "estimated_hours": 0.17,
+      "deliverables": ["commonUI/data/myvault_secrets.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "commonUI Valkey 項目追加",
+      "estimated_hours": 0.17,
+      "deliverables": ["commonUI/data/myvault_secrets.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.1",
+      "description": "expertAgent api_keys カテゴリ更新",
+      "estimated_hours": 0.08,
+      "deliverables": ["expertAgent/myvault_secrets.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "expertAgent service_config カテゴリ更新",
+      "estimated_hours": 0.17,
+      "deliverables": ["expertAgent/myvault_secrets.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.1",
+      "description": "YAML 構文検証",
+      "estimated_hours": 0.17,
+      "deliverables": [],
+      "dependencies": ["1.1", "1.2", "2.1", "2.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "commonUI/data/myvault_secrets.yaml（7項目追加）",
+    "expertAgent/myvault_secrets.yaml（新規作成、7項目追加）"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "両ファイルに全7項目が追加されている",
+    "YAML 構文エラーなし",
+    "既存項目が正常動作"
+  ],
+  "target_coverage": 90,
+  "notes": "このIssueはYAML設定ファイルの編集タスクです。単体テストは不要ですが、YAML構文検証は必須です。expertAgent/myvault_secrets.yamlは存在しないため新規作成が必要です。"
+}

@@ -1,0 +1,18 @@
+{
+  "issue_number": 255,
+  "refactor_targets": [
+    "commonUI/data/myvault_secrets.yaml",
+    "expertAgent/myvault_secrets.yaml"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": 0
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "YAML形式の一貫性確認（インデント、フォーマット）",
+    "コメントの整理（適切なグルーピング）",
+    "重複や不整合がないことの確認"
+  ],
+  "notes": "このIssueはYAML設定ファイルの追加タスクです。リファクタリングの余地は限定的ですが、フォーマットの一貫性を確認します。"
+}
