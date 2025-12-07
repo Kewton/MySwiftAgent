@@ -4,12 +4,12 @@ Tests for Issue #169: Valkey persistence infrastructure implementation.
 This test module verifies the ConversationStoreValkey implementation with 90% coverage target.
 """
 
-import pytest
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.stores.conversation_store_valkey import ConversationStoreValkey
+import pytest
+
 from app.services.valkey_client import ValkeyConnectionError
+from app.stores.conversation_store_valkey import ConversationStoreValkey
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ class TestConversationStoreValkeyInit:
     def test_init_default_values(self):
         """Test initialization with default values."""
         with patch("app.stores.conversation_store_valkey.ValkeyClient") as mock_client:
-            store = ConversationStoreValkey()
+            ConversationStoreValkey()
 
             mock_client.assert_called_once_with(
                 host="localhost", port=6379, db=0
@@ -217,7 +217,7 @@ class TestConversationStoreValkeyGet:
             store = ConversationStoreValkey(key_prefix="custom:")
             await store.connect()
 
-            result = await store.get_conversation("test-conv-123")
+            await store.get_conversation("test-conv-123")
 
             mock_valkey_client.get.assert_awaited_once_with("custom:test-conv-123")
 

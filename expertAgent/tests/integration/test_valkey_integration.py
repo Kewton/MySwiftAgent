@@ -4,9 +4,10 @@ Tests for Issue #169: Valkey persistence infrastructure implementation.
 This test module verifies end-to-end Valkey integration with 50% coverage target.
 """
 
-import pytest
 import time
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
+import pytest
 
 from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
 from app.stores.conversation_store_valkey import ConversationStoreValkey

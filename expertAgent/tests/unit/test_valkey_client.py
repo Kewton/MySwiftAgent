@@ -4,8 +4,9 @@ Tests for Issue #169: Valkey persistence infrastructure implementation.
 This test module verifies the ValkeyClient implementation with 90% coverage target.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
 
@@ -228,7 +229,7 @@ class TestValkeyClientErrorHandling:
         client = ValkeyClient()
         await client.connect()
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             await client.get("test_key")
 
 
