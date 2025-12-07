@@ -38,18 +38,20 @@ Langfuse と Valkey の接続情報を myVault で一元管理し、環境変数
 |-------|------|------|--------|------|
 | #248-1 | SecretsManager 拡張（get_connection_config） | なし | S | 3h |
 | #248-2 | resolve_runtime_value 型変換対応 | なし | XS | 2h |
+| #248-6 | myvault_secrets.yaml 更新 | なし | XS | 1h |
 
 **Phase 1 完了条件**:
 - [ ] `get_connection_config()` メソッド実装完了
 - [ ] `resolve_runtime_value()` に `value_type` パラメータ追加
+- [ ] `myvault_secrets.yaml` に Langfuse/Valkey 設定追加
 - [ ] 単体テスト 90%以上
 
 ### Phase 2: サービス統合（Phase 1 完了後）
 
 | Issue | 概要 | 依存 | サイズ | 見積 |
 |-------|------|------|--------|------|
-| #248-3 | Valkey 初期化の myVault 対応 | #248-1 | S | 2h |
-| #248-4 | Langfuse HOST の myVault 対応 | #248-1 | XS | 1h |
+| #248-3 | Valkey 初期化の myVault 対応 | #248-1, #248-6 | S | 2h |
+| #248-4 | Langfuse HOST の myVault 対応 | #248-1, #248-6 | XS | 1h |
 
 **Phase 2 完了条件**:
 - [ ] Valkey 接続情報が myVault から取得される
@@ -268,6 +270,61 @@ Langfuse と Valkey の接続情報を myVault で一元管理し、環境変数
 
 ---
 
+### Issue #248-6: myvault_secrets.yaml 更新
+
+**概要**: `commonUI/data/myvault_secrets.yaml` と `expertAgent/myvault_secrets.yaml` に Langfuse/Valkey 接続情報の定義を追加
+
+**サイズ**: XS (1 Story Point)
+**優先度**: High
+**作業見積**: 1時間
+**担当候補**: Backend
+
+**スコープ**:
+- [ ] `commonUI/data/myvault_secrets.yaml` に Langfuse 接続情報を追加
+- [ ] `commonUI/data/myvault_secrets.yaml` に Valkey 接続情報を追加
+- [ ] `expertAgent/myvault_secrets.yaml` に Langfuse 接続情報を追加
+- [ ] `expertAgent/myvault_secrets.yaml` に Valkey 接続情報を追加
+
+**技術スタック**:
+- 変更ファイル:
+  - `commonUI/data/myvault_secrets.yaml`
+  - `expertAgent/myvault_secrets.yaml`
+
+**追加する設定項目**:
+
+| キー名 | 説明 |
+|-------|------|
+| `LANGFUSE_HOST` | Langfuse Self-hosted URL |
+| `LANGFUSE_PUBLIC_KEY` | Langfuse public API key（既存確認） |
+| `LANGFUSE_SECRET_KEY` | Langfuse secret API key（既存確認） |
+| `VALKEY_HOST` | Valkey server hostname |
+| `VALKEY_PORT` | Valkey server port |
+| `VALKEY_DB` | Valkey database number |
+| `VALKEY_TTL` | Valkey TTL in seconds |
+
+**受入基準 (Acceptance Criteria)**:
+
+#### 🤖 自動検証可能な基準
+
+**機能要件**:
+- [ ] `commonUI/data/myvault_secrets.yaml` に全7項目が定義されている
+- [ ] `expertAgent/myvault_secrets.yaml` に全7項目が定義されている
+- [ ] YAML 構文が正しい
+
+**品質基準**:
+- [ ] YAML lint エラーゼロ
+
+#### 👤 手動検証が必要な基準
+
+**動作検証**:
+- [ ] commonUI のシークレット登録画面で新規項目がドロップダウンに表示される
+
+#### ✅ 完了条件
+- 両ファイルに全7項目が追加されている
+- commonUI で新規項目が選択可能
+
+---
+
 ### Issue #248-5: 結合テスト・受入テスト作成
 
 **概要**: myVault 接続設定の結合テストと受入テストを作成
@@ -478,6 +535,7 @@ curl -X POST "http://localhost:8103/api/v1/secrets/expertagent/default_project/V
 |---------|-------------|---------|--------|--------|
 | #248-1 | **#250** | [SecretsManager 拡張（get_connection_config）](https://github.com/Kewton/MySwiftAgent/issues/250) | S | High |
 | #248-2 | **#251** | [resolve_runtime_value 型変換対応](https://github.com/Kewton/MySwiftAgent/issues/251) | XS | Medium |
+| #248-6 | **#255** | [myvault_secrets.yaml 更新](https://github.com/Kewton/MySwiftAgent/issues/255) | XS | High |
 
 #### Phase 2: サービス統合
 
