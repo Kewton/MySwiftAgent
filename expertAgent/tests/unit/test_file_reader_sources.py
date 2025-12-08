@@ -46,10 +46,27 @@ class TestDownloadFromUrl:
     @pytest.mark.asyncio
     async def test_download_from_url_404(self):
         """Test download fails for 404 response."""
-        url_404 = "https://httpbin.org/status/404"
+        import httpx
 
-        with pytest.raises(ValueError, match="Failed to download from URL"):
-            await download_from_url(url_404)
+        # Mock httpx to return 404 status instead of making real HTTP request
+        with patch("mymcp.tool.file_reader_sources.httpx.AsyncClient") as mock_client:
+            mock_response = MagicMock()
+            mock_response.status_code = 404
+            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "404 Not Found",
+                request=MagicMock(),
+                response=mock_response,
+            )
+            mock_client.return_value.__aenter__.return_value.get.return_value = (
+                mock_response
+            )
+
+            url_404 = "https://example.com/nonexistent"
+
+            with pytest.raises(
+                ValueError, match="(Failed to download from URL|Download failed)"
+            ):
+                await download_from_url(url_404)
 
 
 class TestDownloadFromGoogleDrive:
