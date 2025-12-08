@@ -32,6 +32,8 @@ class TestLangfuseService:
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
+        # Mock get_connection_config to return the host (myVault or fallback)
+        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
 
         mock_client = Mock()
         mock_langfuse_class.return_value = mock_client
@@ -554,3 +556,85 @@ class TestLangfuseService:
 
         # Verify
         assert result is False
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    @patch("app.services.langfuse_service.Langfuse")
+    def test_initialization_with_myvault_host(
+        self, mock_langfuse_class, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test initialization uses myVault LANGFUSE_HOST when available."""
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://env-fallback:3001"
+        mock_secrets_manager.get_secret.side_effect = lambda key: {
+            "LANGFUSE_PUBLIC_KEY": "pk-test-123",
+            "LANGFUSE_SECRET_KEY": "sk-test-456",
+        }[key]
+        # myVault returns custom host
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://myvault-host:3001"
+        )
+
+        mock_client = Mock()
+        mock_langfuse_class.return_value = mock_client
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        # Execute
+        service = LangfuseService()
+
+        # Verify - should use myVault host
+        mock_secrets_manager.get_connection_config.assert_called_once_with(
+            "LANGFUSE_HOST",
+            value_type=str,
+            default="http://env-fallback:3001",
+        )
+        mock_langfuse_class.assert_called_once_with(
+            secret_key="sk-test-456",
+            public_key="pk-test-123",
+            host="http://myvault-host:3001",
+        )
+        assert service._client == mock_client
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    @patch("app.services.langfuse_service.Langfuse")
+    def test_initialization_with_env_fallback(
+        self, mock_langfuse_class, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test initialization falls back to env LANGFUSE_HOST when myVault has no value."""
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://env-fallback:3001"
+        mock_secrets_manager.get_secret.side_effect = lambda key: {
+            "LANGFUSE_PUBLIC_KEY": "pk-test-123",
+            "LANGFUSE_SECRET_KEY": "sk-test-456",
+        }[key]
+        # myVault returns fallback (env var value)
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://env-fallback:3001"
+        )
+
+        mock_client = Mock()
+        mock_langfuse_class.return_value = mock_client
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        # Execute
+        service = LangfuseService()
+
+        # Verify - should use env fallback
+        mock_secrets_manager.get_connection_config.assert_called_once_with(
+            "LANGFUSE_HOST",
+            value_type=str,
+            default="http://env-fallback:3001",
+        )
+        mock_langfuse_class.assert_called_once_with(
+            secret_key="sk-test-456",
+            public_key="pk-test-123",
+            host="http://env-fallback:3001",
+        )
+        assert service._client == mock_client

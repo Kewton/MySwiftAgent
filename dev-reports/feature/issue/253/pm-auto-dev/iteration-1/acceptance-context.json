@@ -1,0 +1,47 @@
+{
+  "issue_number": 253,
+  "feature_summary": "Langfuse HOST の myVault 対応",
+  "acceptance_criteria": [
+    "myVault に LANGFUSE_HOST がある場合、その値で Langfuse に接続",
+    "myVault に値がない場合、環境変数 LANGFUSE_HOST を使用"
+  ],
+  "quality_criteria": [
+    "Ruff/MyPy エラーゼロ",
+    "既存テスト全パス"
+  ],
+  "test_scenarios": [
+    {
+      "id": "AC-1",
+      "description": "myVault から LANGFUSE_HOST 取得",
+      "type": "unit_test",
+      "test_name": "test_initialization_with_myvault_host",
+      "expected_result": "myVault の値が使用される"
+    },
+    {
+      "id": "AC-2",
+      "description": "環境変数フォールバック",
+      "type": "unit_test",
+      "test_name": "test_initialization_with_env_fallback",
+      "expected_result": "環境変数の値がフォールバックとして使用される"
+    },
+    {
+      "id": "AC-3",
+      "description": "静的解析チェック",
+      "type": "static_analysis",
+      "command": "cd expertAgent && uv run ruff check app/services/langfuse_service.py && uv run mypy app/services/langfuse_service.py",
+      "expected_result": "エラーゼロ"
+    },
+    {
+      "id": "AC-4",
+      "description": "既存テスト全パス",
+      "type": "unit_test",
+      "command": "cd expertAgent && uv run pytest tests/unit/test_langfuse_service.py -v",
+      "expected_result": "全テストパス"
+    }
+  ],
+  "target_files": [
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/tests/unit/test_langfuse_service.py"
+  ],
+  "tdd_result_reference": "dev-reports/feature/issue/253/pm-auto-dev/iteration-1/tdd-result.json"
+}

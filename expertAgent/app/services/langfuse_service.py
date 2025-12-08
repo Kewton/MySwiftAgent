@@ -61,20 +61,27 @@ class LangfuseService:
     def _initialize_client(self) -> None:
         """Langfuse クライアント初期化（Self-hosted対応）.
 
-        myVault優先でAPIキーを取得し、環境変数にフォールバックします。
+        myVault優先でAPIキー・HOSTを取得し、環境変数にフォールバックします。
         """
         try:
             # myVault優先でAPIキーを取得
             public_key = secrets_manager.get_secret("LANGFUSE_PUBLIC_KEY")
             secret_key = secrets_manager.get_secret("LANGFUSE_SECRET_KEY")
 
+            # myVault 優先、環境変数フォールバック
+            langfuse_host = secrets_manager.get_connection_config(
+                "LANGFUSE_HOST",
+                value_type=str,
+                default=settings.LANGFUSE_HOST,
+            )
+
             self._client = Langfuse(
                 secret_key=secret_key,
                 public_key=public_key,
-                host=settings.LANGFUSE_HOST,  # Self-hosted URL
+                host=langfuse_host,
             )
             logger.info(
-                f"Langfuse client initialized successfully (host: {settings.LANGFUSE_HOST})"
+                f"Langfuse client initialized successfully (host: {langfuse_host})"
             )
         except ValueError as e:
             logger.error(f"Failed to get Langfuse API keys: {e}")

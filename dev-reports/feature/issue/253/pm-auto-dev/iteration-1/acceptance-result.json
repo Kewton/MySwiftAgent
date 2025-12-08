@@ -1,0 +1,69 @@
+{
+  "status": "passed",
+  "test_cases": [
+    {
+      "scenario": "AC-1: myVault から LANGFUSE_HOST 取得",
+      "result": "passed",
+      "evidence": "test_initialization_with_myvault_host: PASSED - myVault の値 'http://myvault-host:3001' が正しく Langfuse クライアントに渡される"
+    },
+    {
+      "scenario": "AC-2: 環境変数フォールバック",
+      "result": "passed",
+      "evidence": "test_initialization_with_env_fallback: PASSED - myVault に値がない場合、環境変数 'http://env-fallback:3001' がフォールバックとして使用される"
+    },
+    {
+      "scenario": "AC-3: 静的解析チェック",
+      "result": "passed",
+      "evidence": "ruff check: All checks passed!, mypy: Success: no issues found in 1 source file"
+    },
+    {
+      "scenario": "AC-4: 既存テスト全パス",
+      "result": "passed",
+      "evidence": "pytest: 24 passed, 9 warnings in 0.05s"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "myVault に LANGFUSE_HOST がある場合、その値で Langfuse に接続",
+      "verified": true
+    },
+    {
+      "criterion": "myVault に値がない場合、環境変数 LANGFUSE_HOST を使用",
+      "verified": true
+    },
+    {
+      "criterion": "Ruff/MyPy エラーゼロ",
+      "verified": true
+    },
+    {
+      "criterion": "既存テスト全パス",
+      "verified": true
+    }
+  ],
+  "details": {
+    "tests_run": 24,
+    "tests_passed": 24,
+    "tests_failed": 0,
+    "static_analysis": {
+      "ruff_errors": 0,
+      "mypy_errors": 0
+    }
+  },
+  "evidence_files": [
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/tests/unit/test_langfuse_service.py"
+  ],
+  "code_verification": {
+    "implementation_check": {
+      "file": "expertAgent/app/services/langfuse_service.py",
+      "line_72_76": "langfuse_host = secrets_manager.get_connection_config('LANGFUSE_HOST', value_type=str, default=settings.LANGFUSE_HOST)",
+      "verified": true,
+      "description": "get_connection_config() を使用して myVault 優先、環境変数フォールバックのパターンを実装済み"
+    },
+    "test_coverage": {
+      "test_initialization_with_myvault_host": "myVault からホスト取得を検証",
+      "test_initialization_with_env_fallback": "環境変数へのフォールバックを検証"
+    }
+  },
+  "message": "すべての受入条件を満たしています"
+}
