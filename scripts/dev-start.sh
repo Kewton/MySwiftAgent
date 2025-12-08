@@ -597,9 +597,16 @@ stop_service() {
 
     # Fallback to port-based detection if no valid PID from file
     if [[ -z "$pid" && -n "$port" ]]; then
-        pid=$(find_pid_by_port "$port")
-        if [[ -n "$pid" ]]; then
-            print_warning "$name: PID file not found, detected via port $port (PID: $pid)"
+        local detected_pid=$(find_pid_by_port "$port")
+        if [[ -n "$detected_pid" ]]; then
+            # Check if the detected process is Docker (avoid killing Docker Desktop)
+            local proc_name=$(ps -p "$detected_pid" -o comm= 2>/dev/null || echo "")
+            if [[ "$proc_name" == *"docker"* || "$proc_name" == *"Docker"* || "$proc_name" == "com.docke"* ]]; then
+                print_info "$name: Port $port is used by Docker container (skipping kill)"
+            else
+                pid=$detected_pid
+                print_warning "$name: PID file not found, detected via port $port (PID: $pid)"
+            fi
         fi
     fi
 
@@ -945,20 +952,9 @@ stop_langfuse() {
         return 0
     fi
 
-    # Check if docker-compose is available
-    if ! command -v docker-compose &> /dev/null; then
-        print_info "Langfuse: docker-compose not available, skipping"
-        rm -f "$LANGFUSE_PID" 2>/dev/null || true
-        return 0
-    fi
-
-    cd "$PROJECT_ROOT" || {
-        print_error "Langfuse: Cannot change to project root"
-        return 1
-    }
-
-    # Stop Langfuse services via docker-compose
-    docker-compose stop langfuse-server langfuse-worker langfuse-minio langfuse-redis langfuse-clickhouse langfuse-db 2>/dev/null || true
+    # Stop Langfuse services via individual docker stop commands
+    # Using container names defined in docker-compose.platform.yml
+    docker stop myswiftagent-langfuse-server myswiftagent-langfuse-worker myswiftagent-langfuse-minio myswiftagent-langfuse-redis myswiftagent-langfuse-clickhouse myswiftagent-langfuse-db 2>/dev/null || true
 
     # Remove PID file
     rm -f "$LANGFUSE_PID" 2>/dev/null || true
@@ -1224,7 +1220,7 @@ main() {
                 # - LOG_DIR: Use local logs directory (not Docker's /app/logs)
                 # - LOG_LEVEL: Configurable log level
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "MYVAULT_BASE_URL='http://localhost:$MYVAULT_PORT' MYVAULT_SERVICE_TOKEN='$expertagent_token' MYVAULT_DEFAULT_PROJECT='$myvault_default_project' LOG_DIR='$LOG_DIR' LOG_LEVEL='$expertagent_log_level' uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
+                    "MYVAULT_ENABLED=True MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT MYVAULT_SERVICE_TOKEN=$expertagent_token MYVAULT_DEFAULT_PROJECT=$myvault_default_project LOG_DIR=$LOG_DIR LOG_LEVEL=$expertagent_log_level uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
             fi
 
             # Start GraphAiServer
