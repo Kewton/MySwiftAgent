@@ -29,8 +29,8 @@ from app.api.v1 import (
 from app.middleware import MethodValidatorMiddleware, ResponseValidatorMiddleware
 from app.services.job_creation_state import job_state_manager
 from app.services.valkey_client import ValkeyClient
-from core.config import settings
 from core.logger import setup_logging
+from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +41,33 @@ async def lifespan(app: FastAPI):
     # Startup: Initialize logging
     setup_logging()
 
-    # Initialize Valkey connection for JobCreationStateManager (Issue #244)
-    if settings.VALKEY_ENABLED:
-        logger.info(
-            f"Initializing Valkey connection: {settings.VALKEY_HOST}:{settings.VALKEY_PORT}"
+    # Initialize Valkey connection for JobCreationStateManager (Issue #244, #252)
+    # Use secrets_manager.get_connection_config() for myVault priority with env fallback
+    valkey_enabled = secrets_manager.get_connection_config(
+        "VALKEY_ENABLED", value_type=bool, default=False
+    )
+
+    if valkey_enabled:
+        valkey_host = secrets_manager.get_connection_config(
+            "VALKEY_HOST", value_type=str, default="localhost"
         )
+        valkey_port = secrets_manager.get_connection_config(
+            "VALKEY_PORT", value_type=int, default=6379
+        )
+        valkey_db = secrets_manager.get_connection_config(
+            "VALKEY_DB", value_type=int, default=0
+        )
+        valkey_ttl = secrets_manager.get_connection_config(
+            "VALKEY_TTL", value_type=int, default=86400
+        )
+
+        logger.info(f"Initializing Valkey connection: {valkey_host}:{valkey_port}")
         valkey_client = ValkeyClient(
-            host=settings.VALKEY_HOST,
-            port=settings.VALKEY_PORT,
-            db=settings.VALKEY_DB,
+            host=valkey_host,
+            port=valkey_port,
+            db=valkey_db,
         )
-        job_state_manager.configure_valkey(valkey_client, settings.VALKEY_TTL)
+        job_state_manager.configure_valkey(valkey_client, valkey_ttl)
         await job_state_manager.connect_valkey()
     else:
         logger.info("Valkey disabled - JobCreationStateManager using L1 cache only")
@@ -59,7 +75,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown: cleanup Valkey connection
-    if settings.VALKEY_ENABLED:
+    if valkey_enabled:
         await job_state_manager.disconnect_valkey()
 
 
@@ -201,13 +217,16 @@ async def health_check() -> dict[str, Any]:
     """Health check endpoint (used by CI/CD).
 
     Returns:
-        Health status including Valkey connection state (Issue #244)
+        Health status including Valkey connection state (Issue #244, #252)
     """
+    valkey_enabled = secrets_manager.get_connection_config(
+        "VALKEY_ENABLED", value_type=bool, default=False
+    )
     return {
         "status": "healthy",
         "service": "expertAgent",
         "valkey": {
-            "enabled": settings.VALKEY_ENABLED,
+            "enabled": valkey_enabled,
             "connected": job_state_manager.is_valkey_connected,
         },
     }

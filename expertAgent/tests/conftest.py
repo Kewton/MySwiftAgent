@@ -26,8 +26,28 @@ def enable_myvault_for_ci():
         # Create a mock MyVault client
         mock_client = MagicMock()
 
-        # Configure mock responses
-        mock_client.get_secret.return_value = "mock-secret-value"
+        # Configure mock responses with type-appropriate values
+        # get_secret returns values that can be converted to expected types
+        # Note: myvault_client.get_secret(project, key) - project is first arg
+        def mock_get_secret(project, key):
+            """Return type-appropriate mock values for each key."""
+            mock_values = {
+                # Valkey configuration (Issue #252)
+                "VALKEY_ENABLED": "false",  # Disable Valkey in tests
+                "VALKEY_HOST": "localhost",
+                "VALKEY_PORT": "6379",
+                "VALKEY_DB": "0",
+                "VALKEY_TTL": "86400",
+                # Langfuse configuration
+                "LANGFUSE_HOST": "http://localhost:3000",
+                # API keys
+                "OPENAI_API_KEY": "mock-openai-key",
+                "GOOGLE_API_KEY": "mock-google-key",
+                "ANTHROPIC_API_KEY": "mock-anthropic-key",
+            }
+            return mock_values.get(key, "mock-secret-value")
+
+        mock_client.get_secret.side_effect = mock_get_secret
         mock_client.get_secrets.return_value = {
             "OPENAI_API_KEY": "mock-openai-key",
             "GOOGLE_API_KEY": "mock-google-key",
@@ -35,6 +55,7 @@ def enable_myvault_for_ci():
         }
         mock_client.update_secret.return_value = None
         mock_client.health_check.return_value = True
+        mock_client.get_default_project.return_value = "expertagent"
 
         # Set the mock client
         secrets_manager.myvault_client = mock_client

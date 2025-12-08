@@ -22,7 +22,7 @@ from app.schemas.observability import (
 )
 from app.services.trace_service import trace_service
 from app.services.valkey_client import ValkeyClient, ValkeyConnectionError
-from core.config import settings
+from core.secrets import secrets_manager
 
 from .base import BaseService
 from .response_builder import ResponseBuilder
@@ -37,13 +37,20 @@ class MetricsAggregationService(BaseService):
     """Service for aggregating requirement definition metrics."""
 
     def __init__(self) -> None:
-        """Initialize MetricsAggregationService."""
+        """Initialize MetricsAggregationService.
+
+        Uses secrets_manager.get_connection_config() for myVault priority (Issue #252).
+        """
         super().__init__(logger=logger, response_builder=ResponseBuilder())
-        self._use_valkey = settings.VALKEY_ENABLED
+        self._use_valkey = secrets_manager.get_connection_config(
+            "VALKEY_ENABLED", value_type=bool, default=False
+        )
         self._valkey_client: ValkeyClient | None = None
 
     async def _get_valkey_client(self) -> ValkeyClient | None:
         """Get or create Valkey client connection.
+
+        Uses secrets_manager.get_connection_config() for myVault priority (Issue #252).
 
         Returns:
             ValkeyClient if available, None otherwise.
@@ -53,10 +60,19 @@ class MetricsAggregationService(BaseService):
 
         if self._valkey_client is None:
             try:
+                valkey_host = secrets_manager.get_connection_config(
+                    "VALKEY_HOST", value_type=str, default="localhost"
+                )
+                valkey_port = secrets_manager.get_connection_config(
+                    "VALKEY_PORT", value_type=int, default=6379
+                )
+                valkey_db = secrets_manager.get_connection_config(
+                    "VALKEY_DB", value_type=int, default=0
+                )
                 self._valkey_client = ValkeyClient(
-                    host=settings.VALKEY_HOST,
-                    port=settings.VALKEY_PORT,
-                    db=settings.VALKEY_DB,
+                    host=valkey_host,
+                    port=valkey_port,
+                    db=valkey_db,
                 )
                 await self._valkey_client.connect()
             except ValkeyConnectionError as e:

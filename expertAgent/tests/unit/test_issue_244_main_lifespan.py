@@ -119,11 +119,14 @@ class TestHealthEndpoint:
     @pytest.mark.unit
     async def test_health_includes_valkey_status_when_enabled(self) -> None:
         """Test /health returns Valkey status when enabled."""
-        # Patch settings and job_state_manager
-        with patch("app.main.settings") as mock_settings, patch(
-            "app.main.job_state_manager"
-        ) as mock_manager:
-            mock_settings.VALKEY_ENABLED = True
+        # Patch secrets_manager and job_state_manager
+        with (
+            patch(
+                "app.main.secrets_manager.get_connection_config"
+            ) as mock_get_config,
+            patch("app.main.job_state_manager") as mock_manager,
+        ):
+            mock_get_config.return_value = True
             mock_manager.is_valkey_connected = True
 
             # Import app after patching
@@ -144,10 +147,13 @@ class TestHealthEndpoint:
     @pytest.mark.unit
     async def test_health_includes_valkey_status_when_disabled(self) -> None:
         """Test /health returns Valkey status when disabled."""
-        with patch("app.main.settings") as mock_settings, patch(
-            "app.main.job_state_manager"
-        ) as mock_manager:
-            mock_settings.VALKEY_ENABLED = False
+        with (
+            patch(
+                "app.main.secrets_manager.get_connection_config"
+            ) as mock_get_config,
+            patch("app.main.job_state_manager") as mock_manager,
+        ):
+            mock_get_config.return_value = False
             mock_manager.is_valkey_connected = False
 
             from app.main import app
@@ -172,16 +178,27 @@ class TestLifespanValkeyInit:
         mock_valkey_client = MagicMock()
         mock_valkey_client.connect = AsyncMock()
 
-        with patch("app.main.settings") as mock_settings, patch(
-            "app.main.ValkeyClient", return_value=mock_valkey_client
-        ) as mock_valkey_class, patch(
-            "app.main.job_state_manager"
-        ) as mock_manager:
-            mock_settings.VALKEY_ENABLED = True
-            mock_settings.VALKEY_HOST = "localhost"
-            mock_settings.VALKEY_PORT = 6379
-            mock_settings.VALKEY_DB = 0
-            mock_settings.VALKEY_TTL = 86400
+        def get_config_side_effect(key, **kwargs):
+            config_map = {
+                "VALKEY_ENABLED": True,
+                "VALKEY_HOST": "localhost",
+                "VALKEY_PORT": 6379,
+                "VALKEY_DB": 0,
+                "VALKEY_TTL": 86400,
+            }
+            return config_map.get(key, kwargs.get("default"))
+
+        with (
+            patch(
+                "app.main.secrets_manager.get_connection_config"
+            ) as mock_get_config,
+            patch(
+                "app.main.ValkeyClient", return_value=mock_valkey_client
+            ) as mock_valkey_class,
+            patch("app.main.job_state_manager") as mock_manager,
+            patch("app.main.setup_logging"),
+        ):
+            mock_get_config.side_effect = get_config_side_effect
             mock_manager.configure_valkey = MagicMock()
             mock_manager.connect_valkey = AsyncMock()
             mock_manager.disconnect_valkey = AsyncMock()
@@ -209,12 +226,15 @@ class TestLifespanValkeyInit:
     @pytest.mark.unit
     async def test_lifespan_skips_valkey_when_disabled(self) -> None:
         """Test lifespan skips Valkey when VALKEY_ENABLED=false."""
-        with patch("app.main.settings") as mock_settings, patch(
-            "app.main.ValkeyClient"
-        ) as mock_valkey_class, patch(
-            "app.main.job_state_manager"
-        ) as mock_manager:
-            mock_settings.VALKEY_ENABLED = False
+        with (
+            patch(
+                "app.main.secrets_manager.get_connection_config"
+            ) as mock_get_config,
+            patch("app.main.ValkeyClient") as mock_valkey_class,
+            patch("app.main.job_state_manager") as mock_manager,
+            patch("app.main.setup_logging"),
+        ):
+            mock_get_config.return_value = False
             mock_manager.configure_valkey = MagicMock()
             mock_manager.connect_valkey = AsyncMock()
             mock_manager.disconnect_valkey = AsyncMock()
@@ -236,10 +256,15 @@ class TestLifespanValkeyInit:
     @pytest.mark.unit
     async def test_lifespan_logs_valkey_disabled_message(self) -> None:
         """Test lifespan logs message when Valkey is disabled."""
-        with patch("app.main.settings") as mock_settings, patch(
-            "app.main.job_state_manager"
-        ) as mock_manager, patch("app.main.logger") as mock_logger:
-            mock_settings.VALKEY_ENABLED = False
+        with (
+            patch(
+                "app.main.secrets_manager.get_connection_config"
+            ) as mock_get_config,
+            patch("app.main.job_state_manager") as mock_manager,
+            patch("app.main.logger") as mock_logger,
+            patch("app.main.setup_logging"),
+        ):
+            mock_get_config.return_value = False
             mock_manager.configure_valkey = MagicMock()
             mock_manager.connect_valkey = AsyncMock()
             mock_manager.disconnect_valkey = AsyncMock()

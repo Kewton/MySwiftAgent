@@ -276,9 +276,25 @@ class TestGetConversationService:
         # Import ValkeyConnectionError for the test
         from app.services.valkey_client import ValkeyConnectionError
 
-        with patch(
-            "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
-        ) as mock_store_class:
+        def get_config_side_effect(key, **kwargs):
+            config_map = {
+                "VALKEY_HOST": "localhost",
+                "VALKEY_PORT": 6379,
+                "VALKEY_DB": 0,
+                "LANGFUSE_HOST": "http://localhost:3000",
+            }
+            return config_map.get(key, kwargs.get("default"))
+
+        with (
+            patch(
+                "app.api.v1.diagnostic_endpoints.secrets_manager"
+            ) as mock_secrets,
+            patch(
+                "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
+            ) as mock_store_class,
+        ):
+            mock_secrets.get_connection_config.side_effect = get_config_side_effect
+
             mock_store = MagicMock()
             mock_store.connect = AsyncMock(
                 side_effect=ValkeyConnectionError("Connection refused")
@@ -312,13 +328,32 @@ class TestGetConversationServiceSuccess:
     @pytest.mark.unit
     async def test_get_conversation_service_success(self):
         """Test successful service creation."""
-        with patch(
-            "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
-        ) as mock_store_class, patch(
-            "app.api.v1.diagnostic_endpoints.ValkeyClient"
-        ) as mock_client_class, patch(
-            "app.api.v1.diagnostic_endpoints.IndexManager"
-        ) as mock_index_class:
+
+        def get_config_side_effect(key, **kwargs):
+            config_map = {
+                "VALKEY_HOST": "localhost",
+                "VALKEY_PORT": 6379,
+                "VALKEY_DB": 0,
+                "LANGFUSE_HOST": "http://localhost:3000",
+            }
+            return config_map.get(key, kwargs.get("default"))
+
+        with (
+            patch(
+                "app.api.v1.diagnostic_endpoints.secrets_manager"
+            ) as mock_secrets,
+            patch(
+                "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
+            ) as mock_store_class,
+            patch(
+                "app.api.v1.diagnostic_endpoints.ValkeyClient"
+            ) as mock_client_class,
+            patch(
+                "app.api.v1.diagnostic_endpoints.IndexManager"
+            ) as mock_index_class,
+        ):
+            mock_secrets.get_connection_config.side_effect = get_config_side_effect
+
             # Set up mocks
             mock_store = MagicMock()
             mock_store.connect = AsyncMock()

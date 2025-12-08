@@ -27,7 +27,7 @@ from app.services.ab_test_service import (
     ABTestService,
     ABTestServiceError,
 )
-from core.config import settings
+from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +38,29 @@ _ab_test_service: ABTestService | None = None
 
 
 def get_ab_test_service() -> ABTestService:
-    """Get or create the shared ABTestService instance."""
+    """Get or create the shared ABTestService instance.
+
+    Uses secrets_manager.get_connection_config() for myVault priority (Issue #252).
+    """
     global _ab_test_service
     if _ab_test_service is None:
+        valkey_host = secrets_manager.get_connection_config(
+            "VALKEY_HOST", value_type=str, default="localhost"
+        )
+        valkey_port = secrets_manager.get_connection_config(
+            "VALKEY_PORT", value_type=int, default=6379
+        )
+        valkey_db = secrets_manager.get_connection_config(
+            "VALKEY_DB", value_type=int, default=0
+        )
+        valkey_enabled = secrets_manager.get_connection_config(
+            "VALKEY_ENABLED", value_type=bool, default=False
+        )
         _ab_test_service = ABTestService(
-            valkey_host=settings.VALKEY_HOST,
-            valkey_port=settings.VALKEY_PORT,
-            valkey_db=settings.VALKEY_DB,
-            use_valkey=settings.VALKEY_ENABLED,
+            valkey_host=valkey_host,
+            valkey_port=valkey_port,
+            valkey_db=valkey_db,
+            use_valkey=valkey_enabled,
         )
     return _ab_test_service
 
