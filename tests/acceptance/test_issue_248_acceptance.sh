@@ -14,20 +14,31 @@
 # - Valkey running on localhost:6379
 # - Langfuse running on localhost:3001 (optional)
 #
+# Design patterns applied:
+# - DRY: Common Python test setup extracted to run_python_test function
+# - Single Responsibility: Each function has a focused purpose
+# - Consistent output formatting with helper functions
+#
 # Usage:
 #   ./tests/acceptance/test_issue_248_acceptance.sh
 #
 
 set -euo pipefail
 
-# Configuration
+# =============================================================================
+# Configuration - Environment variables with defaults
+# =============================================================================
+
 MYVAULT_URL="${MYVAULT_URL:-http://localhost:8103}"
 EXPERTAGENT_URL="${EXPERTAGENT_URL:-http://localhost:8104}"
 VALKEY_HOST="${VALKEY_HOST:-localhost}"
 VALKEY_PORT="${VALKEY_PORT:-6379}"
 LANGFUSE_URL="${LANGFUSE_URL:-http://localhost:3001}"
 
-# Colors for output
+# =============================================================================
+# Output formatting - Colors and logging helpers
+# =============================================================================
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -43,7 +54,7 @@ TESTS_SKIPPED=0
 EVIDENCE_DIR="./dev-reports/acceptance-test-evidence/issue-248"
 mkdir -p "$EVIDENCE_DIR"
 
-# Helper functions
+# Logging helpers - Provide consistent output formatting
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -73,6 +84,60 @@ log_test_fail() {
 log_test_skip() {
     echo -e "${YELLOW}[SKIP]${NC} $1"
     ((TESTS_SKIPPED++))
+}
+
+# =============================================================================
+# Common Python Test Runner - DRY pattern for test execution
+# =============================================================================
+
+# Common Python imports and setup code (reduces duplication)
+PYTHON_TEST_PREAMBLE='
+import sys
+import os
+
+# Add expertAgent to path
+sys.path.insert(0, "expertAgent")
+
+from unittest.mock import MagicMock, patch
+from core.secrets import SecretsManager
+from core.myvault_client import MyVaultError
+
+def create_test_manager():
+    """Create a fresh SecretsManager for testing."""
+    manager = SecretsManager()
+    manager.clear_cache()
+    return manager
+'
+
+# Run a Python test with common setup
+# Usage: run_python_test "test_name" "python_code"
+# The python_code should define a function called run_test() that returns True/False
+run_python_test() {
+    local test_name=$1
+    local python_code=$2
+
+    python3 << EOF
+${PYTHON_TEST_PREAMBLE}
+
+${python_code}
+
+try:
+    result = run_test()
+    sys.exit(0 if result else 1)
+except Exception as e:
+    print(f"FAIL: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+EOF
+
+    if [ $? -eq 0 ]; then
+        log_test_pass "$test_name"
+        return 0
+    else
+        log_test_fail "$test_name"
+        return 1
+    fi
 }
 
 # =============================================================================
@@ -223,22 +288,10 @@ EOF
 test_scenario_myvault_priority() {
     log_section "Step 3.1: myVault Priority Test"
 
-    python3 << 'EOF'
-import sys
-import os
-
-# Add expertAgent to path
-sys.path.insert(0, 'expertAgent')
-
-from unittest.mock import MagicMock, patch
-
-def test_myvault_priority():
+    run_python_test "myVault priority test" '
+def run_test():
     """Test that myVault has priority over environment variables."""
-    from core.secrets import SecretsManager
-
-    # Create a fresh manager
-    manager = SecretsManager()
-    manager.clear_cache()
+    manager = create_test_manager()
 
     # Mock myVault client to return a specific value
     mock_client = MagicMock()
@@ -249,8 +302,8 @@ def test_myvault_priority():
     manager.myvault_client = mock_client
 
     # Mock settings to have a different value
-    with patch.object(manager.settings, 'VALKEY_HOST', 'env-value.example.com'):
-        result = manager.get_connection_config('VALKEY_HOST', value_type=str)
+    with patch.object(manager.settings, "VALKEY_HOST", "env-value.example.com"):
+        result = manager.get_connection_config("VALKEY_HOST", value_type=str)
 
     # myVault should have priority
     if result == "myvault-value.example.com":
@@ -259,52 +312,24 @@ def test_myvault_priority():
     else:
         print(f"FAIL: Expected myvault-value.example.com, got {result}")
         return False
-
-try:
-    result = test_myvault_priority()
-    sys.exit(0 if result else 1)
-except Exception as e:
-    print(f"FAIL: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-EOF
-
-    if [ $? -eq 0 ]; then
-        log_test_pass "myVault priority test"
-    else
-        log_test_fail "myVault priority test"
-    fi
+'
 }
 
 test_scenario_env_fallback() {
     log_section "Step 3.2: Environment Variable Fallback Test"
 
-    python3 << 'EOF'
-import sys
-import os
-
-# Add expertAgent to path
-sys.path.insert(0, 'expertAgent')
-
-from unittest.mock import MagicMock, patch
-
-def test_env_fallback():
+    run_python_test "Environment variable fallback test" '
+def run_test():
     """Test fallback to environment variables when myVault is disabled."""
-    from core.secrets import SecretsManager
-    from core.myvault_client import MyVaultError
-
-    # Create a fresh manager
-    manager = SecretsManager()
-    manager.clear_cache()
+    manager = create_test_manager()
 
     # Disable myVault
     manager.myvault_enabled = False
     manager.myvault_client = None
 
     # Set environment variable via settings
-    with patch.object(manager.settings, 'VALKEY_HOST', 'fallback-host.example.com'):
-        result = manager.get_connection_config('VALKEY_HOST', value_type=str)
+    with patch.object(manager.settings, "VALKEY_HOST", "fallback-host.example.com"):
+        result = manager.get_connection_config("VALKEY_HOST", value_type=str)
 
     # Should get env value
     if result == "fallback-host.example.com":
@@ -313,44 +338,16 @@ def test_env_fallback():
     else:
         print(f"FAIL: Expected fallback-host.example.com, got {result}")
         return False
-
-try:
-    result = test_env_fallback()
-    sys.exit(0 if result else 1)
-except Exception as e:
-    print(f"FAIL: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-EOF
-
-    if [ $? -eq 0 ]; then
-        log_test_pass "Environment variable fallback test"
-    else
-        log_test_fail "Environment variable fallback test"
-    fi
+'
 }
 
 test_scenario_myvault_error_fallback() {
     log_section "Step 3.3: myVault Error Fallback Test"
 
-    python3 << 'EOF'
-import sys
-import os
-
-# Add expertAgent to path
-sys.path.insert(0, 'expertAgent')
-
-from unittest.mock import MagicMock, patch
-
-def test_myvault_error_fallback():
+    run_python_test "myVault error fallback test" '
+def run_test():
     """Test fallback when myVault returns an error."""
-    from core.secrets import SecretsManager
-    from core.myvault_client import MyVaultError
-
-    # Create a fresh manager
-    manager = SecretsManager()
-    manager.clear_cache()
+    manager = create_test_manager()
 
     # Mock myVault client to raise an error
     mock_client = MagicMock()
@@ -361,8 +358,8 @@ def test_myvault_error_fallback():
     manager.myvault_client = mock_client
 
     # Set environment variable as fallback
-    with patch.object(manager.settings, 'VALKEY_PORT', '6379'):
-        result = manager.get_connection_config('VALKEY_PORT', value_type=int)
+    with patch.object(manager.settings, "VALKEY_PORT", "6379"):
+        result = manager.get_connection_config("VALKEY_PORT", value_type=int)
 
     # Should fallback to env value
     if result == 6379:
@@ -371,70 +368,43 @@ def test_myvault_error_fallback():
     else:
         print(f"FAIL: Expected 6379, got {result}")
         return False
-
-try:
-    result = test_myvault_error_fallback()
-    sys.exit(0 if result else 1)
-except Exception as e:
-    print(f"FAIL: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-EOF
-
-    if [ $? -eq 0 ]; then
-        log_test_pass "myVault error fallback test"
-    else
-        log_test_fail "myVault error fallback test"
-    fi
+'
 }
 
 test_scenario_type_conversion() {
     log_section "Step 3.4: Type Conversion Test"
 
-    python3 << 'EOF'
-import sys
-import os
-
-# Add expertAgent to path
-sys.path.insert(0, 'expertAgent')
-
-from unittest.mock import MagicMock, patch
-
-def test_type_conversion():
+    run_python_test "Type conversion test" '
+def run_test():
     """Test type conversion for connection configuration."""
-    from core.secrets import SecretsManager
-
-    # Create a fresh manager
-    manager = SecretsManager()
-    manager.clear_cache()
+    manager = create_test_manager()
     manager.myvault_enabled = False
     manager.myvault_client = None
 
     errors = []
 
     # Test int conversion
-    with patch.object(manager.settings, 'VALKEY_PORT', '6380'):
-        result = manager.get_connection_config('VALKEY_PORT', value_type=int)
+    with patch.object(manager.settings, "VALKEY_PORT", "6380"):
+        result = manager.get_connection_config("VALKEY_PORT", value_type=int)
         if result != 6380 or not isinstance(result, int):
             errors.append(f"Int conversion failed: expected 6380 (int), got {result} ({type(result).__name__})")
 
     # Test bool conversion (true)
-    with patch.object(manager.settings, 'VALKEY_ENABLED', 'true'):
-        result = manager.get_connection_config('VALKEY_ENABLED', value_type=bool)
+    with patch.object(manager.settings, "VALKEY_ENABLED", "true"):
+        result = manager.get_connection_config("VALKEY_ENABLED", value_type=bool)
         if result is not True:
             errors.append(f"Bool conversion (true) failed: expected True, got {result}")
 
     # Test bool conversion (false)
-    with patch.object(manager.settings, 'VALKEY_ENABLED', 'false'):
-        result = manager.get_connection_config('VALKEY_ENABLED', value_type=bool)
+    with patch.object(manager.settings, "VALKEY_ENABLED", "false"):
+        result = manager.get_connection_config("VALKEY_ENABLED", value_type=bool)
         if result is not False:
             errors.append(f"Bool conversion (false) failed: expected False, got {result}")
 
     # Test string passthrough
-    with patch.object(manager.settings, 'VALKEY_HOST', 'test-host.example.com'):
-        result = manager.get_connection_config('VALKEY_HOST', value_type=str)
-        if result != 'test-host.example.com':
+    with patch.object(manager.settings, "VALKEY_HOST", "test-host.example.com"):
+        result = manager.get_connection_config("VALKEY_HOST", value_type=str)
+        if result != "test-host.example.com":
             errors.append(f"String passthrough failed: expected test-host.example.com, got {result}")
 
     if errors:
@@ -444,22 +414,7 @@ def test_type_conversion():
     else:
         print("PASS: All type conversions working correctly")
         return True
-
-try:
-    result = test_type_conversion()
-    sys.exit(0 if result else 1)
-except Exception as e:
-    print(f"FAIL: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-EOF
-
-    if [ $? -eq 0 ]; then
-        log_test_pass "Type conversion test"
-    else
-        log_test_fail "Type conversion test"
-    fi
+'
 }
 
 # =============================================================================

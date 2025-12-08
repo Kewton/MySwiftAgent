@@ -10,8 +10,14 @@ Test categories:
 - ValkeyConnectionConfig: Valkey connection configuration tests
 - LangfuseConnectionConfig: Langfuse connection configuration tests
 - FallbackBehavior: Fallback mechanism tests
+
+Design patterns applied:
+- DRY: Common setup extracted to fixtures and helper classes
+- Single Responsibility: Each test class has a focused purpose
+- Test Data Builder: MockSecretsManagerBuilder for flexible test setup
 """
 
+from typing import Dict, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,13 +27,105 @@ from core.myvault_client import MyVaultClient, MyVaultError
 from core.secrets import SecretsManager
 
 # =============================================================================
-# Test Fixtures
+# Test Data Builder Pattern - Reduces setup duplication (DRY principle)
+# =============================================================================
+
+
+class MockSecretsManagerBuilder:
+    """Builder pattern for creating configured SecretsManager test instances.
+
+    This builder reduces code duplication by providing a fluent interface
+    for common test setup scenarios.
+
+    Usage:
+        manager = (MockSecretsManagerBuilder()
+            .with_myvault_enabled()
+            .with_secret_value("KEY", "value")
+            .build())
+    """
+
+    def __init__(self) -> None:
+        """Initialize builder with a fresh SecretsManager."""
+        self._manager = SecretsManager()
+        self._manager.clear_cache()
+        self._mock_client: Optional[MagicMock] = None
+        self._mock_settings: Optional[MagicMock] = None
+        self._secret_mapping: Dict[str, str] = {}
+
+    def with_myvault_enabled(self, enabled: bool = True) -> "MockSecretsManagerBuilder":
+        """Configure myVault enabled state."""
+        self._manager.myvault_enabled = enabled
+        if enabled and self._mock_client is None:
+            self._mock_client = self._create_mock_client()
+            self._manager.myvault_client = self._mock_client
+        elif not enabled:
+            self._manager.myvault_client = None
+        return self
+
+    def with_myvault_disabled(self) -> "MockSecretsManagerBuilder":
+        """Convenience method to disable myVault."""
+        return self.with_myvault_enabled(False)
+
+    def with_mock_client(self, mock_client: MagicMock) -> "MockSecretsManagerBuilder":
+        """Set a custom mock MyVault client."""
+        self._mock_client = mock_client
+        self._manager.myvault_client = mock_client
+        self._manager.myvault_enabled = True
+        return self
+
+    def with_mock_settings(self, mock_settings: MagicMock) -> "MockSecretsManagerBuilder":
+        """Set mock settings for environment variable fallback."""
+        self._mock_settings = mock_settings
+        self._manager.settings = mock_settings
+        return self
+
+    def with_secret_value(self, key: str, value: str) -> "MockSecretsManagerBuilder":
+        """Add a secret that will be returned by myVault."""
+        self._secret_mapping[key] = value
+        if self._mock_client:
+            self._update_mock_client_secrets()
+        return self
+
+    def with_secret_error(self, error_message: str = "Connection refused") -> "MockSecretsManagerBuilder":
+        """Configure myVault to raise errors."""
+        if self._mock_client is None:
+            self._mock_client = self._create_mock_client()
+            self._manager.myvault_client = self._mock_client
+        self._mock_client.get_secret.side_effect = MyVaultError(error_message)
+        self._mock_client.get_default_project.side_effect = MyVaultError(error_message)
+        return self
+
+    def build(self) -> SecretsManager:
+        """Build and return the configured SecretsManager."""
+        if self._mock_client and self._secret_mapping:
+            self._update_mock_client_secrets()
+        return self._manager
+
+    def _create_mock_client(self) -> MagicMock:
+        """Create a default mock MyVault client."""
+        mock_client = MagicMock(spec=MyVaultClient)
+        mock_client.get_secret = MagicMock()
+        mock_client.get_secrets = MagicMock(return_value={})
+        mock_client.get_default_project = MagicMock(return_value="test-project")
+        mock_client.health_check = MagicMock(return_value=True)
+        return mock_client
+
+    def _update_mock_client_secrets(self) -> None:
+        """Update mock client to return configured secrets."""
+        if self._mock_client and self._secret_mapping:
+            self._mock_client.get_secret.side_effect = (
+                lambda _project, key: self._secret_mapping.get(key)
+            )
+
+
+# =============================================================================
+# Test Fixtures - Common fixtures for all test classes
 # =============================================================================
 
 
 @pytest.fixture
 def mock_myvault_client() -> MagicMock:
-    """Create a mock MyVault client."""
+    """Create a mock MyVault client with default configuration."""
     mock_client = MagicMock(spec=MyVaultClient)
     mock_client.get_secret = MagicMock()
     mock_client.get_secrets = MagicMock(return_value={})
@@ -38,8 +136,11 @@ def mock_myvault_client() -> MagicMock:
 
 @pytest.fixture
 def fresh_secrets_manager() -> SecretsManager:
-    """Create a fresh SecretsManager instance for testing."""
-    # Create a new instance to avoid state from other tests
+    """Create a fresh SecretsManager instance for testing.
+
+    This fixture provides an isolated SecretsManager instance
+    with cleared cache to prevent state leakage between tests.
+    """
     manager = SecretsManager()
     manager.clear_cache()
     return manager
@@ -47,23 +148,51 @@ def fresh_secrets_manager() -> SecretsManager:
 
 @pytest.fixture
 def mock_settings() -> MagicMock:
-    """Create mock settings for testing."""
+    """Create mock settings with default test configuration.
+
+    Returns a MagicMock configured with typical settings values
+    for testing environment variable fallback scenarios.
+    """
     mock = MagicMock()
+    # MyVault settings
     mock.MYVAULT_ENABLED = True
     mock.MYVAULT_BASE_URL = "http://localhost:8103"
     mock.MYVAULT_SERVICE_NAME = "expertagent"
     mock.MYVAULT_SERVICE_TOKEN = "test-token"
     mock.MYVAULT_DEFAULT_PROJECT = "test-project"
     mock.SECRETS_CACHE_TTL = 300
+    # Valkey settings
     mock.VALKEY_HOST = "localhost"
     mock.VALKEY_PORT = 6379
     mock.VALKEY_DB = 0
     mock.VALKEY_ENABLED = True
     mock.VALKEY_TTL = 86400
+    # Langfuse settings
     mock.LANGFUSE_HOST = "http://localhost:3001"
     mock.LANGFUSE_PUBLIC_KEY = "test-public-key"
     mock.LANGFUSE_SECRET_KEY = "test-secret-key"
     return mock
+
+
+@pytest.fixture
+def manager_with_myvault_disabled(
+    fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+) -> SecretsManager:
+    """Create a SecretsManager with myVault disabled for fallback testing.
+
+    This composite fixture reduces setup duplication in tests that need
+    to verify environment variable fallback behavior.
+    """
+    fresh_secrets_manager.myvault_enabled = False
+    fresh_secrets_manager.myvault_client = None
+    fresh_secrets_manager.settings = mock_settings
+    return fresh_secrets_manager
+
+
+@pytest.fixture
+def secrets_manager_builder() -> MockSecretsManagerBuilder:
+    """Provide a MockSecretsManagerBuilder for flexible test setup."""
+    return MockSecretsManagerBuilder()
 
 
 # =============================================================================
@@ -189,20 +318,23 @@ class TestLangfuseConnectionConfigFromMyVault:
 
 @pytest.mark.integration
 class TestEnvironmentVariableFallback:
-    """Tests for environment variable fallback when myVault is unavailable."""
+    """Tests for environment variable fallback when myVault is unavailable.
+
+    Uses the manager_with_myvault_disabled composite fixture to reduce
+    setup duplication across test methods.
+    """
 
     def test_valkey_host_fallback_to_env(
-        self, fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+        self,
+        manager_with_myvault_disabled: SecretsManager,
+        mock_settings: MagicMock,
     ):
         """Test VALKEY_HOST fallback to environment variable when not in myVault."""
-        # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
+        # Arrange - only need to set the specific value being tested
         mock_settings.VALKEY_HOST = "env-valkey-host.local"
 
         # Act
-        result = fresh_secrets_manager.get_connection_config(
+        result = manager_with_myvault_disabled.get_connection_config(
             "VALKEY_HOST", value_type=str
         )
 
@@ -210,17 +342,16 @@ class TestEnvironmentVariableFallback:
         assert result == "env-valkey-host.local"
 
     def test_valkey_port_fallback_to_env(
-        self, fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+        self,
+        manager_with_myvault_disabled: SecretsManager,
+        mock_settings: MagicMock,
     ):
         """Test VALKEY_PORT fallback to environment variable with type conversion."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.VALKEY_PORT = "6380"
 
         # Act
-        result = fresh_secrets_manager.get_connection_config(
+        result = manager_with_myvault_disabled.get_connection_config(
             "VALKEY_PORT", value_type=int
         )
 
@@ -229,17 +360,16 @@ class TestEnvironmentVariableFallback:
         assert isinstance(result, int)
 
     def test_langfuse_host_fallback_to_env(
-        self, fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+        self,
+        manager_with_myvault_disabled: SecretsManager,
+        mock_settings: MagicMock,
     ):
         """Test LANGFUSE_HOST fallback to environment variable."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.LANGFUSE_HOST = "http://env-langfuse.local:3001"
 
         # Act
-        result = fresh_secrets_manager.get_connection_config(
+        result = manager_with_myvault_disabled.get_connection_config(
             "LANGFUSE_HOST", value_type=str
         )
 
@@ -247,17 +377,16 @@ class TestEnvironmentVariableFallback:
         assert result == "http://env-langfuse.local:3001"
 
     def test_default_value_when_not_found(
-        self, fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+        self,
+        manager_with_myvault_disabled: SecretsManager,
+        mock_settings: MagicMock,
     ):
         """Test default value is returned when key not found anywhere."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.NONEXISTENT_KEY = ""
 
         # Act
-        result = fresh_secrets_manager.get_connection_config(
+        result = manager_with_myvault_disabled.get_connection_config(
             "NONEXISTENT_KEY", default="default-value", value_type=str
         )
 
@@ -351,7 +480,11 @@ class TestMyVaultErrorHandling:
 
 @pytest.mark.integration
 class TestTypeConversion:
-    """Tests for type conversion functionality."""
+    """Tests for type conversion functionality.
+
+    Uses parameterized tests to verify type conversion for various input values.
+    The manager_with_myvault_disabled fixture provides consistent test setup.
+    """
 
     @pytest.mark.parametrize(
         "value,expected",
@@ -365,20 +498,17 @@ class TestTypeConversion:
     )
     def test_int_conversion(
         self,
-        fresh_secrets_manager: SecretsManager,
+        manager_with_myvault_disabled: SecretsManager,
         mock_settings: MagicMock,
         value: str,
         expected: int,
     ):
         """Test integer type conversion with various port numbers."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.TEST_PORT = value
 
         # Act
-        result = fresh_secrets_manager.get_connection_config(
+        result = manager_with_myvault_disabled.get_connection_config(
             "TEST_PORT", value_type=int
         )
 
@@ -405,20 +535,17 @@ class TestTypeConversion:
     )
     def test_bool_conversion(
         self,
-        fresh_secrets_manager: SecretsManager,
+        manager_with_myvault_disabled: SecretsManager,
         mock_settings: MagicMock,
         value: str,
         expected: bool,
     ):
         """Test boolean type conversion with various truthy/falsy values."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.TEST_FLAG = value
 
         # Act
-        result = fresh_secrets_manager.get_connection_config(
+        result = manager_with_myvault_disabled.get_connection_config(
             "TEST_FLAG", value_type=bool
         )
 
@@ -434,21 +561,23 @@ class TestTypeConversion:
 
 @pytest.mark.integration
 class TestPortValidation:
-    """Tests for port number validation."""
+    """Tests for port number validation.
+
+    Validates that port numbers are within the valid TCP/UDP range (1-65535).
+    """
 
     def test_port_validation_too_low(
-        self, fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+        self,
+        manager_with_myvault_disabled: SecretsManager,
+        mock_settings: MagicMock,
     ):
         """Test port number validation rejects value < 1."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.INVALID_PORT = "0"
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            fresh_secrets_manager.get_connection_config(
+            manager_with_myvault_disabled.get_connection_config(
                 "INVALID_PORT", value_type=int
             )
 
@@ -456,18 +585,17 @@ class TestPortValidation:
         assert "1" in str(exc_info.value) and "65535" in str(exc_info.value)
 
     def test_port_validation_too_high(
-        self, fresh_secrets_manager: SecretsManager, mock_settings: MagicMock
+        self,
+        manager_with_myvault_disabled: SecretsManager,
+        mock_settings: MagicMock,
     ):
         """Test port number validation rejects value > 65535."""
         # Arrange
-        fresh_secrets_manager.myvault_enabled = False
-        fresh_secrets_manager.myvault_client = None
-        fresh_secrets_manager.settings = mock_settings
         mock_settings.INVALID_PORT = "65536"
 
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            fresh_secrets_manager.get_connection_config(
+            manager_with_myvault_disabled.get_connection_config(
                 "INVALID_PORT", value_type=int
             )
 
