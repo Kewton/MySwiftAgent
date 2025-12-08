@@ -255,7 +255,30 @@ TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定。
 
 ---
 
-### Phase 3: 受入テスト
+### Phase 3: 受入テスト（L3: ローカル受入テスト）【必須】
+
+**重要**: Phase 3はローカル環境でのみ実行可能です。実際のサービスを起動し、APIを叩いて動作確認を行います。
+
+#### テストレベルの分類
+
+| テストレベル | 実行環境 | Phase |
+|-------------|----------|-------|
+| L1 単体テスト | CI (GitHub Actions) | Phase 2 で実施済み |
+| L2 結合テスト | CI (GitHub Actions) | Phase 2 で実施済み |
+| **L3 ローカル受入テスト** | **ローカル（APIキー必要）** | **Phase 3【必須】** |
+
+#### スキップ条件
+
+以下のラベルが付与されているIssueの場合のみ、Phase 3をスキップできます：
+
+| ラベル | 説明 |
+|--------|------|
+| `docs-only` | ドキュメントのみの変更 |
+| `internal` | 内部リファクタリング |
+| `test-only` | テストコードのみの変更 |
+| `ci-only` | CI/CD設定のみの変更 |
+
+**上記以外のIssueでは、L3テストは必須です。**
 
 #### 3-1. 受入テストコンテキストファイル作成
 
@@ -278,7 +301,10 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-cont
   "test_scenarios": [
     "シナリオ1: ...",
     "シナリオ2: ..."
-  ]
+  ],
+  "labels": ["feature", "agent-layer"],
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["LLM API", "Langfuse"]
 }
 ```
 
@@ -292,7 +318,15 @@ Use acceptance-test-agent to verify Issue #{issue_number} acceptance criteria.
 Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-context.json
 Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-result.json
 
-Please execute all test scenarios and verify all acceptance criteria are met.
+IMPORTANT: This is L3 (Local Acceptance Test). You MUST:
+1. Start required services (./scripts/dev-start.sh)
+2. Execute health checks for all services
+3. Run E2E scenarios with REAL API calls (curl, requests)
+4. Verify external service integrations (LLM, Langfuse, Valkey)
+5. Collect evidence (API responses, logs)
+
+Do NOT rely on static analysis or unit test results - those are already verified in Phase 2.
+Focus on ACTUAL service behavior with real HTTP requests.
 ```
 
 #### 3-3. 結果確認
@@ -310,13 +344,25 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-
 ```json
 {
   "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
+    "myVault": {"status": "healthy", "url": "http://localhost:8103"}
+  },
   "test_cases": [
-    {"scenario": "シナリオ1", "result": "passed"},
-    {"scenario": "シナリオ2", "result": "passed"}
+    {
+      "scenario": "シナリオ1: APIが期待する応答を返す",
+      "type": "practical_api_test",
+      "command": "curl -s -X POST http://localhost:8104/v1/endpoint ...",
+      "result": "passed",
+      "http_status": 200,
+      "evidence": "Response: {...}"
+    }
   ],
   "acceptance_criteria_status": [
-    {"criterion": "受入条件1", "verified": true},
-    {"criterion": "受入条件2", "verified": true}
+    {"criterion": "受入条件1", "verified": true, "verification_method": "practical_api_test"},
+    {"criterion": "受入条件2", "verified": true, "verification_method": "practical_api_test"}
   ]
 }
 ```
@@ -330,15 +376,32 @@ TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定。
 ```json
 {
   "status": "failed",
+  "test_level": "L3",
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8104"}
+  },
   "test_cases": [
-    {"scenario": "シナリオ1", "result": "passed"},
-    {"scenario": "シナリオ2", "result": "failed"}
+    {"scenario": "シナリオ1", "type": "practical_api_test", "result": "passed"},
+    {"scenario": "シナリオ2", "type": "practical_api_test", "result": "failed", "http_status": 500}
   ],
   "error": "受入テストの一部が失敗しました"
 }
 ```
 
 → **イテレーション回数確認** → **Phase 2に戻る**（TDD実装からやり直し）
+
+##### ケース3: スキップ (`status: "skipped"`)
+
+```json
+{
+  "status": "skipped",
+  "test_level": "L3",
+  "reason": "Issue has 'docs-only' label - L3 acceptance test not required",
+  "label_found": "docs-only"
+}
+```
+
+→ **Phase 4へ進む**（ドキュメントのみの変更のため）
 
 ---
 
