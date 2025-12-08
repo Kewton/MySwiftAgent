@@ -1,0 +1,24 @@
+{
+  "issue_number": 253,
+  "refactor_targets": [
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/tests/unit/test_langfuse_service.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 94.52,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの可読性向上（必要に応じて）",
+    "テストカバレッジの維持（94%以上）",
+    "静的解析エラーゼロの維持"
+  ],
+  "constraints": [
+    "既存の動作を変更しない",
+    "テストがすべてパスすることを確認",
+    "XSサイズのIssueなので大規模な変更は不要"
+  ],
+  "tdd_result_reference": "dev-reports/feature/issue/253/pm-auto-dev/iteration-1/tdd-result.json",
+  "acceptance_result_reference": "dev-reports/feature/issue/253/pm-auto-dev/iteration-1/acceptance-result.json"
+}

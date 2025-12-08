@@ -1,0 +1,77 @@
+{
+  "issue_number": 253,
+  "title": "Langfuse HOST の myVault 対応",
+  "acceptance_criteria": [
+    "myVault に LANGFUSE_HOST がある場合、その値で Langfuse に接続",
+    "myVault に値がない場合、環境変数 LANGFUSE_HOST を使用"
+  ],
+  "quality_criteria": [
+    "Ruff/MyPy エラーゼロ",
+    "既存テスト全パス"
+  ],
+  "implementation_tasks": [
+    "langfuse_service.py の HOST 取得を get_connection_config() 使用に変更",
+    "myVault フォールバックテストケース追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "langfuse_service.py の HOST 取得を get_connection_config() 使用に変更",
+      "estimated_hours": 0.25,
+      "deliverables": ["expertAgent/app/services/langfuse_service.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "インポート文の確認・調整",
+      "estimated_hours": 0.08,
+      "deliverables": ["expertAgent/app/services/langfuse_service.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "既存テスト実行・パス確認",
+      "estimated_hours": 0.17,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "myVault フォールバックテストケース追加",
+      "estimated_hours": 0.17,
+      "deliverables": ["expertAgent/tests/unit/test_langfuse_service.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Ruff/MyPy 静的解析",
+      "estimated_hours": 0.08,
+      "deliverables": ["エラーゼロ確認"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "pre-push-check.sh 実行",
+      "estimated_hours": 0.08,
+      "deliverables": ["全チェックパス"],
+      "dependencies": ["3.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/tests/unit/test_langfuse_service.py"
+  ],
+  "definition_of_done": [
+    "langfuse_service.py の HOST 取得を get_connection_config() 使用に変更",
+    "myVault に LANGFUSE_HOST 登録可能（手動）",
+    "単体テストパス",
+    "静的解析エラーゼロ",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "target_file": "expertAgent/app/services/langfuse_service.py",
+  "change_details": {
+    "before": "host=settings.LANGFUSE_HOST",
+    "after": "langfuse_host = secrets_manager.get_connection_config('LANGFUSE_HOST', value_type=str, default=settings.LANGFUSE_HOST); host=langfuse_host"
+  }
+}
