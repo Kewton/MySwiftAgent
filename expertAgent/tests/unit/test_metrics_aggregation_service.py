@@ -103,7 +103,11 @@ def create_sample_sessions() -> list[dict[str, Any]]:
 @pytest.fixture
 def metrics_service():
     """Create MetricsAggregationService instance."""
-    return MetricsAggregationService()
+    with patch(
+        "app.services.metrics_aggregation_service.secrets_manager"
+    ) as mock_secrets:
+        mock_secrets.get_connection_config.return_value = False
+        return MetricsAggregationService()
 
 
 @pytest.fixture
@@ -545,24 +549,31 @@ class TestValkeyCache:
         metrics_service._use_valkey = True
         metrics_service._valkey_client = None
 
-        with patch(
-            "app.services.metrics_aggregation_service.ValkeyClient"
-        ) as MockValkeyClient:
+        def get_config_side_effect(key, **kwargs):
+            config_map = {
+                "VALKEY_HOST": "localhost",
+                "VALKEY_PORT": 6379,
+                "VALKEY_DB": 0,
+            }
+            return config_map.get(key, kwargs.get("default"))
+
+        with (
+            patch(
+                "app.services.metrics_aggregation_service.ValkeyClient"
+            ) as MockValkeyClient,
+            patch(
+                "app.services.metrics_aggregation_service.secrets_manager"
+            ) as mock_secrets,
+        ):
+            mock_secrets.get_connection_config.side_effect = get_config_side_effect
             mock_client = MagicMock()
             mock_client.connect = AsyncMock()
             MockValkeyClient.return_value = mock_client
 
-            with patch(
-                "app.services.metrics_aggregation_service.settings"
-            ) as mock_settings:
-                mock_settings.VALKEY_HOST = "localhost"
-                mock_settings.VALKEY_PORT = 6379
-                mock_settings.VALKEY_DB = 0
+            result = await metrics_service._get_valkey_client()
 
-                result = await metrics_service._get_valkey_client()
-
-                assert result == mock_client
-                mock_client.connect.assert_awaited_once()
+            assert result == mock_client
+            mock_client.connect.assert_awaited_once()
 
     @pytest.mark.unit
     async def test_valkey_connection_error_returns_none(
@@ -574,26 +585,33 @@ class TestValkeyCache:
         metrics_service._use_valkey = True
         metrics_service._valkey_client = None
 
-        with patch(
-            "app.services.metrics_aggregation_service.ValkeyClient"
-        ) as MockValkeyClient:
+        def get_config_side_effect(key, **kwargs):
+            config_map = {
+                "VALKEY_HOST": "localhost",
+                "VALKEY_PORT": 6379,
+                "VALKEY_DB": 0,
+            }
+            return config_map.get(key, kwargs.get("default"))
+
+        with (
+            patch(
+                "app.services.metrics_aggregation_service.ValkeyClient"
+            ) as MockValkeyClient,
+            patch(
+                "app.services.metrics_aggregation_service.secrets_manager"
+            ) as mock_secrets,
+        ):
+            mock_secrets.get_connection_config.side_effect = get_config_side_effect
             mock_client = MagicMock()
             mock_client.connect = AsyncMock(
                 side_effect=ValkeyConnectionError("Connection failed")
             )
             MockValkeyClient.return_value = mock_client
 
-            with patch(
-                "app.services.metrics_aggregation_service.settings"
-            ) as mock_settings:
-                mock_settings.VALKEY_HOST = "localhost"
-                mock_settings.VALKEY_PORT = 6379
-                mock_settings.VALKEY_DB = 0
+            result = await metrics_service._get_valkey_client()
 
-                result = await metrics_service._get_valkey_client()
-
-                assert result is None
-                assert metrics_service._valkey_client is None
+            assert result is None
+            assert metrics_service._valkey_client is None
 
     @pytest.mark.unit
     async def test_valkey_cache_store(self, metrics_service: MetricsAggregationService):
