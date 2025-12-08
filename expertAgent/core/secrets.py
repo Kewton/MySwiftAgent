@@ -4,9 +4,13 @@ Handles secret retrieval from MyVault (priority) or
 environment variables (fallback).
 Includes caching with TTL and manual reload support.
 Provides helpers for resolving runtime configuration values.
+
+Issue #194: Added Docker hostname auto-resolution for seamless
+dev-start and make environment switching.
 """
 
 import logging
+import socket
 import time
 from typing import Any, Dict, Optional, Tuple
 
@@ -14,6 +18,74 @@ from core.config import settings
 from core.myvault_client import MyVaultClient, MyVaultError
 
 logger = logging.getLogger(__name__)
+
+# Docker hostname mappings for auto-resolution (Issue #194)
+# Key: Docker internal hostname, Value: localhost equivalent
+_DOCKER_HOST_MAPPINGS: Dict[str, str] = {
+    "langfuse-server:3000": "localhost:3001",
+    "valkey:6379": "localhost:6381",
+    "myvault:8000": "localhost:8003",
+    "jobqueue:8000": "localhost:8001",
+    "expertagent:8000": "localhost:8004",
+    "graphaiserver:8000": "localhost:8005",
+}
+
+
+def _is_docker_host_reachable(hostname: str) -> bool:
+    """Check if Docker internal hostname is reachable.
+
+    Args:
+        hostname: Docker internal hostname (e.g., 'langfuse-server')
+
+    Returns:
+        True if hostname is resolvable (running in Docker), False otherwise
+    """
+    try:
+        socket.gethostbyname(hostname)
+        return True
+    except socket.gaierror:
+        return False
+
+
+def _resolve_docker_hostname(url: str) -> str:
+    """Resolve Docker internal hostname to appropriate host based on environment.
+
+    If running inside Docker (hostname resolvable), returns the URL unchanged.
+    If running on host machine (hostname not resolvable), converts to localhost.
+
+    Args:
+        url: URL potentially containing Docker internal hostname
+
+    Returns:
+        Resolved URL appropriate for current environment
+
+    Example:
+        # Running in Docker:
+        >>> _resolve_docker_hostname("http://langfuse-server:3000")
+        'http://langfuse-server:3000'
+
+        # Running on host (dev-start):
+        >>> _resolve_docker_hostname("http://langfuse-server:3000")
+        'http://localhost:3001'
+    """
+    for docker_host, localhost_host in _DOCKER_HOST_MAPPINGS.items():
+        if docker_host in url:
+            # Extract just the hostname part (without port)
+            hostname = docker_host.split(":")[0]
+            if _is_docker_host_reachable(hostname):
+                logger.debug(
+                    "Docker hostname '%s' is reachable, using as-is", hostname
+                )
+                return url
+            else:
+                resolved_url = url.replace(docker_host, localhost_host)
+                logger.info(
+                    "Resolved Docker hostname: %s -> %s",
+                    docker_host,
+                    localhost_host,
+                )
+                return resolved_url
+    return url
 
 
 class SecretsManager:
@@ -442,6 +514,10 @@ class SecretsManager:
 
         # Validate
         self._validate_connection_config(key, converted_value, value_type)
+
+        # Auto-resolve Docker hostnames for HOST keys (Issue #194)
+        if "HOST" in key.upper() and value_type is str:
+            converted_value = _resolve_docker_hostname(converted_value)
 
         # Log retrieval
         self._log_config_retrieval(key, source, converted_value)
