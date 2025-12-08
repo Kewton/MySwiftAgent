@@ -1,0 +1,72 @@
+{
+  "issue_number": 254,
+  "title": "Issue #248-5: 結合テスト・受入テスト作成",
+  "acceptance_criteria": [
+    "結合テストが myVault コンテナを使用して実行される",
+    "myVault → 環境変数フォールバックのテストがパス",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "正常系: myVault に設定登録 → サービス起動 → 接続成功",
+    "正常系: myVault 未登録 → 環境変数フォールバック → 接続成功",
+    "異常系: myVault ダウン時のフォールバック動作",
+    "受入テストスクリプトが正常終了"
+  ],
+  "implementation_tasks": [
+    "結合テストファイル作成: expertAgent/tests/integration/test_myvault_connection_config.py",
+    "受入テストスクリプト作成: tests/acceptance/test_issue_248_acceptance.sh",
+    "受入テストドキュメント作成: tests/acceptance/README_issue_248.md"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "2.1",
+      "description": "結合テストファイル作成",
+      "estimated_minutes": 45,
+      "deliverables": ["expertAgent/tests/integration/test_myvault_connection_config.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.1",
+      "description": "L3受入テスト計画",
+      "estimated_minutes": 15,
+      "deliverables": ["受入テストシナリオ"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "L3受入テストスクリプト作成",
+      "estimated_minutes": 45,
+      "deliverables": ["tests/acceptance/test_issue_248_acceptance.sh"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "受入テストREADME作成",
+      "estimated_minutes": 15,
+      "deliverables": ["tests/acceptance/README_issue_248.md"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/tests/integration/test_myvault_connection_config.py",
+    "tests/acceptance/test_issue_248_acceptance.sh",
+    "tests/acceptance/README_issue_248.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "結合テストカバレッジ 50%以上",
+    "結合テスト全シナリオパス",
+    "L3受入テスト全パス",
+    "Ruff/MyPyエラーゼロ",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 50,
+  "existing_code_references": {
+    "valkey_integration": "expertAgent/app/core/valkey_manager.py",
+    "langfuse_integration": "expertAgent/app/core/langfuse_callback.py",
+    "myvault_client": "expertAgent/app/services/myvault_client.py"
+  },
+  "test_patterns": {
+    "integration_test_example": "expertAgent/tests/integration/",
+    "acceptance_test_example": "tests/acceptance/"
+  }
+}
