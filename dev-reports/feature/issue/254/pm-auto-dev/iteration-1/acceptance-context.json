@@ -1,0 +1,45 @@
+{
+  "issue_number": 254,
+  "feature_summary": "結合テスト・受入テスト作成（myVault接続設定のテスト）",
+  "acceptance_criteria": [
+    "結合テストが myVault コンテナを使用して実行される",
+    "myVault → 環境変数フォールバックのテストがパス",
+    "結合テストカバレッジ 50%以上",
+    "Ruff/MyPy エラーゼロ",
+    "正常系: myVault に設定登録 → サービス起動 → 接続成功",
+    "正常系: myVault 未登録 → 環境変数フォールバック → 接続成功",
+    "異常系: myVault ダウン時のフォールバック動作",
+    "受入テストスクリプトが正常終了"
+  ],
+  "test_scenarios": [
+    "シナリオ1: サービス起動確認（myVault, expertAgent, Valkey）",
+    "シナリオ2: myVault設定確認（VALKEY_HOST, VALKEY_PORT, LANGFUSE_HOST）",
+    "シナリオ3: ジョブ作成API呼び出し（Valkey使用）",
+    "シナリオ4: Langfuse HOST確認",
+    "シナリオ5: 環境変数フォールバック確認"
+  ],
+  "labels": ["feature"],
+  "required_services": ["myVault", "expertAgent", "Valkey"],
+  "optional_services": ["Langfuse"],
+  "external_dependencies": ["LLM API (optional)"],
+  "acceptance_test_script": "tests/acceptance/test_issue_248_acceptance.sh",
+  "l3_test_commands": {
+    "service_startup": "./scripts/dev-start.sh",
+    "health_checks": [
+      "curl -sf http://localhost:8103/health",
+      "curl -sf http://localhost:8104/health",
+      "docker exec myswiftagent-valkey redis-cli PING"
+    ],
+    "myvault_settings": [
+      "curl -s http://localhost:8103/api/v1/secrets/expertagent/default_project/VALKEY_HOST",
+      "curl -s http://localhost:8103/api/v1/secrets/expertagent/default_project/VALKEY_PORT",
+      "curl -s http://localhost:8103/api/v1/secrets/expertagent/default_project/LANGFUSE_HOST"
+    ],
+    "job_creation_api": "curl -s -X POST http://localhost:8104/aiagent-api/v1/job-generator -H 'Content-Type: application/json' -d '{...}'"
+  },
+  "skip_conditions": {
+    "allowed_labels": ["docs-only", "internal", "test-only", "ci-only"],
+    "current_labels": ["feature"],
+    "can_skip": false
+  }
+}

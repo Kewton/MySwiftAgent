@@ -1,0 +1,25 @@
+{
+  "issue_number": 254,
+  "refactor_targets": [
+    "expertAgent/tests/integration/test_myvault_connection_config.py",
+    "tests/acceptance/test_issue_248_acceptance.sh"
+  ],
+  "quality_metrics": {
+    "before_coverage": 62.89,
+    "complexity_score": 5
+  },
+  "design_patterns_to_apply": [
+    "DRY - 重複テストコードの削減",
+    "テストフィクスチャの共通化"
+  ],
+  "improvement_goals": [
+    "テストコードの重複削減",
+    "テストフィクスチャの整理",
+    "コメント・ドキュメント整備"
+  ],
+  "constraints": [
+    "テストカバレッジを下げない",
+    "既存テストを壊さない",
+    "テストケース数を維持"
+  ]
+}
