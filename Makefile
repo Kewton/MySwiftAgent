@@ -50,7 +50,7 @@ DOCKER_COMPOSE := docker compose
 # =============================================================================
 
 .PHONY: help
-.PHONY: dev-platform dev-agent dev-frontend dev-all
+.PHONY: dev-platform dev-agent dev-frontend dev-all init-myvault
 .PHONY: down down-platform down-agent down-frontend
 .PHONY: stop stop-platform stop-agent stop-frontend
 .PHONY: logs logs-platform logs-agent logs-frontend
@@ -81,7 +81,7 @@ help: ## Show this help message
 	@grep -E '^logs[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Utility Commands:"
-	@grep -E '^(status|rebuild|clean|clean-safe|network):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^(status|rebuild|clean|clean-safe|network|init-myvault):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Acceptance Test Commands:"
 	@grep -E '^acceptance-test[a-zA-Z_-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -124,22 +124,29 @@ dev-frontend: _check-agent ## Start Frontend layer (commonui, myagentdesk) - req
 dev-all: network ## Start all layers in order (Platform -> Agent -> Frontend)
 	@echo "Starting all services..."
 	@echo ""
-	@echo "[1/5] Starting Platform layer..."
+	@echo "[1/6] Starting Platform layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) up -d
 	@echo ""
-	@echo "[2/5] Waiting for Platform services to be healthy..."
+	@echo "[2/6] Waiting for Platform services to be healthy..."
 	@$(MAKE) _wait-platform
 	@echo ""
-	@echo "[3/5] Starting Agent layer..."
+	@echo "[3/6] Initializing MyVault default project..."
+	@./scripts/init-myvault-default-project.sh || echo "⚠️  MyVault initialization skipped (may need manual setup)"
+	@echo ""
+	@echo "[4/6] Starting Agent layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) up -d
 	@echo ""
-	@echo "[4/5] Waiting for Agent services to be healthy..."
+	@echo "[5/6] Waiting for Agent services to be healthy..."
 	@$(MAKE) _wait-agent
 	@echo ""
-	@echo "[5/5] Starting Frontend layer..."
+	@echo "[6/6] Starting Frontend layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) up -d
 	@echo ""
 	@echo "All services started successfully!"
+
+init-myvault: ## Initialize MyVault default project (run after dev-platform)
+	@echo "Initializing MyVault default project..."
+	@./scripts/init-myvault-default-project.sh
 
 # =============================================================================
 # Shutdown Targets
