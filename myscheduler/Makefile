@@ -41,3 +41,35 @@ docker-build: ## Build Docker image
 
 docker-run: ## Run Docker container
 	docker run -d --name myscheduler -p 8000:8000 myscheduler
+
+docker-test: docker-build ## Build and test Docker image with health checks
+	@echo "🐳 Building and testing Docker image..."
+	@docker rm -f myscheduler-test 2>/dev/null || true
+	docker run --rm -d --name myscheduler-test -p 8000:8000 myscheduler
+	@echo "⏳ Waiting for container to start..."
+	@for i in 1 2 3 4 5 6; do \
+		sleep 5; \
+		if curl -sf http://localhost:8000/health > /dev/null 2>&1; then \
+			echo "✅ Container is ready after $$((i * 5)) seconds"; \
+			break; \
+		fi; \
+		echo "⏳ Attempt $$i/6: Container not ready yet, waiting..."; \
+		if [ $$i -eq 6 ]; then \
+			echo "❌ Container failed to start after 30 seconds"; \
+			docker logs myscheduler-test || true; \
+			docker stop myscheduler-test 2>/dev/null || true; \
+			exit 1; \
+		fi; \
+	done
+	@echo "🔍 Testing health endpoint..."
+	curl -f http://localhost:8000/health || (docker stop myscheduler-test && exit 1)
+	@echo ""
+	@echo "🔍 Testing API endpoints..."
+	curl -f http://localhost:8000/api/v1/jobs/ || (docker stop myscheduler-test && exit 1)
+	@echo ""
+	@echo "✅ All Docker tests passed!"
+	@docker stop myscheduler-test
+
+docker-stop: ## Stop Docker container
+	docker stop myscheduler 2>/dev/null || true
+	docker rm myscheduler 2>/dev/null || true

@@ -261,34 +261,37 @@ clean: ## Stop all services and remove volumes/orphans (WARNING: data loss)
 # =============================================================================
 
 _check-platform: ## [Internal] Check if Platform layer is running
-	@echo "Checking Platform layer dependencies..."
-	@if ! curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1; then \
+	@echo "🔍 Checking Platform layer dependencies..."
+	@myvault_ok=0; jobqueue_ok=0; \
+	if curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1; then myvault_ok=1; fi; \
+	if curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then jobqueue_ok=1; fi; \
+	if [ $$myvault_ok -eq 0 ]; then \
 		echo ""; \
-		echo "ERROR: Platform layer is not running!"; \
+		echo "❌ ERROR: Platform layer is not running!"; \
 		echo ""; \
 		echo "MyVault health check failed (port $(MYVAULT_PORT))"; \
 		echo "Please start Platform layer first:"; \
 		echo "  make dev-platform"; \
 		echo ""; \
 		exit 1; \
-	fi
-	@if ! curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then \
+	fi; \
+	if [ $$jobqueue_ok -eq 0 ]; then \
 		echo ""; \
-		echo "ERROR: Platform layer is not fully running!"; \
+		echo "❌ ERROR: Platform layer is not fully running!"; \
 		echo ""; \
 		echo "JobQueue health check failed (port $(JOBQUEUE_PORT))"; \
 		echo "Please wait for Platform services to be healthy or restart:"; \
 		echo "  make dev-platform"; \
 		echo ""; \
 		exit 1; \
-	fi
-	@echo "Platform layer is running"
+	fi; \
+	echo "✅ Platform layer is running (MyVault=OK, JobQueue=OK)"
 
 _check-agent: _check-platform ## [Internal] Check if Agent layer is running (implies Platform check)
-	@echo "Checking Agent layer dependencies..."
+	@echo "🔍 Checking Agent layer dependencies..."
 	@if ! curl -sf http://localhost:$(EXPERTAGENT_PORT)/health >/dev/null 2>&1; then \
 		echo ""; \
-		echo "ERROR: Agent layer is not running!"; \
+		echo "❌ ERROR: Agent layer is not running!"; \
 		echo ""; \
 		echo "ExpertAgent health check failed (port $(EXPERTAGENT_PORT))"; \
 		echo "Please start Agent layer first:"; \
@@ -296,37 +299,45 @@ _check-agent: _check-platform ## [Internal] Check if Agent layer is running (imp
 		echo ""; \
 		exit 1; \
 	fi
-	@echo "Agent layer is running"
+	@echo "✅ Agent layer is running (ExpertAgent=OK)"
 
 _wait-platform: ## [Internal] Wait for Platform services to be healthy
-	@echo "Waiting for Platform services..."
-	@timeout=$(HEALTH_CHECK_TIMEOUT); \
-	while [ $$timeout -gt 0 ]; do \
-		if curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1 && \
-		   curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then \
-			echo "Platform services are healthy"; \
+	@echo "⏳ Waiting for Platform services..."
+	@attempt=1; \
+	max_attempts=$$(($(HEALTH_CHECK_TIMEOUT) / $(HEALTH_CHECK_INTERVAL))); \
+	while [ $$attempt -le $$max_attempts ]; do \
+		myvault_ok=0; jobqueue_ok=0; \
+		if curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1; then myvault_ok=1; fi; \
+		if curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then jobqueue_ok=1; fi; \
+		if [ $$myvault_ok -eq 1 ] && [ $$jobqueue_ok -eq 1 ]; then \
+			echo "✅ Platform services are healthy after $$((attempt * $(HEALTH_CHECK_INTERVAL))) seconds"; \
 			exit 0; \
 		fi; \
-		echo "  Waiting... ($$timeout seconds remaining)"; \
+		echo "⏳ Attempt $$attempt/$$max_attempts: MyVault=$$([ $$myvault_ok -eq 1 ] && echo 'OK' || echo 'waiting') JobQueue=$$([ $$jobqueue_ok -eq 1 ] && echo 'OK' || echo 'waiting')"; \
 		sleep $(HEALTH_CHECK_INTERVAL); \
-		timeout=$$((timeout - $(HEALTH_CHECK_INTERVAL))); \
+		attempt=$$((attempt + 1)); \
 	done; \
-	echo "ERROR: Timeout waiting for Platform services"; \
+	echo "❌ Timeout waiting for Platform services after $(HEALTH_CHECK_TIMEOUT) seconds"; \
+	echo "Checking container logs for debugging..."; \
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) logs --tail=20 myvault jobqueue 2>/dev/null || true; \
 	exit 1
 
 _wait-agent: ## [Internal] Wait for Agent services to be healthy
-	@echo "Waiting for Agent services..."
-	@timeout=$(HEALTH_CHECK_TIMEOUT); \
-	while [ $$timeout -gt 0 ]; do \
+	@echo "⏳ Waiting for Agent services..."
+	@attempt=1; \
+	max_attempts=$$(($(HEALTH_CHECK_TIMEOUT) / $(HEALTH_CHECK_INTERVAL))); \
+	while [ $$attempt -le $$max_attempts ]; do \
 		if curl -sf http://localhost:$(EXPERTAGENT_PORT)/health >/dev/null 2>&1; then \
-			echo "Agent services are healthy"; \
+			echo "✅ Agent services are healthy after $$((attempt * $(HEALTH_CHECK_INTERVAL))) seconds"; \
 			exit 0; \
 		fi; \
-		echo "  Waiting... ($$timeout seconds remaining)"; \
+		echo "⏳ Attempt $$attempt/$$max_attempts: ExpertAgent=waiting"; \
 		sleep $(HEALTH_CHECK_INTERVAL); \
-		timeout=$$((timeout - $(HEALTH_CHECK_INTERVAL))); \
+		attempt=$$((attempt + 1)); \
 	done; \
-	echo "ERROR: Timeout waiting for Agent services"; \
+	echo "❌ Timeout waiting for Agent services after $(HEALTH_CHECK_TIMEOUT) seconds"; \
+	echo "Checking container logs for debugging..."; \
+	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) logs --tail=20 expertagent 2>/dev/null || true; \
 	exit 1
 
 # =============================================================================
