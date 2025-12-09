@@ -101,7 +101,8 @@ class LangfuseService:
         """LangChain/LangGraph用のCallbackHandlerを取得.
 
         Note:
-            Langfuse v3では、CallbackHandlerは引数なしで作成します。
+            Issue #263: CallbackHandlerにmyVaultから取得したAPIキーを明示的に渡します。
+            これにより、環境変数に依存せずmyVaultの認証情報でトレースを送信できます。
             trace_name, user_id, session_id等のパラメータは将来の拡張用に保持していますが、
             現在は使用されません。トレースIDは handler.last_trace_id から取得できます。
 
@@ -124,9 +125,18 @@ class LangfuseService:
             return None
 
         try:
-            # Langfuse v3: CallbackHandler は引数なしで作成
-            handler = CallbackHandler()
-            logger.debug("CallbackHandler created successfully")
+            # myVault優先でAPIキーを取得
+            public_key = secrets_manager.get_secret("LANGFUSE_PUBLIC_KEY")
+
+            # Issue #263: CallbackHandlerにpublic_keyを明示的に渡す
+            # Note: Langfuse v3ではCallbackHandlerはpublic_keyのみを受け取り、
+            # secret_keyとhostはLangfuseクライアント初期化時に設定される
+            handler = CallbackHandler(
+                public_key=public_key,
+            )
+            # APIキーをマスクしてログ出力（デバッグ用）
+            masked_key = public_key[:8] + "..." if public_key else "None"
+            logger.debug(f"CallbackHandler created with public_key={masked_key}")
             return handler
         except Exception as e:
             logger.error(f"Failed to create CallbackHandler: {e}")

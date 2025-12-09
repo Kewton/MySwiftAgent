@@ -1,5 +1,6 @@
 """Unit tests for LangfuseService."""
 
+import logging
 from unittest.mock import Mock, patch
 
 from app.services.langfuse_service import LangfuseService, langfuse_service
@@ -104,13 +105,19 @@ class TestLangfuseService:
     def test_get_callback_handler_success(
         self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch
     ):
-        """Test successful CallbackHandler creation (Langfuse v3 - no args)."""
+        """Test successful CallbackHandler creation with explicit public_key.
+
+        Issue #263: CallbackHandler must receive public_key from myVault explicitly.
+        Note: Langfuse v3 CallbackHandler only accepts public_key; secret_key and host
+        are configured via the Langfuse client initialization.
+        """
         # Setup
         mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
         mock_secrets_manager.get_secret.side_effect = lambda key: {
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
+        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
 
         mock_handler = Mock()
         mock_callback_handler_class.return_value = mock_handler
@@ -123,7 +130,7 @@ class TestLangfuseService:
             service = LangfuseService()
             service._client = Mock()  # Ensure client is set
 
-            # Execute (Note: Langfuse v3 ignores these parameters)
+            # Execute (Note: trace_name etc. are reserved for future use)
             handler = service.get_callback_handler(
                 trace_name="test_trace",
                 user_id="user123",
@@ -132,9 +139,11 @@ class TestLangfuseService:
                 metadata={"model": "gpt-4", "temperature": 0.7},
             )
 
-            # Verify - Langfuse v3 CallbackHandler is created without arguments
+            # Verify - Issue #263: CallbackHandler MUST be called with explicit public_key
             assert handler == mock_handler
-            mock_callback_handler_class.assert_called_once_with()
+            mock_callback_handler_class.assert_called_once_with(
+                public_key="pk-test-123",
+            )
 
     @patch("app.services.langfuse_service.settings")
     @patch("app.services.langfuse_service.secrets_manager")
@@ -171,6 +180,7 @@ class TestLangfuseService:
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
+        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
 
         mock_callback_handler_class.side_effect = Exception("Handler creation error")
 
@@ -194,13 +204,17 @@ class TestLangfuseService:
     def test_get_callback_handler_with_defaults(
         self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch
     ):
-        """Test CallbackHandler creation with default parameters (v3 - no args)."""
+        """Test CallbackHandler creation with default parameters.
+
+        Issue #263: CallbackHandler receives explicit public_key regardless of other params.
+        """
         # Setup
         mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
         mock_secrets_manager.get_secret.side_effect = lambda key: {
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
+        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
 
         mock_handler = Mock()
         mock_callback_handler_class.return_value = mock_handler
@@ -216,9 +230,11 @@ class TestLangfuseService:
             # Execute - only trace_name provided
             handler = service.get_callback_handler(trace_name="test_trace")
 
-            # Verify - Langfuse v3 ignores parameters and creates without args
+            # Verify - Issue #263: CallbackHandler is created with explicit public_key
             assert handler == mock_handler
-            mock_callback_handler_class.assert_called_once_with()
+            mock_callback_handler_class.assert_called_once_with(
+                public_key="pk-test-123",
+            )
 
     @patch("app.services.langfuse_service.settings")
     @patch("app.services.langfuse_service.secrets_manager")
@@ -638,3 +654,159 @@ class TestLangfuseService:
             host="http://env-fallback:3001",
         )
         assert service._client == mock_client
+
+
+class TestCallbackHandlerWithMyVaultKeys:
+    """Tests for Issue #263: CallbackHandler with myVault API keys."""
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    @patch("app.services.langfuse_service.CallbackHandler")
+    def test_callback_handler_with_myvault_public_key(
+        self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test CallbackHandler receives public_key explicitly from myVault.
+
+        Issue #263: CallbackHandler must use myVault public_key explicitly.
+        Note: Langfuse v3 CallbackHandler only accepts public_key; secret_key and host
+        are configured via the Langfuse client initialization.
+        """
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
+        mock_secrets_manager.get_secret.side_effect = lambda key: {
+            "LANGFUSE_PUBLIC_KEY": "pk-lf-myvault-12345678",
+            "LANGFUSE_SECRET_KEY": "sk-lf-myvault-87654321",
+        }[key]
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://localhost:3001"
+        )
+
+        mock_handler = Mock()
+        mock_callback_handler_class.return_value = mock_handler
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        with patch("app.services.langfuse_service.Langfuse"):
+            service = LangfuseService()
+            service._client = Mock()
+
+            # Execute
+            handler = service.get_callback_handler()
+
+            # Verify - CallbackHandler MUST be called with explicit public_key
+            assert handler == mock_handler
+            mock_callback_handler_class.assert_called_once_with(
+                public_key="pk-lf-myvault-12345678",
+            )
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    def test_callback_handler_disabled_when_no_keys(
+        self, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test CallbackHandler returns None when no API keys are available.
+
+        Issue #263: When myVault and env vars have no keys, should not error.
+        """
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
+        mock_secrets_manager.get_secret.side_effect = ValueError("Secret not found")
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        service = LangfuseService()
+
+        # Execute
+        handler = service.get_callback_handler()
+
+        # Verify - should return None, no errors
+        assert handler is None
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    @patch("app.services.langfuse_service.CallbackHandler")
+    def test_callback_handler_logs_partial_key(
+        self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch,
+        caplog
+    ):
+        """Test CallbackHandler creation logs partial API key for debugging.
+
+        Issue #263: Log first 8 characters of public_key for debugging.
+        """
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
+        mock_secrets_manager.get_secret.side_effect = lambda key: {
+            "LANGFUSE_PUBLIC_KEY": "pk-lf-test-abcd1234",
+            "LANGFUSE_SECRET_KEY": "sk-lf-test-efgh5678",
+        }[key]
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://localhost:3001"
+        )
+
+        mock_handler = Mock()
+        mock_callback_handler_class.return_value = mock_handler
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        with patch("app.services.langfuse_service.Langfuse"):
+            service = LangfuseService()
+            service._client = Mock()
+
+            # Execute with log capture
+            with caplog.at_level(logging.DEBUG):
+                handler = service.get_callback_handler()
+
+            # Verify - log should contain partial key (first 8 chars)
+            assert handler == mock_handler
+            # Check that log contains masked key information
+            log_messages = [record.message for record in caplog.records]
+            assert any("pk-lf-te" in msg for msg in log_messages), \
+                f"Expected partial key 'pk-lf-te' in logs, got: {log_messages}"
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    @patch("app.services.langfuse_service.CallbackHandler")
+    def test_callback_handler_with_different_public_keys(
+        self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test CallbackHandler uses the correct public_key from myVault.
+
+        Issue #263: Verify public_key is correctly passed to CallbackHandler.
+        Note: In Langfuse v3, host is configured via Langfuse client, not CallbackHandler.
+        """
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://env-default:3001"
+        mock_secrets_manager.get_secret.side_effect = lambda key: {
+            "LANGFUSE_PUBLIC_KEY": "pk-custom-12345678",
+            "LANGFUSE_SECRET_KEY": "sk-custom-87654321",
+        }[key]
+        # myVault returns custom host (used by Langfuse client, not CallbackHandler)
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://myvault-langfuse:3001"
+        )
+
+        mock_handler = Mock()
+        mock_callback_handler_class.return_value = mock_handler
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        with patch("app.services.langfuse_service.Langfuse"):
+            service = LangfuseService()
+            service._client = Mock()
+
+            # Execute
+            handler = service.get_callback_handler()
+
+            # Verify - CallbackHandler receives the correct public_key
+            assert handler == mock_handler
+            mock_callback_handler_class.assert_called_once_with(
+                public_key="pk-custom-12345678",
+            )
