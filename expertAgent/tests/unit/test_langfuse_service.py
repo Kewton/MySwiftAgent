@@ -101,6 +101,42 @@ class TestLangfuseService:
 
     @patch("app.services.langfuse_service.settings")
     @patch("app.services.langfuse_service.secrets_manager")
+    def test_initialization_valueerror_in_initialize_client(
+        self, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test graceful handling of ValueError during client initialization.
+
+        This covers lines 86-88: ValueError exception handling in _initialize_client.
+        """
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
+
+        # _is_enabled() returns True (both keys present)
+        # but _initialize_client() raises ValueError on get_connection_config
+        call_count = [0]
+
+        def get_secret_side_effect(key):
+            call_count[0] += 1
+            # First two calls (from _is_enabled): return valid keys
+            # Third+ calls (from _initialize_client): raise ValueError
+            if call_count[0] <= 2:
+                return {"LANGFUSE_PUBLIC_KEY": "pk-test", "LANGFUSE_SECRET_KEY": "sk-test"}[key]
+            raise ValueError("Secret not found in myVault")
+
+        mock_secrets_manager.get_secret.side_effect = get_secret_side_effect
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        # Execute
+        service = LangfuseService()
+
+        # Verify - should handle ValueError gracefully
+        assert service._client is None
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
     @patch("app.services.langfuse_service.CallbackHandler")
     def test_get_callback_handler_success(
         self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch
@@ -498,6 +534,38 @@ class TestLangfuseService:
             # Execute - should not raise error
             service.shutdown()
             # No assertion needed - just verify no exception
+
+    @patch("app.services.langfuse_service.settings")
+    @patch("app.services.langfuse_service.secrets_manager")
+    def test_shutdown_exception_in_flush_call(
+        self, mock_secrets_manager, mock_settings_patch
+    ):
+        """Test shutdown handles exception from flush() call gracefully.
+
+        This covers lines 218-219: Exception handling in shutdown method.
+        The flush() method itself catches exceptions, but if flush() raises
+        an exception that escapes, shutdown() should handle it.
+        """
+        # Setup
+        mock_settings_patch.LANGFUSE_HOST = "http://localhost:3001"
+        mock_secrets_manager.get_secret.side_effect = lambda key: {
+            "LANGFUSE_PUBLIC_KEY": "pk-test-123",
+            "LANGFUSE_SECRET_KEY": "sk-test-456",
+        }[key]
+
+        # Reset singleton instance
+        LangfuseService._instance = None
+        LangfuseService._client = None
+
+        with patch("app.services.langfuse_service.Langfuse"):
+            service = LangfuseService()
+            service._client = Mock()
+
+            # Mock flush method on the service instance to raise exception
+            with patch.object(service, 'flush', side_effect=Exception("Flush error")):
+                # Execute - should not raise error
+                service.shutdown()
+                # No assertion needed - just verify no exception
 
     @patch("app.services.langfuse_service.settings")
     @patch("app.services.langfuse_service.secrets_manager")
