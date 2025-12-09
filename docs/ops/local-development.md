@@ -520,7 +520,7 @@ MYVAULT_BASE_URL = "http://myvault:8000"
 
 ---
 
-**最終更新**: 2025-11-15
+**最終更新**: 2025-12-09
 **作成者**: /doc-register コマンド
 **関連ドキュメント**:
 - [deployment-guide.md](./deployment-guide.md) - デプロイメント手順

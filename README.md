@@ -110,6 +110,7 @@ Makefileを使用してレイヤ別にサービスを起動・管理できます
 | コマンド | 説明 |
 |---------|------|
 | `make network` | Dockerネットワークを作成 |
+| `make init-myvault` | MyVault default_projectを初期化（dev-all実行時は自動） |
 | `make rebuild` | 全イメージをキャッシュなしで再ビルド |
 | `make clean` | 全サービスを停止しボリューム・孤立コンテナを削除 |
 | `make help` | ヘルプを表示 |

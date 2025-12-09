@@ -72,6 +72,52 @@ make acceptance-test-all
 
 ---
 
+## 🖥️ 開発環境の起動
+
+開発を開始する前に、サービスを起動する必要があります。
+
+### 推奨起動方法
+
+| 状況 | コマンド | 説明 |
+|------|---------|------|
+| **日常開発** | `make dev-all` | 全サービスをDocker環境で起動（推奨） |
+| **コード変更頻繁** | `./scripts/dev-start.sh` | ローカル直接起動（高速リロード） |
+| **本番検証** | `docker compose up -d` | コンテナ環境での動作確認 |
+
+### 起動方法の選択フロー
+
+```
+開発を始める
+    ↓
+Dockerを使いたい？ → Yes → make dev-all（推奨）
+    ↓ No
+ローカル直接起動 → ./scripts/dev-start.sh
+```
+
+### サービスURL（標準ポート）
+
+| サービス | URL | 用途 |
+|---------|-----|------|
+| JobQueue API | http://localhost:8001 | ジョブキュー管理 |
+| MyScheduler API | http://localhost:8002 | スケジューリング |
+| MyVault API | http://localhost:8003 | シークレット管理 |
+| ExpertAgent API | http://localhost:8004 | AIエージェント |
+| GraphAiServer API | http://localhost:8005 | ワークフロー実行 |
+| CommonUI | http://localhost:8501 | Web UI (Streamlit) |
+| Langfuse | http://localhost:3001 | LLM Observability |
+
+### 停止コマンド
+
+```bash
+make down        # 全サービス停止
+# または
+./scripts/dev-start.sh stop
+```
+
+**詳細**: [ローカル開発環境ガイド](./docs/ops/local-development.md)
+
+---
+
 ## 📚 詳細ドキュメントインデックス
 
 | カテゴリ | ドキュメント | 内容 | 優先度 |
@@ -84,6 +130,7 @@ make acceptance-test-all
 | **エラー防止** | [06-ci-cd-prevention.md](./docs/claude/06-ci-cd-prevention.md) | GitHub Actions エラー再発防止 | 🟡 中 |
 | **文書管理** | [07-documentation-rules.md](./docs/claude/07-documentation-rules.md) | 作業ドキュメント管理ルール | 🟡 中 |
 | **Issue分割** | [08-issue-split.md](./docs/claude/08-issue-split.md) | Issue分割詳細ガイド、受入基準の2層構造 | 🔴 高 |
+| **ローカル開発環境** | [local-development.md](./docs/ops/local-development.md) | 起動方法比較、ポート構成、トラブルシューティング | 🟡 中 |
 
 ---
 

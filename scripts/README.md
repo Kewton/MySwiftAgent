@@ -18,6 +18,7 @@ JobQueue、MyScheduler、MyVault、ExpertAgent、GraphAiServer、CommonUIの全�
 | `reload-secrets.sh` | **Secrets更新** | MyVaultシークレット再読み込み |
 | `build-images.sh` | **Docker Build** | バージョンタグ付きイメージビルド |
 | `install-playwright.sh` | **Playwright導入** | TypeScript受入テスト用Playwright環境構築 |
+| `init-myvault-default-project.sh` | **MyVault初期化** | default_projectの作成・デフォルト設定 |
 
 ## 🚀 クイックスタート
 
@@ -264,6 +265,25 @@ tail -f logs/graphaiserver.log
 ```
 
 > 💡 `restart-myvault.sh` は、config.yaml や .env の変更後に MyVault サービスを再起動して設定をリロードする際に使用します。
+
+### MyVault初期化（default_project作成）
+
+```bash
+# default_projectを作成し、デフォルトに設定
+./scripts/init-myvault-default-project.sh
+```
+
+**動作内容**:
+1. MyVaultのヘルスチェック（最大60秒待機）
+2. `default_project` が存在するか確認
+3. 存在しない場合は作成し、デフォルトに設定
+4. 既に存在する場合はスキップ（エラーにならない）
+
+**認証**:
+- `.env.docker` の `MYVAULT_TOKEN_COMMONUI` を使用
+- トークンがない場合は認証なしで試行
+
+> 💡 `make dev-all` 実行時に自動で呼び出されます。手動実行は通常不要です。
 
 ### GraphAiServer管理
 
