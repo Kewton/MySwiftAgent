@@ -387,3 +387,142 @@ class TestResolveRuntimeValue:
             result = resolve_runtime_value("NONEXISTENT_KEY", default="default-val")
             # getattr should return the default when key doesn't exist
             assert result is not None
+
+
+class TestProjectSpecificationBehavior:
+    """Test suite for project specification behavior in SecretsManager.
+
+    Verifies that:
+    - Project指定時: 指定したProjectのsecretsを取得
+    - Project未指定時: Default設定されたProjectのsecretsを取得
+    """
+
+    @pytest.fixture
+    def manager_with_myvault(self):
+        """Create SecretsManager with MyVault enabled."""
+        with patch("core.secrets.settings") as mock_settings:
+            mock_settings.MYVAULT_ENABLED = True
+            mock_settings.MYVAULT_BASE_URL = "http://localhost:8000"
+            mock_settings.MYVAULT_SERVICE_NAME = "test-service"
+            mock_settings.MYVAULT_SERVICE_TOKEN = "test-token"
+            mock_settings.MYVAULT_DEFAULT_PROJECT = "default_project"
+            mock_settings.SECRETS_CACHE_TTL = 300
+
+            with patch("core.secrets.MyVaultClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client_class.return_value = mock_client
+
+                manager = SecretsManager()
+                manager.myvault_client = mock_client
+                manager.myvault_enabled = True
+
+                yield manager
+
+    def test_get_secret_with_explicit_project(self, manager_with_myvault):
+        """Test: Project指定時は指定したProjectのsecretsを取得."""
+        manager_with_myvault.myvault_client.get_secret.return_value = "project-a-value"
+
+        result = manager_with_myvault.get_secret("API_KEY", project="project_a")
+
+        assert result == "project-a-value"
+        manager_with_myvault.myvault_client.get_secret.assert_called_once_with(
+            "project_a", "API_KEY"
+        )
+
+    def test_get_secret_without_project_uses_default_from_api(
+        self, manager_with_myvault
+    ):
+        """Test: Project未指定時はis_default=trueのProjectを使用 (API優先)."""
+        # Mock get_default_project to return default from API
+        manager_with_myvault.myvault_client.get_default_project.return_value = (
+            "api_default_project"
+        )
+        manager_with_myvault.myvault_client.get_secret.return_value = "default-value"
+
+        result = manager_with_myvault.get_secret("API_KEY")
+
+        assert result == "default-value"
+        manager_with_myvault.myvault_client.get_secret.assert_called_once_with(
+            "api_default_project", "API_KEY"
+        )
+
+    def test_get_secret_without_project_falls_back_to_env_default(
+        self, manager_with_myvault
+    ):
+        """Test: API default未設定時は環境変数MYVAULT_DEFAULT_PROJECTを使用."""
+        # Mock get_default_project to return None (no default in API)
+        manager_with_myvault.myvault_client.get_default_project.return_value = None
+        manager_with_myvault.myvault_client.get_secret.return_value = "env-default-value"
+
+        with patch.object(
+            manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", "env_default_proj"
+        ):
+            result = manager_with_myvault.get_secret("API_KEY")
+
+        assert result == "env-default-value"
+        manager_with_myvault.myvault_client.get_secret.assert_called_once_with(
+            "env_default_proj", "API_KEY"
+        )
+
+    def test_get_secrets_for_project_with_explicit_project(self, manager_with_myvault):
+        """Test: get_secrets_for_project with explicit project."""
+        manager_with_myvault.myvault_client.get_secrets.return_value = {
+            "KEY1": "value1",
+            "KEY2": "value2",
+        }
+
+        result = manager_with_myvault.get_secrets_for_project(project="explicit_proj")
+
+        assert result == {"KEY1": "value1", "KEY2": "value2"}
+        manager_with_myvault.myvault_client.get_secrets.assert_called_once_with(
+            "explicit_proj"
+        )
+
+    def test_get_secrets_for_project_without_project_uses_default(
+        self, manager_with_myvault
+    ):
+        """Test: get_secrets_for_project without project uses default."""
+        manager_with_myvault.myvault_client.get_default_project.return_value = (
+            "default_proj"
+        )
+        manager_with_myvault.myvault_client.get_secrets.return_value = {
+            "DEFAULT_KEY": "default_value"
+        }
+
+        result = manager_with_myvault.get_secrets_for_project()
+
+        assert result == {"DEFAULT_KEY": "default_value"}
+        manager_with_myvault.myvault_client.get_secrets.assert_called_once_with(
+            "default_proj"
+        )
+
+    def test_different_projects_return_different_secrets(self, manager_with_myvault):
+        """Test: 異なるProjectは異なるsecretsを返す."""
+        # Setup mock to return different values based on project
+        def mock_get_secret(project, key):
+            if project == "project_a":
+                return "value_from_a"
+            elif project == "project_b":
+                return "value_from_b"
+            return None
+
+        manager_with_myvault.myvault_client.get_secret.side_effect = mock_get_secret
+
+        result_a = manager_with_myvault.get_secret("API_KEY", project="project_a")
+        result_b = manager_with_myvault.get_secret("API_KEY", project="project_b")
+
+        assert result_a == "value_from_a"
+        assert result_b == "value_from_b"
+        assert result_a != result_b
+
+    def test_nonexistent_project_raises_error(self, manager_with_myvault):
+        """Test: 存在しないProject指定時はエラー."""
+        from core.myvault_client import MyVaultError
+
+        manager_with_myvault.myvault_client.get_secret.side_effect = MyVaultError(
+            "Secret 'API_KEY' not found in project 'nonexistent'"
+        )
+
+        with patch.object(manager_with_myvault.settings, "API_KEY", ""):
+            with pytest.raises(ValueError, match="not found in MyVault or environment"):
+                manager_with_myvault.get_secret("API_KEY", project="nonexistent")

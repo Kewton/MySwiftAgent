@@ -1220,7 +1220,7 @@ main() {
                 # - LOG_DIR: Use local logs directory (not Docker's /app/logs)
                 # - LOG_LEVEL: Configurable log level
                 start_service "ExpertAgent" "$EXPERTAGENT_DIR" $EXPERTAGENT_PORT "$EXPERTAGENT_PID" "$EXPERTAGENT_LOG" \
-                    "MYVAULT_ENABLED=True MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT MYVAULT_SERVICE_TOKEN=$expertagent_token MYVAULT_DEFAULT_PROJECT=$myvault_default_project LOG_DIR=$LOG_DIR LOG_LEVEL=$expertagent_log_level uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
+                    "MYVAULT_ENABLED=True MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT MYVAULT_SERVICE_NAME=expertagent MYVAULT_SERVICE_TOKEN=$expertagent_token MYVAULT_DEFAULT_PROJECT=$myvault_default_project LOG_DIR=$LOG_DIR LOG_LEVEL=$expertagent_log_level uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --workers 4" || exit 1
             fi
 
             # Start GraphAiServer
