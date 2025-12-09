@@ -252,7 +252,22 @@ jobs:
         run: |
           PROJECT_LOWER=$(echo "${{ matrix.project }}" | tr '[:upper:]' '[:lower:]')
           docker run --rm -d --name ${PROJECT_LOWER}-test -p 8000:8000 ${PROJECT_LOWER}:test
-          sleep 30
+
+          # Wait for container to be fully ready with retry logic
+          echo "⏳ Waiting for container to start..."
+          for i in {1..6}; do
+            sleep 5
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Container is ready after $((i*5)) seconds"
+              break
+            fi
+            echo "⏳ Attempt $i/6: Container not ready yet, waiting..."
+            if [ $i -eq 6 ]; then
+              echo "❌ Container failed to start after 30 seconds"
+              docker logs ${PROJECT_LOWER}-test || true
+              exit 1
+            fi
+          done
 
           # ヘルスチェック
           echo "🔍 Testing health endpoint..."
