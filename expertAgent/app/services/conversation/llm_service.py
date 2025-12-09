@@ -7,11 +7,14 @@ Design decisions:
 - Use LangChain streaming mode for real-time responses
 - Extract RequirementState from full response (not streamed)
 - Simple keyword-based extraction in Phase 1 (improve in Phase 2)
+- Langfuse integration for LLM observability (Issue #135)
 """
 
 import logging
 import os
 from typing import AsyncGenerator, Dict, List
+
+from langchain_core.runnables.config import RunnableConfig
 
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.requirement_clarification import (
     REQUIREMENT_CLARIFICATION_SYSTEM_PROMPT,
@@ -22,6 +25,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import (
     create_llm_with_fallback,
 )
 from app.schemas.chat import RequirementState
+from app.services.langfuse_service import langfuse_service
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +34,8 @@ async def stream_requirement_clarification(
     user_message: str,
     previous_messages: List[Dict],
     current_requirements: RequirementState,
+    conversation_id: str | None = None,
+    user_id: str | None = None,
 ) -> AsyncGenerator[Dict, None]:
     """Stream requirement clarification chat responses.
 
@@ -42,6 +48,8 @@ async def stream_requirement_clarification(
         user_message: User's latest message
         previous_messages: Previous conversation history
         current_requirements: Current requirement state
+        conversation_id: Conversation ID for Langfuse session tracking
+        user_id: User ID for Langfuse user tracking
 
     Yields:
         Dict with 'type' and 'data' keys for SSE events
@@ -76,13 +84,30 @@ async def stream_requirement_clarification(
         max_tokens=max_tokens,
     )
 
+    # Langfuse CallbackHandler生成 (Issue #135: LLM Observability)
+    langfuse_handler = langfuse_service.get_callback_handler(
+        trace_name="requirement_clarification",
+        user_id=user_id,
+        session_id=conversation_id,
+        tags=["chat", "requirement_clarification", "streaming"],
+        metadata={
+            "model": model_name,
+            "completeness_before": current_requirements.completeness,
+        },
+    )
+
+    # CallbackHandlerをconfigに追加
+    config: RunnableConfig | None = None
+    if langfuse_handler:
+        config = RunnableConfig(callbacks=[langfuse_handler])
+
     perf_tracker.start()
 
     try:
         # Stream LLM response
         full_response = ""
 
-        async for chunk in model.astream(messages):
+        async for chunk in model.astream(messages, config=config):
             # Extract text content from chunk
             content = ""
             if hasattr(chunk, "content"):
@@ -121,12 +146,18 @@ async def stream_requirement_clarification(
         perf_tracker.log_metrics()
         logger.error(f"LLM streaming failed: {e}")
         raise
+    finally:
+        # Langfuseトレースをフラッシュ
+        if langfuse_handler:
+            langfuse_service.flush()
 
 
 async def non_streaming_clarification(
     user_message: str,
     previous_messages: List[Dict],
     current_requirements: RequirementState,
+    conversation_id: str | None = None,
+    user_id: str | None = None,
 ) -> tuple[str, RequirementState]:
     """Non-streaming fallback for requirement clarification.
 
@@ -136,6 +167,8 @@ async def non_streaming_clarification(
         user_message: User's latest message
         previous_messages: Previous conversation history
         current_requirements: Current requirement state
+        conversation_id: Conversation ID for Langfuse session tracking
+        user_id: User ID for Langfuse user tracking
 
     Returns:
         Tuple of (full_response, updated_requirements)
@@ -165,10 +198,27 @@ async def non_streaming_clarification(
         max_tokens=max_tokens,
     )
 
+    # Langfuse CallbackHandler生成 (Issue #135: LLM Observability)
+    langfuse_handler = langfuse_service.get_callback_handler(
+        trace_name="requirement_clarification",
+        user_id=user_id,
+        session_id=conversation_id,
+        tags=["chat", "requirement_clarification", "non_streaming"],
+        metadata={
+            "model": model_name,
+            "completeness_before": current_requirements.completeness,
+        },
+    )
+
+    # CallbackHandlerをconfigに追加
+    config: RunnableConfig | None = None
+    if langfuse_handler:
+        config = RunnableConfig(callbacks=[langfuse_handler])
+
     perf_tracker.start()
 
     try:
-        response = await model.ainvoke(messages)
+        response = await model.ainvoke(messages, config=config)
         full_response = (
             str(response.content) if hasattr(response, "content") else str(response)
         )
@@ -187,3 +237,7 @@ async def non_streaming_clarification(
         perf_tracker.log_metrics()
         logger.error(f"Non-streaming clarification failed: {e}")
         raise
+    finally:
+        # Langfuseトレースをフラッシュ
+        if langfuse_handler:
+            langfuse_service.flush()

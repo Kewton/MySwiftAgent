@@ -105,6 +105,7 @@ async def requirement_definition(request: RequirementChatRequest):
                 user_message=request.user_message,
                 previous_messages=request.context.previous_messages,
                 current_requirements=current_requirements,
+                conversation_id=request.conversation_id,  # Langfuse session tracking
             ):
                 # Accumulate full response for conversation history
                 if chunk["type"] == "message":
