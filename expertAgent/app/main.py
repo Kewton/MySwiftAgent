@@ -1,4 +1,7 @@
-"""Main FastAPI application entry point."""
+"""Main FastAPI application entry point.
+
+ExpertAgent - AI Agent Foundation Service
+"""
 
 import logging
 from contextlib import asynccontextmanager
