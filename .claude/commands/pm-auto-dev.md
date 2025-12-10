@@ -280,7 +280,27 @@ TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定。
 
 **上記以外のIssueでは、L3テストは必須です。**
 
-#### 3-1. 受入テストコンテキストファイル作成
+#### 3-1. work-plan.md の L3テスト計画読み込み【重要】
+
+**必須**: Phase 1で確認したwork-plan.mdの「L3受入テスト計画」セクションを読み込みます。
+
+```bash
+WORK_PLAN_FILE="dev-reports/feature/issue/${ISSUE_NUM}/work-plan.md"
+
+if [ -f "$WORK_PLAN_FILE" ]; then
+  echo "✅ L3テスト計画を読み込み中..."
+  # L3受入テスト計画セクションを抽出
+  sed -n '/### 8\. L3受入テスト計画/,/### 9\./p' "$WORK_PLAN_FILE"
+fi
+```
+
+**work-plan.md から抽出する情報**:
+- 具体的なcurlコマンド（正常系・異常系）
+- 期待するHTTPステータスコード
+- 期待するレスポンスボディ
+- 外部サービス連携確認コマンド
+
+#### 3-2. 受入テストコンテキストファイル作成
 
 Writeツールで以下のファイルを作成：
 
@@ -289,7 +309,7 @@ Writeツールで以下のファイルを作成：
 dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-context.json
 ```
 
-**内容**:
+**内容**（work-plan.mdのL3テスト計画を含む）:
 ```json
 {
   "issue_number": {issue_number},
@@ -298,17 +318,189 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-cont
     "受入条件1",
     "受入条件2"
   ],
-  "test_scenarios": [
-    "シナリオ1: ...",
-    "シナリオ2: ..."
-  ],
   "labels": ["feature", "agent-layer"],
   "required_services": ["expertAgent", "myVault"],
-  "external_dependencies": ["LLM API", "Langfuse"]
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系テスト",
+        "command": "curl -s -X POST http://localhost:8104/v1/endpoint -H 'Content-Type: application/json' -d '{\"param\": \"value\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["result", "success"]
+      },
+      {
+        "name": "異常系テスト",
+        "command": "curl -s -X GET http://localhost:8104/v1/resource/nonexistent -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 404,
+        "expected_response_contains": ["detail", "not found"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"},
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py"
 }
 ```
 
-#### 3-2. 受入テストサブエージェント呼び出し
+**重要**:
+- `l3_test_plan` はwork-plan.mdの「L3受入テスト計画」セクションから転記
+- work-plan.mdが存在しない場合は、受入条件からテストコマンドを生成
+
+#### 3-3. pytest受入テストファイル生成【必須】
+
+**必須**: `tests/acceptance/test_issue_{issue_number}_acceptance.py` を生成します。
+
+Writeツールで以下のファイルを作成：
+
+**ファイルパス**:
+```
+tests/acceptance/test_issue_{issue_number}_acceptance.py
+```
+
+**テンプレート**:
+```python
+"""
+Issue #{issue_number} 受入テスト（L3: ローカル受入テスト）
+
+前提条件:
+- サービスが起動していること (./scripts/dev-start.sh または make dev-all)
+- .env に必要なAPIキーが設定されていること
+
+実行方法:
+  uv run pytest tests/acceptance/test_issue_{issue_number}_acceptance.py -v
+"""
+import pytest
+import requests
+from typing import Any
+
+
+@pytest.mark.acceptance
+class TestIssue{issue_number}Acceptance:
+    """Issue #{issue_number}: {issue_title}"""
+
+    # サービスURL（環境変数で上書き可能）
+    EXPERT_AGENT_URL = "http://localhost:8104"
+    MYVAULT_URL = "http://localhost:8103"
+
+    @pytest.fixture(autouse=True)
+    def check_services_running(self) -> None:
+        """サービス起動確認"""
+        services = [
+            (self.EXPERT_AGENT_URL, "expertAgent"),
+            (self.MYVAULT_URL, "myVault"),
+        ]
+        for url, name in services:
+            try:
+                response = requests.get(f"{url}/health", timeout=5)
+                assert response.status_code == 200, f"{name} is not healthy"
+            except requests.exceptions.ConnectionError:
+                pytest.skip(
+                    f"{name} is not running. "
+                    "Run: ./scripts/dev-start.sh or make dev-all"
+                )
+
+    # ==========================================================================
+    # 正常系テスト
+    # ==========================================================================
+
+    def test_scenario_1_api_returns_expected_response(self) -> None:
+        """シナリオ1: APIが期待する応答を返す
+
+        受入条件: {acceptance_criterion_1}
+        """
+        # Arrange
+        endpoint = f"{self.EXPERT_AGENT_URL}/v1/endpoint"
+        payload: dict[str, Any] = {"param": "value"}
+
+        # Act
+        response = requests.post(
+            endpoint,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30,
+        )
+
+        # Assert
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.text}"
+        )
+        data = response.json()
+        assert "result" in data, f"Response missing 'result' field: {data}"
+
+    # ==========================================================================
+    # 異常系テスト
+    # ==========================================================================
+
+    def test_scenario_2_error_handling_returns_404(self) -> None:
+        """シナリオ2: 存在しないリソースへのアクセスで404を返す
+
+        受入条件: {acceptance_criterion_2}
+        """
+        # Arrange
+        endpoint = f"{self.EXPERT_AGENT_URL}/v1/resource/nonexistent-id"
+
+        # Act
+        response = requests.get(endpoint, timeout=10)
+
+        # Assert
+        assert response.status_code == 404, (
+            f"Expected 404, got {response.status_code}: {response.text}"
+        )
+        data = response.json()
+        assert "detail" in data or "error" in data, (
+            f"Error response missing 'detail' or 'error' field: {data}"
+        )
+
+    # ==========================================================================
+    # 外部サービス連携テスト（該当する場合）
+    # ==========================================================================
+
+    @pytest.mark.external
+    def test_scenario_3_external_service_integration(self) -> None:
+        """シナリオ3: 外部サービス連携が正常動作
+
+        受入条件: {acceptance_criterion_3}
+
+        Note: このテストは実際のAPIキーが必要です。
+        スキップする場合: pytest -m "not external"
+        """
+        # Arrange
+        endpoint = f"{self.EXPERT_AGENT_URL}/v1/generate"
+        payload: dict[str, Any] = {"prompt": "Test prompt for acceptance test"}
+
+        # Act
+        response = requests.post(
+            endpoint,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=60,  # LLM APIは時間がかかる場合がある
+        )
+
+        # Assert
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.text}"
+        )
+        data = response.json()
+        assert len(data.get("content", "")) > 0, (
+            f"Response content is empty: {data}"
+        )
+```
+
+**カスタマイズ指示**:
+- `{issue_number}`, `{issue_title}` を実際の値に置換
+- `{acceptance_criterion_N}` を実際の受入条件に置換
+- work-plan.mdのL3テスト計画に記載されたcurlコマンドをpytestメソッドに変換
+- 外部サービス連携テストは `@pytest.mark.external` マーカーを付与
+
+#### 3-4. 受入テストサブエージェント呼び出し
 
 以下のテキストを記述してください：
 
@@ -319,17 +511,19 @@ Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/a
 Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-result.json
 
 IMPORTANT: This is L3 (Local Acceptance Test). You MUST:
-1. Start required services (./scripts/dev-start.sh)
+1. Start required services (./scripts/dev-start.sh or make dev-all)
 2. Execute health checks for all services
-3. Run E2E scenarios with REAL API calls (curl, requests)
-4. Verify external service integrations (LLM, Langfuse, Valkey)
-5. Collect evidence (API responses, logs)
+3. RUN THE PYTEST ACCEPTANCE TEST FILE:
+   uv run pytest tests/acceptance/test_issue_{issue_number}_acceptance.py -v
+4. Execute additional curl commands from l3_test_plan if pytest passes
+5. Verify external service integrations (LLM, Langfuse, Valkey)
+6. Collect evidence (pytest output, API responses, logs)
 
-Do NOT rely on static analysis or unit test results - those are already verified in Phase 2.
+REQUIRED: The pytest acceptance test file MUST pass. Do NOT mark as passed if pytest fails.
 Focus on ACTUAL service behavior with real HTTP requests.
 ```
 
-#### 3-3. 結果確認
+#### 3-5. 結果確認
 
 Readツールで結果ファイルを確認：
 
@@ -350,19 +544,39 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-
     "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
     "myVault": {"status": "healthy", "url": "http://localhost:8103"}
   },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... pytest output ..."
+  },
   "test_cases": [
     {
       "scenario": "シナリオ1: APIが期待する応答を返す",
-      "type": "practical_api_test",
-      "command": "curl -s -X POST http://localhost:8104/v1/endpoint ...",
+      "type": "pytest",
+      "method": "test_scenario_1_api_returns_expected_response",
       "result": "passed",
       "http_status": 200,
       "evidence": "Response: {...}"
+    },
+    {
+      "scenario": "シナリオ2: エラーハンドリング",
+      "type": "pytest",
+      "method": "test_scenario_2_error_handling_returns_404",
+      "result": "passed",
+      "http_status": 404,
+      "evidence": "Response: {\"detail\": \"Not found\"}"
     }
   ],
   "acceptance_criteria_status": [
-    {"criterion": "受入条件1", "verified": true, "verification_method": "practical_api_test"},
-    {"criterion": "受入条件2", "verified": true, "verification_method": "practical_api_test"}
+    {"criterion": "受入条件1", "verified": true, "verification_method": "pytest"},
+    {"criterion": "受入条件2", "verified": true, "verification_method": "pytest"}
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+    "/tmp/acceptance_test_output.log"
   ]
 }
 ```
@@ -380,11 +594,28 @@ TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定。
   "service_health": {
     "expertAgent": {"status": "healthy", "url": "http://localhost:8104"}
   },
-  "test_cases": [
-    {"scenario": "シナリオ1", "type": "practical_api_test", "result": "passed"},
-    {"scenario": "シナリオ2", "type": "practical_api_test", "result": "failed", "http_status": 500}
-  ],
-  "error": "受入テストの一部が失敗しました"
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+    "total": 3,
+    "passed": 1,
+    "failed": 2,
+    "skipped": 0,
+    "failures": [
+      {
+        "method": "test_scenario_1_api_returns_expected_response",
+        "error": "AssertionError: Expected 200, got 500: Internal Server Error"
+      },
+      {
+        "method": "test_scenario_2_error_handling_returns_404",
+        "error": "AssertionError: Expected 404, got 500"
+      }
+    ]
+  },
+  "error": "pytest受入テストが失敗しました（2/3テスト失敗）",
+  "suggested_fixes": [
+    "エンドポイント /v1/endpoint の実装を確認してください",
+    "エラーハンドリングのステータスコードを確認してください"
+  ]
 }
 ```
 
