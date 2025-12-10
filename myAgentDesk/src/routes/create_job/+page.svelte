@@ -1,4 +1,15 @@
 <script lang="ts">
+	/**
+	 * Create Job Page - Main page for job creation with MLOps integration
+	 *
+	 * Issue #192: Create Job MLOps UI integration
+	 * Features:
+	 * - Chat-based requirement clarification
+	 * - Candidate selection from LLM responses
+	 * - Feedback submission after job creation
+	 * - Job creation with progress tracking
+	 */
+
 	import { onMount, afterUpdate } from 'svelte';
 	import { page } from '$app/stores';
 	import InnerSidebar from '$lib/components/InnerSidebar.svelte';
@@ -8,12 +19,17 @@
 	import JobCreationModal from '$lib/components/create_job/JobCreationModal.svelte';
 	import MarpViewer from '$lib/components/create_job/MarpViewer.svelte';
 	import SlideNavigation from '$lib/components/create_job/SlideNavigation.svelte';
+	import CandidateSelector from '$lib/mlops/components/CandidateSelector.svelte';
+	import FeedbackModal from '$lib/mlops/components/FeedbackModal.svelte';
 	import { conversationStore, activeConversation } from '$lib/stores/conversations';
 	import { chatSession } from '$lib/stores/chatSession';
 	import { innerSidebarOpen } from '$lib/stores/sidebar';
 	import { createSchedule } from '$lib/services/schedule-api';
 	import { getMarpPdfUrl, getMarpPngUrls } from '$lib/services/marp-api';
 	import { createJobAsync, getJobStatus } from '$lib/services';
+	import { selectCandidate, submitFeedback } from '$lib/mlops/api/client';
+	import { parseCandidatesFromResponse, type ParsedCandidate } from '$lib/utils/candidate-parser';
+	import type { Candidate, FeedbackScores } from '$lib/mlops/types';
 
 	let message = '';
 	let isComposing = false; // IME入力中フラグ
@@ -30,6 +46,15 @@
 	let currentSlide = 1;
 	let totalSlides = 1;
 
+	// MLOps UI状態 (Issue #192)
+	let candidates: Candidate[] = [];
+	let selectedCandidateId: string | null = null;
+	let isCandidateLoading = false;
+	let showCandidateSelector = false;
+	let isFeedbackModalOpen = false;
+	let isFeedbackLoading = false;
+	let feedbackSubmitted = false;
+
 	// アクティブな会話のリアクティブデータ
 	$: activeConv = $activeConversation;
 	$: conversationId = activeConv?.id || '';
@@ -42,6 +67,31 @@
 		completeness: 0
 	};
 	$: sessionState = $chatSession;
+
+	// LLMレスポンスから候補を検出・パース (Issue #192)
+	$: {
+		if (messages.length > 0) {
+			const lastMessage = messages[messages.length - 1];
+			if (lastMessage.role === 'assistant') {
+				const parsedCandidates = parseCandidatesFromResponse(lastMessage.message);
+				if (parsedCandidates.length > 0) {
+					// ParsedCandidateをCandidateに変換
+					candidates = parsedCandidates.map((pc: ParsedCandidate) => ({
+						id: pc.id,
+						label: pc.label,
+						description: pc.description,
+						confidence: pc.confidence,
+						requirements: pc.requirements
+					}));
+					showCandidateSelector = true;
+					selectedCandidateId = null;
+				} else {
+					showCandidateSelector = false;
+					candidates = [];
+				}
+			}
+		}
+	}
 
 	// ジョブ作成状態の管理（localStorage）
 	const JOB_CREATION_KEY = 'myAgentDesk_jobCreation';
@@ -74,12 +124,104 @@
 			if (stored) {
 				try {
 					return JSON.parse(stored);
-				} catch (e) {
+				} catch {
 					return null;
 				}
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * 候補選択ハンドラー (Issue #192)
+	 */
+	function handleCandidateSelect(event: CustomEvent<{ candidateId: string }>) {
+		selectedCandidateId = event.detail.candidateId;
+	}
+
+	/**
+	 * 候補確定ハンドラー (Issue #192)
+	 */
+	async function handleCandidateConfirm(event: CustomEvent<{ candidateId: string }>) {
+		if (!conversationId || isCandidateLoading) return;
+
+		isCandidateLoading = true;
+
+		try {
+			const response = await selectCandidate(conversationId, event.detail.candidateId);
+
+			// 要件状態を更新
+			if (response.requirements) {
+				conversationStore.updateRequirements(conversationId, response.requirements);
+			}
+
+			// 確認メッセージを追加
+			conversationStore.addMessage(conversationId, {
+				role: 'assistant',
+				message: response.message || '候補を選択しました。',
+				timestamp: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+			});
+
+			// 候補選択UIを非表示
+			showCandidateSelector = false;
+			candidates = [];
+			selectedCandidateId = null;
+		} catch (error) {
+			console.error('Failed to select candidate:', error);
+			conversationStore.addMessage(conversationId, {
+				role: 'assistant',
+				message: `候補の選択に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+				timestamp: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+			});
+		} finally {
+			isCandidateLoading = false;
+		}
+	}
+
+	/**
+	 * フィードバック送信ハンドラー (Issue #192)
+	 */
+	async function handleFeedbackSubmit(event: CustomEvent<FeedbackScores>) {
+		if (!conversationId || isFeedbackLoading) return;
+
+		isFeedbackLoading = true;
+
+		try {
+			const response = await submitFeedback({
+				conversation_id: conversationId,
+				...event.detail
+			});
+
+			if (response.success) {
+				feedbackSubmitted = true;
+				isFeedbackModalOpen = false;
+
+				// フィードバック送信完了メッセージ
+				conversationStore.addMessage(conversationId, {
+					role: 'assistant',
+					message: 'フィードバックを送信しました。ご協力ありがとうございます。',
+					timestamp: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+				});
+			} else {
+				throw new Error(response.message || 'フィードバック送信に失敗しました');
+			}
+		} catch (error) {
+			console.error('Failed to submit feedback:', error);
+			conversationStore.addMessage(conversationId, {
+				role: 'assistant',
+				message: `フィードバックの送信に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+				timestamp: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+			});
+		} finally {
+			isFeedbackLoading = false;
+		}
+	}
+
+	/**
+	 * フィードバックモーダルを閉じる
+	 */
+	function handleFeedbackClose() {
+		isFeedbackModalOpen = false;
 	}
 
 	/**
@@ -109,7 +251,7 @@
 					// 既存のメッセージを更新
 					conversationStore.updateLastMessage(conversationId, {
 						...lastMessage,
-						message: `🔄 **ジョブを作成しています...**\n\nLLMによるタスク分解と評価を実行中です。数分かかる場合があります。\n\n**経過時間**: ${timeStr}`
+						message: `ジョブを作成しています...\n\nLLMによるタスク分解と評価を実行中です。数分かかる場合があります。\n\n**経過時間**: ${timeStr}`
 					});
 				}
 			}
@@ -132,7 +274,7 @@
 					if (lastMessage.role === 'assistant' && lastMessage.message.includes('経過時間')) {
 						conversationStore.updateLastMessage(conversationId, {
 							...lastMessage,
-							message: `🔄 **ジョブを作成しています...**\n\nLLMによるタスク分解と評価を実行中です。数分かかる場合があります。\n\n**進捗**: ${status.progress}%\n**経過時間**: ${timeStr}`
+							message: `ジョブを作成しています...\n\nLLMによるタスク分解と評価を実行中です。数分かかる場合があります。\n\n**進捗**: ${status.progress}%\n**経過時間**: ${timeStr}`
 						});
 					}
 				}
@@ -154,7 +296,7 @@
 								// スケジュール設定中メッセージ
 								conversationStore.addMessage(conversationId, {
 									role: 'assistant',
-									message: '⏰ **スケジュールを設定しています...**',
+									message: 'スケジュールを設定しています...',
 									timestamp: new Date().toLocaleTimeString('ja-JP', {
 										hour: '2-digit',
 										minute: '2-digit'
@@ -170,7 +312,7 @@
 								// スケジュール設定完了メッセージ
 								conversationStore.addMessage(conversationId, {
 									role: 'assistant',
-									message: `✅ **スケジュール設定が完了しました**\n\n- 実行間隔: ${cronExpression}\n- タイムゾーン: ${timezone}`,
+									message: `**スケジュール設定が完了しました**\n\n- 実行間隔: ${cronExpression}\n- タイムゾーン: ${timezone}`,
 									timestamp: new Date().toLocaleTimeString('ja-JP', {
 										hour: '2-digit',
 										minute: '2-digit'
@@ -184,7 +326,7 @@
 								conversationStore.addMessage(conversationId, {
 									role: 'assistant',
 									message:
-										'⚠️ **警告**: ジョブは作成されましたが、スケジュール設定に失敗しました。',
+										'**警告**: ジョブは作成されましたが、スケジュール設定に失敗しました。',
 									timestamp: new Date().toLocaleTimeString('ja-JP', {
 										hour: '2-digit',
 										minute: '2-digit'
@@ -196,7 +338,7 @@
 						// ジョブ作成完了メッセージ
 						conversationStore.addMessage(conversationId, {
 							role: 'assistant',
-							message: `✅ **ジョブが正常に作成されました**\n\nジョブID: ${createdJobId}`,
+							message: `**ジョブが正常に作成されました**\n\nジョブID: ${createdJobId}`,
 							timestamp: new Date().toLocaleTimeString('ja-JP', {
 								hour: '2-digit',
 								minute: '2-digit'
@@ -208,11 +350,18 @@
 
 						// ジョブ作成成功後、自動的にスライドタブに切り替え
 						showSlides = true;
+
+						// フィードバックモーダルを表示 (Issue #192)
+						if (!feedbackSubmitted) {
+							setTimeout(() => {
+								isFeedbackModalOpen = true;
+							}, 1000);
+						}
 					} else if (status.status === 'failed') {
 						// エラーメッセージ
 						conversationStore.addMessage(conversationId, {
 							role: 'assistant',
-							message: `❌ **ジョブ作成に失敗しました**\n\nエラー: ${status.error_message || '不明なエラー'}`,
+							message: `**ジョブ作成に失敗しました**\n\nエラー: ${status.error_message || '不明なエラー'}`,
 							timestamp: new Date().toLocaleTimeString('ja-JP', {
 								hour: '2-digit',
 								minute: '2-digit'
@@ -274,13 +423,13 @@
 					// 既存のメッセージを更新
 					conversationStore.updateLastMessage(conversationId, {
 						...lastMessage,
-						message: `🔄 **ジョブ作成を再開しています...**\n\nページがリロードされました（経過時間: ${timeStr}）。\n\nジョブ作成の進捗を追跡しています。\n\n**経過時間**: ${timeStr}`
+						message: `**ジョブ作成を再開しています...**\n\nページがリロードされました（経過時間: ${timeStr}）。\n\nジョブ作成の進捗を追跡しています。\n\n**経過時間**: ${timeStr}`
 					});
 				} else {
 					// 新しいメッセージを追加（初回リロード時）
 					conversationStore.addMessage(conversationId, {
 						role: 'assistant',
-						message: `🔄 **ジョブ作成を再開しています...**\n\nページがリロードされました（経過時間: ${timeStr}）。\n\nジョブ作成の進捗を追跡しています。\n\n**経過時間**: ${timeStr}`,
+						message: `**ジョブ作成を再開しています...**\n\nページがリロードされました（経過時間: ${timeStr}）。\n\nジョブ作成の進捗を追跡しています。\n\n**経過時間**: ${timeStr}`,
 						timestamp: new Date().toLocaleTimeString('ja-JP', {
 							hour: '2-digit',
 							minute: '2-digit'
@@ -300,7 +449,7 @@
 				// jobIdがない場合（旧バージョンの状態）、追跡不可メッセージを表示
 				conversationStore.addMessage(conversationId, {
 					role: 'assistant',
-					message: `⚠️ **ジョブ作成状態を追跡できません**\n\nページがリロードされました（経過時間: ${timeStr}）。\n\nバックエンドでジョブ作成処理が継続している可能性がありますが、フロントエンドでは状態を追跡できなくなりました。\n\nジョブ一覧ページで作成状況を確認してください。`,
+					message: `**ジョブ作成状態を追跡できません**\n\nページがリロードされました（経過時間: ${timeStr}）。\n\nバックエンドでジョブ作成処理が継続している可能性がありますが、フロントエンドでは状態を追跡できなくなりました。\n\nジョブ一覧ページで作成状況を確認してください。`,
 					timestamp: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
 				});
 
@@ -394,7 +543,7 @@
 		conversationStore.addMessage(conversationId, {
 			role: 'assistant',
 			message:
-				'🔄 **ジョブを作成しています...**\n\nLLMによるタスク分解と評価を実行中です。数分かかる場合があります。\n\n**経過時間**: 0秒',
+				'ジョブを作成しています...\n\nLLMによるタスク分解と評価を実行中です。数分かかる場合があります。\n\n**経過時間**: 0秒',
 			timestamp: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
 		});
 
@@ -421,7 +570,7 @@
 			// エラーメッセージ
 			conversationStore.addMessage(conversationId, {
 				role: 'assistant',
-				message: `❌ **ジョブ作成の開始に失敗しました**\n\nエラー: ${error instanceof Error ? error.message : '不明なエラー'}`,
+				message: `**ジョブ作成の開始に失敗しました**\n\nエラー: ${error instanceof Error ? error.message : '不明なエラー'}`,
 				timestamp: new Date().toLocaleTimeString('ja-JP', {
 					hour: '2-digit',
 					minute: '2-digit'
@@ -512,16 +661,18 @@
 						? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400'
 						: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
 					on:click={() => (showSlides = false)}
+					data-testid="chat-tab"
 				>
-					💬 チャット
+					Chat
 				</button>
 				<button
 					class="px-6 py-3 text-sm font-medium transition {showSlides
 						? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400'
 						: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
 					on:click={() => (showSlides = true)}
+					data-testid="slides-tab"
 				>
-					📊 スライド
+					Slides
 				</button>
 			</div>
 		{/if}
@@ -530,6 +681,19 @@
 		{#if !showSlides}
 			<!-- Scrollable Chat Messages Area -->
 			<ChatContainer {messages} bind:containerRef={chatContainer} />
+
+			<!-- Candidate Selector (Issue #192) -->
+			{#if showCandidateSelector && candidates.length > 0}
+				<div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+					<CandidateSelector
+						{candidates}
+						selectedId={selectedCandidateId}
+						loading={isCandidateLoading}
+						on:select={handleCandidateSelect}
+						on:confirm={handleCandidateConfirm}
+					/>
+				</div>
+			{/if}
 
 			<!-- Input Area -->
 			<MessageInput
@@ -572,6 +736,15 @@
 	isCreatingJob={sessionState.isCreatingJob}
 	on:create={handleModalCreate}
 	on:cancel={handleModalCancel}
+/>
+
+<!-- Feedback Modal (Issue #192) -->
+<FeedbackModal
+	open={isFeedbackModalOpen}
+	{conversationId}
+	loading={isFeedbackLoading}
+	on:submit={handleFeedbackSubmit}
+	on:close={handleFeedbackClose}
 />
 
 <style>
