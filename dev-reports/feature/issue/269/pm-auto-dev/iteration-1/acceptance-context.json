@@ -1,0 +1,47 @@
+{
+  "issue_number": 269,
+  "feature_summary": "LLMモデル設定をmyVaultで管理しcommonUIから設定可能にする",
+  "acceptance_criteria": [
+    "myVaultでLLMモデル設定が管理されている",
+    "commonUIからモデル設定を変更できる",
+    "設定変更後、サービス再起動なしで新しいモデルが使用される",
+    "デフォルト値が適切にフォールバックされる",
+    "単体テストカバレッジ90%以上"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "commonUI"],
+  "external_dependencies": ["LLM API (optional)", "Langfuse (optional)"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "commonUI", "url": "http://localhost:8501/healthz"}
+    ],
+    "test_commands": [
+      {
+        "name": "モデル設定一覧取得",
+        "command": "curl -s http://localhost:8003/api/secrets?project=default_project -H 'X-Service: commonui' -H 'X-Token: ${MYVAULT_TOKEN_COMMONUI}'",
+        "expected_status": 200,
+        "expected_response_contains": ["CHAT_CLARIFICATION_MODEL"]
+      },
+      {
+        "name": "個別設定取得",
+        "command": "curl -s http://localhost:8003/api/secrets/default_project/CHAT_CLARIFICATION_MODEL -H 'X-Service: commonui' -H 'X-Token: ${MYVAULT_TOKEN_COMMONUI}'",
+        "expected_status": 200,
+        "expected_response_contains": ["value", "gemini-2.0-flash"]
+      },
+      {
+        "name": "設定更新",
+        "command": "curl -s -X PATCH http://localhost:8003/api/secrets/default_project/CHAT_CLARIFICATION_MODEL -H 'Content-Type: application/json' -H 'X-Service: commonui' -H 'X-Token: ${MYVAULT_TOKEN_COMMONUI}' -d '{\"value\": \"claude-haiku-4-5\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["value", "claude-haiku-4-5"]
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_269_acceptance.py",
+  "playwright_test_file": null
+}

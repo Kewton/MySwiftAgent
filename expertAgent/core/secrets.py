@@ -550,18 +550,27 @@ def _convert_runtime_type(value: str, value_type: type) -> Any:
 
     Raises:
         ValueError: If type conversion fails or type is unsupported
+
+    Note:
+        This function mirrors SecretsManager._convert_type() but is kept
+        separate to avoid mock coupling in tests and maintain backward
+        compatibility with existing test fixtures.
     """
     if value_type is str:
         return value
-    elif value_type is int:
+
+    if value_type is int:
         try:
             return int(value)
         except ValueError as e:
             raise ValueError(f"Failed to convert '{value}' to int: {e}") from e
-    elif value_type is bool:
-        return value.lower() in ("true", "1", "yes", "on")
-    else:
-        raise ValueError(f"Unsupported type: {value_type}")
+
+    if value_type is bool:
+        # Use same logic as SecretsManager._convert_to_bool
+        lower_value = value.lower()
+        return lower_value in ("true", "1", "yes", "on")
+
+    raise ValueError(f"Unsupported type: {value_type}")
 
 
 def resolve_runtime_value(

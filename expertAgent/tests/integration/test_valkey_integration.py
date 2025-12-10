@@ -142,7 +142,9 @@ class TestConversationStoreValkeyIntegration:
 
         # Check TTL is approximately 24 hours
         client = conversation_store_test._client
-        ttl = await client.get_ttl(f"{conversation_store_test.key_prefix}{conversation_id}")
+        ttl = await client.get_ttl(
+            f"{conversation_store_test.key_prefix}{conversation_id}"
+        )
 
         # TTL should be close to 86400 seconds (24 hours)
         assert 86395 <= ttl <= 86400

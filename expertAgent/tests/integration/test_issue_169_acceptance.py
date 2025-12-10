@@ -103,7 +103,9 @@ class TestIssue169AcceptanceCriteria:
         client = conversation_store_test._client
         key = f"{conversation_store_test.key_prefix}{short_ttl_id}"
         ttl_value = await client.get_ttl(key)
-        assert 0 < ttl_value <= short_ttl_seconds, f"TTL should be set to {short_ttl_seconds}s, got {ttl_value}s"
+        assert 0 < ttl_value <= short_ttl_seconds, (
+            f"TTL should be set to {short_ttl_seconds}s, got {ttl_value}s"
+        )
 
         # For expiration verification, use sufficient wait time (10 seconds total)
         # This accounts for CI environment variations
@@ -111,7 +113,9 @@ class TestIssue169AcceptanceCriteria:
 
         # Verify expiration occurred
         exists_after_expiration = await conversation_store_test.exists(short_ttl_id)
-        assert not exists_after_expiration, f"Conversation should be expired after 10 seconds (TTL={short_ttl_seconds}s)"
+        assert not exists_after_expiration, (
+            f"Conversation should be expired after 10 seconds (TTL={short_ttl_seconds}s)"
+        )
 
     async def test_ac6_metadata_persistence(
         self,
@@ -218,7 +222,9 @@ class TestIssue169Scenarios:
         client = conversation_store_test._client
         key = f"{conversation_store_test.key_prefix}{conversation_id}"
         ttl_value = await client.get_ttl(key)
-        assert 0 < ttl_value <= ttl_seconds, f"TTL should be set to {ttl_seconds}s, got {ttl_value}s"
+        assert 0 < ttl_value <= ttl_seconds, (
+            f"TTL should be set to {ttl_seconds}s, got {ttl_value}s"
+        )
 
         # When: Wait for TTL expiration (use sufficient time for CI environment)
         # 10 seconds ensures expiration definitely occurs even with timing variations
@@ -226,10 +232,16 @@ class TestIssue169Scenarios:
 
         # Then: Automatically deleted after sufficient wait time
         exists_after_ttl = await conversation_store_test.exists(conversation_id)
-        assert not exists_after_ttl, f"Conversation should be automatically deleted after 10 seconds (TTL={ttl_seconds}s)"
+        assert not exists_after_ttl, (
+            f"Conversation should be automatically deleted after 10 seconds (TTL={ttl_seconds}s)"
+        )
 
-        retrieved_after_ttl = await conversation_store_test.get_conversation(conversation_id)
-        assert retrieved_after_ttl is None, "Conversation should return None after TTL expiration"
+        retrieved_after_ttl = await conversation_store_test.get_conversation(
+            conversation_id
+        )
+        assert retrieved_after_ttl is None, (
+            "Conversation should return None after TTL expiration"
+        )
 
     async def test_scenario3_metadata_persistence(
         self,

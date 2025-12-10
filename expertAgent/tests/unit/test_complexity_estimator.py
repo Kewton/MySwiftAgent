@@ -20,27 +20,21 @@ class TestComplexityEstimator:
         """Create ComplexityEstimator instance."""
         return ComplexityEstimator()
 
-    def test_simple_complexity_detection(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_simple_complexity_detection(self, estimator: ComplexityEstimator) -> None:
         """Test detection of simple complexity from keywords."""
         keywords = ["集計", "CSV", "出力"]
         result = estimator.estimate(keywords)
 
         assert result == ComplexityLevel.SIMPLE
 
-    def test_medium_complexity_detection(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_medium_complexity_detection(self, estimator: ComplexityEstimator) -> None:
         """Test detection of medium complexity from keywords."""
         keywords = ["比較", "分析", "グラフ"]
         result = estimator.estimate(keywords)
 
         assert result == ComplexityLevel.MEDIUM
 
-    def test_complex_complexity_detection(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_complex_complexity_detection(self, estimator: ComplexityEstimator) -> None:
         """Test detection of complex complexity from keywords."""
         keywords = ["予測", "機械学習", "API"]
         result = estimator.estimate(keywords)
@@ -65,9 +59,7 @@ class TestComplexityEstimator:
         # Should return COMPLEX as it's the highest level
         assert result == ComplexityLevel.COMPLEX
 
-    def test_medium_over_simple_priority(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_medium_over_simple_priority(self, estimator: ComplexityEstimator) -> None:
         """Test that medium keywords take priority over simple."""
         keywords = ["集計", "CSV", "比較"]
         result = estimator.estimate(keywords)
@@ -81,9 +73,7 @@ class TestComplexityEstimator:
         result = estimator.estimate(["unknown1", "unknown2"])
         assert result == ComplexityLevel.SIMPLE
 
-    def test_estimate_from_message(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_estimate_from_message(self, estimator: ComplexityEstimator) -> None:
         """Test complexity estimation directly from message."""
         message = "売上データを集計してCSVで出力"
         result = estimator.estimate_from_message(message)
@@ -99,17 +89,13 @@ class TestComplexityEstimator:
 
         assert result == ComplexityLevel.COMPLEX
 
-    def test_get_complexity_score(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_get_complexity_score(self, estimator: ComplexityEstimator) -> None:
         """Test getting numeric complexity score."""
         assert estimator.get_complexity_score(ComplexityLevel.SIMPLE) == 1
         assert estimator.get_complexity_score(ComplexityLevel.MEDIUM) == 2
         assert estimator.get_complexity_score(ComplexityLevel.COMPLEX) == 3
 
-    def test_get_keyword_counts(
-        self, estimator: ComplexityEstimator
-    ) -> None:
+    def test_get_keyword_counts(self, estimator: ComplexityEstimator) -> None:
         """Test getting keyword counts by complexity level."""
         keywords = ["集計", "CSV", "比較", "API"]
         counts = estimator.get_keyword_counts(keywords)

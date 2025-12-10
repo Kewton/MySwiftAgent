@@ -22,7 +22,9 @@
     "commonUI/tests/test_model_settings.py",
     "scripts/init-model-settings.sh"
   ],
-  "commits": [],
+  "commits": [
+    "ad7d8a8: feat(expertAgent,commonUI): implement LLM model settings via MyVault (#269)"
+  ],
   "implementation_summary": {
     "phase_1_1_myvault": {
       "status": "completed",

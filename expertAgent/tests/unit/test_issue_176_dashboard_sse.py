@@ -64,9 +64,7 @@ class TestDashboardSSESchemas:
             completion_rate=75.0,
             total_sessions=50,
             model_usage=[
-                ModelUsage(
-                    model_name="gpt-4o", usage_percentage=60.0, usage_count=30
-                ),
+                ModelUsage(model_name="gpt-4o", usage_percentage=60.0, usage_count=30),
                 ModelUsage(
                     model_name="claude-haiku-4-5", usage_percentage=40.0, usage_count=20
                 ),
@@ -682,9 +680,7 @@ class TestSnapshotToDict:
             completion_rate=75.0,
             total_sessions=50,
             model_usage=[
-                ModelUsage(
-                    model_name="gpt-4o", usage_percentage=60.0, usage_count=30
-                ),
+                ModelUsage(model_name="gpt-4o", usage_percentage=60.0, usage_count=30),
             ],
         )
 

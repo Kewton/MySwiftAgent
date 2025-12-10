@@ -43,7 +43,10 @@ class ABTestVariant(BaseModel):
         ..., description="Prompt version identifier (e.g., 'v1.0', 'v2.0-experimental')"
     )
     weight: float = Field(
-        default=1.0, ge=0.0, le=1.0, description="Variant weight for assignment (0.0-1.0)"
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Variant weight for assignment (0.0-1.0)",
     )
     description: str | None = Field(None, description="Variant description")
     metadata: dict[str, Any] = Field(
@@ -89,9 +92,7 @@ class ABTestConfig(ABTestConfigBase):
     """AB test configuration with ID and status."""
 
     id: str = Field(..., description="Test ID")
-    status: ABTestStatus = Field(
-        default=ABTestStatus.DRAFT, description="Test status"
-    )
+    status: ABTestStatus = Field(default=ABTestStatus.DRAFT, description="Test status")
     created_at: datetime = Field(
         default_factory=datetime.now, description="Creation timestamp"
     )
@@ -144,9 +145,7 @@ class ABTestAssignmentResponse(BaseModel):
     """Response schema for variant assignment."""
 
     assignment: ABTestAssignment = Field(..., description="Variant assignment")
-    is_new: bool = Field(
-        default=False, description="Whether this is a new assignment"
-    )
+    is_new: bool = Field(default=False, description="Whether this is a new assignment")
 
 
 # ========================================
@@ -196,7 +195,8 @@ class TTestResult(BaseModel):
     p_value: float = Field(..., ge=0.0, le=1.0, description="P-value (0.0-1.0)")
     degrees_of_freedom: float = Field(..., description="Degrees of freedom")
     is_significant: bool = Field(
-        default=False, description="Whether result is statistically significant (p < 0.05)"
+        default=False,
+        description="Whether result is statistically significant (p < 0.05)",
     )
 
 
@@ -214,9 +214,7 @@ class ABTestReport(BaseModel):
 
     test_id: str = Field(..., description="AB test ID")
     test_name: str = Field(..., description="AB test name")
-    metrics: list[ABTestMetrics] = Field(
-        ..., description="Metrics for each variant"
-    )
+    metrics: list[ABTestMetrics] = Field(..., description="Metrics for each variant")
     t_test_result: TTestResult | None = Field(
         None, description="T-test result (if applicable)"
     )

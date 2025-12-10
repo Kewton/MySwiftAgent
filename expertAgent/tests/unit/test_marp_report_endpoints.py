@@ -405,7 +405,9 @@ class TestGetMarpReportByJobId:
             await get_marp_report_by_job_id("nonexistent-job-id")
 
         # Verify async method was called
-        mock_state_manager.get_status_async.assert_called_once_with("nonexistent-job-id")
+        mock_state_manager.get_status_async.assert_called_once_with(
+            "nonexistent-job-id"
+        )
 
         # Verify error response
         assert exc_info.value.status_code == 404

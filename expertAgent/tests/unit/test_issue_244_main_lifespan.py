@@ -53,7 +53,9 @@ class TestConfigureValkey:
         assert manager._ttl_seconds == 3600
 
     @pytest.mark.unit
-    def test_configure_valkey_logs_message(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_configure_valkey_logs_message(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test configure_valkey logs configuration message."""
         import logging
 
@@ -121,9 +123,7 @@ class TestHealthEndpoint:
         """Test /health returns Valkey status when enabled."""
         # Patch secrets_manager and job_state_manager
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.job_state_manager") as mock_manager,
         ):
             mock_get_config.return_value = True
@@ -133,7 +133,9 @@ class TestHealthEndpoint:
             from app.main import app
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 response = await client.get("/health")
 
             assert response.status_code == 200
@@ -148,9 +150,7 @@ class TestHealthEndpoint:
     async def test_health_includes_valkey_status_when_disabled(self) -> None:
         """Test /health returns Valkey status when disabled."""
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.job_state_manager") as mock_manager,
         ):
             mock_get_config.return_value = False
@@ -159,7 +159,9 @@ class TestHealthEndpoint:
             from app.main import app
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 response = await client.get("/health")
 
             assert response.status_code == 200
@@ -189,9 +191,7 @@ class TestLifespanValkeyInit:
             return config_map.get(key, kwargs.get("default"))
 
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch(
                 "app.main.ValkeyClient", return_value=mock_valkey_client
             ) as mock_valkey_class,
@@ -227,9 +227,7 @@ class TestLifespanValkeyInit:
     async def test_lifespan_skips_valkey_when_disabled(self) -> None:
         """Test lifespan skips Valkey when VALKEY_ENABLED=false."""
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.ValkeyClient") as mock_valkey_class,
             patch("app.main.job_state_manager") as mock_manager,
             patch("app.main.setup_logging"),
@@ -257,9 +255,7 @@ class TestLifespanValkeyInit:
     async def test_lifespan_logs_valkey_disabled_message(self) -> None:
         """Test lifespan logs message when Valkey is disabled."""
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.job_state_manager") as mock_manager,
             patch("app.main.logger") as mock_logger,
             patch("app.main.setup_logging"),

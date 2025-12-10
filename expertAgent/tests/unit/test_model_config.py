@@ -8,7 +8,7 @@ This module tests the get_model_config helper function that:
 3. Uses default values when neither is available
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -78,7 +78,9 @@ class TestGetModelConfig:
 
         mock_secrets_manager.get_secret.return_value = ""
 
-        with patch.dict("os.environ", {"WORKFLOW_GENERATOR_MODEL": "env-workflow-model"}):
+        with patch.dict(
+            "os.environ", {"WORKFLOW_GENERATOR_MODEL": "env-workflow-model"}
+        ):
             result = get_model_config("WORKFLOW_GENERATOR_MODEL", "claude-haiku-4-5")
 
         # Empty string from MyVault should trigger fallback to env
@@ -190,4 +192,6 @@ class TestModelConfigConstants:
         }
 
         for key, default in default_models.items():
-            assert default in valid_models, f"Invalid default model for {key}: {default}"
+            assert default in valid_models, (
+                f"Invalid default model for {key}: {default}"
+            )

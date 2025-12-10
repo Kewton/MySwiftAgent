@@ -225,7 +225,10 @@ class TestPromptsEndpointsEdgeCases:
         # This should either be 404 or 405 depending on routing
         response = client.get("/v1/prompts/")
         # Empty path should match the list endpoint
-        assert response.status_code in [status.HTTP_200_OK, status.HTTP_307_TEMPORARY_REDIRECT]
+        assert response.status_code in [
+            status.HTTP_200_OK,
+            status.HTTP_307_TEMPORARY_REDIRECT,
+        ]
 
     def test_concurrent_requests(self, client: TestClient) -> None:
         """Test handling of concurrent requests."""

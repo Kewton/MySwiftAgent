@@ -73,7 +73,9 @@ class MockSecretsManagerBuilder:
         self._manager.myvault_enabled = True
         return self
 
-    def with_mock_settings(self, mock_settings: MagicMock) -> "MockSecretsManagerBuilder":
+    def with_mock_settings(
+        self, mock_settings: MagicMock
+    ) -> "MockSecretsManagerBuilder":
         """Set mock settings for environment variable fallback."""
         self._mock_settings = mock_settings
         self._manager.settings = mock_settings
@@ -86,7 +88,9 @@ class MockSecretsManagerBuilder:
             self._update_mock_client_secrets()
         return self
 
-    def with_secret_error(self, error_message: str = "Connection refused") -> "MockSecretsManagerBuilder":
+    def with_secret_error(
+        self, error_message: str = "Connection refused"
+    ) -> "MockSecretsManagerBuilder":
         """Configure myVault to raise errors."""
         if self._mock_client is None:
             self._mock_client = self._create_mock_client()
@@ -638,9 +642,7 @@ class TestFullIntegrationScenario:
         enabled = fresh_secrets_manager.get_connection_config(
             "VALKEY_ENABLED", value_type=bool
         )
-        db = fresh_secrets_manager.get_connection_config(
-            "VALKEY_DB", value_type=int
-        )
+        db = fresh_secrets_manager.get_connection_config("VALKEY_DB", value_type=int)
 
         # Assert
         assert host == "valkey.production.com"

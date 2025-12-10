@@ -38,9 +38,7 @@ class TestValkeyMyVaultIntegration:
     ) -> None:
         """Lifespan should use get_connection_config and not connect when disabled."""
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.job_state_manager"),
             patch("app.main.ValkeyClient") as mock_valkey,
             patch("app.main.setup_logging"),
@@ -69,9 +67,7 @@ class TestValkeyMyVaultIntegration:
     async def test_main_lifespan_uses_get_connection_config_when_enabled(self) -> None:
         """Lifespan should use get_connection_config for all Valkey settings."""
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.job_state_manager") as mock_state_mgr,
             patch("app.main.ValkeyClient") as mock_valkey,
             patch("app.main.setup_logging"),
@@ -130,9 +126,7 @@ class TestValkeyMyVaultIntegration:
     def test_ab_test_endpoints_uses_get_connection_config(self) -> None:
         """ab_test_endpoints.py should use get_connection_config for Valkey settings."""
         with (
-            patch(
-                "app.api.v1.ab_test_endpoints.secrets_manager"
-            ) as mock_secrets,
+            patch("app.api.v1.ab_test_endpoints.secrets_manager") as mock_secrets,
             patch("app.api.v1.ab_test_endpoints.ABTestService") as mock_service,
         ):
 
@@ -185,9 +179,7 @@ class TestValkeyMyVaultIntegration:
     async def test_diagnostic_endpoints_uses_get_connection_config(self) -> None:
         """diagnostic_endpoints.py should use get_connection_config for Valkey settings."""
         with (
-            patch(
-                "app.api.v1.diagnostic_endpoints.secrets_manager"
-            ) as mock_secrets,
+            patch("app.api.v1.diagnostic_endpoints.secrets_manager") as mock_secrets,
             patch(
                 "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
             ) as mock_store,
@@ -432,9 +424,7 @@ class TestHealthEndpointUsesSecretsManager:
     async def test_health_check_uses_get_connection_config(self) -> None:
         """Health check should use secrets_manager for VALKEY_ENABLED."""
         with (
-            patch(
-                "app.main.secrets_manager.get_connection_config"
-            ) as mock_get_config,
+            patch("app.main.secrets_manager.get_connection_config") as mock_get_config,
             patch("app.main.job_state_manager") as mock_state_manager,
         ):
             mock_get_config.return_value = True

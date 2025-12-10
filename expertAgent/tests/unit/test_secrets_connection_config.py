@@ -490,63 +490,49 @@ class TestDockerHostnameResolution:
     def test_resolve_docker_hostname_langfuse_on_host(self):
         """Test _resolve_docker_hostname converts langfuse-server to localhost."""
         url = "http://langfuse-server:3000"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = _resolve_docker_hostname(url)
             assert result == "http://localhost:3001"
 
     def test_resolve_docker_hostname_langfuse_in_docker(self):
         """Test _resolve_docker_hostname keeps langfuse-server when in Docker."""
         url = "http://langfuse-server:3000"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=True
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=True):
             result = _resolve_docker_hostname(url)
             assert result == url
 
     def test_resolve_docker_hostname_valkey_on_host(self):
         """Test _resolve_docker_hostname converts valkey to localhost."""
         url = "redis://valkey:6379"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = _resolve_docker_hostname(url)
             assert result == "redis://localhost:6381"
 
     def test_resolve_docker_hostname_myvault_on_host(self):
         """Test _resolve_docker_hostname converts myvault to localhost."""
         url = "http://myvault:8000"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = _resolve_docker_hostname(url)
             assert result == "http://localhost:8003"
 
     def test_resolve_docker_hostname_jobqueue_on_host(self):
         """Test _resolve_docker_hostname converts jobqueue to localhost."""
         url = "http://jobqueue:8000"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = _resolve_docker_hostname(url)
             assert result == "http://localhost:8001"
 
     def test_resolve_docker_hostname_expertagent_on_host(self):
         """Test _resolve_docker_hostname converts expertagent to localhost."""
         url = "http://expertagent:8000"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = _resolve_docker_hostname(url)
             assert result == "http://localhost:8004"
 
     def test_resolve_docker_hostname_graphaiserver_on_host(self):
         """Test _resolve_docker_hostname converts graphaiserver to localhost."""
         url = "http://graphaiserver:8000"
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = _resolve_docker_hostname(url)
             assert result == "http://localhost:8005"
 
@@ -581,9 +567,7 @@ class TestGetConnectionConfigDockerResolution:
             "http://langfuse-server:3000"
         )
 
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = manager_with_myvault.get_connection_config(
                 "LANGFUSE_HOST", project="test"
             )
@@ -597,9 +581,7 @@ class TestGetConnectionConfigDockerResolution:
             "http://langfuse-server:3000"
         )
 
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=True
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=True):
             result = manager_with_myvault.get_connection_config(
                 "LANGFUSE_HOST", project="test"
             )
@@ -614,9 +596,7 @@ class TestGetConnectionConfigDockerResolution:
         )
 
         # API_URL is not a HOST key, should not resolve
-        with patch(
-            "core.secrets._is_docker_host_reachable", return_value=False
-        ):
+        with patch("core.secrets._is_docker_host_reachable", return_value=False):
             result = manager_with_myvault.get_connection_config(
                 "LANGFUSE_API_URL", project="test"
             )

@@ -66,6 +66,36 @@ def load_secret_definitions() -> dict[str, Any]:
         return {"secrets": []}
 
 
+def _get_or_select_default_project() -> str | None:
+    """Get selected project or auto-select default project.
+
+    This helper reduces code duplication across multiple sections
+    that need to work with the currently selected project.
+
+    Returns:
+        Selected project name or None if no projects available
+    """
+    selected_project = st.session_state.myvault_selected_project
+
+    # Auto-select default project if none is selected
+    if not selected_project and st.session_state.myvault_projects:
+        default_project = next(
+            (
+                p
+                for p in st.session_state.myvault_projects
+                if p.get("is_default", False)
+            ),
+            st.session_state.myvault_projects[0]
+            if st.session_state.myvault_projects
+            else None,
+        )
+        if default_project:
+            st.session_state.myvault_selected_project = default_project["name"]
+            selected_project = default_project["name"]
+
+    return selected_project
+
+
 # ============================================================================
 # Dialog functions for project management
 # ============================================================================
@@ -396,23 +426,7 @@ def render_projects_section() -> None:
 
 def render_secrets_section() -> None:
     """Render secrets section for selected project."""
-    selected_project = st.session_state.myvault_selected_project
-
-    # Auto-select default project if none is selected
-    if not selected_project and st.session_state.myvault_projects:
-        default_project = next(
-            (
-                p
-                for p in st.session_state.myvault_projects
-                if p.get("is_default", False)
-            ),
-            st.session_state.myvault_projects[0]
-            if st.session_state.myvault_projects
-            else None,
-        )
-        if default_project:
-            st.session_state.myvault_selected_project = default_project["name"]
-            selected_project = default_project["name"]
+    selected_project = _get_or_select_default_project()
 
     if not selected_project:
         st.info("👆 Select a project above to view and manage its secrets.")
@@ -927,23 +941,7 @@ def handle_oauth2_callback() -> None:
 
 def render_google_auth_section() -> None:
     """Render Google authentication management section."""
-    selected_project = st.session_state.myvault_selected_project
-
-    # Auto-select default project if none is selected
-    if not selected_project and st.session_state.myvault_projects:
-        default_project = next(
-            (
-                p
-                for p in st.session_state.myvault_projects
-                if p.get("is_default", False)
-            ),
-            st.session_state.myvault_projects[0]
-            if st.session_state.myvault_projects
-            else None,
-        )
-        if default_project:
-            st.session_state.myvault_selected_project = default_project["name"]
-            selected_project = default_project["name"]
+    selected_project = _get_or_select_default_project()
 
     if not selected_project:
         st.info(
@@ -1231,23 +1229,7 @@ def render_model_settings_section() -> None:
 
     Issue #269: LLM model settings management via MyVault.
     """
-    selected_project = st.session_state.myvault_selected_project
-
-    # Auto-select default project if none is selected
-    if not selected_project and st.session_state.myvault_projects:
-        default_project = next(
-            (
-                p
-                for p in st.session_state.myvault_projects
-                if p.get("is_default", False)
-            ),
-            st.session_state.myvault_projects[0]
-            if st.session_state.myvault_projects
-            else None,
-        )
-        if default_project:
-            st.session_state.myvault_selected_project = default_project["name"]
-            selected_project = default_project["name"]
+    selected_project = _get_or_select_default_project()
 
     if not selected_project:
         st.info("Select a project in the 'Projects' tab to manage model settings.")

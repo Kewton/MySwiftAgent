@@ -591,7 +591,9 @@ class ABTestService(BaseService):
                             mean_a = self._mean(group_a)
                             mean_b = self._mean(group_b)
                             winner = (
-                                variant_names[1] if mean_b > mean_a else variant_names[0]
+                                variant_names[1]
+                                if mean_b > mean_a
+                                else variant_names[0]
                             )
                             recommendation = (
                                 f"Variant '{winner}' shows statistically significant "
@@ -670,9 +672,7 @@ class ABTestService(BaseService):
             for v in variants
         ]
 
-    def _select_variant_weighted(
-        self, variants: list[ABTestVariant]
-    ) -> ABTestVariant:
+    def _select_variant_weighted(self, variants: list[ABTestVariant]) -> ABTestVariant:
         """Select a variant using weighted random choice.
 
         Args:
