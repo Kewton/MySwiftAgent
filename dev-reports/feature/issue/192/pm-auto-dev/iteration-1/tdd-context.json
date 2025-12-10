@@ -1,0 +1,108 @@
+{
+  "issue_number": 192,
+  "issue_title": "Issue #152-12: Create JobとMLOps Chat UIの統合",
+  "acceptance_criteria": [
+    "Create Job画面でLLMチャット後に候補選択UIが表示される",
+    "候補選択後にフィードバック送信ができる",
+    "フィードバックがMLOps Dashboardのメトリクスに反映される",
+    "Diagnostics画面で会話履歴が確認できる"
+  ],
+  "implementation_tasks": [
+    "Create Job画面の現状分析",
+    "CandidateSelectorコンポーネントをCreate Jobに統合",
+    "FeedbackModalをCreate Jobに統合",
+    "LLMレスポンスから候補データを抽出するパーサー実装",
+    "会話IDをMLOps APIに連携",
+    "E2Eテストの追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "LLMレスポンスパーサー実装",
+      "estimated_hours": 3,
+      "deliverables": ["myAgentDesk/src/lib/utils/candidate-parser.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "CandidateSelectorのCreate Job画面統合",
+      "estimated_hours": 4,
+      "deliverables": ["myAgentDesk/src/routes/create_job/+page.svelte"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "FeedbackModalのCreate Job画面統合",
+      "estimated_hours": 3,
+      "deliverables": ["myAgentDesk/src/routes/create_job/+page.svelte"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "LLMレスポンス処理の統合",
+      "estimated_hours": 3,
+      "deliverables": ["myAgentDesk/src/routes/create_job/+page.svelte"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "エラーハンドリング実装",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/routes/create_job/+page.svelte"],
+      "dependencies": ["1.2", "1.3"]
+    },
+    {
+      "task_id": "1.6",
+      "description": "静的解析・フォーマット",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "dependencies": ["1.1", "1.2", "1.3", "1.4", "1.5"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "パーサー単体テスト",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/utils/candidate-parser.test.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "コンポーネント統合テスト",
+      "estimated_hours": 4,
+      "deliverables": ["myAgentDesk/src/routes/create_job/+page.test.ts"],
+      "dependencies": ["1.6"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "E2Eテスト",
+      "estimated_hours": 4,
+      "deliverables": ["myAgentDesk/tests/e2e/create-job-mlops.spec.ts"],
+      "dependencies": ["1.6"]
+    }
+  ],
+  "deliverables_checklist": [
+    "myAgentDesk/src/lib/utils/candidate-parser.ts",
+    "myAgentDesk/src/lib/utils/candidate-parser.test.ts",
+    "myAgentDesk/src/routes/create_job/+page.svelte",
+    "myAgentDesk/src/routes/create_job/+page.test.ts",
+    "myAgentDesk/tests/e2e/create-job-mlops.spec.ts"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "ESLint/TypeScriptエラーゼロ",
+    "パーサー単体テストカバレッジ100%",
+    "コンポーネント統合テストカバレッジ70%+",
+    "E2Eテスト全シナリオパス（3シナリオ）",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "target_project": "myAgentDesk",
+  "tech_stack": "SvelteKit + TypeScript",
+  "existing_components": {
+    "CandidateSelector": "myAgentDesk/src/lib/mlops/components/CandidateSelector.svelte",
+    "FeedbackModal": "myAgentDesk/src/lib/mlops/components/FeedbackModal.svelte",
+    "selectCandidate": "myAgentDesk/src/lib/mlops/api.ts",
+    "submitFeedback": "myAgentDesk/src/lib/mlops/api.ts"
+  },
+  "target_file": "myAgentDesk/src/routes/create_job/+page.svelte"
+}

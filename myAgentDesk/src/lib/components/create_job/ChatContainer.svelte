@@ -8,7 +8,7 @@
 	export let containerRef: HTMLDivElement | undefined = undefined;
 </script>
 
-<div bind:this={containerRef} class="flex-1 overflow-y-auto px-6 py-6">
+<div bind:this={containerRef} class="flex-1 overflow-y-auto px-6 py-6" data-testid="chat-container">
 	<div class="max-w-5xl mx-auto">
 		{#if messages.length === 0}
 			<Card>

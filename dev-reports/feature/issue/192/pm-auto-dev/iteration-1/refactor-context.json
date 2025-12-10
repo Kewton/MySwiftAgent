@@ -1,0 +1,38 @@
+{
+  "issue_number": 192,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/utils/candidate-parser.ts",
+    "myAgentDesk/src/routes/create_job/+page.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 97.59,
+    "parser_coverage": 97.59,
+    "overall_coverage": 16.64
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "Type Safety Improvements",
+    "Error Handling Consistency"
+  ],
+  "improvement_goals": [
+    "パーサーカバレッジを100%に向上",
+    "型安全性の強化",
+    "エラーハンドリングの統一",
+    "コードの可読性向上"
+  ],
+  "files_to_review": [
+    {
+      "file": "myAgentDesk/src/lib/utils/candidate-parser.ts",
+      "focus": ["型定義", "エラーハンドリング", "ユーティリティ関数の分離"]
+    },
+    {
+      "file": "myAgentDesk/src/routes/create_job/+page.svelte",
+      "focus": ["状態管理", "イベントハンドラー", "コンポーネント分離"]
+    }
+  ],
+  "constraints": [
+    "既存のテストが全て通ること",
+    "ESLint/TypeScriptエラーが0件であること",
+    "機能の変更がないこと（リファクタリングのみ）"
+  ]
+}
