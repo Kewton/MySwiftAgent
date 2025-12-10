@@ -1,0 +1,63 @@
+{
+  "issue_number": 191,
+  "feature_summary": "プロンプト管理API実装",
+  "acceptance_criteria": [
+    "/v1/prompts エンドポイント実装（GET: プロンプト一覧取得）",
+    "/v1/prompts/{prompt_id} エンドポイント実装（GET: プロンプト詳細取得）",
+    "既存のPromptLoaderサービスを活用",
+    "Pydanticスキーマによるレスポンス定義",
+    "単体テストカバレッジ90%以上",
+    "OpenAPI仕様に準拠したドキュメント生成",
+    "MLOps UIのPrompts画面で実際のプロンプト一覧が表示される",
+    "プロンプトの詳細（コンテンツ、バージョン情報）が閲覧できる",
+    "デモモード表示「Not Found - Using demo mode」が解消される"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["PromptLoader service"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系: プロンプト一覧取得",
+        "command": "curl -s -X GET http://localhost:8104/aiagent-api/v1/prompts -H 'Content-Type: application/json'",
+        "expected_status": 200,
+        "expected_response_contains": ["items", "total"]
+      },
+      {
+        "name": "正常系: プロンプト詳細取得",
+        "command": "curl -s -X GET http://localhost:8104/aiagent-api/v1/prompts/requirement_clarification -H 'Content-Type: application/json'",
+        "expected_status": 200,
+        "expected_response_contains": ["id", "name", "versions", "content"]
+      },
+      {
+        "name": "異常系: 存在しないプロンプト取得",
+        "command": "curl -s -o /tmp/error_response.json -w '%{http_code}' http://localhost:8104/aiagent-api/v1/prompts/nonexistent_prompt",
+        "expected_status": 404,
+        "expected_response_contains": ["detail"]
+      },
+      {
+        "name": "フロントエンド互換性確認",
+        "command": "curl -s http://localhost:8104/aiagent-api/v1/prompts",
+        "expected_status": 200,
+        "expected_fields_in_items": ["id", "name", "description", "category", "current_version", "versions", "created_at", "updated_at"],
+        "expected_fields_in_versions": ["id", "version", "content", "description", "created_at", "is_active"]
+      },
+      {
+        "name": "OpenAPI仕様確認",
+        "command": "curl -s http://localhost:8104/aiagent-api/openapi.json",
+        "expected_status": 200,
+        "expected_paths": ["/v1/prompts", "/v1/prompts/{prompt_id}"]
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_191_prompts_api.py",
+  "playwright_test_file": null
+}

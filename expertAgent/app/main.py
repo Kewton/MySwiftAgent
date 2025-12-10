@@ -25,6 +25,7 @@ from app.api.v1 import (
     job_generator_endpoints,
     marp_report_endpoints,
     observability_endpoints,
+    prompts_endpoints,
     tts_endpoints,
     utility_endpoints,
     workflow_generator_endpoints,
@@ -213,6 +214,7 @@ app.include_router(google_auth_endpoints.router, prefix="/v1")
 app.include_router(observability_endpoints.router, prefix="/v1")
 app.include_router(diagnostic_endpoints.router, prefix="/v1", tags=["Diagnostics"])
 app.include_router(ab_test_endpoints.router, prefix="/v1", tags=["AB Tests"])
+app.include_router(prompts_endpoints.router, prefix="/v1", tags=["Prompts"])
 
 
 @app.get("/health")
