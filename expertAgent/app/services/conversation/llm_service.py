@@ -26,6 +26,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import (
 )
 from app.schemas.chat import RequirementState
 from app.services.langfuse_service import langfuse_service
+from core.secrets import get_model_config
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,8 @@ async def stream_requirement_clarification(
     ]
 
     # Get model name and max tokens from environment
-    model_name = os.getenv("CHAT_CLARIFICATION_MODEL", "gemini-2.0-flash")
+    # Issue #269: Use get_model_config for MyVault-managed model settings
+    model_name = get_model_config("CHAT_CLARIFICATION_MODEL", "gemini-2.0-flash")
     max_tokens = int(os.getenv("CHAT_CLARIFICATION_MAX_TOKENS", "8192"))
 
     # Create LLM with streaming enabled
@@ -189,7 +191,8 @@ async def non_streaming_clarification(
         {"role": "user", "content": user_prompt},
     ]
 
-    model_name = os.getenv("CHAT_CLARIFICATION_MODEL", "gemini-2.0-flash")
+    # Issue #269: Use get_model_config for MyVault-managed model settings
+    model_name = get_model_config("CHAT_CLARIFICATION_MODEL", "gemini-2.0-flash")
     max_tokens = int(os.getenv("CHAT_CLARIFICATION_MAX_TOKENS", "8192"))
 
     model, perf_tracker, _cost_tracker = create_llm_with_fallback(

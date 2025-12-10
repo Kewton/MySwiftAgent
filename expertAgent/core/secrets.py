@@ -73,9 +73,7 @@ def _resolve_docker_hostname(url: str) -> str:
             # Extract just the hostname part (without port)
             hostname = docker_host.split(":")[0]
             if _is_docker_host_reachable(hostname):
-                logger.debug(
-                    "Docker hostname '%s' is reachable, using as-is", hostname
-                )
+                logger.debug("Docker hostname '%s' is reachable, using as-is", hostname)
                 return url
             else:
                 resolved_url = url.replace(docker_host, localhost_host)
@@ -605,3 +603,72 @@ def resolve_runtime_value(
         if env_value is not None:
             return _convert_runtime_type(str(env_value), value_type)
         return default
+
+
+def get_model_config(
+    key: str,
+    default: str,
+    project: Optional[str] = None,
+) -> str:
+    """Get LLM model configuration with MyVault priority and env fallback.
+
+    Retrieves model configuration values with the following priority:
+    1. MyVault secret (if available and non-empty)
+    2. Environment variable (if set and non-empty)
+    3. Default value (always returned if others fail)
+
+    This function is designed for LLM model settings that need to be
+    configurable at runtime without service restart.
+
+    Args:
+        key: Configuration key name (e.g., "CHAT_CLARIFICATION_MODEL")
+        default: Default model name to use if not found elsewhere
+        project: Optional project name for MyVault (uses default if not specified)
+
+    Returns:
+        Model name string
+
+    Example:
+        >>> model = get_model_config("CHAT_CLARIFICATION_MODEL", "gemini-2.0-flash")
+        >>> print(model)
+        'gemini-2.0-flash'
+
+    Issue #269: LLM model settings management via MyVault.
+    """
+    import os
+
+    # 1. Try MyVault first (priority)
+    try:
+        myvault_value = secrets_manager.get_secret(key, project=project)
+        if myvault_value:  # Non-empty value from MyVault
+            logger.debug(
+                "Model config '%s' retrieved from MyVault: %s",
+                key,
+                myvault_value,
+            )
+            return myvault_value
+    except ValueError as e:
+        logger.debug(
+            "Model config '%s' not found in MyVault: %s, trying env var",
+            key,
+            e,
+        )
+        # Continue to environment variable fallback
+
+    # 2. Fallback to environment variable
+    env_value = os.getenv(key, "")
+    if env_value:
+        logger.debug(
+            "Model config '%s' retrieved from environment: %s",
+            key,
+            env_value,
+        )
+        return env_value
+
+    # 3. Use default value
+    logger.debug(
+        "Model config '%s' using default: %s",
+        key,
+        default,
+    )
+    return default

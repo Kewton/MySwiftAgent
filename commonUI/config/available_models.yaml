@@ -1,0 +1,107 @@
+# Available LLM Models Configuration
+# Issue #269: LLM model settings management via MyVault
+#
+# This file defines available models for selection in the Model Settings UI.
+# Add new models here when they become available from providers.
+
+providers:
+  claude:
+    name: "Anthropic Claude"
+    models:
+      - id: "claude-haiku-4-5"
+        name: "Claude Haiku 4.5"
+        description: "Fast and cost-effective for routine tasks"
+        context_window: 200000
+        cost_tier: "low"
+      - id: "claude-sonnet-4-20250514"
+        name: "Claude Sonnet 4"
+        description: "Balanced performance and cost"
+        context_window: 200000
+        cost_tier: "medium"
+
+  gemini:
+    name: "Google Gemini"
+    models:
+      - id: "gemini-2.0-flash"
+        name: "Gemini 2.0 Flash"
+        description: "Fast responses, good for conversational tasks"
+        context_window: 1000000
+        cost_tier: "low"
+      - id: "gemini-1.5-pro"
+        name: "Gemini 1.5 Pro"
+        description: "Advanced reasoning and long context"
+        context_window: 2000000
+        cost_tier: "medium"
+
+  gpt:
+    name: "OpenAI GPT"
+    models:
+      - id: "gpt-4o"
+        name: "GPT-4o"
+        description: "Most capable model"
+        context_window: 128000
+        cost_tier: "high"
+      - id: "gpt-4o-mini"
+        name: "GPT-4o Mini"
+        description: "Fast and affordable"
+        context_window: 128000
+        cost_tier: "low"
+
+# Model Setting Categories
+# Defines which settings use which category of models
+settings_categories:
+  chat:
+    name: "Chat & Conversation"
+    description: "Models for conversational interactions"
+    recommended_models:
+      - "gemini-2.0-flash"
+      - "claude-haiku-4-5"
+    settings:
+      - key: "CHAT_CLARIFICATION_MODEL"
+        name: "Chat Clarification Model"
+        description: "Model for requirement clarification chat"
+        default: "gemini-2.0-flash"
+      - key: "CANDIDATE_GENERATION_MODEL"
+        name: "Candidate Generation Model"
+        description: "Model for generating requirement candidates"
+        default: "gemini-2.0-flash"
+      - key: "REQUIREMENT_EXTRACTION_MODEL"
+        name: "Requirement Extraction Model"
+        description: "Model for extracting requirements from conversation"
+        default: "gemini-2.0-flash"
+
+  job_generator:
+    name: "Job Generator"
+    description: "Models for job and task generation"
+    recommended_models:
+      - "claude-haiku-4-5"
+      - "claude-sonnet-4-20250514"
+    settings:
+      - key: "JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL"
+        name: "Requirement Analysis Model"
+        description: "Model for analyzing job requirements"
+        default: "claude-haiku-4-5"
+      - key: "JOB_GENERATOR_EVALUATOR_MODEL"
+        name: "Evaluator Model"
+        description: "Model for evaluating generated jobs"
+        default: "claude-haiku-4-5"
+      - key: "JOB_GENERATOR_INTERFACE_DEFINITION_MODEL"
+        name: "Interface Definition Model"
+        description: "Model for defining job interfaces"
+        default: "claude-haiku-4-5"
+      - key: "JOB_GENERATOR_VALIDATION_MODEL"
+        name: "Validation Model"
+        description: "Model for validating job specifications"
+        default: "claude-haiku-4-5"
+
+  workflow:
+    name: "Workflow Generation"
+    description: "Models for workflow generation"
+    recommended_models:
+      - "claude-haiku-4-5"
+      - "claude-sonnet-4-20250514"
+    settings:
+      - key: "WORKFLOW_GENERATOR_MODEL"
+        name: "Workflow Generator Model"
+        description: "Model for generating GraphAI workflows"
+        default: "claude-haiku-4-5"

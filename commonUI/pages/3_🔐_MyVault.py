@@ -16,6 +16,7 @@ from components.http_client import HTTPClient
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import ExpertAgentConfig, GraphAiServerConfig, config
+from core.model_settings import ModelSettingsLoader
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ def initialize_session_state() -> None:
         st.session_state.myvault_editing_project = None
     if "myvault_editing_secret" not in st.session_state:
         st.session_state.myvault_editing_secret = None
+    # Issue #269: Model Settings state
+    if "myvault_model_settings_loader" not in st.session_state:
+        st.session_state.myvault_model_settings_loader = ModelSettingsLoader()
 
 
 def load_secret_definitions() -> dict[str, Any]:
@@ -1222,6 +1226,188 @@ def render_google_auth_section() -> None:
             NotificationManager.handle_exception(e, "Start OAuth2 Flow")
 
 
+def render_model_settings_section() -> None:
+    """Render Model Settings section for LLM model configuration.
+
+    Issue #269: LLM model settings management via MyVault.
+    """
+    selected_project = st.session_state.myvault_selected_project
+
+    # Auto-select default project if none is selected
+    if not selected_project and st.session_state.myvault_projects:
+        default_project = next(
+            (
+                p
+                for p in st.session_state.myvault_projects
+                if p.get("is_default", False)
+            ),
+            st.session_state.myvault_projects[0]
+            if st.session_state.myvault_projects
+            else None,
+        )
+        if default_project:
+            st.session_state.myvault_selected_project = default_project["name"]
+            selected_project = default_project["name"]
+
+    if not selected_project:
+        st.info("Select a project in the 'Projects' tab to manage model settings.")
+        return
+
+    st.subheader(f"LLM Model Settings for: {selected_project}")
+    st.caption(
+        "Configure which LLM models to use for different tasks. "
+        "Changes are saved to MyVault and take effect immediately.",
+    )
+
+    # Load model settings configuration
+    loader: ModelSettingsLoader = st.session_state.myvault_model_settings_loader
+    categories = loader.get_settings_categories()
+    all_models = loader.get_all_models()
+
+    if not categories:
+        st.warning("No model settings configuration found.")
+        return
+
+    # Build model options for selectbox
+    model_options = [""] + [m["id"] for m in all_models]
+    model_display = {m["id"]: f"{m['provider_name']}: {m['name']}" for m in all_models}
+    model_display[""] = "-- Use Default --"
+
+    # Get current values from MyVault
+    current_secrets = {
+        s["path"]: s for s in st.session_state.myvault_secrets
+        if s.get("project") == selected_project
+    }
+
+    # Track changes
+    changes: dict[str, str] = {}
+
+    # Render settings by category
+    for category_id, category_data in categories.items():
+        with st.expander(
+            f"{category_data.get('name', category_id)}",
+            expanded=True,
+        ):
+            st.caption(category_data.get("description", ""))
+
+            settings = category_data.get("settings", [])
+            for setting in settings:
+                key = setting["key"]
+                name = setting.get("name", key)
+                description = setting.get("description", "")
+                default = setting.get("default", "")
+
+                # Get current value from MyVault
+                current_value = ""
+                if key in current_secrets:
+                    try:
+                        secret_detail = get_secret(selected_project, key)
+                        current_value = secret_detail.get("value", "")
+                    except Exception:
+                        pass
+
+                # Determine display value
+                display_value = current_value if current_value else ""
+
+                # Create selectbox with current value selected
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    selected_model = st.selectbox(
+                        name,
+                        options=model_options,
+                        index=model_options.index(display_value) if display_value in model_options else 0,
+                        format_func=lambda x: model_display.get(x, x),
+                        help=f"{description} (Default: {default})",
+                        key=f"model_setting_{key}",
+                    )
+
+                with col2:
+                    st.caption(f"Default: {default}")
+
+                # Track if changed
+                if selected_model != current_value:
+                    if selected_model:  # New value selected
+                        changes[key] = selected_model
+                    elif current_value:  # Cleared (will delete)
+                        changes[key] = ""
+
+    st.divider()
+
+    # Save button
+    col1, col2, _col3 = st.columns([1, 1, 2])
+
+    with col1:
+        if st.button(
+            "Save Changes",
+            key="save_model_settings",
+            type="primary",
+            use_container_width=True,
+            disabled=not changes,
+        ):
+            success_count = 0
+            error_count = 0
+
+            with st.spinner("Saving model settings..."):
+                for key, value in changes.items():
+                    try:
+                        if value:
+                            # Create or update secret
+                            if key in current_secrets:
+                                update_secret(selected_project, key, value)
+                            else:
+                                create_secret(selected_project, key, value)
+                            success_count += 1
+                        # Delete secret (use default)
+                        elif key in current_secrets:
+                            delete_secret(selected_project, key)
+                            success_count += 1
+                    except Exception:
+                        logger.exception("Failed to save %s", key)
+                        error_count += 1
+
+            if error_count == 0:
+                st.success(f"Saved {success_count} model setting(s) successfully!")
+                # Reload secrets to reflect changes
+                load_secrets(selected_project)
+                st.rerun()
+            else:
+                st.warning(
+                    f"Saved {success_count} settings, but {error_count} failed.",
+                )
+
+    with col2:
+        if st.button(
+            "Refresh",
+            key="refresh_model_settings",
+            use_container_width=True,
+        ):
+            load_secrets(selected_project)
+            st.rerun()
+
+    # Info section
+    with st.expander("About Model Settings", expanded=False):
+        st.markdown("""
+        **How Model Settings Work:**
+
+        1. **Priority Order**: MyVault value > Environment variable > Default
+        2. **Immediate Effect**: Changes take effect on next API call (no restart needed)
+        3. **Cache Reload**: Use "Reload Cache" in Secrets tab to force immediate refresh
+
+        **Available Models:**
+
+        | Provider | Models |
+        |----------|--------|
+        | Anthropic | claude-haiku-4-5, claude-sonnet-4-20250514 |
+        | Google | gemini-2.0-flash, gemini-1.5-pro |
+        | OpenAI | gpt-4o, gpt-4o-mini |
+
+        **Tips:**
+        - Select "-- Use Default --" to remove the MyVault setting and use the default
+        - Cost-effective: claude-haiku-4-5, gemini-2.0-flash, gpt-4o-mini
+        - High performance: claude-sonnet-4-20250514, gpt-4o
+        """)
+
+
 def main() -> None:
     """Main MyVault page function."""
     # Initialize session state
@@ -1277,7 +1463,13 @@ def main() -> None:
     handle_oauth2_callback()
 
     # Create tabs for different sections
-    tab1, tab2, tab3 = st.tabs(["📁 Projects", "🔐 Secrets", "🔑 Google認証"])
+    # Issue #269: Added Model Settings tab
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Projects",
+        "Secrets",
+        "Model Settings",
+        "Google Auth",
+    ])
 
     with tab1:
         render_projects_section()
@@ -1286,6 +1478,9 @@ def main() -> None:
         render_secrets_section()
 
     with tab3:
+        render_model_settings_section()
+
+    with tab4:
         render_google_auth_section()
 
 

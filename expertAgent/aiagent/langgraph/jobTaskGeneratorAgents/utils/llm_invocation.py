@@ -19,6 +19,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, ValidationError
 
 from app.utils.json_converter import force_to_json_response, to_parse_json
+from core.secrets import get_model_config
 
 from .llm_factory import create_llm_with_fallback
 
@@ -174,7 +175,8 @@ async def invoke_structured_llm(
     """Invoke a chat model with structured output and JSON fallback."""
 
     max_tokens = int(os.getenv(max_tokens_env_var, str(default_max_tokens)))
-    model_name = os.getenv(model_env_var, default_model)
+    # Issue #269: Use get_model_config for MyVault-managed model settings
+    model_name = get_model_config(model_env_var, default_model)
 
     model, perf_tracker, _cost_tracker = create_llm_with_fallback(
         model_name=model_name,
