@@ -245,5 +245,7 @@ function calculateCompleteness(requirements: RequirementState): number {
  * @returns True if candidates are present
  */
 export function hasCandidates(response: string): boolean {
-	return CANDIDATE_BLOCK_PATTERN.test(response);
+	// Create a new RegExp instance to avoid global state issues with lastIndex
+	const pattern = new RegExp(CANDIDATE_BLOCK_PATTERN.source);
+	return pattern.test(response);
 }

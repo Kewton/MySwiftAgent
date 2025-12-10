@@ -325,8 +325,7 @@
 								// スケジュール作成失敗はエラーとして表示するが、ジョブ作成は成功しているので継続
 								conversationStore.addMessage(conversationId, {
 									role: 'assistant',
-									message:
-										'**警告**: ジョブは作成されましたが、スケジュール設定に失敗しました。',
+									message: '**警告**: ジョブは作成されましたが、スケジュール設定に失敗しました。',
 									timestamp: new Date().toLocaleTimeString('ja-JP', {
 										hour: '2-digit',
 										minute: '2-digit'
@@ -684,7 +683,9 @@
 
 			<!-- Candidate Selector (Issue #192) -->
 			{#if showCandidateSelector && candidates.length > 0}
-				<div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+				<div
+					class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+				>
 					<CandidateSelector
 						{candidates}
 						selectedId={selectedCandidateId}

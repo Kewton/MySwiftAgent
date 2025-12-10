@@ -10,7 +10,7 @@ import {
 	parseCandidatesFromResponse,
 	extractCandidateSection,
 	parseCandidate,
-	type ParsedCandidate
+	hasCandidates
 } from './candidate-parser';
 
 describe('candidate-parser', () => {
@@ -47,7 +47,9 @@ Please confirm if this matches your needs.`;
 			expect(result).toHaveLength(1);
 			expect(result[0].id).toBe('candidate-1');
 			expect(result[0].label).toBe('Data Analysis Pipeline');
-			expect(result[0].description).toBe('A pipeline that processes CSV files and outputs Excel reports');
+			expect(result[0].description).toBe(
+				'A pipeline that processes CSV files and outputs Excel reports'
+			);
 			expect(result[0].confidence).toBe(0.85);
 			expect(result[0].requirements.data_source).toBe('CSV files from S3 bucket');
 			expect(result[0].requirements.process_description).toBe('Aggregate sales data by region');
@@ -137,6 +139,48 @@ Requirements:
 			const result = parseCandidatesFromResponse(response);
 
 			expect(result[0].confidence).toBe(0.92);
+		});
+
+		it('should handle confidence as integer greater than 1', () => {
+			const response = `[CANDIDATE:1]
+Label: Test
+Description: Test description
+Confidence: 75
+Requirements:
+  - data_source: Test
+[/CANDIDATE]`;
+
+			const result = parseCandidatesFromResponse(response);
+
+			// 75 > 1, so should be converted to 0.75
+			expect(result[0].confidence).toBe(0.75);
+		});
+
+		it('should handle invalid confidence value', () => {
+			const response = `[CANDIDATE:1]
+Label: Test
+Description: Test description
+Confidence: invalid
+Requirements:
+  - data_source: Test
+[/CANDIDATE]`;
+
+			const result = parseCandidatesFromResponse(response);
+
+			// Invalid value should return 0
+			expect(result[0].confidence).toBe(0);
+		});
+
+		it('should return null for candidate without label', () => {
+			const response = `[CANDIDATE:1]
+Description: Missing label
+Confidence: 0.8
+[/CANDIDATE]`;
+
+			const result = parseCandidatesFromResponse(response);
+
+			// Should skip candidates without label
+			expect(result).toHaveLength(0);
 		});
 	});
 
@@ -328,6 +372,39 @@ Label: Invalid Number
 
 			// Should still parse with auto-generated ID
 			expect(result).toHaveLength(1);
+		});
+	});
+
+	describe('hasCandidates', () => {
+		it('should return true when candidates are present', () => {
+			const response = `[CANDIDATE:1]
+Label: Test
+[/CANDIDATE]`;
+
+			expect(hasCandidates(response)).toBe(true);
+		});
+
+		it('should return false when no candidates are present', () => {
+			const response = 'This is a normal response without any candidates.';
+
+			expect(hasCandidates(response)).toBe(false);
+		});
+
+		it('should return true for multiple candidates', () => {
+			const response = `[CANDIDATE:1]
+Label: First
+[/CANDIDATE]
+[CANDIDATE:2]
+Label: Second
+[/CANDIDATE]`;
+
+			expect(hasCandidates(response)).toBe(true);
+		});
+
+		it('should return false for incomplete candidate markers', () => {
+			const response = '[CANDIDATE:1] Label: Test';
+
+			expect(hasCandidates(response)).toBe(false);
 		});
 	});
 });
