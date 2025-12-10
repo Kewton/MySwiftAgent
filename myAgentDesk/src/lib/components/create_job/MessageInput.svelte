@@ -11,7 +11,7 @@
 	export let onCompositionEnd: () => void;
 </script>
 
-<div class="bg-white dark:bg-dark-bg px-6 py-4">
+<div class="bg-white dark:bg-dark-bg px-6 py-4" data-testid="message-input">
 	<div class="max-w-5xl mx-auto">
 		<div class="flex gap-3 items-end">
 			<textarea

@@ -1,0 +1,63 @@
+{
+  "issue_number": 192,
+  "feature_summary": "Create JobとMLOps Chat UIの統合",
+  "acceptance_criteria": [
+    "Create Job画面でLLMチャット後に候補選択UIが表示される",
+    "候補選択後にフィードバック送信ができる",
+    "フィードバックがMLOps Dashboardのメトリクスに反映される",
+    "Diagnostics画面で会話履歴が確認できる"
+  ],
+  "labels": ["feature", "frontend"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "myAgentDesk"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "test_commands": [
+      {
+        "name": "候補選択API確認",
+        "command": "curl -s -X POST http://localhost:8104/aiagent-api/v1/chat/select-candidate -H 'Content-Type: application/json' -d '{\"conversation_id\": \"test-conv-192\", \"selected_candidate_id\": \"candidate_1\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["conversation_id"]
+      },
+      {
+        "name": "フィードバックAPI確認",
+        "command": "curl -s -X POST http://localhost:8104/aiagent-api/v1/chat/feedback -H 'Content-Type: application/json' -d '{\"conversation_id\": \"test-conv-192\", \"requirement_clarity\": 4, \"interpretation_accuracy\": 5, \"response_helpfulness\": 4, \"overall_satisfaction\": 4, \"comment\": \"L3受入テスト\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["success"]
+      },
+      {
+        "name": "メトリクスAPI確認",
+        "command": "curl -s http://localhost:8104/aiagent-api/v1/observability/requirement-definition-metrics",
+        "expected_status": 200,
+        "expected_response_contains": ["total_sessions"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health || echo 'Langfuse not running (optional)'"},
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING || echo 'Valkey not running'"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_192_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/create-job-mlops.spec.ts",
+  "manual_verification_checklist": [
+    "チャットで要件を入力できる",
+    "LLMが候補を生成した場合、CandidateSelectorが表示される",
+    "候補をクリックで選択できる",
+    "キーボード（Arrow Up/Down）で候補を選択できる",
+    "確定ボタンで候補を確定できる",
+    "確定後、FeedbackModalが表示される",
+    "4段階評価（1-5）を入力できる",
+    "コメントを入力できる",
+    "フィードバック送信ボタンで送信できる",
+    "送信後、モーダルが閉じる",
+    "ダークモードでも正しく表示される",
+    "既存のジョブ作成フローが正常に動作する"
+  ]
+}
