@@ -217,6 +217,28 @@ multiSelect: false
 3. **デフォルト設定**: myVault/langfuseは共有モード（リソース効率重視）
 4. **ポート衝突回避**: ポート番号は自動的に空きを検出して割り当て
 5. **セッション分離推奨**: worktreeでの作業は別セッション/ターミナルで実施
+6. **makeコマンド禁止**: worktree環境では`make`コマンドは使用できません（エラーになります）
+
+### ⚠️ worktree環境でのmakeコマンド制限
+
+**重要**: worktree環境では`make dev-all`等のDocker Compose操作コマンドは**使用できません**。
+
+```
+❌ make dev-all      → エラー: worktree環境では使用できません
+❌ make dev-platform → エラー: worktree環境では使用できません
+❌ make dev-agent    → エラー: worktree環境では使用できません
+```
+
+**理由**:
+- Docker Compose環境はメインリポジトリで一元管理
+- 複数のDocker環境が起動するとポート競合・リソース枯渇が発生
+- worktreeはコード編集とテスト実行のみに専念
+
+**worktree環境での開発方法**:
+1. **サービス起動**: メインリポジトリで`make dev-all`を実行（1回のみ）
+2. **コード編集**: worktree環境でコードを編集
+3. **テスト実行**: worktree環境で`uv run pytest`等を実行
+4. **ローカル起動が必要な場合**: `./scripts/dev-start.sh`を使用（警告表示あり）
 
 ## トラブルシューティング
 

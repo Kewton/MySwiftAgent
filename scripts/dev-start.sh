@@ -114,6 +114,27 @@ EOF
     echo -e "${NC}"
 }
 
+# Check if running in worktree and show warning
+show_worktree_warning() {
+    if [ -f "$PROJECT_ROOT/.git" ] && grep -q "gitdir:" "$PROJECT_ROOT/.git" 2>/dev/null; then
+        local MAIN_REPO=$(cat "$PROJECT_ROOT/.git" | sed 's/gitdir: //' | sed 's|/\.git/worktrees/.*||')
+        local WORKTREE_NAME=$(basename "$PROJECT_ROOT")
+        echo -e "${YELLOW}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "⚠️  worktree環境で実行中: $WORKTREE_NAME"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "   ポート番号がメインリポジトリと異なります（.env.local参照）"
+        echo ""
+        echo "   📌 Docker環境（make dev-all）はメインリポジトリでのみ使用可能:"
+        echo "      cd $MAIN_REPO && make dev-all"
+        echo ""
+        echo "   📌 worktree環境ではこのスクリプト（dev-start.sh）を使用してください"
+        echo ""
+        echo -e "${NC}"
+    fi
+}
+
 # Print functions with timestamps and colors
 print_step() {
     echo -e "${WHITE}[$(date '+%H:%M:%S')] 📋 $1${NC}"
@@ -1064,6 +1085,7 @@ main() {
     # Show banner (except for logs command)
     if [[ "$command" != "logs" ]]; then
         show_banner
+        show_worktree_warning
     fi
 
     # Handle help command

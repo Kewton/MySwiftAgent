@@ -56,8 +56,35 @@ DOCKER_COMPOSE := docker compose
 .PHONY: logs logs-platform logs-agent logs-frontend
 .PHONY: status rebuild clean clean-safe network
 .PHONY: _check-platform _check-agent _wait-platform _wait-agent
+.PHONY: _check-not-worktree
 .PHONY: acceptance-test-platform acceptance-test-agent acceptance-test-e2e
 .PHONY: acceptance-test-python acceptance-test-frontend acceptance-test-all
+
+# =============================================================================
+# Worktree Guard (Prevent Docker Compose execution in worktree)
+# =============================================================================
+
+_check-not-worktree: ## [Internal] Block execution in worktree environment
+	@if [ -f .git ] && grep -q "gitdir:" .git 2>/dev/null; then \
+		MAIN_REPO=$$(cat .git | sed 's/gitdir: //' | sed 's|/\.git/worktrees/.*||'); \
+		echo ""; \
+		echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+		echo "❌ ERROR: make コマンドはworktree環境では使用できません"; \
+		echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+		echo ""; \
+		echo "現在のディレクトリ: $$(pwd)"; \
+		echo "メインリポジトリ:   $$MAIN_REPO"; \
+		echo ""; \
+		echo "📌 worktree環境での開発には以下を使用してください:"; \
+		echo "   ./scripts/dev-start.sh start"; \
+		echo ""; \
+		echo "📌 Docker環境（make）を使用するには、メインリポジトリで実行:"; \
+		echo "   cd $$MAIN_REPO && make dev-all"; \
+		echo ""; \
+		echo "📖 詳細: docs/claude/05-worktree-guide.md"; \
+		echo ""; \
+		exit 1; \
+	fi
 
 # =============================================================================
 # Help Target (Default)
@@ -106,22 +133,22 @@ network: ## Create Docker network if not exists
 # Startup Targets
 # =============================================================================
 
-dev-platform: network ## Start Platform layer (valkey, jobqueue, myscheduler, myvault, langfuse)
+dev-platform: _check-not-worktree network ## Start Platform layer (valkey, jobqueue, myscheduler, myvault, langfuse)
 	@echo "Starting Platform layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) up -d
 	@echo "Platform layer started successfully"
 
-dev-agent: _check-platform ## Start Agent layer (expertagent, graphaiserver) - requires Platform
+dev-agent: _check-not-worktree _check-platform ## Start Agent layer (expertagent, graphaiserver) - requires Platform
 	@echo "Starting Agent layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) up -d
 	@echo "Agent layer started successfully"
 
-dev-frontend: _check-agent ## Start Frontend layer (commonui, myagentdesk) - requires Agent
+dev-frontend: _check-not-worktree _check-agent ## Start Frontend layer (commonui, myagentdesk) - requires Agent
 	@echo "Starting Frontend layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) up -d
 	@echo "Frontend layer started successfully"
 
-dev-all: network ## Start all layers in order (Platform -> Agent -> Frontend)
+dev-all: _check-not-worktree network ## Start all layers in order (Platform -> Agent -> Frontend)
 	@echo "Starting all services..."
 	@echo ""
 	@echo "[1/6] Starting Platform layer..."

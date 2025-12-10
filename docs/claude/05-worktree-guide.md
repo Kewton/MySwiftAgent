@@ -312,6 +312,40 @@ docker compose -f docker-compose.langfuse.yml --env-file .env up -d
 - ❌ 推奨最大worktree数: 3-4個（ディスク容量とパフォーマンスのバランス）
   - 独立モード選択時は特にディスク容量に注意（Langfuse Dockerボリュームが大きい）
 
+### ⚠️ make コマンドの制限
+
+**重要**: worktree環境では `make dev-all` などのDocker Compose関連コマンドは使用できません。
+
+```bash
+# worktree環境で make を実行すると...
+$ make dev-all
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ERROR: make コマンドはworktree環境では使用できません
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 worktree環境での開発には以下を使用してください:
+   ./scripts/dev-start.sh start
+
+📌 Docker環境（make）を使用するには、メインリポジトリで実行:
+   cd /path/to/MySwiftAgent && make dev-all
+```
+
+**理由**:
+- Docker Compose環境は一元管理が必要（ポート競合、リソース管理）
+- worktreeのポート番号（`.env.local`）はDocker Composeと異なる
+- メインリポジトリでのみDocker環境を起動することで、環境の一貫性を保証
+
+**worktree環境での開発方法**:
+```bash
+# ローカルプロセスで起動（推奨）
+./scripts/dev-start.sh start
+
+# または、メインリポジトリのDocker環境を使用
+# （別ターミナルでメインリポジトリから起動）
+cd ~/MySwiftAgent && make dev-all
+```
+
 ## 🛠️ 便利コマンド
 
 ### 全worktreeのブランチ状況を確認
