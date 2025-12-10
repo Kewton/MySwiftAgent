@@ -240,3 +240,39 @@ class TestPromptsEndpointsEdgeCases:
 
         for response in results:
             assert response.status_code == status.HTTP_200_OK
+
+
+class TestPromptsEndpointsErrorHandling:
+    """Test error handling for prompts endpoints."""
+
+    def test_list_prompts_internal_error(self, client: TestClient) -> None:
+        """Test that internal errors return 500 status code."""
+        from unittest.mock import patch
+
+        # Mock the service to raise an exception
+        with patch(
+            "app.api.v1.prompts_endpoints._prompt_management_service.get_prompts",
+            side_effect=RuntimeError("Simulated internal error"),
+        ):
+            response = client.get("/v1/prompts")
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        data = response.json()
+        assert "detail" in data
+        assert "Failed to list prompts" in data["detail"]
+
+    def test_get_prompt_internal_error(self, client: TestClient) -> None:
+        """Test that internal errors in get_prompt return 500 status code."""
+        from unittest.mock import patch
+
+        # Mock the service to raise an exception
+        with patch(
+            "app.api.v1.prompts_endpoints._prompt_management_service.get_prompt",
+            side_effect=RuntimeError("Simulated internal error"),
+        ):
+            response = client.get("/v1/prompts/requirement_clarification")
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        data = response.json()
+        assert "detail" in data
+        assert "Failed to get prompt" in data["detail"]

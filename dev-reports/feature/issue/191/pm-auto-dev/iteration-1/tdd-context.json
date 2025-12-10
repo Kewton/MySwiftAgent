@@ -1,0 +1,114 @@
+{
+  "issue_number": 191,
+  "title": "プロンプト管理API実装",
+  "acceptance_criteria": [
+    "/v1/prompts エンドポイント実装（GET: プロンプト一覧取得）",
+    "/v1/prompts/{prompt_id} エンドポイント実装（GET: プロンプト詳細取得）",
+    "既存のPromptLoaderサービスを活用",
+    "Pydanticスキーマによるレスポンス定義",
+    "単体テストカバレッジ90%以上",
+    "OpenAPI仕様に準拠したドキュメント生成",
+    "MLOps UIのPrompts画面で実際のプロンプト一覧が表示される",
+    "プロンプトの詳細（コンテンツ、バージョン情報）が閲覧できる",
+    "デモモード表示「Not Found - Using demo mode」が解消される"
+  ],
+  "implementation_tasks": [
+    "app/schemas/prompts.py - Pydanticスキーマ定義（PromptVersion, PromptTemplate, PromptListResponse）",
+    "app/services/prompt_management.py - PromptManagementService作成（get_prompts, get_prompt）",
+    "app/api/v1/prompts_endpoints.py - FastAPIルーター作成",
+    "app/main.py - ルーター登録",
+    "単体テスト・統合テスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Pydanticスキーマ定義",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/app/schemas/prompts.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "PromptManagementService実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/services/prompt_management.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "FastAPIルーター実装",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/app/api/v1/prompts_endpoints.py"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "main.pyルーター登録",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/app/main.py"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "静的解析チェック",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "スキーマ単体テスト",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/tests/unit/test_prompts_schemas.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "サービス単体テスト",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/test_prompt_management.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "統合テスト",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/integration/test_prompts_api.py"],
+      "dependencies": ["1.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/app/schemas/prompts.py",
+    "expertAgent/app/services/prompt_management.py",
+    "expertAgent/app/api/v1/prompts_endpoints.py",
+    "expertAgent/app/main.py",
+    "expertAgent/tests/unit/test_prompts_schemas.py",
+    "expertAgent/tests/unit/test_prompt_management.py",
+    "expertAgent/tests/integration/test_prompts_api.py"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "Ruff/MyPyエラーゼロ",
+    "単体テストカバレッジ90%以上",
+    "統合テスト全シナリオパス",
+    "GET /v1/prompts が7件のプロンプトを返す",
+    "GET /v1/prompts/{id} が詳細を返す"
+  ],
+  "target_coverage": 90,
+  "api_specification": {
+    "GET /v1/prompts": {
+      "description": "プロンプトテンプレート一覧を取得",
+      "response_fields": ["items", "total"],
+      "item_fields": ["id", "name", "description", "category", "current_version", "versions", "created_at", "updated_at"]
+    },
+    "GET /v1/prompts/{prompt_id}": {
+      "description": "特定プロンプトの詳細を取得",
+      "response_fields": ["id", "name", "description", "category", "current_version", "versions", "created_at", "updated_at"],
+      "version_fields": ["id", "version", "content", "description", "created_at", "is_active"]
+    }
+  },
+  "existing_services": {
+    "PromptLoader": "expertAgent/app/services/prompt_loader.py",
+    "prompts_directory": "expertAgent/prompts/"
+  }
+}

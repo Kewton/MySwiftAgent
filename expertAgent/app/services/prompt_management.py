@@ -252,50 +252,51 @@ class PromptManagementService:
         """
         return prompt_id.replace("_", " ").title()
 
-    def _get_directory_creation_time(self, path: Path) -> datetime | None:
-        """Get directory creation timestamp.
+    def _get_creation_time(self, path: Path) -> datetime | None:
+        """Get creation timestamp for a file or directory.
+
+        Uses birth time if available (macOS), otherwise falls back to ctime.
 
         Args:
-            path: Path to the directory
+            path: Path to the file or directory
 
         Returns:
-            Creation datetime or None
+            Creation datetime or None if path doesn't exist or access fails
         """
         try:
             stat = path.stat()
             # Use birth time if available (macOS), otherwise modification time
             ctime = getattr(stat, "st_birthtime", stat.st_ctime)
             return datetime.fromtimestamp(ctime)
-        except Exception:
+        except (OSError, ValueError) as e:
+            logger.debug(f"Failed to get creation time for {path}: {e}")
             return None
 
-    def _get_directory_modification_time(self, path: Path) -> datetime | None:
-        """Get directory last modification timestamp.
+    def _get_modification_time(self, path: Path) -> datetime | None:
+        """Get last modification timestamp for a file or directory.
 
         Args:
-            path: Path to the directory
+            path: Path to the file or directory
 
         Returns:
-            Modification datetime or None
+            Modification datetime or None if path doesn't exist or access fails
         """
         try:
             stat = path.stat()
             return datetime.fromtimestamp(stat.st_mtime)
-        except Exception:
+        except (OSError, ValueError) as e:
+            logger.debug(f"Failed to get modification time for {path}: {e}")
             return None
+
+    # Aliases for backward compatibility and semantic clarity
+    def _get_directory_creation_time(self, path: Path) -> datetime | None:
+        """Get directory creation timestamp (alias for _get_creation_time)."""
+        return self._get_creation_time(path)
+
+    def _get_directory_modification_time(self, path: Path) -> datetime | None:
+        """Get directory modification timestamp (alias for _get_modification_time)."""
+        return self._get_modification_time(path)
 
     def _get_file_creation_time(self, path: Path) -> datetime | None:
-        """Get file creation timestamp.
-
-        Args:
-            path: Path to the file
-
-        Returns:
-            Creation datetime or None
-        """
-        try:
-            stat = path.stat()
-            ctime = getattr(stat, "st_birthtime", stat.st_ctime)
-            return datetime.fromtimestamp(ctime)
-        except Exception:
-            return None
+        """Get file creation timestamp (alias for _get_creation_time)."""
+        return self._get_creation_time(path)

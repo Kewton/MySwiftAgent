@@ -1,0 +1,34 @@
+{
+  "issue_number": 191,
+  "refactor_targets": [
+    "expertAgent/app/schemas/prompts.py",
+    "expertAgent/app/services/prompt_management.py",
+    "expertAgent/app/api/v1/prompts_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90.9,
+    "coverage_details": {
+      "app/schemas/prompts.py": 100.0,
+      "app/services/prompt_management.py": 91.45,
+      "app/api/v1/prompts_endpoints.py": 81.25
+    },
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (already applied via PromptLoader)",
+    "Dependency Injection (verify FastAPI Depends usage)"
+  ],
+  "improvement_goals": [
+    "Improve endpoint coverage to 90%+",
+    "Apply consistent error handling patterns",
+    "Ensure code follows SOLID principles",
+    "Remove any code duplication"
+  ],
+  "code_quality_checks": [
+    "Verify proper type hints on all functions",
+    "Check for unused imports",
+    "Ensure docstrings are present",
+    "Verify exception handling consistency"
+  ]
+}
