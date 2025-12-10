@@ -24,10 +24,25 @@
 |------|------|
 | サービス起動確認 | 実際のサービスが起動し、ヘルスチェックが通ること |
 | **pytest受入テスト** | `tests/acceptance/test_issue_{N}_acceptance.py` の実行【必須】 |
+| **Playwrightテスト** | `myAgentDesk`/`commonUI` 対象時はブラウザUIテストの実行【条件付き必須】 |
 | E2Eシナリオ | 実際のAPIエンドポイントを叩いて期待する応答を確認 |
 | 外部サービス連携 | LLM API、Langfuse、Valkey等との連携動作確認 |
 
 **Phase 3では必ずローカル受入テスト（L3）を実施してください。**
+
+---
+
+## プロジェクト別テスト方法
+
+| プロジェクト | pytest | curl API | Playwright | 備考 |
+|-------------|--------|----------|------------|------|
+| **expertAgent** | ✅ 必須 | ✅ 必須 | ❌ 不要 | バックエンドAPI |
+| **graphAiServer** | ✅ 必須 | ✅ 必須 | ❌ 不要 | ワークフローAPI |
+| **myAgentDesk** | ✅ 必須 | ✅ 必須 | **✅ 必須** | フロントエンドUI |
+| **jobqueue** | ✅ 必須 | ✅ 必須 | ❌ 不要 | ジョブキューAPI |
+| **myVault** | ✅ 必須 | ✅ 必須 | ❌ 不要 | シークレット管理API |
+| **myscheduler** | ✅ 必須 | ✅ 必須 | ❌ 不要 | スケジューラAPI |
+| **commonUI** | ✅ 必須 | ❌ 不要 | **✅ 必須** | 共通UIコンポーネント |
 
 ---
 
@@ -90,13 +105,16 @@ cat "$CONTEXT_FILE"
     "受入条件2"
   ],
   "labels": ["feature", "agent-layer"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
   "l3_test_plan": {
     "source": "work-plan.md",
     "health_checks": [...],
     "test_commands": [...],
     "external_service_checks": [...]
   },
-  "pytest_test_file": "tests/acceptance/test_issue_166_acceptance.py"
+  "pytest_test_file": "tests/acceptance/test_issue_166_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_166.spec.ts"
 }
 ```
 
@@ -281,7 +299,98 @@ echo "✅ PASSED: HTTP 404 for nonexistent resource"
 
 ---
 
-### Step 4: 外部サービス連携確認（該当する場合）
+### Step 4: Playwrightテスト実行（myAgentDesk/commonUI対象時）【条件付き必須】
+
+**対象プロジェクト**: `myAgentDesk`, `commonUI`
+
+プロジェクトラベルが上記の場合、Playwrightによるブラウザテストを実行します。
+
+#### プロジェクト判定
+
+```bash
+# Issueのラベルからプロジェクトを判定
+PROJECT_LABEL=$(gh issue view {issue_number} --json labels --jq '.labels[] | select(.name | startswith("project:")) | .name')
+
+echo "Target project: $PROJECT_LABEL"
+
+# または、コンテキストファイルから判定（サブエージェントモード）
+PLAYWRIGHT_REQUIRED=$(cat "$CONTEXT_FILE" | jq -r '.playwright_required // false')
+```
+
+#### Playwrightテスト実行
+
+```bash
+if [[ "$PROJECT_LABEL" == *"myAgentDesk"* ]] || [[ "$PROJECT_LABEL" == *"commonUI"* ]] || [[ "$PLAYWRIGHT_REQUIRED" == "true" ]]; then
+  echo "🎭 Playwright test required"
+
+  # myAgentDesk の場合
+  cd myAgentDesk
+
+  # 開発サーバー起動確認
+  curl -sf http://localhost:5173 && echo "✅ Dev server: running" || echo "❌ Dev server: not running"
+
+  # Playwrightテスト実行
+  npm test -- --run tests/e2e/test_issue_{issue_number}.spec.ts
+
+  # または全E2Eテスト実行
+  npm test -- --run
+
+  # 結果を保存
+  npm test -- --run > /tmp/playwright_output.log 2>&1
+  PLAYWRIGHT_EXIT_CODE=$?
+
+  echo "Playwright exit code: $PLAYWRIGHT_EXIT_CODE"
+  cat /tmp/playwright_output.log
+
+  cd ..
+else
+  echo "⏭️ Playwright test skipped for: $PROJECT_LABEL"
+fi
+```
+
+**Playwright結果の検証【条件付き必須】**:
+
+| 項目 | 判定基準 |
+|------|---------|
+| Exit code | 0 であること |
+| Failed tests | 0 であること |
+| Passed tests | 1以上であること |
+
+**Playwrightが失敗した場合**:
+- `status: "failed"` を設定
+- 失敗したテストとエラーメッセージを記録
+- **Phase 3は失敗として終了**（Phase 2に戻る）
+
+```json
+{
+  "status": "failed",
+  "test_level": "L3",
+  "target_project": "myAgentDesk",
+  "pytest_results": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/test_issue_166.spec.ts",
+    "total": 5,
+    "passed": 3,
+    "failed": 2,
+    "failures": [
+      {
+        "test": "test_ui_displays_result_correctly",
+        "error": "Expected element to be visible, but it was not found"
+      }
+    ]
+  },
+  "error": "Playwrightテストが失敗しました（2/5テスト失敗）"
+}
+```
+
+---
+
+### Step 5: 外部サービス連携確認（該当する場合）
 
 ```bash
 # LLM API連携（実際のAPIキーが必要）
@@ -298,7 +407,7 @@ docker exec myswiftagent-valkey redis-cli PING
 
 ---
 
-### Step 5: エビデンス収集
+### Step 6: エビデンス収集
 
 テスト実行のエビデンスを収集します：
 
@@ -307,6 +416,13 @@ docker exec myswiftagent-valkey redis-cli PING
 ```bash
 # pytestの出力は既に /tmp/acceptance_pytest_output.log に保存済み
 cat /tmp/acceptance_pytest_output.log
+```
+
+#### Playwright出力ログ（該当する場合）
+
+```bash
+# Playwrightの出力は既に /tmp/playwright_output.log に保存済み
+cat /tmp/playwright_output.log
 ```
 
 #### APIレスポンスログ
@@ -352,6 +468,13 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
 ❌ Failed: 0
 ⏭️ Skipped: 0
 
+## Playwrightテスト結果【条件付き必須】（myAgentDesk/commonUI対象時）
+📂 テストファイル: myAgentDesk/tests/e2e/test_issue_{issue_number}.spec.ts
+✅ Total: 5 tests
+✅ Passed: 5
+❌ Failed: 0
+⏭️ Skipped: 0
+
 ## E2Eシナリオ結果（work-plan.mdのL3テスト計画）
 ✅ 正常系テスト
    - コマンド: curl -s -X POST http://localhost:8104/v1/endpoint ...
@@ -369,6 +492,7 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
 
 ## エビデンス
 - pytestログ: /tmp/acceptance_pytest_output.log
+- Playwrightログ: /tmp/playwright_output.log（該当時）
 - APIレスポンス: /tmp/acceptance_test_response.json
 - サービスログ確認済み
 
@@ -386,14 +510,18 @@ RESULT_FILE=$(dirname "$CONTEXT_FILE")/acceptance-result.json
 
 Writeツールで以下の内容を作成:
 
+#### Playwright必須プロジェクトの場合（myAgentDesk/commonUI）
+
 ```json
 {
   "status": "passed",
   "test_level": "L3",
   "test_type": "local_acceptance_test",
+  "target_project": "myAgentDesk",
   "service_health": {
     "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
-    "myVault": {"status": "healthy", "url": "http://localhost:8103"}
+    "myVault": {"status": "healthy", "url": "http://localhost:8103"},
+    "myAgentDesk": {"status": "healthy", "url": "http://localhost:5173"}
   },
   "pytest_results": {
     "test_file": "tests/acceptance/test_issue_166_acceptance.py",
@@ -402,6 +530,15 @@ Writeツールで以下の内容を作成:
     "failed": 0,
     "skipped": 0,
     "output": "... pytest output ..."
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/test_issue_166.spec.ts",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... playwright output ..."
   },
   "l3_test_plan_results": {
     "source": "work-plan.md",
@@ -414,14 +551,71 @@ Writeツールで以下の内容を作成:
         "expected_response_contains": ["result"],
         "response_validation": "passed",
         "result": "passed"
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "受入条件1",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_scenario_1_api_returns_expected_response"
+    },
+    {
+      "criterion": "受入条件2（UI）",
+      "verified": true,
+      "verification_method": "playwright",
+      "test_method": "test_ui_displays_result_correctly"
+    }
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_166_acceptance.py",
+    "myAgentDesk/tests/e2e/test_issue_166.spec.ts",
+    "/tmp/acceptance_pytest_output.log",
+    "/tmp/playwright_output.log",
+    "/tmp/acceptance_test_response.json"
+  ],
+  "message": "すべての受入条件を満たしています（L3ローカル受入テスト完了）"
+}
+```
+
+#### Playwright不要プロジェクトの場合（expertAgent等）
+
+```json
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
+    "myVault": {"status": "healthy", "url": "http://localhost:8103"}
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_166_acceptance.py",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... pytest output ..."
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "l3_test_plan_results": {
+    "source": "work-plan.md",
+    "test_commands": [
+      {
+        "name": "正常系テスト",
+        "expected_status": 200,
+        "actual_status": 200,
+        "result": "passed"
       },
       {
         "name": "異常系テスト",
-        "command": "curl -s -X GET http://localhost:8104/v1/resource/nonexistent ...",
         "expected_status": 404,
         "actual_status": 404,
-        "expected_response_contains": ["detail"],
-        "response_validation": "passed",
         "result": "passed"
       }
     ]
@@ -548,12 +742,14 @@ Writeツールで以下の内容を作成:
 
 - ✅ サービス起動確認（ヘルスチェック通過）
 - ✅ **pytest受入テスト全パス**（`tests/acceptance/test_issue_{N}_acceptance.py`）【必須】
+- ✅ **Playwrightテスト全パス**（myAgentDesk/commonUI対象時）【条件付き必須】
 - ✅ L3テスト計画のコマンドが全て成功（HTTPステータス・レスポンス検証）
 - ✅ すべての受入条件が検証済み
-- ✅ エビデンスが収集済み（pytestログ、レスポンス、サービスログ）
+- ✅ エビデンスが収集済み（pytestログ、Playwrightログ、レスポンス、サービスログ）
 - ✅ 結果ファイルが作成済み（サブエージェントモード）
 
 **重要**:
 - 静的解析（Ruff/MyPy）や単体テストカバレッジの確認は Phase 2 (TDD) で完了しているため、Phase 3 では実施不要です。
 - Phase 3 では **pytest受入テストの実行と、実際のサービスを動かしての動作確認** に集中してください。
 - **pytest受入テストが失敗した場合、Phase 3は失敗として扱います。**
+- **Playwrightテストが失敗した場合（myAgentDesk/commonUI対象時）、Phase 3は失敗として扱います。**

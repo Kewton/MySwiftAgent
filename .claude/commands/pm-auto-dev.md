@@ -300,7 +300,41 @@ fi
 - 期待するレスポンスボディ
 - 外部サービス連携確認コマンド
 
-#### 3-2. 受入テストコンテキストファイル作成
+#### 3-2. プロジェクト判定とテスト方法決定【重要】
+
+**Issueのラベルからプロジェクトを判定し、適切なテスト方法を決定します。**
+
+```bash
+# プロジェクトラベルを取得
+PROJECT_LABEL=$(gh issue view {issue_number} --json labels --jq '.labels[] | select(.name | startswith("project:")) | .name')
+
+echo "Target project: $PROJECT_LABEL"
+```
+
+**プロジェクト別テスト要否**:
+
+| プロジェクト | pytest | curl API | Playwright | 備考 |
+|-------------|--------|----------|------------|------|
+| `project: expertAgent` | ✅ 必須 | ✅ 必須 | ❌ 不要 | バックエンドAPI |
+| `project: graphAiServer` | ✅ 必須 | ✅ 必須 | ❌ 不要 | ワークフローAPI |
+| `project: myAgentDesk` | ✅ 必須 | ✅ 必須 | **✅ 必須** | フロントエンドUI |
+| `project: jobqueue` | ✅ 必須 | ✅ 必須 | ❌ 不要 | ジョブキューAPI |
+| `project: myVault` | ✅ 必須 | ✅ 必須 | ❌ 不要 | シークレット管理API |
+| `project: myscheduler` | ✅ 必須 | ✅ 必須 | ❌ 不要 | スケジューラAPI |
+| `project: commonUI` | ✅ 必須 | ❌ 不要 | **✅ 必須** | 共通UIコンポーネント |
+
+**Playwright必須判定**:
+```bash
+PLAYWRIGHT_REQUIRED=false
+if [[ "$PROJECT_LABEL" == *"myAgentDesk"* ]] || [[ "$PROJECT_LABEL" == *"commonUI"* ]]; then
+  PLAYWRIGHT_REQUIRED=true
+  echo "🎭 Playwright test required for: $PROJECT_LABEL"
+else
+  echo "⏭️ Playwright test not required for: $PROJECT_LABEL"
+fi
+```
+
+#### 3-3. 受入テストコンテキストファイル作成
 
 Writeツールで以下のファイルを作成：
 
@@ -319,13 +353,16 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-cont
     "受入条件2"
   ],
   "labels": ["feature", "agent-layer"],
-  "required_services": ["expertAgent", "myVault"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "myAgentDesk"],
   "external_dependencies": ["LLM API", "Langfuse"],
   "l3_test_plan": {
     "source": "work-plan.md",
     "health_checks": [
       {"service": "expertAgent", "url": "http://localhost:8104/health"},
-      {"service": "myVault", "url": "http://localhost:8103/health"}
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
     ],
     "test_commands": [
       {
@@ -346,15 +383,19 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-cont
       {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"}
     ]
   },
-  "pytest_test_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py"
+  "pytest_test_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_{issue_number}.spec.ts"
 }
 ```
 
 **重要**:
+- `target_project` はプロジェクトラベルから取得
+- `playwright_required` はプロジェクトラベルに基づいて設定
+- `playwright_test_file` はPlaywright必須の場合のみ設定
 - `l3_test_plan` はwork-plan.mdの「L3受入テスト計画」セクションから転記
 - work-plan.mdが存在しない場合は、受入条件からテストコマンドを生成
 
-#### 3-3. pytest受入テストファイル生成【必須】
+#### 3-4. pytest受入テストファイル生成【必須】
 
 **必須**: `tests/acceptance/test_issue_{issue_number}_acceptance.py` を生成します。
 
@@ -500,7 +541,7 @@ class TestIssue{issue_number}Acceptance:
 - work-plan.mdのL3テスト計画に記載されたcurlコマンドをpytestメソッドに変換
 - 外部サービス連携テストは `@pytest.mark.external` マーカーを付与
 
-#### 3-4. 受入テストサブエージェント呼び出し
+#### 3-5. 受入テストサブエージェント呼び出し
 
 以下のテキストを記述してください：
 
@@ -516,14 +557,19 @@ IMPORTANT: This is L3 (Local Acceptance Test). You MUST:
 3. RUN THE PYTEST ACCEPTANCE TEST FILE:
    uv run pytest tests/acceptance/test_issue_{issue_number}_acceptance.py -v
 4. Execute additional curl commands from l3_test_plan if pytest passes
-5. Verify external service integrations (LLM, Langfuse, Valkey)
-6. Collect evidence (pytest output, API responses, logs)
+5. IF playwright_required is true (myAgentDesk/commonUI):
+   RUN THE PLAYWRIGHT TEST:
+   cd myAgentDesk && npm test -- --run tests/e2e/test_issue_{issue_number}.spec.ts
+6. Verify external service integrations (LLM, Langfuse, Valkey)
+7. Collect evidence (pytest output, Playwright output, API responses, logs)
 
-REQUIRED: The pytest acceptance test file MUST pass. Do NOT mark as passed if pytest fails.
-Focus on ACTUAL service behavior with real HTTP requests.
+REQUIRED:
+- The pytest acceptance test file MUST pass. Do NOT mark as passed if pytest fails.
+- If playwright_required=true, Playwright tests MUST pass. Do NOT mark as passed if Playwright fails.
+Focus on ACTUAL service behavior with real HTTP requests and real UI interactions.
 ```
 
-#### 3-5. 結果確認
+#### 3-6. 結果確認
 
 Readツールで結果ファイルを確認：
 
@@ -535,11 +581,55 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-
 
 ##### ケース1: 受入テスト成功 (`status: "passed"`)
 
+**Playwright必須プロジェクト（myAgentDesk/commonUI）の場合**:
 ```json
 {
   "status": "passed",
   "test_level": "L3",
   "test_type": "local_acceptance_test",
+  "target_project": "myAgentDesk",
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
+    "myVault": {"status": "healthy", "url": "http://localhost:8103"},
+    "myAgentDesk": {"status": "healthy", "url": "http://localhost:5173"}
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... pytest output ..."
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/test_issue_{issue_number}.spec.ts",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... playwright output ..."
+  },
+  "acceptance_criteria_status": [
+    {"criterion": "受入条件1", "verified": true, "verification_method": "pytest"},
+    {"criterion": "受入条件2（UI）", "verified": true, "verification_method": "playwright"}
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+    "myAgentDesk/tests/e2e/test_issue_{issue_number}.spec.ts",
+    "/tmp/acceptance_pytest_output.log",
+    "/tmp/playwright_output.log"
+  ]
+}
+```
+
+**Playwright不要プロジェクト（expertAgent等）の場合**:
+```json
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
   "service_health": {
     "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
     "myVault": {"status": "healthy", "url": "http://localhost:8103"}
@@ -552,31 +642,17 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-
     "skipped": 0,
     "output": "... pytest output ..."
   },
-  "test_cases": [
-    {
-      "scenario": "シナリオ1: APIが期待する応答を返す",
-      "type": "pytest",
-      "method": "test_scenario_1_api_returns_expected_response",
-      "result": "passed",
-      "http_status": 200,
-      "evidence": "Response: {...}"
-    },
-    {
-      "scenario": "シナリオ2: エラーハンドリング",
-      "type": "pytest",
-      "method": "test_scenario_2_error_handling_returns_404",
-      "result": "passed",
-      "http_status": 404,
-      "evidence": "Response: {\"detail\": \"Not found\"}"
-    }
-  ],
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
   "acceptance_criteria_status": [
     {"criterion": "受入条件1", "verified": true, "verification_method": "pytest"},
     {"criterion": "受入条件2", "verified": true, "verification_method": "pytest"}
   ],
   "evidence_files": [
     "tests/acceptance/test_issue_{issue_number}_acceptance.py",
-    "/tmp/acceptance_test_output.log"
+    "/tmp/acceptance_pytest_output.log"
   ]
 }
 ```
@@ -585,7 +661,7 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-
 
 TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定。
 
-##### ケース2: 受入テスト失敗 (`status: "failed"`)
+##### ケース2: pytest受入テスト失敗 (`status: "failed"`)
 
 ```json
 {
@@ -621,7 +697,46 @@ TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定。
 
 → **イテレーション回数確認** → **Phase 2に戻る**（TDD実装からやり直し）
 
-##### ケース3: スキップ (`status: "skipped"`)
+##### ケース3: Playwrightテスト失敗 (`status: "failed"`)
+
+```json
+{
+  "status": "failed",
+  "test_level": "L3",
+  "target_project": "myAgentDesk",
+  "pytest_results": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/test_issue_{issue_number}.spec.ts",
+    "total": 5,
+    "passed": 3,
+    "failed": 2,
+    "failures": [
+      {
+        "test": "test_ui_displays_result_correctly",
+        "error": "Expected element to be visible, but it was not found"
+      },
+      {
+        "test": "test_form_submission_shows_success_message",
+        "error": "Timeout waiting for success message"
+      }
+    ]
+  },
+  "error": "Playwrightテストが失敗しました（2/5テスト失敗）",
+  "suggested_fixes": [
+    "UIコンポーネントの表示ロジックを確認してください",
+    "フォーム送信後の成功メッセージ表示を確認してください"
+  ]
+}
+```
+
+→ **イテレーション回数確認** → **Phase 2に戻る**（TDD実装からやり直し）
+
+##### ケース4: スキップ (`status: "skipped"`)
 
 ```json
 {

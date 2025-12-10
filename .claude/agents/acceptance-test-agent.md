@@ -33,6 +33,32 @@ You are an L3 acceptance test specialist working under PM Auto-Dev orchestration
 
 ---
 
+## プロジェクト別テスト方法
+
+対象プロジェクトに応じて、適切なテスト方法を選択してください。
+
+| プロジェクト | pytest | curl API | Playwright | 備考 |
+|-------------|--------|----------|------------|------|
+| **expertAgent** | ✅ 必須 | ✅ 必須 | ❌ 不要 | バックエンドAPI |
+| **graphAiServer** | ✅ 必須 | ✅ 必須 | ❌ 不要 | ワークフローAPI |
+| **myAgentDesk** | ✅ 必須 | ✅ 必須 | **✅ 必須** | フロントエンドUI |
+| **jobqueue** | ✅ 必須 | ✅ 必須 | ❌ 不要 | ジョブキューAPI |
+| **myVault** | ✅ 必須 | ✅ 必須 | ❌ 不要 | シークレット管理API |
+| **myscheduler** | ✅ 必須 | ✅ 必須 | ❌ 不要 | スケジューラAPI |
+| **commonUI** | ✅ 必須 | ❌ 不要 | **✅ 必須** | 共通UIコンポーネント |
+
+### プロジェクト判定方法
+
+```bash
+# Issueのラベルからプロジェクトを判定
+gh issue view {issue_number} --json labels --jq '.labels[] | select(.name | startswith("project:")) | .name'
+
+# 例: "project: myAgentDesk" → Playwright必須
+# 例: "project: expertAgent" → Playwright不要
+```
+
+---
+
 ## Execution
 
 **Read and execute the core prompt**:
@@ -140,7 +166,55 @@ else
 fi
 ```
 
-### Step 5: 外部サービス連携確認（該当する場合）
+### Step 5: Playwrightテスト実行（myAgentDesk/commonUI対象時）【条件付き必須】
+
+**対象プロジェクト**: `myAgentDesk`, `commonUI`
+
+プロジェクトラベルが上記の場合、Playwrightによるブラウザテストを実行します。
+
+```bash
+# プロジェクト判定
+PROJECT_LABEL=$(gh issue view {issue_number} --json labels --jq '.labels[] | select(.name | startswith("project:")) | .name')
+
+if [[ "$PROJECT_LABEL" == *"myAgentDesk"* ]] || [[ "$PROJECT_LABEL" == *"commonUI"* ]]; then
+  echo "🎭 Playwright test required for: $PROJECT_LABEL"
+
+  # myAgentDesk の場合
+  cd myAgentDesk
+
+  # 開発サーバー起動確認
+  curl -sf http://localhost:5173 && echo "✅ Dev server: running"
+
+  # Playwrightテスト実行
+  npm test -- --run tests/e2e/test_issue_{issue_number}.spec.ts
+
+  # または全E2Eテスト実行
+  npm test -- --run
+
+  # 結果を保存
+  npm test -- --run > /tmp/playwright_output.log 2>&1
+  PLAYWRIGHT_EXIT_CODE=$?
+
+  echo "Playwright exit code: $PLAYWRIGHT_EXIT_CODE"
+  cat /tmp/playwright_output.log
+
+  cd ..
+else
+  echo "⏭️ Playwright test skipped for: $PROJECT_LABEL"
+fi
+```
+
+**Playwright結果の検証【条件付き必須】**:
+
+| 項目 | 判定基準 |
+|------|---------|
+| Exit code | 0 であること |
+| Failed tests | 0 であること |
+| Passed tests | 1以上であること |
+
+**Playwrightが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
+
+### Step 6: 外部サービス連携確認（該当する場合）
 
 ```bash
 # LLM API連携
@@ -155,11 +229,14 @@ curl -s http://localhost:3001/api/public/health
 docker exec myswiftagent-valkey redis-cli PING
 ```
 
-### Step 6: エビデンス収集
+### Step 7: エビデンス収集
 
 ```bash
 # pytestログ確認
 cat /tmp/acceptance_pytest_output.log
+
+# Playwrightログ確認（該当する場合）
+cat /tmp/playwright_output.log
 
 # レスポンスを保存
 curl -s -X POST http://localhost:8104/v1/endpoint ... > /tmp/acceptance_response.json
@@ -187,8 +264,9 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
 - ✅ 実際のAPIエンドポイントへのHTTPリクエスト（work-plan.mdのL3テスト計画）
 - ✅ HTTPステータスコードの検証（期待値と実際値の比較）
 - ✅ レスポンスボディの検証（期待するフィールドの存在確認）
+- ✅ **Playwrightテストの実行**（myAgentDesk/commonUI対象時）【条件付き必須】
 - ✅ 外部サービス連携の動作確認
-- ✅ エビデンス収集（pytestログ、APIレスポンス、サービスログ）
+- ✅ エビデンス収集（pytestログ、Playwrightログ、APIレスポンス、サービスログ）
 
 ---
 
@@ -197,8 +275,9 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
 - ✅ サービス起動確認完了（ヘルスチェック通過）
 - ✅ **pytest受入テスト全パス**（`tests/acceptance/test_issue_{N}_acceptance.py`）【必須】
 - ✅ L3テスト計画のコマンドが全て成功（HTTPステータス・レスポンス検証）
-- ✅ All acceptance criteria verified (pytest + practical_api_test)
-- ✅ Evidence collected (pytest output, API responses, logs)
+- ✅ **Playwrightテスト全パス**（myAgentDesk/commonUI対象時）【条件付き必須】
+- ✅ All acceptance criteria verified (pytest + practical_api_test + playwright)
+- ✅ Evidence collected (pytest output, Playwright output, API responses, logs)
 - ✅ Result file created: `acceptance-result.json`
 
 ---
@@ -212,9 +291,11 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
   "status": "passed",
   "test_level": "L3",
   "test_type": "local_acceptance_test",
+  "target_project": "myAgentDesk",
   "service_health": {
     "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
-    "myVault": {"status": "healthy", "url": "http://localhost:8103"}
+    "myVault": {"status": "healthy", "url": "http://localhost:8103"},
+    "myAgentDesk": {"status": "healthy", "url": "http://localhost:5173"}
   },
   "pytest_results": {
     "test_file": "tests/acceptance/test_issue_166_acceptance.py",
@@ -223,6 +304,15 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
     "failed": 0,
     "skipped": 0,
     "output": "... pytest output ..."
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/test_issue_166.spec.ts",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... playwright output ..."
   },
   "l3_test_plan_results": {
     "source": "work-plan.md",
@@ -244,8 +334,60 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
       "verified": true,
       "verification_method": "pytest",
       "test_method": "test_scenario_1_api_returns_expected_response"
+    },
+    {
+      "criterion": "受入条件2（UI）",
+      "verified": true,
+      "verification_method": "playwright",
+      "test_method": "test_ui_displays_result_correctly"
     }
   ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_166_acceptance.py",
+    "myAgentDesk/tests/e2e/test_issue_166.spec.ts",
+    "/tmp/acceptance_pytest_output.log",
+    "/tmp/playwright_output.log",
+    "/tmp/acceptance_response.json"
+  ],
+  "message": "すべての受入条件を満たしています（L3ローカル受入テスト完了）"
+}
+```
+
+### 成功時（Playwright不要プロジェクト）
+
+```json
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8104"},
+    "myVault": {"status": "healthy", "url": "http://localhost:8103"}
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_166_acceptance.py",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "output": "... pytest output ..."
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "l3_test_plan_results": {
+    "source": "work-plan.md",
+    "test_commands": [
+      {
+        "name": "正常系テスト",
+        "expected_status": 200,
+        "actual_status": 200,
+        "result": "passed"
+      }
+    ]
+  },
   "evidence_files": [
     "tests/acceptance/test_issue_166_acceptance.py",
     "/tmp/acceptance_pytest_output.log",
@@ -287,6 +429,45 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
     "エラーハンドリングのステータスコードを確認してください"
   ],
   "message": "pytest受入テストを修正してください"
+}
+```
+
+### Playwright失敗時（myAgentDesk/commonUI対象時）
+
+```json
+{
+  "status": "failed",
+  "test_level": "L3",
+  "target_project": "myAgentDesk",
+  "pytest_results": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/test_issue_166.spec.ts",
+    "total": 5,
+    "passed": 3,
+    "failed": 2,
+    "skipped": 0,
+    "failures": [
+      {
+        "test": "test_ui_displays_result_correctly",
+        "error": "Expected element to be visible, but it was not found"
+      },
+      {
+        "test": "test_form_submission_shows_success_message",
+        "error": "Timeout waiting for success message"
+      }
+    ]
+  },
+  "error": "Playwrightテストが失敗しました（2/5テスト失敗）",
+  "suggested_fixes": [
+    "UIコンポーネントの表示ロジックを確認してください",
+    "フォーム送信後の成功メッセージ表示を確認してください"
+  ],
+  "message": "Playwrightテストを修正してください"
 }
 ```
 
@@ -336,5 +517,7 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
 1. **pytest受入テストは必須**: `tests/acceptance/test_issue_{N}_acceptance.py` が存在し、全テストがパスすること
 2. **HTTPステータスコードの検証は必須**: 期待値と実際値を必ず比較
 3. **レスポンスボディの検証は必須**: 期待するフィールドが含まれるか確認
-4. **pytestが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
-5. **エビデンス収集は必須**: pytestログ、APIレスポンス、サービスログを保存
+4. **Playwrightテストは条件付き必須**: `myAgentDesk`/`commonUI`対象時は全テストがパスすること
+5. **pytestが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
+6. **Playwrightが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
+7. **エビデンス収集は必須**: pytestログ、Playwrightログ、APIレスポンス、サービスログを保存
