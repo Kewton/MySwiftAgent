@@ -7,7 +7,44 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.api.v1.dependencies import ValkeyConfig, _get_valkey_config
 from app.services.conversation_service import ConversationService
+
+
+class TestValkeyConfig:
+    """Tests for ValkeyConfig dataclass."""
+
+    def test_valkey_config_immutable(self):
+        """Test that ValkeyConfig is immutable (frozen)."""
+        config = ValkeyConfig(host="localhost", port=6379, db=0)
+        with pytest.raises(AttributeError):
+            config.host = "other"  # type: ignore[misc]
+
+    def test_valkey_config_equality(self):
+        """Test ValkeyConfig equality comparison."""
+        config1 = ValkeyConfig(host="localhost", port=6379, db=0)
+        config2 = ValkeyConfig(host="localhost", port=6379, db=0)
+        assert config1 == config2
+
+
+class TestGetValkeyConfig:
+    """Tests for _get_valkey_config helper."""
+
+    def test_get_valkey_config_returns_config(self):
+        """Test _get_valkey_config returns ValkeyConfig instance."""
+        with patch("app.api.v1.dependencies.secrets_manager") as mock_secrets:
+            mock_secrets.get_connection_config.side_effect = lambda key, **kwargs: {
+                "VALKEY_HOST": "test-host",
+                "VALKEY_PORT": 6380,
+                "VALKEY_DB": 1,
+            }.get(key, kwargs.get("default"))
+
+            config = _get_valkey_config()
+
+            assert isinstance(config, ValkeyConfig)
+            assert config.host == "test-host"
+            assert config.port == 6380
+            assert config.db == 1
 
 
 class TestGetConversationService:
@@ -18,15 +55,14 @@ class TestGetConversationService:
         """Test successful creation of ConversationService."""
         from app.api.v1.dependencies import get_conversation_service
 
-        with patch(
-            "app.api.v1.dependencies.secrets_manager"
-        ) as mock_secrets, patch(
-            "app.api.v1.dependencies.ConversationStoreValkey"
-        ) as mock_store_class, patch(
-            "app.api.v1.dependencies.ValkeyClient"
-        ) as mock_valkey_class, patch(
-            "app.api.v1.dependencies.IndexManager"
-        ) as mock_index_manager_class:
+        with (
+            patch("app.api.v1.dependencies.secrets_manager") as mock_secrets,
+            patch(
+                "app.api.v1.dependencies.ConversationStoreValkey"
+            ) as mock_store_class,
+            patch("app.api.v1.dependencies.ValkeyClient") as mock_valkey_class,
+            patch("app.api.v1.dependencies.IndexManager") as mock_index_manager_class,
+        ):
             # Setup mocks
             mock_secrets.get_connection_config.side_effect = lambda key, **kwargs: {
                 "VALKEY_HOST": "localhost",
@@ -60,11 +96,12 @@ class TestGetConversationService:
         from app.api.v1.dependencies import get_conversation_service
         from app.services.valkey_client import ValkeyConnectionError
 
-        with patch(
-            "app.api.v1.dependencies.secrets_manager"
-        ) as mock_secrets, patch(
-            "app.api.v1.dependencies.ConversationStoreValkey"
-        ) as mock_store_class:
+        with (
+            patch("app.api.v1.dependencies.secrets_manager") as mock_secrets,
+            patch(
+                "app.api.v1.dependencies.ConversationStoreValkey"
+            ) as mock_store_class,
+        ):
             # Setup mocks
             mock_secrets.get_connection_config.side_effect = lambda key, **kwargs: {
                 "VALKEY_HOST": "localhost",
@@ -73,9 +110,7 @@ class TestGetConversationService:
             }.get(key, kwargs.get("default"))
 
             mock_store = AsyncMock()
-            mock_store.connect.side_effect = ValkeyConnectionError(
-                "Connection refused"
-            )
+            mock_store.connect.side_effect = ValkeyConnectionError("Connection refused")
             mock_store_class.return_value = mock_store
 
             # Execute and verify exception
@@ -90,14 +125,13 @@ class TestGetConversationService:
         """Test that secrets_manager is used for configuration."""
         from app.api.v1.dependencies import get_conversation_service
 
-        with patch(
-            "app.api.v1.dependencies.secrets_manager"
-        ) as mock_secrets, patch(
-            "app.api.v1.dependencies.ConversationStoreValkey"
-        ) as mock_store_class, patch(
-            "app.api.v1.dependencies.ValkeyClient"
-        ) as mock_valkey_class, patch(
-            "app.api.v1.dependencies.IndexManager"
+        with (
+            patch("app.api.v1.dependencies.secrets_manager") as mock_secrets,
+            patch(
+                "app.api.v1.dependencies.ConversationStoreValkey"
+            ) as mock_store_class,
+            patch("app.api.v1.dependencies.ValkeyClient") as mock_valkey_class,
+            patch("app.api.v1.dependencies.IndexManager"),
         ):
             # Setup mocks with custom values from myVault
             mock_secrets.get_connection_config.side_effect = lambda key, **kwargs: {

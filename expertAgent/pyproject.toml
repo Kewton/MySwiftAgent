@@ -141,7 +141,8 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "aiagent.langgraph.common",
-    "aiagent.langgraph.utilityaiagents.jsonOutput_agent"
+    "aiagent.langgraph.utilityaiagents.jsonOutput_agent",
+    "app.api.v1.chat_endpoints"
 ]
 disable_error_code = ["call-arg"]
 

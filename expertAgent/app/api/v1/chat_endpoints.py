@@ -109,9 +109,7 @@ async def _save_conversation_with_metadata(
                 f"Saved conversation {conversation_id} with trace_id={trace_id}"
             )
         else:
-            logger.warning(
-                f"Failed to save conversation {conversation_id} to Valkey"
-            )
+            logger.warning(f"Failed to save conversation {conversation_id} to Valkey")
 
         return result
 
@@ -121,6 +119,7 @@ async def _save_conversation_with_metadata(
             exc_info=True,
         )
         return False
+
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

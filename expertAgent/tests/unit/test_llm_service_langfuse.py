@@ -412,9 +412,7 @@ class TestStreamRequirementClarificationTraceId:
                 results.append(event)
 
             # Find the trace_id event
-            trace_id_events = [
-                e for e in results if e.get("type") == "trace_id"
-            ]
+            trace_id_events = [e for e in results if e.get("type") == "trace_id"]
 
             # Verify trace_id is included in events
             assert len(trace_id_events) == 1
@@ -475,9 +473,7 @@ class TestStreamRequirementClarificationTraceId:
                 results.append(event)
 
             # Verify no trace_id event
-            trace_id_events = [
-                e for e in results if e.get("type") == "trace_id"
-            ]
+            trace_id_events = [e for e in results if e.get("type") == "trace_id"]
             assert len(trace_id_events) == 0
 
 

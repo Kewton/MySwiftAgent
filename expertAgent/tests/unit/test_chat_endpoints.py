@@ -18,13 +18,15 @@ class TestRequirementDefinitionEndpoint:
     @pytest.mark.asyncio
     async def test_requirement_definition_saves_metadata_with_trace_id(self):
         """Test that requirement-definition saves conversation with trace_id."""
-        with patch(
-            "app.api.v1.chat_endpoints.stream_requirement_clarification"
-        ) as mock_stream, patch(
-            "app.api.v1.chat_endpoints.conversation_store"
-        ), patch(
-            "app.api.v1.chat_endpoints.get_conversation_service"
-        ) as mock_get_service:
+        with (
+            patch(
+                "app.api.v1.chat_endpoints.stream_requirement_clarification"
+            ) as mock_stream,
+            patch("app.api.v1.chat_endpoints.conversation_store"),
+            patch(
+                "app.api.v1.chat_endpoints.get_conversation_service"
+            ) as mock_get_service,
+        ):
             # Setup mock stream to yield trace_id
             async def mock_generator():
                 yield {"type": "message", "data": {"content": "Hello"}}
@@ -58,13 +60,15 @@ class TestRequirementDefinitionEndpoint:
     @pytest.mark.asyncio
     async def test_save_with_metadata_called_with_correct_trace_id(self):
         """Test that save_with_metadata is called with correct trace_id."""
-        with patch(
-            "app.api.v1.chat_endpoints.conversation_store"
-        ), patch(
-            "app.api.v1.chat_endpoints.ConversationMetadata"
-        ) as mock_metadata_class, patch(
-            "app.api.v1.chat_endpoints.get_conversation_service"
-        ) as mock_get_service:
+        with (
+            patch("app.api.v1.chat_endpoints.conversation_store"),
+            patch(
+                "app.api.v1.chat_endpoints.ConversationMetadata"
+            ) as mock_metadata_class,
+            patch(
+                "app.api.v1.chat_endpoints.get_conversation_service"
+            ) as mock_get_service,
+        ):
             mock_service = MagicMock()
             mock_service.save_with_metadata = AsyncMock(return_value=True)
             mock_get_service.return_value = mock_service
@@ -94,13 +98,15 @@ class TestRequirementDefinitionEndpoint:
     @pytest.mark.asyncio
     async def test_save_with_metadata_handles_none_trace_id(self):
         """Test that save_with_metadata handles None trace_id gracefully."""
-        with patch(
-            "app.api.v1.chat_endpoints.conversation_store"
-        ), patch(
-            "app.api.v1.chat_endpoints.ConversationMetadata"
-        ) as mock_metadata_class, patch(
-            "app.api.v1.chat_endpoints.get_conversation_service"
-        ) as mock_get_service:
+        with (
+            patch("app.api.v1.chat_endpoints.conversation_store"),
+            patch(
+                "app.api.v1.chat_endpoints.ConversationMetadata"
+            ) as mock_metadata_class,
+            patch(
+                "app.api.v1.chat_endpoints.get_conversation_service"
+            ) as mock_get_service,
+        ):
             mock_service = MagicMock()
             mock_service.save_with_metadata = AsyncMock(return_value=True)
             mock_get_service.return_value = mock_service
