@@ -22,28 +22,63 @@ providers:
   gemini:
     name: "Google Gemini"
     models:
-      - id: "gemini-2.0-flash"
-        name: "Gemini 2.0 Flash"
-        description: "Fast responses, good for conversational tasks"
+      - id: "gemini-2.5-flash"
+        name: "Gemini 2.5 Flash"
+        description: "Hybrid reasoning with 1M token context, balanced cost"
         context_window: 1000000
         cost_tier: "low"
-      - id: "gemini-1.5-pro"
-        name: "Gemini 1.5 Pro"
-        description: "Advanced reasoning and long context"
-        context_window: 2000000
+      - id: "gemini-2.5-flash-lite"
+        name: "Gemini 2.5 Flash-Lite"
+        description: "Cost-effective, high-volume tasks"
+        context_window: 1000000
+        cost_tier: "low"
+      - id: "gemini-2.5-pro"
+        name: "Gemini 2.5 Pro"
+        description: "Advanced reasoning and coding"
+        context_window: 1000000
         cost_tier: "medium"
+      - id: "gemini-2.0-flash"
+        name: "Gemini 2.0 Flash"
+        description: "Balanced multimodal model with 1M token context"
+        context_window: 1000000
+        cost_tier: "low"
 
   gpt:
     name: "OpenAI GPT"
     models:
-      - id: "gpt-4o"
-        name: "GPT-4o"
-        description: "Most capable model"
+      - id: "gpt-5.1"
+        name: "GPT-5.1"
+        description: "Latest frontier model, adaptive reasoning, improved instruction adherence"
         context_window: 128000
         cost_tier: "high"
+      - id: "gpt-5.1-mini"
+        name: "GPT-5.1 Mini"
+        description: "Smaller GPT-5.1, balanced performance"
+        context_window: 128000
+        cost_tier: "medium"
+      - id: "gpt-4.1"
+        name: "GPT-4.1"
+        description: "Best for coding and instruction following, 1M context"
+        context_window: 1000000
+        cost_tier: "medium"
+      - id: "gpt-4.1-mini"
+        name: "GPT-4.1 Mini"
+        description: "Fast and capable, 1M context"
+        context_window: 1000000
+        cost_tier: "low"
+      - id: "gpt-4.1-nano"
+        name: "GPT-4.1 Nano"
+        description: "Fast, affordable, good for classification/autocomplete"
+        context_window: 1000000
+        cost_tier: "low"
+      - id: "gpt-4o"
+        name: "GPT-4o"
+        description: "Multimodal (text + image + audio), legacy"
+        context_window: 128000
+        cost_tier: "medium"
       - id: "gpt-4o-mini"
         name: "GPT-4o Mini"
-        description: "Fast and affordable"
+        description: "Fast and affordable multimodal"
         context_window: 128000
         cost_tier: "low"
 
@@ -54,7 +89,10 @@ settings_categories:
     name: "Chat & Conversation"
     description: "Models for conversational interactions"
     recommended_models:
+      - "gemini-2.5-flash"
       - "gemini-2.0-flash"
+      - "gpt-5.1-mini"
+      - "gpt-4.1-mini"
       - "claude-haiku-4-5"
     settings:
       - key: "CHAT_CLARIFICATION_MODEL"
@@ -76,6 +114,9 @@ settings_categories:
     recommended_models:
       - "claude-haiku-4-5"
       - "claude-sonnet-4-20250514"
+      - "gpt-5.1"
+      - "gpt-4.1"
+      - "gemini-2.5-pro"
     settings:
       - key: "JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL"
         name: "Requirement Analysis Model"
@@ -100,6 +141,9 @@ settings_categories:
     recommended_models:
       - "claude-haiku-4-5"
       - "claude-sonnet-4-20250514"
+      - "gpt-5.1"
+      - "gpt-4.1"
+      - "gemini-2.5-pro"
     settings:
       - key: "WORKFLOW_GENERATOR_MODEL"
         name: "Workflow Generator Model"
