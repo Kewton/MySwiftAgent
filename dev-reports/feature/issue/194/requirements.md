@@ -1,6 +1,7 @@
 # Issue #194: Langfuse Trace not found エラーの長期対応 - 要件定義書
 
 > 作成日: 2025-12-08
+> 更新日: 2025-12-11
 > Issue: [#194](https://github.com/kewton/MySwiftAgent/issues/194)
 > ステータス: 要件定義完了
 
@@ -8,20 +9,42 @@
 
 ## 調査結果サマリー
 
-### 発見した根本原因（Issue #194の元の分析を補完）
+### 発見した根本原因（2025-12-11 詳細調査）
 
 | 原因 | 詳細 | 該当コード |
 |------|------|-----------|
-| **ストレージ不整合** ⭐ | チャットAPI：インメモリ / Diagnostics API：Valkey | `chat_endpoints.py:35`, `diagnostic_endpoints.py:21` |
+| **save_with_metadata()未使用** ⭐ | 定義済みだが呼び出されていない | `conversation_service.py:118-160` |
+| **save_message()のみ使用** | メタデータ(trace_id)が保存されない | `chat_endpoints.py:88-90, 122-124` |
 | デモデータのフェイクURL | Issue記載通り | `+page.svelte:111` |
 | Langfuse APIキー未設定時 | Issue記載通り | `langfuse_service.py:52-59` |
 
-### コード調査結果
+### コード調査結果（2025-12-11更新）
 
-| ファイル | 使用ストレージ | 永続化 |
-|---------|--------------|--------|
-| `expertAgent/app/api/v1/chat_endpoints.py:35` | `conversation_store`（インメモリ） | ❌ サーバー再起動で消失 |
-| `expertAgent/app/api/v1/diagnostic_endpoints.py:21` | `ConversationStoreValkey` | ✅ Valkey永続化 |
+| ファイル | 行番号 | 問題点 |
+|---------|--------|--------|
+| `expertAgent/app/api/v1/chat_endpoints.py` | 88-90, 122-124 | `save_message()`のみ使用、trace_id未保存 |
+| `expertAgent/app/services/conversation_service.py` | 118-160 | `save_with_metadata()`定義済みだが未呼び出し |
+| `expertAgent/app/services/conversation_service.py` | 280-285 | trace_urlの生成ロジック（trace_id必須） |
+| `expertAgent/app/stores/conversation_store_valkey.py` | 97-108 | メタデータ保存処理（trace_id対応済み） |
+| `myAgentDesk/src/routes/mlops/diagnostics/+page.svelte` | 62-70, 111 | デモデータフォールバック |
+
+### 根本原因フロー図
+
+```
+chat_endpoints.py → save_message() のみ使用
+                 ↓
+        trace_id がメタデータに含まれない
+                 ↓
+        Valkey に trace_id が保存されない
+                 ↓
+        ConversationService._build_diagnostic_info() で trace_url = None
+                 ↓
+        Diagnostics API で trace_url = None
+                 ↓
+        フロントエンドがデモデータにフォールバック
+                 ↓
+        "Trace not found" エラー
+```
 
 ### Phase優先度の提案
 
