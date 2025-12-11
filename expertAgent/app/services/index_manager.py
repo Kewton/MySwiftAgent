@@ -116,9 +116,7 @@ class IndexManager:
             await self._add_to_set(key, conversation_id)
             indexes_added += 1
 
-        logger.debug(
-            f"Added conversation {conversation_id} to {indexes_added} indexes"
-        )
+        logger.debug(f"Added conversation {conversation_id} to {indexes_added} indexes")
         return indexes_added
 
     async def remove_from_indexes(
@@ -370,10 +368,7 @@ class IndexManager:
                 return set()
 
             members = await client.smembers(key)  # type: ignore[misc]
-            return {
-                m.decode("utf-8") if isinstance(m, bytes) else m
-                for m in members
-            }
+            return {m.decode("utf-8") if isinstance(m, bytes) else m for m in members}
         except Exception as e:
             logger.error(f"Failed to get set members for {key}: {e}")
             return set()

@@ -20,9 +20,7 @@ class TestConfidenceCalculator:
         """Create ConfidenceCalculator instance."""
         return ConfidenceCalculator()
 
-    def test_calculate_returns_float(
-        self, calculator: ConfidenceCalculator
-    ) -> None:
+    def test_calculate_returns_float(self, calculator: ConfidenceCalculator) -> None:
         """Test that calculate returns a float."""
         result = calculator.calculate(
             keywords=["集計"],
@@ -31,9 +29,7 @@ class TestConfidenceCalculator:
         )
         assert isinstance(result, float)
 
-    def test_confidence_in_valid_range(
-        self, calculator: ConfidenceCalculator
-    ) -> None:
+    def test_confidence_in_valid_range(self, calculator: ConfidenceCalculator) -> None:
         """Test that confidence is always between 0.0 and 1.0."""
         result = calculator.calculate(
             keywords=["集計", "CSV"],
@@ -100,9 +96,7 @@ class TestConfidenceCalculator:
         )
         assert 0.0 <= result <= 1.0
 
-    def test_empty_message_confidence(
-        self, calculator: ConfidenceCalculator
-    ) -> None:
+    def test_empty_message_confidence(self, calculator: ConfidenceCalculator) -> None:
         """Test confidence calculation with empty message."""
         result = calculator.calculate(
             keywords=[],

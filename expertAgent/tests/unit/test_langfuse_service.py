@@ -34,7 +34,9 @@ class TestLangfuseService:
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
         # Mock get_connection_config to return the host (myVault or fallback)
-        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://localhost:3001"
+        )
 
         mock_client = Mock()
         mock_langfuse_class.return_value = mock_client
@@ -120,7 +122,10 @@ class TestLangfuseService:
             # First two calls (from _is_enabled): return valid keys
             # Third+ calls (from _initialize_client): raise ValueError
             if call_count[0] <= 2:
-                return {"LANGFUSE_PUBLIC_KEY": "pk-test", "LANGFUSE_SECRET_KEY": "sk-test"}[key]
+                return {
+                    "LANGFUSE_PUBLIC_KEY": "pk-test",
+                    "LANGFUSE_SECRET_KEY": "sk-test",
+                }[key]
             raise ValueError("Secret not found in myVault")
 
         mock_secrets_manager.get_secret.side_effect = get_secret_side_effect
@@ -153,7 +158,9 @@ class TestLangfuseService:
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
-        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://localhost:3001"
+        )
 
         mock_handler = Mock()
         mock_callback_handler_class.return_value = mock_handler
@@ -216,7 +223,9 @@ class TestLangfuseService:
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
-        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://localhost:3001"
+        )
 
         mock_callback_handler_class.side_effect = Exception("Handler creation error")
 
@@ -250,7 +259,9 @@ class TestLangfuseService:
             "LANGFUSE_PUBLIC_KEY": "pk-test-123",
             "LANGFUSE_SECRET_KEY": "sk-test-456",
         }[key]
-        mock_secrets_manager.get_connection_config.return_value = "http://localhost:3001"
+        mock_secrets_manager.get_connection_config.return_value = (
+            "http://localhost:3001"
+        )
 
         mock_handler = Mock()
         mock_callback_handler_class.return_value = mock_handler
@@ -562,7 +573,7 @@ class TestLangfuseService:
             service._client = Mock()
 
             # Mock flush method on the service instance to raise exception
-            with patch.object(service, 'flush', side_effect=Exception("Flush error")):
+            with patch.object(service, "flush", side_effect=Exception("Flush error")):
                 # Execute - should not raise error
                 service.shutdown()
                 # No assertion needed - just verify no exception
@@ -798,8 +809,11 @@ class TestCallbackHandlerWithMyVaultKeys:
     @patch("app.services.langfuse_service.secrets_manager")
     @patch("app.services.langfuse_service.CallbackHandler")
     def test_callback_handler_logs_partial_key(
-        self, mock_callback_handler_class, mock_secrets_manager, mock_settings_patch,
-        caplog
+        self,
+        mock_callback_handler_class,
+        mock_secrets_manager,
+        mock_settings_patch,
+        caplog,
     ):
         """Test CallbackHandler creation logs partial API key for debugging.
 
@@ -834,8 +848,9 @@ class TestCallbackHandlerWithMyVaultKeys:
             assert handler == mock_handler
             # Check that log contains masked key information
             log_messages = [record.message for record in caplog.records]
-            assert any("pk-lf-te" in msg for msg in log_messages), \
+            assert any("pk-lf-te" in msg for msg in log_messages), (
                 f"Expected partial key 'pk-lf-te' in logs, got: {log_messages}"
+            )
 
     @patch("app.services.langfuse_service.settings")
     @patch("app.services.langfuse_service.secrets_manager")

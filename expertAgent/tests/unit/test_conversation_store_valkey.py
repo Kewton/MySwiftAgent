@@ -54,9 +54,7 @@ class TestConversationStoreValkeyInit:
         with patch("app.stores.conversation_store_valkey.ValkeyClient") as mock_client:
             ConversationStoreValkey()
 
-            mock_client.assert_called_once_with(
-                host="localhost", port=6379, db=0
-            )
+            mock_client.assert_called_once_with(host="localhost", port=6379, db=0)
 
     @pytest.mark.unit
     def test_init_custom_values(self):
@@ -88,7 +86,9 @@ class TestConversationStoreValkeySave:
     """Test ConversationStoreValkey save operations."""
 
     @pytest.mark.unit
-    async def test_save_conversation(self, mock_valkey_client, sample_conversation_data):
+    async def test_save_conversation(
+        self, mock_valkey_client, sample_conversation_data
+    ):
         """Test saving a conversation."""
         with patch(
             "app.stores.conversation_store_valkey.ValkeyClient",
@@ -185,7 +185,9 @@ class TestConversationStoreValkeyGet:
             result = await store.get_conversation("test-conv-123")
 
             assert result == sample_conversation_data
-            mock_valkey_client.get.assert_awaited_once_with("conversation:test-conv-123")
+            mock_valkey_client.get.assert_awaited_once_with(
+                "conversation:test-conv-123"
+            )
 
     @pytest.mark.unit
     async def test_get_nonexistent_conversation(self, mock_valkey_client):
@@ -462,12 +464,15 @@ class TestConversationStoreValkeyListConversations:
         """Test listing all conversations with pagination."""
         mock_valkey_client._client = MagicMock()
         mock_valkey_client._client.scan = AsyncMock(
-            return_value=(0, [
-                b"conversation:conv-1",
-                b"conversation:conv-2",
-                b"conversation:conv-3",
-                b"conversation:conv-4",
-            ])
+            return_value=(
+                0,
+                [
+                    b"conversation:conv-1",
+                    b"conversation:conv-2",
+                    b"conversation:conv-3",
+                    b"conversation:conv-4",
+                ],
+            )
         )
         mock_valkey_client.get = AsyncMock(return_value=sample_conversation_data)
 

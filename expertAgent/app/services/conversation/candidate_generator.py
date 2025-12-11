@@ -11,7 +11,6 @@ Design decisions:
 """
 
 import logging
-import os
 from typing import Any, Dict, List, Literal
 
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.multi_candidate import (
@@ -26,6 +25,7 @@ from app.schemas.chat import (
     CandidateSelectionEvent,
     RequirementCandidate,
 )
+from core.secrets import get_model_config
 
 
 class CandidateGenerationError(Exception):
@@ -40,6 +40,7 @@ class CandidateGenerationError(Exception):
         super().__init__(message)
         self.message = message
         self.cause = cause
+
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,8 @@ async def _invoke_llm_for_candidates(
     ]
 
     try:
-        # Get model from environment
-        model_name = os.getenv("CANDIDATE_GENERATION_MODEL", "gemini-2.0-flash")
+        # Issue #269: Use get_model_config for MyVault-managed model settings
+        model_name = get_model_config("CANDIDATE_GENERATION_MODEL", "gemini-2.0-flash")
 
         # Invoke LLM with structured output
         result = await invoke_structured_llm(
@@ -138,9 +139,7 @@ async def _invoke_llm_for_candidates(
 
     except StructuredLLMError as e:
         logger.error(f"LLM candidate generation failed: {e}")
-        raise CandidateGenerationError(
-            f"LLM service unavailable: {e}", cause=e
-        ) from e
+        raise CandidateGenerationError(f"LLM service unavailable: {e}", cause=e) from e
 
 
 def _create_candidate_with_new_id(

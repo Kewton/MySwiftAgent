@@ -286,9 +286,7 @@ class TestGetConversationService:
             return config_map.get(key, kwargs.get("default"))
 
         with (
-            patch(
-                "app.api.v1.diagnostic_endpoints.secrets_manager"
-            ) as mock_secrets,
+            patch("app.api.v1.diagnostic_endpoints.secrets_manager") as mock_secrets,
             patch(
                 "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
             ) as mock_store_class,
@@ -339,18 +337,12 @@ class TestGetConversationServiceSuccess:
             return config_map.get(key, kwargs.get("default"))
 
         with (
-            patch(
-                "app.api.v1.diagnostic_endpoints.secrets_manager"
-            ) as mock_secrets,
+            patch("app.api.v1.diagnostic_endpoints.secrets_manager") as mock_secrets,
             patch(
                 "app.api.v1.diagnostic_endpoints.ConversationStoreValkey"
             ) as mock_store_class,
-            patch(
-                "app.api.v1.diagnostic_endpoints.ValkeyClient"
-            ) as mock_client_class,
-            patch(
-                "app.api.v1.diagnostic_endpoints.IndexManager"
-            ) as mock_index_class,
+            patch("app.api.v1.diagnostic_endpoints.ValkeyClient") as mock_client_class,
+            patch("app.api.v1.diagnostic_endpoints.IndexManager") as mock_index_class,
         ):
             mock_secrets.get_connection_config.side_effect = get_config_side_effect
 

@@ -99,9 +99,7 @@ class TestSecretsManager:
                 "GOOGLE_API_KEY": "myvault-google",
             }
 
-    def test_get_secrets_for_project_myvault_error_fallback(
-        self, manager_with_myvault
-    ):
+    def test_get_secrets_for_project_myvault_error_fallback(self, manager_with_myvault):
         """Test get_secrets_for_project falls back to env vars on MyVault error."""
         # Make _resolve_default_project raise MyVaultError
         with patch.object(
@@ -205,14 +203,15 @@ class TestSecretsManager:
             result = manager_with_myvault._resolve_default_project()
             assert result == "api-project"
 
-    def test_resolve_default_project_no_client_raises_error(
-        self, manager_with_myvault
-    ):
+    def test_resolve_default_project_no_client_raises_error(self, manager_with_myvault):
         """Test _resolve_default_project raises error when no client."""
         manager_with_myvault.myvault_client = None
 
         with patch.object(manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", ""):
-            with pytest.raises(MyVaultError, match="No default project found in MyVault or environment variables"):
+            with pytest.raises(
+                MyVaultError,
+                match="No default project found in MyVault or environment variables",
+            ):
                 manager_with_myvault._resolve_default_project()
 
     def test_resolve_default_project_not_found_raises_error(self, manager_with_myvault):
@@ -220,7 +219,10 @@ class TestSecretsManager:
         manager_with_myvault.myvault_client.get_default_project.return_value = None
 
         with patch.object(manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", ""):
-            with pytest.raises(MyVaultError, match="No default project found in MyVault or environment variables"):
+            with pytest.raises(
+                MyVaultError,
+                match="No default project found in MyVault or environment variables",
+            ):
                 manager_with_myvault._resolve_default_project()
 
     def test_get_all_env_secrets(self, manager_without_myvault):
@@ -347,9 +349,7 @@ class TestResolveRuntimeValue:
 
         result = resolve_runtime_value("OPENAI_API_KEY")
         assert result == "secret-value"
-        mock_manager.get_secret.assert_called_once_with(
-            "OPENAI_API_KEY", project=None
-        )
+        mock_manager.get_secret.assert_called_once_with("OPENAI_API_KEY", project=None)
 
     def test_resolve_with_project(self, mock_secrets_manager):
         """Test resolve_runtime_value with project parameter."""
@@ -452,7 +452,9 @@ class TestProjectSpecificationBehavior:
         """Test: API default未設定時は環境変数MYVAULT_DEFAULT_PROJECTを使用."""
         # Mock get_default_project to return None (no default in API)
         manager_with_myvault.myvault_client.get_default_project.return_value = None
-        manager_with_myvault.myvault_client.get_secret.return_value = "env-default-value"
+        manager_with_myvault.myvault_client.get_secret.return_value = (
+            "env-default-value"
+        )
 
         with patch.object(
             manager_with_myvault.settings, "MYVAULT_DEFAULT_PROJECT", "env_default_proj"
@@ -498,6 +500,7 @@ class TestProjectSpecificationBehavior:
 
     def test_different_projects_return_different_secrets(self, manager_with_myvault):
         """Test: 異なるProjectは異なるsecretsを返す."""
+
         # Setup mock to return different values based on project
         def mock_get_secret(project, key):
             if project == "project_a":

@@ -1,0 +1,39 @@
+{
+  "issue_number": 269,
+  "refactor_targets": [
+    "expertAgent/core/secrets.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+    "expertAgent/app/services/conversation/llm_service.py",
+    "expertAgent/app/services/conversation/candidate_generator.py",
+    "commonUI/core/model_settings.py",
+    "commonUI/pages/3_🔐_MyVault.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90,
+    "complexity_score": 10
+  },
+  "design_patterns_to_apply": [
+    "Caching Pattern - improve get_model_config() caching",
+    "Configuration Object Pattern - centralize model settings management",
+    "Dependency Injection - for testability"
+  ],
+  "improvement_goals": [
+    "コードの重複を削減",
+    "型アノテーションの追加・改善",
+    "ドキュメンテーションの追加",
+    "エラーハンドリングの改善"
+  ],
+  "completed_phases": {
+    "tdd": {
+      "status": "success",
+      "coverage": 90,
+      "tests_passed": 24,
+      "tests_failed": 0
+    },
+    "acceptance": {
+      "status": "passed",
+      "pytest_passed": 6,
+      "l3_commands_passed": 3
+    }
+  }
+}

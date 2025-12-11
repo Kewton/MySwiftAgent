@@ -65,9 +65,7 @@ class DiagnosticInfo(BaseModel):
         ),
         description="Langfuse trace link",
     )
-    prompt_version: Optional[str] = Field(
-        None, description="Prompt version used"
-    )
+    prompt_version: Optional[str] = Field(None, description="Prompt version used")
     created_at: Optional[datetime] = Field(
         None, description="Conversation creation timestamp"
     )
@@ -114,9 +112,7 @@ class DiagnosticListResponse(BaseModel):
     total: int = Field(0, description="Total number of matching items", ge=0)
     limit: int = Field(100, description="Limit used in the query", ge=1)
     offset: int = Field(0, description="Offset used in the query", ge=0)
-    has_more: bool = Field(
-        False, description="Whether there are more items available"
-    )
+    has_more: bool = Field(False, description="Whether there are more items available")
 
 
 class DiagnosticSummary(BaseModel):
@@ -124,9 +120,7 @@ class DiagnosticSummary(BaseModel):
 
     total_conversations: int = Field(0, description="Total number of conversations")
     total_tokens: int = Field(0, description="Total tokens used across conversations")
-    average_tokens: float = Field(
-        0.0, description="Average tokens per conversation"
-    )
+    average_tokens: float = Field(0.0, description="Average tokens per conversation")
     unique_users: int = Field(0, description="Number of unique users")
     unique_jobs: int = Field(0, description="Number of unique jobs")
     date_range_start: Optional[datetime] = Field(

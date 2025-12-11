@@ -475,7 +475,9 @@ class TestABTestReport:
         """Test creating a valid report."""
         metrics = [
             ABTestMetrics(variant_name="control", sample_size=50, mean=0.8, std=0.1),
-            ABTestMetrics(variant_name="treatment", sample_size=50, mean=0.85, std=0.12),
+            ABTestMetrics(
+                variant_name="treatment", sample_size=50, mean=0.85, std=0.12
+            ),
         ]
         t_test = TTestResult(
             t_statistic=2.5, p_value=0.014, degrees_of_freedom=98, is_significant=True

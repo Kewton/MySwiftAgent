@@ -143,7 +143,9 @@ class TestPromptListResponseSchema:
     def test_prompt_list_response_with_multiple_items(self) -> None:
         """Test PromptListResponse with multiple templates."""
         templates = [
-            PromptTemplate(id=f"prompt_{i}", name=f"Prompt {i}", current_version=1, versions=[])
+            PromptTemplate(
+                id=f"prompt_{i}", name=f"Prompt {i}", current_version=1, versions=[]
+            )
             for i in range(5)
         ]
         response = PromptListResponse(

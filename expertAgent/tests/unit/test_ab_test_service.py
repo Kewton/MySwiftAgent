@@ -276,9 +276,7 @@ class TestVariantAssignment:
         """Test assigning variant to session."""
         test = await ab_service.create_test(sample_config)
 
-        assignment, is_new = await ab_service.assign_variant(
-            test.id, "session-123"
-        )
+        assignment, is_new = await ab_service.assign_variant(test.id, "session-123")
 
         assert is_new is True
         assert assignment.test_id == test.id
@@ -373,9 +371,7 @@ class TestMetricsCollection:
         test = await ab_service.create_test(sample_config)
 
         with pytest.raises(ABTestServiceError, match="No assignment found"):
-            await ab_service.collect_metric(
-                test.id, "unassigned-session", value=0.85
-            )
+            await ab_service.collect_metric(test.id, "unassigned-session", value=0.85)
 
     @pytest.mark.unit
     async def test_get_variant_metrics(self, ab_service: ABTestService, sample_config):
@@ -384,9 +380,7 @@ class TestMetricsCollection:
 
         # Assign and collect metrics for multiple sessions
         for i in range(10):
-            assignment, _ = await ab_service.assign_variant(
-                test.id, f"session-{i}"
-            )
+            assignment, _ = await ab_service.assign_variant(test.id, f"session-{i}")
             # Control gets lower scores, treatment gets higher
             value = 0.7 if assignment.variant_name == "control" else 0.9
             await ab_service.collect_metric(test.id, f"session-{i}", value)
@@ -518,8 +512,13 @@ class TestStatisticalAnalysis:
     @pytest.mark.unit
     def test_interpret_effect_size(self, ab_service: ABTestService):
         """Test effect size interpretation."""
-        assert ab_service.interpret_effect_size(0.1) == EffectSizeInterpretation.NEGLIGIBLE
-        assert ab_service.interpret_effect_size(-0.1) == EffectSizeInterpretation.NEGLIGIBLE
+        assert (
+            ab_service.interpret_effect_size(0.1) == EffectSizeInterpretation.NEGLIGIBLE
+        )
+        assert (
+            ab_service.interpret_effect_size(-0.1)
+            == EffectSizeInterpretation.NEGLIGIBLE
+        )
         assert ab_service.interpret_effect_size(0.3) == EffectSizeInterpretation.SMALL
         assert ab_service.interpret_effect_size(0.6) == EffectSizeInterpretation.MEDIUM
         assert ab_service.interpret_effect_size(1.0) == EffectSizeInterpretation.LARGE
@@ -671,9 +670,7 @@ class TestReportGeneration:
         """Test report with no data."""
         test = await ab_service.create_test(sample_config)
 
-        report = await ab_service.generate_report(
-            test.id, ABTestReportRequest()
-        )
+        report = await ab_service.generate_report(test.id, ABTestReportRequest())
 
         assert len(report.metrics) == 0
         assert report.t_test_result is None
@@ -708,7 +705,7 @@ class TestHelperMethods:
         values = [2, 4, 4, 4, 5, 5, 7, 9]
         var = ab_service._variance(values)
         std = ab_service._std(values)
-        assert var == pytest.approx(std ** 2, rel=0.01)
+        assert var == pytest.approx(std**2, rel=0.01)
 
     @pytest.mark.unit
     def test_calculate_variant_metrics(self, ab_service: ABTestService):
@@ -762,9 +759,7 @@ class TestValkeyIntegration:
 
         service = ABTestService(use_valkey=True)
 
-        with patch(
-            "app.services.ab_test_service.ValkeyClient"
-        ) as MockValkeyClient:
+        with patch("app.services.ab_test_service.ValkeyClient") as MockValkeyClient:
             mock_client = MagicMock()
             mock_client.connect = AsyncMock(
                 side_effect=ValkeyConnectionError("Connection failed")
@@ -781,9 +776,7 @@ class TestValkeyIntegration:
         """Test operations work with memory fallback when Valkey fails."""
         service = ABTestService(use_valkey=True)
 
-        with patch.object(
-            service, "_get_valkey_client", return_value=None
-        ):
+        with patch.object(service, "_get_valkey_client", return_value=None):
             # Create should still work with memory
             test = await service.create_test(sample_config)
             assert test.id is not None

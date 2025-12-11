@@ -50,10 +50,10 @@ class TestValkeyClientPerformance:
         elapsed = (time.perf_counter() - start_time) * 1000  # Convert to ms
 
         avg_time = elapsed / num_writes
-        assert (
-            avg_time < 50
-        ), f"Average write took {avg_time:.2f}ms, expected <50ms"
-        print(f"\nBulk write: {num_writes} ops in {elapsed:.2f}ms (avg: {avg_time:.2f}ms/op)")
+        assert avg_time < 50, f"Average write took {avg_time:.2f}ms, expected <50ms"
+        print(
+            f"\nBulk write: {num_writes} ops in {elapsed:.2f}ms (avg: {avg_time:.2f}ms/op)"
+        )
 
     async def test_bulk_read_performance(self, valkey_test_client: ValkeyClient):
         """Test bulk read operations (100 reads) performance."""
@@ -70,10 +70,10 @@ class TestValkeyClientPerformance:
         elapsed = (time.perf_counter() - start_time) * 1000  # Convert to ms
 
         avg_time = elapsed / num_reads
-        assert (
-            avg_time < 50
-        ), f"Average read took {avg_time:.2f}ms, expected <50ms"
-        print(f"\nBulk read: {num_reads} ops in {elapsed:.2f}ms (avg: {avg_time:.2f}ms/op)")
+        assert avg_time < 50, f"Average read took {avg_time:.2f}ms, expected <50ms"
+        print(
+            f"\nBulk read: {num_reads} ops in {elapsed:.2f}ms (avg: {avg_time:.2f}ms/op)"
+        )
 
 
 @pytest.mark.integration
@@ -95,9 +95,7 @@ class TestConversationStorePerformance:
         )
         elapsed = (time.perf_counter() - start_time) * 1000  # Convert to ms
 
-        assert (
-            elapsed < 50
-        ), f"Save conversation took {elapsed:.2f}ms, expected <50ms"
+        assert elapsed < 50, f"Save conversation took {elapsed:.2f}ms, expected <50ms"
         print(f"\nSave conversation: {elapsed:.2f}ms")
 
     async def test_get_conversation_performance(
@@ -116,9 +114,7 @@ class TestConversationStorePerformance:
         await conversation_store_test.get_conversation("perf-get-001")
         elapsed = (time.perf_counter() - start_time) * 1000  # Convert to ms
 
-        assert (
-            elapsed < 50
-        ), f"Get conversation took {elapsed:.2f}ms, expected <50ms"
+        assert elapsed < 50, f"Get conversation took {elapsed:.2f}ms, expected <50ms"
         print(f"\nGet conversation: {elapsed:.2f}ms")
 
     async def test_large_conversation_performance(

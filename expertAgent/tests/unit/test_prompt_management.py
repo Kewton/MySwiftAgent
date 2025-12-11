@@ -42,13 +42,15 @@ class TestPromptManagementServiceGetPrompts:
             prompt_dir = prompts_dir / prompt_name
             prompt_dir.mkdir()
             (prompt_dir / "default.yaml").write_text(
-                yaml.dump({
-                    "description": f"Description for {prompt_name}",
-                    "version": "1.0",
-                    "agent_type": "test",
-                    "purpose": f"Purpose for {prompt_name}",
-                    "system_prompt": f"System prompt for {prompt_name}",
-                }),
+                yaml.dump(
+                    {
+                        "description": f"Description for {prompt_name}",
+                        "version": "1.0",
+                        "agent_type": "test",
+                        "purpose": f"Purpose for {prompt_name}",
+                        "system_prompt": f"System prompt for {prompt_name}",
+                    }
+                ),
                 encoding="utf-8",
             )
 
@@ -137,13 +139,15 @@ class TestPromptManagementServiceGetPrompt:
         prompt_dir = prompts_dir / "requirement_clarification"
         prompt_dir.mkdir()
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({
-                "description": "Requirement clarification prompt",
-                "version": "1.0",
-                "agent_type": "jobTaskGeneratorAgents",
-                "purpose": "Guide users through job requirement clarification",
-                "system_prompt": "System prompt content here...",
-            }),
+            yaml.dump(
+                {
+                    "description": "Requirement clarification prompt",
+                    "version": "1.0",
+                    "agent_type": "jobTaskGeneratorAgents",
+                    "purpose": "Guide users through job requirement clarification",
+                    "system_prompt": "System prompt content here...",
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -206,11 +210,13 @@ class TestPromptManagementServiceGetPrompt:
         prompt_dir.mkdir()
 
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({
-                "description": "Test description",
-                "system_prompt": "This is the system prompt content",
-                "version": "1.0",
-            }),
+            yaml.dump(
+                {
+                    "description": "Test description",
+                    "system_prompt": "This is the system prompt content",
+                    "version": "1.0",
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -221,7 +227,10 @@ class TestPromptManagementServiceGetPrompt:
         assert result is not None
         assert len(result.versions) == 1
         assert result.versions[0].content is not None
-        assert "system_prompt" in result.versions[0].content or "This is" in result.versions[0].content
+        assert (
+            "system_prompt" in result.versions[0].content
+            or "This is" in result.versions[0].content
+        )
 
 
 class TestPromptManagementServiceHelpers:
@@ -418,10 +427,12 @@ class TestPromptManagementServiceEdgeCases:
 
         # YAML with purpose instead of description
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({
-                "purpose": "This is the purpose",
-                "system_prompt": "test content",
-            }),
+            yaml.dump(
+                {
+                    "purpose": "This is the purpose",
+                    "system_prompt": "test content",
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -507,10 +518,12 @@ class TestPromptManagementServiceEdgeCases:
         prompt_dir.mkdir()
 
         (prompt_dir / "default.yaml").write_text(
-            yaml.dump({
-                "system_prompt": "test",
-                "agent_type": "jobTaskGeneratorAgents",
-            }),
+            yaml.dump(
+                {
+                    "system_prompt": "test",
+                    "agent_type": "jobTaskGeneratorAgents",
+                }
+            ),
             encoding="utf-8",
         )
 

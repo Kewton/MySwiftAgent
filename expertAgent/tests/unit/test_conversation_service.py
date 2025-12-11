@@ -192,7 +192,11 @@ class TestConversationServiceListDiagnostics:
 
     @pytest.mark.unit
     async def test_list_diagnostics_with_results(
-        self, conversation_service, mock_store, mock_index_manager, sample_conversation_data
+        self,
+        conversation_service,
+        mock_store,
+        mock_index_manager,
+        sample_conversation_data,
     ):
         """Test listing with matching conversations."""
         query = DiagnosticListQuery(job_id="job-789")
@@ -208,7 +212,11 @@ class TestConversationServiceListDiagnostics:
 
     @pytest.mark.unit
     async def test_list_diagnostics_pagination(
-        self, conversation_service, mock_store, mock_index_manager, sample_conversation_data
+        self,
+        conversation_service,
+        mock_store,
+        mock_index_manager,
+        sample_conversation_data,
     ):
         """Test pagination of results."""
         query = DiagnosticListQuery(limit=1, offset=0, job_id="job-789")
@@ -226,7 +234,11 @@ class TestConversationServiceListDiagnostics:
 
     @pytest.mark.unit
     async def test_list_diagnostics_with_offset(
-        self, conversation_service, mock_store, mock_index_manager, sample_conversation_data
+        self,
+        conversation_service,
+        mock_store,
+        mock_index_manager,
+        sample_conversation_data,
     ):
         """Test pagination with offset."""
         query = DiagnosticListQuery(limit=10, offset=2, job_id="job-789")
@@ -623,9 +635,7 @@ class TestConversationServiceGetFilteredConversationIds:
         assert result == []
 
     @pytest.mark.unit
-    async def test_get_filtered_ids_with_filters(
-        self, mock_store, mock_index_manager
-    ):
+    async def test_get_filtered_ids_with_filters(self, mock_store, mock_index_manager):
         """Test getting filtered IDs with filters uses intersection."""
         service = ConversationService(
             store=mock_store,

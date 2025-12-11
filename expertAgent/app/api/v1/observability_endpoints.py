@@ -334,10 +334,7 @@ async def stream_dashboard_metrics(
                 current_time = asyncio.get_event_loop().time()
 
                 # Check if it's time for metrics update
-                if (
-                    current_time - last_update_time
-                    >= service.update_interval_seconds
-                ):
+                if current_time - last_update_time >= service.update_interval_seconds:
                     try:
                         metrics_event = await service.generate_metrics_event(
                             is_initial=False

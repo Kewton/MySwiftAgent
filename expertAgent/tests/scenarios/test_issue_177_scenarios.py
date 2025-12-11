@@ -32,8 +32,7 @@ pytestmark = pytest.mark.integration
 # Skip all tests if running in CI without API keys
 SKIP_REASON = "Skipped: requires ANTHROPIC_API_KEY for LLM invocation"
 requires_api_key = pytest.mark.skipif(
-    os.environ.get("CI") == "true"
-    and not os.environ.get("ANTHROPIC_API_KEY_REAL"),
+    os.environ.get("CI") == "true" and not os.environ.get("ANTHROPIC_API_KEY_REAL"),
     reason=SKIP_REASON,
 )
 

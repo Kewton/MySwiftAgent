@@ -48,9 +48,7 @@ class TestKeywordAnalyzer:
         assert "API" in result
         assert "連携" in result
 
-    def test_empty_message_returns_empty_list(
-        self, analyzer: KeywordAnalyzer
-    ) -> None:
+    def test_empty_message_returns_empty_list(self, analyzer: KeywordAnalyzer) -> None:
         """Test that empty message returns empty keyword list."""
         result = analyzer.extract_keywords("")
         assert result == []

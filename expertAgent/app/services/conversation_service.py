@@ -177,14 +177,16 @@ class ConversationService:
             return []
 
         # Check if any filters are specified
-        has_filters = any([
-            query.job_id,
-            query.user_id,
-            query.project_id,
-            query.workflow_id,
-            query.start_date,
-            query.end_date,
-        ])
+        has_filters = any(
+            [
+                query.job_id,
+                query.user_id,
+                query.project_id,
+                query.workflow_id,
+                query.start_date,
+                query.end_date,
+            ]
+        )
 
         if not has_filters:
             # No filters - return all conversations (limited by scan)
@@ -278,11 +280,7 @@ class ConversationService:
         trace_id = metadata.get("trace_id")
         langfuse_link = LangfuseLink(
             trace_id=trace_id,
-            trace_url=(
-                f"{self._langfuse_host}/trace/{trace_id}"
-                if trace_id
-                else None
-            ),
+            trace_url=(f"{self._langfuse_host}/trace/{trace_id}" if trace_id else None),
             session_id=metadata.get("session_id"),
         )
 

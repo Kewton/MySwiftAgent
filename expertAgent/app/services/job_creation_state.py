@@ -33,7 +33,9 @@ DEFAULT_KEY_PREFIX = "job:creation:"
 T = TypeVar("T")
 
 
-def deprecated_sync_method(async_method_name: str) -> Callable[[Callable[..., T]], Callable[..., T]]:
+def deprecated_sync_method(
+    async_method_name: str,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator to mark sync methods as deprecated with consistent warnings.
 
     Args:

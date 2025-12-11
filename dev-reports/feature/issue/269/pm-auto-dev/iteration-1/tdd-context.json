@@ -1,0 +1,194 @@
+{
+  "issue_number": 269,
+  "title": "feat: LLMモデル設定をmyVaultで管理しcommonUIから設定可能にする",
+  "acceptance_criteria": [
+    "myVaultでLLMモデル設定が管理されている",
+    "commonUIからモデル設定を変更できる",
+    "設定変更後、サービス再起動なしで新しいモデルが使用される",
+    "デフォルト値が適切にフォールバックされる",
+    "単体テストカバレッジ90%以上"
+  ],
+  "implementation_tasks": [
+    "Phase 1.1: myVault側 - モデル設定初期登録スクリプト作成",
+    "Phase 1.2: expertAgent側 - 共通ヘルパー関数追加・修正",
+    "Phase 1.3: commonUI側 - モデル設定管理画面作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1.1",
+      "description": "モデル設定初期登録スクリプト作成",
+      "estimated_hours": 1.5,
+      "deliverables": ["scripts/init-model-settings.sh"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.1.2",
+      "description": "初期値登録・確認",
+      "estimated_hours": 0.5,
+      "deliverables": ["myVaultに8つのシークレット登録完了"],
+      "dependencies": ["1.1.1"]
+    },
+    {
+      "task_id": "1.2.1",
+      "description": "共通ヘルパー関数追加 (get_model_config)",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/core/secrets.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2.2",
+      "description": "llm_invocation.py修正",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py"],
+      "dependencies": ["1.2.1"]
+    },
+    {
+      "task_id": "1.2.3",
+      "description": "llm_service.py修正",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/app/services/conversation/llm_service.py"],
+      "dependencies": ["1.2.1"]
+    },
+    {
+      "task_id": "1.2.4",
+      "description": "candidate_generator.py修正",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/app/services/conversation/candidate_generator.py"],
+      "dependencies": ["1.2.1"]
+    },
+    {
+      "task_id": "1.2.5",
+      "description": "静的解析・フォーマット",
+      "estimated_hours": 1,
+      "deliverables": ["Ruff/MyPyエラーゼロ"],
+      "dependencies": ["1.2.2", "1.2.3", "1.2.4"]
+    },
+    {
+      "task_id": "1.2.6",
+      "description": "expertAgent単体テスト追加",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/test_model_config.py"],
+      "dependencies": ["1.2.1"]
+    },
+    {
+      "task_id": "1.3.1",
+      "description": "available_models.yaml作成",
+      "estimated_hours": 1,
+      "deliverables": ["commonUI/config/available_models.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3.2",
+      "description": "モデル設定ローダー実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["commonUI/core/model_settings.py"],
+      "dependencies": ["1.3.1"]
+    },
+    {
+      "task_id": "1.3.3",
+      "description": "モデル設定タブUI実装",
+      "estimated_hours": 3,
+      "deliverables": ["commonUI/pages/3_🔐_MyVault.py"],
+      "dependencies": ["1.3.2"]
+    },
+    {
+      "task_id": "1.3.4",
+      "description": "設定保存・キャッシュリロード連携",
+      "estimated_hours": 1.5,
+      "deliverables": ["commonUI/pages/3_🔐_MyVault.py"],
+      "dependencies": ["1.3.3"]
+    },
+    {
+      "task_id": "1.3.5",
+      "description": "commonUI単体テスト追加",
+      "estimated_hours": 1,
+      "deliverables": ["commonUI/tests/test_model_settings.py"],
+      "dependencies": ["1.3.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "expertAgent結合テスト",
+      "estimated_hours": 2,
+      "deliverables": ["tests/integration/test_model_config_integration.py"],
+      "dependencies": ["1.2.6"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "commonUI結合テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["commonUI/tests/integration/test_myvault_model_settings.py"],
+      "dependencies": ["1.3.5"]
+    }
+  ],
+  "deliverables_checklist": [
+    "scripts/init-model-settings.sh",
+    "expertAgent/core/secrets.py (修正)",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py (修正)",
+    "expertAgent/app/services/conversation/llm_service.py (修正)",
+    "expertAgent/app/services/conversation/candidate_generator.py (修正)",
+    "commonUI/config/available_models.yaml (新規)",
+    "commonUI/core/model_settings.py (新規)",
+    "commonUI/pages/3_🔐_MyVault.py (修正)",
+    "expertAgent/tests/unit/test_model_config.py (新規)",
+    "tests/integration/test_model_config_integration.py (新規)",
+    "commonUI/tests/test_model_settings.py (新規)"
+  ],
+  "definition_of_done": [
+    "すべてのタスク（Phase 1-4）が完了",
+    "単体テストカバレッジ90%以上（expertAgent, commonUI）",
+    "結合テストカバレッジ50%以上",
+    "L3受入テスト全パス",
+    "静的解析エラーゼロ（Ruff, MyPy）",
+    "./scripts/pre-push-check-all.sh パス",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "model_settings_to_migrate": [
+    {
+      "key": "CHAT_CLARIFICATION_MODEL",
+      "default_value": "gemini-2.0-flash",
+      "purpose": "要件定義チャット"
+    },
+    {
+      "key": "CANDIDATE_GENERATION_MODEL",
+      "default_value": "gemini-2.0-flash",
+      "purpose": "候補生成"
+    },
+    {
+      "key": "REQUIREMENT_EXTRACTION_MODEL",
+      "default_value": "gemini-2.0-flash",
+      "purpose": "要件抽出"
+    },
+    {
+      "key": "JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL",
+      "default_value": "claude-haiku-4-5",
+      "purpose": "Job Generator要件分析"
+    },
+    {
+      "key": "JOB_GENERATOR_EVALUATOR_MODEL",
+      "default_value": "claude-haiku-4-5",
+      "purpose": "Job Generator評価"
+    },
+    {
+      "key": "JOB_GENERATOR_INTERFACE_DEFINITION_MODEL",
+      "default_value": "claude-haiku-4-5",
+      "purpose": "Job Generatorインターフェース定義"
+    },
+    {
+      "key": "JOB_GENERATOR_VALIDATION_MODEL",
+      "default_value": "claude-haiku-4-5",
+      "purpose": "Job Generatorバリデーション"
+    },
+    {
+      "key": "WORKFLOW_GENERATOR_MODEL",
+      "default_value": "claude-haiku-4-5",
+      "purpose": "ワークフロー生成"
+    }
+  ],
+  "target_files": [
+    "expertAgent/core/secrets.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+    "expertAgent/app/services/conversation/llm_service.py",
+    "expertAgent/app/services/conversation/candidate_generator.py"
+  ]
+}

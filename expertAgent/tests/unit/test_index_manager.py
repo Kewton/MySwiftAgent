@@ -202,9 +202,7 @@ class TestIndexManagerGetByFilters:
     @pytest.mark.unit
     async def test_get_by_project_id(self, index_manager, mock_valkey_client):
         """Test getting conversations by project ID."""
-        mock_valkey_client._client.smembers = AsyncMock(
-            return_value={b"conv-1"}
-        )
+        mock_valkey_client._client.smembers = AsyncMock(return_value={b"conv-1"})
 
         result = await index_manager.get_by_project_id("project-101")
 
@@ -266,6 +264,7 @@ class TestIndexManagerIntersect:
         """Test intersection with multiple filters."""
         # Mock smembers to return different sets for different calls
         call_count = 0
+
         async def mock_smembers(key):
             nonlocal call_count
             call_count += 1
@@ -573,9 +572,7 @@ class TestIndexManagerIntersectExtended:
         self, index_manager, mock_valkey_client
     ):
         """Test intersection with all filters."""
-        mock_valkey_client._client.smembers = AsyncMock(
-            return_value={b"conv-1"}
-        )
+        mock_valkey_client._client.smembers = AsyncMock(return_value={b"conv-1"})
 
         start = datetime(2025, 1, 15, tzinfo=timezone.utc)
         end = datetime(2025, 1, 15, tzinfo=timezone.utc)
@@ -596,9 +593,7 @@ class TestIndexManagerStatsError:
     """Tests for index stats error handling."""
 
     @pytest.mark.unit
-    async def test_get_index_stats_exception(
-        self, index_manager, mock_valkey_client
-    ):
+    async def test_get_index_stats_exception(self, index_manager, mock_valkey_client):
         """Test getting index stats when keys() raises an exception."""
         mock_valkey_client._client.keys = AsyncMock(
             side_effect=Exception("Connection error")
