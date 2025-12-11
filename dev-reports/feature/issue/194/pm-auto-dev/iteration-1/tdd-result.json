@@ -1,0 +1,126 @@
+{
+  "status": "success",
+  "issue_number": 194,
+  "iteration": 1,
+  "timestamp": "2025-12-11T16:10:00+09:00",
+  "summary": {
+    "title": "Langfuse Trace not found - Long-term fix implementation",
+    "description": "Implemented TDD solution for Issue #194 to fix Langfuse trace_id not being saved to conversation metadata"
+  },
+  "tasks_completed": [
+    {
+      "task_id": "2.1",
+      "description": "Add LangfuseService.extract_trace_id() helper",
+      "status": "completed",
+      "files_modified": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/app/services/langfuse_service.py"
+      ],
+      "tests_added": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/tests/unit/test_langfuse_service.py"
+      ]
+    },
+    {
+      "task_id": "2.2",
+      "description": "Create ConversationService DI function in dependencies.py",
+      "status": "completed",
+      "files_created": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/app/api/v1/dependencies.py"
+      ],
+      "tests_added": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/tests/unit/test_dependencies.py"
+      ]
+    },
+    {
+      "task_id": "2.3",
+      "description": "Refactor chat_endpoints.py - use DI, replace save_message() with save_with_metadata()",
+      "status": "completed",
+      "files_modified": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/app/api/v1/chat_endpoints.py"
+      ],
+      "tests_added": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/tests/unit/test_chat_endpoints.py"
+      ]
+    },
+    {
+      "task_id": "2.4",
+      "description": "Propagate trace_id from llm_service.py",
+      "status": "completed",
+      "files_modified": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/app/services/conversation/llm_service.py"
+      ],
+      "tests_modified": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/expertAgent/tests/unit/test_llm_service_langfuse.py"
+      ]
+    },
+    {
+      "task_id": "1.1-1.3",
+      "description": "Frontend improvements - demo data detection and Langfuse link visibility",
+      "status": "completed",
+      "files_modified": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"
+      ],
+      "tests_added": [
+        "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/fix-issue-194/myAgentDesk/src/routes/mlops/diagnostics/page.test.ts"
+      ]
+    }
+  ],
+  "test_results": {
+    "expertAgent": {
+      "unit_tests": {
+        "passed": 1654,
+        "failed": 0,
+        "skipped": 36,
+        "total": 1690
+      },
+      "ruff_check": "passed",
+      "mypy_check": "not_run"
+    },
+    "myAgentDesk": {
+      "unit_tests": {
+        "passed": 155,
+        "failed": 0,
+        "skipped": 5,
+        "total": 160
+      }
+    }
+  },
+  "coverage": {
+    "estimate": "Target coverage maintained (90%+ for modified files)"
+  },
+  "changes_summary": {
+    "backend": {
+      "new_files": [
+        "expertAgent/app/api/v1/dependencies.py",
+        "expertAgent/tests/unit/test_dependencies.py",
+        "expertAgent/tests/unit/test_chat_endpoints.py"
+      ],
+      "modified_files": [
+        "expertAgent/app/services/langfuse_service.py - Added extract_trace_id() static method",
+        "expertAgent/app/services/conversation/llm_service.py - Return trace_id from stream and non-streaming functions",
+        "expertAgent/app/api/v1/chat_endpoints.py - Added _save_conversation_with_metadata() helper, capture trace_id from stream",
+        "expertAgent/tests/unit/test_langfuse_service.py - Added TestExtractTraceId test class",
+        "expertAgent/tests/unit/test_llm_service_langfuse.py - Added trace_id return tests, fixed return signature tests"
+      ]
+    },
+    "frontend": {
+      "new_files": [
+        "myAgentDesk/src/routes/mlops/diagnostics/page.test.ts"
+      ],
+      "modified_files": [
+        "myAgentDesk/src/routes/mlops/diagnostics/+page.svelte - Added isUsingDemoData flag, isValidLangfuseUrl() function, demo warning banner, conditional Langfuse link visibility"
+      ]
+    }
+  },
+  "key_improvements": [
+    "trace_id is now extracted from Langfuse CallbackHandler after LLM invocation",
+    "trace_id is yielded as a stream event and captured in chat endpoint",
+    "Conversation is saved with full metadata including trace_id to Valkey",
+    "Frontend detects demo data and shows warning banner",
+    "Langfuse link is hidden when URL contains /trace/demo",
+    "Disabled state shown for invalid trace URLs"
+  ],
+  "notes": [
+    "Integration tests (Task 2.7) require running services and should be tested separately",
+    "The fix ensures that clicking 'View in Langfuse' will navigate to actual traces, not demo URLs"
+  ]
+}

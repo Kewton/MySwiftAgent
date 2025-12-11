@@ -1,0 +1,49 @@
+{
+  "issue_number": 194,
+  "feature_summary": "Langfuse Trace not found エラーの長期対応",
+  "acceptance_criteria": [
+    "デモデータ使用時、「View in Langfuse」リンクが非表示",
+    "実際の会話データがValkeyに保存され、Diagnostics APIで取得可能",
+    "Langfuseに正しいトレースが生成され、リンクから確認可能",
+    "Langfuse連携の設定ガイドがドキュメント化されている"
+  ],
+  "labels": ["bug", "enhancement"],
+  "target_project": "expertAgent,myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "myAgentDesk", "Langfuse", "Valkey"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:5173"},
+      {"service": "Langfuse", "url": "http://localhost:3001/api/public/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "Chat API呼び出し（trace_id保存確認）",
+        "command": "curl -s -N -X POST http://localhost:8104/aiagent-api/v1/chat/requirement-definition -H 'Content-Type: application/json' -d '{\"conversation_id\": \"conv-test-acceptance\", \"user_message\": \"売上データを分析したい\", \"context\": {\"previous_messages\": [], \"current_requirements\": {\"data_source\": null, \"process_description\": null, \"output_format\": null, \"schedule\": null, \"completeness\": 0}}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["event"]
+      },
+      {
+        "name": "Diagnostics API確認",
+        "command": "curl -s http://localhost:8104/aiagent-api/v1/chat/diagnostics?limit=10",
+        "expected_status": 200,
+        "expected_response_contains": ["items"]
+      },
+      {
+        "name": "Valkey保存確認",
+        "command": "docker exec myswiftagent-valkey redis-cli KEYS 'conversation:*'",
+        "expected_response_contains": ["conversation"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"},
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_194_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_194.spec.ts"
+}

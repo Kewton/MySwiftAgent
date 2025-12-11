@@ -162,7 +162,11 @@ class TestSchemaValidation:
     def test_validate_schema_passes_for_valid_schema(self) -> None:
         """Test that validation passes for valid schema."""
         schema = {
-            "query": {"type": "string", "description": "Search query", "required": True},
+            "query": {
+                "type": "string",
+                "description": "Search query",
+                "required": True,
+            },
             "max_results": {"type": "integer", "default": 10},
             "filters": {
                 "type": "object",
@@ -191,7 +195,11 @@ class TestConvertToJsonSchema:
     def test_convert_simple_schema(self) -> None:
         """Test converting simple YAML schema to JSON Schema."""
         yaml_schema = {
-            "query": {"type": "string", "description": "Search query", "required": True},
+            "query": {
+                "type": "string",
+                "description": "Search query",
+                "required": True,
+            },
             "max_results": {
                 "type": "integer",
                 "description": "Max results",

@@ -208,13 +208,18 @@ class TestNonStreamingClarificationLangfuse:
                 non_streaming_clarification,
             )
 
-            response, updated_requirements = await non_streaming_clarification(
+            # Issue #194: Return value is now (response, requirements, trace_id)
+            result = await non_streaming_clarification(
                 user_message="テストメッセージ",
                 previous_messages=[],
                 current_requirements=mock_requirement_state,
                 conversation_id="test_conv_789",
                 user_id="test_user_abc",
             )
+
+            # Verify tuple return with 3 elements
+            assert len(result) == 3
+            response, updated_requirements, trace_id = result
 
             # Verify Langfuse handler was created with correct parameters
             mock_langfuse.get_callback_handler.assert_called_once()
@@ -271,11 +276,16 @@ class TestNonStreamingClarificationLangfuse:
                 non_streaming_clarification,
             )
 
-            response, updated_requirements = await non_streaming_clarification(
+            # Issue #194: Return value is now (response, requirements, trace_id)
+            result = await non_streaming_clarification(
                 user_message="テストメッセージ",
                 previous_messages=[],
                 current_requirements=mock_requirement_state,
             )
+
+            # Verify tuple return with 3 elements
+            assert len(result) == 3
+            response, updated_requirements, trace_id = result
 
             # Verify we got a response
             assert response == "テストレスポンスです。詳しく教えてください。"
@@ -326,3 +336,254 @@ class TestNonStreamingClarificationLangfuse:
 
             # Verify flush was still called (in finally block)
             mock_langfuse.flush.assert_called_once()
+
+
+# ============================================================================
+# Issue #194: Tests for trace_id extraction and return
+# ============================================================================
+
+
+class TestStreamRequirementClarificationTraceId:
+    """Tests for trace_id extraction in stream_requirement_clarification.
+
+    Issue #194: Verify that trace_id is extracted from CallbackHandler and
+    returned in the stream events.
+    """
+
+    @pytest.mark.asyncio
+    async def test_trace_id_returned_in_stream_events(self, mock_requirement_state):
+        """Test that trace_id is returned in the final stream event."""
+        with (
+            patch(
+                "app.services.conversation.llm_service.langfuse_service"
+            ) as mock_langfuse,
+            patch(
+                "app.services.conversation.llm_service.create_llm_with_fallback"
+            ) as mock_llm_factory,
+            patch(
+                "app.services.conversation.llm_service.extract_requirement_with_llm"
+            ) as mock_extract,
+            patch(
+                "app.services.conversation.llm_service.LangfuseService"
+            ) as mock_langfuse_class,
+        ):
+            # Setup mocks
+            mock_handler = MagicMock()
+            mock_handler.last_trace_id = "trace-test-12345"
+            mock_langfuse.get_callback_handler.return_value = mock_handler
+            mock_langfuse.flush = MagicMock()
+
+            # Mock extract_trace_id static method
+            mock_langfuse_class.extract_trace_id.return_value = "trace-test-12345"
+
+            mock_model = MagicMock()
+            mock_perf_tracker = MagicMock()
+            mock_cost_tracker = MagicMock()
+            mock_llm_factory.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+
+            # Mock async stream
+            async def mock_astream(*args, **kwargs):
+                mock_chunk = MagicMock()
+                mock_chunk.content = "Test response"
+                yield mock_chunk
+
+            mock_model.astream = mock_astream
+
+            # Mock extract_requirement_with_llm
+            mock_extract.return_value = mock_requirement_state
+
+            # Import and call the function
+            from app.services.conversation.llm_service import (
+                stream_requirement_clarification,
+            )
+
+            # Consume the generator
+            results = []
+            async for event in stream_requirement_clarification(
+                user_message="Test message",
+                previous_messages=[],
+                current_requirements=mock_requirement_state,
+                conversation_id="test_conv_123",
+            ):
+                results.append(event)
+
+            # Find the trace_id event
+            trace_id_events = [e for e in results if e.get("type") == "trace_id"]
+
+            # Verify trace_id is included in events
+            assert len(trace_id_events) == 1
+            assert trace_id_events[0]["data"]["trace_id"] == "trace-test-12345"
+
+    @pytest.mark.asyncio
+    async def test_no_trace_id_event_when_langfuse_disabled(
+        self, mock_requirement_state
+    ):
+        """Test that no trace_id event is emitted when Langfuse is disabled."""
+        with (
+            patch(
+                "app.services.conversation.llm_service.langfuse_service"
+            ) as mock_langfuse,
+            patch(
+                "app.services.conversation.llm_service.create_llm_with_fallback"
+            ) as mock_llm_factory,
+            patch(
+                "app.services.conversation.llm_service.extract_requirement_with_llm"
+            ) as mock_extract,
+            patch(
+                "app.services.conversation.llm_service.LangfuseService"
+            ) as mock_langfuse_class,
+        ):
+            # Setup mocks - Langfuse disabled
+            mock_langfuse.get_callback_handler.return_value = None
+            mock_langfuse_class.extract_trace_id.return_value = None
+
+            mock_model = MagicMock()
+            mock_perf_tracker = MagicMock()
+            mock_cost_tracker = MagicMock()
+            mock_llm_factory.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+
+            # Mock async stream
+            async def mock_astream(*args, **kwargs):
+                mock_chunk = MagicMock()
+                mock_chunk.content = "Test"
+                yield mock_chunk
+
+            mock_model.astream = mock_astream
+
+            mock_extract.return_value = mock_requirement_state
+
+            from app.services.conversation.llm_service import (
+                stream_requirement_clarification,
+            )
+
+            results = []
+            async for event in stream_requirement_clarification(
+                user_message="Test",
+                previous_messages=[],
+                current_requirements=mock_requirement_state,
+            ):
+                results.append(event)
+
+            # Verify no trace_id event
+            trace_id_events = [e for e in results if e.get("type") == "trace_id"]
+            assert len(trace_id_events) == 0
+
+
+class TestNonStreamingClarificationTraceId:
+    """Tests for trace_id extraction in non_streaming_clarification.
+
+    Issue #194: Verify that trace_id is returned from non-streaming calls.
+    """
+
+    @pytest.mark.asyncio
+    async def test_trace_id_returned_from_non_streaming(
+        self, mock_requirement_state, mock_llm_response
+    ):
+        """Test that trace_id is returned in tuple from non_streaming_clarification."""
+        with (
+            patch(
+                "app.services.conversation.llm_service.langfuse_service"
+            ) as mock_langfuse,
+            patch(
+                "app.services.conversation.llm_service.create_llm_with_fallback"
+            ) as mock_llm_factory,
+            patch(
+                "app.services.conversation.llm_service.extract_requirement_with_llm"
+            ) as mock_extract,
+            patch(
+                "app.services.conversation.llm_service.LangfuseService"
+            ) as mock_langfuse_class,
+        ):
+            # Setup mocks
+            mock_handler = MagicMock()
+            mock_handler.last_trace_id = "trace-nonstream-abc"
+            mock_langfuse.get_callback_handler.return_value = mock_handler
+            mock_langfuse.flush = MagicMock()
+
+            mock_langfuse_class.extract_trace_id.return_value = "trace-nonstream-abc"
+
+            mock_model = MagicMock()
+            mock_perf_tracker = MagicMock()
+            mock_cost_tracker = MagicMock()
+            mock_llm_factory.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+
+            mock_model.ainvoke = AsyncMock(return_value=mock_llm_response)
+            mock_extract.return_value = mock_requirement_state
+
+            from app.services.conversation.llm_service import (
+                non_streaming_clarification,
+            )
+
+            result = await non_streaming_clarification(
+                user_message="Test",
+                previous_messages=[],
+                current_requirements=mock_requirement_state,
+                conversation_id="test_conv",
+            )
+
+            # Result should be tuple of (response, requirements, trace_id)
+            assert len(result) == 3
+            response, requirements, trace_id = result
+            assert trace_id == "trace-nonstream-abc"
+
+    @pytest.mark.asyncio
+    async def test_trace_id_none_when_langfuse_disabled(
+        self, mock_requirement_state, mock_llm_response
+    ):
+        """Test that trace_id is None when Langfuse is disabled."""
+        with (
+            patch(
+                "app.services.conversation.llm_service.langfuse_service"
+            ) as mock_langfuse,
+            patch(
+                "app.services.conversation.llm_service.create_llm_with_fallback"
+            ) as mock_llm_factory,
+            patch(
+                "app.services.conversation.llm_service.extract_requirement_with_llm"
+            ) as mock_extract,
+            patch(
+                "app.services.conversation.llm_service.LangfuseService"
+            ) as mock_langfuse_class,
+        ):
+            # Setup mocks - Langfuse disabled
+            mock_langfuse.get_callback_handler.return_value = None
+            mock_langfuse_class.extract_trace_id.return_value = None
+
+            mock_model = MagicMock()
+            mock_perf_tracker = MagicMock()
+            mock_cost_tracker = MagicMock()
+            mock_llm_factory.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+
+            mock_model.ainvoke = AsyncMock(return_value=mock_llm_response)
+            mock_extract.return_value = mock_requirement_state
+
+            from app.services.conversation.llm_service import (
+                non_streaming_clarification,
+            )
+
+            result = await non_streaming_clarification(
+                user_message="Test",
+                previous_messages=[],
+                current_requirements=mock_requirement_state,
+            )
+
+            # Result should be tuple of (response, requirements, trace_id)
+            assert len(result) == 3
+            _, _, trace_id = result
+            assert trace_id is None
