@@ -95,7 +95,8 @@ class ModelSettingsLoader:
         """
         config = self._load_config()
         provider_data = config.get("providers", {}).get(provider, {})
-        return provider_data.get("models", [])
+        models: list[dict[str, Any]] = provider_data.get("models", [])
+        return models
 
     def get_model_ids(self) -> list[str]:
         """Get list of all model IDs.
@@ -113,7 +114,8 @@ class ModelSettingsLoader:
             Dictionary of category ID to category data
         """
         config = self._load_config()
-        return config.get("settings_categories", {})
+        categories: dict[str, Any] = config.get("settings_categories", {})
+        return categories
 
     def get_settings_by_category(self, category: str) -> list[dict[str, Any]]:
         """Get settings for a specific category.
@@ -126,7 +128,8 @@ class ModelSettingsLoader:
         """
         categories = self.get_settings_categories()
         category_data = categories.get(category, {})
-        return category_data.get("settings", [])
+        settings: list[dict[str, Any]] = category_data.get("settings", [])
+        return settings
 
     def get_all_settings(self) -> list[dict[str, Any]]:
         """Get all model settings across all categories.
@@ -173,7 +176,8 @@ class ModelSettingsLoader:
         """
         categories = self.get_settings_categories()
         category_data = categories.get(category, {})
-        return category_data.get("recommended_models", [])
+        recommended: list[str] = category_data.get("recommended_models", [])
+        return recommended
 
 
 # Global instance for convenience

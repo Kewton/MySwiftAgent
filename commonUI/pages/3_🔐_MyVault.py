@@ -75,7 +75,7 @@ def _get_or_select_default_project() -> str | None:
     Returns:
         Selected project name or None if no projects available
     """
-    selected_project = st.session_state.myvault_selected_project
+    selected_project: str | None = st.session_state.myvault_selected_project
 
     # Auto-select default project if none is selected
     if not selected_project and st.session_state.myvault_projects:
@@ -90,8 +90,9 @@ def _get_or_select_default_project() -> str | None:
             else None,
         )
         if default_project:
-            st.session_state.myvault_selected_project = default_project["name"]
-            selected_project = default_project["name"]
+            project_name: str = default_project["name"]
+            st.session_state.myvault_selected_project = project_name
+            selected_project = project_name
 
     return selected_project
 
