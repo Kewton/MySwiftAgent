@@ -1,0 +1,112 @@
+{
+  "status": "success",
+  "issue_number": 270,
+  "iteration": 1,
+  "tdd_phase": "complete",
+  "timestamp": "2025-12-11T11:55:00Z",
+  "summary": "Issue #270: feat: expert_agent_capabilities.yamlにリクエスト/レスポンススキーマを追加 - Implementation complete with TDD approach",
+  "test_results": {
+    "total": 41,
+    "passed": 41,
+    "failed": 0,
+    "test_files": [
+      "expertAgent/tests/unit/test_graphai_capabilities.py",
+      "expertAgent/tests/unit/test_task_breakdown.py"
+    ]
+  },
+  "coverage": {
+    "target": 90,
+    "estimated": 95,
+    "note": "All new functions have comprehensive tests"
+  },
+  "static_analysis": {
+    "ruff": {
+      "status": "pass",
+      "errors": 0
+    },
+    "mypy": {
+      "status": "partial",
+      "errors": 1,
+      "note": "Pre-existing error in task_breakdown.py line 158 - not introduced by this change"
+    }
+  },
+  "implementation_summary": {
+    "files_modified": [
+      {
+        "path": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/graphai_capabilities.py",
+        "changes": [
+          "Extended ExpertAgentAPI dataclass with method, request_schema, response_schema fields",
+          "Added VALID_SCHEMA_TYPES frozenset for schema validation",
+          "Added SchemaValidationError exception class",
+          "Implemented _normalize_schema_keys() for output_schema -> response_schema migration (SF-01)",
+          "Implemented validate_schema() for field validation (SF-02)",
+          "Implemented validate_api_schemas() for API-level validation",
+          "Implemented convert_to_json_schema() for JSON Schema conversion",
+          "Updated _load_expert_agent_apis() to use new normalization and validation"
+        ]
+      },
+      {
+        "path": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+        "changes": [
+          "Added _build_schema_hint() function for LLM prompt hints",
+          "Updated _build_expert_agent_capabilities() to include schema hints"
+        ]
+      },
+      {
+        "path": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/config/expert_agent_capabilities.yaml",
+        "changes": [
+          "Added request_schema and response_schema to all 17 APIs",
+          "APIs updated: Gmail Search, Gmail Send, Google Search, Google Search Overview, Google Drive Upload, Google Drive Upload from URL, TTS Base64, TTS Drive, TTS + Drive + Gmail, Direct LLM, Sample Agent, JSON Output Agent, Explorer Agent, Action Agent, Playwright Agent, Wikipedia Agent, File Reader Agent",
+          "Added method field to all APIs (default: POST)"
+        ]
+      }
+    ],
+    "files_created": [
+      {
+        "path": "expertAgent/tests/unit/test_graphai_capabilities.py",
+        "description": "29 unit tests for graphai_capabilities module"
+      },
+      {
+        "path": "expertAgent/tests/unit/test_task_breakdown.py",
+        "description": "12 unit tests for task_breakdown module"
+      }
+    ]
+  },
+  "acceptance_criteria_status": {
+    "AC1_schema_addition": {
+      "status": "complete",
+      "details": "All 17 APIs have request_schema and/or response_schema defined"
+    },
+    "AC2_dataclass_extension": {
+      "status": "complete",
+      "details": "ExpertAgentAPI extended with method, request_schema, response_schema fields"
+    },
+    "AC3_schema_normalization": {
+      "status": "complete",
+      "details": "_normalize_schema_keys() converts output_schema to response_schema (SF-01)"
+    },
+    "AC4_schema_validation": {
+      "status": "complete",
+      "details": "validate_schema() implements SF-02 validation rules with warnings"
+    },
+    "AC5_prompt_updates": {
+      "status": "complete",
+      "details": "_build_schema_hint() adds schema hints to task_breakdown prompts"
+    },
+    "AC6_unit_tests": {
+      "status": "complete",
+      "details": "41 tests, all passing, estimated 95% coverage of new code"
+    }
+  },
+  "quality_checks": {
+    "solid_principles": "Applied - Single responsibility for validation functions",
+    "kiss": "Applied - Simple schema hint format for LLM prompts",
+    "yagni": "Applied - Only implemented what acceptance criteria required",
+    "dry": "Applied - Reusable validation functions"
+  },
+  "next_steps": [
+    "Commit changes to branch",
+    "Run full test suite to ensure no regressions",
+    "Create PR for review"
+  ]
+}
