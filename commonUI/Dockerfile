@@ -27,6 +27,7 @@ COPY .streamlit/ ./.streamlit/
 
 # Copy configuration files (not mounted by volumes)
 COPY data/ ./config/
+COPY config/ ./config/
 
 # Health check endpoint - Streamlit health endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
