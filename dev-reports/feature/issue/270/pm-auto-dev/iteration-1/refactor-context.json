@@ -1,0 +1,50 @@
+{
+  "issue_number": 270,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/graphai_capabilities.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/config/expert_agent_capabilities.yaml"
+  ],
+  "quality_metrics": {
+    "before_coverage": 95,
+    "complexity_score": 12
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle (SRP)",
+    "Don't Repeat Yourself (DRY)"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持しつつコード品質を向上",
+    "循環的複雑度を10以下に維持",
+    "重複コードがあれば削除",
+    "SOLID原則に従ったコード構造の確認"
+  ],
+  "tdd_result": {
+    "status": "success",
+    "coverage": 95,
+    "tests_passed": 41,
+    "static_analysis": {
+      "ruff_errors": 0,
+      "mypy_errors": 1
+    }
+  },
+  "acceptance_result": {
+    "status": "passed",
+    "pytest_passed": 9,
+    "l3_commands_passed": 4,
+    "acceptance_criteria_verified": 7
+  },
+  "files_to_check": {
+    "main_implementation": [
+      "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/graphai_capabilities.py",
+      "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py"
+    ],
+    "test_files": [
+      "expertAgent/tests/unit/test_graphai_capabilities.py",
+      "expertAgent/tests/unit/test_task_breakdown.py"
+    ],
+    "acceptance_test": [
+      "tests/acceptance/test_issue_270_acceptance.py"
+    ]
+  }
+}

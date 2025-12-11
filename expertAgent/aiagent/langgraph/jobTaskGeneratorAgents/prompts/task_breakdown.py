@@ -33,6 +33,30 @@ def _load_yaml_config(filename: str) -> dict:
         return result if isinstance(result, dict) else {}
 
 
+def _build_schema_hint(api: dict) -> str:
+    """Build compact schema hint for LLM prompt (Issue #270).
+
+    Generates a hint showing required fields for the API.
+
+    Args:
+        api: API definition from YAML
+
+    Returns:
+        Formatted schema hint string (e.g., " [required: query, max_results]")
+    """
+    hints = []
+
+    # Request schema hint
+    if request_schema := api.get("request_schema"):
+        required_fields = [
+            k for k, v in request_schema.items() if v.get("required", False)
+        ]
+        if required_fields:
+            hints.append(f"required: {', '.join(required_fields)}")
+
+    return f" [{'; '.join(hints)}]" if hints else ""
+
+
 def _build_expert_agent_capabilities() -> str:
     """Build expertAgent capabilities section from YAML config.
 
@@ -48,9 +72,11 @@ def _build_expert_agent_capabilities() -> str:
         lines.append("**Utility API (Direct API)**:")
         for api in utility_apis:
             use_cases = "、".join(api.get("use_cases", []))
+            # Add schema hint (Issue #270)
+            schema_hint = _build_schema_hint(api)
             lines.append(
                 f"  - **{api['name']}** (`{api['endpoint']}`): "
-                f"{api['description']} - {use_cases}"
+                f"{api['description']} - {use_cases}{schema_hint}"
             )
         lines.append("")
 
@@ -60,9 +86,11 @@ def _build_expert_agent_capabilities() -> str:
         lines.append("**AI Agent API (AI処理)**:")
         for api in ai_agent_apis:
             use_cases = "、".join(api.get("use_cases", []))
+            # Add schema hint (Issue #270)
+            schema_hint = _build_schema_hint(api)
             lines.append(
                 f"  - **{api['name']}** (`{api['endpoint']}`): "
-                f"{api['description']} - {use_cases}"
+                f"{api['description']} - {use_cases}{schema_hint}"
             )
 
     return "\n".join(lines)

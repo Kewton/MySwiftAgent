@@ -9,11 +9,14 @@ Configuration is loaded from YAML files in utils/config/ directory:
 - infeasible_tasks.yaml: Common infeasible tasks and alternatives
 """
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 def _load_yaml_config(filename: str) -> dict:
@@ -32,6 +35,26 @@ def _load_yaml_config(filename: str) -> dict:
         return result if isinstance(result, dict) else {}
 
 
+# ===== Valid Schema Types =====
+# Used for schema validation (SF-02)
+VALID_SCHEMA_TYPES: frozenset[str] = frozenset(
+    {
+        "string",
+        "integer",
+        "number",
+        "boolean",
+        "array",
+        "object",
+    }
+)
+
+
+class SchemaValidationError(Exception):
+    """Schema validation error."""
+
+    pass
+
+
 @dataclass
 class GraphAIAgent:
     """GraphAI standard agent capability."""
@@ -45,13 +68,21 @@ class GraphAIAgent:
 
 @dataclass
 class ExpertAgentAPI:
-    """expertAgent Direct API capability."""
+    """expertAgent Direct API capability.
+
+    Extended with method, request_schema, and response_schema fields (Issue #270).
+    """
 
     name: str
     endpoint: str
     category: Literal["utility", "ai_agent"]
     description: str
-    use_cases: list[str]
+    use_cases: list[str] = field(default_factory=list)
+    # New fields for Issue #270
+    method: str = "POST"
+    request_schema: dict[str, Any] | None = None
+    response_schema: dict[str, Any] | None = None
+    mcp_tools: list[str] | None = None
 
 
 @dataclass
@@ -63,6 +94,139 @@ class InfeasibleTaskAlternative:
     alternative_api: str
     priority: Literal["high", "medium", "low"]
     notes: str
+
+
+def _normalize_schema_keys(api: dict) -> dict:
+    """Normalize output_schema to response_schema for backwards compatibility (SF-01).
+
+    Args:
+        api: Raw API definition from YAML
+
+    Returns:
+        Normalized API definition with response_schema
+    """
+    if "output_schema" in api:
+        if "response_schema" not in api:
+            # Phase A: Silent migration
+            api["response_schema"] = api["output_schema"]
+            # Phase B: Enable warning (uncomment in next release)
+            # logger.warning(
+            #     f"DEPRECATED: 'output_schema' is deprecated for API '{api.get('name')}'. "
+            #     "Please use 'response_schema' instead."
+            # )
+        del api["output_schema"]
+    return api
+
+
+def validate_schema(
+    schema: dict[str, Any],
+    api_name: str,
+    schema_type: str = "request",
+) -> list[str]:
+    """Validate schema structure and return list of warnings (SF-02).
+
+    Args:
+        schema: Schema definition from YAML
+        api_name: API name for error messages
+        schema_type: "request" or "response"
+
+    Returns:
+        List of warning messages
+
+    Raises:
+        SchemaValidationError: If critical validation error occurs
+    """
+    warnings = []
+
+    for field_name, field_spec in schema.items():
+        # Rule 1: type field is required
+        if "type" not in field_spec:
+            raise SchemaValidationError(
+                f"API '{api_name}' {schema_type}_schema: "
+                f"Field '{field_name}' is missing required 'type' attribute"
+            )
+
+        field_type = field_spec["type"]
+
+        # Rule 2: Valid type name
+        if field_type not in VALID_SCHEMA_TYPES:
+            raise SchemaValidationError(
+                f"API '{api_name}' {schema_type}_schema: "
+                f"Field '{field_name}' has invalid type '{field_type}'. "
+                f"Valid types: {', '.join(sorted(VALID_SCHEMA_TYPES))}"
+            )
+
+        # Rule 3: Nested structure consistency
+        if field_type == "array" and "items" not in field_spec:
+            warnings.append(
+                f"API '{api_name}' {schema_type}_schema: "
+                f"Field '{field_name}' is array type but missing 'items' definition"
+            )
+
+        if field_type == "object" and "properties" not in field_spec:
+            warnings.append(
+                f"API '{api_name}' {schema_type}_schema: "
+                f"Field '{field_name}' is object type but missing 'properties' definition"
+            )
+
+        # Rule 4: required field type check
+        if "required" in field_spec and not isinstance(field_spec["required"], bool):
+            warnings.append(
+                f"API '{api_name}' {schema_type}_schema: "
+                f"Field '{field_name}' has non-boolean 'required' value"
+            )
+
+    return warnings
+
+
+def validate_api_schemas(api: dict) -> list[str]:
+    """Validate all schemas in an API definition.
+
+    Args:
+        api: API definition from YAML
+
+    Returns:
+        List of warning messages
+    """
+    warnings = []
+    api_name = api.get("name", "Unknown")
+
+    if request_schema := api.get("request_schema"):
+        warnings.extend(validate_schema(request_schema, api_name, "request"))
+
+    if response_schema := api.get("response_schema"):
+        warnings.extend(validate_schema(response_schema, api_name, "response"))
+
+    return warnings
+
+
+def convert_to_json_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Convert expert_agent_capabilities format to JSON Schema.
+
+    Args:
+        schema: YAML schema in expert_agent_capabilities format
+
+    Returns:
+        JSON Schema compatible dict
+    """
+    properties = {}
+    required = []
+
+    for field_name, field_spec in schema.items():
+        properties[field_name] = {
+            "type": field_spec["type"],
+            "description": field_spec.get("description", ""),
+        }
+        if field_spec.get("default") is not None:
+            properties[field_name]["default"] = field_spec["default"]
+        if field_spec.get("required", False):
+            required.append(field_name)
+
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": required,
+    }
 
 
 def _load_graphai_agents() -> list[GraphAIAgent]:
@@ -125,16 +289,29 @@ GRAPHAI_AGENTS = _load_graphai_agents()
 
 
 def _load_expert_agent_apis() -> list[ExpertAgentAPI]:
-    """Load expertAgent APIs from YAML configuration.
+    """Load expertAgent APIs from YAML configuration with validation.
 
     Returns:
         List of ExpertAgentAPI objects
     """
     config = _load_yaml_config("expert_agent_capabilities.yaml")
     apis = []
+    all_warnings = []
 
     # Load Utility APIs
     for api in config.get("utility_apis", []):
+        # Step 1: Normalize schema keys (SF-01)
+        api = _normalize_schema_keys(api.copy())
+
+        # Step 2: Validate schemas (SF-02)
+        try:
+            warnings = validate_api_schemas(api)
+            all_warnings.extend(warnings)
+        except SchemaValidationError as e:
+            logger.error(f"Schema validation failed: {e}")
+            raise
+
+        # Step 3: Create dataclass
         apis.append(
             ExpertAgentAPI(
                 name=api["name"],
@@ -142,11 +319,27 @@ def _load_expert_agent_apis() -> list[ExpertAgentAPI]:
                 category="utility",
                 description=api["description"],
                 use_cases=api.get("use_cases", []),
+                method=api.get("method", "POST"),
+                request_schema=api.get("request_schema"),
+                response_schema=api.get("response_schema"),
+                mcp_tools=api.get("mcp_tools"),
             )
         )
 
     # Load AI Agent APIs
     for api in config.get("ai_agent_apis", []):
+        # Step 1: Normalize schema keys (SF-01)
+        api = _normalize_schema_keys(api.copy())
+
+        # Step 2: Validate schemas (SF-02)
+        try:
+            warnings = validate_api_schemas(api)
+            all_warnings.extend(warnings)
+        except SchemaValidationError as e:
+            logger.error(f"Schema validation failed: {e}")
+            raise
+
+        # Step 3: Create dataclass
         apis.append(
             ExpertAgentAPI(
                 name=api["name"],
@@ -154,8 +347,16 @@ def _load_expert_agent_apis() -> list[ExpertAgentAPI]:
                 category="ai_agent",
                 description=api["description"],
                 use_cases=api.get("use_cases", []),
+                method=api.get("method", "POST"),
+                request_schema=api.get("request_schema"),
+                response_schema=api.get("response_schema"),
+                mcp_tools=api.get("mcp_tools"),
             )
         )
+
+    # Log all warnings
+    for warning in all_warnings:
+        logger.warning(warning)
 
     return apis
 
