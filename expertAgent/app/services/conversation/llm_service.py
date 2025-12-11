@@ -28,7 +28,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_factory import (
     create_llm_with_fallback,
 )
 from app.schemas.chat import RequirementState
-from app.services.langfuse_service import langfuse_service
+from app.services.langfuse_service import LangfuseService, langfuse_service
 from core.secrets import get_model_config
 
 logger = logging.getLogger(__name__)
@@ -201,6 +201,12 @@ async def stream_requirement_clarification(
                 f"(completeness={updated_requirements.completeness:.0%})"
             )
 
+        # Issue #194: Extract and yield trace_id for conversation metadata
+        trace_id = LangfuseService.extract_trace_id(setup.langfuse_handler)
+        if trace_id:
+            yield {"type": "trace_id", "data": {"trace_id": trace_id}}
+            logger.debug(f"Yielded trace_id: {trace_id}")
+
         setup.perf_tracker.end(success=True)
         setup.perf_tracker.log_metrics()
 
@@ -221,7 +227,7 @@ async def non_streaming_clarification(
     current_requirements: RequirementState,
     conversation_id: str | None = None,
     user_id: str | None = None,
-) -> tuple[str, RequirementState]:
+) -> tuple[str, RequirementState, str | None]:
     """Non-streaming fallback for requirement clarification.
 
     Used when streaming fails or is not supported.
@@ -234,14 +240,17 @@ async def non_streaming_clarification(
         user_id: User ID for Langfuse user tracking
 
     Returns:
-        Tuple of (full_response, updated_requirements)
+        Tuple of (full_response, updated_requirements, trace_id)
+        trace_id is None if Langfuse is disabled
 
     Example:
-        >>> response, state = await non_streaming_clarification(...)
+        >>> response, state, trace_id = await non_streaming_clarification(...)
         >>> print(response)
         'かしこまりました。どのような形式の売上データですか？'
         >>> print(state.completeness)
         0.35
+        >>> print(trace_id)
+        'trace-abc123'
     """
     # Set up LLM components using shared helper
     setup = _setup_clarification_llm(
@@ -265,10 +274,15 @@ async def non_streaming_clarification(
             user_message, full_response, current_requirements
         )
 
+        # Issue #194: Extract trace_id for conversation metadata
+        trace_id = LangfuseService.extract_trace_id(setup.langfuse_handler)
+        if trace_id:
+            logger.debug(f"Extracted trace_id: {trace_id}")
+
         setup.perf_tracker.end(success=True)
         setup.perf_tracker.log_metrics()
 
-        return full_response, updated_requirements
+        return full_response, updated_requirements, trace_id
 
     except Exception as e:
         setup.perf_tracker.end(success=False, error=str(e))

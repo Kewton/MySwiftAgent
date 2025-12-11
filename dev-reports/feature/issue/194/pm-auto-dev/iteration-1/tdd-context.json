@@ -1,0 +1,143 @@
+{
+  "issue_number": 194,
+  "issue_title": "Langfuse Trace not found エラーの長期対応",
+  "acceptance_criteria": [
+    "デモデータ使用時、「View in Langfuse」リンクが非表示",
+    "実際の会話データがValkeyに保存され、Diagnostics APIで取得可能",
+    "Langfuseに正しいトレースが生成され、リンクから確認可能",
+    "Langfuse連携の設定ガイドがドキュメント化されている"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: デモデータ判定ロジック追加（isUsingDemoDataフラグ）",
+    "Task 1.2: デモデータ表示バナー追加",
+    "Task 1.3: Langfuseリンク表示条件の改善（/trace/demoは非表示）",
+    "Task 1.4: フロントエンド単体テスト",
+    "Task 2.1: LangfuseService.extract_trace_id()ヘルパー追加",
+    "Task 2.2: ConversationService DI関数作成",
+    "Task 2.3: chat_endpoints.pyのリファクタリング（save_with_metadata使用）",
+    "Task 2.4: llm_service.pyからtrace_id伝播",
+    "Task 2.5: LangfuseService単体テスト",
+    "Task 2.6: chat_endpoints単体テスト",
+    "Task 2.7: 結合テスト（Chat→Diagnosticsフロー）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "デモデータ判定ロジック追加",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "デモデータ表示バナー追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "Langfuseリンク表示条件の改善",
+      "estimated_hours": 0.5,
+      "deliverables": ["myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "フロントエンド単体テスト",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/src/routes/mlops/diagnostics/+page.test.ts"],
+      "dependencies": ["1.2", "1.3"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "LangfuseService.extract_trace_id()ヘルパー追加",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/app/services/langfuse_service.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "ConversationService DI関数作成",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/app/api/v1/dependencies.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.3",
+      "description": "chat_endpoints.pyのリファクタリング",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/app/api/v1/chat_endpoints.py"],
+      "dependencies": ["2.1", "2.2", "2.4"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "llm_service.pyからtrace_id伝播",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/app/services/conversation/llm_service.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.5",
+      "description": "LangfuseService単体テスト",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/tests/unit/test_langfuse_service.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.6",
+      "description": "chat_endpoints単体テスト",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/test_chat_endpoints.py"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "2.7",
+      "description": "結合テスト（Chat→Diagnosticsフロー）",
+      "estimated_hours": 1.5,
+      "deliverables": ["tests/integration/test_chat_diagnostics_flow.py"],
+      "dependencies": ["2.6"]
+    }
+  ],
+  "deliverables_checklist": [
+    "myAgentDesk/src/routes/mlops/diagnostics/+page.svelte",
+    "myAgentDesk/src/routes/mlops/diagnostics/+page.test.ts",
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/app/api/v1/dependencies.py",
+    "expertAgent/app/api/v1/chat_endpoints.py",
+    "expertAgent/app/services/conversation/llm_service.py",
+    "expertAgent/tests/unit/test_langfuse_service.py",
+    "expertAgent/tests/unit/test_chat_endpoints.py",
+    "tests/integration/test_chat_diagnostics_flow.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスク（1.1〜2.7）が完了",
+    "Phase 1: フロントエンド単体テストパス",
+    "Phase 2: バックエンド単体テストカバレッジ90%以上",
+    "Phase 2: 結合テスト全シナリオパス",
+    "CI/CD (./scripts/pre-push-check-all.sh) グリーン"
+  ],
+  "target_coverage": 90,
+  "root_causes": {
+    "save_with_metadata_not_used": "ConversationService.save_with_metadata()が定義済みだが呼び出されていない",
+    "save_message_only": "save_message()のみ使用されており、メタデータ(trace_id)が保存されない",
+    "demo_data_fake_url": "APIエラー時にフェイクURLのデモデータにフォールバック"
+  },
+  "affected_files": {
+    "frontend": [
+      "myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"
+    ],
+    "backend": [
+      "expertAgent/app/api/v1/chat_endpoints.py",
+      "expertAgent/app/api/v1/dependencies.py",
+      "expertAgent/app/services/langfuse_service.py",
+      "expertAgent/app/services/conversation/llm_service.py"
+    ],
+    "tests": [
+      "myAgentDesk/src/routes/mlops/diagnostics/+page.test.ts",
+      "expertAgent/tests/unit/test_langfuse_service.py",
+      "expertAgent/tests/unit/test_chat_endpoints.py",
+      "tests/integration/test_chat_diagnostics_flow.py"
+    ]
+  }
+}

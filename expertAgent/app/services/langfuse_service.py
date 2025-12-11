@@ -32,6 +32,37 @@ class LangfuseService:
     _instance: "LangfuseService | None" = None
     _client: Langfuse | None = None
 
+    @staticmethod
+    def extract_trace_id(handler: CallbackHandler | None) -> str | None:
+        """Extract trace_id from a Langfuse CallbackHandler.
+
+        Issue #194: Helper method to safely extract trace_id from CallbackHandler
+        after LLM invocation completes. Used to store trace_id in conversation metadata.
+
+        Args:
+            handler: Langfuse CallbackHandler instance (or None)
+
+        Returns:
+            trace_id string if available, None otherwise
+
+        Example:
+            >>> handler = langfuse_service.get_callback_handler()
+            >>> agent.invoke({"input": "Hello"}, config={"callbacks": [handler]})
+            >>> trace_id = LangfuseService.extract_trace_id(handler)
+            >>> print(trace_id)
+            'trace-abc123'
+        """
+        if handler is None:
+            return None
+
+        try:
+            trace_id = getattr(handler, "last_trace_id", None)
+            # Return None for empty strings as well
+            return trace_id if trace_id else None
+        except Exception as e:
+            logger.warning(f"Failed to extract trace_id from handler: {e}")
+            return None
+
     def __new__(cls) -> "LangfuseService":
         """シングルトンインスタンス取得."""
         if cls._instance is None:

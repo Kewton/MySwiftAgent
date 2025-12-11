@@ -13,11 +13,13 @@ Endpoints:
 
 import json
 import logging
-from typing import Any, AsyncGenerator, Dict
+from datetime import datetime, timezone
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
+from app.api.v1.dependencies import get_conversation_service
 from app.schemas.chat import (
     CandidateSelectRequest,
     CandidateSelectResponse,
@@ -28,6 +30,7 @@ from app.schemas.chat import (
     RequirementFeedbackResponse,
     RequirementState,
 )
+from app.schemas.conversation_metadata import ConversationMetadata
 from app.schemas.job_generator import JobGeneratorRequest
 from app.services.conversation.candidate_generator import (
     candidate_to_requirement_state_dict,
@@ -37,6 +40,87 @@ from app.services.conversation.llm_service import stream_requirement_clarificati
 from app.services.feedback_service import FeedbackService
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Issue #194: Helper for saving conversation with metadata
+# ============================================================================
+
+
+async def _save_conversation_with_metadata(
+    conversation_id: str,
+    messages: List[Dict[str, Any]],
+    trace_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+    workflow_id: Optional[str] = None,
+) -> bool:
+    """Save conversation with extended metadata including Langfuse trace_id.
+
+    Issue #194: This helper uses ConversationService.save_with_metadata()
+    to persist conversation data to Valkey with proper metadata for
+    diagnostic retrieval and Langfuse trace linking.
+
+    Args:
+        conversation_id: Unique conversation identifier
+        messages: List of conversation messages
+        trace_id: Langfuse trace ID (from CallbackHandler.last_trace_id)
+        user_id: User ID for filtering
+        job_id: Job ID for filtering
+        project_id: Project ID for filtering
+        workflow_id: Workflow ID for filtering
+
+    Returns:
+        True if save succeeded, False otherwise
+
+    Example:
+        >>> await _save_conversation_with_metadata(
+        ...     conversation_id="conv-123",
+        ...     messages=[{"role": "user", "content": "Hello"}],
+        ...     trace_id="trace-abc123",
+        ...     user_id="user-456"
+        ... )
+        True
+    """
+    try:
+        # Get ConversationService instance
+        service = await get_conversation_service()
+
+        # Create metadata with trace_id
+        metadata = ConversationMetadata(
+            trace_id=trace_id,
+            user_id=user_id,
+            job_id=job_id,
+            project_id=project_id,
+            workflow_id=workflow_id,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        # Save using ConversationService
+        result = await service.save_with_metadata(
+            conversation_id=conversation_id,
+            messages=messages,
+            metadata=metadata,
+        )
+
+        if result:
+            logger.debug(
+                f"Saved conversation {conversation_id} with trace_id={trace_id}"
+            )
+        else:
+            logger.warning(
+                f"Failed to save conversation {conversation_id} to Valkey"
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(
+            f"Error saving conversation {conversation_id} with metadata: {e}",
+            exc_info=True,
+        )
+        return False
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -84,7 +168,7 @@ async def requirement_definition(request: RequirementChatRequest):
     async def event_generator() -> AsyncGenerator[Dict[str, Any], None]:
         """Generate SSE events for chat stream."""
         try:
-            # Save user message to conversation history
+            # Save user message to conversation history (in-memory store)
             conversation_store.save_message(
                 request.conversation_id, "user", request.user_message
             )
@@ -101,6 +185,8 @@ async def requirement_definition(request: RequirementChatRequest):
 
             # Stream LLM responses
             full_response = ""
+            trace_id: Optional[str] = None  # Issue #194: Capture trace_id
+
             async for chunk in stream_requirement_clarification(
                 user_message=request.user_message,
                 previous_messages=request.context.previous_messages,
@@ -111,17 +197,34 @@ async def requirement_definition(request: RequirementChatRequest):
                 if chunk["type"] == "message":
                     full_response += chunk["data"]["content"]
 
+                # Issue #194: Capture trace_id from stream
+                if chunk["type"] == "trace_id":
+                    trace_id = chunk["data"].get("trace_id")
+                    logger.debug(f"Captured trace_id: {trace_id}")
+
                 # Yield SSE event
                 yield {
                     "event": "message",
                     "data": json.dumps(chunk, ensure_ascii=False),
                 }
 
-            # Save assistant response to conversation history
+            # Save assistant response to conversation history (in-memory)
             if full_response:
                 conversation_store.save_message(
                     request.conversation_id, "assistant", full_response
                 )
+
+            # Issue #194: Save conversation with metadata to Valkey
+            # This enables proper Langfuse trace linking in diagnostics
+            messages = [
+                {"role": "user", "content": request.user_message},
+                {"role": "assistant", "content": full_response},
+            ]
+            await _save_conversation_with_metadata(
+                conversation_id=request.conversation_id,
+                messages=messages,
+                trace_id=trace_id,
+            )
 
             # Send done event
             yield {
@@ -132,7 +235,8 @@ async def requirement_definition(request: RequirementChatRequest):
             logger.info(
                 f"Completed requirement clarification stream: "
                 f"conversation_id={request.conversation_id}, "
-                f"response_length={len(full_response)}"
+                f"response_length={len(full_response)}, "
+                f"trace_id={trace_id}"
             )
 
         except Exception as e:

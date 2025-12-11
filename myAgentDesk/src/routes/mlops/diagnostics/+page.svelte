@@ -6,8 +6,11 @@
 	 * - Diagnostics list with filtering
 	 * - Detailed conversation view
 	 * - Timeline visualization
-	 * - Langfuse trace link
+	 * - Langfuse trace link (hidden for demo data)
+	 * - Demo data warning banner
 	 * - i18n support
+	 *
+	 * Issue #194: Added demo data detection and Langfuse link visibility control
 	 */
 
 	import { onMount } from 'svelte';
@@ -23,9 +26,20 @@
 	let error: string | null = null;
 	let total = 0;
 
+	// Issue #194: Track if using demo data
+	let isUsingDemoData = false;
+
 	// Filters
 	let filterJobId = '';
 	let filterUserId = '';
+
+	// Issue #194: Check if Langfuse URL is valid (not demo)
+	function isValidLangfuseUrl(url: string | null): boolean {
+		if (!url) return false;
+		// Demo URLs contain /trace/demo
+		if (url.includes('/trace/demo')) return false;
+		return true;
+	}
 
 	// Demo data for testing/development
 	const demoData: DiagnosticSummary[] = [
@@ -46,6 +60,7 @@
 	async function loadDiagnostics() {
 		loading = true;
 		error = null;
+		isUsingDemoData = false; // Issue #194: Reset flag
 
 		try {
 			const query: DiagnosticsQuery = {
@@ -62,12 +77,14 @@
 			if (diagnosticsList.length === 0) {
 				diagnosticsList = demoData;
 				total = diagnosticsList.length;
+				isUsingDemoData = true; // Issue #194: Mark as demo data
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load diagnostics';
 			// Use demo data on error
 			diagnosticsList = demoData;
 			total = diagnosticsList.length;
+			isUsingDemoData = true; // Issue #194: Mark as demo data
 		} finally {
 			loading = false;
 		}
@@ -142,6 +159,36 @@
 </svelte:head>
 
 <div class="diagnostics-page" data-testid="mlops-diagnostics-page">
+	<!-- Issue #194: Demo data warning banner -->
+	{#if isUsingDemoData}
+		<div
+			class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+			data-testid="demo-data-warning"
+		>
+			<div class="flex items-center">
+				<svg
+					class="w-5 h-5 text-yellow-500 mr-2"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+					></path>
+				</svg>
+				<span class="text-sm text-yellow-700 dark:text-yellow-300">
+					{$locale === 'ja'
+						? 'デモデータを表示中です。実際の診断データを取得できませんでした。'
+						: 'Displaying demo data. Unable to retrieve actual diagnostic data.'}
+				</span>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Header -->
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -303,7 +350,8 @@
 							<p class="text-sm text-gray-900 dark:text-gray-100">{selectedDiagnostic.job_id}</p>
 						</div>
 					{/if}
-					{#if selectedDiagnostic.langfuse_trace_url}
+					<!-- Issue #194: Only show Langfuse link for valid (non-demo) URLs -->
+					{#if isValidLangfuseUrl(selectedDiagnostic.langfuse_trace_url)}
 						<div>
 							<span class="text-xs text-gray-500 dark:text-gray-400">Trace</span>
 							<a
@@ -315,6 +363,14 @@
 							>
 								View in Langfuse
 							</a>
+						</div>
+					{:else if selectedDiagnostic.langfuse_trace_url}
+						<!-- Show disabled state for demo/invalid URLs -->
+						<div data-testid="langfuse-link-disabled">
+							<span class="text-xs text-gray-500 dark:text-gray-400">Trace</span>
+							<span class="text-sm text-gray-400 dark:text-gray-500 italic">
+								Trace not available
+							</span>
 						</div>
 					{/if}
 				</div>

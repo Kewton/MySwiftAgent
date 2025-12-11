@@ -1,9 +1,82 @@
-"""Unit tests for LangfuseService."""
+"""Unit tests for LangfuseService.
+
+Issue #194: Added tests for extract_trace_id() helper method.
+"""
 
 import logging
 from unittest.mock import Mock, patch
 
 from app.services.langfuse_service import LangfuseService, langfuse_service
+
+# ============================================================================
+# Issue #194: Tests for extract_trace_id() helper method
+# ============================================================================
+
+
+class TestExtractTraceId:
+    """Tests for LangfuseService.extract_trace_id() method.
+
+    Issue #194: Extract trace_id from CallbackHandler for conversation metadata.
+    """
+
+    def test_extract_trace_id_from_handler_with_last_trace_id(self):
+        """Test extracting trace_id when handler has last_trace_id attribute."""
+        mock_handler = Mock()
+        mock_handler.last_trace_id = "trace-abc123"
+
+        result = LangfuseService.extract_trace_id(mock_handler)
+
+        assert result == "trace-abc123"
+
+    def test_extract_trace_id_from_handler_with_none_last_trace_id(self):
+        """Test extracting trace_id when handler has None last_trace_id."""
+        mock_handler = Mock()
+        mock_handler.last_trace_id = None
+
+        result = LangfuseService.extract_trace_id(mock_handler)
+
+        assert result is None
+
+    def test_extract_trace_id_from_handler_without_last_trace_id_attr(self):
+        """Test extracting trace_id when handler lacks last_trace_id attribute."""
+        mock_handler = Mock(spec=[])  # No attributes
+
+        result = LangfuseService.extract_trace_id(mock_handler)
+
+        assert result is None
+
+    def test_extract_trace_id_from_none_handler(self):
+        """Test extracting trace_id from None handler."""
+        result = LangfuseService.extract_trace_id(None)
+
+        assert result is None
+
+    def test_extract_trace_id_empty_string(self):
+        """Test extracting trace_id when handler has empty string trace_id."""
+        mock_handler = Mock()
+        mock_handler.last_trace_id = ""
+
+        result = LangfuseService.extract_trace_id(mock_handler)
+
+        # Empty string should return None (falsy value)
+        assert result is None
+
+    def test_extract_trace_id_with_exception(self):
+        """Test graceful handling of exceptions during trace_id extraction."""
+        mock_handler = Mock()
+        # Configure mock to raise AttributeError when accessing last_trace_id
+        type(mock_handler).last_trace_id = property(
+            lambda self: (_ for _ in ()).throw(Exception("Unexpected error"))
+        )
+
+        result = LangfuseService.extract_trace_id(mock_handler)
+
+        assert result is None
+
+
+# ============================================================================
+# Original LangfuseService tests
+# ============================================================================
 
 
 class TestLangfuseService:
