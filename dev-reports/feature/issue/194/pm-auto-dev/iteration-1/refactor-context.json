@@ -1,0 +1,32 @@
+{
+  "issue_number": 194,
+  "refactor_targets": [
+    "expertAgent/app/api/v1/chat_endpoints.py",
+    "expertAgent/app/services/langfuse_service.py",
+    "expertAgent/app/services/conversation/llm_service.py",
+    "myAgentDesk/src/routes/mlops/diagnostics/+page.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90,
+    "complexity_score": "unknown"
+  },
+  "design_patterns_to_apply": [
+    "Dependency Injection (already applied in dependencies.py)",
+    "Single Responsibility Principle",
+    "Error Handling best practices"
+  ],
+  "improvement_goals": [
+    "Ensure code follows SOLID principles",
+    "Remove any code duplication",
+    "Improve error handling in SSE streams",
+    "Ensure consistent naming conventions"
+  ],
+  "completed_tasks": [
+    "Task 2.1: LangfuseService.extract_trace_id() helper added",
+    "Task 2.2: ConversationService DI function created in dependencies.py",
+    "Task 2.3: chat_endpoints.py refactored with DI and save_with_metadata",
+    "Task 2.4: llm_service.py trace_id propagation implemented",
+    "Task 1.1-1.3: Frontend demo data detection and Langfuse link visibility"
+  ],
+  "notes": "The TDD implementation already applied several refactoring patterns. Focus on any remaining code quality improvements."
+}
