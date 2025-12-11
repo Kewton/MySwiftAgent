@@ -4,8 +4,8 @@ Issue #269: LLM model settings management via MyVault.
 """
 
 from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import mock_open, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -13,12 +13,10 @@ import yaml
 from core.model_settings import (
     ModelSettingsLoader,
     get_model_display_name,
-    get_model_options,
 )
 
-
 # Sample test configuration
-SAMPLE_CONFIG: Dict[str, Any] = {
+SAMPLE_CONFIG: dict[str, Any] = {
     "providers": {
         "claude": {
             "name": "Anthropic Claude",
@@ -106,7 +104,8 @@ class TestModelSettingsLoader:
         assert len(models) == 3  # 2 claude + 1 gemini
 
     def test_load_config_file_not_found(
-        self, loader_without_config: ModelSettingsLoader
+        self,
+        loader_without_config: ModelSettingsLoader,
     ) -> None:
         """Test: 設定ファイルが存在しない場合は空のconfig."""
         models = loader_without_config.get_all_models()
@@ -129,7 +128,8 @@ class TestModelSettingsLoader:
         assert "gemini-2.0-flash" in model_ids
 
     def test_get_models_by_provider(
-        self, loader_with_config: ModelSettingsLoader
+        self,
+        loader_with_config: ModelSettingsLoader,
     ) -> None:
         """Test: プロバイダ別モデル取得."""
         claude_models = loader_with_config.get_models_by_provider("claude")
@@ -151,7 +151,8 @@ class TestModelSettingsLoader:
         }
 
     def test_get_settings_categories(
-        self, loader_with_config: ModelSettingsLoader
+        self,
+        loader_with_config: ModelSettingsLoader,
     ) -> None:
         """Test: 設定カテゴリ取得."""
         categories = loader_with_config.get_settings_categories()
@@ -159,7 +160,8 @@ class TestModelSettingsLoader:
         assert "job_generator" in categories
 
     def test_get_settings_by_category(
-        self, loader_with_config: ModelSettingsLoader
+        self,
+        loader_with_config: ModelSettingsLoader,
     ) -> None:
         """Test: カテゴリ別設定取得."""
         chat_settings = loader_with_config.get_settings_by_category("chat")
@@ -184,7 +186,8 @@ class TestModelSettingsLoader:
         assert unknown is None
 
     def test_get_recommended_models(
-        self, loader_with_config: ModelSettingsLoader
+        self,
+        loader_with_config: ModelSettingsLoader,
     ) -> None:
         """Test: カテゴリの推奨モデル取得."""
         recommended = loader_with_config.get_recommended_models("chat")
@@ -269,6 +272,6 @@ class TestYAMLConfigIntegrity:
             for setting in settings:
                 default = setting.get("default")
                 if default:
-                    assert (
-                        default in model_ids
-                    ), f"Default model '{default}' for '{setting['key']}' not found in available models"
+                    assert default in model_ids, (
+                        f"Default model '{default}' for '{setting['key']}' not found in available models"
+                    )
