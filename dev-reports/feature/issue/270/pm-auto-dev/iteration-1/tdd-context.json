@@ -1,0 +1,154 @@
+{
+  "issue_number": 270,
+  "title": "feat: expert_agent_capabilities.yamlにリクエスト/レスポンススキーマを追加",
+  "acceptance_criteria": [
+    "主要API（10件以上）のスキーマが capabilities.yaml に追加されている",
+    "LLMプロンプトでスキーマ情報が参照されている",
+    "インターフェース生成の精度が向上している（手動検証）",
+    "既存のワークフロー生成が正常に動作する",
+    "単体テストカバレッジ90%以上"
+  ],
+  "implementation_tasks": [
+    "Gmail API（search, send）のリクエスト/レスポンススキーマ追加",
+    "Google Drive API（upload, upload_from_url）のスキーマ追加",
+    "TTS API（text_to_speech, text_to_speech_drive, tts_and_upload_drive）のスキーマ追加",
+    "Google Search API のスキーマ追加",
+    "AI Agent API（jsonoutput, mylllm, sample）のスキーマ追加",
+    "ExpertAgentAPI Dataclass にmethod, request_schema, response_schemaフィールド追加",
+    "output_schema → response_schema 自動変換ユーティリティ実装",
+    "スキーマバリデーション実装",
+    "ローダー関数更新（正規化・バリデーション統合）",
+    "task_breakdown.py にスキーマヒント追加",
+    "interface_schema.py にスキーマ参照追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Gmail API スキーマ追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expert_agent_capabilities.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "Google Drive API スキーマ追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expert_agent_capabilities.yaml"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "TTS API スキーマ追加 + output_schema移行",
+      "estimated_hours": 0.5,
+      "deliverables": ["expert_agent_capabilities.yaml"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "Google Search API スキーマ追加",
+      "estimated_hours": 0.33,
+      "deliverables": ["expert_agent_capabilities.yaml"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "AI Agent API スキーマ追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expert_agent_capabilities.yaml"],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ExpertAgentAPI Dataclass拡張",
+      "estimated_hours": 0.5,
+      "deliverables": ["graphai_capabilities.py"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "スキーマ正規化ユーティリティ実装 (SF-01)",
+      "estimated_hours": 0.33,
+      "deliverables": ["graphai_capabilities.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "スキーマバリデーション実装 (SF-02)",
+      "estimated_hours": 0.5,
+      "deliverables": ["graphai_capabilities.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "ローダー関数更新",
+      "estimated_hours": 0.33,
+      "deliverables": ["graphai_capabilities.py"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "task_breakdown.py スキーマヒント追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["task_breakdown.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "interface_schema.py スキーマ参照追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["interface_schema.py"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "単体テスト（Dataclass・ローダー）",
+      "estimated_hours": 0.75,
+      "deliverables": ["tests/unit/test_graphai_capabilities.py"],
+      "dependencies": ["2.4"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "単体テスト（プロンプト生成）",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/unit/test_task_breakdown.py"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "静的解析確認",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["4.1", "4.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/config/expert_agent_capabilities.yaml",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/graphai_capabilities.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+    "expertAgent/tests/unit/test_graphai_capabilities.py",
+    "expertAgent/tests/unit/test_task_breakdown.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "主要API（10件以上）のスキーマがYAMLに追加されている",
+    "output_schema → response_schema マイグレーション完了 (SF-01)",
+    "スキーマバリデーション実装完了 (SF-02)",
+    "単体テストカバレッジ90%以上",
+    "CI/CDグリーン（./scripts/pre-push-check-all.sh パス）"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent",
+  "key_files": {
+    "capabilities_yaml": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/config/expert_agent_capabilities.yaml",
+    "graphai_capabilities": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/graphai_capabilities.py",
+    "task_breakdown": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+    "interface_schema": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py"
+  },
+  "reference_docs": [
+    "expertAgent/docs/API_REFERENCE.md",
+    "dev-reports/feature/issue/270/work-plan.md",
+    "dev-reports/feature/issue/270/requirements.md",
+    "dev-reports/feature/issue/270/design-policy.md"
+  ]
+}

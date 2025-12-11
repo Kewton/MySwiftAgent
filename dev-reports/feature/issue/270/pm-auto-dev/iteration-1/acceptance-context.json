@@ -1,0 +1,55 @@
+{
+  "issue_number": 270,
+  "feature_summary": "expert_agent_capabilities.yamlにリクエスト/レスポンススキーマを追加",
+  "acceptance_criteria": [
+    "主要API（10件以上）のスキーマが capabilities.yaml に追加されている",
+    "LLMプロンプトでスキーマ情報が参照されている",
+    "インターフェース生成の精度が向上している（手動検証）",
+    "既存のワークフロー生成が正常に動作する",
+    "単体テストカバレッジ90%以上"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/aiagent-api/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "YAML読み込み確認",
+        "type": "python",
+        "command": "from aiagent.langgraph.jobTaskGeneratorAgents.utils.graphai_capabilities import get_expert_agent_apis; apis = get_expert_agent_apis(); print(f'Loaded {len(apis)} APIs'); apis_with_schema = [a for a in apis if a.request_schema or a.response_schema]; print(f'APIs with schema: {len(apis_with_schema)}')",
+        "expected_output_contains": ["APIs with schema: 17"]
+      },
+      {
+        "name": "Gmail検索スキーマ確認",
+        "type": "python",
+        "command": "from aiagent.langgraph.jobTaskGeneratorAgents.utils.graphai_capabilities import get_expert_agent_apis; apis = get_expert_agent_apis(); gmail = next((a for a in apis if a.name == 'Gmail検索'), None); print(f'Gmail request_schema keys: {list(gmail.request_schema.keys()) if gmail and gmail.request_schema else None}')",
+        "expected_output_contains": ["properties", "type"]
+      },
+      {
+        "name": "プロンプト生成確認",
+        "type": "python",
+        "command": "from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import _build_expert_agent_capabilities; prompt = _build_expert_agent_capabilities(); print(f'Prompt length: {len(prompt)} chars'); print(f'Contains schema hint: {\"スキーマ\" in prompt or \"request\" in prompt.lower()}')",
+        "expected_output_contains": ["Contains schema hint: True"]
+      },
+      {
+        "name": "ジョブ生成API テスト",
+        "type": "curl",
+        "command": "curl -s -X POST http://localhost:8104/aiagent-api/v1/job-generator -H 'Content-Type: application/json' -d '{\"user_request\": \"最新のメールを5件検索して教えてください\", \"available_capabilities\": [\"Gmail検索\"]}'",
+        "expected_status": 200,
+        "expected_response_contains": ["status", "tasks"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health || echo 'Langfuse not running (optional)'"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_270_acceptance.py",
+  "playwright_test_file": null
+}
