@@ -3,6 +3,7 @@
 Issue #269: LLM model settings management via MyVault.
 """
 
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -199,7 +200,7 @@ class TestHelperFunctions:
     """Test suite for helper functions."""
 
     @pytest.fixture
-    def mock_loader(self, tmp_path: Path) -> None:
+    def mock_loader(self, tmp_path: Path) -> Generator[None, None, None]:
         """Setup mock loader."""
         config_path = tmp_path / "available_models.yaml"
         with open(config_path, "w") as f:
