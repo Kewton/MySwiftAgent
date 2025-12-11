@@ -962,27 +962,6 @@ start_langfuse() {
     return 0
 }
 
-# Stop Langfuse services via docker-compose
-stop_langfuse() {
-    print_service "🛑" "Langfuse" "Stopping LLM observability platform..."
-
-    # Check if Docker is available
-    if ! command -v docker &> /dev/null; then
-        print_info "Langfuse: Docker not available, skipping"
-        rm -f "$LANGFUSE_PID" 2>/dev/null || true
-        return 0
-    fi
-
-    # Stop Langfuse services via individual docker stop commands
-    # Using container names defined in docker-compose.platform.yml
-    docker stop myswiftagent-langfuse-server myswiftagent-langfuse-worker myswiftagent-langfuse-minio myswiftagent-langfuse-redis myswiftagent-langfuse-clickhouse myswiftagent-langfuse-db 2>/dev/null || true
-
-    # Remove PID file
-    rm -f "$LANGFUSE_PID" 2>/dev/null || true
-
-    print_success "Langfuse: Stopped"
-}
-
 # Check Langfuse status
 check_langfuse_status() {
     if ! command -v docker &> /dev/null || ! command -v docker-compose &> /dev/null; then
@@ -1010,8 +989,9 @@ check_langfuse_status() {
 clean_temp_files() {
     print_step "Cleaning temporary files..."
 
-    # Stop all services first
-    stop_langfuse
+    # Stop native services only (Docker containers are NOT touched)
+    # Use 'docker-compose down' or 'make down' to stop Docker services.
+    stop_service "MyAgentDesk" "$MYAGENTDESK_PID" "$MYAGENTDESK_PORT"
     stop_service "CommonUI" "$COMMONUI_PID" "$COMMONUI_PORT"
     stop_service "GraphAiServer" "$GRAPHAISERVER_PID" "$GRAPHAISERVER_PORT"
     stop_service "ExpertAgent" "$EXPERTAGENT_PID" "$EXPERTAGENT_PORT"
@@ -1019,11 +999,8 @@ clean_temp_files() {
     stop_service "MyScheduler" "$MYSCHEDULER_PID" "$MYSCHEDULER_PORT"
     stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
 
-    # Stop Valkey
-    if command -v docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "^myswiftagent-valkey$"; then
-        docker stop myswiftagent-valkey 2>/dev/null || true
-        docker rm myswiftagent-valkey 2>/dev/null || true
-    fi
+    # Note: Docker containers (Valkey, Langfuse) are NOT stopped here.
+    # Use 'docker stop myswiftagent-valkey' or 'docker-compose down' manually if needed.
 
     # Clean logs (disabled to preserve logs for debugging)
     # rm -f "$LOG_DIR"/*.log 2>/dev/null || true
@@ -1034,6 +1011,7 @@ clean_temp_files() {
     # Note: CommonUI/.env is now managed as a project-level .env file (not auto-generated)
 
     print_success "Temporary files cleaned"
+    print_info "Docker services (Valkey, Langfuse) were not touched. Use 'docker-compose down' to stop them."
 }
 
 # Main execution function
@@ -1313,10 +1291,9 @@ main() {
 
         stop)
             print_step "Stopping all services..."
-            # Stop Langfuse first (docker-compose services)
-            if [[ -z "$service_filter" || "$service_filter" == "langfuse" ]]; then
-                stop_langfuse
-            fi
+            # Note: Docker containers (Langfuse, Valkey) are NOT stopped by this command.
+            # Use 'docker-compose down' or 'make down' to stop Docker services.
+            # This ensures dev-start.sh only manages native (non-Docker) services.
             if [[ -z "$service_filter" || "$service_filter" == "myagentdesk" ]]; then
                 stop_service "MyAgentDesk" "$MYAGENTDESK_PID" "$MYAGENTDESK_PORT"
             fi
@@ -1338,17 +1315,10 @@ main() {
             if [[ -z "$service_filter" || "$service_filter" == "jobqueue" ]]; then
                 stop_service "JobQueue" "$JOBQUEUE_PID" "$JOBQUEUE_PORT"
             fi
-            # Stop Valkey
-            if [[ -z "$service_filter" || "$service_filter" == "valkey" ]]; then
-                if command -v docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "^myswiftagent-valkey$"; then
-                    print_service "🛑" "Valkey" "Stopping Docker container..."
-                    docker stop myswiftagent-valkey 2>/dev/null || true
-                    docker rm myswiftagent-valkey 2>/dev/null || true
-                    rm -f "$VALKEY_PID" 2>/dev/null || true
-                    print_success "Valkey: Stopped"
-                fi
-            fi
-            print_success "All services stopped"
+            # Note: Valkey (Docker container) is NOT stopped here.
+            # Use 'docker stop myswiftagent-valkey' manually if needed.
+            print_success "All native services stopped"
+            print_info "Docker services (Valkey, Langfuse) are still running. Use 'docker-compose down' to stop them."
             ;;
 
         restart)
