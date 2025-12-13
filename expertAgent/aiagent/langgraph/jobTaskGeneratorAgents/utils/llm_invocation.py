@@ -5,19 +5,23 @@ This module centralizes the common pattern used by job/task generator nodes:
 - request structured output (Pydantic model)
 - fall back to JSON parsing when the structured call fails
 - capture raw responses for diagnostics while keeping logs concise
+
+Issue #278: Added Langfuse tracing integration via callback_handler parameter.
 """
 
 from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Generic, TypeVar, cast
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, ValidationError
 
+from app.services.langfuse_service import LangfuseService
 from app.utils.json_converter import force_to_json_response, to_parse_json
 from core.secrets import get_model_config
 
@@ -36,12 +40,16 @@ class StructuredLLMError(RuntimeError):
 
 @dataclass(slots=True)
 class StructuredCallResult(Generic[TModel]):
-    """Result returned by ``invoke_structured_llm``."""
+    """Result returned by ``invoke_structured_llm``.
+
+    Issue #278: Added trace_id field for Langfuse tracing integration.
+    """
 
     result: TModel
     recovered_via_json: bool
     raw_text: str | None
     model_name: str
+    trace_id: str | None = field(default=None)
 
 
 def _extract_message_text(message: Any) -> str | None:
@@ -171,8 +179,27 @@ async def invoke_structured_llm(
     validator: Callable[[TModel], TModel] | None = None,
     max_tokens_env_var: str = "JOB_GENERATOR_MAX_TOKENS",
     default_max_tokens: int = 8192,
+    callback_handler: Any | None = None,
 ) -> StructuredCallResult[TModel]:
-    """Invoke a chat model with structured output and JSON fallback."""
+    """Invoke a chat model with structured output and JSON fallback.
+
+    Issue #278: Added callback_handler parameter for Langfuse tracing integration.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys.
+        response_model: Pydantic model class for structured output.
+        context_label: Label for logging and error context.
+        model_env_var: Environment variable name for model configuration.
+        default_model: Default model name if env var not set.
+        validator: Optional validator function for the response.
+        max_tokens_env_var: Env var name for max tokens configuration.
+        default_max_tokens: Default max tokens if env var not set.
+        callback_handler: Optional Langfuse CallbackHandler for tracing.
+
+    Returns:
+        StructuredCallResult with the parsed response, recovery status,
+        model name, and trace_id (if callback_handler provided).
+    """
 
     max_tokens = int(os.getenv(max_tokens_env_var, str(default_max_tokens)))
     # Issue #269: Use get_model_config for MyVault-managed model settings
@@ -187,22 +214,33 @@ async def invoke_structured_llm(
     perf_tracker.start()
     structured_model = model.with_structured_output(response_model)
 
+    # Issue #278: Prepare config with callbacks if handler is provided
+    invoke_config: RunnableConfig | None = None
+    if callback_handler is not None:
+        invoke_config = RunnableConfig(callbacks=[callback_handler])
+
     primary_error: Exception | None = None
     try:
+        # Issue #278: Pass config to ainvoke for Langfuse tracing
         structured_response = cast(
             TModel | None,
-            await structured_model.ainvoke(messages),
+            await structured_model.ainvoke(messages, config=invoke_config),
         )
         if structured_response is None:
             raise ValueError("Structured LLM response is None")
         validated = validator(structured_response) if validator else structured_response
         perf_tracker.end(success=True)
         perf_tracker.log_metrics()
+
+        # Issue #278: Extract trace_id from callback handler
+        trace_id = LangfuseService.extract_trace_id(callback_handler)
+
         return StructuredCallResult(
             result=validated,
             recovered_via_json=False,
             raw_text=None,
             model_name=perf_tracker.model_name,
+            trace_id=trace_id,
         )
     except Exception as err:
         primary_error = err
@@ -225,11 +263,16 @@ async def invoke_structured_llm(
             )
             perf_tracker.end(success=True)
             perf_tracker.log_metrics()
+
+            # Issue #278: Extract trace_id from callback handler (JSON recovery path)
+            trace_id = LangfuseService.extract_trace_id(callback_handler)
+
             return StructuredCallResult(
                 result=validated,
                 recovered_via_json=True,
                 raw_text=raw_text,
                 model_name=perf_tracker.model_name,
+                trace_id=trace_id,
             )
         except Exception as secondary_validation_error:
             recovery_error = secondary_validation_error

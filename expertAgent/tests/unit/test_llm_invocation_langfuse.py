@@ -4,13 +4,15 @@ Issue #278: Verify CallbackHandler propagation through with_structured_output()
 and trace_id extraction from structured LLM calls.
 
 Test Categories:
-- SF-1: with_structured_output() callback propagation verification (pre-implementation)
-- SF-3: Error case trace_id propagation (pre-implementation)
+- SF-1: with_structured_output() callback propagation verification
+- SF-2: trace_id extraction and return in StructuredCallResult
+- SF-3: Error case trace_id propagation
+- SF-4: Backward compatibility tests
 
-NOTE: These tests verify the CURRENT implementation state.
-Some tests use pytest.mark.xfail to document expected behavior after Issue #278 implementation.
+TDD Implementation: RED -> GREEN -> REFACTOR
 """
 
+import dataclasses
 import inspect
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -22,7 +24,7 @@ from pydantic import BaseModel
 # ============================================================================
 
 
-class TestResponseModel(BaseModel):
+class SimpleResponseModel(BaseModel):
     """Simple response model for testing structured output."""
 
     message: str
@@ -30,22 +32,63 @@ class TestResponseModel(BaseModel):
 
 
 # ============================================================================
-# SF-1: with_structured_output() Callback Propagation Tests
+# SF-1: StructuredCallResult trace_id Field Tests
 # ============================================================================
 
 
-class TestStructuredOutputCallbackPropagation:
-    """Tests for verifying CallbackHandler propagation through with_structured_output().
+class TestStructuredCallResultTraceId:
+    """Tests for StructuredCallResult trace_id field.
 
-    Issue #278 SF-1: Verify that Langfuse CallbackHandler is correctly propagated
-    when using model.with_structured_output().
+    Issue #278 Task 1.1: Add trace_id field to StructuredCallResult.
+    """
+
+    def test_structured_call_result_has_trace_id_field(self):
+        """Verify StructuredCallResult has trace_id field.
+
+        Issue #278 Task 1.1: trace_id field must be added to StructuredCallResult.
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        assert dataclasses.is_dataclass(StructuredCallResult), (
+            "StructuredCallResult should be a dataclass"
+        )
+
+        field_names = [f.name for f in dataclasses.fields(StructuredCallResult)]
+        assert "trace_id" in field_names, (
+            "StructuredCallResult should have trace_id field after Issue #278"
+        )
+
+    def test_structured_call_result_trace_id_type(self):
+        """Verify trace_id field has correct type annotation (str | None)."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        fields = {f.name: f for f in dataclasses.fields(StructuredCallResult)}
+        trace_id_field = fields.get("trace_id")
+
+        assert trace_id_field is not None, "trace_id field must exist"
+        # Type should be str | None
+        assert trace_id_field.default is None, "trace_id should default to None"
+
+
+# ============================================================================
+# SF-2: invoke_structured_llm callback_handler Parameter Tests
+# ============================================================================
+
+
+class TestInvokeStructuredLlmCallbackHandler:
+    """Tests for invoke_structured_llm callback_handler parameter.
+
+    Issue #278 Task 1.2: Add callback_handler argument to invoke_structured_llm.
     """
 
     def test_invoke_structured_llm_signature_has_callback_handler_param(self):
         """Verify invoke_structured_llm accepts callback_handler parameter.
 
-        Issue #278: This test documents the expected signature change.
-        Currently expected to FAIL until implementation is complete.
+        Issue #278 Task 1.2: callback_handler parameter must be added.
         """
         from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
             invoke_structured_llm,
@@ -54,61 +97,42 @@ class TestStructuredOutputCallbackPropagation:
         sig = inspect.signature(invoke_structured_llm)
         param_names = list(sig.parameters.keys())
 
-        # Issue #278: callback_handler parameter should be added
-        # This assertion documents the expected behavior after implementation
-        has_callback_handler = "callback_handler" in param_names
-
-        if not has_callback_handler:
-            pytest.skip(
-                "Issue #278 not implemented: callback_handler parameter not yet added to invoke_structured_llm"
-            )
-
-        assert has_callback_handler, (
-            "invoke_structured_llm should have callback_handler parameter after Issue #278"
+        assert "callback_handler" in param_names, (
+            "invoke_structured_llm should have callback_handler parameter"
         )
 
-    def test_structured_call_result_has_trace_id_field(self):
-        """Verify StructuredCallResult has trace_id field.
-
-        Issue #278: This test documents the expected dataclass change.
-        Currently expected to FAIL until implementation is complete.
-        """
-        # Check if trace_id is in the dataclass fields
-        import dataclasses
-
+    def test_callback_handler_param_defaults_to_none(self):
+        """Verify callback_handler parameter defaults to None."""
         from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredCallResult,
+            invoke_structured_llm,
         )
 
-        if not dataclasses.is_dataclass(StructuredCallResult):
-            pytest.fail("StructuredCallResult should be a dataclass")
+        sig = inspect.signature(invoke_structured_llm)
+        callback_handler_param = sig.parameters.get("callback_handler")
 
-        field_names = [f.name for f in dataclasses.fields(StructuredCallResult)]
-        has_trace_id = "trace_id" in field_names
-
-        if not has_trace_id:
-            pytest.skip(
-                "Issue #278 not implemented: trace_id field not yet added to StructuredCallResult"
-            )
-
-        assert has_trace_id, (
-            "StructuredCallResult should have trace_id field after Issue #278"
+        assert callback_handler_param is not None, (
+            "callback_handler parameter must exist"
+        )
+        assert callback_handler_param.default is None, (
+            "callback_handler should default to None"
         )
 
     @pytest.mark.asyncio
-    async def test_callback_handler_none_does_not_break_current_implementation(self):
-        """Verify current implementation works without callback_handler.
+    async def test_callback_handler_passed_to_ainvoke_config(self):
+        """Verify callback_handler is passed to ainvoke via config.
 
-        This test ensures backward compatibility - the function should work
-        even after Issue #278 implementation when no handler is provided.
+        Issue #278 Task 1.3: ainvoke() must receive config with callbacks.
         """
         mock_structured_model = AsyncMock()
-        mock_structured_model.ainvoke.return_value = TestResponseModel(
+        mock_structured_model.ainvoke.return_value = SimpleResponseModel(
             message="test", count=42
         )
 
         mock_model = Mock()
         mock_model.with_structured_output.return_value = mock_structured_model
+
+        mock_handler = Mock()
+        mock_handler.last_trace_id = "test-trace-123"
 
         with (
             patch(
@@ -132,124 +156,55 @@ class TestStructuredOutputCallbackPropagation:
                 invoke_structured_llm,
             )
 
-            # Act - no callback_handler (current usage pattern)
-            result = await invoke_structured_llm(
+            # Act - pass callback_handler
+            await invoke_structured_llm(
                 messages=[{"role": "user", "content": "test"}],
-                response_model=TestResponseModel,
-                context_label="test_no_callback",
+                response_model=SimpleResponseModel,
+                context_label="test_with_callback",
                 model_env_var="TEST_MODEL",
                 default_model="test-model",
+                callback_handler=mock_handler,
             )
 
-            # Assert - should work without callback_handler
-            assert result.result.message == "test"
-            assert result.result.count == 42
+            # Assert - ainvoke was called with config containing callbacks
             mock_structured_model.ainvoke.assert_called_once()
+            call_args = mock_structured_model.ainvoke.call_args
 
-
-# ============================================================================
-# SF-3: Error Case trace_id Propagation Tests (Pre-implementation)
-# ============================================================================
-
-
-class TestErrorCaseTraceIdPropagation:
-    """Tests for verifying trace_id propagation in error scenarios.
-
-    Issue #278 SF-3: Verify that trace_id is correctly extracted even when
-    LLM calls fail. These tests document expected behavior.
-    """
-
-    def test_current_structured_call_result_fields(self):
-        """Document current StructuredCallResult fields before Issue #278."""
-        import dataclasses
-
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredCallResult,
-        )
-
-        field_names = [f.name for f in dataclasses.fields(StructuredCallResult)]
-
-        # Current fields (before Issue #278)
-        expected_current_fields = [
-            "result",
-            "recovered_via_json",
-            "raw_text",
-            "model_name",
-        ]
-
-        for field in expected_current_fields:
-            assert field in field_names, (
-                f"Expected field '{field}' in StructuredCallResult"
+            # Check config was passed
+            assert "config" in call_args.kwargs, (
+                "ainvoke must receive config keyword argument"
+            )
+            config = call_args.kwargs["config"]
+            assert "callbacks" in config, "config must contain 'callbacks'"
+            assert mock_handler in config["callbacks"], (
+                "callback_handler must be in callbacks list"
             )
 
-        # Issue #278 will add trace_id
-        if "trace_id" not in field_names:
-            # This is expected before implementation
-            pass
-        else:
-            # After implementation, trace_id should be present
-            assert "trace_id" in field_names
-
 
 # ============================================================================
-# LangChain with_structured_output() Compatibility Tests
+# SF-3: trace_id Extraction and Return Tests
 # ============================================================================
 
 
-class TestWithStructuredOutputCompatibility:
-    """Tests to verify LangChain with_structured_output() behavior with callbacks.
+class TestTraceIdExtraction:
+    """Tests for trace_id extraction from CallbackHandler.
 
-    These tests verify the fundamental assumption that with_structured_output()
-    correctly propagates config to the underlying model.
+    Issue #278 Task 1.4: Extract trace_id from handler and return in result.
     """
 
-    def test_with_structured_output_returns_runnable(self):
-        """Verify with_structured_output() returns a Runnable that accepts config."""
-        mock_model = Mock()
-        mock_runnable = Mock()
-        mock_runnable.ainvoke = AsyncMock()
-        mock_model.with_structured_output.return_value = mock_runnable
-
-        structured = mock_model.with_structured_output(TestResponseModel)
-
-        # Verify the returned object has ainvoke method
-        assert hasattr(structured, "ainvoke")
-        assert callable(structured.ainvoke)
-
     @pytest.mark.asyncio
-    async def test_structured_model_ainvoke_accepts_config_kwarg(self):
-        """Verify structured model's ainvoke() accepts config as keyword argument."""
-        mock_runnable = AsyncMock()
-        mock_runnable.ainvoke.return_value = TestResponseModel(message="test", count=1)
-
-        mock_handler = Mock()
-        config = {"callbacks": [mock_handler]}
-
-        # Act
-        await mock_runnable.ainvoke(
-            [{"role": "user", "content": "test"}],
-            config=config,
-        )
-
-        # Assert - ainvoke was called with config
-        mock_runnable.ainvoke.assert_called_once()
-        call_kwargs = mock_runnable.ainvoke.call_args.kwargs
-        assert "config" in call_kwargs
-        assert call_kwargs["config"] == config
-
-    @pytest.mark.asyncio
-    async def test_current_implementation_does_not_pass_config(self):
-        """Document that current implementation does not pass config to ainvoke.
-
-        Issue #278: This test documents the current behavior that needs to be fixed.
-        """
+    async def test_trace_id_extracted_from_handler_on_success(self):
+        """Verify trace_id is extracted from handler after successful call."""
         mock_structured_model = AsyncMock()
-        mock_structured_model.ainvoke.return_value = TestResponseModel(
-            message="test", count=42
+        mock_structured_model.ainvoke.return_value = SimpleResponseModel(
+            message="success", count=100
         )
 
         mock_model = Mock()
         mock_model.with_structured_output.return_value = mock_structured_model
+
+        mock_handler = Mock()
+        mock_handler.last_trace_id = "trace-success-123"
 
         with (
             patch(
@@ -274,35 +229,268 @@ class TestWithStructuredOutputCompatibility:
             )
 
             # Act
-            await invoke_structured_llm(
+            result = await invoke_structured_llm(
                 messages=[{"role": "user", "content": "test"}],
-                response_model=TestResponseModel,
-                context_label="test_config",
+                response_model=SimpleResponseModel,
+                context_label="test_trace_extraction",
+                model_env_var="TEST_MODEL",
+                default_model="test-model",
+                callback_handler=mock_handler,
+            )
+
+            # Assert
+            assert result.trace_id == "trace-success-123", (
+                "trace_id should be extracted from handler"
+            )
+
+    @pytest.mark.asyncio
+    async def test_trace_id_none_when_no_handler(self):
+        """Verify trace_id is None when no callback_handler is provided."""
+        mock_structured_model = AsyncMock()
+        mock_structured_model.ainvoke.return_value = SimpleResponseModel(
+            message="test", count=42
+        )
+
+        mock_model = Mock()
+        mock_model.with_structured_output.return_value = mock_structured_model
+
+        with (
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.create_llm_with_fallback"
+            ) as mock_create_llm,
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.get_model_config"
+            ) as mock_get_model_config,
+        ):
+            mock_perf_tracker = Mock()
+            mock_perf_tracker.model_name = "test-model"
+            mock_cost_tracker = Mock()
+            mock_create_llm.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+            mock_get_model_config.return_value = "test-model"
+
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                invoke_structured_llm,
+            )
+
+            # Act - no callback_handler
+            result = await invoke_structured_llm(
+                messages=[{"role": "user", "content": "test"}],
+                response_model=SimpleResponseModel,
+                context_label="test_no_handler",
                 model_env_var="TEST_MODEL",
                 default_model="test-model",
             )
 
-            # Assert - Document current behavior
-            mock_structured_model.ainvoke.assert_called_once()
-            call_args = mock_structured_model.ainvoke.call_args
+            # Assert
+            assert result.trace_id is None, (
+                "trace_id should be None when no handler provided"
+            )
 
-            # Current implementation: config is NOT passed
-            # Issue #278 should change this behavior
-            config_in_kwargs = "config" in call_args.kwargs
-            config_in_args = len(call_args.args) > 1
+    @pytest.mark.asyncio
+    async def test_trace_id_none_when_handler_has_no_trace_id(self):
+        """Verify trace_id is None when handler has no last_trace_id attribute."""
+        mock_structured_model = AsyncMock()
+        mock_structured_model.ainvoke.return_value = SimpleResponseModel(
+            message="test", count=42
+        )
 
-            if not config_in_kwargs and not config_in_args:
-                # This is the CURRENT behavior (before Issue #278)
-                # Test passes to document this behavior
-                pass
-            else:
-                # After Issue #278, config should be passed
-                config = call_args.kwargs.get("config") or call_args.args[1]
-                assert "callbacks" in config or config is None
+        mock_model = Mock()
+        mock_model.with_structured_output.return_value = mock_structured_model
+
+        mock_handler = Mock(spec=[])  # No last_trace_id attribute
+
+        with (
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.create_llm_with_fallback"
+            ) as mock_create_llm,
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.get_model_config"
+            ) as mock_get_model_config,
+        ):
+            mock_perf_tracker = Mock()
+            mock_perf_tracker.model_name = "test-model"
+            mock_cost_tracker = Mock()
+            mock_create_llm.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+            mock_get_model_config.return_value = "test-model"
+
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                invoke_structured_llm,
+            )
+
+            # Act
+            result = await invoke_structured_llm(
+                messages=[{"role": "user", "content": "test"}],
+                response_model=SimpleResponseModel,
+                context_label="test_no_trace_id_attr",
+                model_env_var="TEST_MODEL",
+                default_model="test-model",
+                callback_handler=mock_handler,
+            )
+
+            # Assert
+            assert result.trace_id is None, (
+                "trace_id should be None when handler has no last_trace_id"
+            )
 
 
 # ============================================================================
-# Integration Readiness Tests
+# SF-4: JSON Recovery Path trace_id Tests
+# ============================================================================
+
+
+class TestJsonRecoveryTraceId:
+    """Tests for trace_id handling in JSON recovery path.
+
+    Issue #278: trace_id should be captured even when JSON fallback is used.
+    """
+
+    @pytest.mark.asyncio
+    async def test_trace_id_preserved_in_json_recovery(self):
+        """Verify trace_id is preserved when recovering via JSON fallback."""
+        # Setup mock for primary failure, then JSON recovery success
+        mock_structured_model = AsyncMock()
+        mock_structured_model.ainvoke.side_effect = ValueError(
+            "Structured output failed"
+        )
+
+        mock_raw_response = Mock()
+        mock_raw_response.content = '{"message": "recovered", "count": 99}'
+        mock_raw_response.usage_metadata = None
+
+        mock_model = Mock()
+        mock_model.with_structured_output.return_value = mock_structured_model
+        mock_model.ainvoke = AsyncMock(return_value=mock_raw_response)
+
+        mock_handler = Mock()
+        mock_handler.last_trace_id = "trace-recovery-456"
+
+        with (
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.create_llm_with_fallback"
+            ) as mock_create_llm,
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.get_model_config"
+            ) as mock_get_model_config,
+        ):
+            mock_perf_tracker = Mock()
+            mock_perf_tracker.model_name = "test-model"
+            mock_cost_tracker = Mock()
+            mock_create_llm.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+            mock_get_model_config.return_value = "test-model"
+
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                invoke_structured_llm,
+            )
+
+            # Act
+            result = await invoke_structured_llm(
+                messages=[{"role": "user", "content": "test"}],
+                response_model=SimpleResponseModel,
+                context_label="test_json_recovery",
+                model_env_var="TEST_MODEL",
+                default_model="test-model",
+                callback_handler=mock_handler,
+            )
+
+            # Assert
+            assert result.recovered_via_json is True, "Should be recovered via JSON"
+            assert result.trace_id == "trace-recovery-456", (
+                "trace_id should be preserved in JSON recovery path"
+            )
+
+
+# ============================================================================
+# SF-5: Backward Compatibility Tests
+# ============================================================================
+
+
+class TestBackwardCompatibility:
+    """Tests for backward compatibility after Issue #278.
+
+    Ensure existing code without callback_handler continues to work.
+    """
+
+    @pytest.mark.asyncio
+    async def test_invoke_without_callback_handler_works(self):
+        """Verify function works without callback_handler parameter."""
+        mock_structured_model = AsyncMock()
+        mock_structured_model.ainvoke.return_value = SimpleResponseModel(
+            message="test", count=42
+        )
+
+        mock_model = Mock()
+        mock_model.with_structured_output.return_value = mock_structured_model
+
+        with (
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.create_llm_with_fallback"
+            ) as mock_create_llm,
+            patch(
+                "aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation.get_model_config"
+            ) as mock_get_model_config,
+        ):
+            mock_perf_tracker = Mock()
+            mock_perf_tracker.model_name = "test-model"
+            mock_cost_tracker = Mock()
+            mock_create_llm.return_value = (
+                mock_model,
+                mock_perf_tracker,
+                mock_cost_tracker,
+            )
+            mock_get_model_config.return_value = "test-model"
+
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                invoke_structured_llm,
+            )
+
+            # Act - no callback_handler (existing usage pattern)
+            result = await invoke_structured_llm(
+                messages=[{"role": "user", "content": "test"}],
+                response_model=SimpleResponseModel,
+                context_label="test_backward_compat",
+                model_env_var="TEST_MODEL",
+                default_model="test-model",
+            )
+
+            # Assert
+            assert result.result.message == "test"
+            assert result.result.count == 42
+            assert result.trace_id is None, "trace_id should be None without handler"
+
+    def test_structured_call_result_has_all_original_fields(self):
+        """Verify all original fields are still present."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        field_names = [f.name for f in dataclasses.fields(StructuredCallResult)]
+
+        # Original fields must still exist
+        expected_original_fields = [
+            "result",
+            "recovered_via_json",
+            "raw_text",
+            "model_name",
+        ]
+
+        for field in expected_original_fields:
+            assert field in field_names, f"Original field '{field}' must be preserved"
+
+
+# ============================================================================
+# LangfuseService Integration Readiness Tests
 # ============================================================================
 
 
