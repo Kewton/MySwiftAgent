@@ -577,7 +577,7 @@ class TestRenderInterfaceSchemaExpanderStNone:
 
         original_st = service.st
         try:
-            service.st = None
+            service.st = None  # type: ignore[assignment]
             # Should not raise any errors
             service.render_interface_schema_expander({"id": "test"}, "Title")
         finally:
@@ -589,7 +589,7 @@ class TestRenderInterfaceSchemaExpanderStNone:
 
         original_st = service.st
         try:
-            service.st = None
+            service.st = None  # type: ignore[assignment]
             # Should not raise any errors
             service.render_task_interface_info({"id": "test"})
         finally:
