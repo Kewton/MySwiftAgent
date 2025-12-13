@@ -460,7 +460,7 @@ class TestRenderInterfaceSchemaExpander:
         interface = {
             "id": "if_01ABC",
             "name": "Test Interface",
-            "json_schema": {
+            "input_schema": {
                 "type": "object",
                 "properties": {
                     "field1": {"type": "string", "description": "Field 1"},
@@ -476,7 +476,7 @@ class TestRenderInterfaceSchemaExpander:
         mock_st.expander.return_value.__exit__ = Mock(return_value=False)
 
         # Call function
-        render_interface_schema_expander(interface, "Input Interface")
+        render_interface_schema_expander(interface, "Input Interface", "input_schema")
 
         # Verify expander was created
         mock_st.expander.assert_called_once()
@@ -494,7 +494,7 @@ class TestRenderInterfaceSchemaExpander:
         interface = {
             "id": "if_01ABC",
             "name": "Test Interface",
-            "json_schema": {},
+            "input_schema": {},
         }
 
         mock_expander = MagicMock()
@@ -502,7 +502,7 @@ class TestRenderInterfaceSchemaExpander:
         mock_st.expander.return_value.__exit__ = Mock(return_value=False)
 
         # Call function
-        render_interface_schema_expander(interface, "Test Interface")
+        render_interface_schema_expander(interface, "Test Interface", "input_schema")
 
         # Verify expander was still created
         mock_st.expander.assert_called_once()
@@ -510,11 +510,11 @@ class TestRenderInterfaceSchemaExpander:
         mock_st.info.assert_called_once()
 
     @patch("components.interface_service.st")
-    def test_render_interface_schema_expander_no_json_schema(
+    def test_render_interface_schema_expander_no_schema(
         self,
         mock_st: Mock,
     ) -> None:
-        """Test rendering expander when json_schema is not present."""
+        """Test rendering expander when schema key is not present."""
         from components.interface_service import render_interface_schema_expander
 
         interface = {
@@ -527,7 +527,7 @@ class TestRenderInterfaceSchemaExpander:
         mock_st.expander.return_value.__exit__ = Mock(return_value=False)
 
         # Call function
-        render_interface_schema_expander(interface, "Test Interface")
+        render_interface_schema_expander(interface, "Test Interface", "input_schema")
 
         # Verify expander was created
         mock_st.expander.assert_called_once()
@@ -545,7 +545,7 @@ class TestRenderInterfaceSchemaExpander:
         interface = {
             "id": "if_01ABC",
             "name": "Test Interface",
-            "json_schema": {
+            "input_schema": {
                 "type": "object",
                 "properties": {
                     "field1": {
@@ -562,7 +562,7 @@ class TestRenderInterfaceSchemaExpander:
         mock_st.expander.return_value.__exit__ = Mock(return_value=False)
 
         # Call function
-        render_interface_schema_expander(interface, "Test Interface")
+        render_interface_schema_expander(interface, "Test Interface", "input_schema")
 
         # Verify caption was called for description
         mock_st.caption.assert_called()
