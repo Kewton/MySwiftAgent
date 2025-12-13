@@ -127,7 +127,9 @@ def render_task_interface_info(task: dict[str, Any]) -> None:
         )
         st.write(f"**Input:** {input_name}")
         if input_interface:
-            render_interface_schema_expander(input_interface, "Input Schema")
+            render_interface_schema_expander(
+                input_interface, "Input Schema", schema_key="input_schema",
+            )
 
     with col2:
         output_name = (
@@ -135,24 +137,28 @@ def render_task_interface_info(task: dict[str, Any]) -> None:
         )
         st.write(f"**Output:** {output_name}")
         if output_interface:
-            render_interface_schema_expander(output_interface, "Output Schema")
+            render_interface_schema_expander(
+                output_interface, "Output Schema", schema_key="output_schema",
+            )
 
 
 def render_interface_schema_expander(
     interface: dict[str, Any],
     title: str,
+    schema_key: str = "input_schema",
 ) -> None:
     """Render interface JSON schema in an expander.
 
     Args:
-        interface: Interface data dictionary containing json_schema.
+        interface: Interface data dictionary containing input_schema/output_schema.
         title: Title for the expander.
+        schema_key: Key to use for schema lookup ('input_schema' or 'output_schema').
     """
     if st is None:
         return
 
     interface_name = interface.get("name", "Unknown")
-    json_schema = interface.get("json_schema", {})
+    json_schema = interface.get(schema_key, {})
 
     with st.expander(f"{title}: {interface_name}"):
         if not json_schema:
