@@ -1,0 +1,145 @@
+{
+  "issue_number": 278,
+  "issue_title": "feat(expertAgent): Job/Workflow GeneratorにLangfuseトレース機能を統合",
+  "acceptance_criteria": [
+    "AC1: Job Task GeneratorのLLM呼び出しがLangfuseにトレースされる",
+    "AC2: Workflow GeneratorのLLM呼び出しがLangfuseにトレースされる",
+    "AC3: API応答にlangfuse_trace_idフィールドが含まれる",
+    "AC4: Langfuse無効時も既存機能が正常動作する"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: StructuredCallResult に trace_id フィールド追加",
+    "Task 1.2: invoke_structured_llm に callback_handler 引数追加",
+    "Task 1.3: ainvoke() に config 渡し",
+    "Task 1.4: trace_id 抽出・返却ロジック追加",
+    "Task 1.5: 単体テスト追加",
+    "Task 2.1: JobGeneratorResponse に langfuse_trace_id フィールド追加",
+    "Task 2.2: job_generator_endpoints.py で handler 取得・trace_id 返却",
+    "Task 2.3: Job Generator 結合テスト追加",
+    "Task 3.1: WorkflowGeneratorResponse に langfuse_trace_id フィールド追加",
+    "Task 3.2: workflow_generator_endpoints.py で handler 取得・trace_id 返却",
+    "Task 3.3: Workflow Generator 結合テスト追加",
+    "Task 4.1: API_REFERENCE.md 更新",
+    "Task 4.2: E2Eテスト追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "StructuredCallResult に trace_id フィールド追加",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "invoke_structured_llm に callback_handler 引数追加",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ainvoke() に config 渡し",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "trace_id 抽出・返却ロジック追加",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "単体テスト追加",
+      "target_file": "expertAgent/tests/unit/test_llm_invocation_langfuse.py",
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "JobGeneratorResponse に langfuse_trace_id フィールド追加",
+      "target_file": "expertAgent/app/schemas/job_generator.py",
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "job_generator_endpoints.py で handler 取得・trace_id 返却",
+      "target_file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "Job Generator 結合テスト追加",
+      "target_file": "tests/integration/test_job_generator_langfuse.py",
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "WorkflowGeneratorResponse に langfuse_trace_id フィールド追加",
+      "target_file": "expertAgent/app/schemas/workflow_generator.py",
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "workflow_generator_endpoints.py で handler 取得・trace_id 返却",
+      "target_file": "expertAgent/app/api/v1/workflow_generator_endpoints.py",
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "Workflow Generator 結合テスト追加",
+      "target_file": "tests/integration/test_workflow_generator_langfuse.py",
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "API_REFERENCE.md 更新",
+      "target_file": "expertAgent/docs/API_REFERENCE.md",
+      "dependencies": ["2.3", "3.3"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "E2Eテスト追加",
+      "target_file": "tests/acceptance/test_langfuse_integration.py",
+      "dependencies": ["4.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py (modified)",
+    "expertAgent/app/schemas/job_generator.py (modified)",
+    "expertAgent/app/schemas/workflow_generator.py (modified)",
+    "expertAgent/app/api/v1/job_generator_endpoints.py (modified)",
+    "expertAgent/app/api/v1/workflow_generator_endpoints.py (modified)",
+    "expertAgent/tests/unit/test_llm_invocation_langfuse.py (modified)",
+    "tests/integration/test_job_generator_langfuse.py (new)",
+    "tests/integration/test_workflow_generator_langfuse.py (new)",
+    "expertAgent/docs/API_REFERENCE.md (modified)",
+    "tests/acceptance/test_langfuse_integration.py (new)"
+  ],
+  "definition_of_done": [
+    "すべてのタスク(Task 1.1-4.2)が完了",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "静的解析エラー0件 (Ruff, MyPy)",
+    "既存のテストがすべてパス",
+    "./scripts/pre-push-check-all.sh がパス"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent",
+  "labels": ["enhancement", "feature"],
+  "technical_details": {
+    "affected_files": [
+      "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+      "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_factory.py",
+      "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+      "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "expertAgent/app/api/v1/workflow_generator_endpoints.py"
+    ],
+    "existing_langfuse_service": "expertAgent/app/services/langfuse_service.py",
+    "key_changes": {
+      "StructuredCallResult": "Add trace_id: str | None = None field",
+      "invoke_structured_llm": "Add callback_handler: CallbackHandler | None = None parameter",
+      "ainvoke_config": "Pass config={'callbacks': [handler]} when handler is not None",
+      "trace_id_extraction": "Use LangfuseService.extract_trace_id(handler)",
+      "response_schemas": "Add langfuse_trace_id: str | None field to JobGeneratorResponse and WorkflowGeneratorResponse"
+    }
+  }
+}

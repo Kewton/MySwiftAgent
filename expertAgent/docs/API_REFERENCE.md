@@ -851,6 +851,7 @@ Asynchronously generates Job and Tasks from natural language requirements using 
 - 実現可能性評価と代替案提案
 - 要求緩和提案（Requirement Relaxation Suggestions）
 - リトライ機能付きLangGraphエージェント実行
+- Langfuseトレーシング統合（Issue #278）
 
 #### Request Body
 
@@ -886,9 +887,12 @@ curl -X POST http://localhost:8104/aiagent-api/v1/job-generator \
   "api_extension_proposals": [],
   "requirement_relaxation_suggestions": [],
   "validation_errors": [],
-  "error_message": "Job creation started. Use GET /api/v1/jobs/{job_id}/status to check progress."
+  "error_message": "Job creation started. Use GET /api/v1/jobs/{job_id}/status to check progress.",
+  "langfuse_trace_id": null
 }
 ```
+
+**Note (Issue #278):** When the job completes, `langfuse_trace_id` will contain the Langfuse trace ID if Langfuse is enabled. Use this ID to view the LLM call traces in the Langfuse dashboard.
 
 **Error Response (500 Internal Server Error):**
 
@@ -998,6 +1002,7 @@ Generate GraphAI workflow YAML files from JobMaster or TaskMaster using LangGrap
 - 自己修復ループ（バリデーションエラー時の自動リトライ）
 - ULID/整数ID両対応
 - バッチ処理（Job内の全タスク一括生成）
+- Langfuseトレーシング統合（Issue #278）
 
 #### Request Body
 
@@ -1054,9 +1059,12 @@ curl -X POST http://localhost:8104/aiagent-api/v1/workflow-generator \
   "total_tasks": 3,
   "successful_tasks": 3,
   "failed_tasks": 0,
-  "generation_time_ms": 5432.1
+  "generation_time_ms": 5432.1,
+  "langfuse_trace_id": "trace-abc123-def456"
 }
 ```
+
+**Note (Issue #278):** The `langfuse_trace_id` field contains the Langfuse trace ID if Langfuse is enabled. Use this ID to view the LLM call traces in the Langfuse dashboard. The field is `null` when Langfuse is disabled.
 
 **Partial Success Response (200 OK):**
 
@@ -1078,7 +1086,8 @@ curl -X POST http://localhost:8104/aiagent-api/v1/workflow-generator \
   "total_tasks": 2,
   "successful_tasks": 1,
   "failed_tasks": 1,
-  "generation_time_ms": 8234.5
+  "generation_time_ms": 8234.5,
+  "langfuse_trace_id": "trace-xyz789"
 }
 ```
 

@@ -152,13 +152,17 @@ async def generate_workflow(
     task_master_id: str | int,
     task_data: dict,
     max_retry: int = 3,
+    callback_handler: Any | None = None,
 ) -> WorkflowGeneratorState:
     """Generate GraphAI workflow YAML from TaskMaster metadata.
+
+    Issue #278: Added callback_handler parameter for Langfuse tracing integration.
 
     Args:
         task_master_id: TaskMaster ID (ULID string or int)
         task_data: TaskMaster metadata with interfaces
         max_retry: Maximum retry count for self-repair (default: 3)
+        callback_handler: Optional Langfuse CallbackHandler for tracing
 
     Returns:
         Final state with generated workflow or error information
@@ -172,7 +176,15 @@ async def generate_workflow(
 
     # Create and run workflow graph
     graph = create_workflow_generator_graph()
-    final_state_raw = await graph.ainvoke(initial_state)
+
+    # Issue #278: Build config with callbacks if handler is provided
+    config: dict[str, Any] = {}
+    if callback_handler is not None:
+        config["callbacks"] = [callback_handler]
+
+    final_state_raw = await graph.ainvoke(
+        initial_state, config=config if config else None
+    )
     final_state: WorkflowGeneratorState = final_state_raw  # type: ignore[assignment]
 
     logger.info(f"Workflow generation completed: status={final_state['status']}")

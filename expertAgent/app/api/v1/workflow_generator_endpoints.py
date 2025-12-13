@@ -1,5 +1,9 @@
-"""API endpoints for GraphAI Workflow Generator."""
+"""API endpoints for GraphAI Workflow Generator.
 
+Issue #278: Added Langfuse tracing integration for LLM observability.
+"""
+
+import logging
 import time
 from typing import Any
 
@@ -19,6 +23,9 @@ from app.schemas.workflow_generator import (
     WorkflowGeneratorResponse,
     WorkflowResult,
 )
+from app.services.langfuse_service import LangfuseService, langfuse_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -35,6 +42,8 @@ async def generate_workflow(
 ) -> WorkflowGeneratorResponse:
     """Generate GraphAI workflow YAML files.
 
+    Issue #278: Added Langfuse tracing integration for LLM observability.
+
     Args:
         request: WorkflowGeneratorRequest with job_master_id or task_master_id
 
@@ -45,6 +54,16 @@ async def generate_workflow(
         HTTPException: If JobMaster/TaskMaster not found or API error occurs
     """
     start_time = time.time()
+
+    # Issue #278: Create a session ID for Langfuse tracing
+    session_id = str(request.job_master_id or request.task_master_id)
+
+    # Issue #278: Get Langfuse callback handler for tracing
+    langfuse_handler = langfuse_service.get_callback_handler(
+        trace_name="workflow_generation",
+        session_id=session_id,
+        tags=["workflow_generator"],
+    )
 
     try:
         # Initialize TaskDataFetcher
@@ -84,11 +103,12 @@ async def generate_workflow(
             # Get task_master_id (ULID string or int)
             task_master_id_value = task_data["task_master_id"]
 
-            # Generate workflow using LangGraph Agent
+            # Issue #278: Generate workflow using LangGraph Agent with Langfuse handler
             final_state = await generate_workflow_with_agent(
                 task_master_id=task_master_id_value,
                 task_data=task_data,
                 max_retry=3,
+                callback_handler=langfuse_handler,
             )
 
             # Extract workflow result from final state
@@ -139,6 +159,15 @@ async def generate_workflow(
         # Calculate generation time
         generation_time_ms = (time.time() - start_time) * 1000
 
+        # Issue #278: Extract trace_id from Langfuse handler
+        trace_id = LangfuseService.extract_trace_id(langfuse_handler)
+        if trace_id:
+            logger.info(f"Workflow generation Langfuse trace_id: {trace_id}")
+
+        # Issue #278: Flush Langfuse traces to ensure they're sent
+        if langfuse_handler is not None:
+            langfuse_service.flush()
+
         return WorkflowGeneratorResponse(
             status=overall_status,
             workflows=workflows,
@@ -146,9 +175,13 @@ async def generate_workflow(
             successful_tasks=successful_tasks,
             failed_tasks=failed_tasks,
             generation_time_ms=generation_time_ms,
+            langfuse_trace_id=trace_id,  # Issue #278
         )
 
     except JobqueueAPIError as e:
+        # Issue #278: Flush traces even on failure
+        if langfuse_handler is not None:
+            langfuse_service.flush()
         # Handle JobqueueAPI errors (404, 500, etc.)
         if e.status_code == 404:
             raise HTTPException(
@@ -161,6 +194,9 @@ async def generate_workflow(
                 detail=f"Jobqueue API error: {e.message}",
             ) from e
     except Exception as e:
+        # Issue #278: Flush traces even on failure
+        if langfuse_handler is not None:
+            langfuse_service.flush()
         # Handle unexpected errors
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
