@@ -6,6 +6,7 @@ from the JobQueue API.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -177,6 +178,6 @@ def render_interface_schema_expander(
         # Display raw JSON schema
         st.markdown("**Raw JSON Schema:**")
         st.code(
-            __import__("json").dumps(json_schema, indent=2, ensure_ascii=False),
+            json.dumps(json_schema, indent=2, ensure_ascii=False),
             language="json",
         )
