@@ -8,6 +8,10 @@ import pandas as pd  # type: ignore[import-untyped]
 import streamlit as st
 
 from components.http_client import HTTPClient
+from components.interface_service import (
+    get_interface_name,
+    render_task_interface_info,
+)
 from components.notifications import NotificationManager
 from components.sidebar import SidebarManager
 from core.config import config
@@ -32,6 +36,8 @@ def initialize_session_state() -> None:
         st.session_state.available_task_masters = []
     if "validation_report" not in st.session_state:
         st.session_state.validation_report = None
+    if "interface_cache" not in st.session_state:
+        st.session_state.interface_cache = {}
 
 
 def load_job_masters() -> None:
@@ -222,13 +228,18 @@ def render_workflow_tasks() -> None:
     # Prepare DataFrame
     task_data = []
     for task in tasks:
+        input_interface_id = task.get("input_interface_id")
+        output_interface_id = task.get("output_interface_id")
+
         task_data.append(
             {
                 "Order": task.get("order", 0),
                 "Task Name": task.get("task_name", ""),
                 "Task ID": task.get("task_master_id", "")[:16] + "...",
-                "Required": "✓" if task.get("is_required") else "✗",
-                "Retry on Failure": "✓" if task.get("retry_on_failure") else "✗",
+                "Input Interface": get_interface_name(input_interface_id),
+                "Output Interface": get_interface_name(output_interface_id),
+                "Required": "Y" if task.get("is_required") else "N",
+                "Retry": "Y" if task.get("retry_on_failure") else "N",
             },
         )
 
@@ -241,10 +252,12 @@ def render_workflow_tasks() -> None:
         hide_index=True,
         column_config={
             "Order": st.column_config.NumberColumn("Order", width="small"),
-            "Task Name": st.column_config.TextColumn("Task Name", width="large"),
-            "Task ID": st.column_config.TextColumn("Task ID", width="medium"),
-            "Required": st.column_config.TextColumn("Required", width="small"),
-            "Retry on Failure": st.column_config.TextColumn("Retry", width="small"),
+            "Task Name": st.column_config.TextColumn("Task Name", width="medium"),
+            "Task ID": st.column_config.TextColumn("Task ID", width="small"),
+            "Input Interface": st.column_config.TextColumn("Input", width="medium"),
+            "Output Interface": st.column_config.TextColumn("Output", width="medium"),
+            "Required": st.column_config.TextColumn("Req", width="small"),
+            "Retry": st.column_config.TextColumn("Retry", width="small"),
         },
     )
 
@@ -370,8 +383,13 @@ def render_add_task_panel() -> None:
             f"**Description**: {task_detail.get('description', 'No description')}",
         )
 
+        # Display interface information for the selected task
+        st.divider()
+        render_task_interface_info(task_detail)
+
         # Add button
-        if st.button("➕ Add to Workflow", key="add_task_btn", width="stretch"):
+        st.divider()
+        if st.button("Add to Workflow", key="add_task_btn", width="stretch"):
             # Add at the end of workflow
             next_order = len(st.session_state.workflow_tasks)
             if add_task_to_workflow(
