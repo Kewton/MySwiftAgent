@@ -16,6 +16,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents import (
 )
 from app.schemas.job_generator import JobGeneratorRequest, JobGeneratorResponse
 from app.services.job_creation_state import job_state_manager
+from app.services.langfuse_service import LangfuseService, langfuse_service
 from core.secrets import secrets_manager
 
 logger = logging.getLogger(__name__)
@@ -161,12 +162,20 @@ async def generate_job_and_tasks(
         # Create job creation tracking entry
         await job_state_manager.create_job_async(job_id)
 
+        # Issue #278: Get Langfuse callback handler for tracing
+        langfuse_handler = langfuse_service.get_callback_handler(
+            trace_name="job_task_generation",
+            session_id=job_id,
+            tags=["job_generator", "async"],
+        )
+
         # Start background job creation
         background_tasks.add_task(
             _create_job_in_background,
             job_id=job_id,
             user_requirement=request.user_requirement,
             max_retry=request.max_retry,
+            langfuse_handler=langfuse_handler,
         )
 
         # Return immediately with job_id
@@ -196,13 +205,17 @@ async def _create_job_in_background(
     job_id: str,
     user_requirement: str,
     max_retry: int,
+    langfuse_handler: Any = None,
 ) -> None:
     """Background task for job creation.
+
+    Issue #278: Added langfuse_handler parameter for tracing integration.
 
     Args:
         job_id: Unique job ID
         user_requirement: User requirement text
         max_retry: Maximum retry count
+        langfuse_handler: Optional Langfuse CallbackHandler for tracing
     """
     logger.info(f"[BG:{job_id}] Starting background job creation")
 
@@ -223,10 +236,13 @@ async def _create_job_in_background(
         await job_state_manager.update_progress_async(job_id, 20)
 
         logger.info(f"[BG:{job_id}] Invoking LangGraph agent")
+        # Issue #278: Build config with callbacks if handler is provided
+        config: dict[str, Any] = {"recursion_limit": 100}
+        if langfuse_handler is not None:
+            config["callbacks"] = [langfuse_handler]
+
         # Phase 8: Set recursion_limit to 100 (increased due to multiple LLM calls and evaluations)
-        final_state = await agent.ainvoke(
-            initial_state, config={"recursion_limit": 100}
-        )
+        final_state = await agent.ainvoke(initial_state, config=config)
 
         # Update progress: 90% - Agent execution completed
         await job_state_manager.update_progress_async(job_id, 90)
@@ -234,8 +250,17 @@ async def _create_job_in_background(
         logger.info(f"[BG:{job_id}] LangGraph agent execution completed")
         logger.debug(f"[BG:{job_id}] Final state keys: {final_state.keys()}")
 
+        # Issue #278: Extract trace_id from Langfuse handler
+        trace_id = LangfuseService.extract_trace_id(langfuse_handler)
+        if trace_id:
+            logger.info(f"[BG:{job_id}] Langfuse trace_id: {trace_id}")
+
         # Extract results from final state
-        response = _build_response_from_state(final_state)
+        response = _build_response_from_state(final_state, langfuse_trace_id=trace_id)
+
+        # Issue #278: Flush Langfuse traces to ensure they're sent
+        if langfuse_handler is not None:
+            langfuse_service.flush()
 
         # Update progress: 100% - Completed
         await job_state_manager.mark_completed_async(
@@ -248,17 +273,26 @@ async def _create_job_in_background(
 
     except Exception as e:
         logger.error(f"[BG:{job_id}] Job creation failed: {e}", exc_info=True)
+        # Issue #278: Flush traces even on failure
+        if langfuse_handler is not None:
+            langfuse_service.flush()
         await job_state_manager.mark_failed_async(
             job_id=job_id,
             error_message=f"Job creation failed: {str(e)}",
         )
 
 
-def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
+def _build_response_from_state(
+    state: dict[str, Any],
+    langfuse_trace_id: str | None = None,
+) -> JobGeneratorResponse:
     """Build JobGeneratorResponse from final LangGraph state.
+
+    Issue #278: Added langfuse_trace_id parameter for tracing integration.
 
     Args:
         state: Final state from LangGraph agent execution
+        langfuse_trace_id: Optional Langfuse trace ID for observability
 
     Returns:
         JobGeneratorResponse with extracted information
@@ -396,6 +430,7 @@ def _build_response_from_state(state: dict[str, Any]) -> JobGeneratorResponse:
         requirement_relaxation_suggestions=requirement_relaxation_suggestions,
         validation_errors=validation_errors,
         error_message=error_message,
+        langfuse_trace_id=langfuse_trace_id,  # Issue #278
     )
 
 

@@ -1,0 +1,49 @@
+{
+  "issue_number": 278,
+  "feature_summary": "Job/Workflow GeneratorにLangfuseトレース機能を統合",
+  "acceptance_criteria": [
+    "AC1: Job Task GeneratorのLLM呼び出しがLangfuseにトレースされる",
+    "AC2: Workflow GeneratorのLLM呼び出しがLangfuseにトレースされる",
+    "AC3: API応答にlangfuse_trace_idフィールドが含まれる",
+    "AC4: Langfuse無効時も既存機能が正常動作する"
+  ],
+  "labels": ["enhancement", "feature"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "langfuse"],
+  "external_dependencies": ["LLM API (OpenAI/Anthropic)", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "langfuse", "url": "http://localhost:3001/api/public/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "Job Generator API - 正常系（レスポンスにlangfuse_trace_id含む）",
+        "command": "curl -s -X POST http://localhost:8104/api/v1/job-generator/generate -H 'Content-Type: application/json' -d '{\"job_request\": \"テスト用タスク生成\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["langfuse_trace_id"]
+      },
+      {
+        "name": "Workflow Generator API - 正常系（レスポンスにlangfuse_trace_id含む）",
+        "command": "curl -s -X POST http://localhost:8104/api/v1/workflow-generator/generate -H 'Content-Type: application/json' -d '{\"task_description\": \"テスト用ワークフロー生成\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["langfuse_trace_id"]
+      },
+      {
+        "name": "OpenAPI Schema確認 - langfuse_trace_idフィールド存在",
+        "command": "curl -s http://localhost:8104/openapi.json | jq '.components.schemas.JobGeneratorResponse.properties.langfuse_trace_id'",
+        "expected_status": 200,
+        "expected_response_contains": ["type", "string"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse Health", "command": "curl -sf http://localhost:3001/api/public/health || echo 'Langfuse not running'"},
+      {"name": "Valkey/Redis", "command": "docker exec myswiftagent-valkey redis-cli PING 2>/dev/null || echo 'Valkey not running'"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_langfuse_integration.py",
+  "playwright_test_file": null
+}

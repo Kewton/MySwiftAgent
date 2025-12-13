@@ -1,0 +1,28 @@
+{
+  "issue_number": 278,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/llm_invocation.py",
+    "expertAgent/app/api/v1/job_generator_endpoints.py",
+    "expertAgent/app/api/v1/workflow_generator_endpoints.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90,
+    "complexity_score": "unknown"
+  },
+  "design_patterns_to_apply": [
+    "Dependency Injection (callback_handler parameter)",
+    "Null Object Pattern (handler can be None)"
+  ],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "重複コードの削減",
+    "型アノテーションの一貫性確保",
+    "docstringの追加（必要な箇所のみ）"
+  ],
+  "constraints": [
+    "既存のテストがすべてパスすること",
+    "後方互換性を維持すること",
+    "静的解析エラー0件を維持すること"
+  ]
+}
