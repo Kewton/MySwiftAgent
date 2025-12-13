@@ -106,6 +106,8 @@ class WorkflowResult(BaseModel):
 class WorkflowGeneratorResponse(BaseModel):
     """Response schema for GraphAI Workflow Generator API.
 
+    Issue #278: Added langfuse_trace_id field for LLM observability.
+
     Attributes:
         status: Overall status ("success", "failed", "partial_success")
         workflows: List of workflow generation results
@@ -114,6 +116,7 @@ class WorkflowGeneratorResponse(BaseModel):
         failed_tasks: Number of failed workflow generations
         generation_time_ms: Total generation time in milliseconds
         error_message: Error message (on failure)
+        langfuse_trace_id: Langfuse trace ID for debugging (Issue #278)
     """
 
     status: str = Field(
@@ -148,4 +151,11 @@ class WorkflowGeneratorResponse(BaseModel):
     error_message: str | None = Field(
         default=None,
         description="Error message (on overall failure)",
+    )
+
+    # Issue #278: Langfuse tracing
+    langfuse_trace_id: str | None = Field(
+        default=None,
+        description="Langfuse trace ID for LLM observability and debugging",
+        examples=["trace-abc123-def456"],
     )

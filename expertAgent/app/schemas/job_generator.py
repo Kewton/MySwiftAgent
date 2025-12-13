@@ -46,6 +46,8 @@ class JobGeneratorRequest(BaseModel):
 class JobGeneratorResponse(BaseModel):
     """Response schema for Job/Task Auto-Generation API.
 
+    Issue #278: Added langfuse_trace_id field for LLM observability.
+
     Attributes:
         status: Status of job generation ("success", "failed", "partial_success")
         job_id: Created Job ID (only on success)
@@ -57,6 +59,7 @@ class JobGeneratorResponse(BaseModel):
         api_extension_proposals: List of API extension proposals
         validation_errors: List of validation errors
         error_message: Error message (on failure)
+        langfuse_trace_id: Langfuse trace ID for debugging (Issue #278)
     """
 
     status: str = Field(
@@ -115,4 +118,11 @@ class JobGeneratorResponse(BaseModel):
     error_message: str | None = Field(
         default=None,
         description="Error message (on failure)",
+    )
+
+    # Issue #278: Langfuse tracing
+    langfuse_trace_id: str | None = Field(
+        default=None,
+        description="Langfuse trace ID for LLM observability and debugging",
+        examples=["trace-abc123-def456"],
     )

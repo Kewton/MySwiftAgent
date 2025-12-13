@@ -33,7 +33,7 @@ class TestGetInterfaceInfo:
         expected_interface = {
             "id": "if_01ABC",
             "name": "Test Interface",
-            "json_schema": {"type": "object", "properties": {}},
+            "input_schema": {"type": "object", "properties": {}},
         }
         mock_client.get.return_value = expected_interface
 
@@ -140,7 +140,7 @@ class TestGetCachedInterface:
         cached_interface = {
             "id": "if_01ABC",
             "name": "Cached Interface",
-            "json_schema": {"type": "object"},
+            "input_schema": {"type": "object"},
         }
         mock_st.session_state = MagicMock()
         mock_st.session_state.interface_cache = {"if_01ABC": cached_interface}
@@ -168,7 +168,7 @@ class TestGetCachedInterface:
         fetched_interface = {
             "id": "if_01XYZ",
             "name": "Fetched Interface",
-            "json_schema": {"type": "object"},
+            "input_schema": {"type": "object"},
         }
         mock_get_interface_info.return_value = fetched_interface
 
