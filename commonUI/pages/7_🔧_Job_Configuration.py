@@ -4,6 +4,8 @@ Job Configuration Page
 Streamlit page for configuring and managing JobMaster task workflows.
 """
 
+from typing import Any
+
 import pandas as pd  # type: ignore[import-untyped]
 import streamlit as st
 
@@ -38,6 +40,8 @@ def initialize_session_state() -> None:
         st.session_state.validation_report = None
     if "interface_cache" not in st.session_state:
         st.session_state.interface_cache = {}
+    if "selected_workflow_task_id" not in st.session_state:
+        st.session_state.selected_workflow_task_id = None
 
 
 def load_job_masters() -> None:
@@ -213,6 +217,22 @@ def render_job_master_selector() -> None:
             st.rerun()
 
 
+def get_task_master_by_id(task_master_id: str) -> dict[str, Any] | None:
+    """Get TaskMaster detail from available_task_masters by ID.
+
+    Args:
+        task_master_id: The task master ID to look up.
+
+    Returns:
+        TaskMaster dict if found, None otherwise.
+    """
+    for task_master in st.session_state.available_task_masters:
+        if task_master.get("id") == task_master_id:
+            result: dict[str, Any] = task_master
+            return result
+    return None
+
+
 def render_workflow_tasks() -> None:
     """Render workflow tasks list."""
     if not st.session_state.selected_workflow_master_id:
@@ -260,6 +280,40 @@ def render_workflow_tasks() -> None:
             "Retry": st.column_config.TextColumn("Retry", width="small"),
         },
     )
+
+    # Task Details section
+    st.divider()
+    st.caption("🔍 Task Details")
+
+    task_options = {f"{t['order']}: {t['task_name']}": t for t in tasks}
+    selected_task_option = st.selectbox(
+        "Select task to view interface details",
+        options=["Select a task...", *task_options.keys()],
+        key="workflow_task_detail_selector",
+    )
+
+    if selected_task_option and selected_task_option != "Select a task...":
+        selected_task = task_options[selected_task_option]
+        task_master_id = selected_task.get("task_master_id")
+
+        # Get TaskMaster detail to access interface IDs
+        task_master = get_task_master_by_id(task_master_id)
+        if task_master:
+            st.caption(
+                f"**Description**: {task_master.get('description', 'No description')}",
+            )
+            render_task_interface_info(task_master)
+        else:
+            # Fallback: use workflow task data directly
+            st.caption(
+                f"**Task ID**: {task_master_id}",
+            )
+            # Create a minimal task object for render_task_interface_info
+            task_with_interface = {
+                "input_interface_id": selected_task.get("input_interface_id"),
+                "output_interface_id": selected_task.get("output_interface_id"),
+            }
+            render_task_interface_info(task_with_interface)
 
     # Task management buttons
     st.divider()
