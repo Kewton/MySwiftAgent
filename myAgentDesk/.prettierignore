@@ -1,11 +1,15 @@
-.DS_Store
-node_modules
-/build
-/.svelte-kit
-/package
-.env
-.env.*
-!.env.example
-pnpm-lock.yaml
+# Package managers
 package-lock.json
+pnpm-lock.yaml
 yarn.lock
+
+# Build outputs
+build/
+.svelte-kit/
+dist/
+
+# Coverage
+coverage/
+
+# Node modules
+node_modules/

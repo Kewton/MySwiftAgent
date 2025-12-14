@@ -1,50 +1,26 @@
-# Node.js
-node_modules
-npm-debug.log
-yarn-error.log
-package-lock.json
-yarn.lock
+# Dependencies
+node_modules/
 
-# SvelteKit
-.svelte-kit
-build
+# Build outputs
+build/
+.svelte-kit/
 
-# Development
-.vscode
-.idea
-*.swp
-*.swo
-*~
+# Test outputs
+coverage/
+test-results/
+playwright-report/
 
-# Testing
-coverage
-*.test.ts
-*.test.js
-*.spec.ts
-*.spec.js
-tests
-
-# Git
-.git
-.gitignore
-.gitattributes
-
-# CI/CD
-.github
-
-# Documentation
-README.md
-*.md
-!package.json
-
-# Environment
+# Development files
+*.log
 .env
 .env.local
 .env.*.local
 
-# Logs
-logs
-*.log
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # OS
 .DS_Store

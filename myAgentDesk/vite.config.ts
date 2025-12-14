@@ -1,28 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [sveltekit()],
-	test: {
-		include: ['src/**/*.{test,spec}.{js,ts}']
-	},
-	server: {
-		port: 5173,
-		proxy: {
-			// Cloudflare API proxy (for future Phase 2)
-			'/api': {
-				target: process.env.CLOUDFLARE_API_URL || 'http://localhost:8787',
-				changeOrigin: true,
-				rewrite: (path) => path.replace(/^\/api/, '')
-			},
-			// expertAgent API proxy (worktree-aware)
-			'/aiagent-api': {
-				target: process.env.EXPERT_AGENT_URL || 'http://localhost:8004',
-				changeOrigin: true
-			}
-		}
-	},
-	preview: {
-		port: 8000
-	}
+	plugins: [sveltekit()]
 });
