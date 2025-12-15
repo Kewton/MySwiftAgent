@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pattern B: Dark Mode - myAgentDesk Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: {
+              50: '#fafafa',
+              100: '#f4f4f5',
+              200: '#e4e4e7',
+              300: '#d4d4d8',
+              400: '#a1a1aa',
+              500: '#71717a',
+              600: '#52525b',
+              700: '#3f3f46',
+              800: '#27272a',
+              850: '#1f1f23',
+              900: '#18181b',
+              950: '#09090b',
+            },
+            accent: {
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .scrollbar-dark::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-dark::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-dark::-webkit-scrollbar-thumb { background-color: #3f3f46; border-radius: 3px; }
+    .scrollbar-dark::-webkit-scrollbar-thumb:hover { background-color: #52525b; }
+  </style>
+</head>
+<body class="bg-dark-950 text-dark-100 antialiased">
+  <!-- Header -->
+  <header class="bg-dark-900 border-b border-dark-800 sticky top-0 z-50">
+    <div class="max-w-full mx-auto px-4">
+      <div class="flex items-center justify-between h-14">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-accent-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="text-lg font-bold text-white">myAgentDesk</span>
+        </div>
+        <!-- Global Nav -->
+        <nav class="flex items-center space-x-4">
+          <a href="#" class="text-sm font-medium text-dark-400 hover:text-white transition-colors">Projects</a>
+          <a href="#" class="text-sm font-medium text-dark-400 hover:text-white transition-colors">Settings</a>
+          <div class="w-8 h-8 bg-dark-700 rounded-full"></div>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex h-[calc(100vh-56px)]">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-dark-900 border-r border-dark-800 flex flex-col">
+      <!-- Project Selector -->
+      <div class="p-4 border-b border-dark-800">
+        <label class="text-xs font-medium text-dark-500 uppercase tracking-wide">Project</label>
+        <select class="mt-1 w-full px-3 py-2 bg-dark-850 border border-dark-700 rounded-lg text-sm text-dark-100 focus:ring-2 focus:ring-accent-500 focus:border-accent-500">
+          <option>Default Project</option>
+          <option>Project Alpha</option>
+          <option>Project Beta</option>
+        </select>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-dark">
+        <p class="text-xs font-medium text-dark-500 uppercase tracking-wide mb-2">Navigation</p>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5 mr-3 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          Overview
+        </a>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-white bg-dark-800 rounded-lg">
+          <svg class="w-5 h-5 mr-3 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+          Workbenches
+        </a>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5 mr-3 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          All Runs
+        </a>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5 mr-3 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Schedules
+        </a>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5 mr-3 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+          Vault Settings
+        </a>
+
+        <p class="text-xs font-medium text-dark-500 uppercase tracking-wide mt-6 mb-2">Workbenches</p>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full mr-3"></span>
+          Email Summarizer
+        </a>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <span class="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
+          Report Generator
+        </a>
+        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-dark-300 rounded-lg hover:bg-dark-800 hover:text-white transition-colors">
+          <span class="w-2 h-2 bg-dark-600 rounded-full mr-3"></span>
+          Data Pipeline
+        </a>
+      </nav>
+
+      <!-- New Workbench Button -->
+      <div class="p-4 border-t border-dark-800">
+        <button class="w-full px-4 py-2 bg-accent-600 text-white text-sm font-medium rounded-lg hover:bg-accent-500 transition-colors flex items-center justify-center">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Workbench
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <!-- Breadcrumb -->
+      <div class="px-6 py-3 bg-dark-900 border-b border-dark-800">
+        <nav class="flex items-center space-x-2 text-sm">
+          <a href="#" class="text-dark-500 hover:text-dark-300">Projects</a>
+          <span class="text-dark-700">/</span>
+          <a href="#" class="text-dark-500 hover:text-dark-300">Default Project</a>
+          <span class="text-dark-700">/</span>
+          <a href="#" class="text-dark-500 hover:text-dark-300">Workbenches</a>
+          <span class="text-dark-700">/</span>
+          <span class="text-white font-medium">Email Summarizer</span>
+        </nav>
+      </div>
+
+      <!-- Workbench Header -->
+      <div class="px-6 py-4 bg-dark-900 border-b border-dark-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-semibold text-white">Email Summarizer</h1>
+            <p class="text-sm text-dark-400 mt-1">Gmailの未読メールを要約してSlackに投稿</p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/50 text-emerald-400 border border-emerald-800">
+              <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
+              Active
+            </span>
+            <button class="px-3 py-1.5 text-sm font-medium text-dark-300 bg-dark-800 border border-dark-700 rounded-lg hover:bg-dark-700 hover:text-white transition-colors">
+              Edit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="px-6 bg-dark-900 border-b border-dark-800">
+        <nav class="flex space-x-6">
+          <a href="#" class="px-1 py-3 text-sm font-medium text-dark-500 border-b-2 border-transparent hover:text-dark-300 hover:border-dark-600 transition-colors">Requirements</a>
+          <a href="#" class="px-1 py-3 text-sm font-medium text-dark-500 border-b-2 border-transparent hover:text-dark-300 hover:border-dark-600 transition-colors">Generate</a>
+          <a href="#" class="px-1 py-3 text-sm font-medium text-accent-400 border-b-2 border-accent-500">Review</a>
+          <a href="#" class="px-1 py-3 text-sm font-medium text-dark-500 border-b-2 border-transparent hover:text-dark-300 hover:border-dark-600 transition-colors">Runs</a>
+          <a href="#" class="px-1 py-3 text-sm font-medium text-dark-500 border-b-2 border-transparent hover:text-dark-300 hover:border-dark-600 transition-colors">Analyze</a>
+          <a href="#" class="px-1 py-3 text-sm font-medium text-dark-500 border-b-2 border-transparent hover:text-dark-300 hover:border-dark-600 transition-colors">Improve</a>
+          <a href="#" class="px-1 py-3 text-sm font-medium text-dark-500 border-b-2 border-transparent hover:text-dark-300 hover:border-dark-600 transition-colors">Schedule</a>
+        </nav>
+      </div>
+
+      <!-- Content Area -->
+      <div class="flex-1 overflow-y-auto p-6 scrollbar-dark bg-dark-950">
+        <!-- JobVersion Cards -->
+        <div class="space-y-4">
+          <!-- Active Version -->
+          <div class="bg-dark-900 border border-accent-800/50 rounded-lg overflow-hidden">
+            <div class="px-4 py-3 bg-accent-900/20 border-b border-accent-800/30 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-900/50 text-accent-300 border border-accent-700">v3</span>
+                <span class="text-sm font-medium text-white">Latest Version</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/50 text-emerald-400 border border-emerald-800">Active</span>
+              </div>
+              <span class="text-xs text-dark-500">Generated 2 hours ago</span>
+            </div>
+            <div class="p-4">
+              <h4 class="text-sm font-medium text-dark-300 mb-2">Task Breakdown</h4>
+              <div class="space-y-2">
+                <div class="flex items-center p-3 bg-dark-850 rounded-lg border border-dark-800">
+                  <span class="w-6 h-6 bg-accent-900/50 text-accent-400 border border-accent-700 rounded-full text-xs flex items-center justify-center mr-3">1</span>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">Check unread emails</p>
+                    <p class="text-xs text-dark-500">Gmail API経由で未読メールを取得</p>
+                  </div>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-900/50 text-sky-400 border border-sky-800">fetchAgent</span>
+                </div>
+                <div class="flex items-center p-3 bg-dark-850 rounded-lg border border-dark-800">
+                  <span class="w-6 h-6 bg-accent-900/50 text-accent-400 border border-accent-700 rounded-full text-xs flex items-center justify-center mr-3">2</span>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">Summarize emails</p>
+                    <p class="text-xs text-dark-500">geminiAgentでメール内容を要約</p>
+                  </div>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-900/50 text-violet-400 border border-violet-800">geminiAgent</span>
+                </div>
+                <div class="flex items-center p-3 bg-dark-850 rounded-lg border border-dark-800">
+                  <span class="w-6 h-6 bg-accent-900/50 text-accent-400 border border-accent-700 rounded-full text-xs flex items-center justify-center mr-3">3</span>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">Post to Slack</p>
+                    <p class="text-xs text-dark-500">Slack Webhook経由で要約を投稿</p>
+                  </div>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-900/50 text-sky-400 border border-sky-800">fetchAgent</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Previous Version -->
+          <div class="bg-dark-900 border border-dark-800 rounded-lg overflow-hidden opacity-60">
+            <div class="px-4 py-3 bg-dark-850 border-b border-dark-800 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dark-800 text-dark-400 border border-dark-700">v2</span>
+                <span class="text-sm font-medium text-dark-400">Previous Version</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-dark-800 text-dark-500 border border-dark-700">Deprecated</span>
+              </div>
+              <span class="text-xs text-dark-600">Generated 1 day ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next Action Bar -->
+      <div class="px-6 py-4 bg-dark-900 border-t border-dark-800">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+            <span class="text-sm text-dark-400">Review complete. Ready to start a run.</span>
+          </div>
+          <button class="px-4 py-2 bg-accent-600 text-white text-sm font-medium rounded-lg hover:bg-accent-500 transition-colors flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Start Run
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Color Palette Reference -->
+  <div class="fixed bottom-4 right-4 p-4 bg-dark-900 rounded-lg shadow-lg border border-dark-700 text-xs text-dark-300">
+    <p class="font-semibold mb-2 text-white">Pattern B: Dark Mode</p>
+    <div class="space-y-1">
+      <div class="flex items-center"><div class="w-4 h-4 bg-accent-500 rounded mr-2"></div>Accent: #6366f1</div>
+      <div class="flex items-center"><div class="w-4 h-4 bg-dark-950 rounded mr-2"></div>Background: #09090b</div>
+      <div class="flex items-center"><div class="w-4 h-4 bg-dark-900 rounded mr-2"></div>Surface: #18181b</div>
+      <div class="flex items-center"><div class="w-4 h-4 bg-dark-100 rounded mr-2"></div>Text: #f4f4f5</div>
+      <div class="flex items-center"><div class="w-4 h-4 bg-emerald-500 rounded mr-2"></div>Success: #10b981</div>
+      <div class="flex items-center"><div class="w-4 h-4 bg-amber-500 rounded mr-2"></div>Warning: #f59e0b</div>
+      <div class="flex items-center"><div class="w-4 h-4 bg-rose-500 rounded mr-2"></div>Error: #f43f5e</div>
+    </div>
+  </div>
+</body>
+</html>
