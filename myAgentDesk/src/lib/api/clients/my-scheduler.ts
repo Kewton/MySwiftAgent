@@ -67,7 +67,9 @@ export class MySchedulerClient extends ApiClient {
 	/**
 	 * Create a new schedule
 	 */
-	async createSchedule(request: CreateScheduleRequest): Promise<Result<ScheduleResponse, ApiError>> {
+	async createSchedule(
+		request: CreateScheduleRequest
+	): Promise<Result<ScheduleResponse, ApiError>> {
 		return this.post<ScheduleResponse>('/api/v1/jobs', request);
 	}
 

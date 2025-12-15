@@ -12,7 +12,12 @@ export * from './types';
 export * from './config';
 
 // Base infrastructure
-export { ApiClient, type ApiClientConfig, type AuthType, type RequestOptions } from './base/api-client';
+export {
+	ApiClient,
+	type ApiClientConfig,
+	type AuthType,
+	type RequestOptions
+} from './base/api-client';
 export { RetryHandler, type RetryConfig, type AsyncOperation } from './base/retry-handler';
 export { CircuitBreaker, CircuitState, type CircuitBreakerConfig } from './base/circuit-breaker';
 

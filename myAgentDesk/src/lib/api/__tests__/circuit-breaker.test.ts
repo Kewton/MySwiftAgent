@@ -98,7 +98,11 @@ describe('CircuitBreaker', () => {
 		});
 
 		it('should transition to OPEN when failure threshold reached', async () => {
-			const breaker = new CircuitBreaker({ failureThreshold: 3, resetTimeoutMs: 30000, halfOpenMaxAttempts: 1 });
+			const breaker = new CircuitBreaker({
+				failureThreshold: 3,
+				resetTimeoutMs: 30000,
+				halfOpenMaxAttempts: 1
+			});
 			const serverError = createApiError({
 				code: ApiErrorCode.SERVER_ERROR,
 				message: 'Server error',
@@ -117,7 +121,11 @@ describe('CircuitBreaker', () => {
 
 	describe('OPEN state behavior', () => {
 		it('should reject execution in OPEN state without calling operation', async () => {
-			const breaker = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 30000, halfOpenMaxAttempts: 1 });
+			const breaker = new CircuitBreaker({
+				failureThreshold: 1,
+				resetTimeoutMs: 30000,
+				halfOpenMaxAttempts: 1
+			});
 			const serverError = createApiError({
 				code: ApiErrorCode.SERVER_ERROR,
 				message: 'Server error',
@@ -246,7 +254,11 @@ describe('CircuitBreaker', () => {
 
 	describe('reset()', () => {
 		it('should reset breaker to initial state', async () => {
-			const breaker = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 30000, halfOpenMaxAttempts: 1 });
+			const breaker = new CircuitBreaker({
+				failureThreshold: 1,
+				resetTimeoutMs: 30000,
+				halfOpenMaxAttempts: 1
+			});
 			const serverError = createApiError({
 				code: ApiErrorCode.SERVER_ERROR,
 				message: 'Server error',
@@ -267,7 +279,11 @@ describe('CircuitBreaker', () => {
 
 	describe('Non-retryable errors', () => {
 		it('should NOT count auth errors towards failure threshold', async () => {
-			const breaker = new CircuitBreaker({ failureThreshold: 2, resetTimeoutMs: 30000, halfOpenMaxAttempts: 1 });
+			const breaker = new CircuitBreaker({
+				failureThreshold: 2,
+				resetTimeoutMs: 30000,
+				halfOpenMaxAttempts: 1
+			});
 			const authError = createApiError({
 				code: ApiErrorCode.UNAUTHORIZED,
 				message: 'Unauthorized',
@@ -285,7 +301,11 @@ describe('CircuitBreaker', () => {
 		});
 
 		it('should NOT count validation errors towards failure threshold', async () => {
-			const breaker = new CircuitBreaker({ failureThreshold: 2, resetTimeoutMs: 30000, halfOpenMaxAttempts: 1 });
+			const breaker = new CircuitBreaker({
+				failureThreshold: 2,
+				resetTimeoutMs: 30000,
+				halfOpenMaxAttempts: 1
+			});
 			const validationError = createApiError({
 				code: ApiErrorCode.VALIDATION_ERROR,
 				message: 'Bad request',

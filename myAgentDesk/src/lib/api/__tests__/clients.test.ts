@@ -180,10 +180,10 @@ describe('JobQueueClient', () => {
 			mockFetch.mockResolvedValue({
 				ok: true,
 				status: 200,
-				json: async () => ([
+				json: async () => [
 					{ id: 'job-1', status: 'pending' },
 					{ id: 'job-2', status: 'pending' }
-				])
+				]
 			});
 
 			const client = new JobQueueClient({
@@ -207,10 +207,10 @@ describe('JobQueueClient', () => {
 			mockFetch.mockResolvedValue({
 				ok: true,
 				status: 200,
-				json: async () => ([
+				json: async () => [
 					{ id: 'jm-1', name: 'Job Master 1' },
 					{ id: 'jm-2', name: 'Job Master 2' }
-				])
+				]
 			});
 
 			const client = new JobQueueClient({
@@ -267,9 +267,7 @@ describe('MySchedulerClient', () => {
 			mockFetch.mockResolvedValue({
 				ok: true,
 				status: 200,
-				json: async () => ([
-					{ job_id: 's-1', job_name: 'Schedule 1' }
-				])
+				json: async () => [{ job_id: 's-1', job_name: 'Schedule 1' }]
 			});
 
 			const client = new MySchedulerClient({
@@ -352,10 +350,10 @@ describe('MyVaultClient', () => {
 			mockFetch.mockResolvedValue({
 				ok: true,
 				status: 200,
-				json: async () => ([
+				json: async () => [
 					{ key: 'KEY_1', project: 'default_project' },
 					{ key: 'KEY_2', project: 'default_project' }
-				])
+				]
 			});
 
 			const client = new MyVaultClient({
@@ -410,9 +408,7 @@ describe('LangfuseClient', () => {
 				ok: true,
 				status: 200,
 				json: async () => ({
-					traces: [
-						{ id: 'trace-1', name: 'Job Generator Execution' }
-					],
+					traces: [{ id: 'trace-1', name: 'Job Generator Execution' }],
 					total: 1,
 					limit: 10,
 					offset: 0

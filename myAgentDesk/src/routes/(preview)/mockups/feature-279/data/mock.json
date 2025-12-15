@@ -1,181 +1,181 @@
 {
-  "project": {
-    "id": "proj_001",
-    "name": "Default Project",
-    "description": "AI workflow automation project"
-  },
-  "workbench": {
-    "id": "wb_abc123",
-    "name": "Email Summarizer",
-    "description": "Gmailの未読メールを要約してSlackに投稿",
-    "status": "active"
-  },
-  "workbenches": [
-    {
-      "id": "wb_abc123",
-      "name": "Email Summarizer",
-      "status": "active",
-      "lastRunAt": "2024-12-14T12:00:00Z"
-    },
-    {
-      "id": "wb_def456",
-      "name": "Report Generator",
-      "status": "idle",
-      "lastRunAt": "2024-12-13T10:00:00Z"
-    },
-    {
-      "id": "wb_ghi789",
-      "name": "Data Pipeline",
-      "status": "inactive",
-      "lastRunAt": null
-    }
-  ],
-  "requirementVersions": [
-    {
-      "id": "rv_v3",
-      "version": 3,
-      "status": "active",
-      "content": "## Email Summarizer Requirements v3\n\n### Input\n- Gmail API経由で未読メールを取得\n- 対象: 過去24時間以内\n\n### Process\n1. 未読メール取得 (fetchAgent)\n2. メール内容要約 (geminiAgent)\n3. Slack投稿 (fetchAgent)\n\n### Output\n- Slack #email-summary チャンネルに投稿\n- 要約形式: 箇条書き",
-      "changeSummary": "Slack投稿機能を追加",
-      "createdAt": "2024-12-14T10:00:00Z"
-    },
-    {
-      "id": "rv_v2",
-      "version": 2,
-      "status": "deprecated",
-      "content": "## Email Summarizer Requirements v2\n\n### Input\n- Gmail未読メール\n\n### Process\n1. メール取得\n2. AI要約\n\n### Output\n- 要約テキスト",
-      "changeSummary": "要約フォーマットを改善",
-      "createdAt": "2024-12-13T10:00:00Z"
-    },
-    {
-      "id": "rv_v1",
-      "version": 1,
-      "status": "deprecated",
-      "content": "## Email Summarizer Requirements v1\n\n### Input\n- Gmail未読メール\n\n### Process\n1. メール要約\n\n### Output\n- テキスト出力",
-      "changeSummary": "初期バージョン",
-      "createdAt": "2024-12-12T10:00:00Z"
-    }
-  ],
-  "jobVersions": [
-    {
-      "id": "jv_xyz789",
-      "version": 3,
-      "status": "active",
-      "sourceRequirementVersionId": "rv_v3",
-      "taskBreakdown": [
-        {
-          "id": "task_1",
-          "name": "Check unread emails",
-          "description": "Gmail API経由で未読メールを取得",
-          "agentType": "fetchAgent",
-          "status": "completed"
-        },
-        {
-          "id": "task_2",
-          "name": "Summarize emails",
-          "description": "geminiAgentでメール内容を要約",
-          "agentType": "geminiAgent",
-          "status": "completed"
-        },
-        {
-          "id": "task_3",
-          "name": "Post to Slack",
-          "description": "Slack Webhook経由で要約を投稿",
-          "agentType": "fetchAgent",
-          "status": "completed"
-        }
-      ],
-      "generatedAt": "2024-12-14T11:00:00Z"
-    },
-    {
-      "id": "jv_abc456",
-      "version": 2,
-      "status": "deprecated",
-      "sourceRequirementVersionId": "rv_v2",
-      "taskBreakdown": [
-        {
-          "id": "task_1",
-          "name": "Fetch emails",
-          "agentType": "fetchAgent",
-          "status": "completed"
-        },
-        {
-          "id": "task_2",
-          "name": "Summarize content",
-          "agentType": "geminiAgent",
-          "status": "completed"
-        }
-      ],
-      "generatedAt": "2024-12-13T11:00:00Z"
-    }
-  ],
-  "runs": [
-    {
-      "id": "run_001",
-      "jobVersionId": "jv_xyz789",
-      "status": "success",
-      "startedAt": "2024-12-14T12:00:00Z",
-      "completedAt": "2024-12-14T12:02:30Z",
-      "duration": "2m 30s",
-      "traceId": "trace_abc123"
-    },
-    {
-      "id": "run_002",
-      "jobVersionId": "jv_xyz789",
-      "status": "running",
-      "startedAt": "2024-12-14T14:00:00Z",
-      "progress": 65,
-      "currentTask": "task_2"
-    },
-    {
-      "id": "run_003",
-      "jobVersionId": "jv_abc456",
-      "status": "failed",
-      "startedAt": "2024-12-13T12:00:00Z",
-      "completedAt": "2024-12-13T12:01:00Z",
-      "errorMessage": "Gmail API rate limit exceeded"
-    }
-  ],
-  "schedules": [
-    {
-      "id": "sched_001",
-      "name": "Daily Morning Summary",
-      "targetJobVersionId": "jv_xyz789",
-      "cronExpression": "0 8 * * *",
-      "isEnabled": true,
-      "nextRunAt": "2024-12-15T08:00:00Z",
-      "lastRunAt": "2024-12-14T08:00:00Z"
-    },
-    {
-      "id": "sched_002",
-      "name": "Weekly Digest",
-      "targetJobVersionId": "jv_xyz789",
-      "cronExpression": "0 10 * * 1",
-      "isEnabled": false,
-      "nextRunAt": null,
-      "lastRunAt": "2024-12-09T10:00:00Z"
-    }
-  ],
-  "patterns": {
-    "pattern-a": {
-      "name": "Professional Blue",
-      "description": "Clean, professional design with sidebar navigation",
-      "features": ["Light mode", "Sidebar nav", "Breadcrumbs", "Action bar"]
-    },
-    "pattern-b": {
-      "name": "Compact Dashboard",
-      "description": "Space-efficient layout with collapsible panels",
-      "features": ["Compact sidebar", "Card-based content", "Quick actions"]
-    },
-    "pattern-c": {
-      "name": "Power User",
-      "description": "Feature-rich interface for advanced users",
-      "features": ["Split view", "Keyboard shortcuts", "Bulk operations"]
-    },
-    "pattern-d": {
-      "name": "AI Assistant",
-      "description": "Conversational interface with AI guidance",
-      "features": ["Chat panel", "AI suggestions", "Guided workflow"]
-    }
-  }
+	"project": {
+		"id": "proj_001",
+		"name": "Default Project",
+		"description": "AI workflow automation project"
+	},
+	"workbench": {
+		"id": "wb_abc123",
+		"name": "Email Summarizer",
+		"description": "Gmailの未読メールを要約してSlackに投稿",
+		"status": "active"
+	},
+	"workbenches": [
+		{
+			"id": "wb_abc123",
+			"name": "Email Summarizer",
+			"status": "active",
+			"lastRunAt": "2024-12-14T12:00:00Z"
+		},
+		{
+			"id": "wb_def456",
+			"name": "Report Generator",
+			"status": "idle",
+			"lastRunAt": "2024-12-13T10:00:00Z"
+		},
+		{
+			"id": "wb_ghi789",
+			"name": "Data Pipeline",
+			"status": "inactive",
+			"lastRunAt": null
+		}
+	],
+	"requirementVersions": [
+		{
+			"id": "rv_v3",
+			"version": 3,
+			"status": "active",
+			"content": "## Email Summarizer Requirements v3\n\n### Input\n- Gmail API経由で未読メールを取得\n- 対象: 過去24時間以内\n\n### Process\n1. 未読メール取得 (fetchAgent)\n2. メール内容要約 (geminiAgent)\n3. Slack投稿 (fetchAgent)\n\n### Output\n- Slack #email-summary チャンネルに投稿\n- 要約形式: 箇条書き",
+			"changeSummary": "Slack投稿機能を追加",
+			"createdAt": "2024-12-14T10:00:00Z"
+		},
+		{
+			"id": "rv_v2",
+			"version": 2,
+			"status": "deprecated",
+			"content": "## Email Summarizer Requirements v2\n\n### Input\n- Gmail未読メール\n\n### Process\n1. メール取得\n2. AI要約\n\n### Output\n- 要約テキスト",
+			"changeSummary": "要約フォーマットを改善",
+			"createdAt": "2024-12-13T10:00:00Z"
+		},
+		{
+			"id": "rv_v1",
+			"version": 1,
+			"status": "deprecated",
+			"content": "## Email Summarizer Requirements v1\n\n### Input\n- Gmail未読メール\n\n### Process\n1. メール要約\n\n### Output\n- テキスト出力",
+			"changeSummary": "初期バージョン",
+			"createdAt": "2024-12-12T10:00:00Z"
+		}
+	],
+	"jobVersions": [
+		{
+			"id": "jv_xyz789",
+			"version": 3,
+			"status": "active",
+			"sourceRequirementVersionId": "rv_v3",
+			"taskBreakdown": [
+				{
+					"id": "task_1",
+					"name": "Check unread emails",
+					"description": "Gmail API経由で未読メールを取得",
+					"agentType": "fetchAgent",
+					"status": "completed"
+				},
+				{
+					"id": "task_2",
+					"name": "Summarize emails",
+					"description": "geminiAgentでメール内容を要約",
+					"agentType": "geminiAgent",
+					"status": "completed"
+				},
+				{
+					"id": "task_3",
+					"name": "Post to Slack",
+					"description": "Slack Webhook経由で要約を投稿",
+					"agentType": "fetchAgent",
+					"status": "completed"
+				}
+			],
+			"generatedAt": "2024-12-14T11:00:00Z"
+		},
+		{
+			"id": "jv_abc456",
+			"version": 2,
+			"status": "deprecated",
+			"sourceRequirementVersionId": "rv_v2",
+			"taskBreakdown": [
+				{
+					"id": "task_1",
+					"name": "Fetch emails",
+					"agentType": "fetchAgent",
+					"status": "completed"
+				},
+				{
+					"id": "task_2",
+					"name": "Summarize content",
+					"agentType": "geminiAgent",
+					"status": "completed"
+				}
+			],
+			"generatedAt": "2024-12-13T11:00:00Z"
+		}
+	],
+	"runs": [
+		{
+			"id": "run_001",
+			"jobVersionId": "jv_xyz789",
+			"status": "success",
+			"startedAt": "2024-12-14T12:00:00Z",
+			"completedAt": "2024-12-14T12:02:30Z",
+			"duration": "2m 30s",
+			"traceId": "trace_abc123"
+		},
+		{
+			"id": "run_002",
+			"jobVersionId": "jv_xyz789",
+			"status": "running",
+			"startedAt": "2024-12-14T14:00:00Z",
+			"progress": 65,
+			"currentTask": "task_2"
+		},
+		{
+			"id": "run_003",
+			"jobVersionId": "jv_abc456",
+			"status": "failed",
+			"startedAt": "2024-12-13T12:00:00Z",
+			"completedAt": "2024-12-13T12:01:00Z",
+			"errorMessage": "Gmail API rate limit exceeded"
+		}
+	],
+	"schedules": [
+		{
+			"id": "sched_001",
+			"name": "Daily Morning Summary",
+			"targetJobVersionId": "jv_xyz789",
+			"cronExpression": "0 8 * * *",
+			"isEnabled": true,
+			"nextRunAt": "2024-12-15T08:00:00Z",
+			"lastRunAt": "2024-12-14T08:00:00Z"
+		},
+		{
+			"id": "sched_002",
+			"name": "Weekly Digest",
+			"targetJobVersionId": "jv_xyz789",
+			"cronExpression": "0 10 * * 1",
+			"isEnabled": false,
+			"nextRunAt": null,
+			"lastRunAt": "2024-12-09T10:00:00Z"
+		}
+	],
+	"patterns": {
+		"pattern-a": {
+			"name": "Professional Blue",
+			"description": "Clean, professional design with sidebar navigation",
+			"features": ["Light mode", "Sidebar nav", "Breadcrumbs", "Action bar"]
+		},
+		"pattern-b": {
+			"name": "Compact Dashboard",
+			"description": "Space-efficient layout with collapsible panels",
+			"features": ["Compact sidebar", "Card-based content", "Quick actions"]
+		},
+		"pattern-c": {
+			"name": "Power User",
+			"description": "Feature-rich interface for advanced users",
+			"features": ["Split view", "Keyboard shortcuts", "Bulk operations"]
+		},
+		"pattern-d": {
+			"name": "AI Assistant",
+			"description": "Conversational interface with AI guidance",
+			"features": ["Chat panel", "AI suggestions", "Guided workflow"]
+		}
+	}
 }

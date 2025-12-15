@@ -44,7 +44,9 @@ export class MySchedulerClientMock implements Partial<MySchedulerClient> {
 	private schedules: ScheduleResponse[] = [...mockSchedules];
 	private scheduleIdCounter = 100;
 
-	async createSchedule(request: CreateScheduleRequest): Promise<Result<ScheduleResponse, ApiError>> {
+	async createSchedule(
+		request: CreateScheduleRequest
+	): Promise<Result<ScheduleResponse, ApiError>> {
 		await this.delay(100);
 		const newSchedule: ScheduleResponse = {
 			job_id: `schedule-${++this.scheduleIdCounter}`,
