@@ -1,10 +1,26 @@
+/**
+ * Database seeding utilities for myAgentDesk.
+ *
+ * This module provides functions for seeding the database with initial/test data
+ * and clearing all data from the database. Used for development, testing,
+ * and demonstration purposes.
+ *
+ * @module seed
+ */
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
 
-// Type for drizzle database instance - using generic type for flexibility in tests
+/**
+ * Type for Drizzle database instance.
+ * Uses generic type for flexibility in tests with different schema configurations.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DrizzleDB = BetterSQLite3Database<any>;
 
+/**
+ * Structure for seed data containing all entity arrays.
+ * Data must be provided in dependency order (projects first, then workbenches, etc.)
+ */
 export interface SeedData {
 	projects: schema.NewProject[];
 	workbenches: schema.NewWorkbench[];
@@ -15,8 +31,22 @@ export interface SeedData {
 }
 
 /**
- * Clear all data from the database (in reverse order of dependencies)
+ * Clear all data from the database.
+ *
+ * Deletes all records from all tables in reverse dependency order
+ * to avoid foreign key constraint violations.
+ *
  * @param database - Drizzle database instance to clear
+ * @returns Promise that resolves when all data is cleared
+ *
+ * @example
+ * ```typescript
+ * import { db } from '$lib/server/db';
+ * import { clearAllData } from '$lib/server/db/seed';
+ *
+ * // Clear all data before running tests
+ * await clearAllData(db);
+ * ```
  */
 export async function clearAllData(database: DrizzleDB): Promise<void> {
 	await database.delete(schema.schedule);
@@ -28,9 +58,24 @@ export async function clearAllData(database: DrizzleDB): Promise<void> {
 }
 
 /**
- * Seed the database with provided data
+ * Seed the database with provided data.
+ *
+ * Inserts all provided data in dependency order (projects first, then
+ * workbenches, requirement versions, job versions, runs, and schedules).
+ *
  * @param database - Drizzle database instance to seed
- * @param data - Seed data to insert
+ * @param data - Seed data containing all entities to insert
+ * @returns Promise that resolves when all data is inserted
+ * @throws Error if foreign key constraints are violated
+ *
+ * @example
+ * ```typescript
+ * import { db } from '$lib/server/db';
+ * import { seedDatabase, getDefaultSeedData } from '$lib/server/db/seed';
+ *
+ * // Seed with default data
+ * await seedDatabase(db, getDefaultSeedData());
+ * ```
  */
 export async function seedDatabase(database: DrizzleDB, data: SeedData): Promise<void> {
 	// Insert in order of dependencies
@@ -60,7 +105,23 @@ export async function seedDatabase(database: DrizzleDB, data: SeedData): Promise
 }
 
 /**
- * Get default seed data for development and testing
+ * Get default seed data for development and testing.
+ *
+ * Returns a complete set of sample data including projects, workbenches,
+ * requirement versions, job versions, runs, and schedules. This data
+ * demonstrates the full data model relationships.
+ *
+ * @returns SeedData object with all default entities
+ *
+ * @example
+ * ```typescript
+ * import { getDefaultSeedData, seedDatabase } from '$lib/server/db/seed';
+ * import { db } from '$lib/server/db';
+ *
+ * const seedData = getDefaultSeedData();
+ * console.log(`Seeding ${seedData.projects.length} projects`);
+ * await seedDatabase(db, seedData);
+ * ```
  */
 export function getDefaultSeedData(): SeedData {
 	const now = new Date();

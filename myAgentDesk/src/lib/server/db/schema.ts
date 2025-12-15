@@ -1,6 +1,57 @@
+/**
+ * Database schema definitions for myAgentDesk.
+ *
+ * This module defines the complete database schema using Drizzle ORM,
+ * including all tables, columns, constraints, and type exports.
+ *
+ * @module schema
+ */
 import { sqliteTable, text, integer, unique } from 'drizzle-orm/sqlite-core';
 
-// Project table - Top-level entity representing a project
+// =============================================================================
+// Status Enum Types
+// =============================================================================
+
+/** Valid status values for workbench entities */
+export const WORKBENCH_STATUSES = ['draft', 'active', 'archived'] as const;
+export type WorkbenchStatus = (typeof WORKBENCH_STATUSES)[number];
+
+/** Valid status values for requirement versions */
+export const REQUIREMENT_VERSION_STATUSES = ['draft', 'submitted', 'active', 'deprecated'] as const;
+export type RequirementVersionStatus = (typeof REQUIREMENT_VERSION_STATUSES)[number];
+
+/** Valid status values for job versions */
+export const JOB_VERSION_STATUSES = [
+	'generating',
+	'success',
+	'failed',
+	'active',
+	'deprecated'
+] as const;
+export type JobVersionStatus = (typeof JOB_VERSION_STATUSES)[number];
+
+/** Valid status values for runs */
+export const RUN_STATUSES = [
+	'queued',
+	'running',
+	'success',
+	'failed',
+	'canceled',
+	'timeout'
+] as const;
+export type RunStatus = (typeof RUN_STATUSES)[number];
+
+// =============================================================================
+// Table Definitions
+// =============================================================================
+
+/**
+ * Project table - Top-level entity representing a project.
+ *
+ * Projects are the highest level of organization and can contain
+ * multiple workbenches. Each project has a unique external ID
+ * for integration with external systems.
+ */
 export const project = sqliteTable('project', {
 	id: text('id').primaryKey().notNull(),
 	externalProjectId: text('external_project_id').notNull().unique(),
@@ -11,7 +62,13 @@ export const project = sqliteTable('project', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
-// Workbench table - A workspace within a project
+/**
+ * Workbench table - A workspace within a project.
+ *
+ * Workbenches represent individual workflow configurations within a project.
+ * Each workbench can have multiple requirement versions, job versions,
+ * runs, and schedules associated with it.
+ */
 export const workbench = sqliteTable('workbench', {
 	id: text('id').primaryKey().notNull(),
 	projectId: text('project_id')
@@ -28,7 +85,13 @@ export const workbench = sqliteTable('workbench', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
-// RequirementVersion table - Versioned requirements for a workbench
+/**
+ * RequirementVersion table - Versioned requirements for a workbench.
+ *
+ * Stores different versions of requirements for each workbench.
+ * Requirements define what a workflow should accomplish.
+ * Versions are unique per workbench.
+ */
 export const requirementVersion = sqliteTable(
 	'requirement_version',
 	{
@@ -48,7 +111,13 @@ export const requirementVersion = sqliteTable(
 	(table) => [unique().on(table.workbenchId, table.version)]
 );
 
-// JobVersion table - Generated job versions from requirements
+/**
+ * JobVersion table - Generated job versions from requirements.
+ *
+ * Stores AI-generated job configurations based on requirement versions.
+ * Each job version includes task breakdowns, interface definitions,
+ * and workflow configurations. Uses semantic versioning (major.minor).
+ */
 export const jobVersion = sqliteTable(
 	'job_version',
 	{
@@ -78,7 +147,13 @@ export const jobVersion = sqliteTable(
 	(table) => [unique().on(table.workbenchId, table.majorVersion, table.minorVersion)]
 );
 
-// Run table - Execution records of job versions
+/**
+ * Run table - Execution records of job versions.
+ *
+ * Tracks individual executions of job versions, including status,
+ * timing, and results. Runs can be triggered manually, by schedules,
+ * or by external systems.
+ */
 export const run = sqliteTable('run', {
 	id: text('id').primaryKey().notNull(),
 	workbenchId: text('workbench_id')
@@ -102,7 +177,13 @@ export const run = sqliteTable('run', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
-// Schedule table - Scheduled executions of job versions
+/**
+ * Schedule table - Scheduled executions of job versions.
+ *
+ * Defines cron-based schedules for automatic job execution.
+ * Schedules can be enabled/disabled and track their next
+ * and last run times.
+ */
 export const schedule = sqliteTable('schedule', {
 	id: text('id').primaryKey().notNull(),
 	workbenchId: text('workbench_id')
@@ -122,21 +203,39 @@ export const schedule = sqliteTable('schedule', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
-// Type exports for use in application code
+// =============================================================================
+// Type Exports
+// =============================================================================
+
+/**
+ * Project entity type (select operations).
+ * Represents a project record as returned from the database.
+ */
 export type Project = typeof project.$inferSelect;
+/** Project entity type for insert operations */
 export type NewProject = typeof project.$inferInsert;
 
+/** Workbench entity type (select operations) */
 export type Workbench = typeof workbench.$inferSelect;
+/** Workbench entity type for insert operations */
 export type NewWorkbench = typeof workbench.$inferInsert;
 
+/** RequirementVersion entity type (select operations) */
 export type RequirementVersion = typeof requirementVersion.$inferSelect;
+/** RequirementVersion entity type for insert operations */
 export type NewRequirementVersion = typeof requirementVersion.$inferInsert;
 
+/** JobVersion entity type (select operations) */
 export type JobVersion = typeof jobVersion.$inferSelect;
+/** JobVersion entity type for insert operations */
 export type NewJobVersion = typeof jobVersion.$inferInsert;
 
+/** Run entity type (select operations) */
 export type Run = typeof run.$inferSelect;
+/** Run entity type for insert operations */
 export type NewRun = typeof run.$inferInsert;
 
+/** Schedule entity type (select operations) */
 export type Schedule = typeof schedule.$inferSelect;
+/** Schedule entity type for insert operations */
 export type NewSchedule = typeof schedule.$inferInsert;
