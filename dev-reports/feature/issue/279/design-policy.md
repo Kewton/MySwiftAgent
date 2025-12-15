@@ -482,6 +482,248 @@ export const api = {
 };
 ```
 
+### 6.3 サービス障害時のエラーハンドリング方針
+
+#### エラー種別と対応
+
+| エラー種別 | HTTPステータス | リトライ可能 | UI対応 |
+|-----------|--------------|-------------|--------|
+| **ネットワークエラー** | - | Yes (3回) | リトライボタン表示、オフライン警告 |
+| **タイムアウト** | 408/504 | Yes (2回) | 「処理に時間がかかっています」表示 |
+| **サーバーエラー** | 5xx | Yes (2回) | リトライボタン、サポート連絡先表示 |
+| **認証エラー** | 401/403 | No | Vault設定画面へ誘導 |
+| **バリデーションエラー** | 400/422 | No | フィールド別エラーメッセージ表示 |
+| **リソース不在** | 404 | No | 前の画面へ戻る、作成導線表示 |
+| **レート制限** | 429 | Yes (指数バックオフ) | 待機時間表示 |
+
+#### エラーハンドリング実装
+
+```typescript
+// src/lib/api/error-handler.ts
+
+// エラー型定義
+type ServiceErrorType =
+  | 'network'
+  | 'timeout'
+  | 'server'
+  | 'auth'
+  | 'validation'
+  | 'not_found'
+  | 'rate_limit';
+
+interface ServiceError {
+  type: ServiceErrorType;
+  message: string;
+  retryable: boolean;
+  retryAfter?: number;  // ミリ秒
+  details?: Record<string, string[]>;  // バリデーションエラー詳細
+}
+
+// リトライ設定
+const RETRY_CONFIG = {
+  maxAttempts: 3,
+  baseDelay: 1000,  // 1秒
+  maxDelay: 10000,  // 10秒
+  backoffFactor: 2,
+};
+
+// 指数バックオフ付きリトライ
+async function fetchWithRetry<T>(
+  fetcher: () => Promise<T>,
+  config = RETRY_CONFIG
+): Promise<Result<T, ServiceError>> {
+  let lastError: ServiceError | null = null;
+
+  for (let attempt = 0; attempt < config.maxAttempts; attempt++) {
+    try {
+      const result = await fetcher();
+      return { success: true, data: result };
+    } catch (error) {
+      lastError = classifyError(error);
+
+      if (!lastError.retryable) {
+        return { success: false, error: lastError };
+      }
+
+      // 最後の試行では待機しない
+      if (attempt < config.maxAttempts - 1) {
+        const delay = Math.min(
+          config.baseDelay * Math.pow(config.backoffFactor, attempt),
+          config.maxDelay
+        );
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  return { success: false, error: lastError! };
+}
+
+// エラー分類
+function classifyError(error: unknown): ServiceError {
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    return { type: 'network', message: 'ネットワーク接続を確認してください', retryable: true };
+  }
+
+  if (error instanceof Response) {
+    switch (error.status) {
+      case 401:
+      case 403:
+        return { type: 'auth', message: '認証情報を確認してください', retryable: false };
+      case 404:
+        return { type: 'not_found', message: 'リソースが見つかりません', retryable: false };
+      case 408:
+      case 504:
+        return { type: 'timeout', message: '処理がタイムアウトしました', retryable: true };
+      case 422:
+        return { type: 'validation', message: '入力内容を確認してください', retryable: false };
+      case 429:
+        const retryAfter = parseInt(error.headers.get('Retry-After') || '5') * 1000;
+        return { type: 'rate_limit', message: 'リクエスト制限中です', retryable: true, retryAfter };
+      default:
+        if (error.status >= 500) {
+          return { type: 'server', message: 'サーバーエラーが発生しました', retryable: true };
+        }
+    }
+  }
+
+  return { type: 'server', message: '予期せぬエラーが発生しました', retryable: false };
+}
+```
+
+#### サーキットブレーカーパターン
+
+連続した障害時にサービスへのリクエストを一時停止し、システム全体の安定性を確保：
+
+```typescript
+// src/lib/api/circuit-breaker.ts
+
+type CircuitState = 'closed' | 'open' | 'half-open';
+
+class CircuitBreaker {
+  private state: CircuitState = 'closed';
+  private failureCount = 0;
+  private lastFailureTime = 0;
+  private readonly threshold = 5;          // 障害閾値
+  private readonly resetTimeout = 30000;   // 30秒後にhalf-openへ
+
+  async execute<T>(operation: () => Promise<T>): Promise<Result<T, ServiceError>> {
+    // Open状態: 即座にエラー返却
+    if (this.state === 'open') {
+      if (Date.now() - this.lastFailureTime > this.resetTimeout) {
+        this.state = 'half-open';
+      } else {
+        return {
+          success: false,
+          error: {
+            type: 'server',
+            message: 'サービスが一時的に利用できません。しばらくお待ちください。',
+            retryable: true,
+            retryAfter: this.resetTimeout - (Date.now() - this.lastFailureTime),
+          }
+        };
+      }
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return { success: true, data: result };
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  private onSuccess() {
+    this.failureCount = 0;
+    this.state = 'closed';
+  }
+
+  private onFailure() {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    if (this.failureCount >= this.threshold) {
+      this.state = 'open';
+    }
+  }
+}
+
+// サービス別サーキットブレーカー
+export const circuitBreakers = {
+  expertAgent: new CircuitBreaker(),
+  jobQueue: new CircuitBreaker(),
+  scheduler: new CircuitBreaker(),
+  vault: new CircuitBreaker(),
+  langfuse: new CircuitBreaker(),
+};
+```
+
+#### UI側のエラー表示パターン
+
+```svelte
+<!-- src/lib/components/ui/ErrorBoundary.svelte -->
+<script lang="ts">
+  import type { ServiceError } from '$lib/api/error-handler';
+  import { AlertTriangle, RefreshCw, Settings, ArrowLeft } from 'lucide-svelte';
+
+  let { error, onRetry, onBack }: {
+    error: ServiceError;
+    onRetry?: () => void;
+    onBack?: () => void;
+  } = $props();
+
+  const errorConfig = {
+    network: { icon: AlertTriangle, color: 'warning', showRetry: true },
+    timeout: { icon: AlertTriangle, color: 'warning', showRetry: true },
+    server: { icon: AlertTriangle, color: 'error', showRetry: true },
+    auth: { icon: Settings, color: 'error', showRetry: false, action: 'vault' },
+    validation: { icon: AlertTriangle, color: 'warning', showRetry: false },
+    not_found: { icon: ArrowLeft, color: 'info', showRetry: false, action: 'back' },
+    rate_limit: { icon: AlertTriangle, color: 'warning', showRetry: true },
+  };
+
+  const config = errorConfig[error.type];
+</script>
+
+<div class="error-container" data-color={config.color}>
+  <svelte:component this={config.icon} size={24} />
+  <p class="error-message">{error.message}</p>
+
+  <div class="error-actions">
+    {#if config.showRetry && onRetry}
+      <button class="btn-retry" onclick={onRetry}>
+        <RefreshCw size={16} />
+        再試行
+      </button>
+    {/if}
+
+    {#if config.action === 'vault'}
+      <a href="/projects/{projectId}/vault" class="btn-secondary">
+        Vault設定を確認
+      </a>
+    {/if}
+
+    {#if config.action === 'back' && onBack}
+      <button class="btn-secondary" onclick={onBack}>
+        <ArrowLeft size={16} />
+        戻る
+      </button>
+    {/if}
+  </div>
+</div>
+```
+
+#### フォールバック戦略
+
+| サービス | 障害時のフォールバック |
+|---------|---------------------|
+| **ExpertAgent** | 生成ボタン無効化、「サービス復旧待ち」表示 |
+| **JobQueue** | Run開始ボタン無効化、既存Run一覧はキャッシュ表示 |
+| **MyScheduler** | スケジュール編集無効化、一覧はキャッシュ表示 |
+| **MyVault** | キャッシュ済みProject情報を表示、更新操作を無効化 |
+| **Langfuse** | 「トレース表示不可」メッセージ、リンクは非表示 |
+
 ---
 
 ## 7. セキュリティ設計

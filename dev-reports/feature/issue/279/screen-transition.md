@@ -438,6 +438,281 @@ flowchart TB
 
 ---
 
+## プロジェクト間アクセス制御
+
+### 設計方針
+
+プロジェクト間のデータ分離を保証し、URLの直接アクセスや改ざんによる不正アクセスを防止する。
+
+### アクセス制御の境界
+
+```mermaid
+flowchart TB
+    subgraph AccessControl["アクセス制御ポイント"]
+        URL["URL直接アクセス"]
+        NAV["UI操作"]
+
+        subgraph Guards["ガードレイヤー"]
+            LAYOUT_GUARD["+layout.server.ts\nProject存在確認"]
+            WB_GUARD["+layout.server.ts\nWorkbench所属確認"]
+            RESOURCE_GUARD["各+page.server.ts\nリソース所有確認"]
+        end
+
+        subgraph Results["結果"]
+            OK["✓ アクセス許可"]
+            NOT_FOUND["✗ 404 Not Found"]
+            FORBIDDEN["✗ 403 Forbidden\n(将来: ユーザー認証後)"]
+        end
+    end
+
+    URL --> LAYOUT_GUARD
+    NAV --> LAYOUT_GUARD
+    LAYOUT_GUARD -->|存在する| WB_GUARD
+    LAYOUT_GUARD -->|存在しない| NOT_FOUND
+    WB_GUARD -->|所属プロジェクト一致| RESOURCE_GUARD
+    WB_GUARD -->|不一致| NOT_FOUND
+    RESOURCE_GUARD -->|所有確認OK| OK
+    RESOURCE_GUARD -->|所有確認NG| NOT_FOUND
+```
+
+### ガードロジック実装
+
+#### Project レイヤーガード
+
+```typescript
+// src/routes/projects/[projectId]/+layout.server.ts
+import { error } from '@sveltejs/kit';
+import type { LayoutServerLoad } from './$types';
+import { db } from '$lib/server/db';
+import { project } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+
+export const load: LayoutServerLoad = async ({ params, locals }) => {
+  // 1. Project存在確認
+  const projectData = await db.query.project.findFirst({
+    where: eq(project.id, params.projectId)
+  });
+
+  if (!projectData) {
+    throw error(404, {
+      message: 'プロジェクトが見つかりません',
+      code: 'PROJECT_NOT_FOUND'
+    });
+  }
+
+  // 2. [将来] ユーザーのプロジェクトアクセス権限確認
+  // if (locals.user && !hasProjectAccess(locals.user.id, projectData.id)) {
+  //   throw error(403, {
+  //     message: 'このプロジェクトへのアクセス権限がありません',
+  //     code: 'PROJECT_ACCESS_DENIED'
+  //   });
+  // }
+
+  return {
+    project: projectData
+  };
+};
+```
+
+#### Workbench レイヤーガード
+
+```typescript
+// src/routes/projects/[projectId]/workbenches/[workbenchId]/+layout.server.ts
+import { error } from '@sveltejs/kit';
+import type { LayoutServerLoad } from './$types';
+import { db } from '$lib/server/db';
+import { workbench } from '$lib/server/db/schema';
+import { eq, and } from 'drizzle-orm';
+
+export const load: LayoutServerLoad = async ({ params, parent }) => {
+  // 親レイアウトからProject情報を取得
+  const { project } = await parent();
+
+  // 1. Workbench存在確認
+  const workbenchData = await db.query.workbench.findFirst({
+    where: eq(workbench.id, params.workbenchId)
+  });
+
+  if (!workbenchData) {
+    throw error(404, {
+      message: 'ワークベンチが見つかりません',
+      code: 'WORKBENCH_NOT_FOUND'
+    });
+  }
+
+  // 2. Workbench → Project 所属確認（重要）
+  if (workbenchData.projectId !== project.id) {
+    // URLのprojectIdとWorkbenchの所属projectIdが一致しない場合
+    // 情報漏洩を防ぐため、存在しないように見せる
+    throw error(404, {
+      message: 'ワークベンチが見つかりません',
+      code: 'WORKBENCH_NOT_FOUND'
+    });
+  }
+
+  return {
+    workbench: workbenchData
+  };
+};
+```
+
+#### リソースレイヤーガード
+
+```typescript
+// src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.server.ts
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { db } from '$lib/server/db';
+import { run } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+
+export const load: PageServerLoad = async ({ params, parent }) => {
+  // 親レイアウトからWorkbench情報を取得
+  const { workbench } = await parent();
+
+  // 1. Run存在確認
+  const runData = await db.query.run.findFirst({
+    where: eq(run.id, params.runId)
+  });
+
+  if (!runData) {
+    throw error(404, {
+      message: '実行履歴が見つかりません',
+      code: 'RUN_NOT_FOUND'
+    });
+  }
+
+  // 2. Run → Workbench 所属確認
+  if (runData.workbenchId !== workbench.id) {
+    throw error(404, {
+      message: '実行履歴が見つかりません',
+      code: 'RUN_NOT_FOUND'
+    });
+  }
+
+  return {
+    run: runData
+  };
+};
+```
+
+### アクセス制御マトリクス
+
+| リソース | 確認対象 | ガードロジック | エラー時レスポンス |
+|---------|---------|--------------|------------------|
+| Project | projectId存在 | `+layout.server.ts` | 404 |
+| Workbench | workbenchId存在 + projectId一致 | `+layout.server.ts` | 404 |
+| RequirementVersion | reqVersionId存在 + workbenchId一致 | `+page.server.ts` | 404 |
+| JobVersion | jobVersionId存在 + workbenchId一致 | `+page.server.ts` | 404 |
+| Run | runId存在 + workbenchId一致 | `+page.server.ts` | 404 |
+| Schedule | scheduleId存在 + workbenchId一致 | `+page.server.ts` | 404 |
+
+### セキュリティ考慮事項
+
+#### 情報漏洩防止
+
+```typescript
+// 悪意あるアクセス例:
+// /projects/proj_002/workbenches/wb_001  (wb_001はproj_001所属)
+
+// NG: 詳細なエラーメッセージ（情報漏洩）
+throw error(403, 'このワークベンチはproj_001に所属しています');
+
+// OK: 存在しないように見せる（推奨）
+throw error(404, 'ワークベンチが見つかりません');
+```
+
+#### IDの推測防止
+
+```typescript
+// 連番IDの場合、総当たり攻撃で他プロジェクトのリソースを探索可能
+// → UUIDまたはULIDを使用して推測困難にする
+
+// NG: 連番ID
+const id = 'run_123';
+
+// OK: UUID/ULID
+const id = 'run_01HQXYZ123456789ABCDEF';
+```
+
+### 将来のユーザー認証統合
+
+Phase 2でユーザー認証を実装する際の拡張ポイント：
+
+```typescript
+// src/hooks.server.ts
+import type { Handle } from '@sveltejs/kit';
+import { verifyToken } from '$lib/server/auth';
+
+export const handle: Handle = async ({ event, resolve }) => {
+  // JWTトークンの検証
+  const token = event.cookies.get('auth_token');
+  if (token) {
+    try {
+      const user = await verifyToken(token);
+      event.locals.user = user;
+    } catch {
+      event.cookies.delete('auth_token', { path: '/' });
+    }
+  }
+
+  return resolve(event);
+};
+
+// src/routes/projects/[projectId]/+layout.server.ts
+export const load: LayoutServerLoad = async ({ params, locals }) => {
+  const projectData = await db.query.project.findFirst({
+    where: eq(project.id, params.projectId)
+  });
+
+  if (!projectData) {
+    throw error(404, 'プロジェクトが見つかりません');
+  }
+
+  // ユーザー認証が有効な場合のみアクセス権限チェック
+  if (locals.user) {
+    const hasAccess = await checkProjectAccess(locals.user.id, projectData.id);
+    if (!hasAccess) {
+      throw error(403, 'このプロジェクトへのアクセス権限がありません');
+    }
+  }
+
+  return { project: projectData };
+};
+```
+
+### クライアントサイドの補完ガード
+
+サーバーサイドガードに加え、UIでも不正な遷移を防止：
+
+```svelte
+<!-- src/lib/components/layout/ProjectGuard.svelte -->
+<script lang="ts">
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  import type { Snippet } from 'svelte';
+
+  let { children, projectId }: {
+    children: Snippet;
+    projectId: string;
+  } = $props();
+
+  // URLのprojectIdと現在選択中のprojectIdの整合性チェック
+  $effect(() => {
+    const urlProjectId = $page.params.projectId;
+    if (urlProjectId && urlProjectId !== projectId) {
+      // 不整合を検出した場合、正しいURLにリダイレクト
+      console.warn('Project ID mismatch detected, redirecting...');
+      goto(`/projects/${projectId}`);
+    }
+  });
+</script>
+
+{@render children()}
+```
+
+---
+
 ## SvelteKit ルーティング構造
 
 ```
