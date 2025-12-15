@@ -18,7 +18,7 @@
 	</div>
 
 	<div class="projects-list">
-		{#each projects as project}
+		{#each projects as project (project.id)}
 			<a href="/projects/{project.id}" class="project-card">
 				<h3>{project.name}</h3>
 				<p>{project.description}</p>

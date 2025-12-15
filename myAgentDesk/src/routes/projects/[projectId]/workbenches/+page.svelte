@@ -31,7 +31,7 @@
 	</div>
 
 	<div class="workbenches-list">
-		{#each workbenches as workbench}
+		{#each workbenches as workbench (workbench.id)}
 			<a href="/projects/{projectId}/workbenches/{workbench.id}" class="workbench-card">
 				<h3>{workbench.name}</h3>
 				<p>{workbench.description}</p>

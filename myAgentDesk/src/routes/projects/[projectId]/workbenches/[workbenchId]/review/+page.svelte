@@ -23,7 +23,7 @@
 	</div>
 
 	<div class="job-versions-list">
-		{#each jobVersions as jv}
+		{#each jobVersions as jv (jv.id)}
 			<a
 				href="/projects/{projectId}/workbenches/{workbenchId}/job-versions/{jv.id}"
 				class="job-version-item"

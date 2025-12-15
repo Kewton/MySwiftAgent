@@ -24,7 +24,7 @@
 	</div>
 
 	<div class="runs-list">
-		{#each runs as run}
+		{#each runs as run (run.id)}
 			<a href="/projects/{projectId}/workbenches/{workbenchId}/runs/{run.id}" class="run-item">
 				<div class="run-info">
 					<span class="run-id">{run.id}</span>

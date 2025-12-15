@@ -24,7 +24,7 @@
 	</div>
 
 	<div class="schedules-list">
-		{#each schedules as schedule}
+		{#each schedules as schedule (schedule.id)}
 			<a
 				href="/projects/{projectId}/workbenches/{workbenchId}/schedule/{schedule.id}"
 				class="schedule-item"

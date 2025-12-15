@@ -58,7 +58,7 @@
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
 	<ol class="breadcrumb-list">
-		{#each items as item, index}
+		{#each items as item, index (item.href)}
 			<li class="breadcrumb-item">
 				{#if index < items.length - 1}
 					<a href={item.href} class="breadcrumb-link">{item.label}</a>

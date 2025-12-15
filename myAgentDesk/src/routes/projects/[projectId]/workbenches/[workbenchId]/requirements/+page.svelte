@@ -24,7 +24,7 @@
 	</div>
 
 	<div class="requirements-list">
-		{#each requirements as req}
+		{#each requirements as req (req.id)}
 			<a
 				href="/projects/{projectId}/workbenches/{workbenchId}/requirements/{req.id}"
 				class="requirement-item"

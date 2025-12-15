@@ -41,7 +41,7 @@
 
 <nav class="workbench-tabs" aria-label="Workbench navigation">
 	<div class="tabs-container">
-		{#each tabs as tab}
+		{#each tabs as tab (tab.path)}
 			<a
 				href="{basePath}/{tab.path}"
 				class="tab"
