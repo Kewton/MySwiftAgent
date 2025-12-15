@@ -24,7 +24,13 @@ myAgentDesk MVP（SvelteKit）の設計ドキュメントおよびワイヤー�
 
 | ファイル | 説明 | ステータス |
 |---------|------|-----------|
-| [architecture-review.md](./architecture-review.md) | アーキテクチャレビュー | ✅ 承認済 (4.4/5)
+| [architecture-review.md](./architecture-review.md) | アーキテクチャレビュー | ✅ 承認済 (4.4/5) |
+
+### 実装計画
+
+| ファイル | 説明 | 主な内容 |
+|---------|------|---------|
+| [issue-split.md](./issue-split.md) | Issue分割計画書 | 13 Issues、7 Phases、依存関係グラフ、マイルストーン |
 
 ---
 
