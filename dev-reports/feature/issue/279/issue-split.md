@@ -954,4 +954,24 @@ graph TD
 
 **作成日**: 2025-12-16
 **対象Issue**: #279 myAgentDesk MVP再構築
-**ステータス**: Issue分割完了、GitHub Issue作成待ち
+**ステータス**: GitHub Issue作成完了
+
+---
+
+## GitHub Issue マッピング
+
+| 計画書内ID | GitHub Issue | タイトル |
+|-----------|--------------|----------|
+| #279-1 | [#285](https://github.com/Kewton/MySwiftAgent/issues/285) | SvelteKitルーティング基盤 |
+| #279-2 | [#286](https://github.com/Kewton/MySwiftAgent/issues/286) | Drizzle ORM + SQLite セットアップ |
+| #279-3 | [#287](https://github.com/Kewton/MySwiftAgent/issues/287) | APIクライアント境界（アダプタ層）|
+| #279-4 | [#288](https://github.com/Kewton/MySwiftAgent/issues/288) | Project一覧・詳細画面 |
+| #279-5 | [#289](https://github.com/Kewton/MySwiftAgent/issues/289) | Workbench一覧・詳細画面 |
+| #279-6 | [#290](https://github.com/Kewton/MySwiftAgent/issues/290) | Requirements一覧・バージョン管理 |
+| #279-7 | [#291](https://github.com/Kewton/MySwiftAgent/issues/291) | Generate画面（Job生成）|
+| #279-8 | [#292](https://github.com/Kewton/MySwiftAgent/issues/292) | Review画面（JobVersion詳細）|
+| #279-9 | [#293](https://github.com/Kewton/MySwiftAgent/issues/293) | Runs画面（実行履歴・監視）|
+| #279-10 | [#294](https://github.com/Kewton/MySwiftAgent/issues/294) | Schedule画面（CRON管理）|
+| #279-11 | [#295](https://github.com/Kewton/MySwiftAgent/issues/295) | Analyze・Improve画面（Langfuse連携）|
+| #279-12 | [#296](https://github.com/Kewton/MySwiftAgent/issues/296) | ダークモード対応 |
+| #279-13 | [#297](https://github.com/Kewton/MySwiftAgent/issues/297) | キーボードショートカット |
