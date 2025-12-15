@@ -10,12 +10,21 @@ myAgentDesk MVP（SvelteKit）の設計ドキュメントおよびワイヤー�
 
 ## ドキュメント一覧
 
+### 設計ドキュメント
+
 | ファイル | 説明 | 主な内容 |
 |---------|------|---------|
 | [requirements.md](./requirements.md) | 要件定義書 | 機能要件、ユーザーストーリー、API連携仕様、バージョン管理体系 |
-| [screen-transition.md](./screen-transition.md) | 画面遷移図 | URL設計、ナビゲーションフロー、状態遷移、Mermaid図 |
+| [screen-transition.md](./screen-transition.md) | 画面遷移図 | URL設計、ナビゲーションフロー、状態遷移、アクセス制御 |
 | [er-diagram.md](./er-diagram.md) | E-R図 | データモデル、エンティティ定義、外部サービス連携境界 |
 | [design-system.md](./design-system.md) | デザインシステム | カラーパレット、タイポグラフィ、スペーシング、コンポーネント |
+| [design-policy.md](./design-policy.md) | 設計方針書 | 技術選定理由、設計パターン、ADR、エラーハンドリング方針 |
+
+### レビュードキュメント
+
+| ファイル | 説明 | ステータス |
+|---------|------|-----------|
+| [architecture-review.md](./architecture-review.md) | アーキテクチャレビュー | ✅ 承認済 (4.4/5)
 
 ---
 
