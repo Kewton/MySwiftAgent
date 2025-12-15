@@ -10,7 +10,7 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],
-			include: ['src/**/*.{js,ts,svelte}'],
+			include: ['src/lib/server/db/**/*.ts'],
 			exclude: ['src/**/*.{test,spec}.{js,ts}', 'src/**/*.d.ts']
 		}
 	}

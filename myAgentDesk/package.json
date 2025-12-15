@@ -17,7 +17,11 @@
 		"test:e2e": "playwright test",
 		"test:coverage": "vitest run --coverage",
 		"lint": "prettier --check . && eslint .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"db:push": "drizzle-kit push",
+		"db:generate": "drizzle-kit generate",
+		"db:studio": "drizzle-kit studio",
+		"db:seed": "npx tsx scripts/db-seed.ts"
 	},
 	"keywords": [
 		"sveltekit",
@@ -36,9 +40,11 @@
 		"@tailwindcss/postcss": "^4.1.18",
 		"@tailwindcss/vite": "^4.1.18",
 		"@testing-library/svelte": "^5.2.9",
+		"@types/better-sqlite3": "^7.6.13",
 		"@types/node": "^25.0.2",
 		"@vitest/coverage-v8": "^4.0.15",
 		"autoprefixer": "^10.4.22",
+		"drizzle-kit": "^0.31.8",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.13.1",
@@ -53,5 +59,9 @@
 		"typescript": "^5.9.3",
 		"vite": "^7.2.6",
 		"vitest": "^4.0.15"
+	},
+	"dependencies": {
+		"better-sqlite3": "^12.5.0",
+		"drizzle-orm": "^0.45.1"
 	}
 }
