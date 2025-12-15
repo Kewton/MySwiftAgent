@@ -1,0 +1,36 @@
+{
+  "issue_number": 285,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/components/layout/GlobalNav.svelte",
+    "myAgentDesk/src/lib/components/layout/Breadcrumb.svelte",
+    "myAgentDesk/src/lib/components/layout/ProjectSidebar.svelte",
+    "myAgentDesk/src/lib/components/layout/WorkbenchTabs.svelte",
+    "myAgentDesk/src/lib/components/layout/NextActionBar.svelte",
+    "myAgentDesk/src/lib/guards/project-guard.ts",
+    "myAgentDesk/src/lib/guards/workbench-guard.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 95,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Component Composition",
+    "Separation of Concerns"
+  ],
+  "improvement_goals": [
+    "カバレッジを95%以上に維持",
+    "ESLint警告を0に削減",
+    "コンポーネントの再利用性向上"
+  ],
+  "tdd_result": {
+    "coverage": 95,
+    "unit_tests_passed": 65,
+    "eslint_warnings": 8,
+    "build_status": "success"
+  },
+  "acceptance_result": {
+    "http_routing_tests": "14/14 passed",
+    "vitest_tests": "65/65 passed",
+    "acceptance_criteria": "6/6 verified"
+  }
+}

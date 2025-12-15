@@ -1,0 +1,104 @@
+{
+  "issue_number": 285,
+  "feature_summary": "SvelteKitルーティング基盤",
+  "acceptance_criteria": [
+    "全17画面のURLパスが screen-transition.md と一致",
+    "+layout.svelte が各階層で正しくネストされる",
+    "パラメータ（:projectId, :workbenchId等）が正しく取得できる",
+    "正常系: /projects/proj_001 へのアクセスで Project Layout が表示される",
+    "正常系: /projects/proj_001/workbenches/wb_001/requirements でタブが「Requirements」選択状態",
+    "異常系: 存在しないパス /invalid で 404 ページ表示"
+  ],
+  "labels": ["enhancement", "feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["myAgentDesk"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myAgentDesk", "url": "http://localhost:8000/"}
+    ],
+    "test_commands": [
+      {
+        "name": "Home画面",
+        "command": "curl -sf http://localhost:8000/ -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Projects一覧",
+        "command": "curl -sf http://localhost:8000/projects -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Project詳細",
+        "command": "curl -sf http://localhost:8000/projects/proj_001 -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Vault設定",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/vault -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Workbench一覧",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Workbench詳細",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001 -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Requirementsタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/requirements -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Generateタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/generate -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Reviewタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/review -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Runsタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/runs -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Analyzeタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/analyze -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Improveタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/improve -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "Scheduleタブ",
+        "command": "curl -sf http://localhost:8000/projects/proj_001/workbenches/wb_001/schedule -o /dev/null",
+        "expected_status": 200
+      },
+      {
+        "name": "存在しないパス - 404",
+        "command": "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/invalid",
+        "expected_status": 404
+      }
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_285_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_285.spec.ts",
+  "tdd_result_summary": {
+    "status": "success",
+    "coverage": 95,
+    "unit_tests_passed": 65,
+    "static_analysis_errors": 0,
+    "build_status": "success"
+  }
+}
