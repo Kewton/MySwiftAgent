@@ -1,0 +1,142 @@
+{
+  "issue_number": 286,
+  "title": "[myAgentDesk] #279-2: Drizzle ORM + SQLite セットアップ",
+  "acceptance_criteria": [
+    "npm run db:push でスキーマがSQLiteに反映される",
+    "全6テーブルが作成される（project, workbench, requirement_version, job_version, run, schedule）",
+    "FK制約が正しく設定される（workbench.project_id → project.id等）",
+    "マイグレーションが冪等（複数回実行可能）",
+    "TypeScript型がスキーマから自動生成される",
+    "正常系: Workbench作成時、project_idが存在するProjectを参照",
+    "異常系: 存在しないproject_idでWorkbench作成時にFK違反エラー"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: パッケージインストール・設定（drizzle-orm, better-sqlite3, drizzle-kit）",
+    "Task 1.2: DB接続モジュール作成（src/lib/server/db/index.ts）",
+    "Task 1.3: スキーマ定義（6テーブル: project, workbench, requirement_version, job_version, run, schedule）",
+    "Task 2.1: マイグレーション実行（npm run db:push）",
+    "Task 2.2: シードデータ作成（モックアップデータ移植）",
+    "Task 3.1: スキーマテスト（全テーブル作成、FK制約確認）",
+    "Task 3.2: CRUD操作テスト（正常系・異常系）",
+    "Task 5.1: 静的解析・ビルド確認"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "パッケージインストール・設定",
+      "estimated_hours": 0.5,
+      "deliverables": ["package.json", "drizzle.config.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "DB接続モジュール作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/server/db/index.ts", "data/.gitkeep"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "スキーマ定義（6テーブル）",
+      "estimated_hours": 1.0,
+      "deliverables": ["src/lib/server/db/schema.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "マイグレーション実行",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/server/db/migrations/", "data/local.db"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "シードデータ作成",
+      "estimated_hours": 1.5,
+      "deliverables": ["src/lib/server/db/seed.ts", "scripts/db-seed.ts"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "スキーマテスト",
+      "estimated_hours": 1.0,
+      "deliverables": ["src/tests/unit/db/schema.test.ts"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "CRUD操作テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["src/tests/unit/db/crud.test.ts"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "静的解析・ビルド確認",
+      "estimated_hours": 0.5,
+      "deliverables": ["CI/CDグリーン確認"],
+      "dependencies": ["3.1", "3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "package.json（依存追加）",
+    "drizzle.config.ts",
+    ".gitignore（data/local.db追加）",
+    "src/lib/server/db/index.ts",
+    "src/lib/server/db/schema.ts",
+    "src/lib/server/db/seed.ts",
+    "src/lib/server/db/migrations/",
+    "data/.gitkeep",
+    "src/tests/unit/db/schema.test.ts",
+    "src/tests/unit/db/crud.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "npm run db:push でスキーマがSQLiteに反映される",
+    "全6テーブルが作成される",
+    "FK制約が正しく設定される（PRAGMA foreign_keys = ON）",
+    "マイグレーションが冪等（複数回実行可能）",
+    "TypeScript型がスキーマから自動生成される",
+    "シードデータが投入される",
+    "単体テストカバレッジ90%以上",
+    "ESLint/TypeScript エラーゼロ",
+    "ビルド成功（npm run build）"
+  ],
+  "target_coverage": 90,
+  "project": "myAgentDesk",
+  "tech_stack": ["Drizzle ORM", "better-sqlite3", "drizzle-kit", "TypeScript", "SvelteKit"],
+  "schema_tables": [
+    {
+      "name": "project",
+      "columns": ["id", "external_project_id", "name", "description", "last_synced_at", "created_at", "updated_at"],
+      "foreign_keys": []
+    },
+    {
+      "name": "workbench",
+      "columns": ["id", "project_id", "name", "description", "status", "active_requirement_version_id", "external_job_master_id", "created_at", "updated_at"],
+      "foreign_keys": ["project_id -> project.id"]
+    },
+    {
+      "name": "requirement_version",
+      "columns": ["id", "workbench_id", "version", "content", "status", "change_summary", "created_at", "updated_at"],
+      "foreign_keys": ["workbench_id -> workbench.id"],
+      "unique_constraints": ["(workbench_id, version)"]
+    },
+    {
+      "name": "job_version",
+      "columns": ["id", "workbench_id", "source_requirement_version_id", "major_version", "minor_version", "version_label", "status", "task_breakdown", "interface_definitions", "workflows", "external_job_master_id", "external_trace_id", "error_message", "generated_at", "created_at", "updated_at"],
+      "foreign_keys": ["workbench_id -> workbench.id", "source_requirement_version_id -> requirement_version.id"],
+      "unique_constraints": ["(workbench_id, major_version, minor_version)"]
+    },
+    {
+      "name": "run",
+      "columns": ["id", "workbench_id", "job_version_id", "status", "external_job_id", "external_trace_id", "execution_params", "result_summary", "started_at", "completed_at", "created_at", "updated_at"],
+      "foreign_keys": ["workbench_id -> workbench.id", "job_version_id -> job_version.id"]
+    },
+    {
+      "name": "schedule",
+      "columns": ["id", "workbench_id", "target_job_version_id", "name", "cron_expression", "is_enabled", "external_scheduler_id", "execution_params", "next_run_at", "last_run_at", "created_at", "updated_at"],
+      "foreign_keys": ["workbench_id -> workbench.id", "target_job_version_id -> job_version.id"]
+    }
+  ]
+}
