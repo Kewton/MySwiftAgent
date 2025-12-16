@@ -1,0 +1,153 @@
+{
+  "issue_number": 285,
+  "title": "Issue #279-1: SvelteKitルーティング基盤",
+  "project": "myAgentDesk",
+  "acceptance_criteria": [
+    "全17画面のURLパスが screen-transition.md と一致",
+    "+layout.svelte が各階層で正しくネストされる",
+    "パラメータ（:projectId, :workbenchId等）が正しく取得できる",
+    "単体テストカバレッジ 90%以上",
+    "ESLint/TypeScript エラーゼロ",
+    "ビルド成功（npm run build）"
+  ],
+  "implementation_tasks": [
+    "src/routes/ ディレクトリ構造の作成（screen-transition.md準拠）",
+    "Root Layout（グローバルナビ、Toast通知）",
+    "Project Layout（サイドバー）",
+    "Workbench Layout（タブナビ、Next Action Bar）",
+    "パンくずリストコンポーネント",
+    "ルーティングの単体テスト"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ディレクトリ構造作成",
+      "estimated_hours": 1,
+      "deliverables": ["src/routes/ 配下の全ディレクトリ・ファイル"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "Root Layout実装",
+      "estimated_hours": 1,
+      "deliverables": [
+        "src/routes/+layout.svelte",
+        "src/lib/components/layout/GlobalNav.svelte",
+        "src/lib/components/layout/Breadcrumb.svelte",
+        "src/lib/components/ui/Toast.svelte"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "Project Layout実装",
+      "estimated_hours": 1,
+      "deliverables": [
+        "src/routes/projects/[projectId]/+layout.svelte",
+        "src/routes/projects/[projectId]/+layout.server.ts",
+        "src/lib/components/layout/ProjectSidebar.svelte"
+      ],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "Workbench Layout実装",
+      "estimated_hours": 1,
+      "deliverables": [
+        "src/routes/projects/[projectId]/workbenches/[workbenchId]/+layout.svelte",
+        "src/routes/projects/[projectId]/workbenches/[workbenchId]/+layout.server.ts",
+        "src/lib/components/layout/WorkbenchTabs.svelte",
+        "src/lib/components/layout/NextActionBar.svelte"
+      ],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "レイアウトコンポーネントテスト",
+      "estimated_hours": 1,
+      "deliverables": [
+        "src/tests/unit/layout/GlobalNav.test.ts",
+        "src/tests/unit/layout/Breadcrumb.test.ts",
+        "src/tests/unit/layout/ProjectSidebar.test.ts",
+        "src/tests/unit/layout/WorkbenchTabs.test.ts"
+      ],
+      "dependencies": ["1.2", "1.4"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "ルーティングテスト",
+      "estimated_hours": 1,
+      "deliverables": ["src/tests/unit/routes/routing.test.ts"],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "ガードロジックテスト",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "src/tests/unit/guards/project-guard.test.ts",
+        "src/tests/unit/guards/workbench-guard.test.ts"
+      ],
+      "dependencies": ["1.3", "1.4"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "静的解析・ビルド確認",
+      "estimated_hours": 0.5,
+      "deliverables": ["CI/CDグリーン確認"],
+      "dependencies": ["2.1", "2.2", "2.3"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/routes/+layout.svelte",
+    "src/routes/+page.svelte",
+    "src/routes/+error.svelte",
+    "src/routes/projects/+layout.svelte",
+    "src/routes/projects/+page.svelte",
+    "src/routes/projects/[projectId]/+layout.svelte",
+    "src/routes/projects/[projectId]/+layout.server.ts",
+    "src/routes/projects/[projectId]/+page.svelte",
+    "src/routes/projects/[projectId]/vault/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/+layout.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/+layout.server.ts",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/requirements/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/requirements/[reqVersionId]/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/analyze/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/improve/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/schedule/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/schedule/[scheduleId]/+page.svelte",
+    "src/lib/components/layout/GlobalNav.svelte",
+    "src/lib/components/layout/Breadcrumb.svelte",
+    "src/lib/components/layout/ProjectSidebar.svelte",
+    "src/lib/components/layout/WorkbenchTabs.svelte",
+    "src/lib/components/layout/NextActionBar.svelte",
+    "src/lib/components/ui/Toast.svelte"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "全17画面のURLパスがscreen-transition.mdと一致",
+    "+layout.svelteが各階層で正しくネストされる",
+    "パラメータ（:projectId, :workbenchId等）が正しく取得できる",
+    "単体テストカバレッジ90%以上",
+    "ESLint/TypeScript エラーゼロ",
+    "ビルド成功（npm run build）",
+    "L3受入テスト全パス"
+  ],
+  "target_coverage": 90,
+  "tech_stack": {
+    "framework": "SvelteKit 2.49.1",
+    "language": "Svelte 5.45.6 (runes API: $state, $derived, $effect)",
+    "typescript": "5.9.3"
+  },
+  "reference_docs": [
+    "myAgentDesk/README.md",
+    "docs/design/screen-transition.md"
+  ]
+}
