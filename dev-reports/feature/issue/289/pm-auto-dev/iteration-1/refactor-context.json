@@ -1,0 +1,29 @@
+{
+  "issue_number": 289,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/server/repositories/workbench.ts",
+    "myAgentDesk/src/lib/components/workbenches/WorkbenchCard.svelte",
+    "myAgentDesk/src/lib/components/workbenches/WorkbenchOverview.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/+page.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 91.57,
+    "complexity_score": "TBD"
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (既に適用済み)",
+    "Component composition for Svelte"
+  ],
+  "improvement_goals": [
+    "カバレッジを93%以上に向上（可能であれば）",
+    "ESLint warningsの削減（現在20件）",
+    "TypeScript warningsの削減（現在2件）",
+    "重複コードの削除",
+    "コンポーネントのアクセシビリティ改善"
+  ],
+  "existing_issues": {
+    "typescript_warnings": 2,
+    "eslint_warnings": 20,
+    "coverage": 91.57
+  }
+}

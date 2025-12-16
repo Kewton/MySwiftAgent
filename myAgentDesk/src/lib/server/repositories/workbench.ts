@@ -282,6 +282,47 @@ export class WorkbenchRepository {
 
 		return counts;
 	}
+
+	/**
+	 * Create a new workbench.
+	 *
+	 * @param projectId - The project ID to create the workbench in
+	 * @param name - The workbench name
+	 * @param description - Optional description
+	 * @returns The created workbench
+	 */
+	async create(projectId: string, name: string, description?: string): Promise<Workbench> {
+		const now = new Date();
+		const id = `wb_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+		const newWorkbench = {
+			id,
+			projectId,
+			name,
+			description: description ?? null,
+			status: 'draft' as const,
+			activeRequirementVersionId: null,
+			externalJobMasterId: null,
+			createdAt: now,
+			updatedAt: now
+		};
+
+		await this.db.insert(workbench).values(newWorkbench);
+
+		return newWorkbench;
+	}
+
+	/**
+	 * Delete a workbench by ID.
+	 *
+	 * @param workbenchId - The workbench ID to delete
+	 * @returns true if deleted, false if not found
+	 */
+	async delete(workbenchId: string): Promise<boolean> {
+		const result = await this.db.delete(workbench).where(eq(workbench.id, workbenchId));
+
+		return (result.changes ?? 0) > 0;
+	}
 }
 
 // Singleton instance for production use

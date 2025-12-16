@@ -6,10 +6,11 @@
 -->
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { invalidateAll } from '$app/navigation';
 	import WorkbenchCard from '$lib/components/workbenches/WorkbenchCard.svelte';
 	import WorkbenchStatusFilter from '$lib/components/workbenches/WorkbenchStatusFilter.svelte';
 	import CreateWorkbenchModal from '$lib/components/workbenches/CreateWorkbenchModal.svelte';
-	import type { CreateWorkbenchInput } from '$lib/types/workbench';
+	import type { CreateWorkbenchInput, WorkbenchListItem } from '$lib/types/workbench';
 
 	interface Props {
 		data: {
@@ -24,33 +25,98 @@
 	const projectId = $derived($page.params.projectId ?? '');
 
 	let isModalOpen = $state(false);
+	let isCreating = $state(false);
+	let createError = $state<string | null>(null);
+
+	// Local workbenches state to support optimistic updates
+	let localWorkbenches = $state<WorkbenchListItem[]>([]);
+
+	// Sync local state with server data
+	$effect(() => {
+		localWorkbenches = [...data.workbenches];
+	});
 
 	function openModal() {
 		isModalOpen = true;
+		createError = null;
 	}
 
 	function closeModal() {
 		isModalOpen = false;
+		createError = null;
 	}
 
-	function handleCreate(input: CreateWorkbenchInput) {
-		// TODO: Implement backend create operation in future issue
-		console.log('Create workbench:', input);
+	async function handleCreate(input: CreateWorkbenchInput) {
+		isCreating = true;
+		createError = null;
+
+		try {
+			const response = await fetch(`/api/projects/${projectId}/workbenches`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(input)
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.message || `Failed to create workbench: ${response.status}`);
+			}
+
+			const { workbench } = await response.json();
+
+			// Optimistic update: add the new workbench to the local list
+			const newWorkbenchItem: WorkbenchListItem = {
+				id: workbench.id,
+				name: workbench.name,
+				description: workbench.description,
+				status: workbench.status,
+				activeRequirementVersionId: workbench.activeRequirementVersionId,
+				createdAt: new Date(workbench.createdAt),
+				updatedAt: new Date(workbench.updatedAt),
+				runCount: 0,
+				scheduleCount: 0,
+				lastRunAt: null,
+				lastRunStatus: null
+			};
+
+			localWorkbenches = [newWorkbenchItem, ...localWorkbenches];
+
+			// Also invalidate server data to keep in sync
+			await invalidateAll();
+
+			closeModal();
+		} catch (err) {
+			createError = err instanceof Error ? err.message : 'Failed to create workbench';
+			console.error('Create workbench error:', err);
+		} finally {
+			isCreating = false;
+		}
 	}
 </script>
 
 <div class="workbenches-page">
 	<div class="page-header">
 		<h1>Workbenches</h1>
-		<button class="create-button" onclick={openModal}>New Workbench</button>
+		<button class="create-button" onclick={openModal} data-testid="create-workbench-button">
+			New Workbench
+		</button>
 	</div>
+
+	{#if createError}
+		<div class="error-banner" role="alert">
+			<p>{createError}</p>
+			<button onclick={() => (createError = null)}>Dismiss</button>
+		</div>
+	{/if}
 
 	<div class="filter-section">
 		<WorkbenchStatusFilter counts={data.statusCounts} />
 	</div>
 
 	<div class="workbenches-list">
-		{#each data.workbenches as workbench (workbench.id)}
+		{#each localWorkbenches as workbench (workbench.id)}
 			<WorkbenchCard {workbench} {projectId} />
 		{:else}
 			<div class="empty-state">
@@ -122,5 +188,36 @@
 	.empty-state p {
 		color: #64748b;
 		margin: 0;
+	}
+
+	.error-banner {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		margin-bottom: 1rem;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		border-radius: 0.375rem;
+		color: #dc2626;
+	}
+
+	.error-banner p {
+		margin: 0;
+		font-size: 0.875rem;
+	}
+
+	.error-banner button {
+		padding: 0.25rem 0.5rem;
+		background: transparent;
+		border: 1px solid #fecaca;
+		border-radius: 0.25rem;
+		color: #dc2626;
+		font-size: 0.75rem;
+		cursor: pointer;
+	}
+
+	.error-banner button:hover {
+		background: #fee2e2;
 	}
 </style>

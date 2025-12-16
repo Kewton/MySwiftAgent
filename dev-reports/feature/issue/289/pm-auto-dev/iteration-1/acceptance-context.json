@@ -1,0 +1,54 @@
+{
+  "issue_number": 289,
+  "feature_summary": "[myAgentDesk] #279-5: Workbench一覧・詳細画面",
+  "acceptance_criteria": [
+    "Workbench一覧がProject別にフィルタリングされる",
+    "タブクリックでURLが変化（?status=active等）",
+    "存在しないworkbenchIdで404エラー",
+    "Project不一致のworkbenchIdで404エラー（セキュリティ）",
+    "単体テストカバレッジ 90%以上",
+    "E2Eテスト: タブ遷移フロー"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["myAgentDesk"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系: Workbench一覧",
+        "command": "curl -s http://localhost:5173/projects/proj_001/workbenches -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 200,
+        "expected_response_contains": ["Workbenches"]
+      },
+      {
+        "name": "正常系: Workbench詳細",
+        "command": "curl -s http://localhost:5173/projects/proj_001/workbenches/wb_001 -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 200
+      },
+      {
+        "name": "正常系: ステータスフィルター",
+        "command": "curl -s 'http://localhost:5173/projects/proj_001/workbenches?status=active' -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 200
+      },
+      {
+        "name": "異常系: 無効なWorkbench ID",
+        "command": "curl -s http://localhost:5173/projects/proj_001/workbenches/invalid_id -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 404
+      },
+      {
+        "name": "異常系: Project不一致",
+        "command": "curl -s http://localhost:5173/projects/proj_002/workbenches/wb_001 -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 404
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_289_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/workbenches.spec.ts"
+}
