@@ -1,28 +1,37 @@
 <!--
   Workbench Dashboard (/projects/:projectId/workbenches/:workbenchId)
-  Issue #285: SvelteKit Routing Foundation
+  Issue #289: Workbench List/Detail Screens
 
-  Workbench overview - typically redirects to requirements tab.
+  Workbench overview page showing statistics and version information.
 -->
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import WorkbenchOverview from '$lib/components/workbenches/WorkbenchOverview.svelte';
+	import type { WorkbenchDetail } from '$lib/types/workbench';
 
-	const projectId = $derived($page.params.projectId);
-	const workbenchId = $derived($page.params.workbenchId);
+	interface Props {
+		data: {
+			workbenchDetail: WorkbenchDetail | null;
+		};
+	}
 
-	// Redirect to requirements tab by default
-	onMount(() => {
-		goto(`/projects/${projectId}/workbenches/${workbenchId}/requirements`, { replaceState: true });
-	});
+	let { data }: Props = $props();
 </script>
 
-<div class="loading">
-	<p>Loading workbench...</p>
+<div class="overview-page">
+	{#if data.workbenchDetail}
+		<WorkbenchOverview workbench={data.workbenchDetail} />
+	{:else}
+		<div class="loading">
+			<p>Loading workbench details...</p>
+		</div>
+	{/if}
 </div>
 
 <style>
+	.overview-page {
+		max-width: 800px;
+	}
+
 	.loading {
 		display: flex;
 		align-items: center;
