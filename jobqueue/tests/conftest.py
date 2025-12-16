@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import Base, get_db
 from app.main import create_app
 
-
 # Note: event_loop fixture is no longer needed with pytest-asyncio >= 0.21
 # Use asyncio_default_fixture_loop_scope in pyproject.toml instead
 

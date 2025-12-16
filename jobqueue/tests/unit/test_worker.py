@@ -263,5 +263,5 @@ class TestWorkerManager:
                 start_task.cancel()
                 try:
                     await asyncio.wait_for(start_task, timeout=1.0)
-                except (asyncio.CancelledError, asyncio.TimeoutError):
+                except (TimeoutError, asyncio.CancelledError):
                     pass
