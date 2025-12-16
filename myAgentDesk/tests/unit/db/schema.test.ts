@@ -1,18 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { sql } from 'drizzle-orm';
 import * as schema from '../../../src/lib/server/db/schema';
 
 describe('Database Schema Tests', () => {
 	let sqlite: Database.Database;
-	let db: ReturnType<typeof drizzle>;
+	let _db: ReturnType<typeof drizzle>;
 
 	beforeEach(() => {
 		// Create in-memory database for testing
 		sqlite = new Database(':memory:');
 		sqlite.pragma('foreign_keys = ON');
-		db = drizzle(sqlite, { schema });
+		_db = drizzle(sqlite, { schema });
 
 		// Create tables using raw SQL from schema definitions
 		createTables(sqlite);

@@ -10,7 +10,6 @@ import { MySchedulerClient } from '../clients/my-scheduler';
 import { MyVaultClient } from '../clients/my-vault';
 import { LangfuseClient } from '../clients/langfuse';
 import { isOk, isErr } from '../result';
-import { ApiErrorCode } from '../errors';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

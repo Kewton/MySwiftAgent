@@ -3,7 +3,7 @@
  * @description Client for ExpertAgent API (job generation, workflows, LLM)
  */
 
-import { ApiClient, type ApiClientConfig } from '../base/api-client';
+import { ApiClient } from '../base/api-client';
 import { type Result } from '../result';
 import { type ApiError } from '../errors';
 

@@ -1,0 +1,133 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "myAgentDesk",
+  "service_health": {
+    "myAgentDesk": {
+      "status": "healthy",
+      "url": "http://localhost:5173"
+    }
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_288_acceptance.py",
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.13, pytest-9.0.2, pluggy-1.6.0\ncollected 9 items\n\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_projects_list_page_returns_200 PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_projects_list_page_contains_expected_content PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_project_detail_page_returns_200_for_valid_id PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_vault_settings_page_returns_200 PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_project_detail_returns_404_for_invalid_id PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_vault_returns_404_for_invalid_project PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_path_traversal_attack_returns_404 PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_projects_page_is_html PASSED\ntests/acceptance/test_issue_288_acceptance.py::TestIssue288Acceptance::test_projects_page_has_doctype PASSED\n\n============================== 9 passed in 0.11s ==============================="
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/projects.spec.ts",
+    "total": 15,
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "failures": [],
+    "output": "Running 15 tests using 1 worker\n\n  15 passed (1.7s)"
+  },
+  "l3_test_plan_results": {
+    "source": "work-plan.md",
+    "test_commands": [
+      {
+        "name": "Project一覧ページ取得",
+        "command": "curl -s http://localhost:5173/projects",
+        "expected_status": 200,
+        "actual_status": 200,
+        "expected_response_contains": ["Projects"],
+        "response_validation": "passed",
+        "result": "passed"
+      },
+      {
+        "name": "Project詳細ページ取得（有効ID）",
+        "command": "curl -s http://localhost:5173/projects/proj_001",
+        "expected_status": 200,
+        "actual_status": 200,
+        "expected_response_contains": ["Project"],
+        "response_validation": "passed",
+        "result": "passed"
+      },
+      {
+        "name": "Project詳細ページ取得（無効ID）",
+        "command": "curl -s http://localhost:5173/projects/invalid_project_id",
+        "expected_status": 404,
+        "actual_status": 404,
+        "expected_response_contains": ["not found"],
+        "response_validation": "passed",
+        "result": "passed"
+      },
+      {
+        "name": "Vault設定ページ取得",
+        "command": "curl -s http://localhost:5173/projects/proj_001/vault",
+        "expected_status": 200,
+        "actual_status": 200,
+        "expected_response_contains": ["Vault"],
+        "response_validation": "passed",
+        "result": "passed"
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "/projects でProject一覧が表示される",
+      "verified": true,
+      "verification_method": "pytest + playwright + L3 API test",
+      "test_method": "test_projects_list_page_returns_200, test_projects_list_page_contains_expected_content, should display project list page",
+      "http_status": 200,
+      "content_verified": true
+    },
+    {
+      "criterion": "/projects/:projectId でProject詳細が表示される",
+      "verified": true,
+      "verification_method": "pytest + playwright + L3 API test",
+      "test_method": "test_project_detail_page_returns_200_for_valid_id, should display project detail page for valid project, should display project statistics",
+      "http_status": 200,
+      "content_verified": true
+    },
+    {
+      "criterion": "/projects/:projectId/vault でシークレット一覧が表示される",
+      "verified": true,
+      "verification_method": "pytest + playwright + L3 API test",
+      "test_method": "test_vault_settings_page_returns_200, should display vault settings page, should display secrets section",
+      "http_status": 200,
+      "content_verified": true
+    },
+    {
+      "criterion": "存在しないprojectIdで404エラー",
+      "verified": true,
+      "verification_method": "pytest + playwright + L3 API test",
+      "test_method": "test_project_detail_returns_404_for_invalid_id, test_vault_returns_404_for_invalid_project, should show 404 for invalid project ID",
+      "http_status": 404,
+      "content_verified": true
+    }
+  ],
+  "fixes_applied": [
+    {
+      "file": "myAgentDesk/tests/e2e/projects.spec.ts",
+      "changes": [
+        "Updated CSS selectors to use [class*='xxx'] partial matching to handle SvelteKit's hash suffixes",
+        "Changed .project-card to [class*='project-card']",
+        "Changed .stats-grid/.stat-card to [class*='dashboard-grid']/[class*='dashboard-card'] matching actual implementation",
+        "Changed .runs-section to [class*='dashboard-card'] with hasText: 'Recent Runs'",
+        "Changed .secrets-section to [class*='vault-section']",
+        "Updated all locators to properly match the actual Svelte component class names"
+      ]
+    },
+    {
+      "file": "myAgentDesk/playwright.config.ts",
+      "changes": [
+        "Changed webServer command from 'npm run build && npm run preview' to 'npm run dev'",
+        "Changed port from 4173 to 5173",
+        "Added reuseExistingServer: true to reuse running dev server",
+        "Updated baseURL to http://localhost:5173"
+      ]
+    }
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_288_acceptance.py",
+    "myAgentDesk/tests/e2e/projects.spec.ts"
+  ],
+  "message": "すべての受入条件を満たしています（L3ローカル受入テスト完了）。pytest 9/9テスト、Playwright 15/15テストが全て成功しました。"
+}

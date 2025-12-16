@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as schema from '../../../src/lib/server/db/schema';
 
 describe('Database CRUD Operations', () => {

@@ -1,16 +1,26 @@
 <!--
   Project Dashboard (/projects/:projectId)
-  Issue #285: SvelteKit Routing Foundation
+  Issue #288: Project screens implementation
 
-  Project overview and dashboard.
+  Project overview and dashboard with statistics and recent activity.
 -->
 <script lang="ts">
+	import ProjectStats from '$lib/components/projects/ProjectStats.svelte';
+	import RecentRunsList from '$lib/components/projects/RecentRunsList.svelte';
+	import RecentSchedulesList from '$lib/components/projects/RecentSchedulesList.svelte';
+	import type {
+		ProjectStats as ProjectStatsType,
+		RunWithWorkbench,
+		ScheduleWithWorkbench
+	} from '$lib/types/project';
+	import type { Project } from '$lib/server/db/schema';
+
 	interface Props {
 		data: {
-			project: {
-				id: string;
-				name: string;
-			};
+			project: Project;
+			stats: ProjectStatsType;
+			recentRuns: RunWithWorkbench[];
+			recentSchedules: ScheduleWithWorkbench[];
 		};
 	}
 
@@ -20,23 +30,19 @@
 <div class="project-dashboard">
 	<div class="page-header">
 		<h1>{data.project.name}</h1>
+		{#if data.project.description}
+			<p class="project-description">{data.project.description}</p>
+		{/if}
 	</div>
 
-	<div class="dashboard-grid">
-		<div class="dashboard-card">
-			<h3>Workbenches</h3>
-			<p class="stat">3</p>
-			<a href="/projects/{data.project.id}/workbenches" class="card-link">View all</a>
+	<ProjectStats stats={data.stats} />
+
+	<div class="dashboard-content">
+		<div class="content-section">
+			<RecentRunsList runs={data.recentRuns} projectId={data.project.id} />
 		</div>
-		<div class="dashboard-card">
-			<h3>Recent Runs</h3>
-			<p class="stat">12</p>
-			<span class="card-note">Last 7 days</span>
-		</div>
-		<div class="dashboard-card">
-			<h3>Active Schedules</h3>
-			<p class="stat">2</p>
-			<span class="card-note">Running</span>
+		<div class="content-section">
+			<RecentSchedulesList schedules={data.recentSchedules} projectId={data.project.id} />
 		</div>
 	</div>
 
@@ -64,50 +70,30 @@
 		font-size: 1.5rem;
 		font-weight: 600;
 		color: #1e293b;
+		margin: 0 0 0.5rem;
+	}
+
+	.project-description {
+		font-size: 0.875rem;
+		color: #64748b;
 		margin: 0;
 	}
 
-	.dashboard-grid {
+	.dashboard-content {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 1rem;
-		margin-bottom: 2rem;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		margin-top: 1.5rem;
 	}
 
-	.dashboard-card {
-		background: white;
-		padding: 1.5rem;
-		border-radius: 0.5rem;
-		border: 1px solid #e2e8f0;
+	@media (max-width: 768px) {
+		.dashboard-content {
+			grid-template-columns: 1fr;
+		}
 	}
 
-	.dashboard-card h3 {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #64748b;
-		margin: 0 0 0.5rem;
-	}
-
-	.stat {
-		font-size: 2rem;
-		font-weight: 700;
-		color: #1e293b;
-		margin: 0 0 0.5rem;
-	}
-
-	.card-link {
-		font-size: 0.875rem;
-		color: #3b82f6;
-		text-decoration: none;
-	}
-
-	.card-link:hover {
-		text-decoration: underline;
-	}
-
-	.card-note {
-		font-size: 0.75rem;
-		color: #94a3b8;
+	.content-section {
+		min-width: 0;
 	}
 
 	.quick-actions {
@@ -115,6 +101,7 @@
 		padding: 1.5rem;
 		border-radius: 0.5rem;
 		border: 1px solid #e2e8f0;
+		margin-top: 1.5rem;
 	}
 
 	.quick-actions h2 {
@@ -127,6 +114,7 @@
 	.actions-list {
 		display: flex;
 		gap: 0.75rem;
+		flex-wrap: wrap;
 	}
 
 	.action-button {

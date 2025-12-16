@@ -3,9 +3,9 @@
  * @description TDD Phase 1: RED - Tests for mock/real mode switching
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MockAdapterFactory, type ApiClients } from '../mock/adapter-factory';
-import { isOk, isErr } from '../result';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { MockAdapterFactory } from '../mock/adapter-factory';
+import { isOk } from '../result';
 
 describe('MockAdapterFactory', () => {
 	let originalEnv: string | undefined;
@@ -56,7 +56,7 @@ describe('MockAdapterFactory', () => {
 		it('should use mock mode by default when env is not set', () => {
 			delete process.env.VITE_USE_MOCK_API;
 
-			const clients = MockAdapterFactory.create();
+			MockAdapterFactory.create();
 
 			expect(MockAdapterFactory.isMockMode()).toBe(true);
 		});

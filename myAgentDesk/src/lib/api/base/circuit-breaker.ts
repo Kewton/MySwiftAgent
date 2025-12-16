@@ -3,7 +3,7 @@
  * @description Circuit breaker pattern for fault tolerance
  */
 
-import { type Result, err, isErr, isOk } from '../result';
+import { type Result, err, isOk } from '../result';
 import { type ApiError, ApiErrorCode, createApiError, isRetryableError } from '../errors';
 
 /**
