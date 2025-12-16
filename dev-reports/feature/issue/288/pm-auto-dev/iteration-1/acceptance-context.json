@@ -1,0 +1,50 @@
+{
+  "issue_number": 288,
+  "feature_summary": "[myAgentDesk] #279-4: Project一覧・詳細画面",
+  "acceptance_criteria": [
+    "/projects でProject一覧が表示される",
+    "/projects/:projectId でProject詳細が表示される",
+    "/projects/:projectId/vault でシークレット一覧が表示される",
+    "存在しないprojectIdで404エラー"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["myAgentDesk"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "test_commands": [
+      {
+        "name": "Project一覧ページ取得",
+        "command": "curl -s http://localhost:5173/projects -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 200,
+        "expected_response_contains": ["Projects"]
+      },
+      {
+        "name": "Project詳細ページ取得（有効ID）",
+        "command": "curl -s http://localhost:5173/projects/proj_001 -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 200,
+        "expected_response_contains": ["Project"]
+      },
+      {
+        "name": "Project詳細ページ取得（無効ID）",
+        "command": "curl -s http://localhost:5173/projects/invalid_project_id -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 404,
+        "expected_response_contains": ["not found"]
+      },
+      {
+        "name": "Vault設定ページ取得",
+        "command": "curl -s http://localhost:5173/projects/proj_001/vault -w '\\nHTTP_STATUS:%{http_code}'",
+        "expected_status": 200,
+        "expected_response_contains": ["Vault"]
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_288_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/projects.spec.ts"
+}
