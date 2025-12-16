@@ -1,0 +1,163 @@
+{
+  "issue_number": 287,
+  "title": "[myAgentDesk] #279-3: APIクライアント境界（アダプタ層）",
+  "project": "myAgentDesk",
+  "acceptance_criteria": [
+    "`api.expertAgent.generateJob()` が型安全に呼び出せる",
+    "モックモード時はAPIを呼び出さずモックデータを返却",
+    "リトライロジック（指数バックオフ）が動作",
+    "単体テストカバレッジ 90%以上",
+    "TypeScriptエラーゼロ",
+    "正常系: モックモードでJobVersion一覧を取得",
+    "正常系: リトライ設定が3回まで試行",
+    "異常系: 401エラー時に認証エラーとして分類"
+  ],
+  "implementation_tasks": [
+    "Result<T, E>型定義 (result.ts)",
+    "ApiError型定義 (errors.ts)",
+    "RetryHandler実装 (retry-handler.ts)",
+    "CircuitBreaker実装 (circuit-breaker.ts)",
+    "ApiClient基底クラス (api-client.ts)",
+    "ExpertAgentClient実装 (expert-agent.ts)",
+    "JobQueueClient実装 (job-queue.ts)",
+    "MySchedulerClient実装 (my-scheduler.ts)",
+    "MyVaultClient実装 (my-vault.ts)",
+    "LangfuseClient実装 (langfuse.ts)",
+    "モック実装 (mock/*.ts)",
+    "MockAdapterFactory実装 (adapter-factory.ts)",
+    "API設定・エクスポート (config.ts, index.ts, types.ts)"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Result<T, E>型定義",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/api/result.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "ApiError型定義",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/api/errors.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3",
+      "description": "RetryHandler実装",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/api/base/retry-handler.ts"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "CircuitBreaker実装",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/api/base/circuit-breaker.ts"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "ApiClient基底クラス",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/api/base/api-client.ts"],
+      "dependencies": ["1.3", "1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ExpertAgentClient実装",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/api/clients/expert-agent.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "JobQueueClient実装",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/api/clients/job-queue.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "MySchedulerClient実装",
+      "estimated_hours": 0.75,
+      "deliverables": ["src/lib/api/clients/my-scheduler.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "MyVaultClient実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/api/clients/my-vault.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "2.5",
+      "description": "LangfuseClient実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/api/clients/langfuse.ts"],
+      "dependencies": ["1.5"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "モック実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["src/lib/api/mock/*.ts"],
+      "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "MockAdapterFactory実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/api/mock/adapter-factory.ts"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "単体テスト実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["src/lib/api/__tests__/*.test.ts"],
+      "dependencies": ["3.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/lib/api/result.ts",
+    "src/lib/api/errors.ts",
+    "src/lib/api/types.ts",
+    "src/lib/api/config.ts",
+    "src/lib/api/index.ts",
+    "src/lib/api/base/api-client.ts",
+    "src/lib/api/base/retry-handler.ts",
+    "src/lib/api/base/circuit-breaker.ts",
+    "src/lib/api/clients/expert-agent.ts",
+    "src/lib/api/clients/job-queue.ts",
+    "src/lib/api/clients/my-scheduler.ts",
+    "src/lib/api/clients/my-vault.ts",
+    "src/lib/api/clients/langfuse.ts",
+    "src/lib/api/mock/adapter-factory.ts",
+    "src/lib/api/mock/expert-agent.mock.ts",
+    "src/lib/api/mock/job-queue.mock.ts",
+    "src/lib/api/mock/my-scheduler.mock.ts",
+    "src/lib/api/mock/my-vault.mock.ts",
+    "src/lib/api/mock/langfuse.mock.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "TypeScriptエラーゼロ",
+    "Ruff lintエラーなし",
+    "全テストケースPASS"
+  ],
+  "target_coverage": 90,
+  "technical_stack": {
+    "language": "TypeScript",
+    "framework": "SvelteKit",
+    "testing": "Vitest",
+    "validation": "Zod"
+  },
+  "reference_documents": [
+    "docs/design/design-policy.md (6.3 エラーハンドリング方針)",
+    "docs/arch/service-dependencies.md (API仕様・認証方式)",
+    "expertAgent/docs/API_REFERENCE.md (ExpertAgent API仕様)"
+  ]
+}

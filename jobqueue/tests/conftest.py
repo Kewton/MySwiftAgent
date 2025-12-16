@@ -14,13 +14,28 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import Base, get_db
 from app.main import create_app
 
+# Note: event_loop fixture is no longer needed with pytest-asyncio >= 0.21
+# Use asyncio_default_fixture_loop_scope in pyproject.toml instead
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+
+@pytest.fixture(autouse=True)
+def cleanup_pending_tasks():
+    """Clean up any pending asyncio tasks after each test."""
+    yield
+    # Cancel any pending tasks after test completes
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return
+        pending = asyncio.all_tasks(loop)
+        for task in pending:
+            if not task.done():
+                task.cancel()
+        if pending:
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+    except RuntimeError:
+        # Event loop might be closed, that's fine
+        pass
 
 
 @pytest_asyncio.fixture

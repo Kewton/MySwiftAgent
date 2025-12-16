@@ -17,6 +17,6 @@ export default [
 		}
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', 'dist/', 'coverage/']
+		ignores: ['build/', '.svelte-kit/', 'dist/', 'coverage/', 'src/routes/(preview)/']
 	}
 ];
