@@ -20,6 +20,7 @@ class TestInterfaceE2E:
     """End-to-End test suite for Interface Validation."""
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(90)  # Allow more time for external HTTP requests
     async def test_e2e_compatible_interfaces_full_flow(
         self, client: AsyncClient, db_session: AsyncSession
     ) -> None:

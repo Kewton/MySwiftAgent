@@ -232,28 +232,36 @@ class TestWorkerManager:
         with patch("app.core.worker.get_settings") as mock_get_settings:
             mock_settings = MagicMock()
             mock_settings.concurrency = 1
+            mock_settings.poll_interval = 0.1
             mock_get_settings.return_value = mock_settings
 
-            manager = WorkerManager()
+            # Mock get_session_maker to prevent actual DB connections
+            with patch("app.core.worker.get_session_maker") as mock_session_maker:
+                mock_session = AsyncMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_maker.return_value = mock_session
 
-            # Start workers
-            start_task = asyncio.create_task(manager.start())
+                manager = WorkerManager()
 
-            # Give it a moment to start
-            await asyncio.sleep(0.1)
+                # Start workers
+                start_task = asyncio.create_task(manager.start())
 
-            assert manager.running
-            assert len(manager.workers) == 1
+                # Give it a moment to start
+                await asyncio.sleep(0.05)
 
-            # Stop workers
-            await manager.stop()
+                assert manager.running
+                assert len(manager.workers) == 1
 
-            assert not manager.running
-            assert len(manager.workers) == 0
+                # Stop workers
+                await manager.stop()
 
-            # Cancel the start task
-            start_task.cancel()
-            try:
-                await start_task
-            except asyncio.CancelledError:
-                pass
+                assert not manager.running
+                assert len(manager.workers) == 0
+
+                # Wait for the start task to finish (should complete after stop)
+                start_task.cancel()
+                try:
+                    await asyncio.wait_for(start_task, timeout=1.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
