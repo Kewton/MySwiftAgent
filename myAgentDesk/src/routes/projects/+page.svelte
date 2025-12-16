@@ -52,9 +52,11 @@
 
 <style>
 	.projects-page {
+		width: 100%;
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 2rem 1rem;
+		box-sizing: border-box;
 	}
 
 	.page-header {

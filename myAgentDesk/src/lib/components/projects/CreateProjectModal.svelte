@@ -3,29 +3,22 @@
   Issue #288: Project screens implementation
 
   Modal dialog for creating a new project.
+  Uses SvelteKit form actions for server-side submission.
 -->
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+
 	interface Props {
 		isOpen: boolean;
 		onClose?: () => void;
-		onSubmit?: (data: { name: string; description: string }) => void;
 	}
 
-	let { isOpen, onClose, onSubmit }: Props = $props();
+	let { isOpen, onClose }: Props = $props();
 
-	let name = $state('');
-	let description = $state('');
-
-	function handleSubmit(event: Event) {
-		event.preventDefault();
-		if (onSubmit) {
-			onSubmit({ name, description });
-		}
-	}
+	let isSubmitting = $state(false);
 
 	function handleCancel() {
-		name = '';
-		description = '';
 		if (onClose) {
 			onClose();
 		}
@@ -64,15 +57,28 @@
 				</button>
 			</div>
 
-			<form onsubmit={handleSubmit}>
+			<form
+				method="POST"
+				action="/projects?/create"
+				use:enhance={() => {
+					isSubmitting = true;
+					return async ({ result }) => {
+						isSubmitting = false;
+						if (result.type === 'redirect') {
+							await goto(result.location);
+						}
+					};
+				}}
+			>
 				<div class="form-group">
 					<label for="project-name">Project Name</label>
 					<input
 						id="project-name"
+						name="name"
 						type="text"
-						bind:value={name}
 						placeholder="Enter project name"
 						required
+						disabled={isSubmitting}
 					/>
 				</div>
 
@@ -80,15 +86,20 @@
 					<label for="project-description">Description</label>
 					<textarea
 						id="project-description"
-						bind:value={description}
+						name="description"
 						placeholder="Enter project description (optional)"
 						rows="3"
+						disabled={isSubmitting}
 					></textarea>
 				</div>
 
 				<div class="modal-actions">
-					<button type="button" class="cancel-button" onclick={handleCancel}> Cancel </button>
-					<button type="submit" class="submit-button"> Create Project </button>
+					<button type="button" class="cancel-button" onclick={handleCancel} disabled={isSubmitting}>
+						Cancel
+					</button>
+					<button type="submit" class="submit-button" disabled={isSubmitting}>
+						{isSubmitting ? 'Creating...' : 'Create Project'}
+					</button>
 				</div>
 			</form>
 		</div>

@@ -7,7 +7,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
 import { ProjectRepository } from '$lib/server/repositories/project';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 
 const projectRepository = new ProjectRepository(db);
 
@@ -31,20 +31,18 @@ export const actions: Actions = {
 			});
 		}
 
+		let project;
 		try {
-			const project = await projectRepository.create({
+			project = await projectRepository.create({
 				name: name.trim(),
 				description: description?.trim()
 			});
-
-			throw redirect(303, `/projects/${project.id}`);
 		} catch (error) {
-			if (error instanceof Response) {
-				throw error;
-			}
 			return fail(500, {
 				error: 'Failed to create project'
 			});
 		}
+
+		redirect(303, `/projects/${project.id}`);
 	}
 };
