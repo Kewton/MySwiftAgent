@@ -1,12 +1,14 @@
 /**
  * Workbench Layout Server Load
- * Issue #285: SvelteKit Routing Foundation
+ * Issue #289: Workbench List/Detail Screens
  *
  * Guards access to workbench pages by validating workbench existence and project ownership.
+ * Uses real database queries for validation.
  */
 import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { validateWorkbenchAccess } from '$lib/guards/workbench-guard';
+import { workbenchRepository } from '$lib/server/repositories/workbench';
 
 export const load: LayoutServerLoad = async ({ params, parent }) => {
 	const { workbenchId, projectId } = params;
@@ -14,18 +16,21 @@ export const load: LayoutServerLoad = async ({ params, parent }) => {
 	// Get project from parent layout (ensures project guard ran first)
 	await parent();
 
-	// TODO: Replace with actual database query
-	// For MVP, we use mock data
-	const mockWorkbench = {
-		id: workbenchId,
-		name: `Workbench ${workbenchId}`,
-		projectId: projectId
-	};
+	// Fetch workbench from database with full detail
+	const workbenchDetail = await workbenchRepository.findByIdWithDetail(workbenchId);
 
-	// In production, this would be: const workbenchData = await db.query.workbench.findFirst(...)
-	const workbenchData = workbenchId.startsWith('wb_') ? mockWorkbench : null;
-
-	const result = validateWorkbenchAccess(workbenchData, workbenchId, projectId);
+	// Validate workbench access (exists, ID matches, belongs to project)
+	const result = validateWorkbenchAccess(
+		workbenchDetail
+			? {
+					id: workbenchDetail.id,
+					name: workbenchDetail.name,
+					projectId: workbenchDetail.projectId
+				}
+			: null,
+		workbenchId,
+		projectId
+	);
 
 	if (!result.valid) {
 		throw error(result.error!.status, {
@@ -34,6 +39,7 @@ export const load: LayoutServerLoad = async ({ params, parent }) => {
 	}
 
 	return {
-		workbench: result.workbench!
+		workbench: result.workbench!,
+		workbenchDetail
 	};
 };
