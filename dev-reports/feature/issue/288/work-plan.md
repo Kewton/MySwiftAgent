@@ -174,7 +174,7 @@ export interface ProjectStats {
 // src/lib/server/repositories/project.ts
 
 import { db } from '$lib/server/db';
-import { project, workbench, run, schedule } from '$lib/server/db/schema';
+import { project, workbench, run, schedule, jobVersion } from '$lib/server/db/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 
 export class ProjectRepository {
@@ -516,7 +516,84 @@ test.describe('Project Management', () => {
 
 ---
 
-## 8. 参照ドキュメント
+## 8. L3受入テスト計画【必須】
+
+### Step 1: サービス起動確認
+
+```bash
+# サービス起動
+./scripts/dev-start.sh
+
+# ヘルスチェック
+curl -sf http://localhost:8000/api/health && echo "✅ myAgentDesk: healthy"
+curl -sf http://localhost:8103/health && echo "✅ myVault: healthy"
+```
+
+### Step 2: Project一覧画面の確認
+
+```bash
+# Project一覧ページ取得
+curl -s http://localhost:8000/projects \
+  -w "\nHTTP Status: %{http_code}\n" \
+  | head -50
+
+# 期待: HTTP Status: 200, HTML containing "Projects"
+```
+
+### Step 3: Project詳細画面の確認
+
+```bash
+# Project詳細ページ取得（有効なprojectId）
+curl -s http://localhost:8000/projects/proj_001 \
+  -w "\nHTTP Status: %{http_code}\n" \
+  | head -50
+
+# 期待: HTTP Status: 200, HTML containing project name
+
+# 無効なprojectIdで404確認
+curl -s http://localhost:8000/projects/invalid_project_id \
+  -w "\nHTTP Status: %{http_code}\n"
+
+# 期待: HTTP Status: 404
+```
+
+### Step 4: Vault設定画面の確認
+
+```bash
+# Vault設定ページ取得
+curl -s http://localhost:8000/projects/proj_001/vault \
+  -w "\nHTTP Status: %{http_code}\n" \
+  | head -50
+
+# 期待: HTTP Status: 200, HTML containing "Vault Settings"
+```
+
+### Step 5: myVault API連携確認
+
+```bash
+# myVault API経由でシークレット一覧取得
+curl -s http://localhost:8103/api/secrets \
+  -H "X-Service: myAgentDesk" \
+  -H "X-Token: ${MYVAULT_SERVICE_TOKEN}" \
+  | head -30
+
+# 期待: JSON array of secrets
+```
+
+### Step 6: エビデンス収集
+
+```bash
+# レスポンスをファイルに保存
+curl -s http://localhost:8000/projects > /tmp/projects_list.html
+curl -s http://localhost:8000/projects/proj_001 > /tmp/project_detail.html
+curl -s http://localhost:8000/projects/proj_001/vault > /tmp/vault_settings.html
+
+echo "✅ Evidence saved to /tmp/"
+```
+
+---
+
+## 9. 参照ドキュメント
 
 | ドキュメント | 用途 |
 |-------------|------|
@@ -528,7 +605,7 @@ test.describe('Project Management', () => {
 
 ---
 
-## 9. 完了定義
+## 10. 完了定義
 
 以下がすべて満たされた時点で完了:
 
@@ -544,7 +621,7 @@ test.describe('Project Management', () => {
 
 ---
 
-## 10. 作業ログ
+## 11. 作業ログ
 
 | 日時 | 作業内容 | 担当 |
 |------|---------|------|

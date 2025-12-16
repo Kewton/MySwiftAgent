@@ -17,13 +17,18 @@
 Phase 1 (Foundation) - 完了済み
 ├── #285: SvelteKit Routing Foundation ✅
 ├── #286: Drizzle ORM + SQLite ✅
-└── #287: APIクライアント境界 ✅
+└── #287: APIクライアント境界 ✅ (間接依存: #288経由)
 
 Phase 2 (本Issue)
-├── #288: Project一覧・詳細画面 ← 依存先
+├── #288: Project一覧・詳細画面 ← 直接依存先
 └── #289: Workbench一覧・詳細画面 ← 今回の作業
-    └── ブロック対象: #290 (Requirements編集), #297 (スケジュール管理)
+    └── ブロック対象: #290 (Requirements編集)
 ```
+
+**依存関係の詳細**:
+- **直接依存**: #285 (Routing), #286 (DB), #288 (Project画面)
+- **間接依存**: #287 (APIクライアント) - #288経由で利用
+- **issue-split.md準拠**: #279-5の依存先は #279-1, #279-2, #279-4
 
 ### 1.2 現状分析
 
@@ -203,7 +208,10 @@ import { workbench, run, schedule, requirementVersion, jobVersion } from '$lib/s
 import { eq, desc, and, count, sql } from 'drizzle-orm';
 
 export class WorkbenchRepository {
-  /** プロジェクト内のWorkbench一覧取得（統計付き） */
+  /** プロジェクト内のWorkbench一覧取得（統計付き）
+   *
+   * N+1問題対策: ウィンドウ関数とサブクエリを使用して1回のクエリで取得
+   */
   async findByProjectWithStats(projectId: string): Promise<WorkbenchListItem[]> {
     // サブクエリで実行数とスケジュール数を集計
     const runCountSubquery = db
@@ -225,6 +233,30 @@ export class WorkbenchRepository {
       .groupBy(schedule.workbenchId)
       .as('schedule_stats');
 
+    // N+1対策: 最新Run情報をウィンドウ関数で取得するサブクエリ
+    // ROW_NUMBER() OVER (PARTITION BY workbench_id ORDER BY created_at DESC)
+    const latestRunSubquery = db
+      .select({
+        workbenchId: run.workbenchId,
+        status: run.status,
+        completedAt: run.completedAt,
+        rowNum: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${run.workbenchId} ORDER BY ${run.createdAt} DESC)`.as('row_num')
+      })
+      .from(run)
+      .as('latest_run_ranked');
+
+    // 最新Run（row_num = 1）のみをフィルタ
+    const latestRunFiltered = db
+      .select({
+        workbenchId: latestRunSubquery.workbenchId,
+        lastRunStatus: latestRunSubquery.status,
+        lastRunAt: latestRunSubquery.completedAt
+      })
+      .from(latestRunSubquery)
+      .where(eq(latestRunSubquery.rowNum, 1))
+      .as('latest_run');
+
+    // 1回のクエリで全データを取得（N+1問題回避）
     const results = await db
       .select({
         id: workbench.id,
@@ -235,36 +267,18 @@ export class WorkbenchRepository {
         createdAt: workbench.createdAt,
         updatedAt: workbench.updatedAt,
         runCount: sql<number>`COALESCE(${runCountSubquery.runCount}, 0)`,
-        scheduleCount: sql<number>`COALESCE(${scheduleCountSubquery.scheduleCount}, 0)`
+        scheduleCount: sql<number>`COALESCE(${scheduleCountSubquery.scheduleCount}, 0)`,
+        lastRunAt: latestRunFiltered.lastRunAt,
+        lastRunStatus: latestRunFiltered.lastRunStatus
       })
       .from(workbench)
       .leftJoin(runCountSubquery, eq(workbench.id, runCountSubquery.workbenchId))
       .leftJoin(scheduleCountSubquery, eq(workbench.id, scheduleCountSubquery.workbenchId))
+      .leftJoin(latestRunFiltered, eq(workbench.id, latestRunFiltered.workbenchId))
       .where(eq(workbench.projectId, projectId))
       .orderBy(desc(workbench.updatedAt));
 
-    // 最新実行情報を追加
-    const workbenchesWithLastRun = await Promise.all(
-      results.map(async (wb) => {
-        const [lastRun] = await db
-          .select({
-            status: run.status,
-            completedAt: run.completedAt
-          })
-          .from(run)
-          .where(eq(run.workbenchId, wb.id))
-          .orderBy(desc(run.createdAt))
-          .limit(1);
-
-        return {
-          ...wb,
-          lastRunAt: lastRun?.completedAt ?? null,
-          lastRunStatus: lastRun?.status ?? null
-        };
-      })
-    );
-
-    return workbenchesWithLastRun;
+    return results;
   }
 
   /** Workbench詳細取得 */
