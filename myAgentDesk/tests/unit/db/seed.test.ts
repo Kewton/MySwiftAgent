@@ -2,12 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from '../../../src/lib/server/db/schema';
-import {
-	getDefaultSeedData,
-	seedDatabase,
-	clearAllData,
-	type SeedData
-} from '../../../src/lib/server/db/seed';
+import { getDefaultSeedData, seedDatabase, clearAllData } from '../../../src/lib/server/db/seed';
 
 describe('Seed Data Module', () => {
 	let sqlite: Database.Database;

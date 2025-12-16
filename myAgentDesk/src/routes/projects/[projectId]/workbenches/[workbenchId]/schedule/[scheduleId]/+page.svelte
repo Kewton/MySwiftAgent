@@ -60,7 +60,7 @@
 				</div>
 				<div class="execution-item">
 					<span class="execution-time">2024-01-15 09:00:00</span>
-					<span class="execution-status success">Success</span>
+					<span class="execution-status failed">Failed</span>
 				</div>
 			</div>
 		</div>

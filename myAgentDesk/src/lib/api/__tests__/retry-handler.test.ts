@@ -5,8 +5,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RetryHandler, type RetryConfig } from '../base/retry-handler';
-import { err, ok, type Result } from '../result';
-import { type ApiError, ApiErrorCode, createApiError } from '../errors';
+import { err, ok } from '../result';
+import { ApiErrorCode, createApiError } from '../errors';
 
 describe('RetryHandler', () => {
 	beforeEach(() => {
