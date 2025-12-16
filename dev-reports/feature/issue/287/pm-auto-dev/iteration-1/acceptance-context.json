@@ -1,0 +1,59 @@
+{
+  "issue_number": 287,
+  "feature_summary": "[myAgentDesk] #279-3: APIクライアント境界（アダプタ層）",
+  "acceptance_criteria": [
+    "`api.expertAgent.generateJob()` が型安全に呼び出せる",
+    "モックモード時はAPIを呼び出さずモックデータを返却",
+    "リトライロジック（指数バックオフ）が動作",
+    "単体テストカバレッジ 90%以上",
+    "TypeScriptエラーゼロ",
+    "正常系: モックモードでJobVersion一覧を取得",
+    "正常系: リトライ設定が3回まで試行",
+    "異常系: 401エラー時に認証エラーとして分類"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["myAgentDesk"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "test_commands": [
+      {
+        "name": "モック切替テスト",
+        "description": "VITE_USE_MOCK_API=true でモックモードに切り替わることを確認",
+        "method": "unit_test_verification"
+      },
+      {
+        "name": "Result型エラーハンドリングテスト",
+        "description": "APIエラーがResult<T, E>型で適切にラップされることを確認",
+        "method": "unit_test_verification"
+      },
+      {
+        "name": "リトライ動作テスト",
+        "description": "指数バックオフで最大3回リトライすることを確認",
+        "method": "unit_test_verification"
+      },
+      {
+        "name": "サーキットブレーカーテスト",
+        "description": "5回連続失敗でサーキットオープンすることを確認",
+        "method": "unit_test_verification"
+      }
+    ]
+  },
+  "pytest_test_file": "N/A (TypeScript project - using Vitest)",
+  "vitest_test_files": [
+    "myAgentDesk/src/lib/api/__tests__/result.test.ts",
+    "myAgentDesk/src/lib/api/__tests__/errors.test.ts",
+    "myAgentDesk/src/lib/api/__tests__/retry-handler.test.ts",
+    "myAgentDesk/src/lib/api/__tests__/circuit-breaker.test.ts",
+    "myAgentDesk/src/lib/api/__tests__/api-client.test.ts",
+    "myAgentDesk/src/lib/api/__tests__/clients.test.ts",
+    "myAgentDesk/src/lib/api/__tests__/mock-adapter.test.ts"
+  ],
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_287.spec.ts",
+  "notes": "This is an API client layer implementation (adapter layer). The main acceptance criteria are verified through unit tests since this is infrastructure code without direct UI interaction. Playwright tests will verify the integration with UI components that consume these API clients."
+}

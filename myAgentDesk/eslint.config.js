@@ -28,7 +28,6 @@ export default tseslint.config(
 			}
 		},
 		rules: {
-			// Disable navigation rules that don't apply to SvelteKit app router
 			'svelte/no-navigation-without-resolve': 'off',
 			'svelte/require-each-key': 'warn'
 		}
@@ -37,16 +36,18 @@ export default tseslint.config(
 		files: ['**/*.ts'],
 		languageOptions: {
 			parser: tseslint.parser
+		},
+		rules: {
+			'@typescript-eslint/no-unused-vars': [
+				'warn',
+				{
+					argsIgnorePattern: '^_',
+					varsIgnorePattern: '^_'
+				}
+			]
 		}
 	},
 	{
-		ignores: [
-			'build/',
-			'.svelte-kit/',
-			'dist/',
-			'coverage/',
-			'node_modules/',
-			'src/routes/(preview)/**' // Ignore preview mockup files
-		]
+		ignores: ['build/', '.svelte-kit/', 'dist/', 'coverage/', 'src/routes/(preview)/']
 	}
 );
