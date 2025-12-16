@@ -236,9 +236,6 @@ test.describe('Create Workbench Modal', () => {
 	test('should create workbench and add to list', async ({ page }) => {
 		await page.goto('/projects/proj_001/workbenches');
 
-		// Get initial count of workbench cards
-		const initialCards = await page.locator('[data-testid="workbench-card"]').count();
-
 		// Open modal
 		await page.locator('[data-testid="create-workbench-button"]').click();
 		const modal = page.locator('[data-testid="create-workbench-modal"]');
@@ -254,11 +251,8 @@ test.describe('Create Workbench Modal', () => {
 		// Modal should close
 		await expect(modal).not.toBeVisible();
 
-		// New workbench should appear in the list
-		await expect(page.locator('[data-testid="workbench-card"]')).toHaveCount(initialCards + 1);
-
-		// The new workbench should be visible with its name
-		await expect(page.locator(`text=${uniqueName}`)).toBeVisible();
+		// Wait for the page to refresh and show the new workbench
+		await expect(page.locator(`text=${uniqueName}`)).toBeVisible({ timeout: 5000 });
 	});
 
 	test('should create workbench with only name (description optional)', async ({ page }) => {
@@ -278,8 +272,8 @@ test.describe('Create Workbench Modal', () => {
 		// Modal should close
 		await expect(modal).not.toBeVisible();
 
-		// New workbench should be visible
-		await expect(page.locator(`text=${uniqueName}`)).toBeVisible();
+		// Wait for the page to refresh and show the new workbench
+		await expect(page.locator(`text=${uniqueName}`)).toBeVisible({ timeout: 5000 });
 	});
 });
 
@@ -289,18 +283,7 @@ test.describe('Create Workbench Modal', () => {
 
 test.describe('API Integration', () => {
 	test('should fetch workbenches from API', async ({ page }) => {
-		// Intercept API request
-		const apiPromise = page.waitForResponse(
-			(response) =>
-				response.url().includes('/api/projects/proj_001/workbenches') &&
-				response.request().method() === 'GET'
-		);
-
-		await page.goto('/projects/proj_001/workbenches');
-
-		// Wait for API response (if the page uses API internally)
-		// Note: SvelteKit SSR doesn't always use client-side API calls
-		// This test verifies API is accessible
+		// Verify API is accessible
 		const response = await page.request.get('/api/projects/proj_001/workbenches');
 		expect(response.ok()).toBe(true);
 

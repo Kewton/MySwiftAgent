@@ -10,7 +10,7 @@
 	import WorkbenchCard from '$lib/components/workbenches/WorkbenchCard.svelte';
 	import WorkbenchStatusFilter from '$lib/components/workbenches/WorkbenchStatusFilter.svelte';
 	import CreateWorkbenchModal from '$lib/components/workbenches/CreateWorkbenchModal.svelte';
-	import type { CreateWorkbenchInput, WorkbenchListItem } from '$lib/types/workbench';
+	import type { CreateWorkbenchInput } from '$lib/types/workbench';
 
 	interface Props {
 		data: {
@@ -25,16 +25,7 @@
 	const projectId = $derived($page.params.projectId ?? '');
 
 	let isModalOpen = $state(false);
-	let isCreating = $state(false);
 	let createError = $state<string | null>(null);
-
-	// Local workbenches state to support optimistic updates
-	let localWorkbenches = $state<WorkbenchListItem[]>([]);
-
-	// Sync local state with server data
-	$effect(() => {
-		localWorkbenches = [...data.workbenches];
-	});
 
 	function openModal() {
 		isModalOpen = true;
@@ -47,7 +38,6 @@
 	}
 
 	async function handleCreate(input: CreateWorkbenchInput) {
-		isCreating = true;
 		createError = null;
 
 		try {
@@ -64,34 +54,13 @@
 				throw new Error(errorData.message || `Failed to create workbench: ${response.status}`);
 			}
 
-			const { workbench } = await response.json();
-
-			// Optimistic update: add the new workbench to the local list
-			const newWorkbenchItem: WorkbenchListItem = {
-				id: workbench.id,
-				name: workbench.name,
-				description: workbench.description,
-				status: workbench.status,
-				activeRequirementVersionId: workbench.activeRequirementVersionId,
-				createdAt: new Date(workbench.createdAt),
-				updatedAt: new Date(workbench.updatedAt),
-				runCount: 0,
-				scheduleCount: 0,
-				lastRunAt: null,
-				lastRunStatus: null
-			};
-
-			localWorkbenches = [newWorkbenchItem, ...localWorkbenches];
-
-			// Also invalidate server data to keep in sync
+			// Invalidate server data to refresh the list
 			await invalidateAll();
 
 			closeModal();
 		} catch (err) {
 			createError = err instanceof Error ? err.message : 'Failed to create workbench';
 			console.error('Create workbench error:', err);
-		} finally {
-			isCreating = false;
 		}
 	}
 </script>
@@ -116,7 +85,7 @@
 	</div>
 
 	<div class="workbenches-list">
-		{#each localWorkbenches as workbench (workbench.id)}
+		{#each data.workbenches as workbench (workbench.id)}
 			<WorkbenchCard {workbench} {projectId} />
 		{:else}
 			<div class="empty-state">
