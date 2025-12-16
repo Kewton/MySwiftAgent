@@ -97,7 +97,7 @@ export class LangfuseClientMock implements Partial<LangfuseClient> {
 		});
 	}
 
-	async submitScore(request: SubmitScoreRequest): Promise<Result<SubmitScoreResponse, ApiError>> {
+	async submitScore(_request: SubmitScoreRequest): Promise<Result<SubmitScoreResponse, ApiError>> {
 		await this.delay(100);
 		return ok({
 			success: true,

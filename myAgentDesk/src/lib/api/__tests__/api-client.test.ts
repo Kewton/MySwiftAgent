@@ -3,10 +3,10 @@
  * @description TDD Phase 1: RED - Tests for base ApiClient with Service Token auth
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ApiClient, type ApiClientConfig } from '../base/api-client';
-import { ok, err, isOk, isErr } from '../result';
-import { ApiErrorCode, createApiError } from '../errors';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ApiClient } from '../base/api-client';
+import { isOk, isErr } from '../result';
+import { ApiErrorCode } from '../errors';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
