@@ -1,0 +1,124 @@
+{
+  "issue_number": 288,
+  "title": "[myAgentDesk] #279-4: Project一覧・詳細画面",
+  "acceptance_criteria": [
+    "/projects でProject一覧が表示される",
+    "/projects/:projectId でProject詳細が表示される",
+    "/projects/:projectId/vault でシークレット一覧が表示される",
+    "存在しないprojectIdで404エラー",
+    "単体テストカバレッジ 90%以上",
+    "ESLint/TypeScript エラーゼロ"
+  ],
+  "test_cases": [
+    "正常系: Project一覧に3件表示（モックデータ）",
+    "正常系: All Runsが選択プロジェクトでフィルタリングされる",
+    "異常系: /projects/invalid_id で404画面表示"
+  ],
+  "implementation_tasks": [
+    "Project一覧画面の実装（/projects）",
+    "Project詳細画面の実装（/projects/:projectId）",
+    "Vault設定画面の実装（/projects/:projectId/vault）",
+    "Projectガードの実装（存在確認、アクセス制御）",
+    "プロジェクトカード表示コンポーネント",
+    "Workbench数表示",
+    "新規作成モーダル",
+    "最近のRun一覧（All Runs）",
+    "最近のSchedule一覧（All Schedules）",
+    "シークレット一覧表示",
+    "疎通確認ボタン",
+    "設定不足警告"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "phase-1",
+      "description": "Repository層実装",
+      "estimated_hours": 3,
+      "deliverables": [
+        "src/lib/types/project.ts",
+        "src/lib/server/repositories/project.ts"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "phase-2",
+      "description": "Project一覧画面",
+      "estimated_hours": 2,
+      "deliverables": [
+        "src/routes/projects/+page.server.ts",
+        "src/routes/projects/+page.svelte",
+        "src/lib/components/projects/ProjectCard.svelte",
+        "src/lib/components/projects/CreateProjectModal.svelte"
+      ],
+      "dependencies": ["phase-1"]
+    },
+    {
+      "task_id": "phase-3",
+      "description": "Project詳細画面",
+      "estimated_hours": 3,
+      "deliverables": [
+        "src/routes/projects/[projectId]/+layout.server.ts",
+        "src/routes/projects/[projectId]/+page.server.ts",
+        "src/routes/projects/[projectId]/+page.svelte",
+        "src/lib/components/projects/ProjectStats.svelte",
+        "src/lib/components/projects/RecentRunsList.svelte",
+        "src/lib/components/projects/RecentSchedulesList.svelte"
+      ],
+      "dependencies": ["phase-1"]
+    },
+    {
+      "task_id": "phase-4",
+      "description": "Vault設定画面",
+      "estimated_hours": 2,
+      "deliverables": [
+        "src/routes/projects/[projectId]/vault/+page.server.ts",
+        "src/routes/projects/[projectId]/vault/+page.svelte",
+        "src/lib/components/projects/SecretsList.svelte"
+      ],
+      "dependencies": ["phase-1"]
+    },
+    {
+      "task_id": "phase-5",
+      "description": "テスト・品質検証",
+      "estimated_hours": 2,
+      "deliverables": [
+        "myAgentDesk/tests/unit/projects/",
+        "myAgentDesk/tests/e2e/projects.spec.ts"
+      ],
+      "dependencies": ["phase-2", "phase-3", "phase-4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/lib/types/project.ts",
+    "src/lib/server/repositories/project.ts",
+    "src/routes/projects/+page.server.ts",
+    "src/routes/projects/+page.svelte",
+    "src/lib/components/projects/ProjectCard.svelte",
+    "src/lib/components/projects/CreateProjectModal.svelte",
+    "src/routes/projects/[projectId]/+layout.server.ts",
+    "src/routes/projects/[projectId]/+page.server.ts",
+    "src/routes/projects/[projectId]/+page.svelte",
+    "src/lib/components/projects/ProjectStats.svelte",
+    "src/lib/components/projects/RecentRunsList.svelte",
+    "src/lib/components/projects/RecentSchedulesList.svelte",
+    "src/routes/projects/[projectId]/vault/+page.server.ts",
+    "src/routes/projects/[projectId]/vault/+page.svelte",
+    "src/lib/components/projects/SecretsList.svelte"
+  ],
+  "definition_of_done": [
+    "Project一覧画面がDBデータを表示",
+    "Project詳細ダッシュボードが統計情報を表示",
+    "Vault設定画面がmyVault APIと連携",
+    "Project Guardが無効IDで404を返す",
+    "単体テストカバレッジ90%以上",
+    "ESLint/TypeScriptエラー0件",
+    "E2Eテストがすべてパス"
+  ],
+  "target_coverage": 90,
+  "tech_stack": {
+    "framework": "SvelteKit",
+    "ui": "Svelte 5 runes ($state, $derived)",
+    "styling": "TailwindCSS 4",
+    "db": "Drizzle ORM + SQLite"
+  },
+  "project_path": "myAgentDesk"
+}

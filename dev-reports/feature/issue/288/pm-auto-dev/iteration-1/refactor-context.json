@@ -1,0 +1,40 @@
+{
+  "issue_number": 288,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/server/repositories/project.ts",
+    "myAgentDesk/src/lib/types/project.ts",
+    "myAgentDesk/src/routes/projects/+page.server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/+page.server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/vault/+page.server.ts",
+    "myAgentDesk/src/lib/components/projects/ProjectCard.svelte",
+    "myAgentDesk/src/lib/components/projects/ProjectStats.svelte",
+    "myAgentDesk/src/lib/components/projects/RecentRunsList.svelte",
+    "myAgentDesk/src/lib/components/projects/RecentSchedulesList.svelte",
+    "myAgentDesk/src/lib/components/projects/SecretsList.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90.51,
+    "typescript_errors": 0,
+    "eslint_errors": 0,
+    "eslint_warnings": 20
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (already applied)",
+    "Type Safety Improvements",
+    "Error Boundary Pattern",
+    "Loading State Management"
+  ],
+  "improvement_goals": [
+    "Reduce ESLint warnings from 20 to 0",
+    "Improve code organization if needed",
+    "Ensure consistent error handling across components",
+    "Verify type safety across all components"
+  ],
+  "tech_stack": {
+    "framework": "SvelteKit",
+    "ui": "Svelte 5 runes ($state, $derived)",
+    "styling": "TailwindCSS 4",
+    "db": "Drizzle ORM + SQLite"
+  },
+  "project_path": "myAgentDesk"
+}

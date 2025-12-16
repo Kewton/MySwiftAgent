@@ -1,35 +1,54 @@
 <!--
   Project List Page (/projects)
-  Issue #285: SvelteKit Routing Foundation
+  Issue #288: Project screens implementation
 
   Displays list of projects and allows creating new ones.
 -->
 <script lang="ts">
-	// Project list - will be loaded from API in future iterations
-	const projects = $state([
-		{ id: 'proj_001', name: 'Demo Project', description: 'A demo project for testing' }
-	]);
+	import ProjectCard from '$lib/components/projects/ProjectCard.svelte';
+	import CreateProjectModal from '$lib/components/projects/CreateProjectModal.svelte';
+	import type { ProjectListItem } from '$lib/types/project';
+
+	interface Props {
+		data: {
+			projects: ProjectListItem[];
+		};
+	}
+
+	let { data }: Props = $props();
+
+	let isCreateModalOpen = $state(false);
+
+	function openCreateModal() {
+		isCreateModalOpen = true;
+	}
+
+	function closeCreateModal() {
+		isCreateModalOpen = false;
+	}
 </script>
 
 <div class="projects-page">
 	<div class="page-header">
 		<h1>Projects</h1>
-		<button class="create-button">New Project</button>
+		<button class="create-button" onclick={openCreateModal}>New Project</button>
 	</div>
 
 	<div class="projects-list">
-		{#each projects as project (project.id)}
-			<a href="/projects/{project.id}" class="project-card">
-				<h3>{project.name}</h3>
-				<p>{project.description}</p>
-			</a>
+		{#each data.projects as project (project.id)}
+			<ProjectCard {project} />
 		{:else}
 			<div class="empty-state">
 				<p>No projects yet. Create your first project to get started.</p>
+				<button class="create-button empty-state-button" onclick={openCreateModal}>
+					Create Project
+				</button>
 			</div>
 		{/each}
 	</div>
 </div>
+
+<CreateProjectModal isOpen={isCreateModalOpen} onClose={closeCreateModal} />
 
 <style>
 	.projects-page {
@@ -73,36 +92,6 @@
 		gap: 1rem;
 	}
 
-	.project-card {
-		display: block;
-		padding: 1.5rem;
-		background: white;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		text-decoration: none;
-		transition:
-			border-color 0.15s,
-			box-shadow 0.15s;
-	}
-
-	.project-card:hover {
-		border-color: #3b82f6;
-		box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-	}
-
-	.project-card h3 {
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: #1e293b;
-		margin: 0 0 0.5rem;
-	}
-
-	.project-card p {
-		font-size: 0.875rem;
-		color: #64748b;
-		margin: 0;
-	}
-
 	.empty-state {
 		grid-column: 1 / -1;
 		text-align: center;
@@ -113,6 +102,10 @@
 
 	.empty-state p {
 		color: #64748b;
-		margin: 0;
+		margin: 0 0 1.5rem;
+	}
+
+	.empty-state-button {
+		margin-top: 0;
 	}
 </style>
