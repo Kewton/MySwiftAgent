@@ -1,0 +1,91 @@
+{
+  "issue_number": 286,
+  "feature_summary": "[myAgentDesk] Drizzle ORM + SQLite セットアップ",
+  "acceptance_criteria": [
+    "npm run db:push でスキーマがSQLiteに反映される",
+    "全6テーブルが作成される（project, workbench, requirement_version, job_version, run, schedule）",
+    "FK制約が正しく設定される（workbench.project_id → project.id等）",
+    "マイグレーションが冪等（複数回実行可能）",
+    "TypeScript型がスキーマから自動生成される",
+    "正常系: Workbench作成時、project_idが存在するProjectを参照",
+    "異常系: 存在しないproject_idでWorkbench作成時にFK違反エラー"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": false,
+  "playwright_reason": "This Issue is database layer implementation (Drizzle ORM, SQLite). No UI components involved.",
+  "required_services": [],
+  "external_dependencies": [],
+  "working_directory": "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-286/myAgentDesk",
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [],
+    "test_commands": [
+      {
+        "name": "Step 1: DBファイル存在確認",
+        "command": "ls -la data/local.db",
+        "description": "data/local.db ファイルが存在することを確認"
+      },
+      {
+        "name": "Step 2: マイグレーション冪等性確認",
+        "command": "npm run db:push && npm run db:push",
+        "description": "npm run db:push を2回実行しても成功すること"
+      },
+      {
+        "name": "Step 3: テーブル数確認",
+        "command": "sqlite3 data/local.db '.tables' | wc -w",
+        "expected_output": "6",
+        "description": "全6テーブルが作成されていること"
+      },
+      {
+        "name": "Step 4: テーブル一覧確認",
+        "command": "sqlite3 data/local.db '.tables'",
+        "expected_contains": ["project", "workbench", "requirement_version", "job_version", "run", "schedule"],
+        "description": "期待するテーブルが存在すること"
+      },
+      {
+        "name": "Step 5: FK制約有効確認",
+        "command": "sqlite3 data/local.db 'PRAGMA foreign_keys;'",
+        "expected_output": "1",
+        "description": "FK制約が有効であること"
+      },
+      {
+        "name": "Step 6: FK違反テスト",
+        "command": "sqlite3 data/local.db \"PRAGMA foreign_keys = ON; INSERT INTO workbench (id, project_id, name, status, created_at, updated_at) VALUES ('test_wb', 'nonexistent', 'Test', 'draft', strftime('%s','now'), strftime('%s','now'));\" 2>&1 | grep -c 'FOREIGN KEY constraint failed'",
+        "expected_output": "1",
+        "description": "存在しないproject_idでWorkbench作成時にFK違反エラーが発生すること"
+      },
+      {
+        "name": "Step 7: シードデータ投入",
+        "command": "npm run db:seed",
+        "description": "シードデータが正常に投入されること"
+      },
+      {
+        "name": "Step 8: Project数確認",
+        "command": "sqlite3 data/local.db 'SELECT COUNT(*) FROM project;'",
+        "expected_minimum": 3,
+        "description": "3件以上のProjectが存在すること"
+      },
+      {
+        "name": "Step 9: Workbench数確認",
+        "command": "sqlite3 data/local.db 'SELECT COUNT(*) FROM workbench;'",
+        "expected_minimum": 5,
+        "description": "5件以上のWorkbenchが存在すること"
+      },
+      {
+        "name": "Step 10: TypeScript型チェック",
+        "command": "npm run type-check",
+        "description": "TypeScriptエラーがないこと"
+      },
+      {
+        "name": "Step 11: 型エクスポート確認",
+        "command": "grep -c 'export type' src/lib/server/db/schema.ts",
+        "expected_minimum": 6,
+        "description": "6つ以上の型がエクスポートされていること"
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_286_acceptance.py",
+  "notes": "This is a database layer implementation for myAgentDesk. All acceptance tests are CLI-based (sqlite3 commands, npm scripts). No HTTP endpoints or UI components are involved."
+}

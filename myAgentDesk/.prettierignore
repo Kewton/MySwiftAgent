@@ -13,3 +13,6 @@ coverage/
 
 # Node modules
 node_modules/
+
+# Preview mockups (Svelte 5 runes syntax)
+src/routes/(preview)/
