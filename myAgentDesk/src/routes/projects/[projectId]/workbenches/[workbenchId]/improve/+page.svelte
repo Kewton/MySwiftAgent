@@ -1,23 +1,66 @@
 <!--
   Improve Page (/projects/:projectId/workbenches/:workbenchId/improve)
-  Issue #285: SvelteKit Routing Foundation
+  Issue #290: Requirements List and Version Management
 
-  Requirements improvement interface.
+  Requirements improvement interface with current requirements display
+  and ability to create new versions.
 -->
 <script lang="ts">
-	// Improve page - params available via parent layout
+	import { enhance } from '$app/forms';
+	import MarkdownViewer from '$lib/components/markdown/MarkdownViewer.svelte';
+	import type { RequirementVersionDetail } from '$lib/types/requirement';
+
+	interface Props {
+		data: {
+			activeRequirement: RequirementVersionDetail | null;
+			projectId: string;
+			workbenchId: string;
+		};
+		form: {
+			error?: string;
+		} | null;
+	}
+
+	let { data, form }: Props = $props();
+
+	const activeRequirement = $derived(data.activeRequirement);
+	const hasRequirement = $derived(!!activeRequirement?.content);
+
+	let isSubmitting = $state(false);
 </script>
 
-<div class="improve-page">
+<div class="improve-page" data-testid="improve-page">
 	<div class="page-header">
 		<h2>Improve Requirements</h2>
 	</div>
 
+	{#if form?.error}
+		<div class="error-message" data-testid="error-message">
+			{form.error}
+		</div>
+	{/if}
+
 	<div class="improve-content">
 		<div class="content-section">
-			<h3>Current Requirements (v2)</h3>
-			<div class="requirements-preview">
-				<p class="placeholder-text">Current requirements content will be displayed here.</p>
+			<h3>
+				Current Requirements
+				{#if activeRequirement}
+					<span class="version-badge">v{activeRequirement.version}</span>
+					<span class="status-badge status-{activeRequirement.status}">{activeRequirement.status}</span>
+				{/if}
+			</h3>
+			<div class="requirements-preview" data-testid="requirements-preview">
+				{#if hasRequirement && activeRequirement}
+					<MarkdownViewer content={activeRequirement.content} />
+				{:else}
+					<p class="placeholder-text">
+						No requirements defined yet.
+						<a href="/projects/{data.projectId}/workbenches/{data.workbenchId}/requirements">
+							Create requirements
+						</a>
+						to get started.
+					</p>
+				{/if}
 			</div>
 		</div>
 
@@ -36,8 +79,44 @@
 		</div>
 
 		<div class="actions-section">
-			<button class="action-button secondary">Discard Changes</button>
-			<button class="action-button">Create New Version</button>
+			<a
+				href="/projects/{data.projectId}/workbenches/{data.workbenchId}/requirements"
+				class="action-button secondary"
+			>
+				View All Versions
+			</a>
+			{#if hasRequirement}
+				<form
+					method="POST"
+					action="?/createVersion"
+					use:enhance={() => {
+						isSubmitting = true;
+						return async ({ update }) => {
+							isSubmitting = false;
+							await update();
+						};
+					}}
+				>
+					<input type="hidden" name="content" value={activeRequirement?.content ?? ''} />
+					<input type="hidden" name="changeSummary" value="Improvement based on analysis" />
+					<button
+						type="submit"
+						class="action-button"
+						disabled={isSubmitting}
+						data-testid="create-version-button"
+					>
+						{isSubmitting ? 'Creating...' : 'Create New Version'}
+					</button>
+				</form>
+			{:else}
+				<a
+					href="/projects/{data.projectId}/workbenches/{data.workbenchId}/requirements/new"
+					class="action-button"
+					data-testid="create-requirements-button"
+				>
+					Create Requirements
+				</a>
+			{/if}
 		</div>
 	</div>
 </div>
@@ -58,6 +137,16 @@
 		margin: 0;
 	}
 
+	.error-message {
+		padding: 0.75rem 1rem;
+		margin-bottom: 1rem;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		border-radius: 0.375rem;
+		color: #991b1b;
+		font-size: 0.875rem;
+	}
+
 	.improve-content {
 		display: flex;
 		flex-direction: column;
@@ -76,6 +165,45 @@
 		font-weight: 600;
 		color: #1e293b;
 		margin: 0 0 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.version-badge {
+		font-size: 0.75rem;
+		font-weight: 500;
+		padding: 0.125rem 0.375rem;
+		background: #e0e7ff;
+		color: #3730a3;
+		border-radius: 0.25rem;
+	}
+
+	.status-badge {
+		font-size: 0.75rem;
+		font-weight: 500;
+		padding: 0.125rem 0.375rem;
+		border-radius: 0.25rem;
+	}
+
+	.status-draft {
+		background: #fef3c7;
+		color: #92400e;
+	}
+
+	.status-active {
+		background: #d1fae5;
+		color: #065f46;
+	}
+
+	.status-submitted {
+		background: #dbeafe;
+		color: #1e40af;
+	}
+
+	.status-deprecated {
+		background: #f3f4f6;
+		color: #6b7280;
 	}
 
 	.requirements-preview {
@@ -84,12 +212,23 @@
 		border: 1px solid #e2e8f0;
 		border-radius: 0.25rem;
 		min-height: 100px;
+		max-height: 400px;
+		overflow-y: auto;
 	}
 
 	.placeholder-text {
 		color: #94a3b8;
 		font-style: italic;
 		margin: 0;
+	}
+
+	.placeholder-text a {
+		color: #3b82f6;
+		text-decoration: none;
+	}
+
+	.placeholder-text a:hover {
+		text-decoration: underline;
 	}
 
 	.suggestions-list {
@@ -129,6 +268,10 @@
 		padding-top: 0.5rem;
 	}
 
+	.actions-section form {
+		display: inline;
+	}
+
 	.action-button {
 		padding: 0.5rem 1rem;
 		background: #3b82f6;
@@ -138,10 +281,17 @@
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
+		text-decoration: none;
+		display: inline-block;
 	}
 
-	.action-button:hover {
+	.action-button:hover:not(:disabled) {
 		background: #2563eb;
+	}
+
+	.action-button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.action-button.secondary {

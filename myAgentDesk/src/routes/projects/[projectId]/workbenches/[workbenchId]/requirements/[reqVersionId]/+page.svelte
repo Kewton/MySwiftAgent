@@ -8,6 +8,7 @@
 	import { page } from '$app/stores';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
 	import MarkdownViewer from '$lib/components/markdown/MarkdownViewer.svelte';
 	import DiffViewer from '$lib/components/markdown/DiffViewer.svelte';
 	import { REQUIREMENT_STATUS_CONFIG } from '$lib/types/requirement';
@@ -21,11 +22,7 @@
 				activeRequirementVersion: { id: string; version: number } | null;
 			};
 			requirementVersion: RequirementVersionDetail;
-			diff: {
-				fromVersion: number;
-				toVersion: number;
-				diffs: DiffEntry[];
-			} | null;
+			previousContent: string | null;
 			compareVersion: RequirementVersionDetail | null;
 			allVersions: Array<{
 				id: string;
@@ -43,9 +40,49 @@
 	const statusConfig = $derived(REQUIREMENT_STATUS_CONFIG[version.status]);
 	const isActive = $derived(data.workbenchDetail?.activeRequirementVersion?.id === version.id);
 
-	// Compare mode state - reactive to URL changes
-	const showDiff = $derived(!!data.diff);
+	// Compare mode state
+	const hasCompare = $derived(!!data.compareVersion && !!data.previousContent);
 	const selectedCompareVersionId = $derived(data.compareVersion?.id ?? '');
+
+	// Computed diff (client-side)
+	let computedDiffs = $state<DiffEntry[]>([]);
+	let isDiffLoading = $state(false);
+
+	// Compute diff when previousContent is available
+	$effect(() => {
+		if (browser && hasCompare && data.previousContent && data.compareVersion) {
+			isDiffLoading = true;
+			computeDiffClientSide(data.previousContent, version.content).then((diffs) => {
+				computedDiffs = diffs;
+				isDiffLoading = false;
+			});
+		} else {
+			computedDiffs = [];
+		}
+	});
+
+	/**
+	 * Compute diff client-side using diff-match-patch.
+	 */
+	async function computeDiffClientSide(oldText: string, newText: string): Promise<DiffEntry[]> {
+		try {
+			const { diff_match_patch } = await import('diff-match-patch');
+			const dmp = new diff_match_patch();
+			const diffs = dmp.diff_main(oldText, newText);
+			dmp.diff_cleanupSemantic(diffs);
+
+			return diffs.map(([operation, text]) => ({
+				operation: operation as -1 | 0 | 1,
+				text
+			}));
+		} catch {
+			// Fallback: show as simple text change
+			return [
+				{ operation: -1 as const, text: oldText },
+				{ operation: 1 as const, text: newText }
+			];
+		}
+	}
 
 	const formattedDate = $derived(
 		new Date(version.createdAt).toLocaleDateString('ja-JP', {
@@ -140,12 +177,16 @@
 	{/if}
 
 	<div class="content-section" data-testid="content-section">
-		{#if data.diff && showDiff}
-			<DiffViewer
-				diffs={data.diff.diffs}
-				fromVersion={data.diff.fromVersion}
-				toVersion={data.diff.toVersion}
-			/>
+		{#if hasCompare && data.compareVersion}
+			{#if isDiffLoading}
+				<div class="loading-diff">Computing diff...</div>
+			{:else if computedDiffs.length > 0}
+				<DiffViewer
+					diffs={computedDiffs}
+					fromVersion={data.compareVersion.version}
+					toVersion={version.version}
+				/>
+			{/if}
 		{:else}
 			<div class="content-wrapper">
 				<h3>Content</h3>
@@ -304,5 +345,15 @@
 		margin: 0 0 1rem;
 		padding-bottom: 0.5rem;
 		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.loading-diff {
+		padding: 1.5rem;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		text-align: center;
+		color: #64748b;
+		font-style: italic;
 	}
 </style>
