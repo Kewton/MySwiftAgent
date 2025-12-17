@@ -28,13 +28,14 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 
 	// Check for compare query param
 	const compareToId = url.searchParams.get('compare');
-	let diff = null;
 	let compareVersion = null;
+	let previousContent: string | null = null;
 
 	if (compareToId) {
 		compareVersion = await requirementVersionRepository.findById(compareToId);
 		if (compareVersion && compareVersion.workbenchId === workbenchId) {
-			diff = await requirementVersionRepository.computeDiff(compareToId, reqVersionId);
+			// Return the previous version content for client-side diff computation
+			previousContent = compareVersion.content;
 		}
 	}
 
@@ -44,7 +45,7 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 	return {
 		workbenchDetail,
 		requirementVersion,
-		diff,
+		previousContent,
 		compareVersion,
 		allVersions
 	};

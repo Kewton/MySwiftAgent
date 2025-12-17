@@ -3,7 +3,8 @@
  * Issue #290: Requirements List and Version Management
  *
  * Repository class for requirement version database operations.
- * Handles CRUD operations, version management, and diff computation.
+ * Handles CRUD operations and version management.
+ * Note: Diff computation is done client-side for better compatibility.
  */
 
 import { eq, desc, and, max } from 'drizzle-orm';
@@ -13,22 +14,15 @@ import type {
 	RequirementVersionListItem,
 	RequirementVersionDetail,
 	CreateRequirementVersionInput,
-	UpdateRequirementVersionInput,
-	RequirementDiff,
-	DiffEntry
+	UpdateRequirementVersionInput
 } from '$lib/types/requirement';
-import { diff_match_patch, type Diff } from 'diff-match-patch';
 
 /**
  * Repository for requirement version database operations.
  */
 export class RequirementVersionRepository {
-	private dmp: InstanceType<typeof diff_match_patch>;
-
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	constructor(private db: BetterSQLite3Database<any>) {
-		this.dmp = new diff_match_patch();
-	}
+	constructor(private db: BetterSQLite3Database<any>) {}
 
 	/**
 	 * Map a database result to RequirementVersionDetail.
@@ -264,33 +258,21 @@ export class RequirementVersionRepository {
 	}
 
 	/**
-	 * Compute diff between two requirement versions.
+	 * Get previous version content for diff computation.
+	 * Diff calculation is done client-side.
 	 *
-	 * @param fromId - The source version ID
-	 * @param toId - The target version ID
-	 * @returns Diff result or null if versions not found
+	 * @param workbenchId - The workbench ID
+	 * @param currentVersion - The current version number
+	 * @returns Previous version content or null if no previous version
 	 */
-	async computeDiff(fromId: string, toId: string): Promise<RequirementDiff | null> {
-		const fromVersion = await this.findById(fromId);
-		const toVersion = await this.findById(toId);
+	async getPreviousVersionContent(
+		workbenchId: string,
+		currentVersion: number
+	): Promise<string | null> {
+		if (currentVersion <= 1) return null;
 
-		if (!fromVersion || !toVersion) {
-			return null;
-		}
-
-		const diffs = this.dmp.diff_main(fromVersion.content, toVersion.content);
-		this.dmp.diff_cleanupSemantic(diffs);
-
-		const diffEntries: DiffEntry[] = diffs.map((diff: Diff) => ({
-			operation: diff[0] as -1 | 0 | 1,
-			text: diff[1]
-		}));
-
-		return {
-			fromVersion: fromVersion.version,
-			toVersion: toVersion.version,
-			diffs: diffEntries
-		};
+		const prevVersion = await this.findByWorkbenchAndVersion(workbenchId, currentVersion - 1);
+		return prevVersion?.content ?? null;
 	}
 }
 

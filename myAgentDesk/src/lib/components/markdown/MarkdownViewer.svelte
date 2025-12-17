@@ -6,7 +6,6 @@
   Uses DOMPurify for sanitization (client-side only).
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { marked } from 'marked';
 	import { DOMPURIFY_CONFIG, MARKED_OPTIONS } from './utils';
@@ -19,6 +18,7 @@
 	let { content, class: className = '' }: Props = $props();
 
 	let renderedHtml = $state('');
+	let isLoading = $state(true);
 	let DOMPurify: typeof import('dompurify').default | null = null;
 
 	// Configure marked for GFM support
@@ -46,22 +46,21 @@
 		return DOMPurify.sanitize(rawHtml, DOMPURIFY_CONFIG);
 	}
 
-	// Update rendered HTML when content changes
+	// Update rendered HTML when content changes (reactive to content prop)
 	$effect(() => {
 		if (browser) {
-			renderMarkdown(content).then((html) => {
+			// Capture content value for the async operation
+			const currentContent = content;
+			renderMarkdown(currentContent).then((html) => {
 				renderedHtml = html;
+				isLoading = false;
 			});
 		}
-	});
-
-	onMount(async () => {
-		renderedHtml = await renderMarkdown(content);
 	});
 </script>
 
 <div class="markdown-viewer {className}" data-testid="markdown-viewer">
-	{#if browser}
+	{#if browser && !isLoading}
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -- Content is sanitized with DOMPurify -->
 		{@html renderedHtml}
 	{:else}

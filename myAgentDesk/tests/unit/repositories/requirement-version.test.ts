@@ -242,34 +242,24 @@ describe('RequirementVersionRepository', () => {
 		});
 	});
 
-	describe('computeDiff', () => {
-		it('should compute diff between two versions', async () => {
-			const diff = await repository.computeDiff('rv_001', 'rv_002');
+	describe('getPreviousVersionContent', () => {
+		it('should return previous version content', async () => {
+			const content = await repository.getPreviousVersionContent('wb_001', 2);
 
-			expect(diff).not.toBeNull();
-			expect(diff?.fromVersion).toBe(1);
-			expect(diff?.toVersion).toBe(2);
-			expect(diff?.diffs.length).toBeGreaterThan(0);
+			expect(content).not.toBeNull();
+			expect(content).toBe('# Initial requirements\n\nThis is version 1.');
 		});
 
-		it('should return null when from version not found', async () => {
-			const diff = await repository.computeDiff('nonexistent', 'rv_002');
+		it('should return null for version 1', async () => {
+			const content = await repository.getPreviousVersionContent('wb_001', 1);
 
-			expect(diff).toBeNull();
+			expect(content).toBeNull();
 		});
 
-		it('should return null when to version not found', async () => {
-			const diff = await repository.computeDiff('rv_001', 'nonexistent');
+		it('should return null when previous version not found', async () => {
+			const content = await repository.getPreviousVersionContent('wb_001', 10);
 
-			expect(diff).toBeNull();
-		});
-
-		it('should identify insertions correctly', async () => {
-			const diff = await repository.computeDiff('rv_001', 'rv_002');
-
-			// rv_002 has additional content compared to rv_001
-			const hasInsertions = diff?.diffs.some((d) => d.operation === 1);
-			expect(hasInsertions).toBe(true);
+			expect(content).toBeNull();
 		});
 	});
 });
