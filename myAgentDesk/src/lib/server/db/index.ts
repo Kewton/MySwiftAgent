@@ -30,6 +30,113 @@ const sqlite = new Database(DATABASE_PATH);
 sqlite.pragma('foreign_keys = ON');
 
 /**
+ * Initialize database schema if tables don't exist.
+ * This allows the application to work without requiring manual db:push.
+ */
+function initializeSchema() {
+	// Check if project table exists
+	const tableExists = sqlite
+		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='project'")
+		.get();
+
+	if (!tableExists) {
+		console.log('[DB] Tables not found. Initializing schema...');
+
+		// Create tables in order (respecting foreign key dependencies)
+		sqlite.exec(`
+			CREATE TABLE IF NOT EXISTS project (
+				id TEXT PRIMARY KEY NOT NULL,
+				external_project_id TEXT NOT NULL UNIQUE,
+				name TEXT NOT NULL,
+				description TEXT,
+				last_synced_at INTEGER,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL
+			);
+
+			CREATE TABLE IF NOT EXISTS workbench (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL REFERENCES project(id),
+				name TEXT NOT NULL,
+				description TEXT,
+				status TEXT NOT NULL DEFAULT 'draft',
+				active_requirement_version_id TEXT,
+				external_job_master_id TEXT,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL
+			);
+
+			CREATE TABLE IF NOT EXISTS requirement_version (
+				id TEXT PRIMARY KEY NOT NULL,
+				workbench_id TEXT NOT NULL REFERENCES workbench(id),
+				version INTEGER NOT NULL,
+				content TEXT NOT NULL,
+				status TEXT NOT NULL DEFAULT 'draft',
+				change_summary TEXT,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL,
+				UNIQUE(workbench_id, version)
+			);
+
+			CREATE TABLE IF NOT EXISTS job_version (
+				id TEXT PRIMARY KEY NOT NULL,
+				workbench_id TEXT NOT NULL REFERENCES workbench(id),
+				source_requirement_version_id TEXT NOT NULL REFERENCES requirement_version(id),
+				major_version INTEGER NOT NULL,
+				minor_version INTEGER NOT NULL,
+				version_label TEXT NOT NULL,
+				status TEXT NOT NULL DEFAULT 'generating',
+				task_breakdown TEXT,
+				interface_definitions TEXT,
+				workflows TEXT,
+				external_job_master_id TEXT,
+				external_trace_id TEXT,
+				error_message TEXT,
+				generated_at INTEGER,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL,
+				UNIQUE(workbench_id, major_version, minor_version)
+			);
+
+			CREATE TABLE IF NOT EXISTS run (
+				id TEXT PRIMARY KEY NOT NULL,
+				workbench_id TEXT NOT NULL REFERENCES workbench(id),
+				job_version_id TEXT NOT NULL REFERENCES job_version(id),
+				status TEXT NOT NULL DEFAULT 'queued',
+				external_job_id TEXT,
+				external_trace_id TEXT,
+				execution_params TEXT,
+				result_summary TEXT,
+				started_at INTEGER,
+				completed_at INTEGER,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL
+			);
+
+			CREATE TABLE IF NOT EXISTS schedule (
+				id TEXT PRIMARY KEY NOT NULL,
+				workbench_id TEXT NOT NULL REFERENCES workbench(id),
+				target_job_version_id TEXT NOT NULL REFERENCES job_version(id),
+				name TEXT NOT NULL,
+				cron_expression TEXT NOT NULL,
+				is_enabled INTEGER NOT NULL DEFAULT 1,
+				external_scheduler_id TEXT,
+				execution_params TEXT,
+				next_run_at INTEGER,
+				last_run_at INTEGER,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL
+			);
+		`);
+
+		console.log('[DB] Schema initialized successfully.');
+	}
+}
+
+// Initialize schema on module load
+initializeSchema();
+
+/**
  * Drizzle ORM database instance with full schema type information.
  * Use this for all database operations in the application.
  *
