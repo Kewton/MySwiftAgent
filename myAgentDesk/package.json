@@ -41,6 +41,8 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@testing-library/svelte": "^5.2.9",
 		"@types/better-sqlite3": "^7.6.13",
+		"@types/diff-match-patch": "^1.0.36",
+		"@types/dompurify": "^3.0.5",
 		"@types/node": "^25.0.2",
 		"@vitest/coverage-v8": "^4.0.15",
 		"autoprefixer": "^10.4.22",
@@ -63,6 +65,9 @@
 	},
 	"dependencies": {
 		"better-sqlite3": "^12.5.0",
-		"drizzle-orm": "^0.45.1"
+		"diff-match-patch": "^1.0.5",
+		"dompurify": "^3.3.1",
+		"drizzle-orm": "^0.45.1",
+		"marked": "^17.0.1"
 	}
 }

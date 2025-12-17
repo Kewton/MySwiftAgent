@@ -94,7 +94,12 @@
 				</div>
 
 				<div class="modal-actions">
-					<button type="button" class="cancel-button" onclick={handleCancel} disabled={isSubmitting}>
+					<button
+						type="button"
+						class="cancel-button"
+						onclick={handleCancel}
+						disabled={isSubmitting}
+					>
 						Cancel
 					</button>
 					<button type="submit" class="submit-button" disabled={isSubmitting}>

@@ -38,20 +38,20 @@ npm run dev
 
 ## npm スクリプト
 
-| コマンド | 説明 |
-|---------|------|
-| `npm run dev` | 開発サーバー起動 |
-| `npm run build` | プロダクションビルド |
-| `npm run preview` | ビルド結果のプレビュー |
-| `npm run check` | TypeScript型チェック |
-| `npm run lint` | Lint実行 |
-| `npm run format` | コードフォーマット |
-| `npm run test` | ユニットテスト（watch mode） |
+| コマンド            | 説明                         |
+| ------------------- | ---------------------------- |
+| `npm run dev`       | 開発サーバー起動             |
+| `npm run build`     | プロダクションビルド         |
+| `npm run preview`   | ビルド結果のプレビュー       |
+| `npm run check`     | TypeScript型チェック         |
+| `npm run lint`      | Lint実行                     |
+| `npm run format`    | コードフォーマット           |
+| `npm run test`      | ユニットテスト（watch mode） |
 | `npm run test:unit` | ユニットテスト（single run） |
-| `npm run test:e2e` | E2Eテスト（Playwright） |
-| `npm run db:push` | DBスキーマをプッシュ |
-| `npm run db:seed` | シードデータ投入 |
-| `npm run db:studio` | Drizzle Studio起動 |
+| `npm run test:e2e`  | E2Eテスト（Playwright）      |
+| `npm run db:push`   | DBスキーマをプッシュ         |
+| `npm run db:seed`   | シードデータ投入             |
+| `npm run db:studio` | Drizzle Studio起動           |
 
 ## ディレクトリ構成
 
@@ -80,10 +80,10 @@ myAgentDesk/
 cp .env.example .env
 ```
 
-| 変数 | 説明 | デフォルト |
-|-----|------|----------|
+| 変数           | 説明                   | デフォルト        |
+| -------------- | ---------------------- | ----------------- |
 | `DATABASE_URL` | SQLiteデータベースパス | `./data/local.db` |
-| `PORT` | サーバーポート | `8000` |
+| `PORT`         | サーバーポート         | `8000`            |
 
 ## トラブルシューティング
 

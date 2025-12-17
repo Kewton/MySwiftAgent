@@ -1,43 +1,67 @@
 <!--
   Requirements Page (/projects/:projectId/workbenches/:workbenchId/requirements)
-  Issue #285: SvelteKit Routing Foundation
+  Issue #290: Requirements List and Version Management
 
-  Lists and manages requirement versions.
+  Lists and manages requirement versions with real data.
 -->
 <script lang="ts">
 	import { page } from '$app/stores';
+	import RequirementVersionCard from '$lib/components/requirements/RequirementVersionCard.svelte';
 
-	const projectId = $derived($page.params.projectId);
-	const workbenchId = $derived($page.params.workbenchId);
+	interface Props {
+		data: {
+			workbenchDetail: {
+				id: string;
+				name: string;
+				activeRequirementVersion: { id: string; version: number } | null;
+			};
+			requirementVersions: Array<{
+				id: string;
+				version: number;
+				status: 'draft' | 'submitted' | 'active' | 'deprecated';
+				changeSummary: string | null;
+				createdAt: Date;
+				updatedAt: Date;
+			}>;
+		};
+	}
 
-	// Mock requirements - will be loaded from API in future iterations
-	const requirements = $state([
-		{ id: 'rv_v1', version: 'v1', status: 'active', createdAt: '2024-01-15' },
-		{ id: 'rv_v2', version: 'v2', status: 'draft', createdAt: '2024-01-16' }
-	]);
+	let { data }: Props = $props();
+
+	const projectId = $derived($page.params.projectId ?? '');
+	const workbenchId = $derived($page.params.workbenchId ?? '');
+	const activeVersionId = $derived(data.workbenchDetail?.activeRequirementVersion?.id ?? null);
 </script>
 
-<div class="requirements-page">
+<div class="requirements-page" data-testid="requirements-page">
 	<div class="page-header">
 		<h2>Requirements</h2>
-		<button class="create-button">New Version</button>
+		<a
+			href="/projects/{projectId}/workbenches/{workbenchId}/requirements/new"
+			class="create-button"
+			data-testid="create-button"
+		>
+			New Version
+		</a>
 	</div>
 
-	<div class="requirements-list">
-		{#each requirements as req (req.id)}
-			<a
-				href="/projects/{projectId}/workbenches/{workbenchId}/requirements/{req.id}"
-				class="requirement-item"
-			>
-				<div class="req-info">
-					<span class="req-version">{req.version}</span>
-					<span class="req-date">{req.createdAt}</span>
-				</div>
-				<span class="req-status" data-status={req.status}>{req.status}</span>
-			</a>
+	<div class="requirements-list" data-testid="requirements-list">
+		{#each data.requirementVersions as version (version.id)}
+			<RequirementVersionCard
+				{version}
+				{projectId}
+				{workbenchId}
+				isActive={version.id === activeVersionId}
+			/>
 		{:else}
-			<div class="empty-state">
+			<div class="empty-state" data-testid="empty-state">
 				<p>No requirements defined yet. Create your first requirement version.</p>
+				<a
+					href="/projects/{projectId}/workbenches/{workbenchId}/requirements/new"
+					class="create-first-button"
+				>
+					Create First Requirement
+				</a>
 			</div>
 		{/each}
 	</div>
@@ -71,6 +95,7 @@
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
+		text-decoration: none;
 	}
 
 	.create-button:hover {
@@ -83,56 +108,6 @@
 		gap: 0.5rem;
 	}
 
-	.requirement-item {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1rem;
-		background: #f8fafc;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.375rem;
-		text-decoration: none;
-		transition: border-color 0.15s;
-	}
-
-	.requirement-item:hover {
-		border-color: #3b82f6;
-	}
-
-	.req-info {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.req-version {
-		font-weight: 600;
-		color: #1e293b;
-	}
-
-	.req-date {
-		font-size: 0.875rem;
-		color: #64748b;
-	}
-
-	.req-status {
-		padding: 0.25rem 0.5rem;
-		font-size: 0.75rem;
-		font-weight: 500;
-		border-radius: 0.25rem;
-		text-transform: capitalize;
-	}
-
-	.req-status[data-status='active'] {
-		background: #dcfce7;
-		color: #166534;
-	}
-
-	.req-status[data-status='draft'] {
-		background: #fef3c7;
-		color: #92400e;
-	}
-
 	.empty-state {
 		text-align: center;
 		padding: 2rem;
@@ -142,6 +117,21 @@
 
 	.empty-state p {
 		color: #64748b;
-		margin: 0;
+		margin: 0 0 1rem;
+	}
+
+	.create-first-button {
+		display: inline-block;
+		padding: 0.5rem 1rem;
+		background: #3b82f6;
+		color: white;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.create-first-button:hover {
+		background: #2563eb;
 	}
 </style>
