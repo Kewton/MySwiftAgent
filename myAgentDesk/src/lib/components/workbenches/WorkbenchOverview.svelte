@@ -8,6 +8,7 @@
 <script lang="ts">
 	import type { WorkbenchDetail } from '$lib/types/workbench';
 	import WorkbenchStats from './WorkbenchStats.svelte';
+	import EditableText from '$lib/components/ui/EditableText.svelte';
 
 	interface Props {
 		workbench: WorkbenchDetail;
@@ -41,9 +42,15 @@
 				{workbench.status}
 			</span>
 		</div>
-		{#if workbench.description}
-			<p class="workbench-description">{workbench.description}</p>
-		{/if}
+		<div class="description-container">
+			<EditableText
+				value={workbench.description}
+				action="?/updateDescription"
+				placeholder="Add a workbench description..."
+				emptyText="Click to add description"
+				multiline={true}
+			/>
+		</div>
 	</div>
 
 	<div class="overview-sections">
@@ -154,11 +161,8 @@
 		color: #d97706;
 	}
 
-	.workbench-description {
-		font-size: 0.875rem;
-		color: #64748b;
-		margin: 0;
-		line-height: 1.5;
+	.description-container {
+		margin-top: 0.5rem;
 	}
 
 	.overview-sections {

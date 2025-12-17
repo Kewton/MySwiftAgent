@@ -8,6 +8,7 @@
 	import ProjectStats from '$lib/components/projects/ProjectStats.svelte';
 	import RecentRunsList from '$lib/components/projects/RecentRunsList.svelte';
 	import RecentSchedulesList from '$lib/components/projects/RecentSchedulesList.svelte';
+	import EditableText from '$lib/components/ui/EditableText.svelte';
 	import type {
 		ProjectStats as ProjectStatsType,
 		RunWithWorkbench,
@@ -30,9 +31,15 @@
 <div class="project-dashboard">
 	<div class="page-header">
 		<h1>{data.project.name}</h1>
-		{#if data.project.description}
-			<p class="project-description">{data.project.description}</p>
-		{/if}
+		<div class="description-container">
+			<EditableText
+				value={data.project.description}
+				action="?/updateDescription"
+				placeholder="Add a project description..."
+				emptyText="Click to add description"
+				multiline={true}
+			/>
+		</div>
 	</div>
 
 	<ProjectStats stats={data.stats} />
@@ -73,10 +80,8 @@
 		margin: 0 0 0.5rem;
 	}
 
-	.project-description {
-		font-size: 0.875rem;
-		color: #64748b;
-		margin: 0;
+	.description-container {
+		margin-top: 0.5rem;
 	}
 
 	.dashboard-content {

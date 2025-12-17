@@ -313,6 +313,39 @@ export class WorkbenchRepository {
 	}
 
 	/**
+	 * Update a workbench.
+	 *
+	 * @param workbenchId - The workbench ID to update
+	 * @param updates - The fields to update
+	 * @returns The updated workbench or null if not found
+	 */
+	async update(
+		workbenchId: string,
+		updates: { name?: string; description?: string; status?: 'draft' | 'active' | 'archived' }
+	): Promise<Workbench | null> {
+		const existing = await this.findById(workbenchId);
+		if (!existing) return null;
+
+		const updateData: Partial<Workbench> = {
+			updatedAt: new Date()
+		};
+
+		if (updates.name !== undefined) {
+			updateData.name = updates.name;
+		}
+		if (updates.description !== undefined) {
+			updateData.description = updates.description;
+		}
+		if (updates.status !== undefined) {
+			updateData.status = updates.status;
+		}
+
+		await this.db.update(workbench).set(updateData).where(eq(workbench.id, workbenchId));
+
+		return this.findById(workbenchId);
+	}
+
+	/**
 	 * Delete a workbench by ID.
 	 *
 	 * @param workbenchId - The workbench ID to delete
