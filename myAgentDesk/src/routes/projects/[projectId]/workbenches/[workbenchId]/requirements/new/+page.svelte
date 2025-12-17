@@ -29,9 +29,23 @@
 	const projectId = $derived($page.params.projectId);
 	const workbenchId = $derived($page.params.workbenchId);
 
-	let content = $state(form?.content ?? '');
-	let changeSummary = $state(form?.changeSummary ?? '');
+	// Initialize with form values (for validation errors) or empty values
+	const initialContent = $derived(form?.content ?? '');
+	const initialChangeSummary = $derived(form?.changeSummary ?? '');
+
+	let content = $state('');
+	let changeSummary = $state('');
 	let isSubmitting = $state(false);
+	let initialized = $state(false);
+
+	// Initialize state once when component mounts or when form data changes
+	$effect(() => {
+		if (!initialized || form) {
+			content = initialContent;
+			changeSummary = initialChangeSummary;
+			initialized = true;
+		}
+	});
 </script>
 
 <div class="new-requirement-page" data-testid="new-requirement-page">
@@ -78,8 +92,8 @@
 		</div>
 
 		<div class="form-group editor-group">
-			<label>Content (Markdown)</label>
-			<input type="hidden" name="content" value={content} />
+			<label for="content-editor">Content (Markdown)</label>
+			<input type="hidden" id="content-editor" name="content" value={content} />
 			<MarkdownEditor
 				bind:content
 				placeholder="# Requirements

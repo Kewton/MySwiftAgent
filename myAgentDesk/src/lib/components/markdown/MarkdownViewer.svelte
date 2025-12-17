@@ -9,6 +9,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { marked } from 'marked';
+	import { DOMPURIFY_CONFIG, MARKED_OPTIONS } from './utils';
 
 	interface Props {
 		content: string;
@@ -21,10 +22,7 @@
 	let DOMPurify: typeof import('dompurify').default | null = null;
 
 	// Configure marked for GFM support
-	marked.setOptions({
-		gfm: true,
-		breaks: true
-	});
+	marked.setOptions(MARKED_OPTIONS);
 
 	/**
 	 * Renders markdown to sanitized HTML.
@@ -45,43 +43,7 @@
 		const rawHtml = await marked.parse(markdown);
 
 		// Sanitize HTML to prevent XSS attacks
-		return DOMPurify.sanitize(rawHtml, {
-			ALLOWED_TAGS: [
-				'h1',
-				'h2',
-				'h3',
-				'h4',
-				'h5',
-				'h6',
-				'p',
-				'br',
-				'strong',
-				'em',
-				'u',
-				's',
-				'del',
-				'ins',
-				'code',
-				'pre',
-				'blockquote',
-				'ul',
-				'ol',
-				'li',
-				'a',
-				'img',
-				'table',
-				'thead',
-				'tbody',
-				'tr',
-				'th',
-				'td',
-				'hr',
-				'div',
-				'span'
-			],
-			ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel'],
-			ALLOW_DATA_ATTR: false
-		});
+		return DOMPurify.sanitize(rawHtml, DOMPURIFY_CONFIG);
 	}
 
 	// Update rendered HTML when content changes

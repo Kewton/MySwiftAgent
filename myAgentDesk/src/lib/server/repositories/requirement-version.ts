@@ -31,6 +31,26 @@ export class RequirementVersionRepository {
 	}
 
 	/**
+	 * Map a database result to RequirementVersionDetail.
+	 * Extracts common mapping logic used by findById and findByWorkbenchAndVersion.
+	 *
+	 * @param row - Raw database row
+	 * @returns Mapped RequirementVersionDetail
+	 */
+	private mapToDetail(row: RequirementVersion): RequirementVersionDetail {
+		return {
+			id: row.id,
+			workbenchId: row.workbenchId,
+			version: row.version,
+			content: row.content,
+			status: row.status as RequirementVersionDetail['status'],
+			changeSummary: row.changeSummary,
+			createdAt: row.createdAt,
+			updatedAt: row.updatedAt
+		};
+	}
+
+	/**
 	 * Find all requirement versions for a workbench.
 	 * Ordered by version descending (newest first).
 	 *
@@ -67,19 +87,8 @@ export class RequirementVersionRepository {
 			.where(eq(requirementVersion.id, id))
 			.limit(1);
 
-		const version = results[0];
-		if (!version) return null;
-
-		return {
-			id: version.id,
-			workbenchId: version.workbenchId,
-			version: version.version,
-			content: version.content,
-			status: version.status as RequirementVersionDetail['status'],
-			changeSummary: version.changeSummary,
-			createdAt: version.createdAt,
-			updatedAt: version.updatedAt
-		};
+		const row = results[0];
+		return row ? this.mapToDetail(row) : null;
 	}
 
 	/**
@@ -104,19 +113,8 @@ export class RequirementVersionRepository {
 			)
 			.limit(1);
 
-		const rv = results[0];
-		if (!rv) return null;
-
-		return {
-			id: rv.id,
-			workbenchId: rv.workbenchId,
-			version: rv.version,
-			content: rv.content,
-			status: rv.status as RequirementVersionDetail['status'],
-			changeSummary: rv.changeSummary,
-			createdAt: rv.createdAt,
-			updatedAt: rv.updatedAt
-		};
+		const row = results[0];
+		return row ? this.mapToDetail(row) : null;
 	}
 
 	/**

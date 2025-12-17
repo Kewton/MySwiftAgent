@@ -31,9 +31,24 @@
 	const workbenchId = $derived($page.params.workbenchId);
 	const version = $derived(data.requirementVersion);
 
-	let content = $state(form?.content ?? version.content);
-	let changeSummary = $state(form?.changeSummary ?? version.changeSummary ?? '');
+	// Initialize with form values (for validation errors) or version values
+	// Using $derived.by to handle the initial value computation reactively
+	const initialContent = $derived(form?.content ?? version.content);
+	const initialChangeSummary = $derived(form?.changeSummary ?? version.changeSummary ?? '');
+
+	let content = $state('');
+	let changeSummary = $state('');
 	let isSubmitting = $state(false);
+	let initialized = $state(false);
+
+	// Initialize state once when component mounts or when data changes
+	$effect(() => {
+		if (!initialized || form) {
+			content = initialContent;
+			changeSummary = initialChangeSummary;
+			initialized = true;
+		}
+	});
 </script>
 
 <div class="edit-requirement-page" data-testid="edit-requirement-page">
@@ -80,8 +95,8 @@
 		</div>
 
 		<div class="form-group editor-group">
-			<label>Content (Markdown)</label>
-			<input type="hidden" name="content" value={content} />
+			<label for="content-editor">Content (Markdown)</label>
+			<input type="hidden" id="content-editor" name="content" value={content} />
 			<MarkdownEditor bind:content placeholder="Enter Markdown content..." />
 		</div>
 

@@ -43,9 +43,9 @@
 	const statusConfig = $derived(REQUIREMENT_STATUS_CONFIG[version.status]);
 	const isActive = $derived(data.workbenchDetail?.activeRequirementVersion?.id === version.id);
 
-	// Compare mode state
-	let showDiff = $state(!!data.diff);
-	let selectedCompareVersionId = $state(data.compareVersion?.id ?? '');
+	// Compare mode state - reactive to URL changes
+	const showDiff = $derived(!!data.diff);
+	const selectedCompareVersionId = $derived(data.compareVersion?.id ?? '');
 
 	const formattedDate = $derived(
 		new Date(version.createdAt).toLocaleDateString('ja-JP', {
@@ -62,9 +62,9 @@
 
 	function handleCompareChange(event: Event) {
 		const select = event.target as HTMLSelectElement;
-		selectedCompareVersionId = select.value;
-		if (selectedCompareVersionId) {
-			goto(`${$page.url.pathname}?compare=${selectedCompareVersionId}`);
+		const compareId = select.value;
+		if (compareId) {
+			goto(`${$page.url.pathname}?compare=${compareId}`);
 		} else {
 			goto($page.url.pathname);
 		}
