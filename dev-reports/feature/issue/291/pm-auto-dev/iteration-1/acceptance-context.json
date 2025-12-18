@@ -1,0 +1,61 @@
+{
+  "issue_number": 291,
+  "feature_summary": "[myAgentDesk] #279-7: Generate画面（Job生成）",
+  "acceptance_criteria": [
+    "Active RequirementVersionが未設定の場合、生成ボタン無効化",
+    "生成開始でJobVersion(status=generating)が作成される",
+    "生成完了でJobVersion(status=success, task_breakdown等)が更新される",
+    "バージョンがvN.M形式で正しく採番される（例: v5.2）",
+    "単体テストカバレッジ 90%以上",
+    "生成タイムアウト（5分）の処理"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "myAgentDesk"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系: ExpertAgent Job Generator API",
+        "command": "curl -s -X POST http://localhost:8104/aiagent-api/v1/job-generator -H 'Content-Type: application/json' -d '{\"user_requirement\": \"テスト用の簡単なジョブを生成してください\", \"max_retry\": 3}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_id"]
+      },
+      {
+        "name": "正常系: ジョブステータス確認",
+        "command": "curl -s http://localhost:8104/aiagent-api/v1/jobs/{job_id}/status",
+        "expected_status": 200,
+        "expected_response_contains": ["status"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"},
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"}
+    ],
+    "database_checks": [
+      {
+        "name": "JobVersion作成確認",
+        "command": "sqlite3 myAgentDesk/data/local.db \"SELECT id, status, version_label FROM job_version ORDER BY created_at DESC LIMIT 1;\""
+      },
+      {
+        "name": "バージョン採番確認",
+        "command": "sqlite3 myAgentDesk/data/local.db \"SELECT rv.version as req_version, jv.major_version, jv.minor_version, jv.version_label FROM job_version jv JOIN requirement_version rv ON jv.source_requirement_version_id = rv.id ORDER BY jv.created_at DESC LIMIT 5;\""
+      }
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_291_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_291.spec.ts",
+  "test_data_setup": {
+    "project_id": "default_project",
+    "workbench_id": "wb_test_291",
+    "requirement_version_id": "rv_test_291",
+    "requirement_content": "PDFファイルをGoogle Driveにアップロードして、完了をメール通知する。"
+  }
+}

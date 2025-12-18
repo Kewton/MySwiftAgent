@@ -46,7 +46,9 @@
 				Current Requirements
 				{#if activeRequirement}
 					<span class="version-badge">v{activeRequirement.version}</span>
-					<span class="status-badge status-{activeRequirement.status}">{activeRequirement.status}</span>
+					<span class="status-badge status-{activeRequirement.status}"
+						>{activeRequirement.status}</span
+					>
 				{/if}
 			</h3>
 			<div class="requirements-preview" data-testid="requirements-preview">

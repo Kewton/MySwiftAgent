@@ -1,0 +1,141 @@
+{
+  "issue_number": 291,
+  "issue_title": "[myAgentDesk] #279-7: Generate画面（Job生成）",
+  "project": "myAgentDesk",
+  "acceptance_criteria": [
+    "Active RequirementVersionが未設定の場合、生成ボタン無効化",
+    "生成開始でJobVersion(status=generating)が作成される",
+    "生成完了でJobVersion(status=success, task_breakdown等)が更新される",
+    "バージョンがvN.M形式で正しく採番される（例: v5.2）",
+    "単体テストカバレッジ 90%以上",
+    "生成タイムアウト（5分）の処理"
+  ],
+  "implementation_tasks": [
+    "Generate画面（/workbenches/:workbenchId/generate）実装",
+    "Active RequirementVersion表示",
+    "「Generate Job」ボタン実装",
+    "生成中状態表示（プログレスバー）",
+    "生成完了/失敗表示",
+    "非同期ポーリング実装（2秒間隔）",
+    "JobVersion作成（生成結果の保存）",
+    "バージョン採番（vN.M形式）",
+    "Retry/Open Trace 導線"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "JobVersionリポジトリ作成",
+      "deliverables": ["src/lib/server/repositories/job-version.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "JobVersion型定義",
+      "deliverables": ["src/lib/types/job-version.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "サーバーサイドLoad関数",
+      "deliverables": ["src/routes/.../generate/+page.server.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "Form Action - generateJob",
+      "deliverables": ["src/routes/.../generate/+page.server.ts (actions追加)"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "ポーリング実装",
+      "deliverables": ["src/routes/.../generate/+page.svelte"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "Generate画面UI更新",
+      "deliverables": ["src/routes/.../generate/+page.svelte"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "ステータス確認APIエンドポイント",
+      "deliverables": ["src/routes/api/jobs/[jobId]/status/+server.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "タイムアウト処理APIエンドポイント",
+      "deliverables": ["src/routes/api/jobs/[jobId]/timeout/+server.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "JobVersionリポジトリ単体テスト",
+      "deliverables": ["tests/unit/repositories/job-version.test.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "Generate画面Form Action単体テスト",
+      "deliverables": ["tests/unit/routes/generate.test.ts"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "結合テスト",
+      "deliverables": ["tests/integration/generate-job.test.ts"],
+      "dependencies": ["2.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/lib/server/repositories/job-version.ts",
+    "src/lib/types/job-version.ts",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte",
+    "src/routes/api/jobs/[jobId]/status/+server.ts",
+    "src/routes/api/jobs/[jobId]/timeout/+server.ts",
+    "myAgentDesk/tests/unit/repositories/job-version.test.ts",
+    "myAgentDesk/tests/unit/routes/generate.test.ts",
+    "myAgentDesk/tests/integration/generate-job.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全シナリオパス",
+    "CI/CDグリーン（./scripts/pre-push-check-all.sh）",
+    "Active RequirementVersionが未設定の場合、生成ボタン無効化",
+    "生成開始でJobVersion(status=generating)が作成される",
+    "生成完了でJobVersion(status=success, task_breakdown等)が更新される",
+    "バージョンがvN.M形式で正しく採番される"
+  ],
+  "target_coverage": 90,
+  "tech_stack": {
+    "frontend": "Svelte 5 (runes API: $state, $derived, $effect)",
+    "backend": "SvelteKit 2.x (form actions, load functions)",
+    "orm": "Drizzle ORM (SQLite)",
+    "api": "ExpertAgent Job Generator API (/aiagent-api/v1/job-generator)",
+    "test": "Vitest (単体), Playwright (E2E)"
+  },
+  "version_numbering_rules": {
+    "format": "vN.M",
+    "major_version": "sourceRequirementVersion.version",
+    "minor_version": "同一majorVersionでの連番 (1から開始)",
+    "example": "RequirementVersion v5から生成: v5.1 → v5.2 → v5.3"
+  },
+  "external_job_id_storage": {
+    "api_response_job_id": "externalTraceId (一時的)",
+    "api_response_job_master_id": "externalJobMasterId (永続)",
+    "api_response_langfuse_trace_id": "externalTraceId (上書き)"
+  },
+  "timeout_handling": {
+    "timeout_ms": 300000,
+    "status_on_timeout": "failed",
+    "error_message": "Timeout: Job generation exceeded 5 minutes"
+  },
+  "polling_config": {
+    "interval_ms": 2000,
+    "max_duration_ms": 300000
+  }
+}
