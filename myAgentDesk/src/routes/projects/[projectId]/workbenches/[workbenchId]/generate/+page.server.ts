@@ -9,10 +9,55 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requirementVersionRepository } from '$lib/server/repositories/requirement-version';
-import { jobVersionRepository } from '$lib/server/repositories/job-version';
+import { jobVersionRepository, type JobVersion } from '$lib/server/repositories/job-version';
 import { workbenchRepository } from '$lib/server/repositories/workbench';
 import { ExpertAgentClient } from '$lib/api/clients/expert-agent';
 import { loadConfigFromEnv } from '$lib/api/config';
+
+/**
+ * Sync langfuse_trace_id for completed jobs that may have stale external_trace_id.
+ * This handles the case where polling stopped before the job completed.
+ */
+async function syncLangfuseTraceIds(jobVersions: JobVersion[]): Promise<void> {
+	const config = loadConfigFromEnv();
+	const expertAgentClient = new ExpertAgentClient({
+		baseUrl: config.expertAgent.baseUrl,
+		adminToken: config.expertAgent.adminToken
+	});
+
+	// Filter completed jobs that have an externalTraceId (which might be job_id, not langfuse_trace_id)
+	const completedJobs = jobVersions.filter(
+		(jv) =>
+			(jv.status === 'failed' || jv.status === 'success') &&
+			jv.externalTraceId
+	);
+
+	// Process each completed job
+	for (const job of completedJobs) {
+		try {
+			// Query ExpertAgent API to get the actual langfuse_trace_id
+			const apiResult = await expertAgentClient.getJobStatus(job.externalTraceId!);
+
+			if (apiResult.ok) {
+				const result = apiResult.value.result;
+				const langfuseTraceId = result?.langfuse_trace_id;
+
+				// If langfuse_trace_id differs from stored externalTraceId, update DB
+				if (langfuseTraceId && langfuseTraceId !== job.externalTraceId) {
+					await jobVersionRepository.updateGenerationResult(job.id, {
+						status: job.status, // Keep existing status
+						externalTraceId: langfuseTraceId
+					});
+					// Update the in-memory object for immediate use
+					job.externalTraceId = langfuseTraceId;
+				}
+			}
+		} catch {
+			// Silently ignore errors - this is a best-effort sync
+			// The original externalTraceId will be used if sync fails
+		}
+	}
+}
 
 /**
  * Load function for the Generate page.
@@ -56,7 +101,12 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 
 	// Get recent job versions for history
 	const allJobVersions = await jobVersionRepository.findByWorkbenchId(workbenchId);
-	const recentJobVersions = allJobVersions.slice(0, 5).map((jv) => ({
+	const recentJobs = allJobVersions.slice(0, 5);
+
+	// Sync langfuse_trace_id for completed jobs (handles stale external_trace_id)
+	await syncLangfuseTraceIds(recentJobs);
+
+	const recentJobVersions = recentJobs.map((jv) => ({
 		id: jv.id,
 		versionLabel: jv.versionLabel,
 		status: jv.status,

@@ -12,6 +12,9 @@ import { eq, desc, and, max } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { jobVersion, type JobVersion, type JobVersionStatus } from '$lib/server/db/schema';
 
+// Re-export types for external use
+export type { JobVersion, JobVersionStatus };
+
 /**
  * Input data for creating a new job version.
  */
