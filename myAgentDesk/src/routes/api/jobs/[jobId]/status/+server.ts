@@ -37,22 +37,41 @@ export const GET: RequestHandler = async ({ params }) => {
 
 		if (apiResult.ok) {
 			const externalStatus = apiResult.value.status;
+			const result = apiResult.value.result;
 
 			// Map ExpertAgent status to our status
 			if (externalStatus === 'completed' || externalStatus === 'success') {
-				// Job completed successfully
-				const updated = await jobVersionRepository.updateGenerationResult(jobId, {
-					status: 'success',
-					externalJobMasterId: apiResult.value.job_master_id ?? undefined
-				});
-				if (updated) {
-					jobVersion = updated;
+				// Check internal result status - API completed but job may have failed internally
+				const resultStatus = result?.status;
+				const langfuseTraceId = result?.langfuse_trace_id;
+
+				if (resultStatus === 'failed' || resultStatus === 'error') {
+					// Internal job generation failed
+					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
+						status: 'failed',
+						errorMessage: result?.error_message || 'Job generation failed',
+						externalTraceId: langfuseTraceId ?? undefined,
+						externalJobMasterId: result?.job_master_id ?? undefined
+					});
+					if (updated) {
+						jobVersion = updated;
+					}
+				} else {
+					// Job completed successfully
+					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
+						status: 'success',
+						externalJobMasterId: result?.job_master_id ?? apiResult.value.job_master_id ?? undefined,
+						externalTraceId: langfuseTraceId ?? undefined
+					});
+					if (updated) {
+						jobVersion = updated;
+					}
 				}
 			} else if (externalStatus === 'failed' || externalStatus === 'error') {
-				// Job failed
+				// API level failure
 				const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 					status: 'failed',
-					errorMessage: 'Job generation failed in ExpertAgent'
+					errorMessage: apiResult.value.error_message || 'Job generation failed in ExpertAgent'
 				});
 				if (updated) {
 					jobVersion = updated;

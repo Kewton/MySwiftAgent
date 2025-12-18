@@ -30,7 +30,16 @@ const mockJobStatus: JobStatusResponse = {
 	job_id: 'mock-job-id',
 	status: 'completed',
 	progress: 100,
-	job_master_id: 'jm_mock_123'
+	job_master_id: 'jm_mock_123',
+	error_message: null,
+	result: {
+		status: 'success',
+		job_id: 'mock-job-id',
+		job_master_id: 'jm_mock_123',
+		task_breakdown: [],
+		error_message: null,
+		langfuse_trace_id: 'mock-langfuse-trace-id'
+	}
 };
 
 /**

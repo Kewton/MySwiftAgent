@@ -34,6 +34,18 @@ export interface GenerateJobResponse {
 }
 
 /**
+ * Job generation result (nested in status response)
+ */
+export interface JobGenerationResult {
+	status: string;
+	job_id: string | null;
+	job_master_id: string | null;
+	task_breakdown: unknown[];
+	error_message: string | null;
+	langfuse_trace_id: string | null;
+}
+
+/**
  * Job status response
  */
 export interface JobStatusResponse {
@@ -41,6 +53,8 @@ export interface JobStatusResponse {
 	status: string;
 	progress: number;
 	job_master_id: string | null;
+	error_message: string | null;
+	result: JobGenerationResult | null;
 }
 
 /**
