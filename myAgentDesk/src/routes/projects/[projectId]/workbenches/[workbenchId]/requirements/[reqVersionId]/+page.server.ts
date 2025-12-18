@@ -7,6 +7,7 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requirementVersionRepository } from '$lib/server/repositories/requirement-version';
+import { workbenchRepository } from '$lib/server/repositories/workbench';
 
 export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const { workbenchId, reqVersionId } = params;
@@ -54,6 +55,7 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 export const actions: Actions = {
 	/**
 	 * Set this version as active.
+	 * Issue #290: Updates both requirement_version.status and workbench.activeRequirementVersionId.
 	 */
 	setActive: async ({ params }) => {
 		const { workbenchId, reqVersionId } = params;
@@ -64,8 +66,14 @@ export const actions: Actions = {
 		}
 
 		// Update workbench to reference this version
-		// This updates the activeRequirementVersionId
-		// For now, we just return success
+		const workbenchUpdated = await workbenchRepository.setActiveRequirementVersion(
+			workbenchId,
+			reqVersionId
+		);
+		if (!workbenchUpdated) {
+			return fail(404, { error: 'Workbench not found' });
+		}
+
 		return { success: true, message: 'Version set as active' };
 	},
 

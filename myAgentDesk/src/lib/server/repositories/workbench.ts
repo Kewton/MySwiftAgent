@@ -356,6 +356,32 @@ export class WorkbenchRepository {
 
 		return (result.changes ?? 0) > 0;
 	}
+
+	/**
+	 * Set the active requirement version for a workbench.
+	 * Issue #290: Updates workbench.activeRequirementVersionId when a version is set as active.
+	 *
+	 * @param workbenchId - The workbench ID to update
+	 * @param requirementVersionId - The requirement version ID to set as active (or null to clear)
+	 * @returns true if updated, false if workbench not found
+	 */
+	async setActiveRequirementVersion(
+		workbenchId: string,
+		requirementVersionId: string | null
+	): Promise<boolean> {
+		const existing = await this.findById(workbenchId);
+		if (!existing) return false;
+
+		await this.db
+			.update(workbench)
+			.set({
+				activeRequirementVersionId: requirementVersionId,
+				updatedAt: new Date()
+			})
+			.where(eq(workbench.id, workbenchId));
+
+		return true;
+	}
 }
 
 // Singleton instance for production use
