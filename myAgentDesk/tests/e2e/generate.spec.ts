@@ -31,7 +31,7 @@ const REQUIREMENTS_URL = `${BASE_URL}/requirements`;
 test.beforeEach(async () => {
 	try {
 		execSync(
-			'sqlite3 data/local.db "UPDATE job_version SET status = \'failed\' WHERE status = \'generating\';"',
+			"sqlite3 data/local.db \"UPDATE job_version SET status = 'failed' WHERE status = 'generating';\"",
 			{ cwd: process.cwd() }
 		);
 	} catch {
@@ -101,7 +101,9 @@ test.describe('Generate Page - Display', () => {
 		await expect(viewContent).toContainText('View Content');
 	});
 
-	test('should display warning OR generate button based on active requirement', async ({ page }) => {
+	test('should display warning OR generate button based on active requirement', async ({
+		page
+	}) => {
 		// This test verifies the page displays correctly regardless of active requirement state
 		await page.goto(`/projects/${TEST_PROJECT_ID}/workbenches/wb_002/generate`);
 		await page.waitForLoadState('networkidle');
@@ -322,7 +324,9 @@ test.describe('Job History Section', () => {
 		await page.goto(GENERATE_URL);
 
 		// Check if history section exists
-		const historySectionHeader = page.locator('.section-card h3').filter({ hasText: 'Recent Job Versions' });
+		const historySectionHeader = page
+			.locator('.section-card h3')
+			.filter({ hasText: 'Recent Job Versions' });
 		const hasHistory = await historySectionHeader.isVisible().catch(() => false);
 
 		if (hasHistory) {
@@ -451,9 +455,7 @@ test.describe('Error Handling', () => {
 	});
 
 	test('should handle invalid project ID gracefully', async ({ page }) => {
-		const response = await page.goto(
-			'/projects/invalid_project_id/workbenches/wb_001/generate'
-		);
+		const response = await page.goto('/projects/invalid_project_id/workbenches/wb_001/generate');
 
 		// Should return error status
 		expect(response?.status()).toBeGreaterThanOrEqual(400);
