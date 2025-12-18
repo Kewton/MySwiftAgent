@@ -11,6 +11,8 @@ import type { PageServerLoad, Actions } from './$types';
 import { requirementVersionRepository } from '$lib/server/repositories/requirement-version';
 import { jobVersionRepository } from '$lib/server/repositories/job-version';
 import { workbenchRepository } from '$lib/server/repositories/workbench';
+import { ExpertAgentClient } from '$lib/api/clients/expert-agent';
+import { loadConfigFromEnv } from '$lib/api/config';
 
 /**
  * Load function for the Generate page.
@@ -123,10 +125,40 @@ export const actions: Actions = {
 			minorVersion
 		});
 
+		// Call ExpertAgent API to start job generation
+		const config = loadConfigFromEnv();
+		const expertAgentClient = new ExpertAgentClient({
+			baseUrl: config.expertAgent.baseUrl,
+			adminToken: config.expertAgent.adminToken
+		});
+
+		const apiResult = await expertAgentClient.generateJob({
+			user_requirement: reqVersion.content
+		});
+
+		if (!apiResult.ok) {
+			// API call failed - update job version status to failed
+			await jobVersionRepository.updateGenerationResult(newJobVersion.id, {
+				status: 'failed',
+				errorMessage: apiResult.error.message || 'Failed to call ExpertAgent API'
+			});
+			return fail(500, {
+				error: `Failed to start job generation: ${apiResult.error.message}`
+			});
+		}
+
+		// Save the external job_id for polling
+		await jobVersionRepository.updateGenerationResult(newJobVersion.id, {
+			status: 'generating',
+			externalTraceId: apiResult.value.job_id,
+			externalJobMasterId: apiResult.value.job_master_id ?? undefined
+		});
+
 		return {
 			success: true,
 			jobVersionId: newJobVersion.id,
 			versionLabel: newJobVersion.versionLabel,
+			externalJobId: apiResult.value.job_id,
 			message: `Job generation started: ${newJobVersion.versionLabel}`
 		};
 	}
