@@ -1,0 +1,26 @@
+{
+  "issue_number": 291,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/server/repositories/job-version.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": "unknown"
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (already applied)",
+    "Error Handling improvements",
+    "Type safety enhancements"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持（100%）",
+    "コードの可読性向上",
+    "重複コードの削除（DRY原則）",
+    "エラーハンドリングの統一"
+  ],
+  "skip_if_coverage_high": true,
+  "skip_threshold": 95,
+  "note": "TDD実装で既にカバレッジ100%達成済み。大きなリファクタリングは不要。軽微な改善のみ検討。"
+}
