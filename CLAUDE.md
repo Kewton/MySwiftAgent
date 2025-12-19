@@ -80,18 +80,21 @@ make acceptance-test-all
 
 | 状況 | コマンド | 説明 |
 |------|---------|------|
-| **日常開発** | `make dev-all` | 全サービスをDocker環境で起動（推奨） |
-| **コード変更頻繁** | `./scripts/dev-start.sh` | ローカル直接起動（高速リロード） |
+| **Agent層開発** | `./scripts/dev-hybrid.sh` | Platform=Docker, Agent=ローカル（推奨） |
+| **日常開発** | `make dev-all` | 全サービスをDocker環境で起動 |
+| **全ローカル** | `./scripts/dev-start.sh` | 全サービスをローカル直接起動 |
 | **本番検証** | `docker compose up -d` | コンテナ環境での動作確認 |
 
 ### 起動方法の選択フロー
 
 ```
-開発を始める
-    ↓
-Dockerを使いたい？ → Yes → make dev-all（推奨）
+Agent層（ExpertAgent, GraphAiServer, myAgentDesk）を開発中？
+    ↓ Yes
+./scripts/dev-hybrid.sh（Platform=Docker, Agent=ローカル）
     ↓ No
-ローカル直接起動 → ./scripts/dev-start.sh
+全サービスDocker？ → Yes → make dev-all
+    ↓ No
+全サービスローカル → ./scripts/dev-start.sh
 ```
 
 ### サービスURL（標準ポート）

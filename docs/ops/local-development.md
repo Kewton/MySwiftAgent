@@ -1,11 +1,12 @@
 # ローカル開発環境の起動方法
 
-MySwiftAgentプロジェクトには3つの起動方法があります。この ドキュメントでは、それぞれの使い分けと詳細を説明します。
+MySwiftAgentプロジェクトには4つの起動方法があります。このドキュメントでは、それぞれの使い分けと詳細を説明します。
 
 ## 📋 目次
 
-- [3つの起動方法の比較](#3つの起動方法の比較)
-- [dev-start.sh（推奨）](#dev-startsh推奨)
+- [4つの起動方法の比較](#4つの起動方法の比較)
+- [dev-hybrid.sh（Agent開発推奨）](#dev-hybridshagent開発推奨)
+- [dev-start.sh](#dev-startsh)
 - [quick-start.sh](#quick-startsh)
 - [docker-compose](#docker-compose)
 - [ポート番号一覧](#ポート番号一覧)
@@ -14,22 +15,154 @@ MySwiftAgentプロジェクトには3つの起動方法があります。この 
 
 ---
 
-## 3つの起動方法の比較
+## 4つの起動方法の比較
 
-| 項目 | dev-start.sh | quick-start.sh | docker-compose |
-|------|-------------|----------------|----------------|
-| **対象** | ローカルプロセス | ローカルプロセス | Dockerコンテナ |
-| **ポート** | 8001-8005, 8501 | 8101-8105, 8601 | 8001-8005, 8501 |
-| **使用頻度** | ⭐⭐⭐⭐⭐ 日常開発 | ⭐⭐ 特殊ケース | ⭐⭐⭐ 本番検証 |
-| **起動速度** | 🚀 高速 | 🚀 高速 | 🐢 遅い（イメージビルド） |
-| **リソース消費** | 💚 低 | 💚 低 | 💛 高（コンテナ） |
-| **コード変更反映** | ✅ 即座 | ✅ 即座 | ❌ 再ビルド必要 |
-| **本番環境近似度** | ❌ 低 | ❌ 低 | ✅ 高 |
-| **複数環境同時起動** | ❌ 不可 | ✅ 可能 | ❌ 不可 |
+| 項目 | dev-hybrid.sh | dev-start.sh | quick-start.sh | docker-compose |
+|------|---------------|-------------|----------------|----------------|
+| **対象** | Docker + ローカル | ローカルプロセス | ローカルプロセス | Dockerコンテナ |
+| **ポート** | 8001-8005, 8000 | 8001-8005, 8501 | 8101-8105, 8601 | 8001-8005, 8501 |
+| **使用頻度** | ⭐⭐⭐⭐⭐ Agent開発 | ⭐⭐⭐⭐ 日常開発 | ⭐⭐ 特殊ケース | ⭐⭐⭐ 本番検証 |
+| **起動速度** | 🚀 高速 | 🚀 高速 | 🚀 高速 | 🐢 遅い（イメージビルド） |
+| **リソース消費** | 💛 中 | 💚 低 | 💚 低 | 💛 高（コンテナ） |
+| **Agent層コード変更** | ✅ 即座 | ✅ 即座 | ✅ 即座 | ❌ 再ビルド必要 |
+| **Platform層安定性** | ✅ 高（Docker） | ❌ 低 | ❌ 低 | ✅ 高 |
+| **複数環境同時起動** | ❌ 不可 | ❌ 不可 | ✅ 可能 | ❌ 不可 |
+
+### 起動方法の選択フロー
+
+```
+Agent層（ExpertAgent, GraphAiServer, myAgentDesk）を開発中？
+    ↓ Yes
+dev-hybrid.sh（Platform=Docker, Agent=ローカル）
+    ↓ No
+Platform層も含めて全てローカルで開発？
+    ↓ Yes
+dev-start.sh
+    ↓ No
+本番環境に近い構成でテスト？
+    ↓ Yes
+docker-compose
+```
 
 ---
 
-## dev-start.sh（推奨）
+## dev-hybrid.sh（Agent開発推奨）
+
+**Platform層をDockerで安定稼働させながら、Agent層をローカルで高速開発**するためのハイブリッドスクリプトです。
+
+### アーキテクチャ
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Platform Layer (Docker)                                     │
+│  ┌─────────┐ ┌──────────┐ ┌───────────┐ ┌─────────┐        │
+│  │ Valkey  │ │ JobQueue │ │MyScheduler│ │ MyVault │        │
+│  │ :6380   │ │ :8001    │ │ :8002     │ │ :8003   │        │
+│  └─────────┘ └──────────┘ └───────────┘ └─────────┘        │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │              Langfuse (:3001)                   │        │
+│  └─────────────────────────────────────────────────┘        │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ API calls
+┌─────────────────────────────────────────────────────────────┐
+│  Agent Layer (Local - ホットリロード対応)                    │
+│  ┌─────────────┐ ┌───────────────┐ ┌─────────────┐         │
+│  │ ExpertAgent │ │ GraphAiServer │ │ MyAgentDesk │         │
+│  │ :8004       │ │ :8005         │ │ :8000       │         │
+│  └─────────────┘ └───────────────┘ └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 基本的な使い方
+
+```bash
+# 全サービス起動（Platform=Docker, Agent=ローカル）
+./scripts/dev-hybrid.sh start
+
+# 状態確認
+./scripts/dev-hybrid.sh status
+
+# ログ確認
+./scripts/dev-hybrid.sh logs                 # 全ログ概要
+./scripts/dev-hybrid.sh logs expertagent     # ExpertAgentログをフォロー
+./scripts/dev-hybrid.sh logs graphaiserver   # GraphAiServerログをフォロー
+./scripts/dev-hybrid.sh logs myagentdesk     # MyAgentDeskログをフォロー
+./scripts/dev-hybrid.sh logs docker          # Dockerサービスログ
+
+# 全サービス停止
+./scripts/dev-hybrid.sh stop
+
+# サービスURL一覧表示
+./scripts/dev-hybrid.sh urls
+```
+
+### レイヤー別操作
+
+```bash
+# Platform層（Docker）のみ起動
+./scripts/dev-hybrid.sh start --docker-only
+
+# Agent層（ローカル）のみ起動
+./scripts/dev-hybrid.sh start --local-only
+
+# Agent層のみ再起動（Platform層はそのまま）
+./scripts/dev-hybrid.sh stop --local-only
+./scripts/dev-hybrid.sh start --local-only
+```
+
+### アクセスURL
+
+| レイヤー | サービス | URL | 起動方法 |
+|---------|---------|-----|---------|
+| Platform | Valkey | redis://localhost:6380 | Docker |
+| Platform | JobQueue | http://localhost:8001 | Docker |
+| Platform | MyScheduler | http://localhost:8002 | Docker |
+| Platform | MyVault | http://localhost:8003 | Docker |
+| Platform | Langfuse | http://localhost:3001 | Docker |
+| Agent | ExpertAgent | http://localhost:8004 | ローカル |
+| Agent | GraphAiServer | http://localhost:8005 | ローカル |
+| Agent | MyAgentDesk | http://localhost:8000 | ローカル |
+
+### 推奨する使用場面
+
+✅ **ExpertAgent / GraphAiServer / MyAgentDesk の開発**
+```bash
+# 起動
+./scripts/dev-hybrid.sh start
+
+# コード変更 → 自動リロード（uvicorn --reload, vite dev）
+# Platform層は安定したDocker環境で動作
+
+# Agent層のみ再起動が必要な場合
+./scripts/dev-hybrid.sh restart --local-only
+```
+
+✅ **APIエンドポイントの開発・デバッグ**
+```bash
+# 起動
+./scripts/dev-hybrid.sh start
+
+# ExpertAgentのログをリアルタイム監視
+./scripts/dev-hybrid.sh logs expertagent
+
+# コード変更 → 即座に反映 → ログで確認
+```
+
+✅ **フロントエンド（MyAgentDesk）の開発**
+```bash
+# 起動
+./scripts/dev-hybrid.sh start
+
+# MyAgentDeskのログを監視
+./scripts/dev-hybrid.sh logs myagentdesk
+
+# Viteのホットリロードでブラウザ自動更新
+open http://localhost:8000
+```
+
+---
+
+## dev-start.sh
 
 **最も一般的な開発環境起動方法**です。ローカルマシン上で直接サービスを起動します。
 
@@ -294,16 +427,17 @@ docker-compose logs -f
 
 ### 完全なポート番号マッピング
 
-| サービス | dev-start.sh | quick-start.sh | docker-compose | 説明 |
-|---------|--------------|----------------|----------------|------|
-| Valkey | 6379 | - | 6380→6379 | Redisプロトコル |
-| JobQueue | 8001 | 8101 | 8001→8000 | ジョブキューAPI |
-| MyScheduler | 8002 | 8102 | 8002→8000 | スケジューラーAPI |
-| MyVault | 8003 | 8103 | 8003→8000 | シークレット管理API |
-| ExpertAgent | 8004 | 8104 | 8004→8000 | AIエージェントAPI |
-| GraphAiServer | 8005 | 8105 | 8005→8000 | ワークフローAPI |
-| CommonUI | 8501 | 8601 | 8501→8501 | Streamlit UI |
-| MyAgentDesk | 8000 | - | - | SvelteKit UI |
+| サービス | dev-hybrid.sh | dev-start.sh | quick-start.sh | docker-compose | 説明 |
+|---------|---------------|--------------|----------------|----------------|------|
+| Valkey | 6380 (Docker) | 6379 | - | 6380→6379 | Redisプロトコル |
+| JobQueue | 8001 (Docker) | 8001 | 8101 | 8001→8000 | ジョブキューAPI |
+| MyScheduler | 8002 (Docker) | 8002 | 8102 | 8002→8000 | スケジューラーAPI |
+| MyVault | 8003 (Docker) | 8003 | 8103 | 8003→8000 | シークレット管理API |
+| ExpertAgent | 8004 (Local) | 8004 | 8104 | 8004→8000 | AIエージェントAPI |
+| GraphAiServer | 8005 (Local) | 8005 | 8105 | 8005→8000 | ワークフローAPI |
+| CommonUI | - | 8501 | 8601 | 8501→8501 | Streamlit UI |
+| MyAgentDesk | 8000 (Local) | 8000 | - | - | SvelteKit UI |
+| Langfuse | 3001 (Docker) | 3001 | - | 3001 | LLM Observability |
 
 ---
 
@@ -389,6 +523,49 @@ curl http://localhost:8003/health
 
 ## トラブルシューティング
 
+### ❌ エラー: dev-hybrid.shでAgent層が起動しない
+
+```
+MyAgentDesk: Failed to start (check logs/myagentdesk.log)
+```
+
+**原因**: 古いPIDファイルが残っている、またはポートが使用中
+
+**解決策**:
+```bash
+# PIDファイルをクリア
+rm -f .pids/*.pid
+
+# キャッシュをクリア（MyAgentDeskの場合）
+rm -rf myAgentDesk/node_modules/.vite myAgentDesk/.svelte-kit
+
+# 再起動
+./scripts/dev-hybrid.sh start --local-only
+```
+
+### ❌ エラー: ANTHROPIC_API_KEY not configured in myVault
+
+```
+Job generation setup failed: 500: ANTHROPIC_API_KEY not configured in myVault
+```
+
+**原因**: MyVaultにAPIキーが登録されていない
+
+**解決策**:
+```bash
+# MyVaultが起動していることを確認
+curl http://localhost:8003/health
+
+# CommonUI（http://localhost:8501）でAPIキーを登録
+# または curlで直接登録
+TOKEN=$(grep -E '^TOKEN_expertagent=' myVault/.env | cut -d'=' -f2 | tr -d '"')
+curl -X POST http://localhost:8003/api/secrets \
+  -H "Content-Type: application/json" \
+  -H "X-Service-Name: expertagent" \
+  -H "X-Service-Token: $TOKEN" \
+  -d '{"key": "ANTHROPIC_API_KEY", "value": "sk-ant-...", "project": "default_project"}'
+```
+
 ### ❌ エラー: ポート番号が既に使用されている
 
 ```
@@ -400,6 +577,7 @@ Error: Port 8003 is already in use
 **解決策1**: 既存のサービスを停止
 
 ```bash
+./scripts/dev-hybrid.sh stop
 ./scripts/dev-start.sh stop
 docker-compose down
 ```
@@ -512,15 +690,18 @@ MYVAULT_BASE_URL = "http://myvault:8000"
 
 | 状況 | 推奨スクリプト | 理由 |
 |------|--------------|------|
-| 日常的な開発 | `dev-start.sh` | シンプル、高速、標準ポート |
-| worktree環境 | `dev-start.sh` | 1つずつ起動・停止で十分 |
+| **Agent層の開発** | `dev-hybrid.sh` | Platform安定、Agent高速リロード |
+| ExpertAgent開発 | `dev-hybrid.sh` | ローカルでデバッグ、MyVaultはDocker |
+| MyAgentDesk開発 | `dev-hybrid.sh` | Viteホットリロード対応 |
+| Platform層の開発 | `dev-start.sh` | 全てローカルで柔軟に |
+| worktree環境 | `dev-start.sh` または `dev-hybrid.sh` | 用途に応じて選択 |
 | docker-compose並行実行 | `quick-start.sh` | ポート番号が被らない |
 | 本番環境検証 | `docker-compose` | コンテナ化された環境 |
 | 動作比較検証 | `quick-start.sh` + `docker-compose` | 両方同時実行可能 |
 
 ---
 
-**最終更新**: 2025-12-09
+**最終更新**: 2025-12-20
 **作成者**: /doc-register コマンド
 **関連ドキュメント**:
 - [deployment-guide.md](./deployment-guide.md) - デプロイメント手順
