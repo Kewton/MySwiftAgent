@@ -96,6 +96,7 @@
 		flex-direction: column;
 		flex: 1;
 		min-height: 0;
+		height: 100%;
 		background: white;
 		border-radius: 0.5rem;
 		border: 1px solid #e2e8f0;
@@ -103,6 +104,7 @@
 	}
 
 	.workbench-header {
+		flex-shrink: 0;
 		padding: 1rem 1.5rem;
 		border-bottom: 1px solid #e2e8f0;
 	}
@@ -116,6 +118,7 @@
 
 	.workbench-content {
 		flex: 1;
+		min-height: 0;
 		overflow-y: auto;
 		padding: 1.5rem;
 	}

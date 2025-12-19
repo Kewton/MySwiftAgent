@@ -35,14 +35,17 @@
 
 <style>
 	.app-layout {
-		min-height: 100vh;
+		height: 100vh;
 		display: flex;
 		flex-direction: column;
+		overflow: hidden;
 	}
 
 	.main-content {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
+		overflow: hidden;
+		min-height: 0;
 	}
 </style>

@@ -33,11 +33,16 @@
 		display: flex;
 		flex: 1;
 		min-height: 0;
+		height: 100%;
+		overflow: hidden;
 	}
 
 	.project-content {
 		flex: 1;
-		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
 		padding: 1.5rem;
 		background: #f8fafc;
 	}

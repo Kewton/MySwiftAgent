@@ -56,6 +56,7 @@
 
 <style>
 	.workbench-tabs {
+		flex-shrink: 0;
 		background: white;
 		border-bottom: 1px solid #e2e8f0;
 		padding: 0 1rem;
