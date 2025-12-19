@@ -288,10 +288,10 @@ start_expertagent() {
 
     cd "$EXPERTAGENT_DIR"
 
-    # Get MyVault token
-    local expertagent_token="${MYVAULT_SERVICE_TOKEN:-}"
+    # Get MyVault token - always read from myVault/.env to avoid conflicts with other service tokens
+    local expertagent_token=$(grep -E "^TOKEN_expertagent=" "$PROJECT_ROOT/myVault/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
     if [[ -z "$expertagent_token" ]]; then
-        expertagent_token=$(grep -E "^TOKEN_expertagent=" "$PROJECT_ROOT/myVault/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+        expertagent_token="${MYVAULT_TOKEN_EXPERTAGENT:-}"
     fi
 
     # Start service
