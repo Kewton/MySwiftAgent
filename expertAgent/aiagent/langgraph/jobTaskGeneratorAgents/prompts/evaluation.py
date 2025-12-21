@@ -33,6 +33,52 @@ def _load_yaml_config(filename: str) -> dict:
         return result if isinstance(result, dict) else {}
 
 
+class APISpecificityIssue(BaseModel):
+    """Issue found in API specification for a task."""
+
+    task_id: str = Field(description="ID of the task with the issue")
+    task_name: str = Field(description="Name of the task")
+    current_api: str = Field(
+        description="Current API specification (e.g., 'fetchAgent')"
+    )
+    problem: str = Field(
+        description="Description of the problem (e.g., 'fetchAgentは抽象的すぎる')"
+    )
+    recommended_api: str = Field(
+        description="Specific API that should be used instead "
+        "(e.g., '/v1/utility/gmail/send')"
+    )
+    recommendation_reason: str = Field(
+        description="Reason for recommending this specific API"
+    )
+
+
+class APISpecificityCheckResult(BaseModel):
+    """Result of LLM-based API specificity check."""
+
+    all_apis_specific: bool = Field(
+        description="Whether all tasks have specific API recommendations"
+    )
+    issues: list[APISpecificityIssue] = Field(
+        default_factory=list,
+        description="List of API specificity issues found",
+    )
+    summary: str = Field(description="Summary of the API specificity check")
+
+    @field_validator("issues", mode="before")
+    @classmethod
+    def parse_issues_json_array(cls, v):
+        """Convert string representation of JSON array to list."""
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                return []
+        return v
+
+
 class InfeasibleTask(BaseModel):
     """Task that is difficult to implement."""
 
@@ -297,7 +343,7 @@ def _build_evaluation_system_prompt() -> str:
     prompt_data = loader.load_prompt("evaluation")
 
     # Get base prompt from YAML
-    base_prompt = prompt_data.get("system_prompt", "")
+    base_prompt: str = str(prompt_data.get("system_prompt", ""))
 
     # Get capability lists to replace placeholders
     graphai_capabilities = _build_graphai_capabilities()
@@ -539,6 +585,103 @@ def create_evaluation_prompt(
 2. 実現困難なタスクを検出
 3. 既存APIでの代替案を提案
 4. 代替不可の場合、API機能追加を提案
+
+JSON形式で評価結果を出力してください。
+"""
+
+
+def _build_api_specificity_check_prompt() -> str:
+    """Build API specificity check system prompt with capability references.
+
+    Returns:
+        Formatted API specificity check system prompt
+    """
+    expert_agent_capabilities = _build_expert_agent_capabilities()
+
+    return f"""あなたはAPI設計の専門家です。
+タスク分割結果の recommended_apis が具体的かどうかを評価します。
+
+## 評価基準
+
+### 抽象的すぎるAPI指定（問題あり）
+以下のパターンは具体性が不足しています：
+- `fetchAgent` のみ（具体的なエンドポイントが不明）
+- `httpAgent` のみ（具体的なAPI情報がない）
+- 汎用的なAgent名のみで、具体的なendpointがない
+
+### 具体的なAPI指定（問題なし）
+以下のパターンは適切です：
+- `/v1/utility/gmail/send` のような具体的なエンドポイント
+- `/v1/utility/text_to_speech_drive` のような機能特化エンドポイント
+- `geminiAgent` + 具体的な用途説明（データ分析、テキスト処理など）
+- 外部API + 具体的なURL・エンドポイント情報
+
+## 利用可能なDirect API
+
+{expert_agent_capabilities}
+
+## 評価手順
+
+1. 各タスクの `recommended_apis` を確認
+2. API指定が具体的かどうかを判定：
+   - api_name: 具体的な名前か？（例: "Gmail送信" は○、"HTTPリクエスト" は×）
+   - endpoint: 具体的なパスか？（例: "/v1/utility/gmail/send" は○、"" や "fetchAgent" は×）
+   - reason: 選択理由が明確か？
+3. 問題があるタスクを特定し、具体的なAPIを推奨
+
+## 出力形式
+
+JSON形式で以下の構造を出力：
+
+```json
+{{
+  "all_apis_specific": false,
+  "issues": [
+    {{
+      "task_id": "task_001",
+      "task_name": "メール送信",
+      "current_api": "fetchAgent",
+      "problem": "fetchAgentは抽象的すぎる。具体的なエンドポイントが必要",
+      "recommended_api": "/v1/utility/gmail/send",
+      "recommendation_reason": "Gmail送信APIを使用すれば、3-5秒でメール送信が完了"
+    }}
+  ],
+  "summary": "3件のタスクでAPI指定が抽象的すぎます。具体的なエンドポイントを指定してください。"
+}}
+```
+
+- all_apis_specific: すべてのAPIが具体的であれば true
+- issues: 問題のあるタスクのリスト（問題がなければ空配列）
+- summary: 評価の要約"""
+
+
+API_SPECIFICITY_CHECK_SYSTEM_PROMPT = _build_api_specificity_check_prompt()
+
+
+def create_api_specificity_check_prompt(task_breakdown: list[dict]) -> str:
+    """Create API specificity check user prompt.
+
+    Args:
+        task_breakdown: Task breakdown result to check
+
+    Returns:
+        Formatted prompt string for LLM
+    """
+    return f"""# タスク分割結果
+
+```json
+{json.dumps(task_breakdown, ensure_ascii=False, indent=2)}
+```
+
+# 指示
+
+上記のタスク分割結果の `recommended_apis` フィールドを確認し、
+API指定が具体的かどうかを評価してください。
+
+特に以下の点に注意：
+1. `fetchAgent` や `httpAgent` だけの指定は抽象的すぎる
+2. 具体的なエンドポイント（例: `/v1/utility/gmail/send`）が必要
+3. 利用可能なDirect APIを参照して、適切なAPIを推奨
 
 JSON形式で評価結果を出力してください。
 """

@@ -96,6 +96,24 @@ def _build_expert_agent_capabilities() -> str:
     return "\n".join(lines)
 
 
+class RecommendedAPI(BaseModel):
+    """Recommended API specification for a task."""
+
+    api_name: str = Field(
+        description="API名（例: 'Gmail送信', 'Text-to-Speech + Google Drive'）"
+    )
+    endpoint: str = Field(
+        description="エンドポイントパス（例: '/v1/utility/gmail/send'）"
+    )
+    method: str = Field(
+        default="POST",
+        description="HTTPメソッド（通常はPOST）",
+    )
+    reason: str = Field(
+        description="このAPIを選択した理由（例: '高速Direct APIで3-5秒でメール送信可能'）"
+    )
+
+
 class TaskBreakdownItem(BaseModel):
     """Single task in the breakdown."""
 
@@ -114,9 +132,9 @@ class TaskBreakdownItem(BaseModel):
     priority: int = Field(
         default=5, ge=1, le=10, description="Task priority (1=highest, 10=lowest)"
     )
-    recommended_apis: list[str] = Field(
+    recommended_apis: list[RecommendedAPI] = Field(
         default_factory=list,
-        description="Recommended GraphAI agents or expertAgent APIs for this task (e.g., ['geminiAgent', 'fetchAgent'])",
+        description="推奨API一覧（API名、エンドポイント、理由を含む構造化形式）",
     )
 
 
@@ -212,10 +230,37 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 
 ### recommended_apis の記述ルール
 
-1. **優先順位順に記述**: 最も推奨するAPIを先頭に記載
-2. **具体的に記述**: "geminiAgent" のように具体的なエージェント名を記載
-3. **複数指定可能**: メインAPI + フォールバックAPIを指定可能
-4. **理由を説明**: descriptionに「なぜそのAPIを使うか」を記載
+**重要**: `recommended_apis` は構造化された形式で記述してください。
+
+#### 形式
+```json
+"recommended_apis": [
+  {{
+    "api_name": "API名",
+    "endpoint": "エンドポイントパス",
+    "method": "POST",
+    "reason": "このAPIを選択した理由"
+  }}
+]
+```
+
+#### 禁止事項
+以下の記述は**禁止**です（情報が不足しています）：
+- ❌ `"recommended_apis": ["fetchAgent"]` - エンドポイントなし
+- ❌ `"recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]` - 構造化されていない
+
+#### タスク種別ごとの推奨API
+
+| タスク種別 | 推奨API | エンドポイント |
+|-----------|---------|---------------|
+| 音声合成 | Text-to-Speech + Google Drive | `/v1/utility/text_to_speech_drive` |
+| 音声合成（Base64） | Text-to-Speech | `/v1/utility/text_to_speech` |
+| ファイルアップロード | Google Drive Upload | `/v1/utility/drive/upload` |
+| メール送信 | Gmail送信 | `/v1/utility/gmail/send` |
+| メール検索 | Gmail検索 | `/v1/utility/gmail/search` |
+| Web検索 | Google検索 | `/v1/utility/google_search` |
+| LLM処理（JSON出力） | JSON Output Agent | `/v1/aiagent/utility/jsonoutput` |
+| LLM処理（汎用） | Direct LLM | `/v1/mylllm` |
 
 ## ⚠️ 重要な制約
 
@@ -231,30 +276,136 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 
 ## タスク分割の例
 
-ユーザー要求: "Gmailで特定キーワードを検索し、結果をGoogleドライブにアップロードする"
+### 例1: Gmailで特定キーワードを検索し、結果をGoogleドライブにアップロードする
 
-分割結果:
+```json
+{{
+  "tasks": [
+    {{
+      "task_id": "task_001",
+      "name": "Gmail検索",
+      "description": "指定されたキーワードでGmailを検索し、メール一覧を取得する。",
+      "dependencies": [],
+      "expected_output": "JSON形式のメール一覧 (件名、送信者、本文抜粋を含む)",
+      "priority": 1,
+      "recommended_apis": [
+        {{
+          "api_name": "Gmail検索",
+          "endpoint": "/v1/utility/gmail/search",
+          "method": "POST",
+          "reason": "高速Direct API（5秒）でGmail検索が可能"
+        }}
+      ]
+    }},
+    {{
+      "task_id": "task_002",
+      "name": "検索結果フォーマット",
+      "description": "Gmail検索結果をレポート形式にフォーマットする。LLMを使用して構造化されたレポートを生成。",
+      "dependencies": ["task_001"],
+      "expected_output": "レポート形式のテキストデータ",
+      "priority": 2,
+      "recommended_apis": [
+        {{
+          "api_name": "JSON Output Agent",
+          "endpoint": "/v1/aiagent/utility/jsonoutput",
+          "method": "POST",
+          "reason": "構造化JSON出力を保証、gemini-2.5-flash推奨"
+        }}
+      ]
+    }},
+    {{
+      "task_id": "task_003",
+      "name": "Googleドライブアップロード",
+      "description": "フォーマットされたレポートをGoogleドライブにアップロードする。",
+      "dependencies": ["task_002"],
+      "expected_output": "アップロード完了メッセージとファイルURL",
+      "priority": 3,
+      "recommended_apis": [
+        {{
+          "api_name": "Google Drive Upload",
+          "endpoint": "/v1/utility/drive/upload",
+          "method": "POST",
+          "reason": "サブフォルダ自動作成・重複ファイル名回避対応"
+        }}
+      ]
+    }}
+  ],
+  "overall_summary": "Gmail検索結果をレポート形式にフォーマットし、Google Driveにアップロードするワークフロー"
+}}
 ```
-task_001:
-  name: "Gmail検索"
-  description: "指定されたキーワードでGmailを検索し、メール一覧を取得する。Gmail APIを使用してHTTP経由でデータを取得。"
-  dependencies: []
-  expected_output: "JSON形式のメール一覧 (件名、送信者、本文抜粋を含む)"
-  recommended_apis: ["fetchAgent"]
 
-task_002:
-  name: "検索結果フォーマット"
-  description: "Gmail検索結果をPDF形式にフォーマットする。LLMを使用して自然言語処理とフォーマット生成を行う。expertAgent の jsonoutput API (http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput) を fetchAgent 経由で呼び出し、gemini-2.5-flash モデルを使用。"
-  dependencies: ["task_001"]
-  expected_output: "PDF形式のレポートファイル"
-  recommended_apis: ["fetchAgent (expertAgent jsonoutput API)"]
+### 例2: ポッドキャスト生成とメール通知
 
-task_003:
-  name: "Googleドライブアップロード"
-  description: "フォーマットされたレポートをGoogleドライブにアップロードする。Google Drive APIを使用してHTTP経由でアップロード。"
-  dependencies: ["task_002"]
-  expected_output: "アップロード完了メッセージとファイルURL"
-  recommended_apis: ["fetchAgent"]
+```json
+{{
+  "tasks": [
+    {{
+      "task_id": "task_001",
+      "name": "ポッドキャスト構成案の作成",
+      "description": "ユーザーが入力したキーワードに基づき、ポッドキャストのトピック、構成、主要なポイントを策定する。",
+      "dependencies": [],
+      "expected_output": "ポッドキャストのタイトル、セクションごとの要点を含むJSONデータ",
+      "priority": 1,
+      "recommended_apis": [
+        {{
+          "api_name": "JSON Output Agent",
+          "endpoint": "/v1/aiagent/utility/jsonoutput",
+          "method": "POST",
+          "reason": "構造化された構成案をJSON形式で生成"
+        }}
+      ]
+    }},
+    {{
+      "task_id": "task_002",
+      "name": "音声合成用スクリプトの生成",
+      "description": "作成された構成案を元に、自然な対話形式またはナレーション形式のスクリプトを作成する。",
+      "dependencies": ["task_001"],
+      "expected_output": "音声合成に適した正規化済みのスクリプトテキスト",
+      "priority": 2,
+      "recommended_apis": [
+        {{
+          "api_name": "JSON Output Agent",
+          "endpoint": "/v1/aiagent/utility/jsonoutput",
+          "method": "POST",
+          "reason": "スクリプトを構造化されたJSON形式で生成"
+        }}
+      ]
+    }},
+    {{
+      "task_id": "task_003",
+      "name": "音声合成とGoogle Driveアップロード",
+      "description": "生成されたスクリプトを音声ファイルに変換し、Google Driveにアップロードする。",
+      "dependencies": ["task_002"],
+      "expected_output": "音声ファイルの公開URL",
+      "priority": 3,
+      "recommended_apis": [
+        {{
+          "api_name": "Text-to-Speech + Google Drive",
+          "endpoint": "/v1/utility/text_to_speech_drive",
+          "method": "POST",
+          "reason": "音声生成とアップロードを一括処理、公開リンクを返却"
+        }}
+      ]
+    }},
+    {{
+      "task_id": "task_004",
+      "name": "通知メール送信",
+      "description": "ポッドキャストの完成を知らせるメールを送信する。音声ファイルのURLを含む。",
+      "dependencies": ["task_003"],
+      "expected_output": "送信完了ステータス",
+      "priority": 4,
+      "recommended_apis": [
+        {{
+          "api_name": "Gmail送信",
+          "endpoint": "/v1/utility/gmail/send",
+          "method": "POST",
+          "reason": "高速Direct API（3-5秒）でメール送信可能"
+        }}
+      ]
+    }}
+  ],
+  "overall_summary": "キーワードからポッドキャストを生成し、Google Driveにアップロード、完了通知をメール送信するワークフロー"
+}}
 ```
 
 ## 出力形式
@@ -267,11 +418,18 @@ JSON形式で以下の構造で出力してください：
     {{
       "task_id": "task_001",
       "name": "タスク名",
-      "description": "詳細な説明（使用APIの理由を含む）。LLM処理が必要な場合は、expertAgent の jsonoutput API を fetchAgent 経由で呼び出す旨を記載。",
+      "description": "詳細な説明",
       "dependencies": [],
       "expected_output": "期待される出力",
-      "priority": 5,
-      "recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]
+      "priority": 1,
+      "recommended_apis": [
+        {{
+          "api_name": "API名",
+          "endpoint": "/v1/...",
+          "method": "POST",
+          "reason": "このAPIを選択した理由"
+        }}
+      ]
     }}
   ],
   "overall_summary": "ワークフロー全体の概要"

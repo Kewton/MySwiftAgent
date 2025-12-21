@@ -10,8 +10,11 @@ from __future__ import annotations
 import logging
 
 from ..prompts.evaluation import (
+    API_SPECIFICITY_CHECK_SYSTEM_PROMPT,
     EVALUATION_SYSTEM_PROMPT,
+    APISpecificityCheckResult,
     EvaluationResult,
+    create_api_specificity_check_prompt,
     create_evaluation_prompt,
 )
 from ..state import JobTaskGeneratorState
@@ -42,6 +45,68 @@ def _validate_evaluation_response(
         )
 
     return response
+
+
+def _validate_api_specificity_response(
+    response: APISpecificityCheckResult | None,
+) -> APISpecificityCheckResult:
+    """Validate API specificity check response."""
+    if response is None:
+        logger.error("API specificity check returned None")
+        raise ValueError("API specificity check failed: LLM returned None response")
+    return response
+
+
+async def _check_api_specificity(
+    task_breakdown: list[dict],
+) -> APISpecificityCheckResult | None:
+    """Check if recommended_apis in task breakdown are specific enough.
+
+    This uses LLM to evaluate whether the API specifications are concrete
+    (e.g., "/v1/utility/gmail/send") rather than abstract (e.g., "fetchAgent").
+
+    Args:
+        task_breakdown: List of task breakdown items to check
+
+    Returns:
+        APISpecificityCheckResult or None if check fails
+    """
+    if not task_breakdown:
+        return None
+
+    user_prompt = create_api_specificity_check_prompt(task_breakdown)
+
+    messages = [
+        {"role": "system", "content": API_SPECIFICITY_CHECK_SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    try:
+        call_result = await invoke_structured_llm(
+            messages=messages,
+            response_model=APISpecificityCheckResult,
+            context_label="api_specificity_check",
+            model_env_var="JOB_GENERATOR_EVALUATOR_MODEL",
+            default_model="claude-haiku-4-5",
+            validator=_validate_api_specificity_response,
+        )
+        logger.info(
+            "API specificity check complete (model=%s all_specific=%s issues=%d)",
+            call_result.model_name,
+            call_result.result.all_apis_specific,
+            len(call_result.result.issues),
+        )
+        return call_result.result
+    except StructuredLLMError as exc:
+        logger.warning("API specificity check failed: %s", exc)
+        return None
+    except Exception as exc:
+        logger.warning(
+            "Unexpected error in API specificity check: %s",
+            exc,
+            exc_info=True,
+        )
+        return None
 
 
 async def evaluator_node(
@@ -172,10 +237,41 @@ async def evaluator_node(
                 api_proposal.priority,
             )
 
+    # Run API specificity check for after_task_breakdown stage
+    # This ensures recommended_apis are concrete (e.g., "/v1/utility/gmail/send")
+    # rather than abstract (e.g., "fetchAgent")
+    api_specificity_result = None
+    if evaluator_stage == "after_task_breakdown" and response.is_valid:
+        logger.info("Running API specificity check for task breakdown")
+        api_specificity_result = await _check_api_specificity(task_breakdown)
+
+        if api_specificity_result and not api_specificity_result.all_apis_specific:
+            logger.warning(
+                "API specificity issues found: %d issues",
+                len(api_specificity_result.issues),
+            )
+            for issue in api_specificity_result.issues:
+                logger.warning(
+                    "API specificity issue in %s (%s): %s → %s",
+                    issue.task_name,
+                    issue.task_id,
+                    issue.current_api,
+                    issue.recommended_api,
+                )
+
     # Generate feedback if structure is invalid OR if there are infeasible tasks
+    # OR if API specificity issues were found
     # This ensures requirement_analysis receives feedback for improvement
     evaluation_feedback = None
-    needs_feedback = not response.is_valid or not response.all_tasks_feasible
+    has_api_specificity_issues = (
+        api_specificity_result is not None
+        and not api_specificity_result.all_apis_specific
+    )
+    needs_feedback = (
+        not response.is_valid
+        or not response.all_tasks_feasible
+        or has_api_specificity_issues
+    )
     if needs_feedback:
         feedback_parts: list[str] = []
         feedback_parts.append("## 品質スコア")
@@ -189,8 +285,8 @@ async def evaluator_node(
 
         if response.issues:
             feedback_parts.append("\n## 検出された問題")
-            for issue in response.issues:
-                feedback_parts.append(f"- {issue}")
+            for eval_issue in response.issues:
+                feedback_parts.append(f"- {eval_issue}")
 
         if response.improvement_suggestions:
             feedback_parts.append("\n## 改善提案")
@@ -220,12 +316,39 @@ async def evaluator_node(
                     f"{api_proposal.functionality}"
                 )
 
+        # Add API specificity issues to feedback
+        if has_api_specificity_issues and api_specificity_result:
+            feedback_parts.append("\n## API具体性の問題")
+            feedback_parts.append(
+                "以下のタスクでAPI指定が抽象的すぎます。"
+                "具体的なエンドポイントを使用してください："
+            )
+            for issue in api_specificity_result.issues:
+                feedback_parts.append(
+                    f"- **{issue.task_name}** ({issue.task_id}): "
+                    f"`{issue.current_api}` → `{issue.recommended_api}`"
+                )
+                feedback_parts.append(f"  - 理由: {issue.recommendation_reason}")
+
         evaluation_feedback = "\n".join(feedback_parts)
         logger.debug("Generated evaluation feedback:\n%s", evaluation_feedback)
+
+    # Build evaluation result with API specificity flag
+    evaluation_result = response.model_dump()
+
+    # Mark as invalid if API specificity issues were found
+    # This triggers re-analysis in requirement_analysis node
+    if has_api_specificity_issues:
+        evaluation_result["all_apis_specific"] = False
+        logger.info(
+            "Marking evaluation as needing re-analysis due to API specificity issues"
+        )
+    else:
+        evaluation_result["all_apis_specific"] = True
 
     # NOTE: Do not modify retry_count here - it's managed by requirement_analysis/interface_definition nodes
     return {
         **state,
-        "evaluation_result": response.model_dump(),
+        "evaluation_result": evaluation_result,
         "evaluation_feedback": evaluation_feedback,
     }

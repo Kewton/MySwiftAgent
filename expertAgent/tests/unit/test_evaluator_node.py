@@ -21,6 +21,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import evaluator_n
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.evaluation import (
     AlternativeProposal,
     APIExtensionProposal,
+    APISpecificityCheckResult,
     EvaluationResult,
     InfeasibleTask,
 )
@@ -45,7 +46,7 @@ class TestEvaluatorNode:
         This is the happy path where all quality criteria are met.
         """
         # Create mock evaluation result (all valid)
-        mock_response = EvaluationResult(
+        mock_eval_response = EvaluationResult(
             is_valid=True,
             evaluation_summary="All quality criteria met. Tasks are well-structured and feasible.",
             hierarchical_score=9,
@@ -61,17 +62,34 @@ class TestEvaluatorNode:
             improvement_suggestions=[],
         )
 
-        # Setup mock invoke_structured_llm
+        # Create mock API specificity check result (all APIs are specific)
+        mock_api_check_response = APISpecificityCheckResult(
+            all_apis_specific=True,
+            issues=[],
+            summary="All APIs are properly specified.",
+        )
+
+        # Setup mock invoke_structured_llm with side_effect for two calls
         from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
             StructuredCallResult,
         )
 
-        mock_invoke_llm.return_value = StructuredCallResult(
-            result=mock_response,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="test-model",
-        )
+        mock_invoke_llm.side_effect = [
+            # First call: evaluation
+            StructuredCallResult(
+                result=mock_eval_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="test-model",
+            ),
+            # Second call: API specificity check
+            StructuredCallResult(
+                result=mock_api_check_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="test-model",
+            ),
+        ]
 
         # Create test state
         task_breakdown = create_mock_task_breakdown(3)
@@ -91,6 +109,7 @@ class TestEvaluatorNode:
         assert result["evaluation_result"]["hierarchical_score"] == 9
         assert result["evaluation_result"]["dependency_score"] == 9
         assert result["evaluation_result"]["all_tasks_feasible"] is True
+        assert result["evaluation_result"]["all_apis_specific"] is True
         assert len(result["evaluation_result"]["infeasible_tasks"]) == 0
 
         # Verify retry_count is NOT modified by evaluator (it's managed by requirement_analysis/interface_definition)
@@ -99,8 +118,8 @@ class TestEvaluatorNode:
         # evaluation_feedback should be None for valid results
         assert result.get("evaluation_feedback") is None
 
-        # Verify invoke_structured_llm was called
-        mock_invoke_llm.assert_called_once()
+        # Verify invoke_structured_llm was called twice (eval + API specificity check)
+        assert mock_invoke_llm.call_count == 2
 
     @pytest.mark.asyncio
     @patch(

@@ -75,11 +75,13 @@ def evaluator_router(
 
     is_valid = evaluation_result.get("is_valid", False)
     all_tasks_feasible = evaluation_result.get("all_tasks_feasible", True)
+    all_apis_specific = evaluation_result.get("all_apis_specific", True)
 
     logger.debug(
-        "Evaluation summary: is_valid=%s all_tasks_feasible=%s",
+        "Evaluation summary: is_valid=%s all_tasks_feasible=%s all_apis_specific=%s",
         is_valid,
         all_tasks_feasible,
+        all_apis_specific,
     )
 
     if evaluator_stage == "after_task_breakdown":
@@ -119,9 +121,17 @@ def evaluator_router(
             "Routing back for re-analysis."
         )
 
+    # Check if all APIs are specific - if not, we need to re-analyze
+    # to get concrete API endpoints instead of abstract "fetchAgent"
+    if is_valid and not all_apis_specific:
+        logger.warning(
+            "Task structure is valid but API specifications are too abstract. "
+            "Routing back for re-analysis with specific endpoints."
+        )
+
     if evaluator_stage == "after_task_breakdown":
-        # Proceed only if both structure is valid AND all tasks are feasible
-        if is_valid and all_tasks_feasible:
+        # Proceed only if structure is valid AND all tasks are feasible AND APIs are specific
+        if is_valid and all_tasks_feasible and all_apis_specific:
             return "interface_definition"
         if retry_count < MAX_RETRY_COUNT:
             return "requirement_analysis"

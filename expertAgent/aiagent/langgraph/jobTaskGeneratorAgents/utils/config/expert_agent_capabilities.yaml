@@ -679,3 +679,159 @@ best_practices:
 
   - pattern: "TTS + storage"
     recommendation: "text_to_speech_drive を使用すると、Google Driveアップロード + リンク返却が一度に可能"
+
+# ====================
+# Task-to-API Mapping
+# ====================
+# Maps common task types to recommended APIs for requirement_analysis
+# Used by evaluator to check if appropriate APIs are recommended
+
+task_api_mapping:
+  # 音声合成関連
+  - task_type: "音声合成"
+    keywords:
+      - "TTS"
+      - "音声生成"
+      - "音声変換"
+      - "ポッドキャスト"
+      - "ナレーション"
+      - "読み上げ"
+    recommended_api:
+      api_name: "Text-to-Speech + Google Drive"
+      endpoint: "/v1/utility/text_to_speech_drive"
+      method: "POST"
+    reason: "音声生成とGoogle Driveアップロードを一括処理、公開リンクを返却"
+    alternative_apis:
+      - api_name: "Text-to-Speech（Base64）"
+        endpoint: "/v1/utility/text_to_speech"
+        reason: "Base64エンコードで音声データを返却（アップロード不要な場合）"
+
+  # ファイルアップロード関連
+  - task_type: "ファイルアップロード"
+    keywords:
+      - "アップロード"
+      - "保存"
+      - "ストレージ"
+      - "Google Drive"
+      - "ドライブ"
+    recommended_api:
+      api_name: "Google Drive Upload"
+      endpoint: "/v1/utility/drive/upload"
+      method: "POST"
+    reason: "サブフォルダ自動作成・重複ファイル名回避・大ファイル対応"
+    alternative_apis:
+      - api_name: "Google Drive Upload from URL"
+        endpoint: "/v1/utility/drive/upload_from_url"
+        reason: "URLから直接Google Driveにアップロード"
+
+  # メール送信関連
+  - task_type: "メール送信"
+    keywords:
+      - "メール送信"
+      - "通知"
+      - "Gmail送信"
+      - "メール通知"
+    recommended_api:
+      api_name: "Gmail送信"
+      endpoint: "/v1/utility/gmail/send"
+      method: "POST"
+    reason: "高速Direct API（3-5秒）でメール送信可能"
+
+  # メール検索関連
+  - task_type: "メール検索"
+    keywords:
+      - "メール検索"
+      - "Gmail検索"
+      - "受信メール"
+      - "メール取得"
+    recommended_api:
+      api_name: "Gmail検索"
+      endpoint: "/v1/utility/gmail/search"
+      method: "POST"
+    reason: "高速Direct API（5秒）でGmail検索が可能"
+
+  # Web検索関連
+  - task_type: "Web検索"
+    keywords:
+      - "Web検索"
+      - "Google検索"
+      - "検索"
+      - "情報収集"
+    recommended_api:
+      api_name: "Google検索"
+      endpoint: "/v1/utility/google_search"
+      method: "POST"
+    reason: "Serper API経由でGoogle検索、複数クエリ一括対応"
+    alternative_apis:
+      - api_name: "Google検索概要"
+        endpoint: "/v1/utility/google_search_overview"
+        reason: "検索結果のサマリーも同時に取得"
+
+  # LLM処理（JSON出力）関連
+  - task_type: "LLM処理（JSON出力）"
+    keywords:
+      - "JSON生成"
+      - "構造化出力"
+      - "データ変換"
+      - "テキスト解析"
+      - "要約"
+      - "分類"
+      - "構成案"
+      - "スクリプト生成"
+    recommended_api:
+      api_name: "JSON Output Agent"
+      endpoint: "/v1/aiagent/utility/jsonoutput"
+      method: "POST"
+    reason: "構造化JSON出力を保証、gemini-2.5-flash推奨"
+
+  # LLM処理（汎用）関連
+  - task_type: "LLM処理（汎用）"
+    keywords:
+      - "LLM"
+      - "AI処理"
+      - "自然言語処理"
+      - "テキスト生成"
+    recommended_api:
+      api_name: "Direct LLM"
+      endpoint: "/v1/mylllm"
+      method: "POST"
+    reason: "カスタムシステムプロンプト対応、複数モデル対応"
+
+  # ファイル読み取り関連
+  - task_type: "ファイル読み取り"
+    keywords:
+      - "ファイル読み取り"
+      - "PDF読み取り"
+      - "テキスト抽出"
+      - "OCR"
+    recommended_api:
+      api_name: "File Reader Agent"
+      endpoint: "/v1/aiagent/utility/file_reader"
+      method: "POST"
+    reason: "テキスト・PDF・画像の読み取り対応"
+
+  # Wikipedia検索関連
+  - task_type: "Wikipedia検索"
+    keywords:
+      - "Wikipedia"
+      - "百科事典"
+      - "知識検索"
+    recommended_api:
+      api_name: "Wikipedia Agent"
+      endpoint: "/v1/aiagent/utility/wikipedia"
+      method: "POST"
+    reason: "多言語対応のWikipedia検索"
+
+  # ブラウザ操作関連
+  - task_type: "ブラウザ操作"
+    keywords:
+      - "Webスクレイピング"
+      - "ブラウザ"
+      - "フォーム操作"
+      - "スクリーンショット"
+    recommended_api:
+      api_name: "Playwright Agent"
+      endpoint: "/v1/aiagent/utility/playwright"
+      method: "POST"
+    reason: "ブラウザ自動化（ただし不安定な場合あり）"
+    note: "⚠️ 不安定な場合はGoogle検索API + fetchAgentの組み合わせを推奨"

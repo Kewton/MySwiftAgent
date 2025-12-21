@@ -131,7 +131,11 @@ class TestEvaluatorRouter:
         assert result == "END"
 
     def test_evaluator_router_after_task_breakdown_with_infeasible_tasks(self):
-        """Test routing when some tasks are infeasible."""
+        """Test routing when some tasks are infeasible.
+
+        Issue #305: When all_tasks_feasible=False, route back to requirement_analysis
+        for re-analysis even if is_valid=True. This ensures infeasible tasks are addressed.
+        """
         state = create_mock_workflow_state(
             retry_count=0,
             evaluator_stage="after_task_breakdown",
@@ -150,8 +154,9 @@ class TestEvaluatorRouter:
 
         result = evaluator_router(state)
 
-        # Should still proceed to interface_definition if is_valid=True
-        assert result == "interface_definition"
+        # Should route back to requirement_analysis when all_tasks_feasible=False
+        # even if is_valid=True (Issue #305 fix)
+        assert result == "requirement_analysis"
 
     # ========================================================================
     # After Interface Definition Tests
