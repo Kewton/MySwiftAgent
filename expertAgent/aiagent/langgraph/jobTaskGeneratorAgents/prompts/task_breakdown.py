@@ -57,6 +57,59 @@ def _build_schema_hint(api: dict) -> str:
     return f" [{'; '.join(hints)}]" if hints else ""
 
 
+def _extract_valid_endpoints() -> list[str]:
+    """Extract all valid endpoints from expert_agent_capabilities.yaml.
+
+    Returns:
+        List of valid endpoint strings (e.g., ["/v1/utility/gmail/send", ...])
+    """
+    config = _load_yaml_config("expert_agent_capabilities.yaml")
+    endpoints: list[str] = []
+
+    # Utility APIs
+    for api in config.get("utility_apis", []):
+        if endpoint := api.get("endpoint"):
+            endpoints.append(endpoint)
+
+    # AI Agent APIs
+    for api in config.get("ai_agent_apis", []):
+        if endpoint := api.get("endpoint"):
+            endpoints.append(endpoint)
+
+    return endpoints
+
+
+# Cache for valid endpoints (loaded once)
+_VALID_ENDPOINTS: list[str] | None = None
+
+
+def _get_valid_endpoints() -> list[str]:
+    """Get cached valid endpoints list.
+
+    Returns:
+        List of valid endpoint strings
+    """
+    global _VALID_ENDPOINTS
+    if _VALID_ENDPOINTS is None:
+        _VALID_ENDPOINTS = _extract_valid_endpoints()
+    return _VALID_ENDPOINTS
+
+
+def _find_endpoint_in_string(text: str) -> str:
+    """Find a valid endpoint within a text string.
+
+    Args:
+        text: String that may contain an endpoint (e.g., "fetchAgent (utility API: /v1/utility/gmail/send)")
+
+    Returns:
+        The matching endpoint if found, empty string otherwise
+    """
+    for endpoint in _get_valid_endpoints():
+        if endpoint in text:
+            return endpoint
+    return ""
+
+
 def _build_expert_agent_capabilities() -> str:
     """Build expertAgent capabilities section from YAML config.
 
@@ -146,6 +199,10 @@ class TaskBreakdownItem(BaseModel):
         the old string format (e.g., ['fetchAgent']) instead of the new
         structured format.
 
+        Also extracts valid endpoints from strings like:
+        - "fetchAgent (utility API: /v1/utility/gmail/send)"
+        - "/v1/utility/text_to_speech_drive"
+
         Args:
             v: Value to validate (can be list of strings or dicts)
 
@@ -158,16 +215,26 @@ class TaskBreakdownItem(BaseModel):
         result = []
         for item in v:
             if isinstance(item, str):
-                # Convert legacy string format to structured format
+                # Try to extract endpoint from the string
+                extracted_endpoint = _find_endpoint_in_string(item)
                 result.append(
                     {
                         "api_name": item,
-                        "endpoint": "",  # Will be filled by LLM or set to empty
+                        "endpoint": extracted_endpoint,
                         "method": "POST",
-                        "reason": f"LLMが推奨（レガシー形式から自動変換: {item}）",
+                        "reason": (
+                            f"LLMが推奨（レガシー形式から自動変換: {item}）"
+                            if not extracted_endpoint
+                            else f"LLMが推奨（エンドポイント自動抽出: {extracted_endpoint}）"
+                        ),
                     }
                 )
             elif isinstance(item, dict):
+                # For dict format, also try to extract endpoint if empty
+                if not item.get("endpoint") and item.get("api_name"):
+                    extracted_endpoint = _find_endpoint_in_string(item["api_name"])
+                    if extracted_endpoint:
+                        item = {**item, "endpoint": extracted_endpoint}
                 result.append(item)
             else:
                 # Keep as-is for Pydantic to handle

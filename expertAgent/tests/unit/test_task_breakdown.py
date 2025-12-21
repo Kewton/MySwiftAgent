@@ -125,3 +125,122 @@ class TestCreateTaskBreakdownPrompt:
         requirement = "Test requirement"
         prompt = create_task_breakdown_prompt(requirement)
         assert "JSON形式" in prompt or "json" in prompt.lower()
+
+
+class TestConvertStringApisToObjects:
+    """Test backward compatibility converter for recommended_apis field.
+
+    Issue #305: Ensure the field_validator correctly extracts endpoints
+    from legacy string formats like 'fetchAgent (utility API: /v1/utility/gmail/send)'.
+    """
+
+    def test_string_format_with_embedded_endpoint(self) -> None:
+        """Test extraction of endpoint from legacy string format."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownItem,
+        )
+
+        # Create item with legacy string format containing endpoint
+        item = TaskBreakdownItem(
+            task_id="task_1",
+            name="Send email",
+            description="Send email via Gmail API",
+            expected_output="Email sent confirmation",
+            recommended_apis=["fetchAgent (utility API: /v1/utility/gmail/send)"],
+        )
+
+        # The endpoint should be extracted
+        assert len(item.recommended_apis) == 1
+        api = item.recommended_apis[0]
+        assert api.endpoint == "/v1/utility/gmail/send"
+        assert "自動抽出" in api.reason
+
+    def test_string_format_without_endpoint(self) -> None:
+        """Test legacy string format that does not contain a valid endpoint."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownItem,
+        )
+
+        item = TaskBreakdownItem(
+            task_id="task_1",
+            name="Custom task",
+            description="Task without specific API",
+            expected_output="Task result",
+            recommended_apis=["customAgent"],
+        )
+
+        assert len(item.recommended_apis) == 1
+        api = item.recommended_apis[0]
+        assert api.endpoint == ""  # No endpoint found
+        assert "レガシー形式" in api.reason
+
+    def test_dict_format_with_empty_endpoint_but_api_name_has_endpoint(self) -> None:
+        """Test dict format where endpoint is empty but api_name contains one."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownItem,
+        )
+
+        item = TaskBreakdownItem(
+            task_id="task_1",
+            name="Search emails",
+            description="Search Gmail",
+            expected_output="List of matching emails",
+            recommended_apis=[
+                {
+                    "api_name": "fetchAgent (utility API: /v1/utility/gmail/search)",
+                    "endpoint": "",  # Empty endpoint
+                    "method": "POST",
+                    "reason": "For email search",
+                }
+            ],
+        )
+
+        assert len(item.recommended_apis) == 1
+        api = item.recommended_apis[0]
+        # Endpoint should be extracted from api_name
+        assert api.endpoint == "/v1/utility/gmail/search"
+
+    def test_dict_format_with_existing_endpoint_unchanged(self) -> None:
+        """Test that dict format with existing endpoint is not modified."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownItem,
+        )
+
+        item = TaskBreakdownItem(
+            task_id="task_1",
+            name="Send email",
+            description="Send Gmail",
+            expected_output="Email sent status",
+            recommended_apis=[
+                {
+                    "api_name": "Gmail Send API",
+                    "endpoint": "/v1/utility/gmail/send",
+                    "method": "POST",
+                    "reason": "Original reason",
+                }
+            ],
+        )
+
+        assert len(item.recommended_apis) == 1
+        api = item.recommended_apis[0]
+        # Existing endpoint should remain unchanged
+        assert api.endpoint == "/v1/utility/gmail/send"
+        assert api.reason == "Original reason"  # Not modified
+
+    def test_direct_endpoint_in_string(self) -> None:
+        """Test string format that is just an endpoint."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownItem,
+        )
+
+        item = TaskBreakdownItem(
+            task_id="task_1",
+            name="Send email",
+            description="Send email",
+            expected_output="Email sent confirmation",
+            recommended_apis=["/v1/utility/gmail/send"],
+        )
+
+        assert len(item.recommended_apis) == 1
+        api = item.recommended_apis[0]
+        assert api.endpoint == "/v1/utility/gmail/send"
