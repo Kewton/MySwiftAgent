@@ -130,17 +130,17 @@ async def requirement_analysis_node(
     if evaluation_feedback:
         # Get previous task breakdown output for reference
         previous_output = None
-        tasks = state.get("tasks")
-        if tasks and isinstance(tasks, list):
+        task_breakdown = state.get("task_breakdown")
+        if task_breakdown and isinstance(task_breakdown, list):
             try:
-                # Convert tasks to JSON string for prompt
+                # task_breakdown is already list[dict] from previous run
                 previous_output = json.dumps(
-                    [task.model_dump() for task in tasks],
+                    task_breakdown,
                     ensure_ascii=False,
                     indent=2,
                 )
             except Exception as e:
-                logger.warning(f"Failed to serialize previous tasks: {e}")
+                logger.warning(f"Failed to serialize previous task_breakdown: {e}")
 
         user_prompt = create_task_breakdown_prompt_with_feedback(
             user_requirement,
