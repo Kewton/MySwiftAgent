@@ -138,7 +138,8 @@ export const jobVersion = sqliteTable(
 		interfaceDefinitions: text('interface_definitions'),
 		workflows: text('workflows'),
 		externalJobMasterId: text('external_job_master_id'),
-		externalTraceId: text('external_trace_id'),
+		externalJobId: text('external_job_id'), // Issue #305: ExpertAgent job_id for polling
+		externalTraceId: text('external_trace_id'), // Issue #305: Langfuse trace_id for observability
 		errorMessage: text('error_message'),
 		generatedAt: integer('generated_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

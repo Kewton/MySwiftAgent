@@ -159,11 +159,18 @@ async def generate_job_and_tasks(
         job_id = str(uuid.uuid4())
         logger.info(f"Generated job_id: {job_id}")
 
+        # Issue #305: Generate trace_id upfront for immediate return in response
+        # This allows the frontend to have the Langfuse trace link immediately
+        langfuse_trace_id = uuid.uuid4().hex
+        logger.info(f"Generated langfuse_trace_id: {langfuse_trace_id}")
+
         # Create job creation tracking entry
         await job_state_manager.create_job_async(job_id)
 
         # Issue #278: Get Langfuse callback handler for tracing
+        # Issue #305: Pass pre-generated trace_id for immediate availability
         langfuse_handler = langfuse_service.get_callback_handler(
+            trace_id=langfuse_trace_id,
             trace_name="job_task_generation",
             session_id=job_id,
             tags=["job_generator", "async"],
@@ -178,7 +185,8 @@ async def generate_job_and_tasks(
             langfuse_handler=langfuse_handler,
         )
 
-        # Return immediately with job_id
+        # Return immediately with job_id and langfuse_trace_id
+        # Issue #305: Include langfuse_trace_id for immediate trace link availability
         return JobGeneratorResponse(
             status="creating",
             job_id=job_id,
@@ -191,6 +199,7 @@ async def generate_job_and_tasks(
             requirement_relaxation_suggestions=[],
             validation_errors=[],
             error_message="Job creation started. Use GET /api/v1/jobs/{job_id}/status to check progress.",
+            langfuse_trace_id=langfuse_trace_id,
         )
 
     except Exception as e:

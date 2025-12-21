@@ -25,12 +25,14 @@ export interface GenerateJobRequest {
 
 /**
  * Job generation response
+ * Issue #305: Added langfuse_trace_id for immediate trace link availability
  */
 export interface GenerateJobResponse {
 	status: string;
 	job_id: string;
 	job_master_id: string | null;
 	task_breakdown: unknown | null;
+	langfuse_trace_id: string | null;
 }
 
 /**

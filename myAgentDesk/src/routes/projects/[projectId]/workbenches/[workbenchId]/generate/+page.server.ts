@@ -15,8 +15,8 @@ import { ExpertAgentClient } from '$lib/api/clients/expert-agent';
 import { loadConfigFromEnv } from '$lib/api/config';
 
 /**
- * Sync langfuse_trace_id for completed jobs that may have stale external_trace_id.
- * This handles the case where polling stopped before the job completed.
+ * Sync langfuse_trace_id for completed jobs that may have missing external_trace_id.
+ * Issue #305: Use externalJobId for API lookup, store result in externalTraceId.
  */
 async function syncLangfuseTraceIds(jobVersions: JobVersion[]): Promise<void> {
 	const config = loadConfigFromEnv();
@@ -25,25 +25,26 @@ async function syncLangfuseTraceIds(jobVersions: JobVersion[]): Promise<void> {
 		adminToken: config.expertAgent.adminToken
 	});
 
-	// Filter completed jobs that have an externalTraceId (which might be job_id, not langfuse_trace_id)
-	const completedJobs = jobVersions.filter(
+	// Filter completed jobs that have externalJobId but missing externalTraceId
+	const jobsNeedingSync = jobVersions.filter(
 		(jv) =>
 			(jv.status === 'failed' || jv.status === 'success') &&
-			jv.externalTraceId
+			jv.externalJobId &&
+			!jv.externalTraceId
 	);
 
-	// Process each completed job
-	for (const job of completedJobs) {
+	// Process each job needing sync
+	for (const job of jobsNeedingSync) {
 		try {
-			// Query ExpertAgent API to get the actual langfuse_trace_id
-			const apiResult = await expertAgentClient.getJobStatus(job.externalTraceId!);
+			// Query ExpertAgent API using externalJobId to get langfuse_trace_id
+			const apiResult = await expertAgentClient.getJobStatus(job.externalJobId!);
 
 			if (apiResult.ok) {
 				const result = apiResult.value.result;
 				const langfuseTraceId = result?.langfuse_trace_id;
 
-				// If langfuse_trace_id differs from stored externalTraceId, update DB
-				if (langfuseTraceId && langfuseTraceId !== job.externalTraceId) {
+				// Update externalTraceId with langfuse_trace_id
+				if (langfuseTraceId) {
 					await jobVersionRepository.updateGenerationResult(job.id, {
 						status: job.status, // Keep existing status
 						externalTraceId: langfuseTraceId
@@ -54,7 +55,6 @@ async function syncLangfuseTraceIds(jobVersions: JobVersion[]): Promise<void> {
 			}
 		} catch {
 			// Silently ignore errors - this is a best-effort sync
-			// The original externalTraceId will be used if sync fails
 		}
 	}
 }
@@ -197,10 +197,11 @@ export const actions: Actions = {
 			});
 		}
 
-		// Save the external job_id for polling
+		// Issue #305: Save both job_id (for polling) and langfuse_trace_id (for trace link)
 		await jobVersionRepository.updateGenerationResult(newJobVersion.id, {
 			status: 'generating',
-			externalTraceId: apiResult.value.job_id,
+			externalJobId: apiResult.value.job_id, // For polling
+			externalTraceId: apiResult.value.langfuse_trace_id ?? undefined, // For Langfuse link
 			externalJobMasterId: apiResult.value.job_master_id ?? undefined
 		});
 

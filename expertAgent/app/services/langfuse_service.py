@@ -123,6 +123,7 @@ class LangfuseService:
 
     def get_callback_handler(
         self,
+        trace_id: str | None = None,
         trace_name: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
@@ -134,10 +135,12 @@ class LangfuseService:
         Note:
             Issue #263: CallbackHandlerにmyVaultから取得したAPIキーを明示的に渡します。
             これにより、環境変数に依存せずmyVaultの認証情報でトレースを送信できます。
-            trace_name, user_id, session_id等のパラメータは将来の拡張用に保持していますが、
-            現在は使用されません。トレースIDは handler.last_trace_id から取得できます。
+
+            Issue #305: trace_idパラメータを追加。事前に生成したtrace_idを渡すことで、
+            ジョブ作成の初期レスポンスにtrace_idを含めることができます。
 
         Args:
+            trace_id: 事前生成したトレースID（指定しない場合はLangfuseが自動生成）
             trace_name: トレース名（将来の拡張用、現在は未使用）
             user_id: ユーザーID（将来の拡張用、現在は未使用）
             session_id: セッションID（将来の拡張用、現在は未使用）
@@ -148,26 +151,52 @@ class LangfuseService:
             CallbackHandler or None（Langfuse無効時）
 
         Example:
-            >>> handler = langfuse_service.get_callback_handler()
+            >>> # 事前にtrace_idを生成して渡す
+            >>> trace_id = uuid.uuid4().hex
+            >>> handler = langfuse_service.get_callback_handler(trace_id=trace_id)
             >>> agent.invoke({"input": "Hello"}, config={"callbacks": [handler]})
-            >>> trace_id = handler.last_trace_id if hasattr(handler, 'last_trace_id') else None
         """
         if not self._is_enabled() or self._client is None:
             return None
 
         try:
+            import os
+
             # myVault優先でAPIキーを取得
             public_key = secrets_manager.get_secret("LANGFUSE_PUBLIC_KEY")
+            secret_key = secrets_manager.get_secret("LANGFUSE_SECRET_KEY")
 
-            # Issue #263: CallbackHandlerにpublic_keyを明示的に渡す
-            # Note: Langfuse v3ではCallbackHandlerはpublic_keyのみを受け取り、
-            # secret_keyとhostはLangfuseクライアント初期化時に設定される
+            # myVault 優先、環境変数フォールバック
+            langfuse_host = secrets_manager.get_connection_config(
+                "LANGFUSE_HOST",
+                value_type=str,
+                default=settings.LANGFUSE_HOST,
+            )
+
+            # Issue #305: Langfuse 3.x requires environment variables for CallbackHandler
+            # Set them before creating the handler
+            os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
+            os.environ["LANGFUSE_SECRET_KEY"] = secret_key
+            os.environ["LANGFUSE_HOST"] = langfuse_host
+
+            # Issue #305: trace_idを指定してCallbackHandlerを作成
+            # Langfuse 3.x uses trace_context for pre-generated trace_id
+            trace_context = None
+            if trace_id:
+                trace_context = {"trace_id": trace_id}
+
             handler = CallbackHandler(
                 public_key=public_key,
+                trace_context=trace_context,
             )
             # APIキーをマスクしてログ出力（デバッグ用）
             masked_key = public_key[:8] + "..." if public_key else "None"
-            logger.debug(f"CallbackHandler created with public_key={masked_key}")
+            if trace_id:
+                logger.info(
+                    f"CallbackHandler created with public_key={masked_key}, trace_id={trace_id}, host={langfuse_host}"
+                )
+            else:
+                logger.info(f"CallbackHandler created with public_key={masked_key}, host={langfuse_host}")
             return handler
         except Exception as e:
             logger.error(f"Failed to create CallbackHandler: {e}")

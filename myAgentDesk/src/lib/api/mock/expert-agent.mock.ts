@@ -15,12 +15,14 @@ import type {
 
 /**
  * Mock data for job generation
+ * Issue #305: Added langfuse_trace_id
  */
 const mockJobResponse: GenerateJobResponse = {
 	status: 'creating',
 	job_id: 'mock-job-' + Date.now(),
 	job_master_id: null,
-	task_breakdown: null
+	task_breakdown: null,
+	langfuse_trace_id: 'mock-langfuse-trace-' + Date.now()
 };
 
 /**
@@ -49,9 +51,11 @@ export class ExpertAgentClientMock implements Partial<ExpertAgentClient> {
 	async generateJob(_request: GenerateJobRequest): Promise<Result<GenerateJobResponse, ApiError>> {
 		// Simulate API delay
 		await this.delay(100);
+		const timestamp = Date.now();
 		return ok({
 			...mockJobResponse,
-			job_id: 'mock-job-' + Date.now()
+			job_id: 'mock-job-' + timestamp,
+			langfuse_trace_id: 'mock-langfuse-trace-' + timestamp
 		});
 	}
 

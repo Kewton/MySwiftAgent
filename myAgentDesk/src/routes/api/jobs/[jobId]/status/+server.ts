@@ -15,7 +15,7 @@ import { loadConfigFromEnv } from '$lib/api/config';
 
 /**
  * Get job version status for polling.
- * If status is 'generating' and externalTraceId exists, query ExpertAgent API.
+ * Issue #305: Use externalJobId for polling, externalTraceId is for Langfuse link only.
  */
 export const GET: RequestHandler = async ({ params }) => {
 	const { jobId } = params;
@@ -26,14 +26,15 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 
 	// If job is generating, query ExpertAgent API for real-time status
-	if (jobVersion.status === 'generating' && jobVersion.externalTraceId) {
+	// Issue #305: Use externalJobId for polling (not externalTraceId which is for Langfuse)
+	if (jobVersion.status === 'generating' && jobVersion.externalJobId) {
 		const config = loadConfigFromEnv();
 		const expertAgentClient = new ExpertAgentClient({
 			baseUrl: config.expertAgent.baseUrl,
 			adminToken: config.expertAgent.adminToken
 		});
 
-		const apiResult = await expertAgentClient.getJobStatus(jobVersion.externalTraceId);
+		const apiResult = await expertAgentClient.getJobStatus(jobVersion.externalJobId);
 
 		if (apiResult.ok) {
 			const externalStatus = apiResult.value.status;

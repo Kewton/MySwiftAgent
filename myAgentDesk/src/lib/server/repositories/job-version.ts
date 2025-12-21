@@ -27,6 +27,7 @@ export interface CreateJobVersionInput {
 
 /**
  * Input data for updating generation result.
+ * Issue #305: Added externalJobId for proper separation of job_id and langfuse_trace_id
  */
 export interface UpdateGenerationResultInput {
 	status: JobVersionStatus;
@@ -34,7 +35,8 @@ export interface UpdateGenerationResultInput {
 	interfaceDefinitions?: string;
 	workflows?: string;
 	externalJobMasterId?: string;
-	externalTraceId?: string;
+	externalJobId?: string; // ExpertAgent job_id for polling
+	externalTraceId?: string; // Langfuse trace_id for observability link
 	errorMessage?: string;
 }
 
@@ -114,7 +116,8 @@ export class JobVersionRepository {
 			interfaceDefinitions: null,
 			workflows: null,
 			externalJobMasterId: null,
-			externalTraceId: null,
+			externalJobId: null, // Issue #305: For ExpertAgent polling
+			externalTraceId: null, // Issue #305: For Langfuse trace link
 			errorMessage: null,
 			generatedAt: null,
 			createdAt: now,
@@ -176,6 +179,9 @@ export class JobVersionRepository {
 		}
 		if (input.externalJobMasterId !== undefined) {
 			updateData.externalJobMasterId = input.externalJobMasterId;
+		}
+		if (input.externalJobId !== undefined) {
+			updateData.externalJobId = input.externalJobId;
 		}
 		if (input.externalTraceId !== undefined) {
 			updateData.externalTraceId = input.externalTraceId;
