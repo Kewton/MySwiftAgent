@@ -306,6 +306,28 @@ def _build_expert_agent_capabilities() -> str:
     return "\n".join(lines)
 
 
+def _extract_valid_endpoints() -> list[str]:
+    """Extract all valid endpoints from expert_agent_capabilities.yaml.
+
+    Returns:
+        List of valid endpoint strings (e.g., ["/v1/utility/gmail/send", ...])
+    """
+    config = _load_yaml_config("expert_agent_capabilities.yaml")
+    endpoints: list[str] = []
+
+    # Utility APIs
+    for api in config.get("utility_apis", []):
+        if endpoint := api.get("endpoint"):
+            endpoints.append(endpoint)
+
+    # AI Agent APIs
+    for api in config.get("ai_agent_apis", []):
+        if endpoint := api.get("endpoint"):
+            endpoints.append(endpoint)
+
+    return endpoints
+
+
 def _build_infeasible_tasks_table() -> str:
     """Build infeasible tasks table from YAML config.
 
@@ -597,41 +619,56 @@ def _build_api_specificity_check_prompt() -> str:
         Formatted API specificity check system prompt
     """
     expert_agent_capabilities = _build_expert_agent_capabilities()
+    valid_endpoints = _extract_valid_endpoints()
+    endpoints_list = "\n".join([f"- `{ep}`" for ep in valid_endpoints])
 
     return f"""あなたはAPI設計の専門家です。
 タスク分割結果の recommended_apis が具体的かどうかを評価します。
 
-## 評価基準
+## 重要：評価基準
 
-### 抽象的すぎるAPI指定（問題あり）
-以下のパターンは具体性が不足しています：
-- `fetchAgent` のみ（具体的なエンドポイントが不明）
-- `httpAgent` のみ（具体的なAPI情報がない）
-- 汎用的なAgent名のみで、具体的なendpointがない
+### 具体的なAPI指定（問題なし ✅）
 
-### 具体的なAPI指定（問題なし）
-以下のパターンは適切です：
-- `/v1/utility/gmail/send` のような具体的なエンドポイント
-- `/v1/utility/text_to_speech_drive` のような機能特化エンドポイント
-- `geminiAgent` + 具体的な用途説明（データ分析、テキスト処理など）
-- 外部API + 具体的なURL・エンドポイント情報
+**以下の有効なエンドポイントのいずれかが、api_name または endpoint フィールドに「含まれて」いれば、そのタスクは問題なしです：**
 
-## 利用可能なDirect API
+{endpoints_list}
+
+**例（すべて問題なし ✅）：**
+- `fetchAgent (utility API: /v1/utility/gmail/send)` → `/v1/utility/gmail/send` が含まれているので OK
+- `/v1/utility/text_to_speech_drive` → 有効なエンドポイントそのものなので OK
+- `expertAgent jsonoutput API (/v1/aiagent/utility/jsonoutput)` → `/v1/aiagent/utility/jsonoutput` が含まれているので OK
+
+### 抽象的すぎるAPI指定（問題あり ❌）
+
+**上記の有効なエンドポイントのいずれも含まれていない場合のみ問題ありです：**
+- `fetchAgent` のみ（有効なエンドポイントが含まれていない）
+- `httpAgent` のみ（有効なエンドポイントが含まれていない）
+- 汎用的なAgent名のみで、上記リストのエンドポイントが含まれていない
+
+## 利用可能なDirect API（参考情報）
 
 {expert_agent_capabilities}
 
 ## 評価手順
 
 1. 各タスクの `recommended_apis` を確認
-2. API指定が具体的かどうかを判定：
-   - api_name: 具体的な名前か？（例: "Gmail送信" は○、"HTTPリクエスト" は×）
-   - endpoint: 具体的なパスか？（例: "/v1/utility/gmail/send" は○、"" や "fetchAgent" は×）
-   - reason: 選択理由が明確か？
-3. 問題があるタスクを特定し、具体的なAPIを推奨
+2. api_name または endpoint の文字列に、上記「有効なエンドポイント」リストのいずれかが**部分文字列として含まれているか**を確認
+3. 含まれていれば → 問題なし（issues に追加しない）
+4. 含まれていなければ → 問題あり（issues に追加し、適切なエンドポイントを推奨）
 
 ## 出力形式
 
 JSON形式で以下の構造を出力：
+
+```json
+{{
+  "all_apis_specific": true,
+  "issues": [],
+  "summary": "すべてのタスクで有効なエンドポイントが指定されています。"
+}}
+```
+
+問題がある場合のみ：
 
 ```json
 {{
@@ -641,16 +678,16 @@ JSON形式で以下の構造を出力：
       "task_id": "task_001",
       "task_name": "メール送信",
       "current_api": "fetchAgent",
-      "problem": "fetchAgentは抽象的すぎる。具体的なエンドポイントが必要",
+      "problem": "有効なエンドポイントが含まれていない",
       "recommended_api": "/v1/utility/gmail/send",
-      "recommendation_reason": "Gmail送信APIを使用すれば、3-5秒でメール送信が完了"
+      "recommendation_reason": "Gmail送信APIを使用してください"
     }}
   ],
-  "summary": "3件のタスクでAPI指定が抽象的すぎます。具体的なエンドポイントを指定してください。"
+  "summary": "1件のタスクで有効なエンドポイントが指定されていません。"
 }}
 ```
 
-- all_apis_specific: すべてのAPIが具体的であれば true
+- all_apis_specific: すべてのタスクに有効なエンドポイントが含まれていれば true
 - issues: 問題のあるタスクのリスト（問題がなければ空配列）
 - summary: 評価の要約"""
 
@@ -676,12 +713,12 @@ def create_api_specificity_check_prompt(task_breakdown: list[dict]) -> str:
 # 指示
 
 上記のタスク分割結果の `recommended_apis` フィールドを確認し、
-API指定が具体的かどうかを評価してください。
+有効なエンドポイントが含まれているかを評価してください。
 
-特に以下の点に注意：
-1. `fetchAgent` や `httpAgent` だけの指定は抽象的すぎる
-2. 具体的なエンドポイント（例: `/v1/utility/gmail/send`）が必要
-3. 利用可能なDirect APIを参照して、適切なAPIを推奨
+**重要な判定ルール：**
+- api_name または endpoint の文字列に、有効なエンドポイント（例: `/v1/utility/gmail/send`）が**部分文字列として含まれていれば問題なし**
+- 例: `fetchAgent (utility API: /v1/utility/gmail/send)` は `/v1/utility/gmail/send` を含むので **問題なし**
+- 有効なエンドポイントが一切含まれていない場合のみ問題あり
 
 JSON形式で評価結果を出力してください。
 """
