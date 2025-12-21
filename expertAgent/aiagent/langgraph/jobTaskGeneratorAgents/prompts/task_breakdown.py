@@ -285,8 +285,10 @@ def _build_task_breakdown_system_prompt() -> str:
         return f"""あなたはワークフロー設計の専門家です。
 ユーザーの自然言語要求を、実行可能なタスクに分解します。
 
-以下の4原則に従ってタスク分解を行ってください：
+以下の「タスク分解の5原則」と「制約条件」に従ってタスク分解を行ってください
+なお、出力形式は「タスク分割の例」を参考に必ず最後の「出力形式」に従ってください：
 
+# タスク分解の5原則
 ## 1. 階層的分解の原則
 - 大きな要求を、小さく実行可能なタスクに分解
 - 各タスクは1つの明確な責務を持つ
@@ -350,8 +352,8 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 
 #### 禁止事項
 以下の記述は**禁止**です（情報が不足しています）：
-- ❌ `"recommended_apis": ["fetchAgent"]` - エンドポイントなし
-- ❌ `"recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]` - 構造化されていない
+- NG `"recommended_apis": ["fetchAgent"]` - エンドポイントなし
+- OK `"recommended_apis": ["fetchAgent (expertAgent jsonoutput API)"]` - 構造化されていない
 
 #### タスク種別ごとの推奨API
 
@@ -366,21 +368,21 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 | LLM処理（JSON出力） | JSON Output Agent | `/v1/aiagent/utility/jsonoutput` |
 | LLM処理（汎用） | Direct LLM | `/v1/mylllm` |
 
-## ⚠️ 重要な制約
+# 制約条件
 
-### タスク数と優先度の制約
+## タスク数と優先度の制約
 - **最大タスク数**: 10タスクまで
 - **優先度の範囲**: 1～10 (1=最高優先度, 10=最低優先度)
 - **絶対的なルール**: 優先度は必ず 1 以上 10 以下の整数であること
 - 優先度11以上や0以下は**絶対に使用しないでください**（システムエラーになります）
 
 例:
-- ✅ 正しい: priority=1, priority=5, priority=10
-- ❌ 間違い: priority=11, priority=0, priority=-1 (これらはシステムエラーを引き起こします)
+- OK 正しい: priority=1, priority=5, priority=10
+- NG 間違い: priority=11, priority=0, priority=-1 (これらはシステムエラーを引き起こします)
 
-## タスク分割の例
+# タスク分割の例
 
-### 例1: Gmailで特定キーワードを検索し、結果をGoogleドライブにアップロードする
+## 例1: Gmailで特定キーワードを検索し、結果をGoogleドライブにアップロードする
 
 ```json
 {{
@@ -438,7 +440,7 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 }}
 ```
 
-### 例2: ポッドキャスト生成とメール通知
+## 例2: ポッドキャスト生成とメール通知
 
 ```json
 {{
@@ -512,7 +514,7 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 }}
 ```
 
-## 出力形式
+# 出力形式
 
 JSON形式で以下の構造で出力してください：
 
