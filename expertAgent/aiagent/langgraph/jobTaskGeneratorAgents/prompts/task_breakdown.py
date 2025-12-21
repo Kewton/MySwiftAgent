@@ -11,7 +11,7 @@ requirements into executable tasks following 4 principles:
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.services.prompt_loader import PromptLoader
 
@@ -136,6 +136,43 @@ class TaskBreakdownItem(BaseModel):
         default_factory=list,
         description="推奨API一覧（API名、エンドポイント、理由を含む構造化形式）",
     )
+
+    @field_validator("recommended_apis", mode="before")
+    @classmethod
+    def convert_string_apis_to_objects(cls, v):
+        """Convert legacy string format to RecommendedAPI objects.
+
+        This provides backward compatibility with LLM responses that use
+        the old string format (e.g., ['fetchAgent']) instead of the new
+        structured format.
+
+        Args:
+            v: Value to validate (can be list of strings or dicts)
+
+        Returns:
+            list: List of RecommendedAPI-compatible dicts
+        """
+        if not isinstance(v, list):
+            return v
+
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                # Convert legacy string format to structured format
+                result.append(
+                    {
+                        "api_name": item,
+                        "endpoint": "",  # Will be filled by LLM or set to empty
+                        "method": "POST",
+                        "reason": f"LLMが推奨（レガシー形式から自動変換: {item}）",
+                    }
+                )
+            elif isinstance(item, dict):
+                result.append(item)
+            else:
+                # Keep as-is for Pydantic to handle
+                result.append(item)
+        return result
 
 
 class TaskBreakdownResponse(BaseModel):
