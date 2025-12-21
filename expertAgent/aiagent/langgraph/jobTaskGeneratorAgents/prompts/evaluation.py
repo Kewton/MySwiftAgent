@@ -615,6 +615,11 @@ JSON形式で評価結果を出力してください。
 def _build_api_specificity_check_prompt() -> str:
     """Build API specificity check system prompt with capability references.
 
+    Issue #305: Relaxed evaluation criteria to accept API keywords in addition
+    to exact endpoint paths. This accommodates LLM outputs like
+    "fetchAgent (expertAgent jsonoutput API)" which indicate intent but don't
+    contain the exact endpoint path.
+
     Returns:
         Formatted API specificity check system prompt
     """
@@ -622,28 +627,46 @@ def _build_api_specificity_check_prompt() -> str:
     valid_endpoints = _extract_valid_endpoints()
     endpoints_list = "\n".join([f"- `{ep}`" for ep in valid_endpoints])
 
+    # Issue #305: API keywords that indicate specific API intent
+    api_keywords = [
+        "jsonoutput", "json output", "json_output",
+        "gmail", "メール送信", "メール検索",
+        "text_to_speech", "tts", "音声合成",
+        "drive", "ドライブ", "アップロード", "upload",
+        "google_search", "web検索", "ウェブ検索",
+        "marp", "スライド", "プレゼン",
+    ]
+    keywords_list = ", ".join([f"`{kw}`" for kw in api_keywords])
+
     return f"""あなたはAPI設計の専門家です。
 タスク分割結果の recommended_apis が具体的かどうかを評価します。
 
-## 重要：評価基準
+## 重要：評価基準（緩和版）
 
 ### 具体的なAPI指定（問題なし ✅）
 
-**以下の有効なエンドポイントのいずれかが、api_name または endpoint フィールドに「含まれて」いれば、そのタスクは問題なしです：**
+**以下のいずれかの条件を満たせば、そのタスクは問題なしです：**
 
+#### 条件1: 有効なエンドポイントが含まれている
 {endpoints_list}
 
+#### 条件2: API種別を示すキーワードが含まれている（大文字小文字を区別しない）
+{keywords_list}
+
 **例（すべて問題なし ✅）：**
-- `fetchAgent (utility API: /v1/utility/gmail/send)` → `/v1/utility/gmail/send` が含まれているので OK
-- `/v1/utility/text_to_speech_drive` → 有効なエンドポイントそのものなので OK
-- `expertAgent jsonoutput API (/v1/aiagent/utility/jsonoutput)` → `/v1/aiagent/utility/jsonoutput` が含まれているので OK
+- `fetchAgent (utility API: /v1/utility/gmail/send)` → エンドポイントが含まれているので OK
+- `/v1/utility/text_to_speech_drive` → エンドポイントそのものなので OK
+- `fetchAgent (expertAgent jsonoutput API)` → "jsonoutput" キーワードが含まれているので OK
+- `fetchAgent (Gmail送信)` → "gmail" と "メール送信" キーワードが含まれているので OK
+- `TTS API` → "tts" キーワードが含まれているので OK
+- `Google Drive Upload` → "drive" と "upload" キーワードが含まれているので OK
 
 ### 抽象的すぎるAPI指定（問題あり ❌）
 
-**上記の有効なエンドポイントのいずれも含まれていない場合のみ問題ありです：**
-- `fetchAgent` のみ（有効なエンドポイントが含まれていない）
-- `httpAgent` のみ（有効なエンドポイントが含まれていない）
-- 汎用的なAgent名のみで、上記リストのエンドポイントが含まれていない
+**エンドポイントもキーワードも含まれていない場合のみ問題ありです：**
+- `fetchAgent` のみ（何も含まれていない）
+- `httpAgent` のみ（何も含まれていない）
+- `API呼び出し` のみ（具体的なAPI種別が不明）
 
 ## 利用可能なDirect API（参考情報）
 
@@ -652,9 +675,11 @@ def _build_api_specificity_check_prompt() -> str:
 ## 評価手順
 
 1. 各タスクの `recommended_apis` を確認
-2. api_name または endpoint の文字列に、上記「有効なエンドポイント」リストのいずれかが**部分文字列として含まれているか**を確認
-3. 含まれていれば → 問題なし（issues に追加しない）
-4. 含まれていなければ → 問題あり（issues に追加し、適切なエンドポイントを推奨）
+2. api_name または endpoint の文字列に、以下のいずれかが含まれているかを確認：
+   - 有効なエンドポイント（/v1/...）
+   - API種別キーワード（jsonoutput, gmail, tts など）
+3. どちらか一方でも含まれていれば → 問題なし（issues に追加しない）
+4. どちらも含まれていなければ → 問題あり（issues に追加）
 
 ## 出力形式
 
@@ -664,7 +689,7 @@ JSON形式で以下の構造を出力：
 {{
   "all_apis_specific": true,
   "issues": [],
-  "summary": "すべてのタスクで有効なエンドポイントが指定されています。"
+  "summary": "すべてのタスクで有効なAPI指定がされています。"
 }}
 ```
 
@@ -678,16 +703,16 @@ JSON形式で以下の構造を出力：
       "task_id": "task_001",
       "task_name": "メール送信",
       "current_api": "fetchAgent",
-      "problem": "有効なエンドポイントが含まれていない",
+      "problem": "エンドポイントもキーワードも含まれていない",
       "recommended_api": "/v1/utility/gmail/send",
       "recommendation_reason": "Gmail送信APIを使用してください"
     }}
   ],
-  "summary": "1件のタスクで有効なエンドポイントが指定されていません。"
+  "summary": "1件のタスクでAPI指定が不明確です。"
 }}
 ```
 
-- all_apis_specific: すべてのタスクに有効なエンドポイントが含まれていれば true
+- all_apis_specific: すべてのタスクに有効なAPI指定があれば true
 - issues: 問題のあるタスクのリスト（問題がなければ空配列）
 - summary: 評価の要約"""
 
