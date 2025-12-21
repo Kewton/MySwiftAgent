@@ -8,6 +8,7 @@ requirements into executable tasks following 4 principles:
 4. Modularity and reusability
 """
 
+import json
 import logging
 
 from ..prompts.task_breakdown import (
@@ -127,9 +128,24 @@ async def requirement_analysis_node(
         logger.debug("Evaluation feedback detected for requirement analysis")
 
     if evaluation_feedback:
+        # Get previous task breakdown output for reference
+        previous_output = None
+        tasks = state.get("tasks")
+        if tasks and isinstance(tasks, list):
+            try:
+                # Convert tasks to JSON string for prompt
+                previous_output = json.dumps(
+                    [task.model_dump() for task in tasks],
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to serialize previous tasks: {e}")
+
         user_prompt = create_task_breakdown_prompt_with_feedback(
             user_requirement,
             evaluation_feedback,
+            previous_output=previous_output,
         )
     else:
         user_prompt = create_task_breakdown_prompt(user_requirement)

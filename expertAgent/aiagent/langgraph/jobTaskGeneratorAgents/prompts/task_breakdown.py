@@ -575,29 +575,48 @@ JSON形式で出力してください。
 def create_task_breakdown_prompt_with_feedback(
     user_requirement: str,
     evaluation_feedback: str,
+    previous_output: str | None = None,
 ) -> str:
     """Create task breakdown prompt with evaluation feedback for retry.
 
     Args:
         user_requirement: Natural language description of workflow
         evaluation_feedback: Feedback from evaluator about previous attempt
+        previous_output: Previous task breakdown output (JSON string) for reference
 
     Returns:
         Formatted prompt string for LLM with feedback context
     """
+    # Build previous output section if provided
+    previous_output_section = ""
+    if previous_output:
+        previous_output_section = f"""
+# 前回の出力結果
+
+以下は前回のタスク分解結果です。評価フィードバックを参考に、この結果を改善してください。
+
+```json
+{previous_output}
+```
+"""
+
     return f"""# ユーザー要求
 
+```md
 {user_requirement}
-
+```
+{previous_output_section}
 # 前回のタスク分解に対する評価フィードバック
 
 前回のタスク分解には以下の問題が検出されました。これらの問題を解決した新しいタスク分解を生成してください。
 
+```md
 {evaluation_feedback}
+```
 
 # 指示
 
-上記のユーザー要求を、4原則に従って実行可能なタスクに分解してください。
+上記のユーザー要求を、5原則に従って実行可能なタスクに分解してください。
 **重要**: 前回の評価フィードバックで指摘された問題を必ず解決してください。
 
 - 各タスクは独立して実行可能であること
