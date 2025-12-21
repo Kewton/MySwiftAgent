@@ -548,3 +548,73 @@ class TestEvaluatorNode:
         )
         result = await evaluator_node(state)
         assert result["retry_count"] == 0
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator.invoke_structured_llm"
+    )
+    async def test_evaluator_skips_api_specificity_check_at_max_retry(
+        self, mock_invoke_llm
+    ):
+        """Test that API specificity check is skipped at max retry count.
+
+        Priority: High
+        When retry_count >= MAX_RETRY_COUNT (5), the evaluator should skip
+        the API specificity check to allow graceful degradation.
+        If is_valid and all_tasks_feasible are True, the workflow can proceed
+        even with abstract API names.
+        """
+        # Create mock evaluation result (valid)
+        mock_eval_response = EvaluationResult(
+            is_valid=True,
+            evaluation_summary="Valid task breakdown.",
+            hierarchical_score=9,
+            dependency_score=9,
+            specificity_score=8,
+            modularity_score=8,
+            consistency_score=9,
+            all_tasks_feasible=True,
+            infeasible_tasks=[],
+            alternative_proposals=[],
+            api_extension_proposals=[],
+            issues=[],
+            improvement_suggestions=[],
+        )
+
+        # Setup mock invoke_structured_llm - only one call expected (no API specificity check)
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+            StructuredCallResult,
+        )
+
+        mock_invoke_llm.return_value = StructuredCallResult(
+            result=mock_eval_response,
+            recovered_via_json=False,
+            raw_text=None,
+            model_name="test-model",
+        )
+
+        # Create test state with retry_count at MAX_RETRY_COUNT (5)
+        task_breakdown = create_mock_task_breakdown(3)
+        state = create_mock_workflow_state(
+            retry_count=5,  # MAX_RETRY_COUNT
+            user_requirement="Create podcast workflow",
+            task_breakdown=task_breakdown,
+            evaluator_stage="after_task_breakdown",
+        )
+
+        # Execute node
+        result = await evaluator_node(state)
+
+        # Verify results
+        assert "evaluation_result" in result
+        assert result["evaluation_result"]["is_valid"] is True
+        assert result["evaluation_result"]["all_tasks_feasible"] is True
+        # At max retry, all_apis_specific should be True (skipped check)
+        assert result["evaluation_result"]["all_apis_specific"] is True
+
+        # Verify invoke_structured_llm was called only ONCE (no API specificity check)
+        # This proves the API specificity check was skipped
+        assert mock_invoke_llm.call_count == 1
+
+        # No evaluation feedback should be generated for valid result
+        assert result.get("evaluation_feedback") is None

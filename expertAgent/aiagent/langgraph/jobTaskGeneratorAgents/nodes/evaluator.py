@@ -22,6 +22,10 @@ from ..utils.llm_invocation import StructuredLLMError, invoke_structured_llm
 
 logger = logging.getLogger(__name__)
 
+# Maximum number of retries before giving up on API specificity improvements
+# Must match the value in agent.py
+MAX_RETRY_COUNT = 5
+
 
 def _validate_evaluation_response(
     response: EvaluationResult | None,
@@ -240,10 +244,20 @@ async def evaluator_node(
     # Run API specificity check for after_task_breakdown stage
     # This ensures recommended_apis are concrete (e.g., "/v1/utility/gmail/send")
     # rather than abstract (e.g., "fetchAgent")
+    # Skip at max retry to allow graceful degradation - if structure is valid,
+    # proceed even with abstract API names
     api_specificity_result = None
+    at_max_retry = retry_count >= MAX_RETRY_COUNT
     if evaluator_stage == "after_task_breakdown" and response.is_valid:
-        logger.info("Running API specificity check for task breakdown")
-        api_specificity_result = await _check_api_specificity(task_breakdown)
+        if at_max_retry:
+            logger.warning(
+                "Skipping API specificity check at max retry (%d). "
+                "Proceeding with current API specifications.",
+                retry_count,
+            )
+        else:
+            logger.info("Running API specificity check for task breakdown")
+            api_specificity_result = await _check_api_specificity(task_breakdown)
 
         if api_specificity_result and not api_specificity_result.all_apis_specific:
             logger.warning(
