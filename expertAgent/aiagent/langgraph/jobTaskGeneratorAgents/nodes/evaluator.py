@@ -172,8 +172,11 @@ async def evaluator_node(
                 api_proposal.priority,
             )
 
+    # Generate feedback if structure is invalid OR if there are infeasible tasks
+    # This ensures requirement_analysis receives feedback for improvement
     evaluation_feedback = None
-    if not response.is_valid:
+    needs_feedback = not response.is_valid or not response.all_tasks_feasible
+    if needs_feedback:
         feedback_parts: list[str] = []
         feedback_parts.append("## 品質スコア")
         feedback_parts.append(f"- 階層的分解: {response.hierarchical_score}/10")
@@ -183,6 +186,11 @@ async def evaluator_node(
             f"- モジュール性と再利用性: {response.modularity_score}/10"
         )
         feedback_parts.append(f"- 全体的一貫性: {response.consistency_score}/10")
+
+        if response.issues:
+            feedback_parts.append("\n## 検出された問題")
+            for issue in response.issues:
+                feedback_parts.append(f"- {issue}")
 
         if response.improvement_suggestions:
             feedback_parts.append("\n## 改善提案")
@@ -202,6 +210,14 @@ async def evaluator_node(
                 feedback_parts.append(
                     f"- {proposal.task_id}: {proposal.api_to_use}を使用 - "
                     f"{proposal.implementation_note}"
+                )
+
+        if response.api_extension_proposals:
+            feedback_parts.append("\n## API拡張提案")
+            for api_proposal in response.api_extension_proposals:
+                feedback_parts.append(
+                    f"- {api_proposal.proposed_api_name} (優先度: {api_proposal.priority}): "
+                    f"{api_proposal.functionality}"
                 )
 
         evaluation_feedback = "\n".join(feedback_parts)

@@ -111,8 +111,17 @@ def evaluator_router(
                 task.get("reason"),
             )
 
+    # Check if all tasks are feasible - if not, we need to re-analyze
+    # even if the structure is valid (is_valid=True)
+    if is_valid and not all_tasks_feasible:
+        logger.warning(
+            "Task structure is valid but contains infeasible tasks. "
+            "Routing back for re-analysis."
+        )
+
     if evaluator_stage == "after_task_breakdown":
-        if is_valid:
+        # Proceed only if both structure is valid AND all tasks are feasible
+        if is_valid and all_tasks_feasible:
             return "interface_definition"
         if retry_count < MAX_RETRY_COUNT:
             return "requirement_analysis"
@@ -120,7 +129,8 @@ def evaluator_router(
         return "END"
 
     if evaluator_stage == "after_interface_definition":
-        if is_valid:
+        # Proceed only if both structure is valid AND all tasks are feasible
+        if is_valid and all_tasks_feasible:
             return "master_creation"
         if retry_count < MAX_RETRY_COUNT:
             return "interface_definition"
