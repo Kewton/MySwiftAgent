@@ -11,6 +11,7 @@ from typing import Any
 
 from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
+from langfuse.types import TraceContext
 
 from core.config import settings
 from core.secrets import secrets_manager
@@ -181,9 +182,9 @@ class LangfuseService:
 
             # Issue #305: trace_idを指定してCallbackHandlerを作成
             # Langfuse 3.x uses trace_context for pre-generated trace_id
-            trace_context = None
+            trace_context: TraceContext | None = None
             if trace_id:
-                trace_context = {"trace_id": trace_id}
+                trace_context = TraceContext(trace_id=trace_id)
 
             handler = CallbackHandler(
                 public_key=public_key,
