@@ -1,11 +1,13 @@
 <!--
   Generate Page (/projects/:projectId/workbenches/:workbenchId/generate)
   Issue #291: Generate Page (Job Generation)
+  Issue #305: 2-Phase Progress Display (Task Analysis + Workflow Generation)
 
   Job generation interface with:
   - Active RequirementVersion display
   - Generate Job button (disabled when no active version)
-  - Progress display during generation
+  - 2-Phase progress display (PhaseFlow component)
+  - Task breakdown display (TaskBreakdownList component)
   - Polling for status updates (2 second interval)
   - Timeout handling (5 minutes)
   - Recent job versions history
@@ -14,6 +16,12 @@
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
 	import { POLLING_CONFIG, JOB_VERSION_STATUS_CONFIG } from '$lib/types/job-version';
+	import type {
+		JobPhase,
+		TaskBreakdownItem,
+		WorkflowStatusItem
+	} from '$lib/api/clients/expert-agent';
+	import { PhaseFlow, TaskBreakdownList, GenerationSummary } from '$lib/components/generation';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -23,6 +31,24 @@
 	let pollingStartTime = $state<number | null>(null);
 	let statusMessage = $state<string>('');
 	let errorMessage = $state<string>('');
+
+	// Issue #305: New generation state fields
+	let currentPhase = $state<JobPhase | 'idle'>('idle');
+	let currentProgress = $state<number>(0);
+	let taskBreakdown = $state<TaskBreakdownItem[]>([]);
+	let workflowStatuses = $state<WorkflowStatusItem[]>([]);
+	let langfuseTraceId = $state<string | null>(null);
+
+	// Issue #305: Derived state for workflow failures
+	let hasWorkflowFailures = $derived(
+		workflowStatuses.some((ws) => ws.status === 'failed')
+	);
+	let successfulWorkflows = $derived(
+		workflowStatuses.filter((ws) => ws.status === 'success').length
+	);
+	let failedWorkflows = $derived(
+		workflowStatuses.filter((ws) => ws.status === 'failed').length
+	);
 
 	// Initialize from data
 	$effect(() => {
@@ -48,6 +74,12 @@
 			pollingStartTime = Date.now();
 			statusMessage = form.message ?? 'Generation started';
 			errorMessage = '';
+			// Reset Issue #305 state
+			currentPhase = 'task_analysis';
+			currentProgress = 0;
+			taskBreakdown = [];
+			workflowStatuses = [];
+			langfuseTraceId = null;
 			startPolling();
 		} else if (form?.error) {
 			errorMessage = form.error;
@@ -83,12 +115,32 @@
 
 				const status = await response.json();
 
+				// Issue #305: Update new state fields
+				if (status.phase) {
+					currentPhase = status.phase;
+				}
+				if (typeof status.progress === 'number') {
+					currentProgress = status.progress;
+				}
+				if (status.task_breakdown) {
+					taskBreakdown = status.task_breakdown;
+				}
+				if (status.workflow_statuses) {
+					workflowStatuses = status.workflow_statuses;
+				}
+				if (status.langfuseTraceId) {
+					langfuseTraceId = status.langfuseTraceId;
+				}
+
 				if (status.status === 'success') {
 					isGenerating = false;
+					currentPhase = 'complete';
 					statusMessage = `Generation complete: ${status.versionLabel}`;
 					stopPolling();
-					// Refresh the page data
-					window.location.reload();
+					// Refresh the page data after a short delay
+					setTimeout(() => {
+						window.location.reload();
+					}, 2000);
 				} else if (status.status === 'failed') {
 					isGenerating = false;
 					errorMessage = status.errorMessage ?? 'Generation failed';
@@ -183,22 +235,27 @@
 		{/if}
 	</div>
 
-	<!-- Generation Status Section -->
+	<!-- Generation Status Section - Issue #305: Enhanced with PhaseFlow -->
 	<div class="section-card">
 		<h3>Generation Status</h3>
-		{#if isGenerating}
-			<div class="status-indicator running">
-				<span class="spinner"></span>
-				<div class="status-text">
-					<span class="status-main">Generating...</span>
-					{#if statusMessage}
-						<span class="status-detail">{statusMessage}</span>
-					{/if}
-				</div>
-			</div>
-			<div class="progress-bar">
-				<div class="progress-fill"></div>
-			</div>
+		{#if isGenerating || currentPhase === 'complete'}
+			<!-- Issue #305: 2-Phase Progress Display -->
+			<PhaseFlow phase={currentPhase} progress={currentProgress} hasFailures={hasWorkflowFailures} />
+
+			<!-- Issue #305: Task Breakdown Display (shown after phase 1) -->
+			{#if taskBreakdown.length > 0}
+				<TaskBreakdownList tasks={taskBreakdown} workflowStatuses={workflowStatuses} />
+			{/if}
+
+			<!-- Issue #305: Generation Summary (shown on completion) -->
+			{#if currentPhase === 'complete'}
+				<GenerationSummary
+					successCount={successfulWorkflows}
+					failedCount={failedWorkflows}
+					totalTasks={taskBreakdown.length}
+					traceId={langfuseTraceId}
+				/>
+			{/if}
 		{:else if errorMessage}
 			<div class="status-indicator error">
 				<span class="error-icon">X</span>
@@ -407,11 +464,6 @@
 		color: #1e40af;
 	}
 
-	.status-indicator.running {
-		background: #fef3c7;
-		color: #92400e;
-	}
-
 	.status-indicator.success {
 		background: #dcfce7;
 		color: #166534;
@@ -435,49 +487,6 @@
 		font-size: 0.75rem;
 		font-weight: 400;
 		opacity: 0.8;
-	}
-
-	.spinner {
-		width: 1.25rem;
-		height: 1.25rem;
-		border: 2px solid currentColor;
-		border-top-color: transparent;
-		border-radius: 50%;
-		animation: spin 0.75s linear infinite;
-		flex-shrink: 0;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.progress-bar {
-		margin-top: 0.75rem;
-		height: 0.25rem;
-		background: #e2e8f0;
-		border-radius: 0.125rem;
-		overflow: hidden;
-	}
-
-	.progress-fill {
-		width: 30%;
-		height: 100%;
-		background: #f59e0b;
-		animation: pulse 2s ease-in-out infinite;
-	}
-
-	@keyframes pulse {
-		0%,
-		100% {
-			width: 30%;
-			margin-left: 0;
-		}
-		50% {
-			width: 50%;
-			margin-left: 50%;
-		}
 	}
 
 	.error-icon,

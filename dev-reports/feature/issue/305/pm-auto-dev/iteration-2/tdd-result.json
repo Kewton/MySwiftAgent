@@ -81,17 +81,19 @@
     }
   },
   "tasks_pending": {
-    "F-3": {
-      "status": "pending",
-      "description": "Generate page update to use new components - requires integration with existing page structure",
-      "reason": "The existing +page.svelte already has a working structure. New components are ready to be integrated when needed."
-    },
     "F-3.1": {
       "status": "pending",
       "description": "Workflow info DB save logic in page.server.ts - requires backend API integration",
-      "reason": "The repository is ready, but saving workflow data requires actual API responses with workflow_statuses."
+      "reason": "The repository is ready, but saving workflow data requires actual API responses with workflow_statuses. This will be done in the next phase."
+    }
+  },
+  "tasks_completed_extra": {
+    "F-3": {
+      "status": "completed",
+      "description": "Generate page updated to use new components (PhaseFlow, TaskBreakdownList, GenerationSummary)",
+      "file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte"
     }
   },
   "commits": [],
-  "message": "TDD implementation completed for Issue #305 Iteration 2. All new components, types, and repository are implemented with passing tests. The remaining tasks (F-3, F-3.1) require integration with the actual generate page and backend API."
+  "message": "TDD implementation completed for Issue #305 Iteration 2. All new components, types, repository and generate page integration are implemented with passing tests. Task F-3.1 (DB save logic) is pending as it requires live backend integration."
 }
