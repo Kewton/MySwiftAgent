@@ -57,11 +57,11 @@ system_prompt: |
 
   #### 利用可能な機能
 
-  [DYNAMIC CONTENT: GraphAI capabilities will be inserted here from graphai_capabilities.yaml]
+  {graphai_capabilities}
 
-  [DYNAMIC CONTENT: expertAgent capabilities will be inserted here from expert_agent_capabilities.yaml]
+  {expert_agent_capabilities}
 
-  [DYNAMIC CONTENT: Infeasible tasks table will be inserted here from infeasible_tasks.yaml]
+  {infeasible_tasks_table}
 
   #### 実現可能性評価の手順
 
