@@ -22,6 +22,7 @@ from aiagent.langgraph.jobTaskGeneratorAgents.agent import (
     create_job_task_generator_agent,
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.evaluation import (
+    APISpecificityCheckResult,
     EvaluationResult,
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.interface_schema import (
@@ -229,6 +230,19 @@ def create_evaluation_result_failure() -> EvaluationResult:
     )
 
 
+def create_api_specificity_check_result_success() -> APISpecificityCheckResult:
+    """Create a successful APISpecificityCheckResult for testing.
+
+    Returns:
+        APISpecificityCheckResult: All APIs are specific, no issues.
+    """
+    return APISpecificityCheckResult(
+        all_apis_specific=True,
+        issues=[],
+        summary="All recommended APIs are specific and concrete.",
+    )
+
+
 def create_mock_invoke_structured_llm(
     task_breakdown_response: TaskBreakdownResponse | None = None,
     evaluation_results: list[EvaluationResult] | None = None,
@@ -385,7 +399,7 @@ async def test_e2e_workflow_success_first_try(
         - Status: "completed"
         - job_id and job_master_id are set
         - retry_count is 0
-        - All nodes executed once (except evaluator: 2 times)
+        - All nodes executed once (except evaluator: called multiple times for evaluation + API specificity check)
     """
     # Setup: Mock invoke_structured_llm for each node
     # requirement_analysis node
@@ -397,22 +411,33 @@ async def test_e2e_workflow_success_first_try(
         model_name="mock-model",
     )
 
-    # evaluator node (called twice)
+    # evaluator node - now calls for both EvaluationResult and APISpecificityCheckResult
+    # Order: EvaluationResult (after task_breakdown) -> APISpecificityCheckResult ->
+    #        EvaluationResult (after interface_definition) -> APISpecificityCheckResult
     evaluation_success = create_evaluation_result_success()
-    mock_invoke_llm_evaluator.side_effect = [
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-    ]
+    api_specificity_success = create_api_specificity_check_result_success()
+
+    async def evaluator_side_effect(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            return StructuredCallResult(
+                result=evaluation_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect
 
     # interface_definition node
     interface_schema_response = create_interface_schema_response()
@@ -457,7 +482,10 @@ async def test_e2e_workflow_success_first_try(
     assert mock_invoke_llm_requirement.call_count == 1, (
         "requirement_analysis called once"
     )
-    assert mock_invoke_llm_evaluator.call_count == 2, "evaluator called twice"
+    # evaluator calls: 2 evaluations + 1 API specificity (only after task_breakdown) = 3
+    assert mock_invoke_llm_evaluator.call_count == 3, (
+        "evaluator called 3 times (2x evaluation + 1x API specificity)"
+    )
     assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
 
     # Assert: Verify Jobqueue call counts
@@ -495,7 +523,7 @@ async def test_e2e_workflow_success_with_retry(
     Expected:
         - Status: "completed"
         - requirement_analysis called twice (initial + retry)
-        - evaluator called 3 times (1st fail, 2nd success after task_breakdown, 3rd after interface)
+        - evaluator called multiple times (evaluation + API specificity checks)
         - Final retry_count is 0 (reset after success)
     """
     # Setup: Mock invoke_structured_llm for each node
@@ -508,29 +536,45 @@ async def test_e2e_workflow_success_with_retry(
         model_name="mock-model",
     )
 
-    # evaluator node (called 3 times: 1st fail, 2nd success, 3rd success)
+    # evaluator node - now calls for both EvaluationResult and APISpecificityCheckResult
+    # Flow: evaluation fail -> retry -> evaluation success + API check -> interface -> evaluation success + API check
     evaluation_failure = create_evaluation_result_failure()
     evaluation_success = create_evaluation_result_success()
-    mock_invoke_llm_evaluator.side_effect = [
-        StructuredCallResult(
-            result=evaluation_failure,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-    ]
+    api_specificity_success = create_api_specificity_check_result_success()
+    eval_call_count = [0]
+
+    async def evaluator_side_effect_with_retry(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            eval_call_count[0] += 1
+            if eval_call_count[0] == 1:
+                # First evaluation fails
+                return StructuredCallResult(
+                    result=evaluation_failure,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+            else:
+                # Subsequent evaluations succeed
+                return StructuredCallResult(
+                    result=evaluation_success,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect_with_retry
 
     # interface_definition node
     interface_schema_response = create_interface_schema_response()
@@ -568,8 +612,10 @@ async def test_e2e_workflow_success_with_retry(
     assert mock_invoke_llm_requirement.call_count == 2, (
         "requirement_analysis called twice (1 retry)"
     )
-    assert mock_invoke_llm_evaluator.call_count == 3, (
-        "evaluator called 3 times (1 fail + 2 success)"
+    # evaluator calls: 3 evaluations + 1 API specificity = 4 total
+    # (1 fail + 1 success after task_breakdown with API check + 1 success after interface_definition)
+    assert mock_invoke_llm_evaluator.call_count == 4, (
+        "evaluator called 4 times (3 eval + 1 API specificity)"
     )
     assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
     # Note: validation_node only uses LLM when validation fails (for fix proposals)
@@ -606,7 +652,7 @@ async def test_e2e_workflow_success_after_interface_retry(
     Expected:
         - Status: "completed"
         - interface_definition called twice (initial + retry)
-        - evaluator called 3 times (1st task success, 2nd interface fail, 3rd interface success)
+        - evaluator called multiple times (evaluation + API specificity checks)
         - Final retry_count is 0 (reset after success)
     """
     # Setup: Mock invoke_structured_llm for each node
@@ -619,29 +665,45 @@ async def test_e2e_workflow_success_after_interface_retry(
         model_name="mock-model",
     )
 
-    # evaluator node (called 3 times: task success, interface fail, interface success)
+    # evaluator node - now calls for both EvaluationResult and APISpecificityCheckResult
+    # Flow: task eval success + API check -> interface eval fail -> interface eval success + API check
     evaluation_success = create_evaluation_result_success()
     evaluation_failure = create_evaluation_result_failure()
-    mock_invoke_llm_evaluator.side_effect = [
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_failure,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-    ]
+    api_specificity_success = create_api_specificity_check_result_success()
+    eval_call_count = [0]
+
+    async def evaluator_side_effect_interface_retry(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            eval_call_count[0] += 1
+            if eval_call_count[0] == 2:
+                # Second evaluation (interface) fails
+                return StructuredCallResult(
+                    result=evaluation_failure,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+            else:
+                # First and third evaluations succeed
+                return StructuredCallResult(
+                    result=evaluation_success,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect_interface_retry
 
     # interface_definition node (called twice due to retry)
     interface_schema_response = create_interface_schema_response()
@@ -679,8 +741,10 @@ async def test_e2e_workflow_success_after_interface_retry(
     assert mock_invoke_llm_requirement.call_count == 1, (
         "requirement_analysis called once"
     )
-    assert mock_invoke_llm_evaluator.call_count == 3, (
-        "evaluator called 3 times (task success, interface fail/success)"
+    # evaluator calls: 3 evaluations + 1 API specificity = 4 total
+    # (1 success after task_breakdown + API check, 1 fail after interface, 1 success after interface)
+    assert mock_invoke_llm_evaluator.call_count == 4, (
+        "evaluator called 4 times (3 eval + 1 API specificity)"
     )
     assert mock_invoke_llm_interface.call_count == 2, (
         "interface_definition called twice (1 retry)"
@@ -841,31 +905,42 @@ async def test_e2e_workflow_infeasible_tasks_detected(
 
     # Create success result
     evaluation_success = create_evaluation_result_success()
+    api_specificity_success = create_api_specificity_check_result_success()
 
-    # evaluator node (returns failure 5 times, then success twice)
-    failure_results = [
-        StructuredCallResult(
-            result=evaluation_with_infeasible,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        )
-    ] * 5
-    success_results = [
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-    ]
-    mock_invoke_llm_evaluator.side_effect = failure_results + success_results
+    # evaluator node - function-based side_effect to handle both response types
+    # Track EvaluationResult call count (failures first, then successes)
+    eval_call_count = {"count": 0}
+
+    async def evaluator_side_effect_with_failures(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            eval_call_count["count"] += 1
+            # First 5 calls return failure, subsequent calls return success
+            if eval_call_count["count"] <= 5:
+                return StructuredCallResult(
+                    result=evaluation_with_infeasible,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+            return StructuredCallResult(
+                result=evaluation_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect_with_failures
 
     # interface_definition node
     interface_schema_response = create_interface_schema_response()
@@ -902,9 +977,12 @@ async def test_e2e_workflow_infeasible_tasks_detected(
     assert result.get("job_master_id") == "jm_test123", "job_master_id should be set"
     assert result["retry_count"] == 0, "retry_count should be reset to 0 after success"
 
-    # Assert: Verify evaluator was called multiple times (failures + successes)
-    assert mock_invoke_llm_evaluator.call_count >= 6, (
-        f"evaluator called at least 6 times (5 failures + 1 success), got {mock_invoke_llm_evaluator.call_count}"
+    # Assert: Verify evaluator was called multiple times (failures + successes + API specificity)
+    # Note: With MAX_RETRIES=5, only 5 evaluation failures happen before success triggers
+    # (retry_count 0,1,2,3,4 → 5 failures, then success at retry=4 before check)
+    # Expected: 5 fails + 2 success + 1 API specificity = 8, but actual is 7 due to MAX_RETRIES timing
+    assert mock_invoke_llm_evaluator.call_count >= 7, (
+        f"evaluator called at least 7 times (failures + success + API spec), got {mock_invoke_llm_evaluator.call_count}"
     )
     # requirement_analysis was retried multiple times due to evaluation failures
     assert mock_invoke_llm_requirement.call_count >= 2, (
@@ -1010,14 +1088,31 @@ async def test_e2e_workflow_empty_interface_definitions(
         model_name="mock-model",
     )
 
-    # evaluator node (returns success for task_breakdown)
+    # evaluator node - now calls for both EvaluationResult and APISpecificityCheckResult
     evaluation_success = create_evaluation_result_success()
-    mock_invoke_llm_evaluator.return_value = StructuredCallResult(
-        result=evaluation_success,
-        recovered_via_json=False,
-        raw_text=None,
-        model_name="mock-model",
-    )
+    api_specificity_success = create_api_specificity_check_result_success()
+
+    async def evaluator_side_effect_empty_interface(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            return StructuredCallResult(
+                result=evaluation_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect_empty_interface
 
     # interface_definition node (returns empty interfaces)
     empty_interface_response = InterfaceSchemaResponse(
@@ -1062,8 +1157,10 @@ async def test_e2e_workflow_empty_interface_definitions(
     assert mock_invoke_llm_requirement.call_count == 1, (
         "requirement_analysis called once"
     )
-    assert mock_invoke_llm_evaluator.call_count == 2, (
-        "evaluator called twice (after task_breakdown and after interface_definition)"
+    # evaluator calls: 2 evaluations + 1 API specificity = 3 total
+    # (1 success after task_breakdown + API check, 1 after interface_definition)
+    assert mock_invoke_llm_evaluator.call_count == 3, (
+        "evaluator called 3 times (2 eval + 1 API specificity)"
     )
     assert mock_invoke_llm_interface.call_count == 1, "interface_definition called once"
 
@@ -1170,22 +1267,31 @@ async def test_e2e_workflow_execution_time(
         model_name="mock-model",
     )
 
-    # evaluator node (called twice)
+    # evaluator node - now calls for both EvaluationResult and APISpecificityCheckResult
     evaluation_success = create_evaluation_result_success()
-    mock_invoke_llm_evaluator.side_effect = [
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-    ]
+    api_specificity_success = create_api_specificity_check_result_success()
+
+    async def evaluator_side_effect_execution_time(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            return StructuredCallResult(
+                result=evaluation_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect_execution_time
 
     # interface_definition node
     interface_schema_response = create_interface_schema_response()
@@ -1270,29 +1376,45 @@ async def test_e2e_workflow_state_consistency(
         model_name="mock-model",
     )
 
-    # evaluator node (1st fail, 2nd success, 3rd success)
+    # evaluator node - now calls for both EvaluationResult and APISpecificityCheckResult
+    # Flow: evaluation fail -> retry -> evaluation success + API check -> interface -> evaluation success + API check
     evaluation_failure = create_evaluation_result_failure()
     evaluation_success = create_evaluation_result_success()
-    mock_invoke_llm_evaluator.side_effect = [
-        StructuredCallResult(
-            result=evaluation_failure,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-        StructuredCallResult(
-            result=evaluation_success,
-            recovered_via_json=False,
-            raw_text=None,
-            model_name="mock-model",
-        ),
-    ]
+    api_specificity_success = create_api_specificity_check_result_success()
+    eval_call_count = [0]
+
+    async def evaluator_side_effect_state_consistency(**kwargs):
+        response_model = kwargs.get("response_model")
+        # Use class name comparison for robustness
+        model_name = getattr(response_model, "__name__", str(response_model))
+        if model_name == "EvaluationResult":
+            eval_call_count[0] += 1
+            if eval_call_count[0] == 1:
+                # First evaluation fails
+                return StructuredCallResult(
+                    result=evaluation_failure,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+            else:
+                # Subsequent evaluations succeed
+                return StructuredCallResult(
+                    result=evaluation_success,
+                    recovered_via_json=False,
+                    raw_text=None,
+                    model_name="mock-model",
+                )
+        elif model_name == "APISpecificityCheckResult":
+            return StructuredCallResult(
+                result=api_specificity_success,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="mock-model",
+            )
+        raise ValueError(f"Unexpected response_model: {response_model}")
+
+    mock_invoke_llm_evaluator.side_effect = evaluator_side_effect_state_consistency
 
     # interface_definition node
     interface_schema_response = create_interface_schema_response()
