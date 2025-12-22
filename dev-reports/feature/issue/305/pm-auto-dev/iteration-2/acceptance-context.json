@@ -1,0 +1,37 @@
+{
+  "issue_number": 305,
+  "iteration": 2,
+  "feature_summary": "myAgentDesk フロントエンド 2フェーズ進捗表示",
+  "acceptance_criteria": [
+    "Generate画面でPhaseFlow (2フェーズ進捗) が表示される",
+    "Task Analysis完了後にTaskBreakdownListが表示される",
+    "各タスクのWorkflow生成状況 (pending/generating/success/failed) が表示される",
+    "生成完了後にGenerationSummaryが表示される"
+  ],
+  "labels": ["bug", "project: myAgentDesk"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "myAgentDesk", "Langfuse"],
+  "l3_test_plan": {
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "manual_test_steps": [
+      "1. myAgentDeskを起動 (npm run dev)",
+      "2. プロジェクト/ワークベンチを選択",
+      "3. Active Requirement Versionを設定",
+      "4. Generate画面でGenerate Jobボタンをクリック",
+      "5. PhaseFlow (2フェーズ進捗) が表示されることを確認",
+      "6. 進捗が0-70%の間はPhase 1 (Task Analysis) がアクティブ",
+      "7. Task Analysisが完了するとTaskBreakdownListが表示される",
+      "8. 進捗が70-95%の間はPhase 2 (Workflow Generation) がアクティブ",
+      "9. 各タスクにWorkflowStatusBadge (pending→generating→success/failed) が表示される",
+      "10. 完了後にGenerationSummaryが表示される"
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_305_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_305.spec.ts",
+  "note": "フロントエンドのみの変更のため、Playwrightテストが主要な検証方法。バックエンドは Iteration 1 で検証済み。"
+}
