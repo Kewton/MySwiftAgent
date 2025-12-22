@@ -132,7 +132,12 @@ async def master_creation_node(
             recommended_apis = task.get("recommended_apis", [])
 
             if recommended_apis:
-                apis_str = ", ".join(recommended_apis)
+                # recommended_apis is list[dict] with api_name key (from LLM response)
+                api_names = [
+                    api.get("api_name", str(api)) if isinstance(api, dict) else str(api)
+                    for api in recommended_apis
+                ]
+                apis_str = ", ".join(api_names)
                 enhanced_description = f"{base_description}\n\n**推奨API**: {apis_str}"
                 logger.info(f"  Enhanced description with recommended APIs: {apis_str}")
             else:
