@@ -256,9 +256,11 @@ class TestLangfuseService:
             )
 
             # Verify - Issue #263: CallbackHandler MUST be called with explicit public_key
+            # Issue #305: trace_context is now always passed (None when no trace_id provided)
             assert handler == mock_handler
             mock_callback_handler_class.assert_called_once_with(
                 public_key="pk-test-123",
+                trace_context=None,
             )
 
     @patch("app.services.langfuse_service.settings")
@@ -351,9 +353,11 @@ class TestLangfuseService:
             handler = service.get_callback_handler(trace_name="test_trace")
 
             # Verify - Issue #263: CallbackHandler is created with explicit public_key
+            # Issue #305: trace_context is now always passed (None when no trace_id provided)
             assert handler == mock_handler
             mock_callback_handler_class.assert_called_once_with(
                 public_key="pk-test-123",
+                trace_context=None,
             )
 
     @patch("app.services.langfuse_service.settings")
@@ -848,9 +852,11 @@ class TestCallbackHandlerWithMyVaultKeys:
             handler = service.get_callback_handler()
 
             # Verify - CallbackHandler MUST be called with explicit public_key
+            # Issue #305: trace_context is now always passed (None when no trace_id provided)
             assert handler == mock_handler
             mock_callback_handler_class.assert_called_once_with(
                 public_key="pk-lf-myvault-12345678",
+                trace_context=None,
             )
 
     @patch("app.services.langfuse_service.settings")
@@ -962,7 +968,9 @@ class TestCallbackHandlerWithMyVaultKeys:
             handler = service.get_callback_handler()
 
             # Verify - CallbackHandler receives the correct public_key
+            # Issue #305: trace_context is now always passed (None when no trace_id provided)
             assert handler == mock_handler
             mock_callback_handler_class.assert_called_once_with(
                 public_key="pk-custom-12345678",
+                trace_context=None,
             )
