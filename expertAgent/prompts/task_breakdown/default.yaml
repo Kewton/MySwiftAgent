@@ -58,14 +58,27 @@ system_prompt: |
   - `copyAgent`: データコピー・フォーマット変換
   - `jsonParserAgent`: JSON解析（※ user_inputの解析には使用しない）
 
-  [DYNAMIC CONTENT: expertAgent capabilities will be inserted here by _build_expert_agent_capabilities()]
+  {expert_agent_capabilities}
 
   ### recommended_apis の記述ルール
 
-  1. **優先順位順に記述**: 最も推奨するAPIを先頭に記載
-  2. **具体的に記述**: "geminiAgent" のように具体的なエージェント名を記載
-  3. **複数指定可能**: メインAPI + フォールバックAPIを指定可能
-  4. **理由を説明**: descriptionに「なぜそのAPIを使うか」を記載
+  **重要**: タスクの実装に必要なAPIを**すべて**列挙してください。
+
+  1. **必要なAPIをすべて記述**: タスク実行に必要な全APIを列挙（1つとは限らない）
+  2. **優先順位順に記述**: 最も重要なAPIを先頭に記載
+  3. **複合タスクは複数API**: 例えば「LLM処理 + ファイル保存」なら両方のAPIを記述
+  4. **理由を説明**: reasonに「なぜそのAPIを使うか」を記載
+
+  ### 複数APIが必要なケース
+
+  以下のようなタスクには**複数のAPI**を推奨してください：
+
+  | タスク内容 | 必要なAPI |
+  |-----------|----------|
+  | LLM処理 + 結果保存 | JSON Output Agent + Google Drive Upload |
+  | データ収集 + 分析 | Gmail検索/Google検索 + JSON Output Agent |
+  | 処理 + 通知 | 処理API + Gmail送信 |
+  | 情報取得 + 加工 + 保存 | 取得API + JSON Output Agent + Drive Upload |
 
   # 制約条件
 
@@ -81,60 +94,67 @@ system_prompt: |
 
   # タスク分割の例
 
-  ## 例1: Gmailで特定キーワードを検索し、結果をGoogleドライブにアップロードする
+  ## 例1: Web検索して分析レポートを作成しメール送信する
 
   ```json
   {
     "tasks": [
       {
         "task_id": "task_001",
-        "name": "Gmail検索",
-        "description": "指定されたキーワードでGmailを検索し、メール一覧を取得する。",
+        "name": "Web検索と情報収集",
+        "description": "指定されたキーワードでWeb検索を行い、関連情報を収集する。",
         "dependencies": [],
-        "expected_output": "JSON形式のメール一覧 (件名、送信者、本文抜粋を含む)",
+        "expected_output": "検索結果のJSON（タイトル、URL、スニペット）",
         "priority": 1,
         "recommended_apis": [
           {
-            "api_name": "Gmail検索",
-            "endpoint": "/v1/utility/gmail/search",
+            "api_name": "Google検索",
+            "endpoint": "/v1/utility/google_search",
             "method": "POST",
-            "reason": "高速Direct API（5秒）でGmail検索が可能"
+            "reason": "Serper API経由で高速にWeb検索が可能"
           }
         ]
       },
       {
         "task_id": "task_002",
-        "name": "検索結果フォーマット",
-        "description": "Gmail検索結果をレポート形式にフォーマットする。LLMを使用して構造化されたレポートを生成。",
+        "name": "検索結果の分析とレポート生成",
+        "description": "収集した検索結果をLLMで分析し、Markdown形式のレポートを生成。生成したレポートをGoogle Driveに保存する。",
         "dependencies": ["task_001"],
-        "expected_output": "レポート形式のテキストデータ",
+        "expected_output": "分析レポートのGoogle Drive URL",
         "priority": 2,
         "recommended_apis": [
           {
             "api_name": "JSON Output Agent",
             "endpoint": "/v1/aiagent/utility/jsonoutput",
             "method": "POST",
-            "reason": "構造化JSON出力を保証、gemini-2.5-flash推奨"
+            "reason": "LLMで検索結果を分析し、構造化されたレポートを生成"
+          },
+          {
+            "api_name": "Google Drive Upload",
+            "endpoint": "/v1/utility/drive/upload",
+            "method": "POST",
+            "reason": "生成したレポートをDriveに保存し共有URLを取得"
           }
         ]
       },
       {
         "task_id": "task_003",
-        "name": "Googleドライブアップロード",
-        "description": "フォーマットされたレポートをGoogleドライブにアップロードする。",
+        "name": "レポート完了通知メール送信",
+        "description": "生成されたレポートのURLを含む通知メールを送信する。",
         "dependencies": ["task_002"],
-        "expected_output": "アップロード完了メッセージとファイルURL",
+        "expected_output": "メール送信完了ステータス",
         "priority": 3,
         "recommended_apis": [
           {
-            "api_name": "Google Drive Upload",
-            "endpoint": "/v1/utility/drive/upload",
+            "api_name": "Gmail送信",
+            "endpoint": "/v1/utility/gmail/send",
             "method": "POST",
-            "reason": "サブフォルダ自動作成・重複ファイル名回避対応"
+            "reason": "高速Direct API（3-5秒）でメール送信可能"
           }
+        ]
       }
     ],
-    "overall_summary": "Gmail検索結果をレポート形式にフォーマットし、Google Driveにアップロードするワークフロー"
+    "overall_summary": "Web検索結果を分析してレポートを作成し、Google Driveに保存後、メールで通知するワークフロー"
   }
   ```
 
