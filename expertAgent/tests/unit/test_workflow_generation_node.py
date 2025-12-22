@@ -490,6 +490,8 @@ class TestWorkflowGenerationNode:
         manager.update_phase_async = AsyncMock()
         manager.init_workflow_statuses_async = AsyncMock()
         manager.update_workflow_status_async = AsyncMock()
+        # Issue #305: Add set_task_breakdown_async mock
+        manager.set_task_breakdown_async = AsyncMock()
         return manager
 
     @pytest.fixture
@@ -512,9 +514,25 @@ class TestWorkflowGenerationNode:
                     "recommended_apis": ["Claude API"],
                 },
             ],
+            "task_breakdown": [
+                {
+                    "task_id": "task_001",
+                    "name": "Gmail Fetch",
+                    "description": "Fetch emails",
+                    "recommended_apis": ["Gmail API"],
+                },
+                {
+                    "task_id": "task_002",
+                    "name": "AI Analysis",
+                    "description": "Analyze emails",
+                    "recommended_apis": ["Claude API"],
+                },
+            ],
             "task_master_ids": ["tm_001", "tm_002"],
             "job_master_id": "jm_001",
             "job_id": "job_001",
+            # Issue #305: tracking_job_id is used for progress tracking
+            "tracking_job_id": "tracking_001",
             "status": "completed",
             "phase": "task_analysis",
             "workflow_results": [],

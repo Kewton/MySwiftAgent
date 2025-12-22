@@ -229,9 +229,10 @@ async def _create_job_in_background(
     logger.info(f"[BG:{job_id}] Starting background job creation")
 
     try:
-        # Create initial state
+        # Create initial state with tracking_job_id for progress tracking (Issue #305)
         initial_state = create_initial_state(
             user_requirement=user_requirement,
+            tracking_job_id=job_id,  # Pass tracking job_id for workflow generation
         )
 
         # Update progress: 10% - Initial state created
