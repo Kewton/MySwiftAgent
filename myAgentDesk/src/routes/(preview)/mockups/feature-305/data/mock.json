@@ -1,0 +1,130 @@
+{
+  "featureNumber": 305,
+  "title": "Job生成時にワークフロー自動生成",
+  "description": "Job Generator完了後に各TaskMasterのGraphAIワークフローを自動生成する機能",
+  "patterns": {
+    "pattern-a": {
+      "name": "シンプル・ミニマル",
+      "description": "最小限の進捗表示。全体ステータスのみ表示",
+      "features": [
+        "シンプルな2段階プログレスバー",
+        "全体ステータスのみ表示",
+        "最小限のUI",
+        "高速レスポンス"
+      ]
+    },
+    "pattern-b": {
+      "name": "標準・バランス型",
+      "description": "タスク単位の進捗表示。バランスの取れたUI",
+      "features": [
+        "タスク単位の進捗表示",
+        "成功/失敗カウント",
+        "Langfuseトレースリンク",
+        "部分成功の明示"
+      ]
+    },
+    "pattern-c": {
+      "name": "リッチ・高機能",
+      "description": "詳細なワークフロー情報とYAMLプレビュー",
+      "features": [
+        "YAML内容のプレビュー",
+        "タスクごとの詳細ステータス",
+        "エラー詳細とリトライ",
+        "ワークフロー検証結果"
+      ]
+    },
+    "pattern-d": {
+      "name": "革新的・実験的",
+      "description": "リアルタイムストリーミングとAIサジェスト",
+      "features": [
+        "リアルタイム生成ログ",
+        "AIによる最適化提案",
+        "ドラッグ&ドロップ編集",
+        "ワークフロービジュアライザ"
+      ]
+    }
+  },
+  "mockData": {
+    "workbench": {
+      "id": "wb_001",
+      "name": "Email Summarizer"
+    },
+    "activeRequirementVersion": {
+      "id": "rv_001",
+      "version": 1,
+      "status": "active",
+      "content": "Gmailから未読メールを取得し、Claude APIで要約してSlackに投稿する"
+    },
+    "generationStates": {
+      "idle": {
+        "status": "idle",
+        "message": "Ready to generate"
+      },
+      "analyzing": {
+        "status": "running",
+        "phase": "task_analysis",
+        "progress": 35,
+        "message": "タスク分析中..."
+      },
+      "workflow": {
+        "status": "running",
+        "phase": "workflow_generation",
+        "progress": 72,
+        "message": "ワークフロー生成中 (2/3タスク完了)",
+        "taskProgress": {
+          "total": 3,
+          "completed": 2,
+          "current": "send_slack_notification"
+        }
+      },
+      "success": {
+        "status": "success",
+        "phase": "complete",
+        "progress": 100,
+        "message": "生成完了",
+        "workflowResults": {
+          "total": 3,
+          "successful": 3,
+          "failed": 0
+        }
+      },
+      "partial_success": {
+        "status": "partial_success",
+        "phase": "complete",
+        "progress": 100,
+        "message": "一部のワークフロー生成に失敗",
+        "workflowResults": {
+          "total": 3,
+          "successful": 2,
+          "failed": 1
+        }
+      }
+    },
+    "taskMasters": [
+      {
+        "id": "tm_001",
+        "name": "Gmail未読メール取得",
+        "status": "success",
+        "workflowName": "fetch_gmail_unread",
+        "yamlPreview": "nodes:\n  - name: fetchGmail\n    type: gmail_fetch\n    ...",
+        "generationTimeMs": 28500
+      },
+      {
+        "id": "tm_002",
+        "name": "Claude要約生成",
+        "status": "success",
+        "workflowName": "summarize_with_claude",
+        "yamlPreview": "nodes:\n  - name: summarize\n    type: llm_call\n    ...",
+        "generationTimeMs": 32100
+      },
+      {
+        "id": "tm_003",
+        "name": "Slack投稿",
+        "status": "failed",
+        "workflowName": "send_slack_notification",
+        "errorMessage": "Failed to generate workflow: Max retries exceeded",
+        "retryCount": 3
+      }
+    ]
+  }
+}
