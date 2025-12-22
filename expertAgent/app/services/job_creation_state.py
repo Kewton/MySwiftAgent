@@ -5,6 +5,7 @@ L1: In-memory cache for fast access
 L2: Valkey (Redis-compatible) for persistence
 
 Issue #239: JobCreationStateManager Valkey integration.
+Issue #305: Extended with phase, task_breakdown, workflow_statuses fields.
 
 Refactored for:
 - DRY: Extracted common patterns (job lookup, Valkey availability check)
@@ -60,8 +61,36 @@ def deprecated_sync_method(
     return decorator
 
 
+class TaskBreakdownItem(BaseModel):
+    """Task breakdown result item (Issue #305).
+
+    Represents a single task in the task breakdown result.
+    """
+
+    task_id: str
+    name: str
+    description: str
+    recommended_apis: list[str]
+
+
+class WorkflowStatusItem(BaseModel):
+    """Workflow generation status item (Issue #305).
+
+    Represents the generation status of a single workflow.
+    """
+
+    task_id: str
+    status: str  # 'pending' | 'generating' | 'success' | 'failed'
+    workflow_name: Optional[str] = None
+    generation_time_ms: Optional[int] = None
+    error_message: Optional[str] = None
+
+
 class JobCreationStatus(BaseModel):
-    """Job creation status model."""
+    """Job creation status model.
+
+    Issue #305: Extended with phase, task_breakdown, workflow_statuses fields.
+    """
 
     job_id: str
     status: str  # 'creating' | 'completed' | 'failed'
@@ -71,6 +100,11 @@ class JobCreationStatus(BaseModel):
     job_master_id: Optional[str] = None
     error_message: Optional[str] = None
     result: Optional[dict[str, Any]] = None
+
+    # Issue #305: New fields for workflow generation tracking
+    phase: Optional[str] = None  # 'task_analysis' | 'workflow_generation' | 'complete'
+    task_breakdown: Optional[list[TaskBreakdownItem]] = None
+    workflow_statuses: Optional[list[WorkflowStatusItem]] = None
 
 
 class JobCreationStateManager:
@@ -410,6 +444,127 @@ class JobCreationStateManager:
 
         self._update_status_failed(status, error_message)
         logger.error(f"Marked job {job_id} as failed: {error_message}")
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    # ----- Issue #305: Extended async methods for workflow tracking -----
+
+    async def update_phase_async(self, job_id: str, phase: str) -> None:
+        """Update job creation phase (async version).
+
+        Issue #305: Track workflow generation phase.
+
+        Args:
+            job_id: Job ID
+            phase: Phase name ('task_analysis' | 'workflow_generation' | 'complete')
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        status.phase = phase
+        logger.debug(f"Updated job {job_id} phase to {phase}")
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    async def set_task_breakdown_async(
+        self,
+        job_id: str,
+        breakdown: list[TaskBreakdownItem],
+    ) -> None:
+        """Set task breakdown result (async version).
+
+        Issue #305: Store task breakdown result and update phase.
+
+        Args:
+            job_id: Job ID
+            breakdown: List of TaskBreakdownItem
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        status.task_breakdown = breakdown
+        status.phase = "workflow_generation"
+        logger.info(f"Set task breakdown for job {job_id}: {len(breakdown)} tasks")
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    async def init_workflow_statuses_async(
+        self,
+        job_id: str,
+        task_ids: list[str],
+    ) -> None:
+        """Initialize workflow statuses for all tasks (async version).
+
+        Issue #305: Initialize all workflow statuses to 'pending'.
+
+        Args:
+            job_id: Job ID
+            task_ids: List of task IDs to initialize
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        status.workflow_statuses = [
+            WorkflowStatusItem(task_id=tid, status="pending") for tid in task_ids
+        ]
+        logger.debug(
+            f"Initialized workflow statuses for job {job_id}: {len(task_ids)} tasks"
+        )
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    async def update_workflow_status_async(
+        self,
+        job_id: str,
+        task_id: str,
+        workflow_status: str,
+        workflow_name: Optional[str] = None,
+        generation_time_ms: Optional[int] = None,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Update individual workflow status (async version).
+
+        Issue #305: Update status for a specific workflow.
+
+        Args:
+            job_id: Job ID
+            task_id: Task ID
+            workflow_status: Status ('pending' | 'generating' | 'success' | 'failed')
+            workflow_name: Workflow name (if success)
+            generation_time_ms: Generation time in milliseconds (if success)
+            error_message: Error message (if failed)
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        if status.workflow_statuses is None:
+            logger.warning(f"Workflow statuses not initialized for job {job_id}")
+            return
+
+        # Find and update the workflow status
+        for ws in status.workflow_statuses:
+            if ws.task_id == task_id:
+                ws.status = workflow_status
+                ws.workflow_name = workflow_name
+                ws.generation_time_ms = generation_time_ms
+                ws.error_message = error_message
+                logger.debug(
+                    f"Updated workflow status for task {task_id}: {workflow_status}"
+                )
+                break
+        else:
+            logger.warning(
+                f"Task {task_id} not found in workflow statuses for job {job_id}"
+            )
+            return
 
         # Write to L2 (Valkey)
         await self._write_to_valkey(job_id, status)

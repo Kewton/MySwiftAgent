@@ -1,0 +1,211 @@
+"""Workflow generation node for Job/Task Generator.
+
+Issue #305: This module provides a LangGraph node that generates GraphAI YAML
+workflows for each TaskMaster created during job generation.
+"""
+
+import logging
+import time
+from typing import Any
+
+from app.services.job_creation_state import job_state_manager
+
+from ..state import JobTaskGeneratorState
+from ..utils.workflow_helper import generate_workflow_for_task
+
+logger = logging.getLogger(__name__)
+
+
+async def workflow_generation_node(
+    state: JobTaskGeneratorState,
+) -> JobTaskGeneratorState:
+    """Generate GraphAI YAML workflows for all TaskMasters.
+
+    This node:
+    1. Iterates through all task_masters in state
+    2. Calls Workflow Generator for each TaskMaster
+    3. Updates progress (70-95%)
+    4. Tracks success/failure for each workflow
+
+    Issue #305: Added to support automatic workflow generation.
+
+    Args:
+        state: Current job task generator state
+
+    Returns:
+        Updated state with workflow_results and phase='complete'
+    """
+    logger.info("Starting workflow generation node")
+
+    task_masters = state.get("task_masters", [])
+    job_id = state.get("job_id")
+
+    # Update phase if job_id is available
+    if job_id:
+        try:
+            await job_state_manager.update_phase_async(job_id, "workflow_generation")
+        except Exception as e:
+            logger.warning(f"Failed to update phase for job {job_id}: {e}")
+
+    # Handle empty task_masters
+    if not task_masters:
+        logger.info("No task masters found, skipping workflow generation")
+        return {
+            **state,
+            "workflow_results": [],
+            "phase": "complete",
+        }
+
+    total_tasks = len(task_masters)
+    logger.info(f"Generating workflows for {total_tasks} task(s)")
+
+    # Initialize workflow statuses if job_id is available
+    if job_id:
+        try:
+            task_ids = [tm.get("id", f"tm_{i}") for i, tm in enumerate(task_masters)]
+            await job_state_manager.init_workflow_statuses_async(job_id, task_ids)
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize workflow statuses for job {job_id}: {e}"
+            )
+
+    workflow_results: list[dict[str, Any]] = []
+
+    for idx, task_master in enumerate(task_masters):
+        task_id = task_master.get("id", f"tm_{idx}")
+        task_name = task_master.get("name", "Unknown Task")
+
+        logger.info(
+            f"[{idx + 1}/{total_tasks}] Generating workflow for task {task_id}: {task_name}"
+        )
+
+        # Update status to 'generating'
+        if job_id:
+            try:
+                await job_state_manager.update_workflow_status_async(
+                    job_id=job_id,
+                    task_id=task_id,
+                    workflow_status="generating",
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to update workflow status for task {task_id}: {e}"
+                )
+
+        start_time = time.time()
+
+        try:
+            # Generate workflow
+            result = await generate_workflow_for_task(task_master)
+
+            generation_time_ms = int((time.time() - start_time) * 1000)
+
+            if result.get("status") == "success":
+                workflow_result = {
+                    "task_id": task_id,
+                    "status": "success",
+                    "workflow_name": result.get("workflow_name"),
+                    "yaml_content": result.get("yaml_content"),
+                    "generation_time_ms": generation_time_ms,
+                }
+                workflow_results.append(workflow_result)
+
+                # Update status to 'success'
+                if job_id:
+                    try:
+                        await job_state_manager.update_workflow_status_async(
+                            job_id=job_id,
+                            task_id=task_id,
+                            workflow_status="success",
+                            workflow_name=result.get("workflow_name"),
+                            generation_time_ms=generation_time_ms,
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to update workflow status for task {task_id}: {e}"
+                        )
+
+                logger.info(
+                    f"Successfully generated workflow for task {task_id} "
+                    f"in {generation_time_ms}ms"
+                )
+            else:
+                error_message = result.get("error_message", "Unknown error")
+                workflow_result = {
+                    "task_id": task_id,
+                    "status": "failed",
+                    "error_message": error_message,
+                    "generation_time_ms": generation_time_ms,
+                }
+                workflow_results.append(workflow_result)
+
+                # Update status to 'failed'
+                if job_id:
+                    try:
+                        await job_state_manager.update_workflow_status_async(
+                            job_id=job_id,
+                            task_id=task_id,
+                            workflow_status="failed",
+                            error_message=error_message,
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to update workflow status for task {task_id}: {e}"
+                        )
+
+                logger.warning(
+                    f"Failed to generate workflow for task {task_id}: {error_message}"
+                )
+
+        except Exception as e:
+            generation_time_ms = int((time.time() - start_time) * 1000)
+            error_message = str(e)
+
+            workflow_result = {
+                "task_id": task_id,
+                "status": "failed",
+                "error_message": error_message,
+                "generation_time_ms": generation_time_ms,
+            }
+            workflow_results.append(workflow_result)
+
+            # Update status to 'failed'
+            if job_id:
+                try:
+                    await job_state_manager.update_workflow_status_async(
+                        job_id=job_id,
+                        task_id=task_id,
+                        workflow_status="failed",
+                        error_message=error_message,
+                    )
+                except Exception as e2:
+                    logger.warning(
+                        f"Failed to update workflow status for task {task_id}: {e2}"
+                    )
+
+            logger.error(
+                f"Exception during workflow generation for task {task_id}: {error_message}",
+                exc_info=True,
+            )
+
+        # Update progress (70% base + increments up to 95%)
+        # Progress formula: 70 + (idx + 1) / total_tasks * 25
+        if job_id:
+            progress = 70 + int(((idx + 1) / total_tasks) * 25)
+            try:
+                await job_state_manager.update_progress_async(job_id, progress)
+            except Exception as e:
+                logger.warning(f"Failed to update progress for job {job_id}: {e}")
+
+    # Log summary
+    success_count = sum(1 for wr in workflow_results if wr["status"] == "success")
+    failed_count = sum(1 for wr in workflow_results if wr["status"] == "failed")
+    logger.info(
+        f"Workflow generation completed: {success_count} success, {failed_count} failed"
+    )
+
+    return {
+        **state,
+        "workflow_results": workflow_results,
+        "phase": "complete",
+    }

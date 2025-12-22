@@ -3,6 +3,9 @@
 This module defines the state structure for the LangGraph-based agent that
 automatically generates jobqueue Jobs and Tasks from natural language
 requirements.
+
+Issue #305: Extended with workflow_results and phase fields for workflow
+generation tracking.
 """
 
 from typing import Any, TypedDict
@@ -91,6 +94,10 @@ class JobTaskGeneratorState(TypedDict, total=False):
     status: str
     error_message: str | None
 
+    # ===== Issue #305: Workflow Generation =====
+    workflow_results: list[dict[str, Any]]
+    phase: str  # 'task_analysis' | 'workflow_generation' | 'complete'
+
 
 def create_initial_state(
     user_requirement: str,
@@ -137,4 +144,7 @@ def create_initial_state(
         "job_id": None,
         "status": "initialized",
         "error_message": None,
+        # Issue #305: Workflow Generation
+        "workflow_results": [],
+        "phase": "task_analysis",
     }

@@ -4,13 +4,14 @@ This module provides the main LangGraph agent that orchestrates the workflow
 for automatically generating Jobs and Tasks from user requirements.
 
 Workflow:
-1. requirement_analysis → Decompose user requirements into tasks
-2. evaluator → Evaluate task quality and feasibility
-3. interface_definition → Define JSON Schema interfaces
-4. schema_enrichment → Enrich interfaces with OpenAPI schemas
-5. master_creation → Create TaskMasters, JobMaster, JobMasterTask
-6. validation → Validate workflow interfaces
-7. job_registration → Create executable Job
+1. requirement_analysis -> Decompose user requirements into tasks
+2. evaluator -> Evaluate task quality and feasibility
+3. interface_definition -> Define JSON Schema interfaces
+4. schema_enrichment -> Enrich interfaces with OpenAPI schemas
+5. master_creation -> Create TaskMasters, JobMaster, JobMasterTask
+6. validation -> Validate workflow interfaces
+7. job_registration -> Create executable Job
+8. workflow_generation -> Issue #305: Generate GraphAI YAML workflows
 
 The agent uses conditional routing to handle:
 - Evaluation failures (retry or exit)
@@ -31,6 +32,7 @@ from .nodes import (
     requirement_analysis_node,
     schema_enrichment_node,
     validation_node,
+    workflow_generation_node,
 )
 from .state import JobTaskGeneratorState
 
@@ -195,23 +197,24 @@ def create_job_task_generator_agent() -> Any:
     This function creates a LangGraph StateGraph with the following workflow:
 
     Flow:
-        START → requirement_analysis → evaluator
-        evaluator → (conditional)
+        START -> requirement_analysis -> evaluator
+        evaluator -> (conditional)
             - interface_definition (if task breakdown valid)
             - requirement_analysis (if invalid, retry)
             - END (if max retries)
-        interface_definition → schema_enrichment (enrich with OpenAPI schemas)
-        schema_enrichment → evaluator (re-evaluate interfaces)
-        evaluator → (conditional)
+        interface_definition -> schema_enrichment (enrich with OpenAPI schemas)
+        schema_enrichment -> evaluator (re-evaluate interfaces)
+        evaluator -> (conditional)
             - master_creation (if interfaces valid)
             - interface_definition (if invalid, retry)
             - END (if max retries)
-        master_creation → validation
-        validation → (conditional)
+        master_creation -> validation
+        validation -> (conditional)
             - job_registration (if validation successful)
             - interface_definition (if failed, retry with fixes)
             - END (if max retries)
-        job_registration → END
+        job_registration -> workflow_generation (Issue #305)
+        workflow_generation -> END
 
     Returns:
         Compiled LangGraph StateGraph
@@ -229,15 +232,17 @@ def create_job_task_generator_agent() -> Any:
     workflow.add_node("master_creation", master_creation_node)
     workflow.add_node("validation", validation_node)
     workflow.add_node("job_registration", job_registration_node)
+    # Issue #305: Add workflow_generation node
+    workflow.add_node("workflow_generation", workflow_generation_node)
 
     # Set entry point
     workflow.set_entry_point("requirement_analysis")
 
     # Add edges
-    # requirement_analysis → evaluator
+    # requirement_analysis -> evaluator
     workflow.add_edge("requirement_analysis", "evaluator")
 
-    # evaluator → conditional routing for interface_definition /
+    # evaluator -> conditional routing for interface_definition /
     # requirement_analysis / master_creation / END
     workflow.add_conditional_edges(
         "evaluator",
@@ -250,16 +255,16 @@ def create_job_task_generator_agent() -> Any:
         },
     )
 
-    # interface_definition → schema_enrichment
+    # interface_definition -> schema_enrichment
     workflow.add_edge("interface_definition", "schema_enrichment")
 
-    # schema_enrichment → evaluator (re-evaluate)
+    # schema_enrichment -> evaluator (re-evaluate)
     workflow.add_edge("schema_enrichment", "evaluator")
 
-    # master_creation → validation
+    # master_creation -> validation
     workflow.add_edge("master_creation", "validation")
 
-    # validation → (conditional) job_registration / interface_definition / END
+    # validation -> (conditional) job_registration / interface_definition / END
     workflow.add_conditional_edges(
         "validation",
         validation_router,
@@ -270,8 +275,9 @@ def create_job_task_generator_agent() -> Any:
         },
     )
 
-    # job_registration → END
-    workflow.add_edge("job_registration", END)
+    # Issue #305: job_registration -> workflow_generation -> END
+    workflow.add_edge("job_registration", "workflow_generation")
+    workflow.add_edge("workflow_generation", END)
 
     # Compile graph (recursion_limit is set via RunnableConfig at runtime)
     graph = workflow.compile()
