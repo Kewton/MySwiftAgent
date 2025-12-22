@@ -1,0 +1,198 @@
+{
+  "issue_number": 305,
+  "iteration": 2,
+  "acceptance_criteria": [
+    "Job Generator呼び出し後、自動的にWorkflow Generatorが実行される",
+    "Phase 1(0-70%) -> Phase 2(70-95%)の進捗表示が正しい",
+    "各タスクのWorkflow生成状況(pending/generating/success/failed)が表示される",
+    "部分失敗時もJob全体はcompletedになる",
+    "workflow_mastersテーブルにYAMLが正しく保存される"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "B-1",
+      "description": "WorkflowMasterテーブル作成",
+      "file": "myAgentDesk/src/lib/server/db/schema.ts",
+      "status": "pending"
+    },
+    {
+      "task_id": "B-2",
+      "description": "DBマイグレーション実行",
+      "file": "myAgentDesk/src/lib/server/db/migrations/",
+      "status": "pending"
+    },
+    {
+      "task_id": "B-3",
+      "description": "WorkflowMasterリポジトリ作成",
+      "file": "myAgentDesk/src/lib/server/repositories/workflow-master.ts",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-1",
+      "description": "expert-agent APIクライアント更新（phase, task_breakdown, workflow_statuses追加）",
+      "file": "myAgentDesk/src/lib/api/clients/expert-agent.ts",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-2",
+      "description": "expert-agent モック更新",
+      "file": "myAgentDesk/src/lib/api/mock/expert-agent.mock.ts",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-3",
+      "description": "Generate画面Pattern B実装（2フェーズ進捗表示）",
+      "file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-3.1",
+      "description": "Workflow情報DB保存ロジック",
+      "file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-4",
+      "description": "PhaseFlowコンポーネント作成",
+      "file": "myAgentDesk/src/lib/components/generation/PhaseFlow.svelte",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-5",
+      "description": "TaskBreakdownListコンポーネント作成",
+      "file": "myAgentDesk/src/lib/components/generation/TaskBreakdownList.svelte",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-6",
+      "description": "WorkflowStatusBadgeコンポーネント作成",
+      "file": "myAgentDesk/src/lib/components/generation/WorkflowStatusBadge.svelte",
+      "status": "pending"
+    },
+    {
+      "task_id": "F-7",
+      "description": "フロントエンドテスト",
+      "file": "myAgentDesk/tests/components/",
+      "status": "pending"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "B-1",
+      "description": "WorkflowMasterテーブル作成（myAgentDesk DB）",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/src/lib/server/db/schema.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "B-2",
+      "description": "DBマイグレーション実行",
+      "estimated_hours": 0.5,
+      "deliverables": ["myAgentDesk/src/lib/server/db/migrations/"],
+      "dependencies": ["B-1"]
+    },
+    {
+      "task_id": "B-3",
+      "description": "WorkflowMasterリポジトリ作成",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/server/repositories/workflow-master.ts"],
+      "dependencies": ["B-1"]
+    },
+    {
+      "task_id": "F-1",
+      "description": "APIクライアント更新（JobStatusResponseに新フィールド追加）",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/src/lib/api/clients/expert-agent.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "F-2",
+      "description": "モック更新",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/src/lib/api/mock/expert-agent.mock.ts"],
+      "dependencies": ["F-1"]
+    },
+    {
+      "task_id": "F-3",
+      "description": "Generate画面Pattern B実装",
+      "estimated_hours": 4,
+      "deliverables": ["myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte"],
+      "dependencies": ["F-1", "F-4", "F-5", "F-6"]
+    },
+    {
+      "task_id": "F-3.1",
+      "description": "Workflow情報DB保存ロジック",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts"],
+      "dependencies": ["F-3", "B-3"]
+    },
+    {
+      "task_id": "F-4",
+      "description": "PhaseFlowコンポーネント作成",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/components/generation/PhaseFlow.svelte"],
+      "dependencies": []
+    },
+    {
+      "task_id": "F-5",
+      "description": "TaskBreakdownListコンポーネント作成",
+      "estimated_hours": 2,
+      "deliverables": ["myAgentDesk/src/lib/components/generation/TaskBreakdownList.svelte"],
+      "dependencies": []
+    },
+    {
+      "task_id": "F-6",
+      "description": "WorkflowStatusBadgeコンポーネント作成",
+      "estimated_hours": 1,
+      "deliverables": ["myAgentDesk/src/lib/components/generation/WorkflowStatusBadge.svelte"],
+      "dependencies": []
+    },
+    {
+      "task_id": "F-7",
+      "description": "フロントエンドテスト（vitest）",
+      "estimated_hours": 3,
+      "deliverables": ["myAgentDesk/tests/components/"],
+      "dependencies": ["F-3", "F-4", "F-5", "F-6"]
+    }
+  ],
+  "deliverables_checklist": [
+    "myAgentDesk/src/lib/server/db/schema.ts (workflowMasters table)",
+    "myAgentDesk/src/lib/server/repositories/workflow-master.ts",
+    "myAgentDesk/src/lib/api/clients/expert-agent.ts (updated types)",
+    "myAgentDesk/src/lib/api/mock/expert-agent.mock.ts (updated mock)",
+    "myAgentDesk/src/lib/components/generation/PhaseFlow.svelte",
+    "myAgentDesk/src/lib/components/generation/TaskBreakdownList.svelte",
+    "myAgentDesk/src/lib/components/generation/WorkflowStatusBadge.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte (Pattern B)",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts (Workflow保存)",
+    "myAgentDesk/tests/components/ (unit tests)"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "npm run check パス",
+    "npm run test パス",
+    "Pattern Bモックアップと実装の一致確認"
+  ],
+  "target_coverage": 80,
+  "backend_api_fields": {
+    "phase": "task_analysis | workflow_generation | complete",
+    "task_breakdown": [
+      {
+        "task_id": "string",
+        "name": "string",
+        "description": "string",
+        "recommended_apis": ["string"]
+      }
+    ],
+    "workflow_statuses": [
+      {
+        "task_id": "string",
+        "status": "pending | generating | success | failed",
+        "workflow_name": "string | null",
+        "generation_time_ms": "number | null",
+        "error_message": "string | null"
+      }
+    ]
+  },
+  "ui_mockup_location": "myAgentDesk/src/routes/(preview)/mockups/feature-305/pattern-b/"
+}

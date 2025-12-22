@@ -1,0 +1,65 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "execution_time": "2025-12-23T00:08:00+09:00",
+  "duration_seconds": 228,
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8004"},
+    "myVault": {"status": "healthy", "url": "http://localhost:8003"},
+    "Langfuse": {"status": "healthy", "url": "http://localhost:3001"}
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_305_acceptance.py",
+    "executed": true,
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "tests": [
+      {"name": "test_job_generator_returns_job_id", "status": "passed"},
+      {"name": "test_status_api_returns_progress", "status": "passed"},
+      {"name": "test_workflow_generation_completes", "status": "passed"},
+      {"name": "test_status_api_contains_new_fields", "status": "passed"},
+      {"name": "test_phase_transitions_and_workflow_success", "status": "passed"},
+      {"name": "test_status_api_returns_404_for_unknown_job", "status": "passed"}
+    ]
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "Job Generator呼び出し後、自動的にWorkflow Generatorが実行される",
+      "verified": true,
+      "verification_method": "pytest"
+    },
+    {
+      "criterion": "Phase 1(0-70%) -> Phase 2(70-95%)の進捗表示が正しい",
+      "verified": true,
+      "verification_method": "pytest"
+    },
+    {
+      "criterion": "各タスクのWorkflow生成状況(pending/generating/success/failed)が表示される",
+      "verified": true,
+      "verification_method": "pytest"
+    },
+    {
+      "criterion": "部分失敗時もJob全体はcompletedになる",
+      "verified": true,
+      "verification_method": "pytest"
+    }
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_305_acceptance.py"
+  ],
+  "notes": [
+    "tracking_job_idフィールドを追加してjob_idとの混同を解決",
+    "空のtask_mastersケースでもphaseとworkflow_statusesを適切に設定",
+    "テストを6件に強化（新規フィールド検証強化）",
+    "全6テストが228秒で完了"
+  ],
+  "message": "L3受入テストに合格しました。全6テストがパス（228秒）。Issue #305のPhase 1（バックエンド）は完了です。"
+}
