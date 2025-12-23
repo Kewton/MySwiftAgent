@@ -30,3 +30,9 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated workflow files (Issue #305)
+# These are auto-generated during workflow testing
+config/graphai/taskmaster/
+config/graphai/test/
+config/graphai/test_workflow.yml

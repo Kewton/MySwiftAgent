@@ -1,7 +1,0 @@
-version: 0.5
-nodes:
-  source: {}
-  output:
-    agent: copyAgent
-    inputs: [:source]
-    isResult: true
