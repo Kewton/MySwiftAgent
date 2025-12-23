@@ -43,12 +43,13 @@ async def generate_workflow_for_task(
 
     try:
         # Build task_data in the format expected by generate_workflow
+        # Note: sample_input_generator expects input_interface.schema structure
         task_data = {
             "name": task_name,
             "description": task_master.get("description", ""),
             "recommended_apis": task_master.get("recommended_apis", []),
-            "input_interface": task_master.get("input_schema", {}),
-            "output_interface": task_master.get("output_schema", {}),
+            "input_interface": {"schema": task_master.get("input_schema", {})},
+            "output_interface": {"schema": task_master.get("output_schema", {})},
         }
 
         # Call the existing Workflow Generator

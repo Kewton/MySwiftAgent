@@ -34,7 +34,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # API URLs
-EXPERTAGENT_BASE_URL = os.getenv("EXPERTAGENT_BASE_URL", "http://localhost:8104")
+# Default: 8004 for local development (--local-only mode)
+# Override via environment variable for Docker (8104) or other setups
+EXPERTAGENT_BASE_URL = os.getenv("EXPERTAGENT_BASE_URL", "http://localhost:8004")
 JOB_GENERATOR_URL = f"{EXPERTAGENT_BASE_URL}/aiagent-api/v1/job-generator"
 
 

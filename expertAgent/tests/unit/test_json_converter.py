@@ -162,11 +162,11 @@ class TestEnsureJsonStructure:
         assert result["is_json_guaranteed"] is True
 
     def test_ensure_dict_without_result(self):
-        """Test ensuring dict without result key - keeps original dict."""
+        """Test ensuring dict without result key - wraps in result key."""
         data = {"data": "value"}
         result = ensure_json_structure(data, "test")
-        # Implementation keeps original dict and adds type and is_json_guaranteed
-        assert result["data"] == "value"
+        # Dicts without 'result' key are wrapped to ensure consistent structure
+        assert result["result"] == {"data": "value"}
         assert result["type"] == "test"
         assert result["is_json_guaranteed"] is True
 

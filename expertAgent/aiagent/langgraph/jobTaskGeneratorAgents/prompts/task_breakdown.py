@@ -14,6 +14,12 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 
 from app.services.prompt_loader import PromptLoader
+from core.config import settings
+
+# Dynamic API URL for LLM processing
+EXPERTAGENT_JSONOUTPUT_URL = (
+    f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+)
 
 
 def _load_yaml_config(filename: str) -> dict:
@@ -271,11 +277,15 @@ def _build_task_breakdown_system_prompt() -> str:
     # Get expert_agent_capabilities to replace placeholder
     expert_agent_capabilities = _build_expert_agent_capabilities()
 
-    # If YAML prompt is loaded, replace placeholder with capabilities
+    # If YAML prompt is loaded, replace placeholders with dynamic values
     if base_prompt:
         # Replace {expert_agent_capabilities} placeholder with actual capabilities
         base_prompt = base_prompt.replace(
             "{expert_agent_capabilities}", expert_agent_capabilities
+        )
+        # Replace {expertagent_jsonoutput_url} placeholder with dynamic URL
+        base_prompt = base_prompt.replace(
+            "{expertagent_jsonoutput_url}", EXPERTAGENT_JSONOUTPUT_URL
         )
         return base_prompt
 
@@ -319,7 +329,7 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 
 **LLM処理 (expertAgent jsonoutput API)**:
 - LLM処理には必ず expertAgent の jsonoutput API を使用
-- URL: `http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput`
+- URL: `{EXPERTAGENT_JSONOUTPUT_URL}`
 - fetchAgent経由で呼び出す
 - 推奨モデル:
   * `gemini-2.5-flash`: Google Gemini 2.5 Flash（推奨、高速・高品質）

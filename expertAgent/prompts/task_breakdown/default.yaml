@@ -45,7 +45,7 @@ system_prompt: |
 
   **LLM処理 (expertAgent jsonoutput API)**:
   - LLM処理には必ず expertAgent の jsonoutput API を使用
-  - URL: `http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput`
+  - URL: `{expertagent_jsonoutput_url}`
   - fetchAgent経由で呼び出す
   - 推奨モデル:
     * `gemini-2.5-flash`: Google Gemini 2.5 Flash（推奨、高速・高品質）

@@ -10,6 +10,12 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.services.prompt_loader import PromptLoader
+from core.config import settings
+
+# Dynamic API URL based on environment configuration
+# Default: http://localhost:8004 for local development
+# Override via EXPERTAGENT_BASE_URL environment variable
+EXPERTAGENT_API_URL = f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
 
 # Load prompt from YAML
 _loader = PromptLoader.create_default()
@@ -230,7 +236,7 @@ def create_workflow_generation_prompt(
    - **IMPORTANT**: NEVER use GraphAI standard LLM agents (geminiAgent, openAIAgent, anthropicAgent, groqAgent, replicateAgent)
    - For LLM processing:
      * ALWAYS use fetchAgent to call expertAgent jsonoutput API
-     * URL: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+     * URL: {EXPERTAGENT_API_URL}
      * Default model: gemini-2.5-flash (recommended)
      * Fallback model: gpt-4o-mini
      * High-quality model: claude-3-5-sonnet
@@ -291,7 +297,7 @@ nodes:
   llm_analysis:
     agent: fetchAgent
     inputs:
-      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      url: {EXPERTAGENT_API_URL}
       method: POST
       body:
         user_input: :build_prompt
@@ -327,7 +333,7 @@ nodes:
   llm:
     agent: fetchAgent
     inputs:
-      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      url: {EXPERTAGENT_API_URL}
       method: POST
       body:
         user_input: :source.query  # ✅ OK: single field reference
@@ -368,7 +374,7 @@ nodes:
   llm_process:
     agent: fetchAgent
     inputs:
-      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      url: {EXPERTAGENT_API_URL}
       method: POST
       body:
         user_input: :build_prompt
@@ -535,7 +541,7 @@ build_upload_prompt:
 generate_content:
   agent: fetchAgent
   inputs:
-    url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+    url: {EXPERTAGENT_API_URL}
     method: POST
     body:
       user_input: :build_prompt

@@ -300,6 +300,8 @@ start_expertagent() {
         MYVAULT_SERVICE_NAME=expertagent \
         MYVAULT_SERVICE_TOKEN=$expertagent_token \
         MYVAULT_DEFAULT_PROJECT=default_project \
+        EXPERTAGENT_BASE_URL=http://localhost:$EXPERTAGENT_PORT \
+        GRAPHAISERVER_BASE_URL=http://localhost:$GRAPHAISERVER_PORT \
         LOG_DIR=$LOG_DIR \
         uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --reload" > "$EXPERTAGENT_LOG" 2>&1 &
 

@@ -29,9 +29,10 @@ from ..state import JobTaskGeneratorState
 logger = logging.getLogger(__name__)
 
 # expertAgent API base URL
+# Default: 8004 for local development (--local-only mode)
 EXPERTAGENT_BASE_URL = os.getenv(
     "EXPERTAGENT_BASE_URL",
-    "http://localhost:8104",
+    "http://localhost:8004",
 )
 
 

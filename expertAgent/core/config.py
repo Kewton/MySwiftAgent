@@ -31,7 +31,9 @@ class Settings(BaseSettings):
     SECRETS_CACHE_TTL: int = Field(default=300)  # 5 minutes cache TTL
 
     # ExpertAgent Base URL (for Job/Task Generator)
-    EXPERTAGENT_BASE_URL: str = Field(default="http://localhost:8104")
+    # Default: 8004 for local development (--local-only mode)
+    # Override via environment variable for Docker (8104) or other setups
+    EXPERTAGENT_BASE_URL: str = Field(default="http://localhost:8004")
 
     # Google APIs Configuration
     GOOGLE_APIS_DEFAULT_PROJECT: str = Field(

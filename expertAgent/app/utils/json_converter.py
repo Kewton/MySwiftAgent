@@ -167,7 +167,7 @@ def ensure_json_structure(data: Any, default_type: str | None = None) -> dict[st
         default_type: type フィールドのデフォルト値
 
     Returns:
-        dict: ExpertAiAgentResponse 互換の構造
+        dict: ExpertAiAgentResponse 互換の構造（必ず 'result' キーを含む）
 
     Example:
         >>> ensure_json_structure("simple text", "test")
@@ -175,15 +175,27 @@ def ensure_json_structure(data: Any, default_type: str | None = None) -> dict[st
 
         >>> ensure_json_structure({"result": "data"}, "test")
         {'result': 'data', 'type': 'test', 'is_json_guaranteed': True}
+
+        >>> ensure_json_structure({"email_subject": "test"}, "email")
+        {'result': {'email_subject': 'test'}, 'type': 'email', 'is_json_guaranteed': True}
     """
     if isinstance(data, dict):
         # 既に dict の場合
-        result = data.copy()
-        if "is_json_guaranteed" not in result:
-            result["is_json_guaranteed"] = True
-        if default_type and "type" not in result:
-            result["type"] = default_type
-        return result
+        if "result" in data:
+            # result キーがあればそのまま使用
+            result = data.copy()
+            if "is_json_guaranteed" not in result:
+                result["is_json_guaranteed"] = True
+            if default_type and "type" not in result:
+                result["type"] = default_type
+            return result
+        else:
+            # result キーがなければラップする
+            return {
+                "result": data,
+                "type": default_type,
+                "is_json_guaranteed": True,
+            }
     elif isinstance(data, str):
         # 文字列の場合
         return {

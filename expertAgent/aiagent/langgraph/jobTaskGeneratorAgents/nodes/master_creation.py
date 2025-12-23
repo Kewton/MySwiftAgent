@@ -124,7 +124,7 @@ async def master_creation_node(
                 )
 
             # Get expertAgent base URL from settings
-            # Falls back to http://localhost:8104 if not set
+            # Default: http://localhost:8004 for local development
             task_url = f"{settings.EXPERTAGENT_BASE_URL}/api/v1/tasks/{task_id}"
 
             # Build description with recommended_apis
