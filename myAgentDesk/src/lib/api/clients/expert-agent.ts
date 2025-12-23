@@ -49,13 +49,17 @@ export interface TaskBreakdownItem {
 /**
  * Workflow status item for each task
  * Issue #305: Tracks workflow generation status per task
+ * Issue #305: Added langfuse_trace_id for per-task trace links
+ * Issue #305: Added task_name for human-readable display
  */
 export interface WorkflowStatusItem {
 	task_id: string;
+	task_name: string | null;
 	status: 'pending' | 'generating' | 'success' | 'failed';
 	workflow_name: string | null;
 	generation_time_ms: number | null;
 	error_message: string | null;
+	langfuse_trace_id: string | null;
 }
 
 /**

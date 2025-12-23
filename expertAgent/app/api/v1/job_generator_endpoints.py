@@ -235,6 +235,9 @@ async def _create_job_in_background(
             tracking_job_id=job_id,  # Pass tracking job_id for workflow generation
         )
 
+        # Issue #305: Set initial phase to "task_analysis" for frontend tracking
+        await job_state_manager.update_phase_async(job_id, "task_analysis")
+
         # Update progress: 10% - Initial state created
         await job_state_manager.update_progress_async(job_id, 10)
 

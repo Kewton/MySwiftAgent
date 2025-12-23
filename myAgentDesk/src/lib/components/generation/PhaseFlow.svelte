@@ -9,6 +9,12 @@
   Props:
   - phase: Current phase ('idle' | 'task_analysis' | 'workflow_generation' | 'complete')
   - progress: Current progress percentage (0-100)
+  - hasFailures: Whether there are workflow generation failures
+
+  Issue #305 Enhancement:
+  - Added spinner animation for active phases
+  - Added pulse animation for better visual feedback
+  - Added striped progress bar animation during generation
 -->
 <script lang="ts">
 	import type { JobPhase } from '$lib/api/clients/expert-agent';
@@ -28,6 +34,7 @@
 	);
 	const isPhase2Active = $derived(phase === 'workflow_generation');
 	const isPhase2Complete = $derived(phase === 'complete');
+	const isGenerating = $derived(phase === 'task_analysis' || phase === 'workflow_generation');
 
 	// Get phase status message
 	const statusMessage = $derived(() => {
@@ -52,13 +59,23 @@
 		class:complete={isPhase1Complete}
 		aria-current={isPhase1Active ? 'step' : undefined}
 	>
-		<span class="phase-number" aria-hidden="true">1</span>
+		<span class="phase-number" aria-hidden="true">
+			{#if isPhase1Active}
+				<span class="spinner"></span>
+			{:else if isPhase1Complete}
+				<svg class="checkmark" viewBox="0 0 24 24" fill="none">
+					<path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+			{:else}
+				1
+			{/if}
+		</span>
 		<span class="phase-label">Task Analysis</span>
 		<span class="phase-desc">Requirements analysis & task breakdown</span>
 	</div>
 
 	<!-- Arrow -->
-	<div class="phase-arrow" aria-hidden="true">
+	<div class="phase-arrow" class:active={isPhase1Complete} aria-hidden="true">
 		<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
 			<path
 				d="M5 12H19M19 12L12 5M19 12L12 19"
@@ -78,7 +95,23 @@
 		class:has-failures={hasFailures && isPhase2Complete}
 		aria-current={isPhase2Active ? 'step' : undefined}
 	>
-		<span class="phase-number" aria-hidden="true">2</span>
+		<span class="phase-number" aria-hidden="true">
+			{#if isPhase2Active}
+				<span class="spinner"></span>
+			{:else if isPhase2Complete}
+				{#if hasFailures}
+					<svg class="warning-icon" viewBox="0 0 24 24" fill="none">
+						<path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+					</svg>
+				{:else}
+					<svg class="checkmark" viewBox="0 0 24 24" fill="none">
+						<path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				{/if}
+			{:else}
+				2
+			{/if}
+		</span>
 		<span class="phase-label">Workflow Generation</span>
 		<span class="phase-desc">Generate YAML for each task</span>
 	</div>
@@ -88,13 +121,19 @@
 {#if phase !== 'idle'}
 	<div class="progress-section">
 		<div class="progress-header">
-			<span class="status-message">{statusMessage()}</span>
+			<span class="status-message">
+				{#if isGenerating}
+					<span class="status-spinner"></span>
+				{/if}
+				{statusMessage()}
+			</span>
 			<span class="progress-percent">{Math.round(progress)}%</span>
 		</div>
-		<div class="progress-bar" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+		<div class="progress-bar" class:generating={isGenerating} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
 			<div
 				class="progress-fill"
 				class:warning={hasFailures && phase === 'complete'}
+				class:animated={isGenerating}
 				style="width: {progress}%"
 			></div>
 			<!-- Phase marker at 70% -->
@@ -133,6 +172,7 @@
 	.phase-step.active {
 		border-color: #3b82f6;
 		background: #eff6ff;
+		animation: pulse 2s ease-in-out infinite;
 	}
 
 	.phase-step.complete {
@@ -143,6 +183,15 @@
 	.phase-step.has-failures {
 		border-color: #f59e0b;
 		background: #fffbeb;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+		}
+		50% {
+			box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+		}
 	}
 
 	.phase-number {
@@ -174,6 +223,40 @@
 		color: white;
 	}
 
+	/* Spinner animation for active phases */
+	.spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid transparent;
+		border-top-color: currentColor;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	.status-spinner {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		border: 2px solid #e2e8f0;
+		border-top-color: #3b82f6;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+		margin-right: 0.5rem;
+		vertical-align: middle;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	/* Checkmark and icons */
+	.checkmark, .warning-icon {
+		width: 14px;
+		height: 14px;
+	}
+
 	.phase-label {
 		font-size: 0.75rem;
 		font-weight: 600;
@@ -189,6 +272,11 @@
 
 	.phase-arrow {
 		color: #cbd5e1;
+		transition: color 0.2s;
+	}
+
+	.phase-arrow.active {
+		color: #10b981;
 	}
 
 	.phase-arrow svg {
@@ -204,12 +292,15 @@
 	.progress-header {
 		display: flex;
 		justify-content: space-between;
+		align-items: center;
 		margin-bottom: 0.5rem;
 		font-size: 0.875rem;
 		color: #475569;
 	}
 
 	.status-message {
+		display: flex;
+		align-items: center;
 		font-weight: 500;
 	}
 
@@ -230,11 +321,49 @@
 		height: 100%;
 		background: #3b82f6;
 		border-radius: 4px;
-		transition: width 0.1s ease;
+		transition: width 0.3s ease;
+	}
+
+	/* Animated striped progress bar during generation */
+	.progress-fill.animated {
+		background: linear-gradient(
+			-45deg,
+			#3b82f6 25%,
+			#60a5fa 25%,
+			#60a5fa 50%,
+			#3b82f6 50%,
+			#3b82f6 75%,
+			#60a5fa 75%
+		);
+		background-size: 20px 20px;
+		animation: stripes 0.5s linear infinite;
+	}
+
+	@keyframes stripes {
+		from {
+			background-position: 0 0;
+		}
+		to {
+			background-position: 20px 0;
+		}
 	}
 
 	.progress-fill.warning {
 		background: #f59e0b;
+	}
+
+	.progress-fill.warning.animated {
+		background: linear-gradient(
+			-45deg,
+			#f59e0b 25%,
+			#fbbf24 25%,
+			#fbbf24 50%,
+			#f59e0b 50%,
+			#f59e0b 75%,
+			#fbbf24 75%
+		);
+		background-size: 20px 20px;
+		animation: stripes 0.5s linear infinite;
 	}
 
 	.phase-marker {

@@ -8,12 +8,14 @@
   - Generate Job button (disabled when no active version)
   - 2-Phase progress display (PhaseFlow component)
   - Task breakdown display (TaskBreakdownList component)
-  - Polling for status updates (2 second interval)
+  - Polling for status updates (1 second interval)
   - Timeout handling (5 minutes)
   - Recent job versions history
+  - Last generation result display (persistent after completion)
 -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData, ActionData } from './$types';
 	import { POLLING_CONFIG, JOB_VERSION_STATUS_CONFIG } from '$lib/types/job-version';
 	import type {
@@ -38,6 +40,18 @@
 	let taskBreakdown = $state<TaskBreakdownItem[]>([]);
 	let workflowStatuses = $state<WorkflowStatusItem[]>([]);
 	let langfuseTraceId = $state<string | null>(null);
+
+	// Issue #305: Last generation result (persisted after completion)
+	let lastGenerationResult = $state<{
+		phase: JobPhase | 'idle';
+		progress: number;
+		taskBreakdown: TaskBreakdownItem[];
+		workflowStatuses: WorkflowStatusItem[];
+		langfuseTraceId: string | null;
+		versionLabel: string | null;
+		completedAt: Date | null;
+		hasFailures: boolean;
+	} | null>(null);
 
 	// Issue #305: Derived state for workflow failures
 	let hasWorkflowFailures = $derived(
@@ -80,6 +94,8 @@
 			taskBreakdown = [];
 			workflowStatuses = [];
 			langfuseTraceId = null;
+			// Clear last result when starting new generation
+			lastGenerationResult = null;
 			startPolling();
 		} else if (form?.error) {
 			errorMessage = form.error;
@@ -135,16 +151,32 @@
 				if (status.status === 'success') {
 					isGenerating = false;
 					currentPhase = 'complete';
+					currentProgress = 100;
 					statusMessage = `Generation complete: ${status.versionLabel}`;
+
+					// Issue #305: Save last generation result
+					lastGenerationResult = {
+						phase: 'complete',
+						progress: 100,
+						taskBreakdown: [...taskBreakdown],
+						workflowStatuses: [...workflowStatuses],
+						langfuseTraceId,
+						versionLabel: status.versionLabel,
+						completedAt: new Date(),
+						hasFailures: workflowStatuses.some((ws) => ws.status === 'failed')
+					};
+
 					stopPolling();
-					// Refresh the page data after a short delay
-					setTimeout(() => {
-						window.location.reload();
-					}, 2000);
+					// Issue #305: Refresh data without full page reload to keep state
+					await invalidateAll();
 				} else if (status.status === 'failed') {
 					isGenerating = false;
 					errorMessage = status.errorMessage ?? 'Generation failed';
 					statusMessage = '';
+					// Issue #305: Clear last result on failure (don't persist failed state)
+					lastGenerationResult = null;
+					// Reset phase to idle on failure
+					currentPhase = 'idle';
 					stopPolling();
 				}
 			} catch (err) {
@@ -191,9 +223,21 @@
 		);
 	}
 
-	function formatDate(dateString: string | null) {
+	function formatDate(dateString: string | Date | null) {
 		if (!dateString) return '-';
-		return new Date(dateString).toLocaleString();
+		const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+		return date.toLocaleString();
+	}
+
+	// Issue #305: Clear last result
+	function clearLastResult() {
+		lastGenerationResult = null;
+		currentPhase = 'idle';
+		currentProgress = 0;
+		taskBreakdown = [];
+		workflowStatuses = [];
+		langfuseTraceId = null;
+		statusMessage = '';
 	}
 </script>
 
@@ -237,26 +281,15 @@
 
 	<!-- Generation Status Section - Issue #305: Enhanced with PhaseFlow -->
 	<div class="section-card">
-		<h3>Generation Status</h3>
-		{#if isGenerating || currentPhase === 'complete'}
-			<!-- Issue #305: 2-Phase Progress Display -->
-			<PhaseFlow phase={currentPhase} progress={currentProgress} hasFailures={hasWorkflowFailures} />
-
-			<!-- Issue #305: Task Breakdown Display (shown after phase 1) -->
-			{#if taskBreakdown.length > 0}
-				<TaskBreakdownList tasks={taskBreakdown} workflowStatuses={workflowStatuses} />
+		<div class="section-header">
+			<h3>Generation Status</h3>
+			{#if lastGenerationResult && !isGenerating}
+				<button class="clear-button" onclick={clearLastResult}>Clear Result</button>
 			{/if}
+		</div>
 
-			<!-- Issue #305: Generation Summary (shown on completion) -->
-			{#if currentPhase === 'complete'}
-				<GenerationSummary
-					successCount={successfulWorkflows}
-					failedCount={failedWorkflows}
-					totalTasks={taskBreakdown.length}
-					traceId={langfuseTraceId}
-				/>
-			{/if}
-		{:else if errorMessage}
+		<!-- Issue #305: Error display takes priority over other states -->
+		{#if errorMessage && !isGenerating}
 			<div class="status-indicator error">
 				<span class="error-icon">X</span>
 				<div class="status-text">
@@ -264,6 +297,46 @@
 					<span class="status-detail">{errorMessage}</span>
 				</div>
 			</div>
+		{:else if isGenerating || currentPhase === 'complete' || (lastGenerationResult && !errorMessage)}
+			<!-- Issue #305: 2-Phase Progress Display -->
+			<PhaseFlow
+				phase={isGenerating ? currentPhase : (lastGenerationResult?.phase ?? 'idle')}
+				progress={isGenerating ? currentProgress : (lastGenerationResult?.progress ?? 0)}
+				hasFailures={isGenerating ? hasWorkflowFailures : (lastGenerationResult?.hasFailures ?? false)}
+			/>
+
+			<!-- Issue #305: Task Breakdown Display (shown after phase 1) -->
+			{@const displayTasks = isGenerating ? taskBreakdown : (lastGenerationResult?.taskBreakdown ?? [])}
+			{@const displayStatuses = isGenerating ? workflowStatuses : (lastGenerationResult?.workflowStatuses ?? [])}
+			{#if displayTasks.length > 0}
+				<TaskBreakdownList tasks={displayTasks} workflowStatuses={displayStatuses} />
+			{/if}
+
+			<!-- Issue #305: Generation Summary (shown on completion) -->
+			{#if currentPhase === 'complete' || lastGenerationResult?.phase === 'complete'}
+				{@const displaySuccessCount = isGenerating ? successfulWorkflows : displayStatuses.filter((ws) => ws.status === 'success').length}
+				{@const displayFailedCount = isGenerating ? failedWorkflows : displayStatuses.filter((ws) => ws.status === 'failed').length}
+				{@const displayTraceId = isGenerating ? langfuseTraceId : lastGenerationResult?.langfuseTraceId}
+				<GenerationSummary
+					successCount={displaySuccessCount}
+					failedCount={displayFailedCount}
+					totalTasks={displayTasks.length}
+					traceId={displayTraceId}
+				/>
+
+				<!-- Last generation info -->
+				{#if lastGenerationResult && !isGenerating}
+					<div class="last-generation-info">
+						<span class="info-label">Completed:</span>
+						<span class="info-value">{formatDate(lastGenerationResult.completedAt)}</span>
+						{#if lastGenerationResult.versionLabel}
+							<span class="info-separator">|</span>
+							<span class="info-label">Version:</span>
+							<span class="info-value">{lastGenerationResult.versionLabel}</span>
+						{/if}
+					</div>
+				{/if}
+			{/if}
 		{:else if statusMessage}
 			<div class="status-indicator success">
 				<span class="success-icon">OK</span>
@@ -284,6 +357,7 @@
 		<form method="POST" action="?/generateJob" use:enhance>
 			<button type="submit" class="generate-button" disabled={!canGenerate}>
 				{#if isGenerating}
+					<span class="button-spinner"></span>
 					Generating...
 				{:else if !data.activeRequirementVersion}
 					No Active Version
@@ -303,28 +377,70 @@
 			<h3>Recent Job Versions</h3>
 			<div class="job-history">
 				{#each data.recentJobVersions as job (job.id)}
-					<div class="job-item">
-						<div class="job-version">{job.versionLabel}</div>
-						<span
-							class="status-badge"
-							style="color: {getStatusConfig(job.status).color}; background: {getStatusConfig(
-								job.status
-							).bgColor}"
-						>
-							{getStatusConfig(job.status).label}
-						</span>
-						<span class="job-date">{formatDate(job.generatedAt ?? job.createdAt)}</span>
-						{#if job.externalTraceId}
-							<a
-								href="http://localhost:3001/trace/{job.externalTraceId}"
-								target="_blank"
-								rel="noopener noreferrer"
-								class="trace-link"
+					{@const workflowStatuses = job.workflows ? JSON.parse(job.workflows) : []}
+					<details class="job-item-details">
+						<summary class="job-item">
+							<div class="job-version">{job.versionLabel}</div>
+							<span
+								class="status-badge"
+								style="color: {getStatusConfig(job.status).color}; background: {getStatusConfig(
+									job.status
+								).bgColor}"
 							>
-								Open Trace
-							</a>
+								{getStatusConfig(job.status).label}
+							</span>
+							{#if workflowStatuses.length > 0}
+								<span class="workflow-count">
+									{workflowStatuses.filter((ws: WorkflowStatusItem) => ws.status === 'success').length}/{workflowStatuses.length} tasks
+								</span>
+							{/if}
+							<span class="job-date">{formatDate(job.generatedAt ?? job.createdAt)}</span>
+							{#if job.externalTraceId}
+								<a
+									href="http://localhost:3001/trace/{job.externalTraceId}"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="trace-link"
+									onclick={(e) => e.stopPropagation()}
+								>
+									Main Trace
+								</a>
+							{/if}
+						</summary>
+						<!-- Issue #305: Per-task workflow traces -->
+						{#if workflowStatuses.length > 0}
+							<div class="workflow-traces">
+								<div class="workflow-traces-header">Task Workflow Traces</div>
+								{#each workflowStatuses as ws (ws.task_id)}
+									<div class="workflow-trace-item">
+										<span class="task-name">{ws.task_name ?? ws.task_id}</span>
+										<span
+											class="status-badge small"
+											style="color: {ws.status === 'success' ? '#166534' : '#dc2626'}; background: {ws.status === 'success' ? '#dcfce7' : '#fee2e2'}"
+										>
+											{ws.status}
+										</span>
+										{#if ws.workflow_name}
+											<span class="workflow-name">{ws.workflow_name}</span>
+										{/if}
+										{#if ws.langfuse_trace_id}
+											<a
+												href="http://localhost:3001/trace/{ws.langfuse_trace_id}"
+												target="_blank"
+												rel="noopener noreferrer"
+												class="trace-link small"
+											>
+												Trace
+											</a>
+										{/if}
+										{#if ws.error_message}
+											<span class="error-hint" title={ws.error_message}>Error</span>
+										{/if}
+									</div>
+								{/each}
+							</div>
 						{/if}
-					</div>
+					</details>
 				{/each}
 			</div>
 		</div>
@@ -362,11 +478,38 @@
 		margin-bottom: 1rem;
 	}
 
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.section-header h3 {
+		margin: 0;
+	}
+
 	.section-card h3 {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: #1e293b;
 		margin: 0 0 1rem;
+	}
+
+	.clear-button {
+		font-size: 0.75rem;
+		color: #64748b;
+		background: none;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.25rem;
+		padding: 0.25rem 0.5rem;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.clear-button:hover {
+		background: #f1f5f9;
+		color: #475569;
 	}
 
 	.requirement-info {
@@ -519,6 +662,10 @@
 	}
 
 	.generate-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
 		padding: 0.75rem 1.5rem;
 		background: #3b82f6;
 		color: white;
@@ -539,10 +686,51 @@
 		cursor: not-allowed;
 	}
 
+	/* Button spinner */
+	.button-spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
 	.help-text {
 		font-size: 0.75rem;
 		color: #94a3b8;
 		margin: 0.5rem 0 0;
+	}
+
+	/* Last generation info */
+	.last-generation-info {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		padding: 0.75rem;
+		background: #f1f5f9;
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+	}
+
+	.info-label {
+		color: #64748b;
+	}
+
+	.info-value {
+		color: #1e293b;
+		font-weight: 500;
+	}
+
+	.info-separator {
+		color: #cbd5e1;
 	}
 
 	.job-history {
@@ -581,5 +769,95 @@
 
 	.trace-link:hover {
 		text-decoration: underline;
+	}
+
+	/* Issue #305: Job item with expandable workflow traces */
+	.job-item-details {
+		background: white;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.25rem;
+	}
+
+	.job-item-details summary {
+		list-style: none;
+		cursor: pointer;
+	}
+
+	.job-item-details summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.job-item-details[open] .job-item {
+		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.workflow-count {
+		font-size: 0.75rem;
+		color: #64748b;
+		background: #f1f5f9;
+		padding: 0.125rem 0.375rem;
+		border-radius: 0.25rem;
+	}
+
+	.workflow-traces {
+		padding: 0.75rem;
+		background: #f8fafc;
+	}
+
+	.workflow-traces-header {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #64748b;
+		margin-bottom: 0.5rem;
+	}
+
+	.workflow-trace-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.375rem 0.5rem;
+		background: white;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.25rem;
+		margin-bottom: 0.25rem;
+		font-size: 0.75rem;
+	}
+
+	.workflow-trace-item:last-child {
+		margin-bottom: 0;
+	}
+
+	.task-name {
+		font-weight: 500;
+		color: #1e293b;
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.workflow-name {
+		color: #64748b;
+		font-size: 0.675rem;
+		flex-shrink: 0;
+	}
+
+	.status-badge.small {
+		font-size: 0.625rem;
+		padding: 0.0625rem 0.25rem;
+	}
+
+	.trace-link.small {
+		font-size: 0.675rem;
+	}
+
+	.error-hint {
+		font-size: 0.675rem;
+		color: #dc2626;
+		background: #fee2e2;
+		padding: 0.0625rem 0.25rem;
+		border-radius: 0.125rem;
+		cursor: help;
 	}
 </style>

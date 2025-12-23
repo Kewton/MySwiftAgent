@@ -106,11 +106,13 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	// Sync langfuse_trace_id for completed jobs (handles stale external_trace_id)
 	await syncLangfuseTraceIds(recentJobs);
 
+	// Issue #305: Include workflows (JSON) for per-task trace links
 	const recentJobVersions = recentJobs.map((jv) => ({
 		id: jv.id,
 		versionLabel: jv.versionLabel,
 		status: jv.status,
 		externalTraceId: jv.externalTraceId,
+		workflows: jv.workflows, // JSON string containing workflow_statuses with trace IDs
 		generatedAt: jv.generatedAt?.toISOString() ?? null,
 		createdAt: jv.createdAt.toISOString()
 	}));

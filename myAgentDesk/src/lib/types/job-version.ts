@@ -109,9 +109,10 @@ export const JOB_VERSION_STATUS_CONFIG: Record<
 
 /**
  * Polling configuration for job generation.
+ * Issue #305: Reduced interval from 2s to 1s for better progress tracking.
  */
 export const POLLING_CONFIG = {
-	intervalMs: 2000,
+	intervalMs: 1000,
 	maxDurationMs: 300000 // 5 minutes
 } as const;
 

@@ -80,10 +80,12 @@ class WorkflowStatusItem(BaseModel):
     """
 
     task_id: str
+    task_name: Optional[str] = None  # Issue #305: Human-readable task name for UI
     status: str  # 'pending' | 'generating' | 'success' | 'failed'
     workflow_name: Optional[str] = None
     generation_time_ms: Optional[int] = None
     error_message: Optional[str] = None
+    langfuse_trace_id: Optional[str] = None  # Issue #305: Per-task trace link
 
 
 class JobCreationStatus(BaseModel):
@@ -497,6 +499,7 @@ class JobCreationStateManager:
         self,
         job_id: str,
         task_ids: list[str],
+        task_names: Optional[list[str]] = None,
     ) -> None:
         """Initialize workflow statuses for all tasks (async version).
 
@@ -505,14 +508,21 @@ class JobCreationStateManager:
         Args:
             job_id: Job ID
             task_ids: List of task IDs to initialize
+            task_names: Optional list of task names (same order as task_ids)
         """
         status = self._get_job_or_log_warning(job_id)
         if status is None:
             return
 
-        status.workflow_statuses = [
-            WorkflowStatusItem(task_id=tid, status="pending") for tid in task_ids
-        ]
+        # Build workflow statuses with optional task names
+        workflow_statuses: list[WorkflowStatusItem] = []
+        for i, tid in enumerate(task_ids):
+            task_name = task_names[i] if task_names and i < len(task_names) else None
+            workflow_statuses.append(
+                WorkflowStatusItem(task_id=tid, task_name=task_name, status="pending")
+            )
+
+        status.workflow_statuses = workflow_statuses
         logger.debug(
             f"Initialized workflow statuses for job {job_id}: {len(task_ids)} tasks"
         )
@@ -528,6 +538,7 @@ class JobCreationStateManager:
         workflow_name: Optional[str] = None,
         generation_time_ms: Optional[int] = None,
         error_message: Optional[str] = None,
+        langfuse_trace_id: Optional[str] = None,
     ) -> None:
         """Update individual workflow status (async version).
 
@@ -540,6 +551,7 @@ class JobCreationStateManager:
             workflow_name: Workflow name (if success)
             generation_time_ms: Generation time in milliseconds (if success)
             error_message: Error message (if failed)
+            langfuse_trace_id: Langfuse trace ID for per-task tracing
         """
         status = self._get_job_or_log_warning(job_id)
         if status is None:
@@ -556,6 +568,7 @@ class JobCreationStateManager:
                 ws.workflow_name = workflow_name
                 ws.generation_time_ms = generation_time_ms
                 ws.error_message = error_message
+                ws.langfuse_trace_id = langfuse_trace_id
                 logger.debug(
                     f"Updated workflow status for task {task_id}: {workflow_status}"
                 )

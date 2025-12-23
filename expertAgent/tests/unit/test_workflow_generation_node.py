@@ -495,6 +495,17 @@ class TestWorkflowGenerationNode:
         return manager
 
     @pytest.fixture
+    def mock_langfuse_service(self) -> MagicMock:
+        """Create mock langfuse service.
+
+        Issue #305: Added to support per-task tracing.
+        """
+        service = MagicMock()
+        service.get_callback_handler = MagicMock(return_value=None)
+        service.flush = MagicMock()
+        return service
+
+    @pytest.fixture
     def sample_state(self) -> dict[str, Any]:
         """Create sample state for testing."""
         return {
@@ -540,7 +551,10 @@ class TestWorkflowGenerationNode:
 
     @pytest.mark.unit
     async def test_workflow_generation_node_success(
-        self, mock_job_state_manager: MagicMock, sample_state: dict[str, Any]
+        self,
+        mock_job_state_manager: MagicMock,
+        mock_langfuse_service: MagicMock,
+        sample_state: dict[str, Any],
     ) -> None:
         """Test successful workflow generation for all tasks."""
         from aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation import (
@@ -552,30 +566,40 @@ class TestWorkflowGenerationNode:
             mock_job_state_manager,
         ):
             with patch(
-                "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.generate_workflow_for_task"
-            ) as mock_generate:
-                mock_generate.return_value = {
-                    "status": "success",
-                    "workflow_name": "test_workflow",
-                    "yaml_content": "version: 0.6",
-                }
+                "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.langfuse_service",
+                mock_langfuse_service,
+            ):
+                with patch(
+                    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.generate_workflow_for_task"
+                ) as mock_generate:
+                    mock_generate.return_value = {
+                        "status": "success",
+                        "workflow_name": "test_workflow",
+                        "yaml_content": "version: 0.6",
+                    }
 
-                result = await workflow_generation_node(sample_state)
+                    result = await workflow_generation_node(sample_state)
 
-                # Verify workflow results
-                assert result["phase"] == "complete"
-                assert len(result["workflow_results"]) == 2
-                assert all(
-                    wr["status"] == "success" for wr in result["workflow_results"]
-                )
+                    # Verify workflow results
+                    assert result["phase"] == "complete"
+                    assert len(result["workflow_results"]) == 2
+                    assert all(
+                        wr["status"] == "success" for wr in result["workflow_results"]
+                    )
 
-                # Verify progress updates were made
-                mock_job_state_manager.update_phase_async.assert_called()
-                mock_job_state_manager.update_workflow_status_async.assert_called()
+                    # Verify progress updates were made
+                    mock_job_state_manager.update_phase_async.assert_called()
+                    mock_job_state_manager.update_workflow_status_async.assert_called()
+
+                    # Issue #305: Verify per-task tracing
+                    assert mock_langfuse_service.get_callback_handler.call_count == 2
 
     @pytest.mark.unit
     async def test_workflow_generation_node_partial_failure(
-        self, mock_job_state_manager: MagicMock, sample_state: dict[str, Any]
+        self,
+        mock_job_state_manager: MagicMock,
+        mock_langfuse_service: MagicMock,
+        sample_state: dict[str, Any],
     ) -> None:
         """Test partial failure in workflow generation."""
         from aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation import (
@@ -604,18 +628,29 @@ class TestWorkflowGenerationNode:
             mock_job_state_manager,
         ):
             with patch(
-                "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.generate_workflow_for_task"
-            ) as mock_generate:
-                mock_generate.side_effect = mock_generate_side_effect
+                "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.langfuse_service",
+                mock_langfuse_service,
+            ):
+                with patch(
+                    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.generate_workflow_for_task"
+                ) as mock_generate:
+                    mock_generate.side_effect = mock_generate_side_effect
 
-                result = await workflow_generation_node(sample_state)
+                    result = await workflow_generation_node(sample_state)
 
-                # Verify mixed results
-                assert len(result["workflow_results"]) == 2
-                assert result["workflow_results"][0]["status"] == "success"
-                assert result["workflow_results"][1]["status"] == "failed"
-                # Phase should still be complete (partial success)
-                assert result["phase"] == "complete"
+                    # Verify mixed results
+                    assert len(result["workflow_results"]) == 2
+                    # Note: With parallel execution, order may vary
+                    success_count = sum(
+                        1 for wr in result["workflow_results"] if wr["status"] == "success"
+                    )
+                    failed_count = sum(
+                        1 for wr in result["workflow_results"] if wr["status"] == "failed"
+                    )
+                    assert success_count == 1
+                    assert failed_count == 1
+                    # Phase should still be complete (partial success)
+                    assert result["phase"] == "complete"
 
     @pytest.mark.unit
     async def test_workflow_generation_node_empty_tasks(
@@ -648,7 +683,10 @@ class TestWorkflowGenerationNode:
 
     @pytest.mark.unit
     async def test_workflow_generation_node_progress_updates(
-        self, mock_job_state_manager: MagicMock, sample_state: dict[str, Any]
+        self,
+        mock_job_state_manager: MagicMock,
+        mock_langfuse_service: MagicMock,
+        sample_state: dict[str, Any],
     ) -> None:
         """Test progress updates during workflow generation."""
         from aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation import (
@@ -669,21 +707,25 @@ class TestWorkflowGenerationNode:
             mock_job_state_manager,
         ):
             with patch(
-                "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.generate_workflow_for_task"
-            ) as mock_generate:
-                mock_generate.return_value = {
-                    "status": "success",
-                    "workflow_name": "test",
-                    "yaml_content": "version: 0.6",
-                }
+                "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.langfuse_service",
+                mock_langfuse_service,
+            ):
+                with patch(
+                    "aiagent.langgraph.jobTaskGeneratorAgents.nodes.workflow_generation.generate_workflow_for_task"
+                ) as mock_generate:
+                    mock_generate.return_value = {
+                        "status": "success",
+                        "workflow_name": "test",
+                        "yaml_content": "version: 0.6",
+                    }
 
-                await workflow_generation_node(sample_state)
+                    await workflow_generation_node(sample_state)
 
-                # Progress should increase (70% base + increments up to 95%)
-                assert len(progress_values) >= 2
-                # Each progress value should be >= 70 and <= 95
-                for progress in progress_values:
-                    assert 70 <= progress <= 95
+                    # Progress should increase (70% base + increments up to 95%)
+                    assert len(progress_values) >= 2
+                    # Each progress value should be >= 70 and <= 95
+                    for progress in progress_values:
+                        assert 70 <= progress <= 95
 
 
 # ============================================================================

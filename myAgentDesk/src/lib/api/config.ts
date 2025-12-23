@@ -38,27 +38,27 @@ export interface ApiConfig {
  */
 export const DEFAULT_CONFIG: ApiConfig = {
 	expertAgent: {
-		baseUrl: 'http://localhost:8104/aiagent-api',
+		baseUrl: 'http://localhost:8004/aiagent-api',
 		timeout: 30000
 	},
 	jobQueue: {
-		baseUrl: 'http://localhost:8101',
+		baseUrl: 'http://localhost:8001',
 		apiToken: '',
 		timeout: 30000
 	},
 	myScheduler: {
-		baseUrl: 'http://localhost:8102',
+		baseUrl: 'http://localhost:8002',
 		apiToken: '',
 		timeout: 30000
 	},
 	myVault: {
-		baseUrl: 'http://localhost:8103',
+		baseUrl: 'http://localhost:8003',
 		serviceName: 'myAgentDesk',
 		serviceToken: '',
 		timeout: 30000
 	},
 	langfuse: {
-		baseUrl: 'http://localhost:8104/aiagent-api',
+		baseUrl: 'http://localhost:3001',
 		timeout: 30000
 	}
 };

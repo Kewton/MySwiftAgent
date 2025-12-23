@@ -74,11 +74,13 @@ async def generate_workflow_for_task(
                 "yaml_content": yaml_content,
             }
         else:
-            error_message = result.get(
-                "error_message",
-                result.get("validation_errors", ["Unknown error"])[0]
-                if result.get("validation_errors")
-                else "Workflow generation failed",
+            # Note: result.get("error_message", default) returns None if key exists
+            # but value is None, so we need to handle None explicitly with `or`
+            validation_errors = result.get("validation_errors", [])
+            error_message = (
+                result.get("error_message")
+                or (validation_errors[0] if validation_errors else None)
+                or f"Workflow generation failed (status={result.get('status', 'unknown')})"
             )
             logger.warning(
                 f"Workflow generation failed for task {task_id}: {error_message}"

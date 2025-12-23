@@ -62,21 +62,24 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 		status: 'success',
 		workflow_name: 'workflow_gmail_fetch',
 		generation_time_ms: 28500,
-		error_message: null
+		error_message: null,
+		langfuse_trace_id: 'trace_mock_001'
 	},
 	{
 		task_id: 'tm_002',
 		status: 'success',
 		workflow_name: 'workflow_claude_summarize',
 		generation_time_ms: 32100,
-		error_message: null
+		error_message: null,
+		langfuse_trace_id: 'trace_mock_002'
 	},
 	{
 		task_id: 'tm_003',
 		status: 'success',
 		workflow_name: 'workflow_slack_post',
 		generation_time_ms: 25300,
-		error_message: null
+		error_message: null,
+		langfuse_trace_id: 'trace_mock_003'
 	}
 ];
 
