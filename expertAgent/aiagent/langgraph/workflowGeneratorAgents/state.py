@@ -3,11 +3,15 @@
 This module defines the state structure for the LangGraph-based agent that
 automatically generates GraphAI workflow YAML files from TaskMaster metadata.
 
-Workflow:
-1. Generator Node → Generate YAML from task metadata using LLM
-2. Workflow Tester Node → Test YAML execution on graphAiServer
-3. Validator Node → Validate execution results (non-LLM)
-4. Self-Repair Node → Fix errors and regenerate (max 3 retries)
+Updated Workflow (Issue #305):
+1. Generator Node -> Generate YAML from task metadata using LLM
+2. Sample Input Generator Node -> Generate sample input from Input Interface
+3. Workflow Tester Node -> Test YAML execution on graphAiServer
+4. Validator Node -> Validate execution results (non-LLM)
+5. LLM Evaluator Node -> LLM-based semantic evaluation (NEW)
+6. Test Data Regenerator Node -> Regenerate low-quality test data (NEW)
+7. Result Summary Generator Node -> Generate validation summary (NEW)
+8. Self-Repair Node -> Fix errors and regenerate (max 3 retries)
 """
 
 from typing import Any, TypedDict
@@ -29,7 +33,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
         yaml_content: Generated GraphAI workflow YAML
         workflow_name: Generated workflow name (snake_case)
         generation_retry_count: Current generation retry count
-    generation_model: Model name used for latest generation attempt
+        generation_model: Model name used for latest generation attempt
 
         # Workflow Testing fields
         workflow_registered: Whether workflow was registered to graphAiServer
@@ -43,10 +47,29 @@ class WorkflowGeneratorState(TypedDict, total=False):
         validation_errors: List of validation error messages
         is_valid: Whether workflow passed all validations
 
+        # LLM Evaluator fields (Issue #305)
+        llm_evaluation_result: LLM evaluation result dictionary
+        evaluation_score: Overall evaluation score (0-100)
+        evaluation_feedback: Human-readable feedback from LLM
+        evaluation_suggestions: List of improvement suggestions
+
+        # Test Data Quality fields (Issue #305)
+        test_data_quality_score: Test data quality score (0-100)
+        test_data_issues: List of test data quality issues
+        needs_test_data_regeneration: Whether test data needs regeneration
+        test_data_regeneration_count: Current test data regeneration count
+        max_test_data_regeneration: Maximum test data regeneration count
+        regenerated_sample_input: LLM-regenerated sample input
+        suggested_test_data: LLM-suggested test data for regeneration
+
+        # Result Summary fields (Issue #305)
+        validation_summary: Complete validation summary dictionary
+        summary_markdown: Markdown-formatted summary
+
         # Self-Repair fields
         retry_count: Current self-repair retry count
         error_feedback: Error feedback for LLM to fix issues
-    repair_history: List of repair attempts with errors and metadata
+        repair_history: List of repair attempts with errors and metadata
 
         # Output fields
         status: Workflow status (success, failed, max_retries_exceeded)
@@ -78,6 +101,25 @@ class WorkflowGeneratorState(TypedDict, total=False):
     validation_errors: list[str]
     is_valid: bool
 
+    # ===== LLM Evaluator (Issue #305) =====
+    llm_evaluation_result: dict[str, Any] | None
+    evaluation_score: int | None
+    evaluation_feedback: str | None
+    evaluation_suggestions: list[str]
+
+    # ===== Test Data Quality (Issue #305) =====
+    test_data_quality_score: int | None
+    test_data_issues: list[str]
+    needs_test_data_regeneration: bool
+    test_data_regeneration_count: int
+    max_test_data_regeneration: int
+    regenerated_sample_input: dict[str, Any] | None
+    suggested_test_data: dict[str, Any] | None
+
+    # ===== Result Summary (Issue #305) =====
+    validation_summary: dict[str, Any] | None
+    summary_markdown: str | None
+
     # ===== Self-Repair =====
     retry_count: int
     error_feedback: str | None
@@ -92,6 +134,7 @@ def create_initial_state(
     task_master_id: str | int,
     task_data: dict[str, Any],
     max_retry: int = 3,
+    max_test_data_regeneration: int = 2,
 ) -> WorkflowGeneratorState:
     """Create initial state with default values.
 
@@ -100,6 +143,7 @@ def create_initial_state(
             workflow for
         task_data: TaskMaster metadata from jobqueue API
         max_retry: Maximum retry count for self-repair (default: 3)
+        max_test_data_regeneration: Maximum test data regeneration count (default: 2)
 
     Returns:
         WorkflowGeneratorState: Initial state with default values
@@ -124,6 +168,22 @@ def create_initial_state(
         "validation_result": None,
         "validation_errors": [],
         "is_valid": False,
+        # LLM Evaluator (Issue #305)
+        "llm_evaluation_result": None,
+        "evaluation_score": None,
+        "evaluation_feedback": None,
+        "evaluation_suggestions": [],
+        # Test Data Quality (Issue #305)
+        "test_data_quality_score": None,
+        "test_data_issues": [],
+        "needs_test_data_regeneration": False,
+        "test_data_regeneration_count": 0,
+        "max_test_data_regeneration": max_test_data_regeneration,
+        "regenerated_sample_input": None,
+        "suggested_test_data": None,
+        # Result Summary (Issue #305)
+        "validation_summary": None,
+        "summary_markdown": None,
         # Self-Repair
         "retry_count": 0,
         "error_feedback": None,

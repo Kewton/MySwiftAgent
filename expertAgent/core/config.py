@@ -54,6 +54,21 @@ class Settings(BaseSettings):
     WORKFLOW_GENERATOR_MODEL: str = Field(default="claude-haiku-4-5")
     WORKFLOW_GENERATOR_MAX_TOKENS: int = Field(default=16384)
 
+    # LLM Evaluator Configuration (Issue #305)
+    LLM_EVALUATOR_ENABLED: bool = Field(default=True)
+    LLM_EVALUATOR_MODEL: str = Field(default="gpt-4o-mini")
+    LLM_EVALUATOR_THRESHOLD: int = Field(default=70)
+    LLM_EVALUATOR_TIMEOUT: int = Field(default=30)
+
+    # Test Data Regenerator Configuration (Issue #305)
+    TEST_DATA_QUALITY_THRESHOLD: int = Field(default=50)
+    MAX_TEST_DATA_REGENERATION: int = Field(default=2)
+    TEST_DATA_REGENERATOR_MODEL: str = Field(default="gpt-4o-mini")
+
+    # Result Summary Configuration (Issue #305)
+    RESULT_SUMMARY_ENABLED: bool = Field(default=True)
+    RESULT_SUMMARY_FORMAT: str = Field(default="markdown")  # markdown or json
+
     # Langfuse Observability Configuration (Issue #113)
     LANGFUSE_PUBLIC_KEY: str = Field(default="")
     LANGFUSE_SECRET_KEY: str = Field(default="")

@@ -17,10 +17,17 @@ from aiagent.langgraph.workflowGeneratorAgents.state import (
 
 
 class TestValidatorRouter:
-    """Test validator_router (conditional routing after validation)."""
+    """Test validator_router (conditional routing after validation).
+
+    Updated for Issue #305: validator_router now always routes to llm_evaluator
+    for semantic evaluation. The llm_evaluator_router handles subsequent routing.
+    """
 
     def test_validator_router_validation_success(self):
-        """Test router returns END when validation passes."""
+        """Test router returns llm_evaluator when validation passes.
+
+        Issue #305: validator now routes to llm_evaluator for semantic evaluation.
+        """
         state: WorkflowGeneratorState = {
             "task_master_id": 123,
             "task_data": {"name": "test"},
@@ -33,10 +40,14 @@ class TestValidatorRouter:
 
         next_node = validator_router(state)
 
-        assert next_node == "END"
+        assert next_node == "llm_evaluator"
 
     def test_validator_router_validation_failed(self):
-        """Test router returns self_repair when validation fails."""
+        """Test router returns llm_evaluator even when validation fails.
+
+        Issue #305: validator now always routes to llm_evaluator for
+        comprehensive evaluation before self_repair.
+        """
         state: WorkflowGeneratorState = {
             "task_master_id": 123,
             "task_data": {"name": "test"},
@@ -49,7 +60,7 @@ class TestValidatorRouter:
 
         next_node = validator_router(state)
 
-        assert next_node == "self_repair"
+        assert next_node == "llm_evaluator"
 
 
 class TestSelfRepairRouter:
@@ -147,7 +158,11 @@ class TestWorkflowGraph:
 
 
 class TestGenerateWorkflow:
-    """Test generate_workflow main entry point (integration tests)."""
+    """Test generate_workflow main entry point (integration tests).
+
+    Updated for Issue #305: Tests now mock the new llm_evaluator_node
+    and result_summary_generator_node.
+    """
 
     @pytest.mark.asyncio
     async def test_generate_workflow_success_first_try(self):
@@ -187,6 +202,12 @@ class TestGenerateWorkflow:
             patch(
                 "aiagent.langgraph.workflowGeneratorAgents.agent.validator_node"
             ) as mock_validator,
+            patch(
+                "aiagent.langgraph.workflowGeneratorAgents.agent.llm_evaluator_node"
+            ) as mock_llm_evaluator,
+            patch(
+                "aiagent.langgraph.workflowGeneratorAgents.agent.result_summary_generator_node"
+            ) as mock_result_summary,
         ):
             # Setup mock responses
             async def mock_gen(state):
@@ -225,10 +246,36 @@ class TestGenerateWorkflow:
                     "status": "validated",
                 }
 
+            async def mock_llm_eval(state):
+                return {
+                    **state,
+                    "llm_evaluation_result": {
+                        "overall_score": 85,
+                        "structural_score": 90,
+                        "requirement_score": 85,
+                        "output_quality_score": 80,
+                        "error_handling_score": 75,
+                        "test_data_quality_score": 85,
+                    },
+                    "evaluation_score": 85,
+                    "needs_test_data_regeneration": False,
+                    "is_valid": True,
+                }
+
+            async def mock_summary(state):
+                return {
+                    **state,
+                    "validation_summary": {"overall_status": "success"},
+                    "summary_markdown": "# Summary",
+                    "status": "success",
+                }
+
             mock_generator.side_effect = mock_gen
             mock_sample_input.side_effect = mock_sample
             mock_tester.side_effect = mock_test
             mock_validator.side_effect = mock_validate
+            mock_llm_evaluator.side_effect = mock_llm_eval
+            mock_result_summary.side_effect = mock_summary
 
             # Execute workflow
             final_state = await generate_workflow(
@@ -237,13 +284,17 @@ class TestGenerateWorkflow:
 
             # Assertions
             assert final_state["is_valid"] is True
-            assert final_state["status"] == "validated"
+            assert final_state["status"] == "success"  # Updated for Issue #305
             assert final_state["retry_count"] == 0
             assert final_state["workflow_name"] == "send_email_notification"
 
     @pytest.mark.asyncio
     async def test_generate_workflow_success_after_retry(self):
-        """Test successful workflow generation after 1 retry."""
+        """Test successful workflow generation after 1 retry.
+
+        Updated for Issue #305: Now includes llm_evaluator_node and
+        result_summary_generator_node in the workflow.
+        """
         task_data = {
             "name": "Send email notification",
             "description": "Test task",
@@ -251,7 +302,7 @@ class TestGenerateWorkflow:
             "output_interface": {"type": "json_schema", "schema": {"type": "object"}},
         }
 
-        validation_attempt = 0
+        llm_eval_attempt = 0
 
         with (
             patch(
@@ -266,6 +317,12 @@ class TestGenerateWorkflow:
             patch(
                 "aiagent.langgraph.workflowGeneratorAgents.agent.validator_node"
             ) as mock_validator,
+            patch(
+                "aiagent.langgraph.workflowGeneratorAgents.agent.llm_evaluator_node"
+            ) as mock_llm_evaluator,
+            patch(
+                "aiagent.langgraph.workflowGeneratorAgents.agent.result_summary_generator_node"
+            ) as mock_result_summary,
             patch(
                 "aiagent.langgraph.workflowGeneratorAgents.agent.self_repair_node"
             ) as mock_self_repair,
@@ -292,24 +349,48 @@ class TestGenerateWorkflow:
                 }
 
             async def mock_validate(state):
-                nonlocal validation_attempt
-                validation_attempt += 1
+                return {
+                    **state,
+                    "is_valid": True,
+                    "validation_result": {"is_valid": True, "errors": []},
+                    "status": "validated",
+                }
 
-                # First attempt: fail, second attempt: succeed
-                if validation_attempt == 1:
+            async def mock_llm_eval(state):
+                nonlocal llm_eval_attempt
+                llm_eval_attempt += 1
+
+                # First attempt: low score, second attempt: pass
+                if llm_eval_attempt == 1:
                     return {
                         **state,
+                        "llm_evaluation_result": {
+                            "overall_score": 50,
+                            "failure_reason": "workflow_quality",
+                        },
+                        "evaluation_score": 50,
+                        "needs_test_data_regeneration": False,
                         "is_valid": False,
-                        "validation_errors": ["Node error"],
-                        "status": "validation_failed",
                     }
                 else:
                     return {
                         **state,
+                        "llm_evaluation_result": {
+                            "overall_score": 85,
+                            "failure_reason": "none",
+                        },
+                        "evaluation_score": 85,
+                        "needs_test_data_regeneration": False,
                         "is_valid": True,
-                        "validation_result": {"is_valid": True, "errors": []},
-                        "status": "validated",
                     }
+
+            async def mock_summary(state):
+                return {
+                    **state,
+                    "validation_summary": {"overall_status": "partial"},
+                    "summary_markdown": "# Summary",
+                    "status": "success",
+                }
 
             async def mock_repair(state):
                 return {
@@ -323,6 +404,8 @@ class TestGenerateWorkflow:
             mock_sample_input.side_effect = mock_sample
             mock_tester.side_effect = mock_test
             mock_validator.side_effect = mock_validate
+            mock_llm_evaluator.side_effect = mock_llm_eval
+            mock_result_summary.side_effect = mock_summary
             mock_self_repair.side_effect = mock_repair
 
             final_state = await generate_workflow(
@@ -331,7 +414,7 @@ class TestGenerateWorkflow:
 
             # Should succeed after 1 retry
             assert final_state["is_valid"] is True
-            assert final_state["status"] == "validated"
+            assert final_state["status"] == "success"  # Updated for Issue #305
             assert final_state["retry_count"] == 1
 
     @pytest.mark.asyncio

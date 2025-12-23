@@ -1,176 +1,104 @@
 {
   "issue_number": 305,
-  "title": "[expertAgent] Job生成時にLLMワークフローが生成されない",
-  "description": "myAgentDeskのGenerate画面からJob生成を実行すると、job-task分割は正常に実行されるが、LLMワークフローの生成が行われない問題。Job Generator APIでJobを生成した際に、Workflow Generatorを自動呼び出しし、各TaskMasterに対応するGraphAI YAMLワークフローを生成する機能を実装する。",
+  "feature_name": "LLM Evaluator for Workflow Generator",
+  "spec_file": "dev-reports/feature/issue/305/llm-evaluator-spec.md",
   "acceptance_criteria": [
-    "Job Generator呼び出し後、自動的にWorkflow Generatorが実行される",
-    "Phase 1（0-70%）→ Phase 2（70-95%）の進捗表示が正しい",
-    "Task Breakdown結果がUIに表示される",
-    "各タスクのWorkflow生成状況（pending/generating/success/failed）が表示される",
-    "部分失敗時もJob全体はcompletedになり、失敗したWorkflowのみエラー表示",
-    "workflow_mastersテーブルにYAMLが正しく保存される"
+    "LLM Evaluator ノードがワークフロー品質を5観点（構造的妥当性、要件充足度、出力品質、エラー耐性、テストデータ品質）で評価する",
+    "テストデータ品質が低い場合（score < 50）、Test Data Regenerator が自動的にテストデータを再生成する",
+    "テストデータ再生成後、workflow_tester で再テストが実行される",
+    "最大再生成回数（default: 2）に達した場合、処理を終了する",
+    "Result Summary Generator がMarkdown形式のサマリを生成する",
+    "3方向ルーティング（test_data_regenerator / self_repair / result_summary_generator）が正しく動作する"
   ],
   "implementation_tasks": [
-    "B-1: WorkflowMasterテーブル作成（myAgentDesk/src/lib/server/db/schema.ts）",
-    "B-2: DBマイグレーション実行",
-    "B-3: WorkflowMasterリポジトリ作成",
-    "B-4: JobCreationStatus拡張（phase, task_breakdown, workflow_statuses追加）",
-    "B-4.5: JobTaskGeneratorState拡張（workflow_results, phase追加）",
-    "B-5.1: generate_workflow_for_task実装",
-    "B-5: workflow_generation_node新規作成",
-    "B-6: LangGraphフロー更新 + ノードエクスポート",
-    "B-7: Status APIレスポンス拡張",
-    "B-8: 単体テスト追加",
-    "F-1: expert-agent APIクライアント更新",
-    "F-2: expert-agent モック更新",
-    "F-3: Generate画面Pattern B実装",
-    "F-3.1: Workflow情報DB保存ロジック",
-    "F-4: PhaseFlowコンポーネント作成",
-    "F-5: TaskBreakdownListコンポーネント作成",
-    "F-6: WorkflowStatusBadgeコンポーネント作成",
-    "F-7: フロントエンドテスト"
-  ],
-  "work_plan_tasks": [
     {
-      "task_id": "B-1",
-      "description": "WorkflowMasterテーブル作成",
-      "deliverables": ["myAgentDesk/src/lib/server/db/schema.ts"],
-      "dependencies": []
+      "task_id": "E-1",
+      "description": "WorkflowGeneratorState に LLM Evaluator 関連フィールドを追加",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/state.py",
+      "estimated_hours": 1
     },
     {
-      "task_id": "B-2",
-      "description": "DBマイグレーション実行",
-      "deliverables": ["myAgentDesk/src/lib/server/db/migrations/"],
-      "dependencies": ["B-1"]
+      "task_id": "E-2",
+      "description": "LLMEvaluationResult Pydantic モデル定義",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/models/evaluation.py",
+      "estimated_hours": 1
     },
     {
-      "task_id": "B-3",
-      "description": "WorkflowMasterリポジトリ作成",
-      "deliverables": ["myAgentDesk/src/lib/server/repositories/workflow-master.ts"],
-      "dependencies": ["B-1"]
+      "task_id": "E-3",
+      "description": "LLM Evaluator プロンプト作成",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/llm_evaluation.py",
+      "estimated_hours": 2
     },
     {
-      "task_id": "B-4",
-      "description": "JobCreationStatus拡張",
-      "deliverables": ["expertAgent/app/services/job_creation_state.py"],
-      "dependencies": []
+      "task_id": "E-4",
+      "description": "llm_evaluator_node 実装",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/llm_evaluator.py",
+      "estimated_hours": 4
     },
     {
-      "task_id": "B-4.5",
-      "description": "JobTaskGeneratorState拡張",
-      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py"],
-      "dependencies": []
+      "task_id": "E-5",
+      "description": "Test Data Regenerator プロンプト作成",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/test_data_regeneration.py",
+      "estimated_hours": 1
     },
     {
-      "task_id": "B-5.1",
-      "description": "generate_workflow_for_task実装",
-      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/workflow_helper.py"],
-      "dependencies": []
+      "task_id": "E-6",
+      "description": "test_data_regenerator_node 実装",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/test_data_regenerator.py",
+      "estimated_hours": 3
     },
     {
-      "task_id": "B-5",
-      "description": "workflow_generation_node新規作成",
-      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py"],
-      "dependencies": ["B-4", "B-4.5", "B-5.1"]
+      "task_id": "E-7",
+      "description": "ValidationSummary モデル定義",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/models/summary.py",
+      "estimated_hours": 1
     },
     {
-      "task_id": "B-6",
-      "description": "LangGraphフロー更新 + ノードエクスポート",
-      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/agent.py", "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/__init__.py"],
-      "dependencies": ["B-5"]
+      "task_id": "E-8",
+      "description": "result_summary_generator_node 実装",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/result_summary_generator.py",
+      "estimated_hours": 2
     },
     {
-      "task_id": "B-7",
-      "description": "Status APIレスポンス拡張",
-      "deliverables": ["expertAgent/app/api/v1/job_generator_endpoints.py"],
-      "dependencies": ["B-4"]
+      "task_id": "E-9",
+      "description": "3方向ルーター実装",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
+      "estimated_hours": 2
     },
     {
-      "task_id": "B-8",
-      "description": "単体テスト追加",
-      "deliverables": ["expertAgent/tests/unit/test_workflow_generation_node.py"],
-      "dependencies": ["B-5"]
+      "task_id": "E-10",
+      "description": "LangGraph フロー更新",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
+      "estimated_hours": 2
     },
     {
-      "task_id": "F-1",
-      "description": "expert-agent APIクライアント更新",
-      "deliverables": ["myAgentDesk/src/lib/api/clients/expert-agent.ts", "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts"],
-      "dependencies": ["B-7"]
-    },
-    {
-      "task_id": "F-2",
-      "description": "expert-agent モック更新",
-      "deliverables": ["myAgentDesk/src/lib/api/mock/expert-agent.mock.ts"],
-      "dependencies": ["F-1"]
-    },
-    {
-      "task_id": "F-3",
-      "description": "Generate画面Pattern B実装",
-      "deliverables": ["myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte"],
-      "dependencies": ["F-1"]
-    },
-    {
-      "task_id": "F-3.1",
-      "description": "Workflow情報DB保存ロジック",
-      "deliverables": ["myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts"],
-      "dependencies": ["F-3", "B-3"]
-    },
-    {
-      "task_id": "F-4",
-      "description": "PhaseFlowコンポーネント作成",
-      "deliverables": ["myAgentDesk/src/lib/components/generation/PhaseFlow.svelte"],
-      "dependencies": []
-    },
-    {
-      "task_id": "F-5",
-      "description": "TaskBreakdownListコンポーネント作成",
-      "deliverables": ["myAgentDesk/src/lib/components/generation/TaskBreakdownList.svelte"],
-      "dependencies": []
-    },
-    {
-      "task_id": "F-6",
-      "description": "WorkflowStatusBadgeコンポーネント作成",
-      "deliverables": ["myAgentDesk/src/lib/components/generation/WorkflowStatusBadge.svelte"],
-      "dependencies": []
-    },
-    {
-      "task_id": "F-7",
-      "description": "フロントエンドテスト",
-      "deliverables": ["myAgentDesk/tests/components/"],
-      "dependencies": ["F-3", "F-4", "F-5", "F-6"]
+      "task_id": "E-11",
+      "description": "環境変数・Pydantic Settings 追加",
+      "file": "expertAgent/core/config.py",
+      "estimated_hours": 1
     }
   ],
-  "deliverables_checklist": [
-    "expertAgent/app/services/job_creation_state.py",
-    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
-    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/workflow_helper.py",
-    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py",
-    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/__init__.py",
-    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/agent.py",
-    "expertAgent/app/api/v1/job_generator_endpoints.py",
-    "expertAgent/tests/unit/test_workflow_generation_node.py",
-    "myAgentDesk/src/lib/server/db/schema.ts",
-    "myAgentDesk/src/lib/server/repositories/workflow-master.ts",
-    "myAgentDesk/src/lib/api/clients/expert-agent.ts",
-    "myAgentDesk/src/lib/api/mock/expert-agent.mock.ts",
-    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.svelte",
-    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/generate/+page.server.ts",
-    "myAgentDesk/src/lib/components/generation/PhaseFlow.svelte",
-    "myAgentDesk/src/lib/components/generation/TaskBreakdownList.svelte",
-    "myAgentDesk/src/lib/components/generation/WorkflowStatusBadge.svelte"
+  "test_tasks": [
+    {
+      "task_id": "T-1",
+      "description": "llm_evaluator_node 単体テスト",
+      "file": "expertAgent/tests/unit/test_llm_evaluator_node.py"
+    },
+    {
+      "task_id": "T-2",
+      "description": "test_data_regenerator_node 単体テスト",
+      "file": "expertAgent/tests/unit/test_test_data_regenerator_node.py"
+    },
+    {
+      "task_id": "T-3",
+      "description": "result_summary_generator_node 単体テスト",
+      "file": "expertAgent/tests/unit/test_result_summary_generator_node.py"
+    },
+    {
+      "task_id": "T-4",
+      "description": "ルーター単体テスト",
+      "file": "expertAgent/tests/unit/test_llm_evaluator_routers.py"
+    }
   ],
-  "definition_of_done": [
-    "すべてのタスク（B-1〜B-8, F-1〜F-7）完了",
-    "単体テストカバレッジ90%以上",
-    "静的解析エラー0件（Ruff, MyPy, svelte-check）",
-    "L3受入テストパス",
-    "Pattern Bモックアップと実装の一致確認"
-  ],
-  "target_coverage": 90,
-  "existing_files": {
-    "agent.py": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/agent.py - 現在のフロー: requirement_analysis → evaluator → interface_definition → schema_enrichment → evaluator → master_creation → validation → job_registration → END",
-    "state.py": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py - JobTaskGeneratorStateにworkflow_results, phase未追加",
-    "job_creation_state.py": "expertAgent/app/services/job_creation_state.py - JobCreationStatusにphase, task_breakdown, workflow_statuses未追加"
-  },
-  "design_reference": "dev-reports/feature/issue/305/work-plan.md"
+  "target_coverage": 90
 }
