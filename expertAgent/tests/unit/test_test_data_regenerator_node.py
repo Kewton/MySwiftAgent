@@ -236,3 +236,165 @@ class TestRegeneratedTestDataModel:
         )
 
         assert data.sample_input == {}
+
+
+class TestTestDataRegeneratorAdditionalCases:
+    """Additional tests for test_data_regenerator to increase coverage."""
+
+    @pytest.mark.asyncio
+    async def test_test_data_regenerator_llm_returns_none(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test that regenerator handles LLM returning None."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            test_data_regenerator_node,
+        )
+
+        state_no_suggestion = {
+            **base_state_needs_regeneration,
+            "suggested_test_data": None,
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator._call_llm_regenerator"
+        ) as mock_call:
+            # LLM returns None (no valid result)
+            mock_call.return_value = None
+
+            result = await test_data_regenerator_node(state_no_suggestion)
+
+            mock_call.assert_called_once()
+            # Should fail gracefully
+            assert result["status"] == "test_data_regeneration_failed"
+            assert result["test_data_regeneration_count"] == 1
+            assert result["needs_test_data_regeneration"] is False
+
+    @pytest.mark.asyncio
+    async def test_test_data_regenerator_with_non_dict_sample_input(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test regenerator with non-dict sample input (string)."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            test_data_regenerator_node,
+        )
+
+        state_string_input = {
+            **base_state_needs_regeneration,
+            "sample_input": "just a string input",
+        }
+
+        result = await test_data_regenerator_node(state_string_input)
+
+        # Should use suggested_test_data regardless of current sample_input type
+        assert result["sample_input"] == {"company_name": "Toyota Motor Corporation"}
+        assert result["status"] == "test_data_regenerated"
+
+    @pytest.mark.asyncio
+    async def test_test_data_regenerator_with_int_sample_input(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test regenerator with integer sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            test_data_regenerator_node,
+        )
+
+        state_int_input = {
+            **base_state_needs_regeneration,
+            "sample_input": 12345,
+        }
+
+        result = await test_data_regenerator_node(state_int_input)
+
+        assert result["sample_input"] == {"company_name": "Toyota Motor Corporation"}
+        assert result["status"] == "test_data_regenerated"
+
+    @pytest.mark.asyncio
+    async def test_test_data_regenerator_with_none_sample_input(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test regenerator with None sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            test_data_regenerator_node,
+        )
+
+        state_none_input = {
+            **base_state_needs_regeneration,
+            "sample_input": None,
+        }
+
+        result = await test_data_regenerator_node(state_none_input)
+
+        assert result["sample_input"] == {"company_name": "Toyota Motor Corporation"}
+        assert result["status"] == "test_data_regenerated"
+
+    @pytest.mark.asyncio
+    async def test_test_data_regenerator_with_list_sample_input(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test regenerator with list sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            test_data_regenerator_node,
+        )
+
+        state_list_input = {
+            **base_state_needs_regeneration,
+            "sample_input": [1, 2, 3],
+        }
+
+        result = await test_data_regenerator_node(state_list_input)
+
+        assert result["sample_input"] == {"company_name": "Toyota Motor Corporation"}
+        assert result["status"] == "test_data_regenerated"
+
+
+class TestBuildRegeneratorInput:
+    """Test _build_regenerator_input function."""
+
+    def test_build_regenerator_input_with_dict_sample(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test prompt building with dict sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            _build_regenerator_input,
+        )
+
+        prompt = _build_regenerator_input(base_state_needs_regeneration)
+
+        assert "Get company information" in prompt
+        assert "company_name" in prompt
+        assert "sample_text" in prompt
+
+    def test_build_regenerator_input_with_string_sample(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test prompt building with string sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            _build_regenerator_input,
+        )
+
+        state = {
+            **base_state_needs_regeneration,
+            "sample_input": "test_string_input",
+        }
+
+        prompt = _build_regenerator_input(state)
+
+        assert "test_string_input" in prompt
+
+    def test_build_regenerator_input_with_none_sample(
+        self, base_state_needs_regeneration: WorkflowGeneratorState
+    ):
+        """Test prompt building with None sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.test_data_regenerator import (
+            _build_regenerator_input,
+        )
+
+        state = {
+            **base_state_needs_regeneration,
+            "sample_input": None,
+        }
+
+        prompt = _build_regenerator_input(state)
+
+        # Should still generate valid prompt
+        assert "Get company information" in prompt

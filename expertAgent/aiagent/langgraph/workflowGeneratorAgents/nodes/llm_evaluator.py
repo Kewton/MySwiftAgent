@@ -6,7 +6,6 @@ evaluation of generated workflows including test data quality assessment.
 
 import logging
 from datetime import datetime
-from typing import Any
 
 from ..models.evaluation import LLMEvaluationResult
 from ..prompts.llm_evaluation import (
@@ -14,6 +13,7 @@ from ..prompts.llm_evaluation import (
     create_llm_evaluation_prompt,
 )
 from ..state import WorkflowGeneratorState
+from ..utils import convert_sample_input_to_dict_or_str
 
 logger = logging.getLogger(__name__)
 
@@ -138,24 +138,6 @@ def _format_feedback(evaluation: LLMEvaluationResult) -> str:
     return "\n".join(lines)
 
 
-def _convert_sample_input_to_dict_or_str(
-    sample_input: dict[str, Any] | str | int | float | bool | list[Any] | None,
-) -> dict[str, Any] | str:
-    """Convert sample_input to dict or str for prompt generation.
-
-    Args:
-        sample_input: Raw sample input from state
-
-    Returns:
-        Sample input as dict or str
-    """
-    if sample_input is None:
-        return {}
-    if isinstance(sample_input, dict):
-        return sample_input
-    return str(sample_input)
-
-
 async def llm_evaluator_node(
     state: WorkflowGeneratorState,
 ) -> WorkflowGeneratorState:
@@ -180,7 +162,7 @@ async def llm_evaluator_node(
     task_data = state.get("task_data", {})
     yaml_content = state.get("yaml_content", "")
     raw_sample_input = state.get("sample_input")
-    sample_input = _convert_sample_input_to_dict_or_str(raw_sample_input)
+    sample_input = convert_sample_input_to_dict_or_str(raw_sample_input)
     execution_result = state.get("test_execution_result")
     validation_result = state.get("validation_result") or {}
 

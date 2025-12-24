@@ -246,7 +246,9 @@ async def workflow_generation_node(
                             recommended_apis.append(api_name)
 
                 item = TaskBreakdownItem(
-                    task_id=task.get("task_id", f"task_{len(task_breakdown_items) + 1}"),
+                    task_id=task.get(
+                        "task_id", f"task_{len(task_breakdown_items) + 1}"
+                    ),
                     name=task.get("name", "Unknown Task"),
                     description=task.get("description", ""),
                     recommended_apis=recommended_apis,
@@ -391,7 +393,9 @@ async def workflow_generation_node(
         try:
             await job_state_manager.update_phase_async(job_id, "complete")
         except Exception as e:
-            logger.warning(f"Failed to update phase to 'complete' for job {job_id}: {e}")
+            logger.warning(
+                f"Failed to update phase to 'complete' for job {job_id}: {e}"
+            )
 
     return {
         **state,

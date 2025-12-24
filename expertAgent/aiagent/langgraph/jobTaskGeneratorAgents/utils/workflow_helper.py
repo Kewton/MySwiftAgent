@@ -2,12 +2,12 @@
 
 Issue #305: This module provides a helper function to generate GraphAI YAML
 workflows for individual TaskMasters.
+
+Note: Uses lazy import to avoid circular dependency with workflowGeneratorAgents.
 """
 
 import logging
 from typing import Any, Optional
-
-from aiagent.langgraph.workflowGeneratorAgents.agent import generate_workflow
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,11 @@ async def generate_workflow_for_task(
             - status: "success" | "failed"
             - error_message: Optional[str] (if failed)
     """
+    # Lazy import to avoid circular dependency
+    # (jobTaskGeneratorAgents.utils → workflowGeneratorAgents.agent → nodes → generator
+    #  → jobTaskGeneratorAgents.utils)
+    from aiagent.langgraph.workflowGeneratorAgents.agent import generate_workflow
+
     task_id = task_master.get("id", "unknown")
     task_name = task_master.get("name", "Unknown Task")
 

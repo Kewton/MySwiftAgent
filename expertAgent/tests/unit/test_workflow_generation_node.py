@@ -400,8 +400,9 @@ class TestGenerateWorkflowForTask:
         }
 
         # Mock the workflow generator
+        # Note: Patch at source module because workflow_helper uses lazy import
         with patch(
-            "aiagent.langgraph.jobTaskGeneratorAgents.utils.workflow_helper.generate_workflow"
+            "aiagent.langgraph.workflowGeneratorAgents.agent.generate_workflow"
         ) as mock_generate:
             mock_generate.return_value = {
                 "status": "success",
@@ -430,8 +431,9 @@ class TestGenerateWorkflowForTask:
         }
 
         # Mock the workflow generator to raise an exception
+        # Note: Patch at source module because workflow_helper uses lazy import
         with patch(
-            "aiagent.langgraph.jobTaskGeneratorAgents.utils.workflow_helper.generate_workflow"
+            "aiagent.langgraph.workflowGeneratorAgents.agent.generate_workflow"
         ) as mock_generate:
             mock_generate.side_effect = Exception("API connection failed")
 
@@ -456,8 +458,9 @@ class TestGenerateWorkflowForTask:
 
         mock_langfuse_handler = MagicMock()
 
+        # Note: Patch at source module because workflow_helper uses lazy import
         with patch(
-            "aiagent.langgraph.jobTaskGeneratorAgents.utils.workflow_helper.generate_workflow"
+            "aiagent.langgraph.workflowGeneratorAgents.agent.generate_workflow"
         ) as mock_generate:
             mock_generate.return_value = {
                 "status": "success",
@@ -642,10 +645,14 @@ class TestWorkflowGenerationNode:
                     assert len(result["workflow_results"]) == 2
                     # Note: With parallel execution, order may vary
                     success_count = sum(
-                        1 for wr in result["workflow_results"] if wr["status"] == "success"
+                        1
+                        for wr in result["workflow_results"]
+                        if wr["status"] == "success"
                     )
                     failed_count = sum(
-                        1 for wr in result["workflow_results"] if wr["status"] == "failed"
+                        1
+                        for wr in result["workflow_results"]
+                        if wr["status"] == "failed"
                     )
                     assert success_count == 1
                     assert failed_count == 1

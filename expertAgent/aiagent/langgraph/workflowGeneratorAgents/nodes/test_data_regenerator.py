@@ -13,6 +13,7 @@ from ..prompts.test_data_regeneration import (
     create_test_data_regeneration_prompt,
 )
 from ..state import WorkflowGeneratorState
+from ..utils import convert_sample_input_to_dict_or_str
 
 logger = logging.getLogger(__name__)
 
@@ -57,24 +58,6 @@ async def _call_llm_regenerator(
         return None
 
 
-def _convert_sample_input_to_dict_or_str(
-    sample_input: dict[str, Any] | str | int | float | bool | list[Any] | None,
-) -> dict[str, Any] | str:
-    """Convert sample_input to dict or str for prompt generation.
-
-    Args:
-        sample_input: Raw sample input from state
-
-    Returns:
-        Sample input as dict or str
-    """
-    if sample_input is None:
-        return {}
-    if isinstance(sample_input, dict):
-        return sample_input
-    return str(sample_input)
-
-
 def _build_regenerator_input(
     state: WorkflowGeneratorState,
 ) -> str:
@@ -89,7 +72,7 @@ def _build_regenerator_input(
     task_data = state.get("task_data", {})
     input_interface = task_data.get("input_interface", {})
     raw_sample_input = state.get("sample_input")
-    sample_input = _convert_sample_input_to_dict_or_str(raw_sample_input)
+    sample_input = convert_sample_input_to_dict_or_str(raw_sample_input)
 
     return create_test_data_regeneration_prompt(
         task_name=task_data.get("name", "Unknown"),

@@ -1610,9 +1610,7 @@ async def test_e2e_workflow_with_workflow_generation(
     assert "task_masters" in result, (
         "task_masters should be in final state (Issue #305 fix)"
     )
-    assert len(result["task_masters"]) > 0, (
-        "task_masters should not be empty"
-    )
+    assert len(result["task_masters"]) > 0, "task_masters should not be empty"
 
     # Issue #305: Verify workflow_generation was called for each task_master
     # Note: The number of calls depends on the number of task_masters
@@ -1628,9 +1626,7 @@ async def test_e2e_workflow_with_workflow_generation(
     )
 
     # Issue #305: Verify workflow_results
-    assert "workflow_results" in result, (
-        "workflow_results should be in final state"
-    )
+    assert "workflow_results" in result, "workflow_results should be in final state"
 
 
 @pytest.mark.asyncio
@@ -1768,7 +1764,11 @@ async def test_e2e_workflow_generation_partial_failure(
     # Assert: workflow_results contains both success and failure
     workflow_results = result.get("workflow_results", [])
     if len(workflow_results) > 0:
-        success_count = sum(1 for wr in workflow_results if wr.get("status") == "success")
-        failure_count = sum(1 for wr in workflow_results if wr.get("status") == "failed")
+        success_count = sum(
+            1 for wr in workflow_results if wr.get("status") == "success"
+        )
+        failure_count = sum(
+            1 for wr in workflow_results if wr.get("status") == "failed"
+        )
         assert success_count >= 1, "Should have at least one successful workflow"
         assert failure_count >= 1, "Should have at least one failed workflow"

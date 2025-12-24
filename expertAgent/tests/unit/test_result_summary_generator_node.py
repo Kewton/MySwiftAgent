@@ -377,3 +377,184 @@ class TestValidationSummaryModel:
                 regeneration_history=[],
             )
             assert eval_summary.source == source
+
+
+class TestResultSummaryGeneratorHelpers:
+    """Test helper functions in result_summary_generator."""
+
+    @pytest.mark.asyncio
+    async def test_result_summary_with_none_test_data_quality_score(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test summary generation when test_data_quality_score is None (covers line 106)."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_no_quality_score = {
+            **success_state,
+            "test_data_quality_score": None,  # Explicitly set to None
+        }
+
+        result = await result_summary_generator_node(state_no_quality_score)
+
+        # Should default to 0 for the quality score
+        summary = result["validation_summary"]
+        assert summary["test_data_evaluation"]["quality_score"] == 0
+
+    @pytest.mark.asyncio
+    async def test_result_summary_overall_status_failed(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test summary generation when is_valid is False (covers line 132)."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_invalid = {
+            **success_state,
+            "is_valid": False,
+            "retry_count": 0,
+            "test_data_regeneration_count": 0,
+        }
+
+        result = await result_summary_generator_node(state_invalid)
+
+        summary = result["validation_summary"]
+        assert summary["overall_status"] == "failed"
+
+    @pytest.mark.asyncio
+    async def test_result_summary_with_validation_errors(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test summary generation with validation errors."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_with_errors = {
+            **success_state,
+            "validation_errors": ["yaml syntax error", "graphai node error", "output error"],
+            "test_http_status": 500,
+        }
+
+        result = await result_summary_generator_node(state_with_errors)
+
+        summary = result["validation_summary"]
+        # Rule-based validation should reflect errors
+        rb = summary["rule_based_validation"]
+        assert rb["yaml_syntax_valid"] is False
+        assert rb["http_status_valid"] is False
+        assert rb["graphai_execution_valid"] is False
+        assert rb["output_schema_valid"] is False
+
+    @pytest.mark.asyncio
+    async def test_result_summary_with_empty_llm_evaluation(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test summary generation with None llm_evaluation_result."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_no_llm_result = {
+            **success_state,
+            "llm_evaluation_result": None,
+        }
+
+        result = await result_summary_generator_node(state_no_llm_result)
+
+        summary = result["validation_summary"]
+        # Should use defaults (0) for scores
+        llm_eval = summary["llm_evaluation"]
+        assert llm_eval["overall_score"] == 0
+
+    @pytest.mark.asyncio
+    async def test_determine_overall_status_partial_with_retry(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test overall status is partial when retry_count > 0."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_with_retry = {
+            **success_state,
+            "is_valid": True,
+            "retry_count": 1,
+            "test_data_regeneration_count": 0,
+        }
+
+        result = await result_summary_generator_node(state_with_retry)
+
+        summary = result["validation_summary"]
+        assert summary["overall_status"] == "partial"
+
+    @pytest.mark.asyncio
+    async def test_determine_overall_status_partial_with_regen(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test overall status is partial when test_data_regeneration_count > 0."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_with_regen = {
+            **success_state,
+            "is_valid": True,
+            "retry_count": 0,
+            "test_data_regeneration_count": 1,
+        }
+
+        result = await result_summary_generator_node(state_with_regen)
+
+        summary = result["validation_summary"]
+        assert summary["overall_status"] == "partial"
+
+    @pytest.mark.asyncio
+    async def test_result_summary_with_empty_repair_history(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test summary generation with empty repair_history."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_empty_history = {
+            **success_state,
+            "repair_history": [],
+            "test_data_regeneration_count": 1,  # Has regen count but no history entries
+        }
+
+        result = await result_summary_generator_node(state_empty_history)
+
+        summary = result["validation_summary"]
+        assert summary["test_data_evaluation"]["regeneration_history"] == []
+
+    @pytest.mark.asyncio
+    async def test_result_summary_with_mixed_repair_history(
+        self, success_state: WorkflowGeneratorState
+    ):
+        """Test summary generation filters only test_data_regeneration entries."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.result_summary_generator import (
+            result_summary_generator_node,
+        )
+
+        state_mixed_history = {
+            **success_state,
+            "repair_history": [
+                {"type": "test_data_regeneration", "details": "regen1"},
+                {"type": "workflow_repair", "details": "repair1"},  # Should be filtered out
+                {"type": "test_data_regeneration", "details": "regen2"},
+            ],
+            "test_data_regeneration_count": 2,
+        }
+
+        result = await result_summary_generator_node(state_mixed_history)
+
+        summary = result["validation_summary"]
+        regen_history = summary["test_data_evaluation"]["regeneration_history"]
+        # Should only have 2 test_data_regeneration entries
+        assert len(regen_history) == 2
+        for entry in regen_history:
+            assert entry["type"] == "test_data_regeneration"

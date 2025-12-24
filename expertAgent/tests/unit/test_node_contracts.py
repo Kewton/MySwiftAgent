@@ -431,6 +431,4 @@ class TestJobTaskGeneratorStateSchema:
         assert "task_masters" in state, (
             "create_initial_state must include 'task_masters' field"
         )
-        assert state["task_masters"] == [], (
-            "task_masters default should be empty list"
-        )
+        assert state["task_masters"] == [], "task_masters default should be empty list"

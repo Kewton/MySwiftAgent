@@ -422,3 +422,246 @@ class TestLLMEvaluationResult:
                 confidence=0.5,
             )
             assert result.failure_reason == reason
+
+
+class TestLLMEvaluatorSampleInputConversion:
+    """Test sample input conversion in llm_evaluator_node."""
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_with_none_sample_input(
+        self, base_state: WorkflowGeneratorState, mock_evaluation_result: dict[str, Any]
+    ):
+        """Test LLM evaluator with None sample input."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        state_none_input = {
+            **base_state,
+            "sample_input": None,
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**mock_evaluation_result)
+
+            result = await llm_evaluator_node(state_none_input)
+
+            mock_call.assert_called_once()
+            assert result["evaluation_score"] == 85
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_with_string_sample_input(
+        self, base_state: WorkflowGeneratorState, mock_evaluation_result: dict[str, Any]
+    ):
+        """Test LLM evaluator with string sample input (non-dict)."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        state_string_input = {
+            **base_state,
+            "sample_input": "just a string value",
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**mock_evaluation_result)
+
+            result = await llm_evaluator_node(state_string_input)
+
+            mock_call.assert_called_once()
+            assert result["evaluation_score"] == 85
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_with_int_sample_input(
+        self, base_state: WorkflowGeneratorState, mock_evaluation_result: dict[str, Any]
+    ):
+        """Test LLM evaluator with integer sample input (non-dict)."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        state_int_input = {
+            **base_state,
+            "sample_input": 42,
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**mock_evaluation_result)
+
+            result = await llm_evaluator_node(state_int_input)
+
+            mock_call.assert_called_once()
+            assert result["evaluation_score"] == 85
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_with_list_sample_input(
+        self, base_state: WorkflowGeneratorState, mock_evaluation_result: dict[str, Any]
+    ):
+        """Test LLM evaluator with list sample input (non-dict)."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        state_list_input = {
+            **base_state,
+            "sample_input": [1, 2, 3],
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**mock_evaluation_result)
+
+            result = await llm_evaluator_node(state_list_input)
+
+            mock_call.assert_called_once()
+            assert result["evaluation_score"] == 85
+
+
+class TestFallbackEvaluation:
+    """Test fallback evaluation creation."""
+
+    @pytest.mark.asyncio
+    async def test_fallback_evaluation_with_invalid_state(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test fallback evaluation when state is_valid is False."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        state_invalid = {
+            **base_state,
+            "is_valid": False,
+            "validation_errors": ["Error 1", "Error 2", "Error 3", "Error 4"],
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = None  # Force fallback
+
+            result = await llm_evaluator_node(state_invalid)
+
+            # Fallback should have lower scores for invalid state
+            assert result["evaluation_score"] == 40  # Base score for invalid
+            assert result["llm_evaluation_result"]["evaluation_model"] == "fallback"
+            # Only first 3 errors should be in weaknesses
+            assert len(result["llm_evaluation_result"]["weaknesses"]) <= 3
+
+    @pytest.mark.asyncio
+    async def test_fallback_evaluation_with_valid_state(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test fallback evaluation when state is_valid is True."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = None  # Force fallback
+
+            result = await llm_evaluator_node(base_state)
+
+            # Fallback should have higher scores for valid state
+            assert result["evaluation_score"] == 70  # Base score for valid
+            assert "Rule-based validation passed" in result["llm_evaluation_result"]["strengths"]
+
+
+class TestFormatFeedback:
+    """Test _format_feedback function."""
+
+    def test_format_feedback_with_all_fields(self):
+        """Test feedback formatting with all fields populated."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _format_feedback,
+        )
+
+        evaluation = LLMEvaluationResult(
+            overall_score=85,
+            structural_score=90,
+            requirement_score=85,
+            output_quality_score=80,
+            error_handling_score=75,
+            test_data_quality_score=85,
+            test_data_issues=[],
+            needs_test_data_regeneration=False,
+            suggested_test_data=None,
+            strengths=["Good structure", "Clean code"],
+            weaknesses=["Missing docs"],
+            suggestions=["Add documentation"],
+            is_acceptable=True,
+            failure_reason="none",
+            confidence=0.9,
+        )
+
+        feedback = _format_feedback(evaluation)
+
+        assert "Overall Score: 85/100" in feedback
+        assert "Structural: 90" in feedback
+        assert "Requirements: 85" in feedback
+        assert "Strengths:" in feedback
+        assert "Good structure" in feedback
+        assert "Clean code" in feedback
+        assert "Weaknesses:" in feedback
+        assert "Missing docs" in feedback
+        assert "Suggestions:" in feedback
+        assert "Add documentation" in feedback
+
+    def test_format_feedback_with_empty_lists(self):
+        """Test feedback formatting with empty strengths/weaknesses/suggestions."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _format_feedback,
+        )
+
+        evaluation = LLMEvaluationResult(
+            overall_score=50,
+            structural_score=50,
+            requirement_score=50,
+            output_quality_score=50,
+            error_handling_score=50,
+            test_data_quality_score=50,
+            test_data_issues=[],
+            needs_test_data_regeneration=False,
+            suggested_test_data=None,
+            strengths=[],
+            weaknesses=[],
+            suggestions=[],
+            is_acceptable=False,
+            failure_reason="workflow_quality",
+            confidence=0.5,
+        )
+
+        feedback = _format_feedback(evaluation)
+
+        assert "Overall Score: 50/100" in feedback
+        # Empty lists should not add section headers
+        assert "Strengths:" not in feedback
+        assert "Weaknesses:" not in feedback
+        assert "Suggestions:" not in feedback
