@@ -15,7 +15,9 @@ from core.config import settings
 # Dynamic API URL based on environment configuration
 # Default: http://localhost:8004 for local development
 # Override via EXPERTAGENT_BASE_URL environment variable
-EXPERTAGENT_API_URL = f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+EXPERTAGENT_API_URL = (
+    f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+)
 
 # Load prompt from YAML
 _loader = PromptLoader.create_default()
@@ -48,6 +50,15 @@ CRITICAL REQUIREMENT:
   you MUST use stringTemplateAgent to build the prompt first
 - NEVER embed :source.field directly in fetchAgent user_input multi-line strings
 - This is a GraphAI technical limitation and MANDATORY
+
+OUTPUT FORMAT REQUIREMENT:
+You MUST respond in JSON format with exactly these fields:
+{
+  "workflow_name": "snake_case_name",
+  "yaml_content": "complete YAML content as a string",
+  "reasoning": "explanation of design decisions"
+}
+Do NOT use ```yaml blocks. The yaml_content field should contain the YAML as a plain string.
 """
 
 
@@ -558,7 +569,21 @@ Generate a complete, executable GraphAI workflow YAML that:
 - Includes clear comments
 - Is syntactically correct
 
-Provide your response in the structured format with workflow_name, yaml_content, and reasoning.
+## Response Format (MANDATORY)
+
+You MUST respond with a JSON object containing exactly these three fields:
+```json
+{{
+  "workflow_name": "snake_case_workflow_name",
+  "yaml_content": "version: 0.5\\nnodes:\\n  source: {{}}\\n  ...",
+  "reasoning": "Brief explanation of design decisions"
+}}
+```
+
+IMPORTANT:
+- Do NOT wrap your response in ```yaml blocks
+- The yaml_content must be a valid JSON string (escape newlines as \\n)
+- Only output the JSON object, no additional text
 """
 
     return prompt

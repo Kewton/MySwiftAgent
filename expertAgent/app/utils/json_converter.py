@@ -5,8 +5,9 @@ LLM レスポンスを確実に JSON 形式に変換するためのユーティ�
 jsonOutput_agent.py のロジックを再利用し、全エンドポイントで共通化。
 
 主要機能:
-1. to_parse_json(): 文字列を JSON に変換（```json``` ブロック対応）
+1. to_parse_json(): 文字列を JSON に変換（```json``` / ```yaml``` ブロック対応）
 2. force_to_json_response(): 最終手段として必ず JSON を返却
+3. ensure_json_structure(): 任意のデータを JSON 構造に変換
 """
 
 import json
@@ -14,6 +15,7 @@ import logging
 import re
 from typing import Any, cast
 
+import yaml
 from langchain_core.output_parsers import JsonOutputParser
 
 logger = logging.getLogger(__name__)
@@ -73,12 +75,30 @@ def to_parse_json(content: str) -> dict | list[Any]:
                 raise ValueError(
                     f"Failed to parse extracted JSON: {json_err}"
                 ) from json_err
-        else:
-            logger.error("Could not extract JSON block using regex")
-            raise ValueError(
-                "Failed to extract JSON block from content. "
-                "Content must be valid JSON or contain ```json...``` block"
-            ) from e
+
+        # 3. ```yaml ... ``` ブロックから抽出してパース（フォールバック）
+        yaml_match = re.search(r"```ya?ml\s*(.*?)\s*```", content, re.DOTALL)
+        if yaml_match:
+            yaml_content = yaml_match.group(1)
+            try:
+                parsed_yaml = yaml.safe_load(yaml_content)
+                if isinstance(parsed_yaml, (dict, list)):
+                    logger.info("Successfully parsed YAML from code block (fallback)")
+                    return cast(dict[Any, Any] | list[Any], parsed_yaml)
+                else:
+                    logger.warning(f"YAML parsed but unexpected type: {type(parsed_yaml)}")
+                    raise ValueError(f"YAML parsed to unexpected type: {type(parsed_yaml)}")
+            except yaml.YAMLError as yaml_err:
+                logger.error(f"YAMLError after regex extraction: {yaml_err}")
+                raise ValueError(
+                    f"Failed to parse extracted YAML: {yaml_err}"
+                ) from yaml_err
+
+        logger.error("Could not extract JSON or YAML block using regex")
+        raise ValueError(
+            "Failed to extract JSON/YAML block from content. "
+            "Content must be valid JSON or contain ```json...``` or ```yaml...``` block"
+        ) from e
 
 
 def force_to_json_response(
