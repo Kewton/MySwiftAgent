@@ -6,6 +6,32 @@ when the LLM Evaluator detects quality issues.
 
 from typing import Any
 
+
+def _format_recommended_apis(apis: list[Any] | None) -> str:
+    """Format recommended APIs for display in prompt.
+
+    Handles both list[str] and list[dict] formats.
+
+    Args:
+        apis: List of recommended APIs (can be str or dict with 'name'/'api_name' key)
+
+    Returns:
+        Comma-separated string of API names, or "None specified" if empty
+    """
+    if not apis:
+        return "None specified"
+
+    formatted = []
+    for api in apis:
+        if isinstance(api, dict):
+            # Try 'name' first, then 'api_name', then fallback to str(dict)
+            name = api.get("name") or api.get("api_name") or str(api)
+            formatted.append(str(name))
+        else:
+            formatted.append(str(api))
+
+    return ", ".join(formatted) if formatted else "None specified"
+
 TEST_DATA_REGENERATION_SYSTEM_PROMPT = """You are a test data generation expert.
 Generate appropriate and realistic test data based on the given task information and input schema.
 
@@ -43,7 +69,7 @@ def create_test_data_regeneration_prompt(
     task_name: str,
     task_description: str,
     input_schema: dict[str, Any],
-    recommended_apis: list[str],
+    recommended_apis: list[Any],
     previous_sample_input: dict[str, Any] | str,
     test_data_issues: list[str],
     suggested_test_data: dict[str, Any] | None,
@@ -54,7 +80,7 @@ def create_test_data_regeneration_prompt(
         task_name: Name of the task
         task_description: Task description
         input_schema: Input interface schema
-        recommended_apis: List of recommended APIs
+        recommended_apis: List of recommended APIs (can be str or dict)
         previous_sample_input: Previous sample input that had issues
         test_data_issues: Issues found with previous test data
         suggested_test_data: LLM suggested test data (if available)
@@ -77,7 +103,7 @@ def create_test_data_regeneration_prompt(
     return f"""## Task Information
 - Name: {task_name}
 - Description: {task_description}
-- Recommended APIs: {", ".join(recommended_apis) if recommended_apis else "None specified"}
+- Recommended APIs: {_format_recommended_apis(recommended_apis)}
 
 ## Input Schema
 ```json
