@@ -860,6 +860,102 @@ class ResultSummarySettings(BaseModel):
 | `test_test_data_regeneration_then_workflow_repair` | 再生成後もワークフロー不備 | self_repairが呼ばれる |
 | `test_disabled_evaluation` | 評価無効時 | validator → END |
 
+### 6.3 実践的受入テスト（L3/L4）
+
+> **重要**: モックテストだけでは実データ形式との不整合を検出できない。
+> 実際に発見されたバグ例: `recommended_apis: list[dict]` 形式で `TypeError` 発生
+
+#### 6.3.1 実データ形式テスト
+
+| テストケース | 内容 | 期待結果 |
+|-------------|------|---------|
+| `test_create_prompt_with_dict_recommended_apis` | `recommended_apis: list[dict]` 形式でプロンプト生成 | 正常にAPI名が抽出される |
+| `test_create_prompt_with_mixed_recommended_apis` | 混在形式（str + dict）でプロンプト生成 | 正常に処理される |
+| `test_llm_evaluator_with_real_task_data` | 実際のTaskMasterデータ形式を使用 | TypeErrorなく処理完了 |
+
+```python
+# tests/unit/test_llm_evaluation_prompt.py
+
+def test_create_prompt_with_dict_recommended_apis():
+    """recommended_apis が list[dict] 形式でも動作することを確認"""
+    prompt = create_llm_evaluation_prompt(
+        task_name="テストタスク",
+        task_description="説明",
+        input_schema={},
+        output_schema={},
+        recommended_apis=[
+            {"name": "gmail_api", "endpoint": "/api/v1/gmail"},
+            {"name": "drive_api", "endpoint": "/api/v1/drive"},
+        ],  # 実際のデータ形式
+        yaml_content="version: 0.5",
+        sample_input={},
+        execution_result=None,
+        rule_based_issues=[],
+    )
+    assert "gmail_api" in prompt
+    assert "drive_api" in prompt
+```
+
+#### 6.3.2 E2Eテスト（フロントエンド→バックエンド）
+
+| テストケース | 内容 | 期待結果 |
+|-------------|------|---------|
+| `test_workflow_generation_completes_within_timeout` | 生成が5分以内に完了 | success または明確なエラー |
+| `test_generation_progress_updates` | 進捗状況がUIに反映 | phase/progressが更新される |
+| `test_generation_failure_displays_error` | 失敗時にエラー表示 | 具体的なエラーメッセージ表示 |
+
+```typescript
+// tests/e2e/generate-workflow.spec.ts
+
+test('ワークフロー生成が5分以内に完了する', async ({ page }) => {
+  await page.goto('/projects/xxx/workbenches/yyy/generate');
+  await page.click('button:has-text("Generate")');
+
+  // 5分以内に完了または明確なエラーメッセージ
+  await expect(page.locator('[data-testid="generation-status"]'))
+    .toHaveText(/success|failed/, { timeout: 300000 });
+});
+```
+
+#### 6.3.3 統合テスト（実LLM API使用）
+
+| テストケース | 内容 | 期待結果 |
+|-------------|------|---------|
+| `test_llm_evaluator_with_real_api` | 実APIでLLM評価 | 0-100のスコアが返る |
+| `test_full_workflow_generation_e2e` | 全フロー実行（モックなし） | ワークフローYAMLが生成される |
+
+```python
+# tests/integration/test_llm_evaluator_real.py
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("ANTHROPIC_API_KEY"), reason="No API key")
+async def test_llm_evaluator_with_real_api():
+    """実際のLLM APIを使用した統合テスト"""
+    state = create_test_state_with_real_data()
+    result = await llm_evaluator_node(state)
+
+    assert result["evaluation_score"] is not None
+    assert 0 <= result["evaluation_score"] <= 100
+```
+
+#### 6.3.4 受入テストチェックリスト
+
+```markdown
+## 受入テスト確認項目
+
+### L3: ローカル受入テスト
+- [ ] 実データ形式でのテスト（recommended_apis: list[dict]）
+- [ ] サービス起動確認（expertAgent, graphAiServer）
+- [ ] フロントエンドからの生成リクエスト成功確認
+- [ ] 5分以内に完了またはエラー返却
+
+### L4: E2Eテスト
+- [ ] Playwright による UI 操作テスト
+- [ ] タイムアウト動作の確認
+- [ ] エラーメッセージの表示確認
+- [ ] Langfuseトレースリンクの動作確認
+```
+
 ---
 
 ## 7. 実装スケジュール

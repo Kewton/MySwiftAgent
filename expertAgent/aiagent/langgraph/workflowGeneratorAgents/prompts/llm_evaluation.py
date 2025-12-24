@@ -6,6 +6,32 @@ workflow quality across multiple dimensions.
 
 from typing import Any
 
+
+def _format_recommended_apis(apis: list[Any] | None) -> str:
+    """Format recommended APIs for display in prompt.
+
+    Handles both list[str] and list[dict] formats.
+
+    Args:
+        apis: List of recommended APIs (can be strings or dicts with 'name' key)
+
+    Returns:
+        Comma-separated string of API names
+    """
+    if not apis:
+        return "None specified"
+
+    formatted = []
+    for api in apis:
+        if isinstance(api, dict):
+            # Handle dict format: {"name": "api_name", ...}
+            name = api.get("name") or api.get("api_name") or str(api)
+            formatted.append(str(name))
+        else:
+            formatted.append(str(api))
+
+    return ", ".join(formatted) if formatted else "None specified"
+
 LLM_EVALUATION_SYSTEM_PROMPT = """You are an expert GraphAI workflow quality evaluator.
 Evaluate the given workflow across the following dimensions and return a structured JSON response.
 
@@ -81,7 +107,7 @@ def create_llm_evaluation_prompt(
     task_description: str,
     input_schema: dict[str, Any],
     output_schema: dict[str, Any],
-    recommended_apis: list[str],
+    recommended_apis: list[Any],
     yaml_content: str,
     sample_input: dict[str, Any] | str,
     execution_result: dict[str, Any] | None,
@@ -96,7 +122,7 @@ def create_llm_evaluation_prompt(
         task_description: Task description
         input_schema: Input interface schema
         output_schema: Output interface schema
-        recommended_apis: List of recommended APIs
+        recommended_apis: List of recommended APIs (can be str or dict)
         yaml_content: Generated workflow YAML
         sample_input: Sample input used for testing
         execution_result: Execution result from graphAiServer
@@ -125,7 +151,7 @@ def create_llm_evaluation_prompt(
     return f"""## TaskMaster Information
 - Name: {task_name}
 - Description: {task_description}
-- Recommended APIs: {", ".join(recommended_apis) if recommended_apis else "None specified"}
+- Recommended APIs: {_format_recommended_apis(recommended_apis)}
 
 ## Input Schema
 ```json
