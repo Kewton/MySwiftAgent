@@ -132,6 +132,7 @@ describe('TaskBreakdownList', () => {
 	const mockWorkflowStatuses: WorkflowStatusItem[] = [
 		{
 			task_id: 'tm_001',
+			task_name: 'Gmail取得',
 			status: 'success',
 			workflow_name: 'workflow_gmail',
 			generation_time_ms: 28500,
@@ -140,6 +141,7 @@ describe('TaskBreakdownList', () => {
 		},
 		{
 			task_id: 'tm_002',
+			task_name: 'Claude要約',
 			status: 'generating',
 			workflow_name: null,
 			generation_time_ms: null,

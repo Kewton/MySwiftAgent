@@ -59,6 +59,7 @@ const mockTaskBreakdown: TaskBreakdownItem[] = [
 const mockWorkflowStatuses: WorkflowStatusItem[] = [
 	{
 		task_id: 'tm_001',
+		task_name: 'Gmail未読メール取得',
 		status: 'success',
 		workflow_name: 'workflow_gmail_fetch',
 		generation_time_ms: 28500,
@@ -67,6 +68,7 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 	},
 	{
 		task_id: 'tm_002',
+		task_name: 'Claude要約生成',
 		status: 'success',
 		workflow_name: 'workflow_claude_summarize',
 		generation_time_ms: 32100,
@@ -75,6 +77,7 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 	},
 	{
 		task_id: 'tm_003',
+		task_name: 'Slack投稿',
 		status: 'success',
 		workflow_name: 'workflow_slack_post',
 		generation_time_ms: 25300,
