@@ -121,13 +121,31 @@ def create_workflow_generation_prompt(
     ai_agent_apis = expert_agent_capabilities.get("ai_agent_apis", [])
     expert_apis = utility_apis + ai_agent_apis
 
-    # Include endpoint information and output schema for better API selection
+    # Include endpoint information, request schema, and output schema for better API selection
     def format_api(api: dict[str, Any]) -> str:
-        """Format API information including output schema if available."""
+        """Format API information including request and output schema if available."""
         lines = [
             f"  - {api['name']}: {api.get('description', 'No description')}",
             f"    Endpoint: {api.get('endpoint', 'N/A')}",
         ]
+
+        # Add request schema if available (CRITICAL for correct parameter names)
+        request_schema = api.get("request_schema")
+        if request_schema:
+            lines.append("    Request Schema:")
+            for field_name, field_info in request_schema.items():
+                field_type = field_info.get("type", "unknown")
+                field_desc = field_info.get("description", "")
+                required = (
+                    " (required)"
+                    if field_info.get("required", False)
+                    else " (optional)"
+                )
+                default = field_info.get("default")
+                default_str = f" [default: {default}]" if default is not None else ""
+                lines.append(
+                    f"      - {field_name}: {field_type}{required}{default_str} - {field_desc}"
+                )
 
         # Add output schema if available
         output_schema = api.get("output_schema")

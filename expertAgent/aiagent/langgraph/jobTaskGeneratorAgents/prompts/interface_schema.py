@@ -228,6 +228,99 @@ if not INTERFACE_SCHEMA_SYSTEM_PROMPT:
 }
 ```
 
+### 例3: 音声合成（TTS）タスク - **重要: OpenAI TTS API仕様**
+
+**入力スキーマ**:
+```json
+{
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "音声合成するテキスト（最大4096文字）",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "voice": {
+      "type": "string",
+      "description": "音声タイプ（OpenAI TTS APIで使用可能な値のみ）",
+      "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+      "default": "alloy"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "保存ファイル名（拡張子.mp3を含む）",
+      "example": "podcast_episode_001.mp3"
+    }
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}
+```
+
+**重要**: `voice`パラメータは必ず`enum`で指定された値のみを使用してください。
+- ✅ 正しい: "alloy", "echo", "fable", "onyx", "nova", "shimmer"
+- ❌ 間違い: "ja-JP-Standard-A", "en-US-Wavenet-D"（これらはGoogle Cloud TTS形式で、本システムでは使用不可）
+
+**出力スキーマ**:
+```json
+{
+  "type": "object",
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "音声合成成功フラグ"
+    },
+    "audio_url": {
+      "type": "string",
+      "description": "音声ファイルのURL（Google Drive公開リンク）"
+    },
+    "file_id": {
+      "type": "string",
+      "description": "Google DriveファイルID"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "エラーメッセージ（失敗時）"
+    }
+  },
+  "required": ["success"],
+  "additionalProperties": false
+}
+```
+
+### 例4: Web検索タスク - **重要: Google検索API仕様**
+
+**入力スキーマ**:
+```json
+{
+  "type": "object",
+  "properties": {
+    "queries": {
+      "type": "array",
+      "description": "検索クエリのリスト（複数クエリ一括検索可能）",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "num": {
+      "type": "integer",
+      "description": "各クエリの検索結果件数",
+      "default": 10,
+      "minimum": 1,
+      "maximum": 100
+    }
+  },
+  "required": ["queries"],
+  "additionalProperties": false
+}
+```
+
+**重要**: `queries`パラメータは配列形式です。
+- ✅ 正しい: `"queries": ["検索クエリ1", "検索クエリ2"]`
+- ❌ 間違い: `"query": "検索クエリ"`（単数形は不可）
+
 ## インターフェース命名規則
 
 - スネークケースを使用: `gmail_search_interface`
