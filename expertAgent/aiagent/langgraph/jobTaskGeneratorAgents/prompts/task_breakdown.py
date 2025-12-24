@@ -120,7 +120,7 @@ def _build_expert_agent_capabilities() -> str:
     """Build expertAgent capabilities section from YAML config.
 
     Returns:
-        Formatted expertAgent capabilities string
+        Formatted expertAgent capabilities string including task-to-API mapping
     """
     config = _load_yaml_config("expert_agent_capabilities.yaml")
     lines = ["**expertAgent Direct API一覧**:", ""]
@@ -151,6 +151,25 @@ def _build_expert_agent_capabilities() -> str:
                 f"  - **{api['name']}** (`{api['endpoint']}`): "
                 f"{api['description']} - {use_cases}{schema_hint}"
             )
+        lines.append("")
+
+    # Task-to-API Mapping (Issue #305)
+    # This section guides LLM to select appropriate APIs for specific task types
+    task_api_mapping = config.get("task_api_mapping", [])
+    if task_api_mapping:
+        lines.append("**タスク種別ごとの推奨API**:")
+        lines.append("")
+        lines.append(
+            "| タスク種別 | 推奨API | エンドポイント | 理由 |"
+        )
+        lines.append("|-----------|---------|---------------|------|")
+        for mapping in task_api_mapping:
+            task_type = mapping.get("task_type", "")
+            recommended_api = mapping.get("recommended_api", {})
+            api_name = recommended_api.get("api_name", "")
+            endpoint = recommended_api.get("endpoint", "")
+            reason = mapping.get("reason", "")
+            lines.append(f"| {task_type} | {api_name} | `{endpoint}` | {reason} |")
 
     return "\n".join(lines)
 
