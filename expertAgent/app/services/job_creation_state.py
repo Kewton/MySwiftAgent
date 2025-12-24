@@ -19,7 +19,7 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from app.services.valkey_client import ValkeyClient
@@ -73,10 +73,93 @@ class TaskBreakdownItem(BaseModel):
     recommended_apis: list[str]
 
 
+# ----- Issue #305 Extension: Workflow Generation Summary Models -----
+
+
+class TestExecutionSummary(BaseModel):
+    """Test execution summary for workflow generation.
+
+    Issue #305 Extension: Captures test execution results for UI display.
+    """
+
+    http_status: Optional[int] = None
+    is_valid: bool = False
+    validation_errors: list[str] = Field(default_factory=list)
+    execution_time_ms: Optional[int] = None
+
+
+class EvaluationSummary(BaseModel):
+    """LLM evaluation summary for workflow generation.
+
+    Issue #305 Extension: Captures LLM evaluation scores for UI display.
+    Contains 5 category scores plus overall feedback.
+    """
+
+    score: Optional[int] = None  # 0-100 overall score
+    structural_score: Optional[int] = None  # Workflow structure quality
+    requirement_score: Optional[int] = None  # Requirement fulfillment
+    output_quality_score: Optional[int] = None  # Output quality
+    error_handling_score: Optional[int] = None  # Error handling quality
+    test_data_quality_score: Optional[int] = None  # Test data quality
+    strengths: list[str] = Field(default_factory=list)  # Positive points
+    weaknesses: list[str] = Field(default_factory=list)  # Areas for improvement
+    suggestions: list[str] = Field(default_factory=list)  # Improvement suggestions
+    confidence: Optional[float] = None  # Evaluation confidence (0.0-1.0)
+
+
+class RetryInfo(BaseModel):
+    """Retry information for workflow generation.
+
+    Issue #305 Extension: Tracks retry attempts and model used.
+    """
+
+    retry_count: int = 0
+    max_retry: int = 3
+    generation_model: Optional[str] = None
+
+
+class FailureDetails(BaseModel):
+    """Failure details for failed workflow generation.
+
+    Issue #305 Extension: Detailed failure information for debugging.
+
+    failure_stage values:
+    - yaml_generation: YAML generation failed
+    - schema_validation: Input schema validation failed
+    - workflow_registration: graphAiServer registration failed
+    - workflow_execution: Workflow execution failed (HTTP 4xx/5xx)
+    - node_error: Individual node execution error
+    - output_validation: Output schema validation failed
+    - quality_evaluation: Quality criteria not met
+    """
+
+    failure_stage: str  # See docstring for valid values
+    error_summary: dict[str, Any] = Field(default_factory=dict)
+    cause_analysis: Optional[dict[str, Any]] = None
+    recommendations: list[str] = Field(default_factory=list)
+    retry_history: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class WorkflowGenerationSummary(BaseModel):
+    """Workflow generation summary for UI display.
+
+    Issue #305 Extension: Contains all information needed to display
+    detailed workflow generation results in the UI.
+    """
+
+    yaml_preview: Optional[str] = None  # First 500 chars of YAML
+    sample_input: Optional[dict[str, Any]] = None  # Test input data
+    test_result: Optional[TestExecutionSummary] = None
+    evaluation: Optional[EvaluationSummary] = None
+    retry_info: Optional[RetryInfo] = None
+    failure_details: Optional[FailureDetails] = None  # Only for failed workflows
+
+
 class WorkflowStatusItem(BaseModel):
     """Workflow generation status item (Issue #305).
 
     Represents the generation status of a single workflow.
+    Issue #305 Extension: Added summary field for detailed results.
     """
 
     task_id: str
@@ -86,6 +169,7 @@ class WorkflowStatusItem(BaseModel):
     generation_time_ms: Optional[int] = None
     error_message: Optional[str] = None
     langfuse_trace_id: Optional[str] = None  # Issue #305: Per-task trace link
+    summary: Optional[WorkflowGenerationSummary] = None  # Issue #305 Extension
 
 
 class JobCreationStatus(BaseModel):
