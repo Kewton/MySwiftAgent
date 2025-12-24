@@ -110,13 +110,14 @@ export const JOB_VERSION_STATUS_CONFIG: Record<
 /**
  * Polling configuration for job generation.
  * Issue #305: Reduced interval from 2s to 1s for better progress tracking.
+ * Issue #305: Extended timeout from 5 to 10 minutes for complex workflow generation.
  */
 export const POLLING_CONFIG = {
 	intervalMs: 1000,
-	maxDurationMs: 300000 // 5 minutes
+	maxDurationMs: 600000 // 10 minutes
 } as const;
 
 /**
  * Timeout error message.
  */
-export const TIMEOUT_ERROR_MESSAGE = 'Timeout: Job generation exceeded 5 minutes';
+export const TIMEOUT_ERROR_MESSAGE = 'Timeout: Job generation exceeded 10 minutes';

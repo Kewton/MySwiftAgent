@@ -43,18 +43,33 @@ logger = logging.getLogger(__name__)
 
 def validator_router(
     state: WorkflowGeneratorState,
-) -> Literal["llm_evaluator"]:
-    """Route after validator node to llm_evaluator.
+) -> Literal["llm_evaluator", "result_summary_generator"]:
+    """Route after validator node based on fast_mode and validation results.
 
-    Updated for Issue #305: Always route to llm_evaluator for semantic evaluation.
-    The llm_evaluator will handle routing based on evaluation results.
+    Updated for Issue #305: Skip LLM evaluation in fast_mode when rule-based
+    validation passes and workflow execution succeeded.
 
     Args:
         state: Current workflow generator state
 
     Returns:
-        Always returns "llm_evaluator"
+        "result_summary_generator" if fast_mode and validation passed
+        "llm_evaluator" otherwise
     """
+    fast_mode = state.get("fast_mode", False)
+    is_valid = state.get("is_valid", False)
+    test_http_status = state.get("test_http_status")
+
+    # Issue #305: Skip LLM evaluation in fast_mode when:
+    # 1. Rule-based validation passed
+    # 2. Workflow execution succeeded (HTTP 200)
+    if fast_mode and is_valid and test_http_status == 200:
+        logger.info(
+            "Validator router: fast_mode enabled and validation passed, "
+            "skipping LLM evaluation -> result_summary_generator"
+        )
+        return "result_summary_generator"
+
     logger.info("Validator router: routing to llm_evaluator")
     return "llm_evaluator"
 
@@ -192,8 +207,16 @@ def create_workflow_generator_graph() -> Any:
     # workflow_tester -> validator
     workflow.add_edge("workflow_tester", "validator")
 
-    # validator -> llm_evaluator (always)
-    workflow.add_edge("validator", "llm_evaluator")
+    # validator -> (conditional) -> llm_evaluator or result_summary_generator
+    # Issue #305: Skip LLM evaluation in fast_mode when validation passes
+    workflow.add_conditional_edges(
+        "validator",
+        validator_router,
+        {
+            "llm_evaluator": "llm_evaluator",
+            "result_summary_generator": "result_summary_generator",
+        },
+    )
 
     # llm_evaluator -> (conditional) -> test_data_regenerator or self_repair or result_summary_generator
     workflow.add_conditional_edges(

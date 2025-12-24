@@ -219,11 +219,11 @@ describe('Generate Page Form Actions', () => {
 
 			const updated = await jobVersionRepo.updateGenerationResult(job.id, {
 				status: 'failed',
-				errorMessage: 'Timeout: Job generation exceeded 5 minutes'
+				errorMessage: 'Timeout: Job generation exceeded 10 minutes'
 			});
 
 			expect(updated?.status).toBe('failed');
-			expect(updated?.errorMessage).toBe('Timeout: Job generation exceeded 5 minutes');
+			expect(updated?.errorMessage).toBe('Timeout: Job generation exceeded 10 minutes');
 		});
 	});
 });

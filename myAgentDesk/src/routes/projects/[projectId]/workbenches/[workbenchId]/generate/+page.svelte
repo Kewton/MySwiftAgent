@@ -9,7 +9,7 @@
   - 2-Phase progress display (PhaseFlow component)
   - Task breakdown display (TaskBreakdownList component)
   - Polling for status updates (1 second interval)
-  - Timeout handling (5 minutes)
+  - Timeout handling (10 minutes)
   - Recent job versions history
   - Last generation result display (persistent after completion)
 -->
@@ -198,7 +198,7 @@
 		try {
 			await fetch(`/api/jobs/${currentJobId}/timeout`, { method: 'POST' });
 			isGenerating = false;
-			errorMessage = 'Generation timed out (exceeded 5 minutes)';
+			errorMessage = 'Generation timed out (exceeded 10 minutes)';
 			statusMessage = '';
 			stopPolling();
 		} catch (err) {

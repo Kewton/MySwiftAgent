@@ -23,7 +23,8 @@ from ..utils.workflow_helper import generate_workflow_for_task
 logger = logging.getLogger(__name__)
 
 # Maximum concurrent workflow generations to avoid overwhelming external APIs
-MAX_CONCURRENT_WORKFLOWS = 3
+# Issue #305: Increased from 3 to 4 for better performance
+MAX_CONCURRENT_WORKFLOWS = 4
 
 
 async def _generate_single_workflow(

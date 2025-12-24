@@ -28,6 +28,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
         task_master_id: TaskMaster ID to generate workflow for
         task_data: TaskMaster metadata (name, description, interfaces, etc.)
         max_retry: Maximum retry count for self-repair (default: 3)
+        fast_mode: Skip LLM evaluation when rule-based validation passes (Issue #305)
 
         # Generator fields
         yaml_content: Generated GraphAI workflow YAML
@@ -82,6 +83,7 @@ class WorkflowGeneratorState(TypedDict, total=False):
     )  # ULID string (e.g., 'tm_01K8K13NC8PRJ3V4R35C1AP2JP') or legacy int
     task_data: dict[str, Any]
     max_retry: int
+    fast_mode: bool  # Issue #305: Skip LLM evaluation when rule-based validation passes
 
     # ===== Generator =====
     yaml_content: str
@@ -135,6 +137,7 @@ def create_initial_state(
     task_data: dict[str, Any],
     max_retry: int = 3,
     max_test_data_regeneration: int = 2,
+    fast_mode: bool = True,
 ) -> WorkflowGeneratorState:
     """Create initial state with default values.
 
@@ -144,15 +147,23 @@ def create_initial_state(
         task_data: TaskMaster metadata from jobqueue API
         max_retry: Maximum retry count for self-repair (default: 3)
         max_test_data_regeneration: Maximum test data regeneration count (default: 2)
+        fast_mode: Skip LLM evaluation when rule-based validation passes (default: True)
+            Issue #305: When enabled, skips LLM evaluation for successfully
+            validated workflows to reduce processing time.
 
     Returns:
         WorkflowGeneratorState: Initial state with default values
     """
+    # Issue #305: In fast_mode, reduce retry counts for faster processing
+    effective_max_retry = 2 if fast_mode else max_retry
+    effective_max_test_data_regen = 1 if fast_mode else max_test_data_regeneration
+
     return {
         # Input
         "task_master_id": task_master_id,
         "task_data": task_data,
-        "max_retry": max_retry,
+        "max_retry": effective_max_retry,
+        "fast_mode": fast_mode,
         # Generator
         "yaml_content": "",
         "workflow_name": "",
@@ -178,7 +189,7 @@ def create_initial_state(
         "test_data_issues": [],
         "needs_test_data_regeneration": False,
         "test_data_regeneration_count": 0,
-        "max_test_data_regeneration": max_test_data_regeneration,
+        "max_test_data_regeneration": effective_max_test_data_regen,
         "regenerated_sample_input": None,
         "suggested_test_data": None,
         # Result Summary (Issue #305)
