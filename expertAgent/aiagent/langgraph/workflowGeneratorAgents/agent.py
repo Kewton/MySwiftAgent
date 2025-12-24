@@ -254,17 +254,20 @@ async def generate_workflow(
     task_data: dict,
     max_retry: int = 3,
     callback_handler: Any | None = None,
+    fast_mode: bool = True,
 ) -> WorkflowGeneratorState:
     """Generate GraphAI workflow YAML from TaskMaster metadata.
 
     Issue #278: Added callback_handler parameter for Langfuse tracing integration.
     Issue #305: Added LLM Evaluator, Test Data Regenerator, and Result Summary Generator.
+    Issue #305: Added fast_mode parameter for performance optimization.
 
     Args:
         task_master_id: TaskMaster ID (ULID string or int)
         task_data: TaskMaster metadata with interfaces
         max_retry: Maximum retry count for self-repair (default: 3)
         callback_handler: Optional Langfuse CallbackHandler for tracing
+        fast_mode: Skip LLM evaluation when rule-based validation passes (default: True)
 
     Returns:
         Final state with generated workflow or error information
@@ -274,7 +277,9 @@ async def generate_workflow(
     logger.info(f"Starting workflow generation for TaskMaster {task_master_id}")
 
     # Create initial state
-    initial_state = create_initial_state(task_master_id, task_data, max_retry)
+    initial_state = create_initial_state(
+        task_master_id, task_data, max_retry, fast_mode=fast_mode
+    )
 
     # Create and run workflow graph
     graph = create_workflow_generator_graph()

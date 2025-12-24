@@ -19,14 +19,36 @@ from aiagent.langgraph.workflowGeneratorAgents.state import (
 class TestValidatorRouter:
     """Test validator_router (conditional routing after validation).
 
-    Updated for Issue #305: validator_router now always routes to llm_evaluator
-    for semantic evaluation. The llm_evaluator_router handles subsequent routing.
+    Updated for Issue #305: validator_router routes based on fast_mode and validation results.
+    - fast_mode=True + validation passed + HTTP 200 -> result_summary_generator (skip LLM)
+    - Otherwise -> llm_evaluator
     """
 
-    def test_validator_router_validation_success(self):
-        """Test router returns llm_evaluator when validation passes.
+    def test_validator_router_validation_success_fast_mode(self):
+        """Test router skips LLM evaluator when fast_mode=True and validation passes.
 
-        Issue #305: validator now routes to llm_evaluator for semantic evaluation.
+        Issue #305: In fast_mode, skip LLM evaluation when rule-based validation passes.
+        """
+        state: WorkflowGeneratorState = {
+            "task_master_id": 123,
+            "task_data": {"name": "test"},
+            "is_valid": True,
+            "validation_errors": [],
+            "max_retry": 2,
+            "retry_count": 0,
+            "status": "validated",
+            "fast_mode": True,
+            "test_http_status": 200,
+        }
+
+        next_node = validator_router(state)
+
+        assert next_node == "result_summary_generator"
+
+    def test_validator_router_validation_success_no_fast_mode(self):
+        """Test router returns llm_evaluator when fast_mode=False.
+
+        Issue #305: Without fast_mode, always go through LLM evaluator.
         """
         state: WorkflowGeneratorState = {
             "task_master_id": 123,
@@ -36,6 +58,8 @@ class TestValidatorRouter:
             "max_retry": 3,
             "retry_count": 0,
             "status": "validated",
+            "fast_mode": False,
+            "test_http_status": 200,
         }
 
         next_node = validator_router(state)
@@ -43,10 +67,9 @@ class TestValidatorRouter:
         assert next_node == "llm_evaluator"
 
     def test_validator_router_validation_failed(self):
-        """Test router returns llm_evaluator even when validation fails.
+        """Test router returns llm_evaluator when validation fails.
 
-        Issue #305: validator now always routes to llm_evaluator for
-        comprehensive evaluation before self_repair.
+        Issue #305: Even with fast_mode, failed validation goes to llm_evaluator.
         """
         state: WorkflowGeneratorState = {
             "task_master_id": 123,
@@ -56,6 +79,29 @@ class TestValidatorRouter:
             "max_retry": 3,
             "retry_count": 0,
             "status": "validation_failed",
+            "fast_mode": True,
+            "test_http_status": 200,
+        }
+
+        next_node = validator_router(state)
+
+        assert next_node == "llm_evaluator"
+
+    def test_validator_router_http_error(self):
+        """Test router returns llm_evaluator when HTTP status is not 200.
+
+        Issue #305: Even with fast_mode, HTTP errors go to llm_evaluator.
+        """
+        state: WorkflowGeneratorState = {
+            "task_master_id": 123,
+            "task_data": {"name": "test"},
+            "is_valid": True,
+            "validation_errors": [],
+            "max_retry": 2,
+            "retry_count": 0,
+            "status": "validated",
+            "fast_mode": True,
+            "test_http_status": 500,  # HTTP error
         }
 
         next_node = validator_router(state)
@@ -116,7 +162,7 @@ class TestCreateInitialState:
     """Test create_initial_state helper function."""
 
     def test_create_initial_state_default(self):
-        """Test creating initial state with default values."""
+        """Test creating initial state with default values (fast_mode disabled)."""
         task_data = {
             "name": "Send email notification",
             "description": "Test task",
@@ -124,22 +170,52 @@ class TestCreateInitialState:
             "output_interface": {"type": "json_schema", "schema": {}},
         }
 
-        state = create_initial_state(123, task_data, max_retry=3)
+        # Issue #305: Explicitly disable fast_mode to test original behavior
+        state = create_initial_state(123, task_data, max_retry=3, fast_mode=False)
 
         assert state["task_master_id"] == 123
         assert state["task_data"] == task_data
         assert state["max_retry"] == 3
         assert state["retry_count"] == 0
         assert state["status"] == "initialized"
+        assert state["fast_mode"] is False
 
     def test_create_initial_state_custom_max_retry(self):
-        """Test creating initial state with custom max_retry."""
+        """Test creating initial state with custom max_retry (fast_mode disabled)."""
         task_data = {"name": "Test task"}
 
-        state = create_initial_state(456, task_data, max_retry=5)
+        # Issue #305: Explicitly disable fast_mode to test custom max_retry
+        state = create_initial_state(456, task_data, max_retry=5, fast_mode=False)
 
         assert state["task_master_id"] == 456
         assert state["max_retry"] == 5
+        assert state["fast_mode"] is False
+
+    def test_create_initial_state_fast_mode_enabled(self):
+        """Test creating initial state with fast_mode enabled (default).
+
+        Issue #305: fast_mode reduces max_retry to 2 and max_test_data_regeneration to 1.
+        """
+        task_data = {"name": "Test task"}
+
+        state = create_initial_state(789, task_data, max_retry=5, fast_mode=True)
+
+        assert state["task_master_id"] == 789
+        assert state["max_retry"] == 2  # Reduced from 5 to 2 in fast_mode
+        assert state["max_test_data_regeneration"] == 1  # Reduced from 2 to 1 in fast_mode
+        assert state["fast_mode"] is True
+
+    def test_create_initial_state_fast_mode_default(self):
+        """Test that fast_mode is enabled by default.
+
+        Issue #305: fast_mode defaults to True for performance optimization.
+        """
+        task_data = {"name": "Test task"}
+
+        state = create_initial_state(101, task_data)
+
+        assert state["fast_mode"] is True
+        assert state["max_retry"] == 2  # Default fast_mode value
 
 
 class TestWorkflowGraph:
@@ -277,9 +353,9 @@ class TestGenerateWorkflow:
             mock_llm_evaluator.side_effect = mock_llm_eval
             mock_result_summary.side_effect = mock_summary
 
-            # Execute workflow
+            # Execute workflow (fast_mode=False to go through LLM evaluator)
             final_state = await generate_workflow(
-                task_master_id=123, task_data=task_data, max_retry=3
+                task_master_id=123, task_data=task_data, max_retry=3, fast_mode=False
             )
 
             # Assertions
@@ -294,6 +370,7 @@ class TestGenerateWorkflow:
 
         Updated for Issue #305: Now includes llm_evaluator_node and
         result_summary_generator_node in the workflow.
+        Uses fast_mode=False to test retry behavior.
         """
         task_data = {
             "name": "Send email notification",
@@ -408,8 +485,9 @@ class TestGenerateWorkflow:
             mock_result_summary.side_effect = mock_summary
             mock_self_repair.side_effect = mock_repair
 
+            # Execute workflow (fast_mode=False to test retry behavior)
             final_state = await generate_workflow(
-                task_master_id=123, task_data=task_data, max_retry=3
+                task_master_id=123, task_data=task_data, max_retry=3, fast_mode=False
             )
 
             # Should succeed after 1 retry
@@ -419,7 +497,10 @@ class TestGenerateWorkflow:
 
     @pytest.mark.asyncio
     async def test_generate_workflow_max_retries_exceeded(self):
-        """Test workflow generation failing after max retries."""
+        """Test workflow generation failing after max retries.
+
+        Uses fast_mode=False to test retry behavior with specified max_retry.
+        """
         task_data = {
             "name": "Send email notification",
             "description": "Test task",
@@ -440,6 +521,9 @@ class TestGenerateWorkflow:
             patch(
                 "aiagent.langgraph.workflowGeneratorAgents.agent.validator_node"
             ) as mock_validator,
+            patch(
+                "aiagent.langgraph.workflowGeneratorAgents.agent.llm_evaluator_node"
+            ) as mock_llm_evaluator,
             patch(
                 "aiagent.langgraph.workflowGeneratorAgents.agent.self_repair_node"
             ) as mock_self_repair,
@@ -474,6 +558,19 @@ class TestGenerateWorkflow:
                     "status": "validation_failed",
                 }
 
+            async def mock_llm_eval(state):
+                # LLM evaluator also indicates failure
+                return {
+                    **state,
+                    "llm_evaluation_result": {
+                        "overall_score": 30,
+                        "failure_reason": "workflow_quality",
+                    },
+                    "evaluation_score": 30,
+                    "needs_test_data_regeneration": False,
+                    "is_valid": False,
+                }
+
             async def mock_repair(state):
                 retry_count = state.get("retry_count", 0)
                 max_retry = state.get("max_retry", 3)
@@ -496,10 +593,12 @@ class TestGenerateWorkflow:
             mock_sample_input.side_effect = mock_sample
             mock_tester.side_effect = mock_test
             mock_validator.side_effect = mock_validate
+            mock_llm_evaluator.side_effect = mock_llm_eval
             mock_self_repair.side_effect = mock_repair
 
+            # Execute workflow (fast_mode=False to test retry behavior with specified max_retry)
             final_state = await generate_workflow(
-                task_master_id=123, task_data=task_data, max_retry=3
+                task_master_id=123, task_data=task_data, max_retry=3, fast_mode=False
             )
 
             # Should fail after max retries
