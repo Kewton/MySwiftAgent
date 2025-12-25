@@ -102,7 +102,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		try {
 			const parsed = JSON.parse(jv.taskBreakdown);
 			// Support both formats: { tasks: [...] } and [...]
-			const rawTasks = Array.isArray(parsed) ? parsed : (parsed.tasks || []);
+			const rawTasks = Array.isArray(parsed) ? parsed : parsed.tasks || [];
 			// Normalize task_id field (support both 'id' and 'task_id')
 			tasks = rawTasks.map((t: Record<string, unknown>) => ({
 				task_id: (t.task_id || t.id || '') as string,
@@ -141,9 +141,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		try {
 			const parsed = JSON.parse(jv.workflows);
 			// Support both formats: { workflow_statuses: [...] } and [...]
-			const rawWorkflows = Array.isArray(parsed)
-				? parsed
-				: (parsed.workflow_statuses || []);
+			const rawWorkflows = Array.isArray(parsed) ? parsed : parsed.workflow_statuses || [];
 			// Normalize workflow fields
 			workflows = rawWorkflows.map((w: Record<string, unknown>) => ({
 				task_id: (w.task_id || w.id || '') as string,

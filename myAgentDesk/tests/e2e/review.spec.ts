@@ -121,7 +121,9 @@ test.describe('JobVersion Detail Page - Task Breakdown (実践的テスト)', ()
 		const firstTask = page.locator(`text=${EXPECTED_TASKS[0]}`).first();
 		if ((await firstTask.count()) > 0) {
 			// クリック可能な親要素を探す
-			const clickableParent = firstTask.locator('xpath=ancestor::button | ancestor::details | ancestor::div[contains(@class, "accordion")]');
+			const clickableParent = firstTask.locator(
+				'xpath=ancestor::button | ancestor::details | ancestor::div[contains(@class, "accordion")]'
+			);
 			if ((await clickableParent.count()) > 0) {
 				await clickableParent.first().click();
 			} else {
@@ -284,7 +286,9 @@ test.describe('Active Version Switch (実践的テスト)', () => {
 		await page.waitForLoadState('networkidle');
 
 		// deprecated または success のJobVersionがある場合、Set Activeボタンが表示される
-		const setActiveBtn = page.locator('button:has-text("Set Active"), [data-testid="set-active-button"]');
+		const setActiveBtn = page.locator(
+			'button:has-text("Set Active"), [data-testid="set-active-button"]'
+		);
 		// ボタンの存在を確認（active以外のJobVersionがあれば表示される）
 		const count = await setActiveBtn.count();
 		console.log(`Set Active buttons found: ${count}`);
@@ -405,7 +409,9 @@ test.describe('User Workflow - Complete Scenario (実践的テスト)', () => {
 			await page.waitForTimeout(300);
 
 			// Step 5: Backボタンまたはブラウザバックで戻る
-			const backButton = page.locator('a:has-text("Back"), button:has-text("Back"), [data-testid="back-button"]');
+			const backButton = page.locator(
+				'a:has-text("Back"), button:has-text("Back"), [data-testid="back-button"]'
+			);
 			if ((await backButton.count()) > 0) {
 				await backButton.first().click();
 			} else {

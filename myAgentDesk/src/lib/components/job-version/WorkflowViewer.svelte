@@ -102,8 +102,13 @@
 
 	{#if !isCollapsed && yaml}
 		<div class="content">
-			<pre class="yaml-code"><code class="language-yaml">{#each lines as line, lineIdx (lineIdx)}<span class="yaml-line">{#if showLineNumbers}<span class="line-number">{lineIdx + 1}</span>{/if}{@html highlightYaml(line)}</span>
-{/each}</code></pre>
+			<pre class="yaml-code"><code class="language-yaml"
+					>{#each lines as line, lineIdx (lineIdx)}<span class="yaml-line"
+							>{#if showLineNumbers}<span class="line-number">{lineIdx + 1}</span
+								>{/if}{@html highlightYaml(line)}</span
+						>
+					{/each}</code
+				></pre>
 		</div>
 	{:else if !yaml}
 		<div class="empty-state">
