@@ -7,7 +7,6 @@ Issue #305: These tests were added after discovering a TypeError
 when recommended_apis was passed as list[dict] instead of list[str].
 """
 
-import pytest
 
 from aiagent.langgraph.workflowGeneratorAgents.prompts.llm_evaluation import (
     _format_recommended_apis,

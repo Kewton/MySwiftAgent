@@ -32,7 +32,8 @@ describe('WorkflowTraceSummary', () => {
 		error_message: null,
 		langfuse_trace_id: 'trace_abc123',
 		summary: {
-			yaml_preview: 'version: 0.5\nnodes:\n  source: {}\n  build_prompt:\n    agent: stringTemplateAgent',
+			yaml_preview:
+				'version: 0.5\nnodes:\n  source: {}\n  build_prompt:\n    agent: stringTemplateAgent',
 			yaml_content:
 				'version: 0.5\nnodes:\n  source: {}\n  build_prompt:\n    agent: stringTemplateAgent\n    params:\n      template: "Generate audio script for {{title}}"',
 			sample_input: { title: 'Test Title', sections: ['section1', 'section2'] },
@@ -73,7 +74,8 @@ describe('WorkflowTraceSummary', () => {
 		langfuse_trace_id: 'trace_def456',
 		summary: {
 			yaml_preview: 'version: 0.5\nnodes:\n  tts_drive_upload: {}',
-			yaml_content: 'version: 0.5\nnodes:\n  tts_drive_upload:\n    agent: ttsAgent\n    params:\n      voice_id: ja-JP-Standard-A',
+			yaml_content:
+				'version: 0.5\nnodes:\n  tts_drive_upload:\n    agent: ttsAgent\n    params:\n      voice_id: ja-JP-Standard-A',
 			sample_input: { voice_id: 'ja-JP-Standard-A' },
 			test_result: {
 				http_status: 400,

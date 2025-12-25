@@ -11,7 +11,11 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { jobVersionRepository } from '$lib/server/repositories/job-version';
-import { ExpertAgentClient, type TaskBreakdownItem, type WorkflowStatusItem } from '$lib/api/clients/expert-agent';
+import {
+	ExpertAgentClient,
+	type TaskBreakdownItem,
+	type WorkflowStatusItem
+} from '$lib/api/clients/expert-agent';
 import { loadConfigFromEnv } from '$lib/api/config';
 
 /**
@@ -79,7 +83,8 @@ export const GET: RequestHandler = async ({ params }) => {
 					// Issue #305: Save workflow_statuses for trace links
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'success',
-						externalJobMasterId: result?.job_master_id ?? apiResult.value.job_master_id ?? undefined,
+						externalJobMasterId:
+							result?.job_master_id ?? apiResult.value.job_master_id ?? undefined,
 						externalTraceId: langfuseTraceId ?? undefined,
 						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined
 					});

@@ -29,7 +29,8 @@ describe('FailureDetailsPanel', () => {
 			http_status: 400,
 			error_code: 'INVALID_PARAMETER',
 			error_message: 'Invalid voice parameter',
-			error_detail: '"ja-JP-Standard-A" is not valid. Expected one of: alloy, echo, fable, onyx, nova, shimmer'
+			error_detail:
+				'"ja-JP-Standard-A" is not valid. Expected one of: alloy, echo, fable, onyx, nova, shimmer'
 		},
 		cause_analysis: {
 			category: 'API parameter',

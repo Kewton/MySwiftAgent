@@ -44,7 +44,7 @@
 	// Get the YAML to display based on state
 	const displayYaml = $derived(
 		showFullYaml
-			? workflowStatus.summary?.yaml_content ?? workflowStatus.summary?.yaml_preview
+			? (workflowStatus.summary?.yaml_content ?? workflowStatus.summary?.yaml_preview)
 			: workflowStatus.summary?.yaml_preview
 	);
 
@@ -101,7 +101,13 @@
 
 			<!-- Langfuse trace link -->
 			{#if langfuseUrl}
-				<a href={langfuseUrl} target="_blank" rel="noopener noreferrer" class="trace-link" aria-label="View trace in Langfuse">
+				<a
+					href={langfuseUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="trace-link"
+					aria-label="View trace in Langfuse"
+				>
 					Trace
 				</a>
 			{/if}
@@ -151,7 +157,8 @@
 			{#if workflowStatus.summary.sample_input}
 				<div class="detail-section test-data-section">
 					<h4>Test Data (sample_input)</h4>
-					<pre class="test-data"><code>{formatJson(workflowStatus.summary.sample_input)}</code></pre>
+					<pre class="test-data"><code>{formatJson(workflowStatus.summary.sample_input)}</code
+						></pre>
 				</div>
 			{/if}
 
@@ -162,20 +169,30 @@
 					<div class="test-result">
 						<span class="result-item">
 							<span class="result-label">HTTP Status:</span>
-							<span class="result-value status-{workflowStatus.summary.test_result.http_status === 200 ? 'success' : 'error'}">
+							<span
+								class="result-value status-{workflowStatus.summary.test_result.http_status === 200
+									? 'success'
+									: 'error'}"
+							>
 								{workflowStatus.summary.test_result.http_status ?? '--'}
 							</span>
 						</span>
 						<span class="result-item">
 							<span class="result-label">Valid:</span>
-							<span class="result-value {workflowStatus.summary.test_result.is_valid ? 'valid' : 'invalid'}">
+							<span
+								class="result-value {workflowStatus.summary.test_result.is_valid
+									? 'valid'
+									: 'invalid'}"
+							>
 								{workflowStatus.summary.test_result.is_valid ? 'Yes' : 'No'}
 							</span>
 						</span>
 						{#if workflowStatus.summary.test_result.execution_time_ms}
 							<span class="result-item">
 								<span class="result-label">Time:</span>
-								<span class="result-value">{formatTime(workflowStatus.summary.test_result.execution_time_ms)}</span>
+								<span class="result-value"
+									>{formatTime(workflowStatus.summary.test_result.execution_time_ms)}</span
+								>
 							</span>
 						{/if}
 					</div>

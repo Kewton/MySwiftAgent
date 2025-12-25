@@ -64,15 +64,8 @@ describe('EvaluationDetailsPanel', () => {
 		error_handling_score: 35,
 		test_data_quality_score: 48,
 		strengths: [],
-		weaknesses: [
-			'Does not meet requirements',
-			'Major structural issues',
-			'No error handling'
-		],
-		suggestions: [
-			'Redesign workflow structure',
-			'Review requirements carefully'
-		],
+		weaknesses: ['Does not meet requirements', 'Major structural issues', 'No error handling'],
+		suggestions: ['Redesign workflow structure', 'Review requirements carefully'],
 		confidence: 0.7
 	});
 
@@ -89,7 +82,9 @@ describe('EvaluationDetailsPanel', () => {
 			const { container } = render(EvaluationDetailsPanel, { props: { evaluation } });
 
 			// Should have green styling class
-			const scoreElement = container.querySelector('.score-high, .score-excellent, [class*="green"]');
+			const scoreElement = container.querySelector(
+				'.score-high, .score-excellent, [class*="green"]'
+			);
 			expect(scoreElement).not.toBeNull();
 		});
 
@@ -164,7 +159,9 @@ describe('EvaluationDetailsPanel', () => {
 			const { container } = render(EvaluationDetailsPanel, { props: { evaluation } });
 
 			// Should have progress bar elements
-			const progressBars = container.querySelectorAll('[role="progressbar"], .progress-bar, .progress');
+			const progressBars = container.querySelectorAll(
+				'[role="progressbar"], .progress-bar, .progress'
+			);
 			expect(progressBars.length).toBeGreaterThanOrEqual(5);
 		});
 

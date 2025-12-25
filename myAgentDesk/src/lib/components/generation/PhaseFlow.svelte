@@ -29,9 +29,7 @@
 
 	// Determine phase states
 	const isPhase1Active = $derived(phase === 'task_analysis');
-	const isPhase1Complete = $derived(
-		phase === 'workflow_generation' || phase === 'complete'
-	);
+	const isPhase1Complete = $derived(phase === 'workflow_generation' || phase === 'complete');
 	const isPhase2Active = $derived(phase === 'workflow_generation');
 	const isPhase2Complete = $derived(phase === 'complete');
 	const isGenerating = $derived(phase === 'task_analysis' || phase === 'workflow_generation');
@@ -64,7 +62,13 @@
 				<span class="spinner"></span>
 			{:else if isPhase1Complete}
 				<svg class="checkmark" viewBox="0 0 24 24" fill="none">
-					<path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+					<path
+						d="M5 13l4 4L19 7"
+						stroke="currentColor"
+						stroke-width="3"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			{:else}
 				1
@@ -101,11 +105,22 @@
 			{:else if isPhase2Complete}
 				{#if hasFailures}
 					<svg class="warning-icon" viewBox="0 0 24 24" fill="none">
-						<path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+						<path
+							d="M12 9v4M12 17h.01"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+						/>
 					</svg>
 				{:else}
 					<svg class="checkmark" viewBox="0 0 24 24" fill="none">
-						<path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+						<path
+							d="M5 13l4 4L19 7"
+							stroke="currentColor"
+							stroke-width="3"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
 					</svg>
 				{/if}
 			{:else}
@@ -129,7 +144,14 @@
 			</span>
 			<span class="progress-percent">{Math.round(progress)}%</span>
 		</div>
-		<div class="progress-bar" class:generating={isGenerating} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+		<div
+			class="progress-bar"
+			class:generating={isGenerating}
+			role="progressbar"
+			aria-valuenow={progress}
+			aria-valuemin={0}
+			aria-valuemax={100}
+		>
 			<div
 				class="progress-fill"
 				class:warning={hasFailures && phase === 'complete'}
@@ -186,7 +208,8 @@
 	}
 
 	@keyframes pulse {
-		0%, 100% {
+		0%,
+		100% {
 			box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
 		}
 		50% {
@@ -252,7 +275,8 @@
 	}
 
 	/* Checkmark and icons */
-	.checkmark, .warning-icon {
+	.checkmark,
+	.warning-icon {
 		width: 14px;
 		height: 14px;
 	}

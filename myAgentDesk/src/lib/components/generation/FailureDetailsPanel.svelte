@@ -46,7 +46,11 @@
 		{#if failureDetails.error_summary.http_status !== null}
 			<div class="error-row">
 				<span class="error-label">HTTP Status:</span>
-				<span class="error-value status-{failureDetails.error_summary.http_status >= 500 ? 'server' : 'client'}">
+				<span
+					class="error-value status-{failureDetails.error_summary.http_status >= 500
+						? 'server'
+						: 'client'}"
+				>
 					{failureDetails.error_summary.http_status}
 				</span>
 			</div>

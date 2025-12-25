@@ -59,15 +59,11 @@
 	} | null>(null);
 
 	// Issue #305: Derived state for workflow failures
-	let hasWorkflowFailures = $derived(
-		workflowStatuses.some((ws) => ws.status === 'failed')
-	);
+	let hasWorkflowFailures = $derived(workflowStatuses.some((ws) => ws.status === 'failed'));
 	let successfulWorkflows = $derived(
 		workflowStatuses.filter((ws) => ws.status === 'success').length
 	);
-	let failedWorkflows = $derived(
-		workflowStatuses.filter((ws) => ws.status === 'failed').length
-	);
+	let failedWorkflows = $derived(workflowStatuses.filter((ws) => ws.status === 'failed').length);
 
 	// Initialize from data
 	$effect(() => {
@@ -307,21 +303,33 @@
 			<PhaseFlow
 				phase={isGenerating ? currentPhase : (lastGenerationResult?.phase ?? 'idle')}
 				progress={isGenerating ? currentProgress : (lastGenerationResult?.progress ?? 0)}
-				hasFailures={isGenerating ? hasWorkflowFailures : (lastGenerationResult?.hasFailures ?? false)}
+				hasFailures={isGenerating
+					? hasWorkflowFailures
+					: (lastGenerationResult?.hasFailures ?? false)}
 			/>
 
 			<!-- Issue #305: Task Breakdown Display (shown after phase 1) -->
-			{@const displayTasks = isGenerating ? taskBreakdown : (lastGenerationResult?.taskBreakdown ?? [])}
-			{@const displayStatuses = isGenerating ? workflowStatuses : (lastGenerationResult?.workflowStatuses ?? [])}
+			{@const displayTasks = isGenerating
+				? taskBreakdown
+				: (lastGenerationResult?.taskBreakdown ?? [])}
+			{@const displayStatuses = isGenerating
+				? workflowStatuses
+				: (lastGenerationResult?.workflowStatuses ?? [])}
 			{#if displayTasks.length > 0}
 				<TaskBreakdownList tasks={displayTasks} workflowStatuses={displayStatuses} />
 			{/if}
 
 			<!-- Issue #305: Generation Summary (shown on completion) -->
 			{#if currentPhase === 'complete' || lastGenerationResult?.phase === 'complete'}
-				{@const displaySuccessCount = isGenerating ? successfulWorkflows : displayStatuses.filter((ws) => ws.status === 'success').length}
-				{@const displayFailedCount = isGenerating ? failedWorkflows : displayStatuses.filter((ws) => ws.status === 'failed').length}
-				{@const displayTraceId = isGenerating ? langfuseTraceId : lastGenerationResult?.langfuseTraceId}
+				{@const displaySuccessCount = isGenerating
+					? successfulWorkflows
+					: displayStatuses.filter((ws) => ws.status === 'success').length}
+				{@const displayFailedCount = isGenerating
+					? failedWorkflows
+					: displayStatuses.filter((ws) => ws.status === 'failed').length}
+				{@const displayTraceId = isGenerating
+					? langfuseTraceId
+					: lastGenerationResult?.langfuseTraceId}
 				<GenerationSummary
 					successCount={displaySuccessCount}
 					failedCount={displayFailedCount}
@@ -396,7 +404,8 @@
 							</span>
 							{#if workflowStatuses.length > 0}
 								<span class="workflow-count">
-									{workflowStatuses.filter((ws: WorkflowStatusItem) => ws.status === 'success').length}/{workflowStatuses.length} tasks
+									{workflowStatuses.filter((ws: WorkflowStatusItem) => ws.status === 'success')
+										.length}/{workflowStatuses.length} tasks
 								</span>
 							{/if}
 							<span class="job-date">{formatDate(job.generatedAt ?? job.createdAt)}</span>

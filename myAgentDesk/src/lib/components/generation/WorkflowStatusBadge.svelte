@@ -24,7 +24,12 @@
 		errorMessage?: string | null;
 	}
 
-	let { status, workflowName = null, generationTimeMs = null, errorMessage = null }: Props = $props();
+	let {
+		status,
+		workflowName = null,
+		generationTimeMs = null,
+		errorMessage = null
+	}: Props = $props();
 
 	const statusLabels: Record<WorkflowStatus, string> = {
 		pending: 'Pending',

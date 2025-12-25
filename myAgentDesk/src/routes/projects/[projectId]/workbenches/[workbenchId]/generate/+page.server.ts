@@ -28,9 +28,7 @@ async function syncLangfuseTraceIds(jobVersions: JobVersion[]): Promise<void> {
 	// Filter completed jobs that have externalJobId but missing externalTraceId
 	const jobsNeedingSync = jobVersions.filter(
 		(jv) =>
-			(jv.status === 'failed' || jv.status === 'success') &&
-			jv.externalJobId &&
-			!jv.externalTraceId
+			(jv.status === 'failed' || jv.status === 'success') && jv.externalJobId && !jv.externalTraceId
 	);
 
 	// Process each job needing sync

@@ -6,15 +6,14 @@ Tests for the build_failure_details function that transforms
 workflow generation state into FailureDetails for UI display.
 """
 
-import pytest
 from typing import Any
 
 from app.services.failure_details_builder import (
     build_failure_details,
     determine_failure_stage,
+    extract_cause_from_validation_errors,
     extract_error_code,
     extract_error_detail,
-    extract_cause_from_validation_errors,
     format_repair_history,
     generate_default_recommendations,
 )
@@ -263,9 +262,10 @@ class TestExtractCauseFromValidationErrors:
     def test_none_for_no_categorized_errors(self) -> None:
         """Test returns None when no categorized errors found."""
         errors = ["Unknown error without category"]
-        cause = extract_cause_from_validation_errors(errors)
+        result = extract_cause_from_validation_errors(errors)
         # May return None or a cause with unknown category
         # depending on implementation
+        assert result is None or isinstance(result, str)
 
 
 class TestFormatRepairHistory:

@@ -6,8 +6,6 @@ These tests verify the new Pydantic models for workflow generation summary
 that will be used to display detailed information in the UI.
 """
 
-import pytest
-from pydantic import ValidationError
 
 from app.services.job_creation_state import (
     EvaluationSummary,
