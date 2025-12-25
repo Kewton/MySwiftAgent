@@ -291,7 +291,7 @@ def _build_task_breakdown_system_prompt() -> str:
     prompt_data = loader.load_prompt("task_breakdown")
 
     # Get base prompt from YAML
-    base_prompt = prompt_data.get("system_prompt", "")
+    base_prompt: str = prompt_data.get("system_prompt", "")
 
     # Get expert_agent_capabilities to replace placeholder
     expert_agent_capabilities = _build_expert_agent_capabilities()
