@@ -95,6 +95,18 @@ class TestMasterCreationNode:
         assert "tm_001" in result["task_master_ids"]
         assert "tm_002" in result["task_master_ids"]
 
+        # Issue #305: Verify task_masters list for workflow_generation_node
+        assert "task_masters" in result
+        assert len(result["task_masters"]) == 2
+        # Verify task_masters are sorted by order
+        assert result["task_masters"][0]["order"] == 0
+        assert result["task_masters"][1]["order"] == 1
+        # Verify task_masters have required fields for workflow_generation_node
+        for tm in result["task_masters"]:
+            assert "id" in tm
+            assert "name" in tm
+            assert "order" in tm
+
         # Verify retry_count is reset to 0
         assert result["retry_count"] == 0
 
@@ -373,3 +385,12 @@ class TestMasterCreationNode:
         assert result["job_master_id"] == "jm_001"
         assert len(result["task_master_ids"]) == 3
         assert result["retry_count"] == 0
+
+        # Issue #305: Verify task_masters list for workflow_generation_node
+        assert "task_masters" in result
+        assert len(result["task_masters"]) == 3
+        # Verify sorted by order
+        for i, tm in enumerate(result["task_masters"]):
+            assert tm["order"] == i
+            assert "id" in tm
+            assert "name" in tm

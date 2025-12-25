@@ -14,6 +14,12 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 
 from app.services.prompt_loader import PromptLoader
+from core.config import settings
+
+# Dynamic API URL for LLM processing
+EXPERTAGENT_JSONOUTPUT_URL = (
+    f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+)
 
 
 def _load_yaml_config(filename: str) -> dict:
@@ -114,7 +120,7 @@ def _build_expert_agent_capabilities() -> str:
     """Build expertAgent capabilities section from YAML config.
 
     Returns:
-        Formatted expertAgent capabilities string
+        Formatted expertAgent capabilities string including task-to-API mapping
     """
     config = _load_yaml_config("expert_agent_capabilities.yaml")
     lines = ["**expertAgent Direct API一覧**:", ""]
@@ -145,6 +151,25 @@ def _build_expert_agent_capabilities() -> str:
                 f"  - **{api['name']}** (`{api['endpoint']}`): "
                 f"{api['description']} - {use_cases}{schema_hint}"
             )
+        lines.append("")
+
+    # Task-to-API Mapping (Issue #305)
+    # This section guides LLM to select appropriate APIs for specific task types
+    task_api_mapping = config.get("task_api_mapping", [])
+    if task_api_mapping:
+        lines.append("**タスク種別ごとの推奨API**:")
+        lines.append("")
+        lines.append(
+            "| タスク種別 | 推奨API | エンドポイント | 理由 |"
+        )
+        lines.append("|-----------|---------|---------------|------|")
+        for mapping in task_api_mapping:
+            task_type = mapping.get("task_type", "")
+            recommended_api = mapping.get("recommended_api", {})
+            api_name = recommended_api.get("api_name", "")
+            endpoint = recommended_api.get("endpoint", "")
+            reason = mapping.get("reason", "")
+            lines.append(f"| {task_type} | {api_name} | `{endpoint}` | {reason} |")
 
     return "\n".join(lines)
 
@@ -271,11 +296,15 @@ def _build_task_breakdown_system_prompt() -> str:
     # Get expert_agent_capabilities to replace placeholder
     expert_agent_capabilities = _build_expert_agent_capabilities()
 
-    # If YAML prompt is loaded, replace placeholder with capabilities
+    # If YAML prompt is loaded, replace placeholders with dynamic values
     if base_prompt:
         # Replace {expert_agent_capabilities} placeholder with actual capabilities
         base_prompt = base_prompt.replace(
             "{expert_agent_capabilities}", expert_agent_capabilities
+        )
+        # Replace {expertagent_jsonoutput_url} placeholder with dynamic URL
+        base_prompt = base_prompt.replace(
+            "{expertagent_jsonoutput_url}", EXPERTAGENT_JSONOUTPUT_URL
         )
         return base_prompt
 
@@ -319,7 +348,7 @@ LLM処理には必ず expertAgent の jsonoutput API を使用してください
 
 **LLM処理 (expertAgent jsonoutput API)**:
 - LLM処理には必ず expertAgent の jsonoutput API を使用
-- URL: `http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput`
+- URL: `{EXPERTAGENT_JSONOUTPUT_URL}`
 - fetchAgent経由で呼び出す
 - 推奨モデル:
   * `gemini-2.5-flash`: Google Gemini 2.5 Flash（推奨、高速・高品質）

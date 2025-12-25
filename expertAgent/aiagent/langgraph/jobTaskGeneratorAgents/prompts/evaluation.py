@@ -628,13 +628,30 @@ def _build_api_specificity_check_prompt() -> str:
 
     # Issue #305: API keywords that indicate specific API intent
     api_keywords = [
-        "jsonoutput", "json output", "json_output",
-        "gmail", "メール送信", "メール検索", "メール",
-        "text_to_speech", "tts", "音声合成", "音声",
-        "drive", "ドライブ", "アップロード", "upload",
-        "google_search", "web検索", "ウェブ検索", "検索",
-        "marp", "スライド", "プレゼン",
-        "ホスティング", "hosting",
+        "jsonoutput",
+        "json output",
+        "json_output",
+        "gmail",
+        "メール送信",
+        "メール検索",
+        "メール",
+        "text_to_speech",
+        "tts",
+        "音声合成",
+        "音声",
+        "drive",
+        "ドライブ",
+        "アップロード",
+        "upload",
+        "google_search",
+        "web検索",
+        "ウェブ検索",
+        "検索",
+        "marp",
+        "スライド",
+        "プレゼン",
+        "ホスティング",
+        "hosting",
     ]
     keywords_list = ", ".join([f"`{kw}`" for kw in api_keywords])
 

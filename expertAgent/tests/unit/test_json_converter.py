@@ -58,7 +58,7 @@ class TestToParseJson:
         content = "This is just plain text"
         with pytest.raises(ValueError) as exc_info:
             to_parse_json(content)
-        assert "Failed to extract JSON block" in str(exc_info.value)
+        assert "Failed to extract JSON/YAML block" in str(exc_info.value)
 
     def test_parse_json_failure_invalid_json_in_code_block(self):
         """Test that invalid JSON in code block raises ValueError."""
@@ -79,6 +79,57 @@ class TestToParseJson:
         except ValueError:
             # ValueError is also acceptable for malformed JSON
             pass
+
+    def test_parse_yaml_code_block_object(self):
+        """Test parsing YAML from ```yaml``` code block (object)."""
+        content = '```yaml\nworkflow_name: test_workflow\nyaml_content: "version: 0.5"\n```'
+        result = to_parse_json(content)
+        assert result == {"workflow_name": "test_workflow", "yaml_content": "version: 0.5"}
+
+    def test_parse_yaml_code_block_array(self):
+        """Test parsing YAML from ```yaml``` code block (array)."""
+        content = "```yaml\n- item1\n- item2\n- item3\n```"
+        result = to_parse_json(content)
+        assert result == ["item1", "item2", "item3"]
+
+    def test_parse_yml_code_block(self):
+        """Test parsing YAML from ```yml``` code block (alternative extension)."""
+        content = '```yml\ndata:\n  key: value\n  items:\n    - 1\n    - 2\n```'
+        result = to_parse_json(content)
+        assert result == {"data": {"key": "value", "items": [1, 2]}}
+
+    def test_parse_yaml_code_block_multiline(self):
+        """Test parsing multiline YAML from code block."""
+        content = """```yaml
+workflow_name: email_workflow
+yaml_content: |
+  version: 0.5
+  nodes:
+    source: {}
+reasoning: Test reasoning
+```"""
+        result = to_parse_json(content)
+        assert result["workflow_name"] == "email_workflow"
+        assert "version: 0.5" in result["yaml_content"]
+        assert result["reasoning"] == "Test reasoning"
+
+    def test_parse_yaml_code_block_with_json_inside(self):
+        """Test parsing YAML that contains JSON-like structure."""
+        content = '''```yaml
+workflow_name: api_workflow
+yaml_content: "{\\"key\\": \\"value\\"}"
+reasoning: Contains JSON in string
+```'''
+        result = to_parse_json(content)
+        assert result["workflow_name"] == "api_workflow"
+        assert result["reasoning"] == "Contains JSON in string"
+
+    def test_parse_yaml_failure_invalid_yaml(self):
+        """Test that invalid YAML in code block raises ValueError."""
+        content = "```yaml\n: invalid: yaml: content:\n```"
+        with pytest.raises(ValueError) as exc_info:
+            to_parse_json(content)
+        assert "Failed to parse extracted YAML" in str(exc_info.value)
 
 
 class TestForceToJsonResponse:
@@ -162,11 +213,11 @@ class TestEnsureJsonStructure:
         assert result["is_json_guaranteed"] is True
 
     def test_ensure_dict_without_result(self):
-        """Test ensuring dict without result key - keeps original dict."""
+        """Test ensuring dict without result key - wraps in result key."""
         data = {"data": "value"}
         result = ensure_json_structure(data, "test")
-        # Implementation keeps original dict and adds type and is_json_guaranteed
-        assert result["data"] == "value"
+        # Dicts without 'result' key are wrapped to ensure consistent structure
+        assert result["result"] == {"data": "value"}
         assert result["type"] == "test"
         assert result["is_json_guaranteed"] is True
 

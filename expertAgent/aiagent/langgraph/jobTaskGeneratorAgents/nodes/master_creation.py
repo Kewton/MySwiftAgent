@@ -124,7 +124,7 @@ async def master_creation_node(
                 )
 
             # Get expertAgent base URL from settings
-            # Falls back to http://localhost:8104 if not set
+            # Default: http://localhost:8004 for local development
             task_url = f"{settings.EXPERTAGENT_BASE_URL}/api/v1/tasks/{task_id}"
 
             # Build description with recommended_apis
@@ -161,6 +161,11 @@ async def master_creation_node(
                 "order": order,
                 "input_interface_id": input_interface_id,
                 "output_interface_id": output_interface_id,
+                # Issue #305: Add fields required by workflow_generation_node
+                "description": task["description"],
+                "recommended_apis": recommended_apis,
+                "input_schema": interface_def.get("input_schema", {}),
+                "output_schema": interface_def.get("output_schema", {}),
             }
 
             logger.info(
@@ -229,6 +234,27 @@ async def master_creation_node(
         # Update state with job_master data for job_registration
         # Note: job_master API response only includes id/name/is_active,
         # so we use the parameters we sent during creation
+        #
+        # Issue #305: Convert task_masters dict to list format for workflow_generation_node
+        # workflow_generation_node expects list of dicts with 'id' and 'name' keys
+        task_masters_list = [
+            {
+                "id": info["task_master_id"],
+                "name": info["task_name"],
+                "order": info["order"],
+                "input_interface_id": info["input_interface_id"],
+                "output_interface_id": info["output_interface_id"],
+                # Issue #305: Include fields for workflow_generation_node
+                "description": info.get("description", ""),
+                "recommended_apis": info.get("recommended_apis", []),
+                "input_schema": info.get("input_schema", {}),
+                "output_schema": info.get("output_schema", {}),
+            }
+            for info in task_masters.values()
+        ]
+        # Sort by order to maintain execution sequence
+        task_masters_list.sort(key=lambda x: x["order"])
+
         return {
             **state,
             "job_master": {
@@ -239,6 +265,7 @@ async def master_creation_node(
                 "timeout_sec": job_timeout_sec,
             },
             "job_master_id": job_master_id,
+            "task_masters": task_masters_list,  # Issue #305: Add for workflow_generation_node
             "task_master_ids": [
                 info["task_master_id"] for info in task_masters.values()
             ],

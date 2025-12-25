@@ -240,3 +240,39 @@ export type NewRun = typeof run.$inferInsert;
 export type Schedule = typeof schedule.$inferSelect;
 /** Schedule entity type for insert operations */
 export type NewSchedule = typeof schedule.$inferInsert;
+
+// =============================================================================
+// WorkflowMaster Table
+// =============================================================================
+
+/** Valid status values for workflow master entities */
+export const WORKFLOW_MASTER_STATUSES = ['pending', 'generating', 'success', 'failed'] as const;
+export type WorkflowMasterStatus = (typeof WORKFLOW_MASTER_STATUSES)[number];
+
+/**
+ * WorkflowMasters table - Stores generated workflow YAML for each task.
+ * Issue #305: Workflow Generation Progress Display
+ *
+ * Each TaskMaster from the Job Generator results in a WorkflowMaster
+ * containing the generated GraphAI workflow YAML.
+ */
+export const workflowMasters = sqliteTable('workflow_masters', {
+	id: text('id').primaryKey().notNull(),
+	taskMasterId: text('task_master_id').notNull().unique(),
+	jobVersionId: text('job_version_id').references(() => jobVersion.id),
+	workflowName: text('workflow_name').notNull(),
+	yamlContent: text('yaml_content').notNull(),
+	status: text('status', { enum: ['pending', 'generating', 'success', 'failed'] })
+		.notNull()
+		.default('pending'),
+	generationTimeMs: integer('generation_time_ms'),
+	errorMessage: text('error_message'),
+	langfuseTraceId: text('langfuse_trace_id'),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+/** WorkflowMaster entity type (select operations) */
+export type WorkflowMaster = typeof workflowMasters.$inferSelect;
+/** WorkflowMaster entity type for insert operations */
+export type NewWorkflowMaster = typeof workflowMasters.$inferInsert;

@@ -1,0 +1,45 @@
+{
+  "issue_number": "305-extension",
+  "feature_summary": "Task Workflow Traces サマリ表示機能",
+  "acceptance_criteria": [
+    "WorkflowGenerationSummary モデルが正しくシリアライズされる",
+    "FailureDetails ビルダーが失敗ステージを正しく判定する",
+    "UI コンポーネントが成功/失敗時に適切な情報を表示する",
+    "評価詳細（5項目スコア）が正しく表示される",
+    "リトライ履歴が時系列で表示される"
+  ],
+  "labels": ["feature", "agent-layer", "project: expertAgent", "project: myAgentDesk"],
+  "target_projects": ["expertAgent", "myAgentDesk"],
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "graphAiServer", "myAgentDesk"],
+  "l3_test_plan": {
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:8000"}
+    ],
+    "test_scenarios": [
+      {
+        "name": "Backend: WorkflowGenerationSummary serialization",
+        "type": "pytest",
+        "description": "Verify that WorkflowGenerationSummary models are correctly serialized/deserialized"
+      },
+      {
+        "name": "Backend: FailureDetails builder",
+        "type": "pytest",
+        "description": "Verify that FailureDetails is correctly built from workflow state"
+      },
+      {
+        "name": "Frontend: Component rendering",
+        "type": "vitest",
+        "description": "Verify that UI components render correctly with test data"
+      },
+      {
+        "name": "E2E: Task Workflow Traces display",
+        "type": "playwright",
+        "description": "Verify that workflow traces are displayed correctly in the UI"
+      }
+    ]
+  }
+}

@@ -284,6 +284,7 @@ function createTables(sqlite: Database.Database) {
 			status TEXT NOT NULL DEFAULT 'draft',
 			active_requirement_version_id TEXT,
 			external_job_master_id TEXT,
+			external_job_id TEXT,
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL
 		);

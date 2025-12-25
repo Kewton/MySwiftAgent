@@ -66,7 +66,82 @@ def _normalise_type(value: Any) -> str | None:
     return None
 
 
-def _generate_sample_from_schema(schema: dict[str, Any]) -> SchemaValue:
+def _generate_string_sample(schema: dict[str, Any], prop_name: str = "") -> str:
+    """Generate appropriate string sample based on property name and schema.
+
+    Args:
+        schema: JSON Schema for the string property
+        prop_name: Property name (used to infer appropriate sample value)
+
+    Returns:
+        Appropriate sample string value
+    """
+    # Check for format hint in schema
+    fmt = schema.get("format", "")
+
+    # Generate sample based on format
+    if fmt == "date":
+        return "2024-01-15"
+    if fmt == "date-time":
+        return "2024-01-15T10:30:00Z"
+    if fmt == "email":
+        return "sample@example.com"
+    if fmt == "uri" or fmt == "url":
+        return "https://example.com/sample"
+
+    # Generate sample based on property name patterns
+    prop_lower = prop_name.lower()
+
+    # File name patterns
+    if "file" in prop_lower and "name" in prop_lower:
+        return "sample_file.txt"
+    if prop_lower.endswith("_file") or prop_lower == "filename":
+        return "sample_file.txt"
+
+    # Date patterns
+    if "date" in prop_lower:
+        return "2024-01-15"
+
+    # Email patterns
+    if "email" in prop_lower or "mail" in prop_lower:
+        return "sample@example.com"
+
+    # URL patterns
+    if "url" in prop_lower or "link" in prop_lower:
+        return "https://example.com/sample"
+
+    # ID patterns
+    if prop_lower.endswith("_id") or prop_lower == "id":
+        return "sample_id_001"
+
+    # Name patterns
+    if "name" in prop_lower:
+        return "Sample Name"
+
+    # Title patterns
+    if "title" in prop_lower:
+        return "Sample Title"
+
+    # Script/text patterns
+    if "script" in prop_lower or "text" in prop_lower or "content" in prop_lower:
+        return "これはサンプルテキストです。テスト用の内容が含まれています。"
+
+    # Default
+    return "sample_text"
+
+
+def _generate_sample_from_schema(
+    schema: dict[str, Any], prop_name: str = ""
+) -> SchemaValue:
+    """Generate sample value from JSON Schema.
+
+    Args:
+        schema: JSON Schema definition
+        prop_name: Property name (used for string type to generate appropriate value)
+
+    Returns:
+        Sample value matching the schema
+    """
     schema = _resolve_schema(schema)
 
     enum_value = _enum_or_default(schema)
@@ -80,11 +155,13 @@ def _generate_sample_from_schema(schema: dict[str, Any]) -> SchemaValue:
         if not isinstance(properties, dict):
             properties = {}
         sample: dict[str, Any] = {}
-        for prop_name, prop_schema in properties.items():
+        for child_prop_name, prop_schema in properties.items():
             if not isinstance(prop_schema, dict):
-                sample[prop_name] = None
+                sample[child_prop_name] = None
                 continue
-            sample[prop_name] = _generate_sample_from_schema(prop_schema)
+            sample[child_prop_name] = _generate_sample_from_schema(
+                prop_schema, child_prop_name
+            )
         return sample
 
     if schema_type == "array":
@@ -93,13 +170,11 @@ def _generate_sample_from_schema(schema: dict[str, Any]) -> SchemaValue:
             items_schema = _first_dict(items_schema)
         if not isinstance(items_schema, dict):
             items_schema = {}
-        return [_generate_sample_from_schema(items_schema)]
+        return [_generate_sample_from_schema(items_schema, prop_name)]
 
     if schema_type == "string":
-        pattern = schema.get("pattern")
-        if pattern:
-            return f"sample_matching_{pattern[:12]}"
-        return "sample_text"
+        # Generate appropriate string sample based on property name and schema
+        return _generate_string_sample(schema, prop_name)
 
     if schema_type == "integer":
         return 1

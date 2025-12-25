@@ -10,6 +10,14 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.services.prompt_loader import PromptLoader
+from core.config import settings
+
+# Dynamic API URL based on environment configuration
+# Default: http://localhost:8004 for local development
+# Override via EXPERTAGENT_BASE_URL environment variable
+EXPERTAGENT_API_URL = (
+    f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+)
 
 # Load prompt from YAML
 _loader = PromptLoader.create_default()
@@ -42,6 +50,15 @@ CRITICAL REQUIREMENT:
   you MUST use stringTemplateAgent to build the prompt first
 - NEVER embed :source.field directly in fetchAgent user_input multi-line strings
 - This is a GraphAI technical limitation and MANDATORY
+
+OUTPUT FORMAT REQUIREMENT:
+You MUST respond in JSON format with exactly these fields:
+{
+  "workflow_name": "snake_case_name",
+  "yaml_content": "complete YAML content as a string",
+  "reasoning": "explanation of design decisions"
+}
+Do NOT use ```yaml blocks. The yaml_content field should contain the YAML as a plain string.
 """
 
 
@@ -104,13 +121,31 @@ def create_workflow_generation_prompt(
     ai_agent_apis = expert_agent_capabilities.get("ai_agent_apis", [])
     expert_apis = utility_apis + ai_agent_apis
 
-    # Include endpoint information and output schema for better API selection
+    # Include endpoint information, request schema, and output schema for better API selection
     def format_api(api: dict[str, Any]) -> str:
-        """Format API information including output schema if available."""
+        """Format API information including request and output schema if available."""
         lines = [
             f"  - {api['name']}: {api.get('description', 'No description')}",
             f"    Endpoint: {api.get('endpoint', 'N/A')}",
         ]
+
+        # Add request schema if available (CRITICAL for correct parameter names)
+        request_schema = api.get("request_schema")
+        if request_schema:
+            lines.append("    Request Schema:")
+            for field_name, field_info in request_schema.items():
+                field_type = field_info.get("type", "unknown")
+                field_desc = field_info.get("description", "")
+                required = (
+                    " (required)"
+                    if field_info.get("required", False)
+                    else " (optional)"
+                )
+                default = field_info.get("default")
+                default_str = f" [default: {default}]" if default is not None else ""
+                lines.append(
+                    f"      - {field_name}: {field_type}{required}{default_str} - {field_desc}"
+                )
 
         # Add output schema if available
         output_schema = api.get("output_schema")
@@ -230,7 +265,7 @@ def create_workflow_generation_prompt(
    - **IMPORTANT**: NEVER use GraphAI standard LLM agents (geminiAgent, openAIAgent, anthropicAgent, groqAgent, replicateAgent)
    - For LLM processing:
      * ALWAYS use fetchAgent to call expertAgent jsonoutput API
-     * URL: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+     * URL: {EXPERTAGENT_API_URL}
      * Default model: gemini-2.5-flash (recommended)
      * Fallback model: gpt-4o-mini
      * High-quality model: claude-3-5-sonnet
@@ -291,7 +326,7 @@ nodes:
   llm_analysis:
     agent: fetchAgent
     inputs:
-      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      url: {EXPERTAGENT_API_URL}
       method: POST
       body:
         user_input: :build_prompt
@@ -327,7 +362,7 @@ nodes:
   llm:
     agent: fetchAgent
     inputs:
-      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      url: {EXPERTAGENT_API_URL}
       method: POST
       body:
         user_input: :source.query  # ✅ OK: single field reference
@@ -368,7 +403,7 @@ nodes:
   llm_process:
     agent: fetchAgent
     inputs:
-      url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+      url: {EXPERTAGENT_API_URL}
       method: POST
       body:
         user_input: :build_prompt
@@ -465,65 +500,6 @@ build_prompt:
       }}
 ```
 
-**CRITICAL RULE - Mock Approach for Non-LLM Tasks** (MANDATORY):
-- ❌ DO NOT attempt TTS audio generation via LLM
-- ❌ DO NOT attempt file upload/download via LLM
-- ❌ DO NOT attempt email sending via LLM
-- ❌ DO NOT attempt cloud storage operations via LLM
-- ✅ Use LLM to generate MOCK RESULTS for these tasks
-- ✅ Include implementation notes for future API integration
-
-**Non-LLM Task Pattern Examples**:
-```yaml
-# Example 1: Mock TTS audio generation
-build_tts_prompt:
-  agent: stringTemplateAgent
-  inputs:
-    script: :source.script
-  params:
-    template: |-
-      あなたは音声ファイル生成結果を模擬するシステムです。
-      以下の台本を基に、TTS音声生成の結果を模擬的に生成してください。
-
-      台本: ${{script}}
-
-      # 制約条件
-      - 実際のTTS音声生成は行わないこと（モックデータを返す）
-      - 音声データはダミーのBase64文字列とすること
-      - ファイル名は現在日時を含む形式にすること
-
-      # RESPONSE_FORMAT:
-      {{
-        "success": true,
-        "audio_data_base64": "ダミー音声データ（Base64）",
-        "file_name": "audio_YYYYMMDD_HHMMSS.mp3",
-        "duration_seconds": 180
-      }}
-
-# Example 2: Mock file upload
-build_upload_prompt:
-  agent: stringTemplateAgent
-  inputs:
-    file_name: :source.file_name
-  params:
-    template: |-
-      あなたはファイルアップロード処理を模擬するシステムです。
-      以下の情報を基に、ファイルアップロード結果を生成してください。
-
-      ファイル名: ${{file_name}}
-
-      # 制約条件
-      - 実際のファイルアップロードは行わないこと（モックデータを返す）
-      - ストレージパスは架空のGCS/S3パスにすること
-
-      # RESPONSE_FORMAT:
-      {{
-        "success": true,
-        "storage_path": "gs://bucket/path/file.ext",
-        "file_size_bytes": 1048576
-      }}
-```
-
 **CRITICAL RULE - Timeout Settings** (MANDATORY):
 - ✅ fetchAgent (LLM calls): 60000ms (60 seconds) - ALWAYS use 60 seconds
 - ✅ stringTemplateAgent: No timeout needed (fast operation)
@@ -535,7 +511,7 @@ build_upload_prompt:
 generate_content:
   agent: fetchAgent
   inputs:
-    url: http://localhost:8104/aiagent-api/v1/aiagent/utility/jsonoutput
+    url: {EXPERTAGENT_API_URL}
     method: POST
     body:
       user_input: :build_prompt
@@ -552,7 +528,21 @@ Generate a complete, executable GraphAI workflow YAML that:
 - Includes clear comments
 - Is syntactically correct
 
-Provide your response in the structured format with workflow_name, yaml_content, and reasoning.
+## Response Format (MANDATORY)
+
+You MUST respond with a JSON object containing exactly these three fields:
+```json
+{{
+  "workflow_name": "snake_case_workflow_name",
+  "yaml_content": "version: 0.5\\nnodes:\\n  source: {{}}\\n  ...",
+  "reasoning": "Brief explanation of design decisions"
+}}
+```
+
+IMPORTANT:
+- Do NOT wrap your response in ```yaml blocks
+- The yaml_content must be a valid JSON string (escape newlines as \\n)
+- Only output the JSON object, no additional text
 """
 
     return prompt

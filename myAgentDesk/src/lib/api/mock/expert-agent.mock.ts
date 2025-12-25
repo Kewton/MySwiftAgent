@@ -10,7 +10,9 @@ import type {
 	GenerateJobRequest,
 	GenerateJobResponse,
 	JobStatusResponse,
-	HealthResponse
+	HealthResponse,
+	TaskBreakdownItem,
+	WorkflowStatusItem
 } from '../clients/expert-agent';
 
 /**
@@ -26,7 +28,70 @@ const mockJobResponse: GenerateJobResponse = {
 };
 
 /**
+ * Mock task breakdown data
+ * Issue #305: Structured task data for UI display
+ */
+const mockTaskBreakdown: TaskBreakdownItem[] = [
+	{
+		task_id: 'tm_001',
+		name: 'Gmail未読メール取得',
+		description: 'Gmail APIを使用して未読メールを最大10件取得する',
+		recommended_apis: ['Gmail API (users.messages.list)']
+	},
+	{
+		task_id: 'tm_002',
+		name: 'Claude要約生成',
+		description: '取得したメール内容をClaude APIで要約する',
+		recommended_apis: ['Anthropic API (messages)']
+	},
+	{
+		task_id: 'tm_003',
+		name: 'Slack投稿',
+		description: '要約結果をSlackチャンネルに投稿する',
+		recommended_apis: ['Slack API (chat.postMessage)']
+	}
+];
+
+/**
+ * Mock workflow statuses
+ * Issue #305: Workflow generation status per task
+ */
+const mockWorkflowStatuses: WorkflowStatusItem[] = [
+	{
+		task_id: 'tm_001',
+		task_name: 'Gmail未読メール取得',
+		status: 'success',
+		workflow_name: 'workflow_gmail_fetch',
+		generation_time_ms: 28500,
+		error_message: null,
+		langfuse_trace_id: 'trace_mock_001',
+		summary: null
+	},
+	{
+		task_id: 'tm_002',
+		task_name: 'Claude要約生成',
+		status: 'success',
+		workflow_name: 'workflow_claude_summarize',
+		generation_time_ms: 32100,
+		error_message: null,
+		langfuse_trace_id: 'trace_mock_002',
+		summary: null
+	},
+	{
+		task_id: 'tm_003',
+		task_name: 'Slack投稿',
+		status: 'success',
+		workflow_name: 'workflow_slack_post',
+		generation_time_ms: 25300,
+		error_message: null,
+		langfuse_trace_id: 'trace_mock_003',
+		summary: null
+	}
+];
+
+/**
  * Mock data for job status
+ * Issue #305: Extended with phase, task_breakdown, workflow_statuses
  */
 const mockJobStatus: JobStatusResponse = {
 	job_id: 'mock-job-id',
@@ -34,11 +99,14 @@ const mockJobStatus: JobStatusResponse = {
 	progress: 100,
 	job_master_id: 'jm_mock_123',
 	error_message: null,
+	phase: 'complete',
+	task_breakdown: mockTaskBreakdown,
+	workflow_statuses: mockWorkflowStatuses,
 	result: {
 		status: 'success',
 		job_id: 'mock-job-id',
 		job_master_id: 'jm_mock_123',
-		task_breakdown: [],
+		task_breakdown: mockTaskBreakdown,
 		error_message: null,
 		langfuse_trace_id: 'mock-langfuse-trace-id'
 	}

@@ -282,8 +282,8 @@ class TestInterfaceDefinitionNode:
         # Verify retry_count incremented
         assert result["retry_count"] == 1
 
-        # Verify invoke_structured_llm was called
-        mock_invoke_llm.assert_called_once()
+        # Verify invoke_structured_llm was called 3 times (internal retry)
+        assert mock_invoke_llm.call_count == 3
 
     @pytest.mark.asyncio
     @patch(

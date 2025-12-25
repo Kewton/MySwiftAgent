@@ -17,10 +17,10 @@ from .workflow_validator import WorkflowSchemaValidator
 
 logger = logging.getLogger(__name__)
 
-# GraphAI Server URL
+# GraphAI Server URL (default: 8005 per docs/ops/local-development.md)
 GRAPHAISERVER_BASE_URL = os.getenv(
     "GRAPHAISERVER_BASE_URL",
-    "http://localhost:8105",
+    "http://localhost:8005",
 )
 
 

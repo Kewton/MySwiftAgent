@@ -147,23 +147,54 @@ async def interface_definition_node(
         {"role": "user", "content": user_prompt},
     ]
 
-    try:
-        call_result = await invoke_structured_llm(
-            messages=messages,
-            response_model=InterfaceSchemaResponse,
-            context_label="interface_definition",
-            model_env_var="JOB_GENERATOR_INTERFACE_DEFINITION_MODEL",
-            default_model="claude-haiku-4-5",
-            validator=_validate_interface_response,
-        )
-    except StructuredLLMError as exc:
-        logger.error("Interface schema generation failed: %s", exc)
-        new_retry = state.get("retry_count", 0) + 1
-        return {
-            **state,
-            "error_message": str(exc),
-            "retry_count": new_retry,
-        }
+    # Internal retry loop for LLM call (handles transient validation failures)
+    max_internal_retries = 3
+    last_error: StructuredLLMError | None = None
+
+    for attempt in range(max_internal_retries):
+        try:
+            call_result = await invoke_structured_llm(
+                messages=messages,
+                response_model=InterfaceSchemaResponse,
+                context_label="interface_definition",
+                model_env_var="JOB_GENERATOR_INTERFACE_DEFINITION_MODEL",
+                default_model="claude-haiku-4-5",
+                validator=_validate_interface_response,
+            )
+            # Success - break out of retry loop
+            break
+        except StructuredLLMError as exc:
+            last_error = exc
+            logger.warning(
+                "Interface schema generation attempt %d/%d failed: %s",
+                attempt + 1,
+                max_internal_retries,
+                exc,
+            )
+            if attempt < max_internal_retries - 1:
+                logger.info("Retrying interface schema generation...")
+                continue
+            # All retries exhausted
+            logger.error(
+                "Interface schema generation failed after %d attempts: %s",
+                max_internal_retries,
+                exc,
+            )
+            new_retry = state.get("retry_count", 0) + 1
+            return {
+                **state,
+                "error_message": str(exc),
+                "retry_count": new_retry,
+            }
+    else:
+        # This should not happen, but handle it just in case
+        if last_error:
+            new_retry = state.get("retry_count", 0) + 1
+            return {
+                **state,
+                "error_message": str(last_error),
+                "retry_count": new_retry,
+            }
 
     response = call_result.result
     logger.info(

@@ -1,0 +1,30 @@
+{
+  "issue_number": 305,
+  "refactor_targets": [
+    "expertAgent/app/services/job_creation_state.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/workflow_helper.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 92.5,
+    "complexity_score": 12
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "Dependency Injection"
+  ],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "重複コードの削除（DRY原則）",
+    "エラーハンドリングの統一"
+  ],
+  "completed_tasks": [
+    "B-4: JobCreationStatus拡張",
+    "B-4.5: JobTaskGeneratorState拡張",
+    "B-5.1: generate_workflow_for_task実装",
+    "B-5: workflow_generation_node新規作成",
+    "B-6: LangGraphフロー更新",
+    "B-8: 単体テスト追加"
+  ],
+  "test_file": "expertAgent/tests/unit/test_workflow_generation_node.py"
+}

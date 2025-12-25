@@ -197,7 +197,9 @@ class LangfuseService:
                     f"CallbackHandler created with public_key={masked_key}, trace_id={trace_id}, host={langfuse_host}"
                 )
             else:
-                logger.info(f"CallbackHandler created with public_key={masked_key}, host={langfuse_host}")
+                logger.info(
+                    f"CallbackHandler created with public_key={masked_key}, host={langfuse_host}"
+                )
             return handler
         except Exception as e:
             logger.error(f"Failed to create CallbackHandler: {e}")

@@ -1,0 +1,53 @@
+{
+  "issue_number": "305-extension",
+  "feature_name": "Task Workflow Traces サマリ表示機能",
+  "spec_file": "dev-reports/feature/issue/305/task-workflow-traces-summary-spec.md",
+  "acceptance_criteria": [
+    "ワークフロー生成結果サマリがUIで確認可能",
+    "成功時: YAML プレビュー、テストデータ、評価スコアが表示される",
+    "失敗時: 失敗ステージ、エラーサマリ、原因分析、推奨対応が表示される",
+    "LLM評価詳細（5項目スコア、良い点、改善点、提案）が表示される",
+    "リトライ履歴が時系列で表示される"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "BE-1",
+      "description": "WorkflowGenerationSummary モデル定義",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "test_file": "expertAgent/tests/unit/test_workflow_generation_summary.py"
+    },
+    {
+      "id": "BE-2",
+      "description": "FailureDetails ビルダー関数実装",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "test_file": "expertAgent/tests/unit/test_failure_details_builder.py"
+    },
+    {
+      "id": "BE-3",
+      "description": "workflow_generation_node でサマリ生成",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py"
+    },
+    {
+      "id": "FE-1",
+      "description": "TypeScript 型定義拡張",
+      "file": "myAgentDesk/src/lib/types/workflow-summary.ts"
+    },
+    {
+      "id": "FE-2",
+      "description": "WorkflowTraceSummary コンポーネント",
+      "file": "myAgentDesk/src/lib/components/generation/WorkflowTraceSummary.svelte"
+    },
+    {
+      "id": "FE-3",
+      "description": "FailureDetailsPanel コンポーネント",
+      "file": "myAgentDesk/src/lib/components/generation/FailureDetailsPanel.svelte"
+    },
+    {
+      "id": "FE-4",
+      "description": "EvaluationDetailsPanel コンポーネント",
+      "file": "myAgentDesk/src/lib/components/generation/EvaluationDetailsPanel.svelte"
+    }
+  ],
+  "target_coverage": 90,
+  "projects": ["expertAgent", "myAgentDesk"]
+}

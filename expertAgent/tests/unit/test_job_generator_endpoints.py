@@ -412,6 +412,8 @@ class TestCreateJobInBackground:
         mock_create_agent.return_value = mock_agent
 
         # Setup async mocks for job_state_manager
+        # Issue #305: Add update_phase_async mock for initial phase setting
+        mock_state_manager.update_phase_async = AsyncMock()
         mock_state_manager.update_progress_async = AsyncMock()
         mock_state_manager.mark_completed_async = AsyncMock()
         mock_state_manager.mark_failed_async = AsyncMock()
@@ -424,6 +426,10 @@ class TestCreateJobInBackground:
         )
 
         # Assert async methods were called
+        # Issue #305: Verify initial phase is set to "task_analysis"
+        mock_state_manager.update_phase_async.assert_called_once_with(
+            "test-job-id", "task_analysis"
+        )
         assert mock_state_manager.update_progress_async.call_count == 3
         mock_state_manager.update_progress_async.assert_any_call("test-job-id", 10)
         mock_state_manager.update_progress_async.assert_any_call("test-job-id", 20)
@@ -447,6 +453,8 @@ class TestCreateJobInBackground:
         mock_create_agent.return_value = mock_agent
 
         # Setup async mocks for job_state_manager
+        # Issue #305: Add update_phase_async mock for initial phase setting
+        mock_state_manager.update_phase_async = AsyncMock()
         mock_state_manager.update_progress_async = AsyncMock()
         mock_state_manager.mark_completed_async = AsyncMock()
         mock_state_manager.mark_failed_async = AsyncMock()

@@ -1,0 +1,124 @@
+{
+  "status": "success",
+  "iteration": 1,
+  "scope": "backend",
+  "project": "expertAgent",
+  "coverage": 95.0,
+  "unit_tests": {
+    "total": 68,
+    "passed": 68,
+    "failed": 0,
+    "files": [
+      "tests/unit/test_workflow_generation_summary.py",
+      "tests/unit/test_failure_details_builder.py"
+    ]
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_created": [
+    "expertAgent/app/services/failure_details_builder.py",
+    "expertAgent/tests/unit/test_workflow_generation_summary.py",
+    "expertAgent/tests/unit/test_failure_details_builder.py"
+  ],
+  "files_modified": [
+    "expertAgent/app/services/job_creation_state.py"
+  ],
+  "models_added": [
+    {
+      "name": "TestExecutionSummary",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "description": "Test execution summary with HTTP status, validation status, errors, and timing"
+    },
+    {
+      "name": "EvaluationSummary",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "description": "LLM evaluation summary with 5-category scores (structural, requirement, output_quality, error_handling, test_data_quality)"
+    },
+    {
+      "name": "RetryInfo",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "description": "Retry information with count, max retry, and model used"
+    },
+    {
+      "name": "FailureDetails",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "description": "Detailed failure information with stage, error summary, cause analysis, recommendations, and retry history"
+    },
+    {
+      "name": "WorkflowGenerationSummary",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "description": "Main summary container with YAML preview, sample input, test result, evaluation, retry info, and failure details"
+    }
+  ],
+  "functions_added": [
+    {
+      "name": "build_failure_details",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Main entry point for building FailureDetails from workflow generation state"
+    },
+    {
+      "name": "determine_failure_stage",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Determines failure stage based on priority order"
+    },
+    {
+      "name": "extract_error_code",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Extracts error code from error messages"
+    },
+    {
+      "name": "extract_error_detail",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Extracts detailed error information from validation errors"
+    },
+    {
+      "name": "extract_cause_from_validation_errors",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Extracts cause analysis from categorized validation errors"
+    },
+    {
+      "name": "format_repair_history",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Formats repair history for UI display"
+    },
+    {
+      "name": "generate_default_recommendations",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "description": "Generates default recommendations based on failure stage"
+    }
+  ],
+  "commits": [
+    "c900f1e feat(expertAgent): Issue #305 Workflow Generation Summary models"
+  ],
+  "implementation_tasks_completed": [
+    {
+      "id": "BE-1",
+      "description": "WorkflowGenerationSummary model definition",
+      "status": "completed"
+    },
+    {
+      "id": "BE-2",
+      "description": "FailureDetails builder function implementation",
+      "status": "completed"
+    }
+  ],
+  "acceptance_criteria_met": [
+    "WorkflowGenerationSummary model defined with all required fields",
+    "TestExecutionSummary captures test results for UI display",
+    "EvaluationSummary captures 5-category LLM evaluation scores",
+    "RetryInfo tracks retry attempts and model used",
+    "FailureDetails provides structured failure information",
+    "build_failure_details extracts failure info from state without LLM",
+    "All failure stages correctly determined by rule-based logic",
+    "WorkflowStatusItem extended with summary field for backward compatibility"
+  ],
+  "notes": [
+    "All models use Pydantic Field with default_factory for mutable defaults",
+    "FailureDetails builder is rule-based (no LLM calls) for low latency (<10ms)",
+    "Tests are comprehensive and cover edge cases",
+    "Backward compatibility maintained - WorkflowStatusItem.summary is optional"
+  ],
+  "message": "TDD implementation complete for backend (BE-1, BE-2). 68 tests passing. Static analysis clean."
+}

@@ -219,11 +219,11 @@ describe('Generate Page Form Actions', () => {
 
 			const updated = await jobVersionRepo.updateGenerationResult(job.id, {
 				status: 'failed',
-				errorMessage: 'Timeout: Job generation exceeded 5 minutes'
+				errorMessage: 'Timeout: Job generation exceeded 10 minutes'
 			});
 
 			expect(updated?.status).toBe('failed');
-			expect(updated?.errorMessage).toBe('Timeout: Job generation exceeded 5 minutes');
+			expect(updated?.errorMessage).toBe('Timeout: Job generation exceeded 10 minutes');
 		});
 	});
 });
@@ -248,6 +248,7 @@ function createTables(sqlite: Database.Database) {
 			status TEXT NOT NULL DEFAULT 'draft',
 			active_requirement_version_id TEXT,
 			external_job_master_id TEXT,
+			external_job_id TEXT,
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL
 		);
@@ -276,6 +277,7 @@ function createTables(sqlite: Database.Database) {
 			interface_definitions TEXT,
 			workflows TEXT,
 			external_job_master_id TEXT,
+			external_job_id TEXT,
 			external_trace_id TEXT,
 			error_message TEXT,
 			generated_at INTEGER,

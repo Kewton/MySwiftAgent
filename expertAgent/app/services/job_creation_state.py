@@ -5,6 +5,7 @@ L1: In-memory cache for fast access
 L2: Valkey (Redis-compatible) for persistence
 
 Issue #239: JobCreationStateManager Valkey integration.
+Issue #305: Extended with phase, task_breakdown, workflow_statuses fields.
 
 Refactored for:
 - DRY: Extracted common patterns (job lookup, Valkey availability check)
@@ -18,7 +19,7 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from app.services.valkey_client import ValkeyClient
@@ -60,8 +61,123 @@ def deprecated_sync_method(
     return decorator
 
 
+class TaskBreakdownItem(BaseModel):
+    """Task breakdown result item (Issue #305).
+
+    Represents a single task in the task breakdown result.
+    """
+
+    task_id: str
+    name: str
+    description: str
+    recommended_apis: list[str]
+
+
+# ----- Issue #305 Extension: Workflow Generation Summary Models -----
+
+
+class TestExecutionSummary(BaseModel):
+    """Test execution summary for workflow generation.
+
+    Issue #305 Extension: Captures test execution results for UI display.
+    """
+
+    http_status: Optional[int] = None
+    is_valid: bool = False
+    validation_errors: list[str] = Field(default_factory=list)
+    execution_time_ms: Optional[int] = None
+
+
+class EvaluationSummary(BaseModel):
+    """LLM evaluation summary for workflow generation.
+
+    Issue #305 Extension: Captures LLM evaluation scores for UI display.
+    Contains 5 category scores plus overall feedback.
+    """
+
+    score: Optional[int] = None  # 0-100 overall score
+    structural_score: Optional[int] = None  # Workflow structure quality
+    requirement_score: Optional[int] = None  # Requirement fulfillment
+    output_quality_score: Optional[int] = None  # Output quality
+    error_handling_score: Optional[int] = None  # Error handling quality
+    test_data_quality_score: Optional[int] = None  # Test data quality
+    strengths: list[str] = Field(default_factory=list)  # Positive points
+    weaknesses: list[str] = Field(default_factory=list)  # Areas for improvement
+    suggestions: list[str] = Field(default_factory=list)  # Improvement suggestions
+    confidence: Optional[float] = None  # Evaluation confidence (0.0-1.0)
+
+
+class RetryInfo(BaseModel):
+    """Retry information for workflow generation.
+
+    Issue #305 Extension: Tracks retry attempts and model used.
+    """
+
+    retry_count: int = 0
+    max_retry: int = 3
+    generation_model: Optional[str] = None
+
+
+class FailureDetails(BaseModel):
+    """Failure details for failed workflow generation.
+
+    Issue #305 Extension: Detailed failure information for debugging.
+
+    failure_stage values:
+    - yaml_generation: YAML generation failed
+    - schema_validation: Input schema validation failed
+    - workflow_registration: graphAiServer registration failed
+    - workflow_execution: Workflow execution failed (HTTP 4xx/5xx)
+    - node_error: Individual node execution error
+    - output_validation: Output schema validation failed
+    - quality_evaluation: Quality criteria not met
+    """
+
+    failure_stage: str  # See docstring for valid values
+    error_summary: dict[str, Any] = Field(default_factory=dict)
+    cause_analysis: Optional[dict[str, Any]] = None
+    recommendations: list[str] = Field(default_factory=list)
+    retry_history: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class WorkflowGenerationSummary(BaseModel):
+    """Workflow generation summary for UI display.
+
+    Issue #305 Extension: Contains all information needed to display
+    detailed workflow generation results in the UI.
+    """
+
+    yaml_preview: Optional[str] = None  # First 500 chars of YAML
+    yaml_content: Optional[str] = None  # Full YAML content for expansion
+    sample_input: Optional[dict[str, Any]] = None  # Test input data
+    test_result: Optional[TestExecutionSummary] = None
+    evaluation: Optional[EvaluationSummary] = None
+    retry_info: Optional[RetryInfo] = None
+    failure_details: Optional[FailureDetails] = None  # Only for failed workflows
+
+
+class WorkflowStatusItem(BaseModel):
+    """Workflow generation status item (Issue #305).
+
+    Represents the generation status of a single workflow.
+    Issue #305 Extension: Added summary field for detailed results.
+    """
+
+    task_id: str
+    task_name: Optional[str] = None  # Issue #305: Human-readable task name for UI
+    status: str  # 'pending' | 'generating' | 'success' | 'failed'
+    workflow_name: Optional[str] = None
+    generation_time_ms: Optional[int] = None
+    error_message: Optional[str] = None
+    langfuse_trace_id: Optional[str] = None  # Issue #305: Per-task trace link
+    summary: Optional[WorkflowGenerationSummary] = None  # Issue #305 Extension
+
+
 class JobCreationStatus(BaseModel):
-    """Job creation status model."""
+    """Job creation status model.
+
+    Issue #305: Extended with phase, task_breakdown, workflow_statuses fields.
+    """
 
     job_id: str
     status: str  # 'creating' | 'completed' | 'failed'
@@ -71,6 +187,11 @@ class JobCreationStatus(BaseModel):
     job_master_id: Optional[str] = None
     error_message: Optional[str] = None
     result: Optional[dict[str, Any]] = None
+
+    # Issue #305: New fields for workflow generation tracking
+    phase: Optional[str] = None  # 'task_analysis' | 'workflow_generation' | 'complete'
+    task_breakdown: Optional[list[TaskBreakdownItem]] = None
+    workflow_statuses: Optional[list[WorkflowStatusItem]] = None
 
 
 class JobCreationStateManager:
@@ -410,6 +531,141 @@ class JobCreationStateManager:
 
         self._update_status_failed(status, error_message)
         logger.error(f"Marked job {job_id} as failed: {error_message}")
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    # ----- Issue #305: Extended async methods for workflow tracking -----
+
+    async def update_phase_async(self, job_id: str, phase: str) -> None:
+        """Update job creation phase (async version).
+
+        Issue #305: Track workflow generation phase.
+
+        Args:
+            job_id: Job ID
+            phase: Phase name ('task_analysis' | 'workflow_generation' | 'complete')
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        status.phase = phase
+        logger.debug(f"Updated job {job_id} phase to {phase}")
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    async def set_task_breakdown_async(
+        self,
+        job_id: str,
+        breakdown: list[TaskBreakdownItem],
+    ) -> None:
+        """Set task breakdown result (async version).
+
+        Issue #305: Store task breakdown result and update phase.
+
+        Args:
+            job_id: Job ID
+            breakdown: List of TaskBreakdownItem
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        status.task_breakdown = breakdown
+        status.phase = "workflow_generation"
+        logger.info(f"Set task breakdown for job {job_id}: {len(breakdown)} tasks")
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    async def init_workflow_statuses_async(
+        self,
+        job_id: str,
+        task_ids: list[str],
+        task_names: Optional[list[str]] = None,
+    ) -> None:
+        """Initialize workflow statuses for all tasks (async version).
+
+        Issue #305: Initialize all workflow statuses to 'pending'.
+
+        Args:
+            job_id: Job ID
+            task_ids: List of task IDs to initialize
+            task_names: Optional list of task names (same order as task_ids)
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        # Build workflow statuses with optional task names
+        workflow_statuses: list[WorkflowStatusItem] = []
+        for i, tid in enumerate(task_ids):
+            task_name = task_names[i] if task_names and i < len(task_names) else None
+            workflow_statuses.append(
+                WorkflowStatusItem(task_id=tid, task_name=task_name, status="pending")
+            )
+
+        status.workflow_statuses = workflow_statuses
+        logger.debug(
+            f"Initialized workflow statuses for job {job_id}: {len(task_ids)} tasks"
+        )
+
+        # Write to L2 (Valkey)
+        await self._write_to_valkey(job_id, status)
+
+    async def update_workflow_status_async(
+        self,
+        job_id: str,
+        task_id: str,
+        workflow_status: str,
+        workflow_name: Optional[str] = None,
+        generation_time_ms: Optional[int] = None,
+        error_message: Optional[str] = None,
+        langfuse_trace_id: Optional[str] = None,
+        summary: Optional["WorkflowGenerationSummary"] = None,
+    ) -> None:
+        """Update individual workflow status (async version).
+
+        Issue #305: Update status for a specific workflow.
+
+        Args:
+            job_id: Job ID
+            task_id: Task ID
+            workflow_status: Status ('pending' | 'generating' | 'success' | 'failed')
+            workflow_name: Workflow name (if success)
+            generation_time_ms: Generation time in milliseconds (if success)
+            error_message: Error message (if failed)
+            langfuse_trace_id: Langfuse trace ID for per-task tracing
+            summary: Workflow generation summary with detailed results
+        """
+        status = self._get_job_or_log_warning(job_id)
+        if status is None:
+            return
+
+        if status.workflow_statuses is None:
+            logger.warning(f"Workflow statuses not initialized for job {job_id}")
+            return
+
+        # Find and update the workflow status
+        for ws in status.workflow_statuses:
+            if ws.task_id == task_id:
+                ws.status = workflow_status
+                ws.workflow_name = workflow_name
+                ws.generation_time_ms = generation_time_ms
+                ws.error_message = error_message
+                ws.langfuse_trace_id = langfuse_trace_id
+                ws.summary = summary
+                logger.debug(
+                    f"Updated workflow status for task {task_id}: {workflow_status}"
+                )
+                break
+        else:
+            logger.warning(
+                f"Task {task_id} not found in workflow statuses for job {job_id}"
+            )
+            return
 
         # Write to L2 (Valkey)
         await self._write_to_valkey(job_id, status)

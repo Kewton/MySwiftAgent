@@ -94,6 +94,43 @@ class TestBuildExpertAgentCapabilities:
         capabilities = _build_expert_agent_capabilities()
         assert "AI Agent API" in capabilities
 
+    def test_build_capabilities_includes_task_api_mapping(self) -> None:
+        """Test that capabilities includes task-to-API mapping section.
+
+        Issue #305: task_api_mapping should be included in prompt to guide
+        LLM in selecting appropriate APIs for specific task types.
+        """
+        capabilities = _build_expert_agent_capabilities()
+        # Should include the task-to-API mapping section header
+        assert "タスク種別ごとの推奨API" in capabilities
+
+    def test_build_capabilities_includes_file_reader_mapping(self) -> None:
+        """Test that task_api_mapping includes File Reader Agent mapping.
+
+        Issue #305: File Reader Agent should be recommended for file reading tasks.
+        """
+        capabilities = _build_expert_agent_capabilities()
+        # Should include file reading task mapping
+        assert "ファイル読み取り" in capabilities
+        assert "File Reader Agent" in capabilities
+        assert "/v1/aiagent/utility/file_reader" in capabilities
+
+    def test_build_capabilities_includes_tts_mapping(self) -> None:
+        """Test that task_api_mapping includes TTS mapping."""
+        capabilities = _build_expert_agent_capabilities()
+        # Should include TTS task mapping
+        assert "音声合成" in capabilities
+        assert "Text-to-Speech" in capabilities
+
+    def test_build_capabilities_includes_mapping_table_format(self) -> None:
+        """Test that task_api_mapping is formatted as a markdown table."""
+        capabilities = _build_expert_agent_capabilities()
+        # Should have table headers
+        assert "| タスク種別 |" in capabilities
+        assert "| 推奨API |" in capabilities or "推奨API" in capabilities
+        # Should have table separator
+        assert "|---" in capabilities
+
 
 class TestBuildTaskBreakdownSystemPrompt:
     """Test task breakdown system prompt building."""
