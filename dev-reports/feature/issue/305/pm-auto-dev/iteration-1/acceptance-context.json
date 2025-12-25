@@ -1,56 +1,45 @@
 {
-  "issue_number": 305,
-  "feature_summary": "Job生成時にLLMワークフローが自動生成される",
+  "issue_number": "305-extension",
+  "feature_summary": "Task Workflow Traces サマリ表示機能",
   "acceptance_criteria": [
-    "Job Generator呼び出し後、自動的にWorkflow Generatorが実行される",
-    "Phase 1（0-70%）→ Phase 2（70-95%）の進捗表示が正しい",
-    "Task Breakdown結果がUIに表示される",
-    "各タスクのWorkflow生成状況（pending/generating/success/failed）が表示される",
-    "部分失敗時もJob全体はcompletedになり、失敗したWorkflowのみエラー表示"
+    "WorkflowGenerationSummary モデルが正しくシリアライズされる",
+    "FailureDetails ビルダーが失敗ステージを正しく判定する",
+    "UI コンポーネントが成功/失敗時に適切な情報を表示する",
+    "評価詳細（5項目スコア）が正しく表示される",
+    "リトライ履歴が時系列で表示される"
   ],
-  "labels": ["bug"],
-  "target_project": "expertAgent",
-  "playwright_required": false,
-  "required_services": ["expertAgent", "myVault", "Langfuse"],
-  "external_dependencies": ["LLM API", "Langfuse"],
+  "labels": ["feature", "agent-layer", "project: expertAgent", "project: myAgentDesk"],
+  "target_projects": ["expertAgent", "myAgentDesk"],
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "graphAiServer", "myAgentDesk"],
   "l3_test_plan": {
-    "source": "work-plan.md",
     "health_checks": [
       {"service": "expertAgent", "url": "http://localhost:8004/health"},
       {"service": "myVault", "url": "http://localhost:8003/health"},
-      {"service": "Langfuse", "url": "http://localhost:3001/api/public/health"}
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:8000"}
     ],
-    "test_commands": [
+    "test_scenarios": [
       {
-        "name": "Test 1: Job Generator呼び出し",
-        "command": "curl -s -X POST 'http://localhost:8004/api/v1/job-generator' -H 'Content-Type: application/json' -d '{\"requirement_text\": \"Gmailから未読メールを取得し、AI分析後にSlackへ通知するワークフロー\", \"project_id\": \"test-project\"}'",
-        "expected_status": 200,
-        "expected_response_contains": ["job_id"]
+        "name": "Backend: WorkflowGenerationSummary serialization",
+        "type": "pytest",
+        "description": "Verify that WorkflowGenerationSummary models are correctly serialized/deserialized"
       },
       {
-        "name": "Test 2: Status API - Phase 1進捗確認",
-        "command": "curl -s 'http://localhost:8004/api/v1/jobs/{job_id}/status'",
-        "expected_status": 200,
-        "expected_response_contains": ["progress", "status"]
+        "name": "Backend: FailureDetails builder",
+        "type": "pytest",
+        "description": "Verify that FailureDetails is correctly built from workflow state"
       },
       {
-        "name": "Test 3: Status API - Phase 2 (Workflow Generation)確認",
-        "command": "curl -s 'http://localhost:8004/api/v1/jobs/{job_id}/status'",
-        "expected_status": 200,
-        "expected_response_contains": ["phase", "workflow_statuses"]
+        "name": "Frontend: Component rendering",
+        "type": "vitest",
+        "description": "Verify that UI components render correctly with test data"
       },
       {
-        "name": "Test 4: 最終結果確認",
-        "command": "curl -s 'http://localhost:8004/api/v1/jobs/{job_id}/status'",
-        "expected_status": 200,
-        "expected_response_contains": ["status", "completed", "workflow_statuses"]
+        "name": "E2E: Task Workflow Traces display",
+        "type": "playwright",
+        "description": "Verify that workflow traces are displayed correctly in the UI"
       }
-    ],
-    "external_service_checks": [
-      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"}
     ]
-  },
-  "pytest_test_file": "tests/acceptance/test_issue_305_acceptance.py",
-  "playwright_test_file": null,
-  "implementation_note": "B-7 (Status API拡張)が未実装のため、phase, task_breakdown, workflow_statusesフィールドがAPIレスポンスに含まれない可能性あり。その場合はTDD Phase 2に戻ってB-7を実装する必要がある。"
+  }
 }

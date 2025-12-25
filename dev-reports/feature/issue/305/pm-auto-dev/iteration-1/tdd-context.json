@@ -1,104 +1,53 @@
 {
-  "issue_number": 305,
-  "feature_name": "LLM Evaluator for Workflow Generator",
-  "spec_file": "dev-reports/feature/issue/305/llm-evaluator-spec.md",
+  "issue_number": "305-extension",
+  "feature_name": "Task Workflow Traces サマリ表示機能",
+  "spec_file": "dev-reports/feature/issue/305/task-workflow-traces-summary-spec.md",
   "acceptance_criteria": [
-    "LLM Evaluator ノードがワークフロー品質を5観点（構造的妥当性、要件充足度、出力品質、エラー耐性、テストデータ品質）で評価する",
-    "テストデータ品質が低い場合（score < 50）、Test Data Regenerator が自動的にテストデータを再生成する",
-    "テストデータ再生成後、workflow_tester で再テストが実行される",
-    "最大再生成回数（default: 2）に達した場合、処理を終了する",
-    "Result Summary Generator がMarkdown形式のサマリを生成する",
-    "3方向ルーティング（test_data_regenerator / self_repair / result_summary_generator）が正しく動作する"
+    "ワークフロー生成結果サマリがUIで確認可能",
+    "成功時: YAML プレビュー、テストデータ、評価スコアが表示される",
+    "失敗時: 失敗ステージ、エラーサマリ、原因分析、推奨対応が表示される",
+    "LLM評価詳細（5項目スコア、良い点、改善点、提案）が表示される",
+    "リトライ履歴が時系列で表示される"
   ],
   "implementation_tasks": [
     {
-      "task_id": "E-1",
-      "description": "WorkflowGeneratorState に LLM Evaluator 関連フィールドを追加",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/state.py",
-      "estimated_hours": 1
+      "id": "BE-1",
+      "description": "WorkflowGenerationSummary モデル定義",
+      "file": "expertAgent/app/services/job_creation_state.py",
+      "test_file": "expertAgent/tests/unit/test_workflow_generation_summary.py"
     },
     {
-      "task_id": "E-2",
-      "description": "LLMEvaluationResult Pydantic モデル定義",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/models/evaluation.py",
-      "estimated_hours": 1
+      "id": "BE-2",
+      "description": "FailureDetails ビルダー関数実装",
+      "file": "expertAgent/app/services/failure_details_builder.py",
+      "test_file": "expertAgent/tests/unit/test_failure_details_builder.py"
     },
     {
-      "task_id": "E-3",
-      "description": "LLM Evaluator プロンプト作成",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/llm_evaluation.py",
-      "estimated_hours": 2
+      "id": "BE-3",
+      "description": "workflow_generation_node でサマリ生成",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py"
     },
     {
-      "task_id": "E-4",
-      "description": "llm_evaluator_node 実装",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/llm_evaluator.py",
-      "estimated_hours": 4
+      "id": "FE-1",
+      "description": "TypeScript 型定義拡張",
+      "file": "myAgentDesk/src/lib/types/workflow-summary.ts"
     },
     {
-      "task_id": "E-5",
-      "description": "Test Data Regenerator プロンプト作成",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/test_data_regeneration.py",
-      "estimated_hours": 1
+      "id": "FE-2",
+      "description": "WorkflowTraceSummary コンポーネント",
+      "file": "myAgentDesk/src/lib/components/generation/WorkflowTraceSummary.svelte"
     },
     {
-      "task_id": "E-6",
-      "description": "test_data_regenerator_node 実装",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/test_data_regenerator.py",
-      "estimated_hours": 3
+      "id": "FE-3",
+      "description": "FailureDetailsPanel コンポーネント",
+      "file": "myAgentDesk/src/lib/components/generation/FailureDetailsPanel.svelte"
     },
     {
-      "task_id": "E-7",
-      "description": "ValidationSummary モデル定義",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/models/summary.py",
-      "estimated_hours": 1
-    },
-    {
-      "task_id": "E-8",
-      "description": "result_summary_generator_node 実装",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/result_summary_generator.py",
-      "estimated_hours": 2
-    },
-    {
-      "task_id": "E-9",
-      "description": "3方向ルーター実装",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
-      "estimated_hours": 2
-    },
-    {
-      "task_id": "E-10",
-      "description": "LangGraph フロー更新",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
-      "estimated_hours": 2
-    },
-    {
-      "task_id": "E-11",
-      "description": "環境変数・Pydantic Settings 追加",
-      "file": "expertAgent/core/config.py",
-      "estimated_hours": 1
+      "id": "FE-4",
+      "description": "EvaluationDetailsPanel コンポーネント",
+      "file": "myAgentDesk/src/lib/components/generation/EvaluationDetailsPanel.svelte"
     }
   ],
-  "test_tasks": [
-    {
-      "task_id": "T-1",
-      "description": "llm_evaluator_node 単体テスト",
-      "file": "expertAgent/tests/unit/test_llm_evaluator_node.py"
-    },
-    {
-      "task_id": "T-2",
-      "description": "test_data_regenerator_node 単体テスト",
-      "file": "expertAgent/tests/unit/test_test_data_regenerator_node.py"
-    },
-    {
-      "task_id": "T-3",
-      "description": "result_summary_generator_node 単体テスト",
-      "file": "expertAgent/tests/unit/test_result_summary_generator_node.py"
-    },
-    {
-      "task_id": "T-4",
-      "description": "ルーター単体テスト",
-      "file": "expertAgent/tests/unit/test_llm_evaluator_routers.py"
-    }
-  ],
-  "target_coverage": 90
+  "target_coverage": 90,
+  "projects": ["expertAgent", "myAgentDesk"]
 }

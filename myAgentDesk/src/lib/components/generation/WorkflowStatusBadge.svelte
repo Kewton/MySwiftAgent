@@ -39,6 +39,14 @@
 	};
 
 	const label = $derived(statusLabels[status]);
+	const tooltipText = $derived(() => {
+		if (errorMessage) return errorMessage;
+		if (workflowName) {
+			const timeStr = generationTimeMs ? ` (${generationTimeMs}ms)` : '';
+			return `${workflowName}${timeStr}`;
+		}
+		return undefined;
+	});
 </script>
 
 <span
@@ -49,7 +57,7 @@
 	class:failed={status === 'failed'}
 	role="status"
 	aria-label={`Workflow status: ${label}`}
-	title={errorMessage || (workflowName ? `${workflowName}` : undefined)}
+	title={tooltipText()}
 >
 	{#if status === 'generating'}
 		<span class="mini-spinner" aria-hidden="true"></span>

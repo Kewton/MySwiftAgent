@@ -1,16 +1,21 @@
 {
-  "status": "passed",
-  "test_level": "L3+",
-  "test_type": "local_acceptance_test_with_real_api",
-  "target_project": "expertAgent",
-  "feature": "LLM Evaluator",
+  "status": "failed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent, myAgentDesk",
+  "feature": "Task Workflow Traces Summary Display",
   "issue_number": 305,
-  "executed_at": "2025-12-24T09:40:00+09:00",
+  "executed_at": "2025-12-24T15:13:00+09:00",
   "service_health": {
     "expertAgent": {
       "status": "healthy",
       "url": "http://localhost:8004",
       "response": "{\"status\":\"healthy\",\"service\":\"expertAgent\",\"valkey\":{\"enabled\":false,\"connected\":false}}"
+    },
+    "myVault": {
+      "status": "healthy",
+      "url": "http://localhost:8003",
+      "response": "{\"status\":\"healthy\",\"service\":\"myVault\"}"
     },
     "graphAiServer": {
       "status": "healthy",
@@ -24,175 +29,198 @@
     }
   },
   "pytest_results": {
-    "test_files": [
-      "expertAgent/tests/unit/test_llm_evaluator_node.py",
-      "expertAgent/tests/unit/test_test_data_regenerator_node.py",
-      "expertAgent/tests/unit/test_result_summary_generator_node.py",
-      "expertAgent/tests/unit/test_llm_evaluator_routers.py",
-      "expertAgent/tests/unit/test_llm_evaluation_prompt.py"
+    "test_file": "tests/acceptance/test_issue_305_acceptance.py",
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "skipped": 0,
+    "duration": "543.75s (9:03)",
+    "failures": [
+      {
+        "method": "test_workflow_generation_completes",
+        "error": "Job f853d3cd-f37f-4219-a986-bfe0b3b93eb4 did not complete within 180 seconds - stuck at 95% progress in workflow_generation phase"
+      },
+      {
+        "method": "test_status_api_contains_new_fields",
+        "error": "Job 1fea470d-6edf-46ac-bc88-ae7c436441f8 did not complete within 180 seconds - stuck at 76-95% progress"
+      },
+      {
+        "method": "test_phase_transitions_and_workflow_success",
+        "error": "Job 635da4e8-cd01-4dc6-aba9-fbde5433406f did not complete within 180 seconds - stuck at 95% progress in workflow_generation phase"
+      }
     ],
-    "total": 51,
-    "passed": 51,
+    "passed_tests": [
+      "test_job_generator_returns_job_id",
+      "test_status_api_returns_progress",
+      "test_status_api_returns_404_for_unknown_job"
+    ],
+    "output_file": "/tmp/acceptance_pytest_output.log"
+  },
+  "backend_unit_tests": {
+    "test_files": [
+      "expertAgent/tests/unit/test_workflow_generation_summary.py",
+      "expertAgent/tests/unit/test_failure_details_builder.py"
+    ],
+    "total": 68,
+    "passed": 68,
     "failed": 0,
     "skipped": 0,
-    "warnings": 8,
-    "exit_code": 0,
-    "duration": "0.12s",
-    "test_details": {
-      "test_llm_evaluator_node": {
-        "test_llm_evaluator_high_score": "PASSED",
-        "test_llm_evaluator_low_score": "PASSED",
-        "test_llm_evaluator_low_test_data_quality": "PASSED",
-        "test_llm_evaluator_timeout_fallback": "PASSED",
-        "test_llm_evaluator_invalid_response_fallback": "PASSED",
-        "test_llm_evaluator_max_regeneration_reached": "PASSED"
-      },
-      "test_llm_evaluation_prompt": {
-        "test_format_with_string_list": "PASSED",
-        "test_format_with_dict_list": "PASSED",
-        "test_format_with_dict_list_using_api_name_key": "PASSED",
-        "test_format_with_mixed_list": "PASSED",
-        "test_format_with_empty_list": "PASSED",
-        "test_format_with_none": "PASSED",
-        "test_format_with_dict_without_name_key": "PASSED",
-        "test_create_prompt_with_string_recommended_apis": "PASSED",
-        "test_create_prompt_with_dict_recommended_apis": "PASSED",
-        "test_create_prompt_with_mixed_recommended_apis": "PASSED",
-        "test_create_prompt_with_empty_recommended_apis": "PASSED",
-        "test_create_prompt_with_rule_based_issues": "PASSED",
-        "test_create_prompt_with_regenerated_test_data": "PASSED",
-        "test_create_prompt_with_string_sample_input": "PASSED",
-        "test_create_prompt_with_complex_nested_data": "PASSED"
-      }
-    }
-  },
-  "real_api_test_results": {
-    "status": "passed",
-    "description": "End-to-end job generation test with real LLM API calls",
-    "test_details": {
-      "job_id": "f07b9f83-4231-49f8-8c0d-cf25dc66da24",
-      "user_requirement": "メールを送信する",
-      "start_time": "2025-12-24T09:35:21.220085",
-      "end_time": "2025-12-24T09:40:23.023998",
-      "duration_seconds": 301.8,
-      "final_status": "completed",
-      "final_progress": 100,
-      "final_phase": "complete",
-      "job_master_id": "jm_01KD6WJKRV7YWVPG89F95493BD",
-      "langfuse_trace_id": "602d4a706b234d39892b22c6ebd5e052",
-      "task_breakdown": [
-        {
-          "task_id": "task_001",
-          "name": "メール内容の構成と構造化",
-          "recommended_apis": [
-            {
-              "api_name": "JSON Output Agent",
-              "endpoint": "/v1/aiagent/utility/jsonoutput",
-              "method": "POST"
-            }
-          ]
-        },
-        {
-          "task_id": "task_002",
-          "name": "メール送信の実行",
-          "recommended_apis": [
-            {
-              "api_name": "Gmail送信",
-              "endpoint": "/v1/utility/gmail/send",
-              "method": "POST"
-            }
-          ]
-        }
-      ],
-      "llm_evaluator_logs": [
-        "LLM evaluation complete: score=15, is_acceptable=False, needs_regeneration=True",
-        "LLM evaluation complete: score=15, is_acceptable=False, needs_regeneration=False"
-      ],
-      "workflow_statuses": [
-        {
-          "task_name": "メール内容の構成と構造化",
-          "status": "failed",
-          "error_message": "Workflow testing failed: missing workflow content"
-        },
-        {
-          "task_name": "メール送信の実行",
-          "status": "failed",
-          "error_message": "Workflow testing failed: missing workflow content"
-        }
-      ]
-    },
-    "bug_fix_verification": {
-      "bug_description": "TypeError: sequence item 0: expected str instance, dict found",
-      "bug_location": "llm_evaluation.py:128",
-      "root_cause": "recommended_apis was passed as list[dict] but code assumed list[str]",
-      "fix_applied": "_format_recommended_apis helper function added to handle both formats",
-      "verification_result": "PASSED - No TypeError occurred during real API test",
-      "evidence": "LLM evaluator completed evaluation without type errors, logs show 'LLM evaluation complete' messages"
-    }
-  },
-  "static_analysis_results": {
-    "ruff": {
-      "status": "passed",
-      "path": "aiagent/langgraph/workflowGeneratorAgents/",
-      "message": "All checks passed!"
-    }
-  },
-  "acceptance_criteria_checklist": {
-    "L3_local_acceptance": {
-      "real_data_format_test": {
-        "status": "passed",
-        "description": "recommended_apis: list[dict] format tested and working",
-        "test_file": "tests/unit/test_llm_evaluation_prompt.py"
-      },
-      "service_health_check": {
-        "status": "passed",
-        "services": ["expertAgent", "graphAiServer", "myAgentDesk"]
-      },
-      "frontend_generation_request": {
-        "status": "passed",
-        "job_completed_within_timeout": true,
-        "duration_seconds": 301.8
-      },
-      "no_type_error": {
-        "status": "passed",
-        "evidence": "LLM evaluator logs show successful evaluation without TypeError"
-      }
-    },
-    "L4_e2e": {
-      "playwright_ui_test": {
-        "status": "pending",
-        "reason": "Manual UI test passed, automated Playwright test to be added"
-      },
-      "timeout_behavior": {
-        "status": "passed",
-        "description": "Job completed in 5 minutes, no timeout occurred"
-      },
-      "error_message_display": {
-        "status": "not_applicable",
-        "reason": "Job succeeded, no error message to display"
-      }
-    }
-  },
-  "bug_fix_summary": {
-    "original_error": "TypeError: sequence item 0: expected str instance, dict found at llm_evaluation.py:128",
-    "fix_description": "Added _format_recommended_apis helper function to handle both list[str] and list[dict] formats",
-    "files_modified": [
-      "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/llm_evaluation.py"
-    ],
-    "tests_added": [
-      "expertAgent/tests/unit/test_llm_evaluation_prompt.py (15 new tests)"
-    ],
-    "spec_updated": [
-      "dev-reports/feature/issue/305/llm-evaluator-spec.md (Section 6.3 added)"
+    "duration": "0.07s",
+    "output_file": "/tmp/unit_test_backend.log",
+    "test_classes": [
+      "TestTestExecutionSummary (4 tests)",
+      "TestEvaluationSummary (4 tests)",
+      "TestRetryInfo (3 tests)",
+      "TestFailureDetails (4 tests)",
+      "TestWorkflowGenerationSummary (6 tests)",
+      "TestWorkflowStatusItemWithSummary (4 tests)",
+      "TestDetermineFailureStage (12 tests)",
+      "TestExtractErrorCode (5 tests)",
+      "TestExtractErrorDetail (4 tests)",
+      "TestExtractCauseFromValidationErrors (6 tests)",
+      "TestFormatRepairHistory (4 tests)",
+      "TestGenerateDefaultRecommendations (4 tests)",
+      "TestBuildFailureDetails (8 tests)"
     ]
   },
-  "notes": [
-    "Real API test completed successfully - TypeError bug is fixed",
-    "Job generation completed in 5 minutes (within timeout limit)",
-    "LLM Evaluator correctly evaluated workflows and triggered test data regeneration",
-    "Workflow generation itself failed due to 'missing workflow content' - separate issue from TypeError",
-    "15 new unit tests added for real data format validation",
-    "Specification updated with practical acceptance test requirements (Section 6.3)"
+  "frontend_unit_tests": {
+    "test_files": [
+      "myAgentDesk/tests/unit/generation/workflow-summary/types.test.ts",
+      "myAgentDesk/tests/unit/generation/workflow-summary/WorkflowTraceSummary.test.ts",
+      "myAgentDesk/tests/unit/generation/workflow-summary/EvaluationDetailsPanel.test.ts",
+      "myAgentDesk/tests/unit/generation/workflow-summary/FailureDetailsPanel.test.ts"
+    ],
+    "total": 87,
+    "passed": 87,
+    "failed": 0,
+    "skipped": 0,
+    "duration": "1.16s",
+    "output_file": "/tmp/unit_test_frontend.log",
+    "test_breakdown": {
+      "types.test.ts": 12,
+      "FailureDetailsPanel.test.ts": 29,
+      "EvaluationDetailsPanel.test.ts": 28,
+      "WorkflowTraceSummary.test.ts": 18
+    }
+  },
+  "playwright_results": {
+    "required": true,
+    "status": "not_executed",
+    "reason": "No specific Issue #305 E2E test file exists (test_issue_305.spec.ts). Existing generate.spec.ts covers general generation flow but not WorkflowTraceSummary, FailureDetailsPanel, or EvaluationDetailsPanel components.",
+    "existing_e2e_tests": [
+      "myAgentDesk/tests/e2e/generate.spec.ts",
+      "myAgentDesk/tests/e2e/projects.spec.ts",
+      "myAgentDesk/tests/e2e/requirements.spec.ts",
+      "myAgentDesk/tests/e2e/workbenches.spec.ts"
+    ]
+  },
+  "component_verification": {
+    "backend_models": {
+      "location": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/models/summary.py",
+      "exports": ["WorkflowGenerationSummary", "TestExecutionSummary", "EvaluationSummary", "RetryInfo", "FailureDetails"],
+      "status": "verified",
+      "unit_tests": "25 tests covering all model classes"
+    },
+    "backend_builder": {
+      "location": "expertAgent/app/services/failure_details_builder.py",
+      "functions": ["build_failure_details", "determine_failure_stage", "extract_error_code", "extract_error_detail", "extract_cause_from_validation_errors", "format_repair_history", "generate_default_recommendations"],
+      "status": "verified",
+      "unit_tests": "43 tests covering all builder functions"
+    },
+    "frontend_components": {
+      "location": "myAgentDesk/src/lib/components/generation/",
+      "files": {
+        "WorkflowTraceSummary.svelte": "9715 bytes",
+        "FailureDetailsPanel.svelte": "8105 bytes",
+        "EvaluationDetailsPanel.svelte": "6659 bytes"
+      },
+      "exports_file": "myAgentDesk/src/lib/components/generation/index.ts",
+      "status": "verified",
+      "unit_tests": "87 tests covering all UI components"
+    }
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "WorkflowGenerationSummary models are correctly serialized",
+      "verified": true,
+      "verification_method": "pytest unit tests",
+      "test_methods": ["test_serialization", "test_json_serialization", "test_serialization_with_summary"],
+      "evidence": "68/68 unit tests passed in expertAgent"
+    },
+    {
+      "criterion": "FailureDetails builder correctly determines failure stage",
+      "verified": true,
+      "verification_method": "pytest unit tests",
+      "test_methods": ["test_yaml_generation_failure_*", "test_schema_validation_failure", "test_workflow_execution_failure_*", "test_quality_evaluation_*"],
+      "evidence": "12 failure stage determination tests passed"
+    },
+    {
+      "criterion": "UI components display success/failure information correctly",
+      "verified": true,
+      "verification_method": "vitest unit tests",
+      "test_methods": ["renders success state", "renders failure state", "shows cause analysis", "renders retry history"],
+      "evidence": "87/87 frontend unit tests passed"
+    },
+    {
+      "criterion": "Evaluation details (5-item scores) are displayed correctly",
+      "verified": true,
+      "verification_method": "vitest unit tests",
+      "test_methods": ["renders score breakdown", "handles missing scores", "displays acceptable status", "shows suggestions"],
+      "evidence": "28 EvaluationDetailsPanel tests passed"
+    },
+    {
+      "criterion": "Retry history is displayed chronologically",
+      "verified": true,
+      "verification_method": "vitest + pytest unit tests",
+      "test_methods": ["test_format_multiple_attempts", "renders retry history", "shows attempt numbers"],
+      "evidence": "Retry history formatting and display tests passed"
+    },
+    {
+      "criterion": "End-to-end job generation completes successfully",
+      "verified": false,
+      "verification_method": "pytest acceptance tests",
+      "test_methods": ["test_workflow_generation_completes", "test_phase_transitions_and_workflow_success"],
+      "evidence": "Jobs stuck at 95% progress, timeout after 180 seconds",
+      "root_cause": "Workflow execution timeout in graphAiServer - workflow validation/testing phase not completing"
+    }
   ],
-  "message": "Acceptance test PASSED (L3+). The TypeError bug in llm_evaluation.py has been fixed and verified with real API calls. Job generation completed successfully with LLM Evaluator working correctly. Workflow generation failures are a separate issue unrelated to the TypeError fix."
+  "root_cause_analysis": {
+    "symptom": "Jobs get stuck at 95% progress in workflow_generation phase",
+    "logs_analysis": [
+      "expertAgent logs show 'Workflow execution timeout: Request timeout' during workflow testing phase",
+      "httpx.TimeoutException raised in workflow_tester.py line 86",
+      "Validation warnings: YAML syntax errors, HTTP 500 errors, Node timeouts"
+    ],
+    "affected_component": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_tester.py",
+    "error_type": "httpx.TimeoutException during workflow execution via graphAiServer",
+    "impact": "Workflow generation does not transition from 'creating' to 'completed' status"
+  },
+  "evidence_files": [
+    "/tmp/acceptance_pytest_output.log",
+    "/tmp/unit_test_backend.log",
+    "/tmp/unit_test_frontend.log",
+    "expertAgent/tests/unit/test_workflow_generation_summary.py",
+    "expertAgent/tests/unit/test_failure_details_builder.py",
+    "myAgentDesk/tests/unit/generation/workflow-summary/WorkflowTraceSummary.test.ts",
+    "myAgentDesk/tests/unit/generation/workflow-summary/FailureDetailsPanel.test.ts",
+    "myAgentDesk/tests/unit/generation/workflow-summary/EvaluationDetailsPanel.test.ts",
+    "myAgentDesk/tests/unit/generation/workflow-summary/types.test.ts"
+  ],
+  "suggested_fixes": [
+    "1. Increase workflow execution timeout in workflow_tester.py (current timeout appears to be too short for LLM-based workflow testing)",
+    "2. Check graphAiServer response times and increase client timeout if needed",
+    "3. Consider adding a fast_mode or mock mode for acceptance testing to avoid LLM latency",
+    "4. Add specific Issue #305 Playwright E2E tests for WorkflowTraceSummary, FailureDetailsPanel, and EvaluationDetailsPanel components",
+    "5. Investigate why workflow_tester node is receiving workflows with YAML syntax errors"
+  ],
+  "summary": {
+    "unit_tests_total": 155,
+    "unit_tests_passed": 155,
+    "unit_tests_failed": 0,
+    "acceptance_tests_total": 6,
+    "acceptance_tests_passed": 3,
+    "acceptance_tests_failed": 3,
+    "playwright_tests_executed": false
+  },
+  "message": "L3 acceptance tests FAILED. Unit tests (155/155) all passed - Issue #305 models, builder, and UI components are correctly implemented and tested. However, 3 end-to-end job generation tests timed out (jobs stuck at 95% progress). The failure is in the workflow execution phase which times out waiting for graphAiServer. Playwright E2E tests were not executed due to missing Issue #305 specific test file."
 }
