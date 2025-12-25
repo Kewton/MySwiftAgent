@@ -1,0 +1,139 @@
+{
+  "issue_number": 292,
+  "title": "[myAgentDesk] #279-8: Review画面（JobVersion詳細）",
+  "acceptance_criteria": [
+    "JobVersion一覧がvN.M形式で表示される",
+    "タスク分解が階層的に表示される",
+    "IF定義（JSON Schema）がフォーマットされて表示される",
+    "単体テストカバレッジ 90%以上",
+    "正常系: jv_v5.2の詳細に8タスクが表示される",
+    "正常系: タスク展開でinputInterface/outputInterfaceが表示される"
+  ],
+  "implementation_tasks": [
+    "Review画面（/workbenches/:workbenchId/review）",
+    "JobVersion一覧（vN.M形式）",
+    "Active/Deprecated ステータス",
+    "JobVersion詳細画面（/job-versions/:jobVersionId）",
+    "タスク分解一覧（アコーディオン）",
+    "各タスクのInput/Output IF定義表示",
+    "ワークフロー可視化（YAML表示）",
+    "生成元RequirementVersionへのリンク",
+    "Active JobVersion切り替え",
+    "「Start Run」ボタン"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Review画面（JobVersion一覧）の実装",
+      "deliverables": [
+        "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.svelte",
+        "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.server.ts"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "JobVersion詳細画面の実装",
+      "deliverables": [
+        "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.svelte",
+        "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.server.ts"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "タスク分解アコーディオンコンポーネントの作成",
+      "deliverables": [
+        "myAgentDesk/src/lib/components/job-version/TaskAccordion.svelte"
+      ],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "IF定義表示コンポーネントの作成",
+      "deliverables": [
+        "myAgentDesk/src/lib/components/job-version/InterfaceViewer.svelte"
+      ],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "ワークフロー表示コンポーネントの作成",
+      "deliverables": [
+        "myAgentDesk/src/lib/components/job-version/WorkflowViewer.svelte"
+      ],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.6",
+      "description": "Active切り替え機能の実装",
+      "deliverables": [
+        "myAgentDesk/src/routes/api/job-versions/[id]/activate/+server.ts"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "Review画面の単体テスト",
+      "deliverables": [
+        "myAgentDesk/tests/unit/routes/review.test.ts"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "JobVersion詳細画面の単体テスト",
+      "deliverables": [
+        "myAgentDesk/tests/unit/routes/job-version-detail.test.ts"
+      ],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "コンポーネント単体テスト",
+      "deliverables": [
+        "myAgentDesk/tests/unit/components/job-version/TaskAccordion.test.ts",
+        "myAgentDesk/tests/unit/components/job-version/InterfaceViewer.test.ts",
+        "myAgentDesk/tests/unit/components/job-version/WorkflowViewer.test.ts"
+      ],
+      "dependencies": ["1.3", "1.4", "1.5"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "結合テスト",
+      "deliverables": [
+        "tests/integration/myAgentDesk/test_review_flow.py"
+      ],
+      "dependencies": ["2.1", "2.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.svelte",
+    "myAgentDesk/src/lib/components/job-version/TaskAccordion.svelte",
+    "myAgentDesk/src/lib/components/job-version/InterfaceViewer.svelte",
+    "myAgentDesk/src/lib/components/job-version/WorkflowViewer.svelte",
+    "myAgentDesk/src/routes/api/job-versions/[id]/activate/+server.ts",
+    "myAgentDesk/tests/unit/routes/review.test.ts",
+    "myAgentDesk/tests/unit/routes/job-version-detail.test.ts",
+    "myAgentDesk/tests/unit/components/job-version/*.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全シナリオパス",
+    "L3受入テスト全パス",
+    "CI/CDグリーン",
+    "コードレビュー承認"
+  ],
+  "target_coverage": 90,
+  "technology_stack": {
+    "frontend": "SvelteKit",
+    "styling": "Tailwind CSS",
+    "syntax_highlight": "highlight.js (YAML)",
+    "testing": "Vitest",
+    "database": "SQLite (Drizzle ORM)"
+  }
+}
