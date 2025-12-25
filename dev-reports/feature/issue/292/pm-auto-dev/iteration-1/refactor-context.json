@@ -1,0 +1,34 @@
+{
+  "issue_number": 292,
+  "refactor_targets": [
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/review/+page.server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/job-versions/[jobVersionId]/+page.server.ts",
+    "myAgentDesk/src/lib/components/job-version/TaskAccordion.svelte",
+    "myAgentDesk/src/lib/components/job-version/InterfaceViewer.svelte",
+    "myAgentDesk/src/lib/components/job-version/WorkflowViewer.svelte",
+    "myAgentDesk/src/routes/api/job-versions/[id]/activate/+server.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 97.72,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Component Composition",
+    "Single Responsibility Principle",
+    "DRY (Don't Repeat Yourself)"
+  ],
+  "improvement_goals": [
+    "コードの重複排除",
+    "コンポーネントの責務分離",
+    "エラーハンドリングの統一",
+    "型定義の改善",
+    "アクセシビリティの向上"
+  ],
+  "constraints": [
+    "テストをすべてパスさせること",
+    "カバレッジを維持または向上させること",
+    "既存のAPIインターフェースを変更しないこと"
+  ]
+}

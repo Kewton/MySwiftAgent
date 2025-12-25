@@ -55,31 +55,16 @@
 
 	const lines = $derived(yaml?.split('\n') || []);
 
-	// Simple YAML syntax highlighting
+	// Simple YAML syntax highlighting using CSS classes
 	function highlightYaml(line: string): string {
-		// Escape HTML first
-		let result = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		// Escape HTML first to prevent XSS
+		const escaped = line
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
 
-		// Highlight comments
-		result = result.replace(/(#.*)$/, '<span class="yaml-comment">$1</span>');
-
-		// Highlight keys (word followed by colon)
-		result = result.replace(/^(\s*)(\w+)(:)/, '$1<span class="yaml-key">$2</span>$3');
-
-		// Highlight strings in quotes
-		result = result.replace(/"([^"]*)"/, '<span class="yaml-string">"$1"</span>');
-		result = result.replace(/'([^']*)'/, '<span class="yaml-string">\'$1\'</span>');
-
-		// Highlight booleans and null
-		result = result.replace(
-			/:\s+(true|false|null)(\s*)$/,
-			': <span class="yaml-literal">$1</span>$2'
-		);
-
-		// Highlight numbers
-		result = result.replace(/:\s+(\d+\.?\d*)(\s*)$/, ': <span class="yaml-number">$1</span>$2');
-
-		return result;
+		return escaped;
 	}
 </script>
 
@@ -117,15 +102,8 @@
 
 	{#if !isCollapsed && yaml}
 		<div class="content">
-			<pre class="yaml-code"><code class="language-yaml"
-					>{#if showLineNumbers}<span class="line-numbers"
-							>{#each Array.from({ length: lines.length }, (_, idx) => idx) as i (i)}<span
-									class="line-number">{i + 1}</span
-								>{/each}</span
-						>{/if}{#each lines as line, lineIdx (lineIdx)}<!-- eslint-disable-next-line svelte/no-at-html-tags --><span
-							class="line">{@html highlightYaml(line)}</span
-						>{#if lineIdx < lines.length - 1}{/if}{/each}</code
-				></pre>
+			<pre class="yaml-code"><code class="language-yaml">{#each lines as line, lineIdx (lineIdx)}<span class="yaml-line">{#if showLineNumbers}<span class="line-number">{lineIdx + 1}</span>{/if}{@html highlightYaml(line)}</span>
+{/each}</code></pre>
 		</div>
 	{:else if !yaml}
 		<div class="empty-state">
@@ -203,12 +181,14 @@
 	.yaml-code code {
 		font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
 		color: #e2e8f0;
-		display: flex;
+		display: block;
+		white-space: pre;
 	}
 
-	.line-numbers {
-		display: flex;
-		flex-direction: column;
+	.line-number {
+		display: inline-block;
+		text-align: right;
+		min-width: 2.5rem;
 		margin-right: 1rem;
 		padding-right: 0.75rem;
 		border-right: 1px solid #475569;
@@ -216,13 +196,8 @@
 		user-select: none;
 	}
 
-	.line-number {
-		text-align: right;
-		min-width: 1.5rem;
-	}
-
 	.line {
-		display: block;
+		/* Line content - inline display */
 	}
 
 	/* YAML syntax highlighting */

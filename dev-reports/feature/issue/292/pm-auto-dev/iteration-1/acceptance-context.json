@@ -1,0 +1,67 @@
+{
+  "issue_number": 292,
+  "feature_summary": "Review画面（JobVersion詳細）",
+  "acceptance_criteria": [
+    "JobVersion一覧がvN.M形式で表示される",
+    "タスク分解が階層的に表示される",
+    "IF定義（JSON Schema）がフォーマットされて表示される",
+    "単体テストカバレッジ 90%以上",
+    "正常系: jv_v5.2の詳細に8タスクが表示される",
+    "正常系: タスク展開でinputInterface/outputInterfaceが表示される"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["myAgentDesk"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myAgentDesk", "url": "http://localhost:5173"}
+    ],
+    "test_commands": [
+      {
+        "name": "Review画面アクセス確認",
+        "command": "curl -s -o /dev/null -w '%{http_code}' 'http://localhost:5173/projects/{PROJECT_ID}/workbenches/{WORKBENCH_ID}/review'",
+        "expected_status": 200
+      },
+      {
+        "name": "JobVersion詳細画面アクセス確認",
+        "command": "curl -s -o /dev/null -w '%{http_code}' 'http://localhost:5173/projects/{PROJECT_ID}/workbenches/{WORKBENCH_ID}/job-versions/{JOB_VERSION_ID}'",
+        "expected_status": 200
+      },
+      {
+        "name": "存在しないJobVersionで404確認",
+        "command": "curl -s -o /dev/null -w '%{http_code}' 'http://localhost:5173/projects/{PROJECT_ID}/workbenches/{WORKBENCH_ID}/job-versions/jv_nonexistent'",
+        "expected_status": 404
+      },
+      {
+        "name": "Active切替API確認",
+        "command": "curl -s -X POST 'http://localhost:5173/api/job-versions/{JOB_VERSION_ID}/activate'",
+        "expected_status": 200
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_292_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_292.spec.ts",
+  "existing_acceptance_script": "tests/acceptance/test_issue_292_acceptance.sh",
+  "ui_test_scenarios": [
+    {
+      "name": "Review画面表示確認",
+      "description": "JobVersion一覧がvN.M形式で表示され、ステータスバッジが正しく表示される"
+    },
+    {
+      "name": "JobVersion詳細画面表示確認",
+      "description": "タスク分解アコーディオン、IF定義、ワークフローYAMLが表示される"
+    },
+    {
+      "name": "タスクアコーディオン開閉",
+      "description": "タスクをクリックすると詳細が展開され、再度クリックで閉じる"
+    },
+    {
+      "name": "Active切替機能",
+      "description": "Set Activeボタンをクリックすると、そのJobVersionがActiveになる"
+    }
+  ]
+}
