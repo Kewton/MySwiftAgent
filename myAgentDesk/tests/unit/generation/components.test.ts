@@ -137,7 +137,8 @@ describe('TaskBreakdownList', () => {
 			workflow_name: 'workflow_gmail',
 			generation_time_ms: 28500,
 			error_message: null,
-			langfuse_trace_id: 'trace_abc123'
+			langfuse_trace_id: 'trace_abc123',
+			summary: null
 		},
 		{
 			task_id: 'tm_002',
@@ -146,7 +147,8 @@ describe('TaskBreakdownList', () => {
 			workflow_name: null,
 			generation_time_ms: null,
 			error_message: null,
-			langfuse_trace_id: null
+			langfuse_trace_id: null,
+			summary: null
 		}
 	];
 

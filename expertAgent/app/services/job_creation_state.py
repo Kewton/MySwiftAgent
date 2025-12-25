@@ -148,6 +148,7 @@ class WorkflowGenerationSummary(BaseModel):
     """
 
     yaml_preview: Optional[str] = None  # First 500 chars of YAML
+    yaml_content: Optional[str] = None  # Full YAML content for expansion
     sample_input: Optional[dict[str, Any]] = None  # Test input data
     test_result: Optional[TestExecutionSummary] = None
     evaluation: Optional[EvaluationSummary] = None
@@ -623,6 +624,7 @@ class JobCreationStateManager:
         generation_time_ms: Optional[int] = None,
         error_message: Optional[str] = None,
         langfuse_trace_id: Optional[str] = None,
+        summary: Optional["WorkflowGenerationSummary"] = None,
     ) -> None:
         """Update individual workflow status (async version).
 
@@ -636,6 +638,7 @@ class JobCreationStateManager:
             generation_time_ms: Generation time in milliseconds (if success)
             error_message: Error message (if failed)
             langfuse_trace_id: Langfuse trace ID for per-task tracing
+            summary: Workflow generation summary with detailed results
         """
         status = self._get_job_or_log_warning(job_id)
         if status is None:
@@ -653,6 +656,7 @@ class JobCreationStateManager:
                 ws.generation_time_ms = generation_time_ms
                 ws.error_message = error_message
                 ws.langfuse_trace_id = langfuse_trace_id
+                ws.summary = summary
                 logger.debug(
                     f"Updated workflow status for task {task_id}: {workflow_status}"
                 )

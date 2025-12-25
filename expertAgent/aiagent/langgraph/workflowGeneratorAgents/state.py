@@ -137,7 +137,7 @@ def create_initial_state(
     task_data: dict[str, Any],
     max_retry: int = 3,
     max_test_data_regeneration: int = 2,
-    fast_mode: bool = True,
+    fast_mode: bool = False,
 ) -> WorkflowGeneratorState:
     """Create initial state with default values.
 
@@ -147,9 +147,10 @@ def create_initial_state(
         task_data: TaskMaster metadata from jobqueue API
         max_retry: Maximum retry count for self-repair (default: 3)
         max_test_data_regeneration: Maximum test data regeneration count (default: 2)
-        fast_mode: Skip LLM evaluation when rule-based validation passes (default: True)
+        fast_mode: Skip LLM evaluation when rule-based validation passes (default: False)
             Issue #305: When enabled, skips LLM evaluation for successfully
             validated workflows to reduce processing time.
+            Changed to False by default for quality-first approach.
 
     Returns:
         WorkflowGeneratorState: Initial state with default values

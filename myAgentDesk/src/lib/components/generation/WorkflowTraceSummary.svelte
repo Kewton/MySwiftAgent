@@ -25,6 +25,7 @@
 	// Use the expanded prop directly - the warning can be safely ignored
 	// as we intentionally only use it as the initial value
 	let isExpanded = $state(false);
+	let showFullYaml = $state(false);
 
 	// Initialize from prop
 	$effect(() => {
@@ -32,6 +33,20 @@
 			isExpanded = true;
 		}
 	});
+
+	// Check if YAML is truncated (has full content longer than preview)
+	const isYamlTruncated = $derived(
+		workflowStatus.summary?.yaml_content &&
+			workflowStatus.summary?.yaml_preview &&
+			workflowStatus.summary.yaml_content.length > workflowStatus.summary.yaml_preview.length
+	);
+
+	// Get the YAML to display based on state
+	const displayYaml = $derived(
+		showFullYaml
+			? workflowStatus.summary?.yaml_content ?? workflowStatus.summary?.yaml_preview
+			: workflowStatus.summary?.yaml_preview
+	);
 
 	const score = $derived(workflowStatus.summary?.evaluation?.score ?? null);
 	const scoreRange = $derived(getScoreRange(score));
@@ -108,11 +123,27 @@
 	<!-- Expanded Details -->
 	{#if isExpanded && workflowStatus.summary}
 		<div class="summary-details">
-			<!-- YAML Preview -->
-			{#if workflowStatus.summary.yaml_preview}
+			<!-- YAML Preview / Full -->
+			{#if displayYaml}
 				<div class="detail-section yaml-section">
-					<h4>Generated Workflow YAML</h4>
-					<pre class="yaml-preview"><code>{workflowStatus.summary.yaml_preview}</code></pre>
+					<div class="section-header">
+						<h4>Generated Workflow YAML</h4>
+						{#if isYamlTruncated}
+							<button
+								class="yaml-toggle-btn"
+								onclick={() => (showFullYaml = !showFullYaml)}
+								aria-label={showFullYaml ? 'Show preview' : 'Show full YAML'}
+							>
+								{showFullYaml ? 'Show Preview' : 'Show Full'}
+							</button>
+						{/if}
+					</div>
+					<pre class="yaml-preview" class:yaml-full={showFullYaml}><code>{displayYaml}</code></pre>
+					{#if !showFullYaml && isYamlTruncated}
+						<div class="yaml-truncated-hint">
+							... (truncated - click "Show Full" to see complete YAML)
+						</div>
+					{/if}
 				</div>
 			{/if}
 
@@ -330,6 +361,34 @@
 		text-transform: uppercase;
 	}
 
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+
+	.section-header h4 {
+		margin: 0;
+	}
+
+	.yaml-toggle-btn {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		color: #2563eb;
+		background: #eff6ff;
+		border: 1px solid #bfdbfe;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.yaml-toggle-btn:hover {
+		background: #dbeafe;
+		border-color: #93c5fd;
+	}
+
 	/* YAML Preview */
 	.yaml-preview {
 		margin: 0;
@@ -343,8 +402,20 @@
 		max-height: 200px;
 	}
 
+	.yaml-preview.yaml-full {
+		max-height: none;
+	}
+
 	.yaml-preview code {
 		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+	}
+
+	.yaml-truncated-hint {
+		font-size: 0.6875rem;
+		color: #94a3b8;
+		font-style: italic;
+		margin-top: 0.25rem;
+		text-align: center;
 	}
 
 	/* Test Data */

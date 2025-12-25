@@ -206,16 +206,16 @@ class TestCreateInitialState:
         assert state["fast_mode"] is True
 
     def test_create_initial_state_fast_mode_default(self):
-        """Test that fast_mode is enabled by default.
+        """Test that fast_mode is disabled by default.
 
-        Issue #305: fast_mode defaults to True for performance optimization.
+        Issue #305: fast_mode defaults to False for quality-first approach.
         """
         task_data = {"name": "Test task"}
 
         state = create_initial_state(101, task_data)
 
-        assert state["fast_mode"] is True
-        assert state["max_retry"] == 2  # Default fast_mode value
+        assert state["fast_mode"] is False
+        assert state["max_retry"] == 3  # Default value when fast_mode is False
 
 
 class TestWorkflowGraph:

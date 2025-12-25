@@ -64,7 +64,8 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 		workflow_name: 'workflow_gmail_fetch',
 		generation_time_ms: 28500,
 		error_message: null,
-		langfuse_trace_id: 'trace_mock_001'
+		langfuse_trace_id: 'trace_mock_001',
+		summary: null
 	},
 	{
 		task_id: 'tm_002',
@@ -73,7 +74,8 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 		workflow_name: 'workflow_claude_summarize',
 		generation_time_ms: 32100,
 		error_message: null,
-		langfuse_trace_id: 'trace_mock_002'
+		langfuse_trace_id: 'trace_mock_002',
+		summary: null
 	},
 	{
 		task_id: 'tm_003',
@@ -82,7 +84,8 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 		workflow_name: 'workflow_slack_post',
 		generation_time_ms: 25300,
 		error_message: null,
-		langfuse_trace_id: 'trace_mock_003'
+		langfuse_trace_id: 'trace_mock_003',
+		summary: null
 	}
 ];
 

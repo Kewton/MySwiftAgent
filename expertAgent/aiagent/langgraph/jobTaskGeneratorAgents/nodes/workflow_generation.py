@@ -23,8 +23,8 @@ from ..utils.workflow_helper import generate_workflow_for_task
 logger = logging.getLogger(__name__)
 
 # Maximum concurrent workflow generations to avoid overwhelming external APIs
-# Issue #305: Increased from 3 to 4 for better performance
-MAX_CONCURRENT_WORKFLOWS = 4
+# Issue #305: Increased from 3 to 10 for better performance
+MAX_CONCURRENT_WORKFLOWS = 10
 
 
 async def _generate_single_workflow(
@@ -87,6 +87,9 @@ async def _generate_single_workflow(
 
         generation_time_ms = int((time.time() - start_time) * 1000)
 
+        # Issue #305 Extension: Get summary from result
+        summary = result.get("summary")
+
         if result.get("status") == "success":
             workflow_result = {
                 "task_id": task_id,
@@ -95,6 +98,7 @@ async def _generate_single_workflow(
                 "yaml_content": result.get("yaml_content"),
                 "generation_time_ms": generation_time_ms,
                 "langfuse_trace_id": trace_id,
+                "summary": summary,
             }
 
             # Update status to 'success'
@@ -107,6 +111,7 @@ async def _generate_single_workflow(
                         workflow_name=result.get("workflow_name"),
                         generation_time_ms=generation_time_ms,
                         langfuse_trace_id=trace_id,
+                        summary=summary,
                     )
                 except Exception as e:
                     logger.warning(
@@ -126,6 +131,7 @@ async def _generate_single_workflow(
                 "error_message": error_message,
                 "generation_time_ms": generation_time_ms,
                 "langfuse_trace_id": trace_id,
+                "summary": summary,
             }
 
             # Update status to 'failed'
@@ -137,6 +143,7 @@ async def _generate_single_workflow(
                         workflow_status="failed",
                         error_message=error_message,
                         langfuse_trace_id=trace_id,
+                        summary=summary,
                     )
                 except Exception as e:
                     logger.warning(

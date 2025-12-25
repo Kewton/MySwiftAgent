@@ -175,6 +175,7 @@ describe('Workflow Summary Type Definitions', () => {
 		it('should have correct structure for success case', () => {
 			const summary: WorkflowGenerationSummary = {
 				yaml_preview: 'version: 0.5\nnodes:\n  source: {}',
+				yaml_content: 'version: 0.5\nnodes:\n  source: {}\n  process: {}',
 				sample_input: { title: 'Test', sections: ['s1', 's2'] },
 				test_result: {
 					http_status: 200,
@@ -212,6 +213,7 @@ describe('Workflow Summary Type Definitions', () => {
 		it('should have correct structure for failure case', () => {
 			const summary: WorkflowGenerationSummary = {
 				yaml_preview: null,
+				yaml_content: null,
 				sample_input: null,
 				test_result: null,
 				evaluation: null,
@@ -251,6 +253,7 @@ describe('Workflow Summary Type Definitions', () => {
 				langfuse_trace_id: 'trace_abc123',
 				summary: {
 					yaml_preview: 'version: 0.5\nnodes: {}',
+					yaml_content: 'version: 0.5\nnodes: {}\n  process: {}',
 					sample_input: { text: 'sample' },
 					test_result: {
 						http_status: 200,

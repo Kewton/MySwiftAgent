@@ -23,7 +23,12 @@
 		TaskBreakdownItem,
 		WorkflowStatusItem
 	} from '$lib/api/clients/expert-agent';
-	import { PhaseFlow, TaskBreakdownList, GenerationSummary } from '$lib/components/generation';
+	import {
+		PhaseFlow,
+		TaskBreakdownList,
+		GenerationSummary,
+		WorkflowTraceSummary
+	} from '$lib/components/generation';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -407,36 +412,12 @@
 								</a>
 							{/if}
 						</summary>
-						<!-- Issue #305: Per-task workflow traces -->
+						<!-- Issue #305: Per-task workflow traces with summary -->
 						{#if workflowStatuses.length > 0}
 							<div class="workflow-traces">
 								<div class="workflow-traces-header">Task Workflow Traces</div>
 								{#each workflowStatuses as ws (ws.task_id)}
-									<div class="workflow-trace-item">
-										<span class="task-name">{ws.task_name ?? ws.task_id}</span>
-										<span
-											class="status-badge small"
-											style="color: {ws.status === 'success' ? '#166534' : '#dc2626'}; background: {ws.status === 'success' ? '#dcfce7' : '#fee2e2'}"
-										>
-											{ws.status}
-										</span>
-										{#if ws.workflow_name}
-											<span class="workflow-name">{ws.workflow_name}</span>
-										{/if}
-										{#if ws.langfuse_trace_id}
-											<a
-												href="http://localhost:3001/trace/{ws.langfuse_trace_id}"
-												target="_blank"
-												rel="noopener noreferrer"
-												class="trace-link small"
-											>
-												Trace
-											</a>
-										{/if}
-										{#if ws.error_message}
-											<span class="error-hint" title={ws.error_message}>Error</span>
-										{/if}
-									</div>
+									<WorkflowTraceSummary workflowStatus={ws} />
 								{/each}
 							</div>
 						{/if}
@@ -809,55 +790,5 @@
 		font-weight: 600;
 		color: #64748b;
 		margin-bottom: 0.5rem;
-	}
-
-	.workflow-trace-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.375rem 0.5rem;
-		background: white;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.25rem;
-		margin-bottom: 0.25rem;
-		font-size: 0.75rem;
-	}
-
-	.workflow-trace-item:last-child {
-		margin-bottom: 0;
-	}
-
-	.task-name {
-		font-weight: 500;
-		color: #1e293b;
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.workflow-name {
-		color: #64748b;
-		font-size: 0.675rem;
-		flex-shrink: 0;
-	}
-
-	.status-badge.small {
-		font-size: 0.625rem;
-		padding: 0.0625rem 0.25rem;
-	}
-
-	.trace-link.small {
-		font-size: 0.675rem;
-	}
-
-	.error-hint {
-		font-size: 0.675rem;
-		color: #dc2626;
-		background: #fee2e2;
-		padding: 0.0625rem 0.25rem;
-		border-radius: 0.125rem;
-		cursor: help;
 	}
 </style>

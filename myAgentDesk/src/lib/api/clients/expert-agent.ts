@@ -6,6 +6,7 @@
 import { ApiClient } from '../base/api-client';
 import { type Result } from '../result';
 import { type ApiError } from '../errors';
+import type { WorkflowGenerationSummary } from '$lib/types/workflow-summary';
 
 /**
  * ExpertAgent client configuration
@@ -60,6 +61,8 @@ export interface WorkflowStatusItem {
 	generation_time_ms: number | null;
 	error_message: string | null;
 	langfuse_trace_id: string | null;
+	/** Issue #305 Extension: Detailed workflow generation summary */
+	summary: WorkflowGenerationSummary | null;
 }
 
 /**

@@ -99,6 +99,7 @@ export interface FailureDetails {
  */
 export interface WorkflowGenerationSummary {
 	yaml_preview: string | null;
+	yaml_content: string | null; // Full YAML for expansion
 	sample_input: Record<string, unknown> | null;
 	test_result: TestExecutionSummary | null;
 	evaluation: EvaluationSummary | null;
