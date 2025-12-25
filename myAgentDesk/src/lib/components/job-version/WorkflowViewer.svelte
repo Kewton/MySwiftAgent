@@ -54,18 +54,6 @@
 	}
 
 	const lines = $derived(yaml?.split('\n') || []);
-
-	// Simple YAML syntax highlighting using CSS classes
-	function highlightYaml(line: string): string {
-		// Escape HTML first to prevent XSS
-		const escaped = line
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;');
-
-		return escaped;
-	}
 </script>
 
 <div class="workflow-viewer">
@@ -104,8 +92,7 @@
 		<div class="content">
 			<pre class="yaml-code"><code class="language-yaml"
 					>{#each lines as line, lineIdx (lineIdx)}<span class="yaml-line"
-							>{#if showLineNumbers}<span class="line-number">{lineIdx + 1}</span
-								>{/if}{@html highlightYaml(line)}</span
+							>{#if showLineNumbers}<span class="line-number">{lineIdx + 1}</span>{/if}{line}</span
 						>
 					{/each}</code
 				></pre>

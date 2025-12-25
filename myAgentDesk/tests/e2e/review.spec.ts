@@ -211,7 +211,7 @@ test.describe('JobVersion Detail Page - Interface Definition (実践的テスト
 		if ((await jsonViewer.count()) > 0) {
 			const content = await jsonViewer.first().textContent();
 			// JSON形式の特徴的な文字が含まれていることを確認
-			expect(content).toMatch(/[{}":\[\]]/);
+			expect(content).toMatch(/[{}":[\]]/);
 		}
 	});
 
