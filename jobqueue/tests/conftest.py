@@ -81,3 +81,6 @@ def sync_client(test_db):
 
     with TestClient(app) as client:
         yield client
+
+
+# Note: This file configures pytest fixtures for jobqueue tests.
