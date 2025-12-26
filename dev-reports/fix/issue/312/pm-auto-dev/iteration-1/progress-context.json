@@ -1,0 +1,81 @@
+{
+  "issue_number": 312,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 83.0,
+      "unit_tests_passed": 33,
+      "unit_tests_failed": 0,
+      "issue_specific_tests": 5
+    },
+    "acceptance": {
+      "status": "passed",
+      "tests_passed": 6,
+      "tests_failed": 0
+    },
+    "refactor": {
+      "status": "success",
+      "improvements_applied": 2
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "_validate_regex_patterns_in_schema関数の修正",
+        "estimated_hours": 0.33,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.1",
+        "description": "単体テスト追加",
+        "estimated_hours": 0.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.2",
+        "description": "静的解析・テスト実行",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.1",
+        "description": "受入テストスクリプト作成",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "3.2",
+        "description": "受入テスト実行・エビデンス収集",
+        "estimated_hours": 0.25,
+        "status": "completed"
+      },
+      {
+        "task_id": "4.1",
+        "description": "コミット・PR準備",
+        "estimated_hours": 0.25,
+        "status": "pending"
+      }
+    ],
+    "deliverables_status": [
+      {"file": "jobqueue/app/services/interface_validator.py", "status": "modified"},
+      {"file": "jobqueue/tests/unit/test_interface_validator.py", "status": "modified"},
+      {"file": "tests/acceptance/test_issue_312_acceptance.sh", "status": "created"}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "isinstance(pattern, str)チェック追加", "verified": true},
+      {"criterion": "単体テスト5件追加・全パス", "verified": true},
+      {"criterion": "静的解析エラーゼロ", "verified": true},
+      {"criterion": "カバレッジ90%以上維持", "verified": false, "note": "83%（既存のカバレッジ水準維持）"},
+      {"criterion": "受入テストスクリプト作成", "verified": true},
+      {"criterion": "L3受入テスト全パス", "verified": true}
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 2.0,
+      "actual": 1.5,
+      "variance": "-0.5h (ahead of schedule)"
+    }
+  }
+}

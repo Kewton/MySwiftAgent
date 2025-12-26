@@ -1,0 +1,50 @@
+{
+  "issue_number": 312,
+  "title": "fix(jobqueue): interface_validator.pyでプロパティ名 'pattern' を含むスキーマ検証時にTypeError発生",
+  "acceptance_criteria": [
+    "patternという名前のプロパティを含むスキーマが正常に検証される",
+    "JSON Schema仕様に準拠したpatternキーワードの検証が行われる",
+    "TypeErrorが適切にハンドリングされる",
+    "単体テストが追加される（カバレッジ90%以上維持）",
+    "静的解析エラーがない"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: _validate_regex_patterns_in_schema関数に isinstance(pattern, str) チェック追加",
+    "Task 1.1: docstring更新",
+    "Task 2.1: 単体テスト5件追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "_validate_regex_patterns_in_schema関数の修正",
+      "estimated_hours": 0.33,
+      "deliverables": ["jobqueue/app/services/interface_validator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/tests/unit/test_interface_validator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "静的解析・テスト実行",
+      "estimated_hours": 0.25,
+      "deliverables": ["テスト結果"],
+      "dependencies": ["2.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "jobqueue/app/services/interface_validator.py（修正）",
+    "jobqueue/tests/unit/test_interface_validator.py（テストケース5件追加）"
+  ],
+  "definition_of_done": [
+    "isinstance(pattern, str)チェック追加",
+    "単体テスト5件追加・全パス",
+    "静的解析エラーゼロ",
+    "カバレッジ90%以上維持"
+  ],
+  "target_coverage": 90
+}
