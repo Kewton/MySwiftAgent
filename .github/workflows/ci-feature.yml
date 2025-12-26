@@ -131,8 +131,9 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: ./${{ matrix.project }}
+        timeout-minutes: 5
         # Run unit tests only in CI (integration tests require external services)
-        run: uv run pytest tests/unit/ -v --cov=app --cov-report=xml --cov-report=term
+        run: uv run pytest tests/unit/ -v --cov=app --cov-report=xml --cov-report=term --timeout=60
 
       - name: Check test coverage
         working-directory: ./${{ matrix.project }}
