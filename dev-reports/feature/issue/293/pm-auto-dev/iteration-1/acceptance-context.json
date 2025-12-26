@@ -1,0 +1,52 @@
+{
+  "issue_number": 293,
+  "feature_summary": "[myAgentDesk] Runs画面（実行履歴・監視）",
+  "acceptance_criteria": [
+    "Run開始でRun(status=queued)が作成される",
+    "ステータスがqueued→running→success/failedと遷移する",
+    "プログレスがリアルタイム更新される",
+    "external_trace_idでLangfuseリンクが生成される",
+    "失敗したRunをRerunできる"
+  ],
+  "labels": ["feature"],
+  "target_project": "myAgentDesk",
+  "playwright_required": true,
+  "required_services": ["myAgentDesk", "jobqueue"],
+  "external_dependencies": ["JobQueue API"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "myAgentDesk", "url": "http://localhost:5173"},
+      {"service": "JobQueue", "url": "http://localhost:8001/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系: Run開始",
+        "command": "curl -s -X POST http://localhost:5173/api/runs -H 'Content-Type: application/json' -d '{\"jobVersionId\": \"<JOB_VERSION_ID>\"}'",
+        "expected_status": 201,
+        "expected_response_contains": ["id", "status", "queued"]
+      },
+      {
+        "name": "異常系: 存在しないJobVersion",
+        "command": "curl -s -X POST http://localhost:5173/api/runs -H 'Content-Type: application/json' -d '{\"jobVersionId\": \"nonexistent-id\"}'",
+        "expected_status": 404,
+        "expected_response_contains": ["error"]
+      },
+      {
+        "name": "正常系: ステータス取得",
+        "command": "curl -s http://localhost:5173/api/runs/<RUN_ID>/status",
+        "expected_status": 200,
+        "expected_response_contains": ["status"]
+      },
+      {
+        "name": "正常系: Rerun",
+        "command": "curl -s -X POST http://localhost:5173/api/runs/<FAILED_RUN_ID>/rerun",
+        "expected_status": 201,
+        "expected_response_contains": ["id", "status"]
+      }
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_293_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/runs.spec.ts",
+  "shell_script_test_file": "tests/acceptance/test_issue_293_acceptance.sh"
+}

@@ -1,0 +1,88 @@
+{
+  "issue_number": 293,
+  "issue_title": "[myAgentDesk] #279-9: Runs画面（実行履歴・監視）",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "tests_passed": 91,
+      "files_created": 9,
+      "files_modified": 2
+    },
+    "acceptance": {
+      "status": "partial",
+      "test_files_created": true,
+      "unit_tests_passed": 781,
+      "svelte_check_errors": 0,
+      "eslint_errors": 0,
+      "l3_tests_executed": false,
+      "reason": "myAgentDesk running from wrong worktree (feature-issue-292)"
+    },
+    "refactor": {
+      "status": "success",
+      "a11y_warnings_fixed": 2,
+      "unused_imports_removed": 1,
+      "tests_still_passing": 91
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "Run型定義の作成", "status": "completed"},
+      {"task_id": "1.2", "description": "RunRepositoryの実装", "status": "completed"},
+      {"task_id": "1.3", "description": "ポーリング設定の統合", "status": "completed"},
+      {"task_id": "2.1", "description": "Runs一覧のサーバーサイドデータ取得", "status": "completed"},
+      {"task_id": "2.2", "description": "Run詳細のサーバーサイドデータ取得", "status": "completed"},
+      {"task_id": "2.3", "description": "Run開始APIエンドポイント", "status": "completed"},
+      {"task_id": "2.4", "description": "ステータスポーリングAPIエンドポイント", "status": "completed"},
+      {"task_id": "2.5", "description": "Rerun APIエンドポイント", "status": "completed"},
+      {"task_id": "3.1", "description": "Runs一覧画面の実装", "status": "completed"},
+      {"task_id": "3.2", "description": "Run詳細画面の実装", "status": "completed"},
+      {"task_id": "3.3", "description": "ポーリングストアの実装", "status": "completed"},
+      {"task_id": "3.4", "description": "Run詳細画面へのポーリング統合", "status": "completed"},
+      {"task_id": "3.5", "description": "Run開始機能の実装", "status": "completed"},
+      {"task_id": "4.1", "description": "単体テスト - RunRepository", "status": "completed"},
+      {"task_id": "4.2", "description": "単体テスト - ポーリングストア", "status": "completed"},
+      {"task_id": "4.3", "description": "単体テスト - Run型・ヘルパー", "status": "completed"},
+      {"task_id": "4.4", "description": "APIエンドポイントテスト", "status": "completed"},
+      {"task_id": "5.1", "description": "L3受入テストスクリプト作成", "status": "completed"},
+      {"task_id": "5.2", "description": "L3受入テスト実行", "status": "blocked"}
+    ],
+    "deliverables_status": [
+      {"file": "src/lib/types/run.ts", "created": true},
+      {"file": "src/lib/config/polling.ts", "created": true},
+      {"file": "src/lib/server/repositories/run.ts", "created": true},
+      {"file": "src/routes/api/runs/+server.ts", "created": true},
+      {"file": "src/routes/api/runs/[runId]/status/+server.ts", "created": true},
+      {"file": "src/routes/api/runs/[runId]/rerun/+server.ts", "created": true},
+      {"file": "src/lib/stores/run-polling.svelte.ts", "created": true},
+      {"file": "tests/unit/types/run.test.ts", "created": true},
+      {"file": "tests/unit/repositories/run.test.ts", "created": true},
+      {"file": "tests/unit/stores/run-polling.test.ts", "created": true},
+      {"file": "tests/unit/routes/api/runs.test.ts", "created": true},
+      {"file": "tests/acceptance/test_issue_293_acceptance.py", "created": true},
+      {"file": "tests/e2e/runs.spec.ts", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "すべてのタスク完了", "verified": true, "note": "18/19 (L3実行以外)"},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": true, "value": "100%"},
+      {"criterion": "TypeScript型チェックエラーなし", "verified": true},
+      {"criterion": "ESLintエラーなし", "verified": true},
+      {"criterion": "L3受入テスト全パス", "verified": false, "note": "サービスが別worktreeで起動中"}
+    ]
+  },
+  "blockers": [
+    {
+      "type": "service_conflict",
+      "description": "myAgentDesk (port 5173) が feature-issue-292 worktree で起動中",
+      "impact": "L3受入テスト（pytest, Playwright）が実行できない",
+      "resolution": "正しいworktreeでmyAgentDeskを再起動"
+    }
+  ],
+  "next_steps": [
+    "正しいworktreeでmyAgentDeskを起動",
+    "L3受入テストを実行",
+    "PR作成"
+  ]
+}

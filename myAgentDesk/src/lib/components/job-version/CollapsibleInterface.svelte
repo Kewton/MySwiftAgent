@@ -51,7 +51,11 @@
 	const hasSchema = $derived(schema && Object.keys(schema).length > 0);
 </script>
 
-<div class="collapsible-interface" class:input={variant === 'input'} class:output={variant === 'output'}>
+<div
+	class="collapsible-interface"
+	class:input={variant === 'input'}
+	class:output={variant === 'output'}
+>
 	<button
 		type="button"
 		class="toggle-header"

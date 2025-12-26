@@ -8,7 +8,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { runRepository } from '$lib/server/repositories/run';
-import { jobVersionRepository } from '$lib/server/repositories/job-version';
 import type { RunDetail } from '$lib/types/run';
 
 export const load: PageServerLoad = async ({ params }) => {

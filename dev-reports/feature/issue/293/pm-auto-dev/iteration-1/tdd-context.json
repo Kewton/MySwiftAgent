@@ -1,0 +1,177 @@
+{
+  "issue_number": 293,
+  "issue_title": "[myAgentDesk] #279-9: Runs画面（実行履歴・監視）",
+  "target_project": "myAgentDesk",
+  "acceptance_criteria": [
+    "Run開始でRun(status=queued)が作成される",
+    "ステータスがqueued→running→success/failedと遷移する",
+    "プログレスがリアルタイム更新される",
+    "external_trace_idでLangfuseリンクが生成される",
+    "単体テストカバレッジ 90%以上",
+    "ポーリング停止（成功/失敗時）",
+    "正常系: Run開始→queued→running→successの遷移",
+    "正常系: 失敗時にRerunボタン表示",
+    "異常系: ポーリング中にコンポーネントアンマウント→メモリリークなし"
+  ],
+  "implementation_tasks": [
+    "Runs一覧画面（/workbenches/:workbenchId/runs）実装",
+    "Run詳細画面（/runs/:runId）実装",
+    "リアルタイムステータス更新（ポーリング5秒）実装",
+    "プログレスバー（tasksCompleted/totalTasks）実装",
+    "Run開始機能（JobVersionから）実装",
+    "Rerun機能（失敗時）実装"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Run型定義の作成",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/types/run.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "RunRepositoryの実装",
+      "estimated_hours": 2,
+      "deliverables": ["src/lib/server/repositories/run.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ポーリング設定の統合",
+      "estimated_hours": 0.5,
+      "deliverables": ["src/lib/config/polling.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.1",
+      "description": "Runs一覧のサーバーサイドデータ取得",
+      "estimated_hours": 1.5,
+      "deliverables": ["src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.server.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "Run詳細のサーバーサイドデータ取得",
+      "estimated_hours": 1,
+      "deliverables": ["src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.server.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "Run開始APIエンドポイント",
+      "estimated_hours": 2,
+      "deliverables": ["src/routes/api/runs/+server.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "ステータスポーリングAPIエンドポイント",
+      "estimated_hours": 1,
+      "deliverables": ["src/routes/api/runs/[runId]/status/+server.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.5",
+      "description": "Rerun APIエンドポイント",
+      "estimated_hours": 1,
+      "deliverables": ["src/routes/api/runs/[runId]/rerun/+server.ts"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "Runs一覧画面の実装",
+      "estimated_hours": 2,
+      "deliverables": ["src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "Run詳細画面の実装",
+      "estimated_hours": 2.5,
+      "deliverables": ["src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "ポーリングストアの実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["src/lib/stores/run-polling.svelte.ts"],
+      "dependencies": ["1.3", "2.4"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "Run詳細画面へのポーリング統合",
+      "estimated_hours": 1,
+      "deliverables": ["src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte"],
+      "dependencies": ["3.2", "3.3"]
+    },
+    {
+      "task_id": "3.5",
+      "description": "Run開始機能の実装",
+      "estimated_hours": 1,
+      "deliverables": ["src/lib/components/runs/StartRunButton.svelte"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "単体テスト - RunRepository",
+      "estimated_hours": 2,
+      "deliverables": ["tests/unit/repositories/run.test.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "単体テスト - ポーリングストア",
+      "estimated_hours": 1.5,
+      "deliverables": ["tests/unit/stores/run-polling.test.ts"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "単体テスト - Run型・ヘルパー",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/unit/types/run.test.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "APIエンドポイントテスト",
+      "estimated_hours": 2,
+      "deliverables": ["tests/unit/routes/api/runs.test.ts"],
+      "dependencies": ["2.3", "2.4", "2.5"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/lib/types/run.ts",
+    "src/lib/config/polling.ts",
+    "src/lib/server/repositories/run.ts",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.server.ts",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.server.ts",
+    "src/routes/api/runs/+server.ts",
+    "src/routes/api/runs/[runId]/status/+server.ts",
+    "src/routes/api/runs/[runId]/rerun/+server.ts",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+    "src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte",
+    "src/lib/stores/run-polling.svelte.ts",
+    "myAgentDesk/tests/unit/types/run.test.ts",
+    "myAgentDesk/tests/unit/repositories/run.test.ts",
+    "myAgentDesk/tests/unit/stores/run-polling.test.ts",
+    "myAgentDesk/tests/unit/routes/api/runs.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスク（Task 1.1 ~ Task 4.4）が完了",
+    "単体テストカバレッジ90%以上",
+    "TypeScript型チェックエラーなし（npm run check）",
+    "ESLintエラーなし（npm run lint）",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "technology_stack": [
+    "SvelteKit",
+    "Svelte 5 Runes",
+    "TypeScript",
+    "JobQueue API",
+    "ポーリングパターン（5秒間隔）"
+  ]
+}

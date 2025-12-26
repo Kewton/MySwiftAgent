@@ -35,6 +35,15 @@
 	}
 
 	/**
+	 * Handle keyboard events for modal (Escape to close)
+	 */
+	function handleModalKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			showNewRunModal = false;
+		}
+	}
+
+	/**
 	 * Handle creating a new run
 	 */
 	async function handleCreateRun() {
@@ -113,14 +122,27 @@
 
 <!-- New Run Modal -->
 {#if showNewRunModal}
-	<div class="modal-overlay" onclick={() => (showNewRunModal = false)} role="presentation">
-		<div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-			<h3>Start New Run</h3>
+	<div
+		class="modal-overlay"
+		onclick={() => (showNewRunModal = false)}
+		onkeydown={handleModalKeydown}
+		role="presentation"
+	>
+		<div
+			class="modal"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="modal-title"
+			tabindex="0"
+		>
+			<h3 id="modal-title">Start New Run</h3>
 			<div class="form-group">
 				<label for="jobVersion">Select Job Version</label>
 				<select id="jobVersion" bind:value={selectedJobVersionId}>
 					<option value="">-- Select a version --</option>
-					{#each data.activeJobVersions as jv}
+					{#each data.activeJobVersions as jv (jv.id)}
 						<option value={jv.id}>{jv.versionLabel} ({jv.status})</option>
 					{/each}
 				</select>
