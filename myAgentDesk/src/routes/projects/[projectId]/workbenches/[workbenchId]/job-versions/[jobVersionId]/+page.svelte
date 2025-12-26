@@ -8,7 +8,7 @@
 	import { page } from '$app/stores';
 	import type { PageData } from './$types';
 	import TaskAccordion from '$lib/components/job-version/TaskAccordion.svelte';
-	import InterfaceViewer from '$lib/components/job-version/InterfaceViewer.svelte';
+	import CollapsibleInterface from '$lib/components/job-version/CollapsibleInterface.svelte';
 	import WorkflowViewer from '$lib/components/job-version/WorkflowViewer.svelte';
 	import { formatDate, getStatusConfig, getLangfuseUrl, canStartRun } from '$lib/utils';
 
@@ -18,6 +18,26 @@
 	const workbenchId = $derived($page.params.workbenchId);
 
 	const jv = $derived(data.jobVersion);
+
+	// Get input interface for first task (job input)
+	const jobInputInterface = $derived(
+		jv.tasks.length > 0
+			? (jv.tasks[0].inputInterface ?? null)
+			: jv.interfaceDefinitions.inputSchema
+	);
+
+	// Create a map of task_name to workflow for easy lookup
+	// Note: task_id in workflows is TaskMaster ID (tm_xxx), not task_breakdown ID (task_xxx)
+	// So we match by task_name instead
+	const workflowsByTaskName = $derived(
+		jv.workflows.reduce(
+			(acc, wf) => {
+				acc[wf.task_name] = wf;
+				return acc;
+			},
+			{} as Record<string, (typeof jv.workflows)[0]>
+		)
+	);
 </script>
 
 <div class="jv-detail-page">
@@ -66,7 +86,7 @@
 		</div>
 	</div>
 
-	<!-- Tasks Section -->
+	<!-- Task Breakdown with Interface Flow (Issue #310) -->
 	<section class="content-section">
 		<h3>
 			<span class="section-icon">1</span>
@@ -74,9 +94,30 @@
 			<span class="task-count">{jv.tasks.length} tasks</span>
 		</h3>
 		{#if jv.tasks.length > 0}
-			<div class="tasks-list">
+			<div class="task-flow">
+				<!-- Job Input Interface -->
+				<CollapsibleInterface
+					schema={jobInputInterface}
+					title="Job Input Interface"
+					variant="input"
+					collapsed={true}
+				/>
+
 				{#each jv.tasks as task, index (task.task_id)}
-					<TaskAccordion {task} {index} />
+					<!-- Task -->
+					<TaskAccordion {task} {index} workflow={workflowsByTaskName[task.name]} />
+
+					<!-- Task Output Interface (becomes next task's input) -->
+					{#if task.outputInterface}
+						<CollapsibleInterface
+							schema={task.outputInterface}
+							title={index < jv.tasks.length - 1
+								? `Task ${index + 1} → Task ${index + 2}`
+								: 'Job Output Interface'}
+							variant={index < jv.tasks.length - 1 ? 'output' : 'input'}
+							collapsed={true}
+						/>
+					{/if}
 				{/each}
 			</div>
 		{:else}
@@ -86,22 +127,10 @@
 		{/if}
 	</section>
 
-	<!-- Interface Definitions Section -->
-	<section class="content-section">
-		<h3>
-			<span class="section-icon">2</span>
-			Interface Definitions
-		</h3>
-		<div class="interface-grid">
-			<InterfaceViewer schema={jv.interfaceDefinitions.inputSchema} title="Input Schema" />
-			<InterfaceViewer schema={jv.interfaceDefinitions.outputSchema} title="Output Schema" />
-		</div>
-	</section>
-
 	<!-- Workflows Section -->
 	<section class="content-section">
 		<h3>
-			<span class="section-icon">3</span>
+			<span class="section-icon">2</span>
 			Generated Workflows
 			<span class="workflow-count">{jv.workflows.length} workflows</span>
 		</h3>
@@ -331,16 +360,10 @@
 		color: #64748b;
 	}
 
-	.tasks-list {
+	.task-flow {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.interface-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-		gap: 1rem;
+		gap: 0.5rem;
 	}
 
 	.workflows-list {

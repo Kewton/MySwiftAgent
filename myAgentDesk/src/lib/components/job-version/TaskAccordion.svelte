@@ -11,7 +11,8 @@
   - expanded: Optional initial expanded state (default: false)
 -->
 <script lang="ts">
-	import { formatJson } from '$lib/utils';
+	import { formatJson, getLangfuseUrl } from '$lib/utils';
+	import WorkflowViewer from './WorkflowViewer.svelte';
 
 	interface TaskInterface {
 		type?: string;
@@ -29,13 +30,29 @@
 		outputInterface?: TaskInterface | null;
 	}
 
+	interface WorkflowStatus {
+		task_id: string;
+		task_name: string;
+		status: string;
+		workflow_name: string | null;
+		generation_time_ms: number | null;
+		langfuse_trace_id: string | null;
+		summary?: {
+			yaml_preview?: string;
+			yaml_content?: string;
+			sample_input?: Record<string, unknown>;
+			test_result?: Record<string, unknown>;
+		} | null;
+	}
+
 	interface Props {
 		task: Task;
 		index: number;
 		expanded?: boolean;
+		workflow?: WorkflowStatus | null;
 	}
 
-	let { task, index, expanded = false }: Props = $props();
+	let { task, index, expanded = false, workflow = null }: Props = $props();
 
 	// Local toggle state, managed separately for user interaction
 	let localExpanded = $state<boolean | null>(null);
@@ -77,27 +94,73 @@
 	</div>
 
 	{#if isExpanded}
-		<div class="task-details" role="region" aria-label="Task interface details">
-			{#if task.inputInterface}
-				<div class="interface-section">
-					<h4>Input Interface</h4>
-					<pre class="json-display"><code class="language-json"
-							>{formatJson(task.inputInterface)}</code
-						></pre>
+		<div class="task-details" role="region" aria-label="Task details">
+			<!-- Workflow Section -->
+			{#if workflow}
+				<div class="workflow-section">
+					<div class="workflow-header">
+						<h4>Workflow</h4>
+						<span
+							class="workflow-status"
+							class:success={workflow.status === 'success'}
+							class:failed={workflow.status === 'failed'}
+							class:pending={workflow.status === 'pending'}
+						>
+							{workflow.status}
+						</span>
+						{#if workflow.generation_time_ms}
+							<span class="workflow-time">
+								{(workflow.generation_time_ms / 1000).toFixed(1)}s
+							</span>
+						{/if}
+						{#if workflow.langfuse_trace_id}
+							<a
+								href={getLangfuseUrl(workflow.langfuse_trace_id)}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="trace-link"
+							>
+								Trace
+							</a>
+						{/if}
+					</div>
+					{#if workflow.summary?.yaml_content}
+						<WorkflowViewer
+							yaml={workflow.summary.yaml_content}
+							title={workflow.workflow_name ? `${workflow.workflow_name}.yaml` : 'Workflow YAML'}
+							collapsible={false}
+							collapsed={false}
+							showLineNumbers={true}
+						/>
+					{:else}
+						<p class="no-workflow">Workflow YAML not available.</p>
+					{/if}
 				</div>
+			{:else}
+				<p class="no-workflow">No workflow generated for this task.</p>
 			{/if}
 
-			{#if task.outputInterface}
-				<div class="interface-section">
-					<h4>Output Interface</h4>
-					<pre class="json-display"><code class="language-json"
-							>{formatJson(task.outputInterface)}</code
-						></pre>
-				</div>
-			{/if}
-
-			{#if !task.inputInterface && !task.outputInterface}
-				<p class="no-interfaces">No interface definitions available.</p>
+			<!-- Interface Section (hidden by default, shown for debugging) -->
+			{#if task.inputInterface || task.outputInterface}
+				<details class="interface-details">
+					<summary>Interface Schemas</summary>
+					{#if task.inputInterface}
+						<div class="interface-section">
+							<h4>Input Interface</h4>
+							<pre class="json-display"><code class="language-json"
+									>{formatJson(task.inputInterface)}</code
+								></pre>
+						</div>
+					{/if}
+					{#if task.outputInterface}
+						<div class="interface-section">
+							<h4>Output Interface</h4>
+							<pre class="json-display"><code class="language-json"
+									>{formatJson(task.outputInterface)}</code
+								></pre>
+						</div>
+					{/if}
+				</details>
 			{/if}
 		</div>
 	{/if}
@@ -237,5 +300,109 @@
 		color: #94a3b8;
 		font-style: italic;
 		margin: 0;
+	}
+
+	.workflow-section {
+		margin-bottom: 1rem;
+	}
+
+	.workflow-header {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.workflow-header h4 {
+		margin: 0;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #334155;
+	}
+
+	.workflow-status {
+		padding: 0.125rem 0.5rem;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		border-radius: 0.25rem;
+		text-transform: uppercase;
+	}
+
+	.workflow-status.success {
+		background: #dcfce7;
+		color: #166534;
+	}
+
+	.workflow-status.failed {
+		background: #fee2e2;
+		color: #dc2626;
+	}
+
+	.workflow-status.pending {
+		background: #fef3c7;
+		color: #92400e;
+	}
+
+	.workflow-time {
+		font-size: 0.75rem;
+		color: #64748b;
+	}
+
+	.trace-link {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.125rem 0.375rem;
+		background: #f0fdf4;
+		border: 1px solid #86efac;
+		border-radius: 0.25rem;
+		font-size: 0.625rem;
+		font-weight: 500;
+		color: #15803d;
+		text-decoration: none;
+	}
+
+	.trace-link:hover {
+		background: #dcfce7;
+	}
+
+	.no-workflow {
+		font-size: 0.8125rem;
+		color: #94a3b8;
+		font-style: italic;
+		margin: 0;
+		padding: 1rem;
+		background: #f8fafc;
+		border: 1px dashed #e2e8f0;
+		border-radius: 0.375rem;
+		text-align: center;
+	}
+
+	.interface-details {
+		margin-top: 1rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.375rem;
+		overflow: hidden;
+	}
+
+	.interface-details summary {
+		padding: 0.5rem 0.75rem;
+		background: #f8fafc;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: #64748b;
+		cursor: pointer;
+	}
+
+	.interface-details summary:hover {
+		background: #f1f5f9;
+		color: #334155;
+	}
+
+	.interface-details[open] summary {
+		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.interface-details .interface-section {
+		padding: 0.75rem;
 	}
 </style>
