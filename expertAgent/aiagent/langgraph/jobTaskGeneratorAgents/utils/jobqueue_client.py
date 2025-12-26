@@ -52,7 +52,7 @@ class JobqueueClient:
             timeout: Request timeout in seconds
         """
         self.base_url = (
-            base_url or os.getenv("JOBQUEUE_API_URL") or "http://localhost:8101"
+            base_url or os.getenv("JOBQUEUE_API_URL") or "http://localhost:8001"
         )
         self.timeout = timeout
 

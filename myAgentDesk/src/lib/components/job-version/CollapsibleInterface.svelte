@@ -23,11 +23,15 @@
 
 	let { schema, title, collapsed = true, variant = 'output' }: Props = $props();
 
-	let isCollapsed = $state(collapsed);
+	// Local toggle state, managed separately for user interaction
+	let localCollapsed = $state<boolean | null>(null);
 	let copyFeedback = $state(false);
 
+	// Effective collapsed state: use local state if set, otherwise use prop
+	const isCollapsed = $derived(localCollapsed !== null ? localCollapsed : collapsed);
+
 	function toggle() {
-		isCollapsed = !isCollapsed;
+		localCollapsed = !isCollapsed;
 	}
 
 	async function copyToClipboard() {

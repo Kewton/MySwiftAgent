@@ -295,13 +295,6 @@
 		color: #334155;
 	}
 
-	.no-interfaces {
-		font-size: 0.8125rem;
-		color: #94a3b8;
-		font-style: italic;
-		margin: 0;
-	}
-
 	.workflow-section {
 		margin-bottom: 1rem;
 	}

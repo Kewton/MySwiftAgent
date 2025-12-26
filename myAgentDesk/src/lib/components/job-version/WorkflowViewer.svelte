@@ -188,10 +188,6 @@
 		user-select: none;
 	}
 
-	.line {
-		/* Line content - inline display */
-	}
-
 	/* YAML syntax highlighting */
 	.yaml-code :global(.yaml-key) {
 		color: #38bdf8;
