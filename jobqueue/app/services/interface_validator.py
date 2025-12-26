@@ -48,6 +48,12 @@ def _validate_regex_patterns_in_schema(schema: dict[str, Any]) -> None:
     This function walks through the schema and validates all 'pattern' fields
     using the regex library to ensure Unicode property escapes are supported.
 
+    Note: JSON Schema Draft 7 specifies that 'pattern' keyword is only valid
+    for type: string schemas. However, 'pattern' can also be a property name
+    in an object schema. This function distinguishes between the two cases
+    by checking if the 'pattern' value is a string (regex pattern) or a dict
+    (property definition).
+
     Args:
         schema: JSON Schema to validate
 
@@ -60,13 +66,16 @@ def _validate_regex_patterns_in_schema(schema: dict[str, Any]) -> None:
     # Check if current level has a pattern field
     if "pattern" in schema:
         pattern = schema["pattern"]
-        try:
-            regex.compile(pattern)
-        except regex.error as e:
-            raise InterfaceValidationError(
-                "Invalid regex pattern in schema",
-                [f"Pattern '{pattern}' is invalid: {e}"],
-            ) from e
+        # Type check: only validate if pattern is a string (actual regex pattern)
+        # If pattern is a dict, it's a property definition, not a regex pattern
+        if isinstance(pattern, str):
+            try:
+                regex.compile(pattern)
+            except regex.error as e:
+                raise InterfaceValidationError(
+                    "Invalid regex pattern in schema",
+                    [f"Pattern '{pattern}' is invalid: {e}"],
+                ) from e
 
     # Recursively check nested objects
     for value in schema.values():

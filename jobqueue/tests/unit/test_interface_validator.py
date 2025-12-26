@@ -409,3 +409,97 @@ class TestInterfaceValidator:
         # Output accepts string or integer, input expects string -> compatible
         assert is_compatible is True
         assert len(missing) == 0
+
+
+class TestPatternPropertyName:
+    """Test cases for Issue #312: pattern as property name.
+
+    These tests verify that the schema validator correctly distinguishes between:
+    - 'pattern' as a JSON Schema keyword (regex pattern for string validation)
+    - 'pattern' as a property name in an object schema
+
+    See: https://github.com/Kewton/MySwiftAgent/issues/312
+    """
+
+    def test_pattern_as_property_name_should_pass(self) -> None:
+        """Test that a schema with 'pattern' as a property name is validated successfully.
+
+        This is the main bug fix test for Issue #312. Previously, this would cause
+        TypeError: unhashable type: 'dict' because the validator tried to compile
+        a dict as a regex pattern.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "URL pattern for matching",
+                }
+            },
+        }
+        # Should not raise - 'pattern' here is a property name, not a regex pattern
+        InterfaceValidator.validate_json_schema_v7(schema)
+
+    def test_pattern_as_nested_property_name_should_pass(self) -> None:
+        """Test that nested 'pattern' property names are validated successfully."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "Matching pattern",
+                        }
+                    },
+                }
+            },
+        }
+        InterfaceValidator.validate_json_schema_v7(schema)
+
+    def test_valid_regex_pattern_with_type_string_should_pass(self) -> None:
+        """Test that valid regex patterns in type:string schemas are validated."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "pattern": "^https?://.+",
+                }
+            },
+        }
+        InterfaceValidator.validate_json_schema_v7(schema)
+
+    def test_invalid_regex_pattern_should_raise_error(self) -> None:
+        """Test that invalid regex patterns raise InterfaceValidationError."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "pattern": "[unclosed",  # Invalid regex - unclosed bracket
+                }
+            },
+        }
+        with pytest.raises(InterfaceValidationError) as exc_info:
+            InterfaceValidator.validate_json_schema_v7(schema)
+        assert "Invalid regex pattern" in str(exc_info.value)
+
+    def test_pattern_property_with_regex_pattern_sibling(self) -> None:
+        """Test schema where 'pattern' property has a regex pattern constraint.
+
+        This tests a complex case where 'pattern' is both a property name AND
+        has a 'pattern' keyword as a sibling for regex validation.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "pattern": "^[a-z]+$",  # Regex pattern for the 'pattern' property
+                    "description": "Pattern must be lowercase letters only",
+                }
+            },
+        }
+        InterfaceValidator.validate_json_schema_v7(schema)

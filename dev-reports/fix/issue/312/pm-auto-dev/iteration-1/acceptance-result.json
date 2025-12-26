@@ -1,0 +1,97 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "jobqueue",
+  "playwright_required": false,
+  "execution_timestamp": "2025-12-26T13:48:53+09:00",
+  "service_health": {
+    "jobqueue": {
+      "status": "healthy",
+      "url": "http://localhost:8001"
+    },
+    "expertAgent": {
+      "status": "healthy",
+      "url": "http://localhost:8004"
+    }
+  },
+  "test_script": "tests/acceptance/test_issue_312_acceptance.sh",
+  "test_results": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "tests": [
+      {
+        "name": "pattern_as_property_name",
+        "status": "passed",
+        "expected_http_status": 201,
+        "actual_http_status": 201,
+        "description": "Main bug fix test - pattern as property name"
+      },
+      {
+        "name": "nested_pattern_property",
+        "status": "passed",
+        "expected_http_status": 201,
+        "actual_http_status": 201,
+        "description": "Nested pattern property test"
+      },
+      {
+        "name": "valid_regex_pattern",
+        "status": "passed",
+        "expected_http_status": 201,
+        "actual_http_status": 201,
+        "description": "Regression test - valid regex pattern"
+      },
+      {
+        "name": "pattern_property_with_regex",
+        "status": "passed",
+        "expected_http_status": 201,
+        "actual_http_status": 201,
+        "description": "Complex case - pattern property with regex pattern sibling"
+      },
+      {
+        "name": "invalid_regex_pattern",
+        "status": "passed",
+        "expected_http_status": 400,
+        "actual_http_status": 400,
+        "description": "Error case - invalid regex pattern returns 400"
+      },
+      {
+        "name": "expertAgent_availability",
+        "status": "passed",
+        "description": "expertAgent health check (E2E test skipped - requires LLM API key)"
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "patternという名前のプロパティを含むスキーマが正常に検証される",
+      "verified": true,
+      "verification_method": "test_pattern_as_property_name"
+    },
+    {
+      "criterion": "JSON Schema仕様に準拠したpatternキーワードの検証が行われる",
+      "verified": true,
+      "verification_method": "test_valid_regex_pattern, test_invalid_regex_pattern"
+    },
+    {
+      "criterion": "TypeErrorが発生しない",
+      "verified": true,
+      "verification_method": "All tests returned expected HTTP status (no 500 error)"
+    }
+  ],
+  "evidence_files": [
+    "/tmp/issue312_evidence_1766724533/pattern_as_property_name.json",
+    "/tmp/issue312_evidence_1766724533/nested_pattern_property.json",
+    "/tmp/issue312_evidence_1766724533/valid_regex_pattern.json",
+    "/tmp/issue312_evidence_1766724533/pattern_property_with_regex.json",
+    "/tmp/issue312_evidence_1766724533/invalid_regex_pattern.json"
+  ],
+  "cleanup_performed": true,
+  "resources_cleaned": [
+    "if_01KDCFSZFJAT3NY8NFNXRECXYP",
+    "if_01KDCFSZGS60SDPYWFKG50G85P",
+    "if_01KDCFSZHNHK2F5GZ8MXMNCCN9",
+    "if_01KDCFSZJJN7NAD5KV64SC317D"
+  ]
+}
