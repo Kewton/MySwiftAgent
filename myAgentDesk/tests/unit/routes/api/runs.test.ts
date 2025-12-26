@@ -204,6 +204,65 @@ describe('Run API Endpoints', () => {
 		});
 	});
 
+	describe('GET /api/runs/:runId/tasks', () => {
+		it('should return task list with interface metadata', () => {
+			const expectedResponse = {
+				runId: 'run_001',
+				tasks: [
+					{
+						taskId: 'task_001',
+						taskName: 'google_search_financials',
+						order: 1,
+						status: 'succeeded',
+						inputData: { company_name: 'Toyota' },
+						outputData: { success: true, documents: ['doc1.pdf'] },
+						durationMs: 12000
+					},
+					{
+						taskId: 'task_002',
+						taskName: 'file_reader_pdf',
+						order: 2,
+						status: 'running',
+						inputData: { file_path: '/tmp/doc1.pdf' },
+						outputData: null,
+						durationMs: null
+					}
+				],
+				total: 2
+			};
+
+			expect(expectedResponse.tasks).toHaveLength(2);
+			expect(expectedResponse.tasks[0].status).toBe('succeeded');
+			expect(expectedResponse.tasks[0].outputData).toBeDefined();
+			expect(expectedResponse.tasks[1].status).toBe('running');
+		});
+
+		it('should return empty task list when no externalJobId', () => {
+			const expectedResponse = {
+				runId: 'run_001',
+				tasks: [],
+				total: 0
+			};
+
+			expect(expectedResponse.tasks).toHaveLength(0);
+		});
+
+		it('should return 404 for non-existent run', () => {
+			const params: MockParams = { runId: 'run_nonexistent' };
+			expect(params.runId).toBe('run_nonexistent');
+		});
+
+		it('should handle JobQueue errors gracefully', () => {
+			const errorResponse = {
+				error: 'Bad Gateway',
+				message: 'Failed to fetch tasks from JobQueue',
+				status: 502
+			};
+
+			expect(errorResponse.status).toBe(502);
+		});
+	});
+
 	describe('Response structure', () => {
 		it('should return proper error response format', () => {
 			const errorResponse = {

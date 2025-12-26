@@ -2,7 +2,7 @@
   Run Detail Page (/projects/:projectId/workbenches/:workbenchId/runs/:runId)
   Issue #293: Runs Screen (Execution History / Monitoring)
 
-  Shows run details, progress, and trace information with real-time updates.
+  Shows run details, progress, task output, and trace information with real-time updates.
 -->
 <script lang="ts">
 	import { page } from '$app/stores';
@@ -15,9 +15,16 @@
 		isTerminalStatus
 	} from '$lib/types/run';
 	import { createRunPollingStore } from '$lib/stores/run-polling.svelte';
+	import { TaskProgressList } from '$lib/components/runs';
+	import type { TaskProgressItem } from '$lib/utils/interface-schema';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	// Task progress state
+	let tasks = $state<TaskProgressItem[]>([]);
+	let tasksLoading = $state(false);
+	let tasksError = $state<string | null>(null);
 
 	const projectId = $derived($page.params.projectId);
 	const workbenchId = $derived($page.params.workbenchId);
@@ -42,6 +49,68 @@
 
 	// State for rerun
 	let isRerunning = $state(false);
+
+	// Task polling interval
+	let taskPollingInterval: ReturnType<typeof setInterval> | null = null;
+
+	/**
+	 * Fetch tasks for this run
+	 */
+	async function fetchTasks() {
+		if (!data.run.externalJobId) {
+			tasks = [];
+			return;
+		}
+
+		try {
+			tasksLoading = tasks.length === 0; // Only show loading on initial fetch
+			const response = await fetch(`/api/runs/${data.run.id}/tasks`);
+
+			if (response.ok) {
+				const result = await response.json();
+				tasks = result.tasks;
+				tasksError = null;
+			} else {
+				const errorData = await response.json();
+				tasksError = errorData.message || 'Failed to fetch tasks';
+			}
+		} catch (error) {
+			tasksError = 'Failed to fetch tasks';
+			console.error('Error fetching tasks:', error);
+		} finally {
+			tasksLoading = false;
+		}
+	}
+
+	/**
+	 * Start polling for task updates
+	 */
+	function startTaskPolling() {
+		if (taskPollingInterval) return;
+
+		// Fetch immediately
+		fetchTasks();
+
+		// Then poll every 3 seconds while run is active
+		taskPollingInterval = setInterval(() => {
+			if (!isTerminalStatus(currentStatus)) {
+				fetchTasks();
+			} else {
+				// Stop polling when run completes
+				stopTaskPolling();
+			}
+		}, 3000);
+	}
+
+	/**
+	 * Stop task polling
+	 */
+	function stopTaskPolling() {
+		if (taskPollingInterval) {
+			clearInterval(taskPollingInterval);
+			taskPollingInterval = null;
+		}
+	}
 
 	/**
 	 * Format date for display
@@ -86,11 +155,14 @@
 		if (!isTerminalStatus(data.run.status)) {
 			pollingStore.startPolling(data.run.id);
 		}
+		// Always start task polling to fetch initial task data
+		startTaskPolling();
 	});
 
 	// Cleanup on unmount
 	onDestroy(() => {
 		pollingStore.destroy();
+		stopTaskPolling();
 	});
 </script>
 
@@ -206,6 +278,14 @@
 				<div class="result-summary">
 					{data.run.resultSummary}
 				</div>
+			</div>
+		{/if}
+
+		<!-- Task Progress Section -->
+		{#if data.run.externalJobId || tasks.length > 0}
+			<div class="content-section tasks-section">
+				<h3>Task Progress</h3>
+				<TaskProgressList {tasks} loading={tasksLoading} error={tasksError} />
 			</div>
 		{/if}
 	</div>
@@ -420,5 +500,13 @@
 		font-size: 0.875rem;
 		color: #1e293b;
 		line-height: 1.5;
+	}
+
+	.tasks-section {
+		background: white;
+	}
+
+	.tasks-section h3 {
+		margin-bottom: 1rem;
 	}
 </style>
