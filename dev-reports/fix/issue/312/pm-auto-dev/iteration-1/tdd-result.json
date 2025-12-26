@@ -1,0 +1,34 @@
+{
+  "status": "success",
+  "coverage": 83.0,
+  "unit_tests": {
+    "total": 33,
+    "passed": 33,
+    "failed": 0,
+    "skipped": 2
+  },
+  "issue_312_tests": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "tests": [
+      "test_pattern_as_property_name_should_pass",
+      "test_pattern_as_nested_property_name_should_pass",
+      "test_valid_regex_pattern_with_type_string_should_pass",
+      "test_invalid_regex_pattern_should_raise_error",
+      "test_pattern_property_with_regex_pattern_sibling"
+    ]
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "modified_files": [
+    "jobqueue/app/services/interface_validator.py",
+    "jobqueue/tests/unit/test_interface_validator.py"
+  ],
+  "changes_summary": {
+    "function_modified": "_validate_regex_patterns_in_schema",
+    "change_description": "Added isinstance(pattern, str) check before regex.compile() to distinguish between JSON Schema pattern keyword (string) and pattern property name (dict)"
+  }
+}
