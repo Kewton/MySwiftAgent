@@ -678,3 +678,349 @@ class TestInterfaceDefinitionNode:
             # Check that the reference exists in $defs
             ref_name = items_schema["$ref"].split("/")[-1]
             assert ref_name in schema.get("$defs", {})
+
+
+@pytest.mark.unit
+class TestNormalizeJsonSchemaProperties:
+    """Unit tests for normalize_json_schema_properties function.
+
+    Issue #310: Fix LLM-generated shorthand JSON Schema formats.
+    """
+
+    def test_normalize_shorthand_string_type(self):
+        """Test normalizing ["string"] → {"type": "string"}."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": ["string"],
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        assert result["properties"]["name"] == {"type": "string"}
+
+    def test_normalize_shorthand_boolean_type(self):
+        """Test normalizing ["boolean"] → {"type": "boolean"}."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "active": ["boolean"],
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        assert result["properties"]["active"] == {"type": "boolean"}
+
+    def test_normalize_multiple_shorthand_types(self):
+        """Test normalizing multiple shorthand types in one schema."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "target_directory": ["string"],
+                "recursive": ["boolean"],
+                "allowed_extensions": ["array"],
+                "max_depth": ["integer"],
+                "config": ["object"],
+            },
+            "required": ["target_directory"],
+            "additionalProperties": False,
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        assert result["properties"]["target_directory"] == {"type": "string"}
+        assert result["properties"]["recursive"] == {"type": "boolean"}
+        assert result["properties"]["allowed_extensions"] == {"type": "array"}
+        assert result["properties"]["max_depth"] == {"type": "integer"}
+        assert result["properties"]["config"] == {"type": "object"}
+        # Non-properties fields should be preserved
+        assert result["required"] == ["target_directory"]
+        assert result["additionalProperties"] is False
+
+    def test_normalize_preserves_valid_schema(self):
+        """Test that already-valid JSON Schema is preserved unchanged."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query",
+                    "minLength": 1,
+                },
+                "max_results": {
+                    "type": "integer",
+                    "default": 10,
+                },
+            },
+            "required": ["query"],
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Valid schema should be unchanged
+        assert result == schema
+
+    def test_normalize_nested_properties(self):
+        """Test normalizing shorthand types in nested objects."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": ["string"],
+                            "count": ["integer"],
+                        },
+                    },
+                },
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Check nested properties are normalized
+        nested_props = result["properties"]["items"]["items"]["properties"]
+        assert nested_props["id"] == {"type": "string"}
+        assert nested_props["count"] == {"type": "integer"}
+
+    def test_normalize_handles_empty_schema(self):
+        """Test that empty schema is handled gracefully."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema: dict = {}
+        result = normalize_json_schema_properties(schema)
+        assert result == {}
+
+    def test_normalize_handles_non_dict_input(self):
+        """Test that non-dict input returns input unchanged."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        # Test with non-dict inputs
+        assert normalize_json_schema_properties("string") == "string"  # type: ignore
+        assert normalize_json_schema_properties(123) == 123  # type: ignore
+        assert normalize_json_schema_properties(None) is None  # type: ignore
+
+    def test_normalize_real_world_llm_output(self):
+        """Test normalizing a real-world LLM-generated schema (Issue #310).
+
+        This schema was actually generated by gemini-3-flash-preview and
+        caused the error: 'boolean' is not of type 'object', 'boolean'
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        # Real schema generated by LLM that caused validation failure
+        schema = {
+            "type": "object",
+            "properties": {
+                "target_directory": ["string"],
+                "recursive": ["boolean"],
+                "allowed_extensions": ["array"],
+            },
+            "required": ["target_directory"],
+            "additionalProperties": False,
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Verify the normalized schema is valid JSON Schema format
+        assert result["type"] == "object"
+        assert result["properties"]["target_directory"] == {"type": "string"}
+        assert result["properties"]["recursive"] == {"type": "boolean"}
+        assert result["properties"]["allowed_extensions"] == {"type": "array"}
+        assert result["required"] == ["target_directory"]
+        assert result["additionalProperties"] is False
+
+    def test_normalize_bare_string_types(self):
+        """Test normalizing bare string type names (Issue #310 follow-up).
+
+        This schema pattern was also generated by gemini-3-flash-preview:
+        {"properties": {"name": "string"}} instead of {"properties": {"name": {"type": "string"}}}
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        # Real schema generated by LLM with bare string types
+        schema = {
+            "type": "object",
+            "properties": {
+                "directory_path": "string",
+                "recursive": "boolean",
+                "search_pattern": "string",
+            },
+            "required": ["directory_path"],
+            "additionalProperties": False,
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Verify the normalized schema is valid JSON Schema format
+        assert result["type"] == "object"
+        assert result["properties"]["directory_path"] == {"type": "string"}
+        assert result["properties"]["recursive"] == {"type": "boolean"}
+        assert result["properties"]["search_pattern"] == {"type": "string"}
+        assert result["required"] == ["directory_path"]
+        assert result["additionalProperties"] is False
+
+    def test_normalize_mixed_formats(self):
+        """Test normalizing a mix of shorthand and valid formats."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                # Bare string format
+                "name": "string",
+                # Array shorthand format
+                "active": ["boolean"],
+                # Already valid format
+                "count": {"type": "integer", "minimum": 0},
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        assert result["properties"]["name"] == {"type": "string"}
+        assert result["properties"]["active"] == {"type": "boolean"}
+        assert result["properties"]["count"] == {"type": "integer", "minimum": 0}
+
+    def test_normalize_null_property_values(self):
+        """Test normalizing null property values (Issue #310 follow-up).
+
+        LLM sometimes generates null instead of a schema definition.
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "directory_path": None,
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Null values should be normalized to {"type": "string"} as fallback
+        assert result["properties"]["directory_path"] == {"type": "string"}
+
+    def test_normalize_description_string_as_property(self):
+        """Test normalizing description strings placed as property values (Issue #310 follow-up).
+
+        LLM sometimes puts description text directly as property value instead of
+        wrapping it in a proper schema object.
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "user_request": {"type": "string"},
+                "description": "ユーザーからの検索要求テキスト",
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # The description string should be converted to a valid schema
+        assert result["properties"]["user_request"] == {"type": "string"}
+        assert result["properties"]["description"] == {
+            "type": "string",
+            "description": "ユーザーからの検索要求テキスト",
+        }
+
+    def test_normalize_numeric_property_values(self):
+        """Test normalizing numeric property values (Issue #310 follow-up).
+
+        LLM sometimes places numeric values (like minLength: 1) directly inside
+        properties instead of wrapping them in proper schema objects.
+        Error: 1 is not of type 'object', 'boolean'
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "count": 1,  # Numeric value directly as property (LLM error)
+                "ratio": 3.14,  # Float value directly as property
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Numeric values should be converted to proper schema objects
+        assert result["properties"]["name"] == {"type": "string"}
+        assert result["properties"]["count"] == {"type": "integer", "default": 1}
+        assert result["properties"]["ratio"] == {"type": "number", "default": 3.14}
+
+    def test_normalize_malformed_enum_pattern(self):
+        """Test normalizing malformed enum pattern (Issue #310 follow-up).
+
+        LLM sometimes generates enum values as an array of objects like:
+        [{'type': 'string', 'description': 'NEUTRAL'}, {'type': 'string', 'description': 'MALE'}]
+        Instead of the correct JSON Schema format:
+        {'type': 'string', 'enum': ['NEUTRAL', 'MALE']}
+        Error: [...] is not of type 'object', 'boolean'
+        """
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.interface_definition import (
+            normalize_json_schema_properties,
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "gender": [
+                    {"type": "string", "description": "NEUTRAL"},
+                    {"type": "string", "description": "MALE"},
+                    {"type": "string", "description": "FEMALE"},
+                ],
+            },
+        }
+
+        result = normalize_json_schema_properties(schema)
+
+        # Malformed enum should be converted to proper enum format
+        assert result["properties"]["name"] == {"type": "string"}
+        assert result["properties"]["gender"] == {
+            "type": "string",
+            "enum": ["NEUTRAL", "MALE", "FEMALE"],
+        }

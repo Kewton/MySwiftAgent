@@ -85,6 +85,11 @@ class JobGeneratorResponse(BaseModel):
         default=None,
         description="Task breakdown result from requirement analysis",
     )
+    # Issue #310: Added interface_definitions field
+    interface_definitions: dict[str, dict[str, Any]] | None = Field(
+        default=None,
+        description="Interface definitions for each task (input/output schemas)",
+    )
     evaluation_result: dict[str, Any] | None = Field(
         default=None,
         description="Evaluation result (quality, feasibility, etc.)",

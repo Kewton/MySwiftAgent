@@ -192,6 +192,7 @@ async def generate_job_and_tasks(
             job_id=job_id,
             job_master_id=None,
             task_breakdown=None,
+            interface_definitions=None,  # Issue #310
             evaluation_result=None,
             infeasible_tasks=[],
             alternative_proposals=[],
@@ -320,6 +321,9 @@ def _build_response_from_state(
     # Extract task breakdown
     task_breakdown = state.get("task_breakdown")
 
+    # Issue #310: Extract interface definitions
+    interface_definitions = state.get("interface_definitions")
+
     # Extract evaluation result
     evaluation_result = state.get("evaluation_result")
 
@@ -436,6 +440,7 @@ def _build_response_from_state(
         job_id=job_id,
         job_master_id=job_master_id,
         task_breakdown=task_breakdown,
+        interface_definitions=interface_definitions,  # Issue #310
         evaluation_result=evaluation_result,
         infeasible_tasks=infeasible_tasks,
         alternative_proposals=alternative_proposals,

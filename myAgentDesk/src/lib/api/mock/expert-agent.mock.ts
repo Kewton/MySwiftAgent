@@ -90,8 +90,28 @@ const mockWorkflowStatuses: WorkflowStatusItem[] = [
 ];
 
 /**
+ * Mock interface definitions
+ * Issue #310: Interface definitions for each task
+ */
+const mockInterfaceDefinitions: Record<string, unknown> = {
+	tm_001: {
+		interface_master_id: 'im_mock_001',
+		interface_name: 'GmailFetchInterface',
+		input_schema: { type: 'object', properties: { max_results: { type: 'integer' } } },
+		output_schema: { type: 'object', properties: { messages: { type: 'array' } } }
+	},
+	tm_002: {
+		interface_master_id: 'im_mock_002',
+		interface_name: 'ClaudeSummarizeInterface',
+		input_schema: { type: 'object', properties: { text: { type: 'string' } } },
+		output_schema: { type: 'object', properties: { summary: { type: 'string' } } }
+	}
+};
+
+/**
  * Mock data for job status
  * Issue #305: Extended with phase, task_breakdown, workflow_statuses
+ * Issue #310: Added interface_definitions
  */
 const mockJobStatus: JobStatusResponse = {
 	job_id: 'mock-job-id',
@@ -107,6 +127,7 @@ const mockJobStatus: JobStatusResponse = {
 		job_id: 'mock-job-id',
 		job_master_id: 'jm_mock_123',
 		task_breakdown: mockTaskBreakdown,
+		interface_definitions: mockInterfaceDefinitions,
 		error_message: null,
 		langfuse_trace_id: 'mock-langfuse-trace-id'
 	}

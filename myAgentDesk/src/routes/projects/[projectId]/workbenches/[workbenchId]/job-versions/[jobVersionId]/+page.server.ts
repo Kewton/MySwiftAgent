@@ -117,22 +117,65 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		}
 	}
 
-	// Parse interface definitions
+	// Parse interface definitions (per-task format from Issue #310)
+	// Format: { task_001: { input_schema: {...}, output_schema: {...} }, task_002: {...} }
 	let interfaceDefinitions = {
 		inputSchema: null as Record<string, unknown> | null,
 		outputSchema: null as Record<string, unknown> | null
 	};
+	let interfacesByTask: Record<
+		string,
+		{ input_schema: Record<string, unknown> | null; output_schema: Record<string, unknown> | null }
+	> = {};
+
 	if (jv.interfaceDefinitions) {
 		try {
 			const parsed = JSON.parse(jv.interfaceDefinitions);
-			// Support both formats: { inputSchema/outputSchema } and { input/output }
-			interfaceDefinitions = {
-				inputSchema: parsed.inputSchema || parsed.input || null,
-				outputSchema: parsed.outputSchema || parsed.output || null
-			};
+
+			// Check if it's per-task format (keys are task IDs like task_001, task_002)
+			const isPerTaskFormat =
+				typeof parsed === 'object' &&
+				parsed !== null &&
+				Object.keys(parsed).some((key) => key.startsWith('task_'));
+
+			if (isPerTaskFormat) {
+				// Per-task format from Issue #310
+				interfacesByTask = parsed;
+
+				// Extract first task's interface for the combined view
+				const firstTaskKey = Object.keys(parsed)[0];
+				if (firstTaskKey && parsed[firstTaskKey]) {
+					const firstTask = parsed[firstTaskKey];
+					interfaceDefinitions = {
+						inputSchema: firstTask.input_schema || null,
+						outputSchema: firstTask.output_schema || null
+					};
+				}
+			} else {
+				// Legacy format: { inputSchema/outputSchema } or { input/output }
+				interfaceDefinitions = {
+					inputSchema: parsed.inputSchema || parsed.input || null,
+					outputSchema: parsed.outputSchema || parsed.output || null
+				};
+			}
 		} catch {
 			console.error('Failed to parse interface definitions');
 		}
+	}
+
+	// Merge interface definitions into tasks
+	if (Object.keys(interfacesByTask).length > 0) {
+		tasks = tasks.map((task) => {
+			const taskInterface = interfacesByTask[task.task_id];
+			if (taskInterface) {
+				return {
+					...task,
+					inputInterface: taskInterface.input_schema || null,
+					outputInterface: taskInterface.output_schema || null
+				};
+			}
+			return task;
+		});
 	}
 
 	// Parse workflows

@@ -68,12 +68,21 @@ export const GET: RequestHandler = async ({ params }) => {
 				if (resultStatus === 'failed' || resultStatus === 'error') {
 					// Internal job generation failed
 					// Issue #305: Save workflow_statuses for trace links
+					// Issue #310: Save taskBreakdown even on failure (for debugging)
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'failed',
 						errorMessage: result?.error_message || 'Job generation failed',
 						externalTraceId: langfuseTraceId ?? undefined,
 						externalJobMasterId: result?.job_master_id ?? undefined,
-						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined
+						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined,
+						taskBreakdown: taskBreakdownFromApi
+							? JSON.stringify(taskBreakdownFromApi)
+							: result?.task_breakdown
+								? JSON.stringify(result.task_breakdown)
+								: undefined,
+						interfaceDefinitions: result?.interface_definitions
+							? JSON.stringify(result.interface_definitions)
+							: undefined
 					});
 					if (updated) {
 						jobVersion = updated;
@@ -81,12 +90,21 @@ export const GET: RequestHandler = async ({ params }) => {
 				} else {
 					// Job completed successfully
 					// Issue #305: Save workflow_statuses for trace links
+					// Issue #310: Save taskBreakdown and interfaceDefinitions to DB
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'success',
 						externalJobMasterId:
 							result?.job_master_id ?? apiResult.value.job_master_id ?? undefined,
 						externalTraceId: langfuseTraceId ?? undefined,
-						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined
+						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined,
+						taskBreakdown: taskBreakdownFromApi
+							? JSON.stringify(taskBreakdownFromApi)
+							: result?.task_breakdown
+								? JSON.stringify(result.task_breakdown)
+								: undefined,
+						interfaceDefinitions: result?.interface_definitions
+							? JSON.stringify(result.interface_definitions)
+							: undefined
 					});
 					if (updated) {
 						jobVersion = updated;

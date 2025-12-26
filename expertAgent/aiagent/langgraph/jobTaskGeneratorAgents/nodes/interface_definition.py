@@ -21,6 +21,139 @@ from ..utils.schema_matcher import SchemaMatcher
 logger = logging.getLogger(__name__)
 
 
+def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
+    """Normalize LLM-generated JSON Schema to valid JSON Schema Draft 7.
+
+    This function fixes common LLM errors where property types are specified as
+    shorthand formats instead of proper JSON Schema objects:
+    - "string" → {"type": "string"} (bare string type)
+    - ["string"] → {"type": "string"} (array shorthand)
+    - ["boolean"] → {"type": "boolean"}
+    - ["array"] → {"type": "array"}
+    - ["object"] → {"type": "object"}
+    - ["integer"] → {"type": "integer"}
+    - ["number"] → {"type": "number"}
+
+    Args:
+        schema: JSON Schema dictionary (input_schema or output_schema)
+
+    Returns:
+        Normalized JSON Schema dictionary with correct property definitions
+
+    Examples:
+        >>> schema = {"properties": {"name": "string"}}
+        >>> normalize_json_schema_properties(schema)
+        {"properties": {"name": {"type": "string"}}}
+
+        >>> schema = {"properties": {"name": ["string"]}}
+        >>> normalize_json_schema_properties(schema)
+        {"properties": {"name": {"type": "string"}}}
+
+        >>> schema = {"properties": {"active": ["boolean"], "count": ["integer"]}}
+        >>> normalize_json_schema_properties(schema)
+        {"properties": {"active": {"type": "boolean"}, "count": {"type": "integer"}}}
+    """
+    valid_types = {"string", "boolean", "array", "object", "integer", "number", "null"}
+
+    def normalize_value(value: Any, prop_name: str = "") -> Any:
+        """Normalize a single value in the schema."""
+        # Handle null/None value - LLM sometimes generates null instead of type definition
+        if value is None:
+            logger.warning(
+                f"Found null value for property '{prop_name}', defaulting to {{'type': 'string'}}"
+            )
+            return {"type": "string"}
+        # Handle integer values (likely misplaced schema keywords like minLength)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            logger.warning(
+                f"Found numeric value {value} for property '{prop_name}', "
+                f"converting to {{'type': 'integer', 'default': {value}}}"
+            )
+            if isinstance(value, int):
+                return {"type": "integer", "default": value}
+            else:
+                return {"type": "number", "default": value}
+        # Handle bare string type like "string", "boolean", etc.
+        if isinstance(value, str):
+            if value in valid_types:
+                logger.debug(f"Normalizing bare string type '{value}' → {{'type': '{value}'}}")
+                return {"type": value}
+            else:
+                # Handle arbitrary strings (likely descriptions placed incorrectly)
+                logger.warning(
+                    f"Found non-type string '{value[:50]}...' for property '{prop_name}', "
+                    f"converting to {{'type': 'string', 'description': ...}}"
+                )
+                return {"type": "string", "description": value}
+        # Handle array shorthand like ["string"]
+        if isinstance(value, list):
+            # Check if it's a shorthand type like ["string"]
+            if len(value) == 1 and isinstance(value[0], str) and value[0] in valid_types:
+                type_name = value[0]
+                logger.debug(f"Normalizing shorthand type [{type_name}] → {{'type': '{type_name}'}}")
+                return {"type": type_name}
+            # Check if it's a malformed enum pattern like:
+            # [{'type': 'string', 'description': 'NEUTRAL'}, {'type': 'string', 'description': 'MALE'}]
+            # This should be converted to: {"type": "string", "enum": ["NEUTRAL", "MALE"]}
+            if (
+                len(value) > 0
+                and all(isinstance(item, dict) for item in value)
+                and all("type" in item and "description" in item for item in value)
+            ):
+                # Extract enum values from description fields
+                enum_values = [item.get("description", "") for item in value]
+                base_type = value[0].get("type", "string")
+                logger.warning(
+                    f"Found malformed enum pattern for property '{prop_name}', "
+                    f"converting to {{'type': '{base_type}', 'enum': {enum_values}}}"
+                )
+                return {"type": base_type, "enum": enum_values}
+            # It might be an array with objects inside (e.g., items in allOf)
+            return [normalize_value(item) for item in value]
+        elif isinstance(value, dict):
+            return normalize_schema_dict(value)
+        return value
+
+    # JSON Schema keywords that contain string arrays (property names, type names, etc.)
+    # These should NOT be normalized as they are not schema definitions
+    string_array_keywords = {
+        "required",
+        "enum",
+        "allOf",
+        "anyOf",
+        "oneOf",
+        "dependencies",
+    }
+
+    def normalize_schema_dict(obj: dict[str, Any]) -> dict[str, Any]:
+        """Recursively normalize all fields in a schema dict."""
+        result = {}
+        for key, value in obj.items():
+            if key == "properties" and isinstance(value, dict):
+                # Normalize each property
+                result[key] = {}
+                for prop_name, prop_value in value.items():
+                    result[key][prop_name] = normalize_value(prop_value, prop_name)
+            elif key == "items" and isinstance(value, (dict, list)):
+                # Handle array items
+                result[key] = normalize_value(value, "items")
+            elif key in string_array_keywords:
+                # Don't normalize string arrays like "required", "enum", etc.
+                result[key] = value
+            elif isinstance(value, dict):
+                result[key] = normalize_schema_dict(value)
+            elif isinstance(value, list):
+                result[key] = [normalize_value(item, key) for item in value]
+            else:
+                result[key] = value
+        return result
+
+    if not isinstance(schema, dict):
+        return schema
+
+    return normalize_schema_dict(schema)
+
+
 def fix_regex_over_escaping(schema: dict[str, Any]) -> dict[str, Any]:
     """Fix over-escaped regex patterns in JSON Schema.
 
@@ -206,6 +339,10 @@ async def interface_definition_node(
         logger.info("Interface schema generation succeeded via JSON fallback")
 
     for iface in response.interfaces:
+        # First normalize shorthand types like ["string"] → {"type": "string"}
+        iface.input_schema = normalize_json_schema_properties(iface.input_schema)
+        iface.output_schema = normalize_json_schema_properties(iface.output_schema)
+        # Then fix over-escaped regex patterns
         iface.input_schema = fix_regex_over_escaping(iface.input_schema)
         iface.output_schema = fix_regex_over_escaping(iface.output_schema)
 

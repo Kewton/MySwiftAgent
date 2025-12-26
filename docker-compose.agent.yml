@@ -40,6 +40,10 @@ services:
       - TZ=Asia/Tokyo
       # Admin authentication
       - ADMIN_TOKEN=${EXPERTAGENT_ADMIN_TOKEN}
+      # JobQueue API URL (for interface definition)
+      - JOBQUEUE_API_URL=http://jobqueue:8000
+      # GraphAI Server URL (for workflow testing)
+      - GRAPHAISERVER_BASE_URL=http://graphaiserver:8000
       # Valkey Configuration (Conversation persistence) - Platform service
       - VALKEY_URL=redis://valkey:6379
       - CONVERSATION_STORE_TYPE=${CONVERSATION_STORE_TYPE:-valkey}

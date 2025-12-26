@@ -67,12 +67,15 @@ export interface WorkflowStatusItem {
 
 /**
  * Job generation result (nested in status response)
+ * Issue #310: Added interface_definitions field
  */
 export interface JobGenerationResult {
 	status: string;
 	job_id: string | null;
 	job_master_id: string | null;
 	task_breakdown: TaskBreakdownItem[];
+	/** Issue #310: Interface definitions from job generation */
+	interface_definitions: Record<string, unknown> | null;
 	error_message: string | null;
 	langfuse_trace_id: string | null;
 }
