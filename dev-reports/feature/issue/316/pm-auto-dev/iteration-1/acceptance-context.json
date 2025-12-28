@@ -1,0 +1,100 @@
+{
+  "issue_number": 316,
+  "feature_summary": "３層構造の組み換え - jobqueue/myscheduler を Platform 層から Agent 層へ移動",
+  "acceptance_criteria": [
+    "AC1: docker-compose.platform.yml から jobqueue/myscheduler が削除され、docker-compose.agent.yml に移動している",
+    "AC2: myscheduler は jobqueue の service_healthy 条件を満たしてから起動する",
+    "AC3: Agent層のexpertagent/graphaiserverはPlatform層(myvault, valkey)起動後に起動する",
+    "AC4: expertagentからjobqueueへ http://jobqueue:8000 で正常に通信できる",
+    "AC5: docker compose up -d で全サービスが healthy 状態になる",
+    "AC6: dev-hybrid.sh で jobqueue/myscheduler がローカルプロセスとして起動する",
+    "AC7: Makefile の dev-platform/dev-agent ターゲットが新しい層構造に従う",
+    "AC8: docs/arch/service-dependencies.md が新しい層構造を反映している"
+  ],
+  "labels": ["feature"],
+  "target_project": "infrastructure",
+  "playwright_required": false,
+  "required_services": [],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "description": "This is an infrastructure change issue. L3 tests focus on configuration validation rather than API testing.",
+    "static_tests": [
+      {
+        "name": "Docker Compose Platform 構文検証",
+        "command": "docker compose -f docker-compose.platform.yml config --quiet",
+        "expected_exit_code": 0
+      },
+      {
+        "name": "Docker Compose Agent 構文検証",
+        "command": "docker compose -f docker-compose.agent.yml config --quiet",
+        "expected_exit_code": 0
+      },
+      {
+        "name": "dev-hybrid.sh 構文検証",
+        "command": "bash -n scripts/dev-hybrid.sh",
+        "expected_exit_code": 0
+      },
+      {
+        "name": "Makefile 構文検証",
+        "command": "make help > /dev/null 2>&1",
+        "expected_exit_code": 0
+      }
+    ],
+    "layer_structure_verification": [
+      {
+        "name": "Platform層にjobqueue/myschedulerがないことを確認",
+        "command": "grep -c 'jobqueue:\\|myscheduler:' docker-compose.platform.yml",
+        "expected_result": "0"
+      },
+      {
+        "name": "Agent層にjobqueue/myschedulerがあることを確認",
+        "command": "grep -c 'jobqueue:\\|myscheduler:' docker-compose.agent.yml",
+        "expected_result": "2"
+      },
+      {
+        "name": "myscheduler が jobqueue に依存することを確認",
+        "command": "grep -A2 'myscheduler:' docker-compose.agent.yml | grep -c 'depends_on'",
+        "expected_result": "1"
+      }
+    ],
+    "makefile_verification": [
+      {
+        "name": "_check-platform に JOBQUEUE_PORT がないことを確認",
+        "command": "grep -A20 '_check-platform:' Makefile | grep -c 'JOBQUEUE_PORT'",
+        "expected_result": "0"
+      },
+      {
+        "name": "_wait-platform に jobqueue がないことを確認",
+        "command": "grep -A30 '_wait-platform:' Makefile | grep -c 'jobqueue_ok'",
+        "expected_result": "0"
+      }
+    ],
+    "dev_hybrid_verification": [
+      {
+        "name": "DOCKER_SERVICES に jobqueue/myscheduler がないことを確認",
+        "command": "grep 'DOCKER_SERVICES=' scripts/dev-hybrid.sh | grep -c 'jobqueue'",
+        "expected_result": "0"
+      },
+      {
+        "name": "start_jobqueue 関数があることを確認",
+        "command": "grep -c 'start_jobqueue()' scripts/dev-hybrid.sh",
+        "expected_result": "1"
+      },
+      {
+        "name": "start_myscheduler 関数があることを確認",
+        "command": "grep -c 'start_myscheduler()' scripts/dev-hybrid.sh",
+        "expected_result": "1"
+      }
+    ],
+    "documentation_verification": [
+      {
+        "name": "service-dependencies.md のPlatform層が正しいことを確認",
+        "command": "grep 'Platform.*docker-compose.platform.yml' docs/arch/service-dependencies.md | grep -cv 'jobqueue\\|myscheduler'",
+        "expected_result": "1"
+      }
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_316_acceptance.py",
+  "playwright_test_file": null
+}

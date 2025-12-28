@@ -1,0 +1,106 @@
+{
+  "issue_number": 316,
+  "issue_title": "３層構造の組み換え",
+  "acceptance_criteria": [
+    "AC1: docker-compose.platform.yml から jobqueue/myscheduler が削除され、docker-compose.agent.yml に移動している",
+    "AC2: myscheduler は jobqueue の service_healthy 条件を満たしてから起動する",
+    "AC3: Agent層のexpertagent/graphaiserverはPlatform層(myvault, valkey)起動後に起動する",
+    "AC4: expertagentからjobqueueへ http://jobqueue:8000 で正常に通信できる",
+    "AC5: docker compose up -d で全サービスが healthy 状態になる",
+    "AC6: dev-hybrid.sh で jobqueue/myscheduler がローカルプロセスとして起動する",
+    "AC7: Makefile の dev-platform/dev-agent ターゲットが新しい層構造に従う",
+    "AC8: docs/arch/service-dependencies.md が新しい層構造を反映している"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: docker-compose.platform.yml から jobqueue/myscheduler 削除",
+    "Task 1.2: docker-compose.agent.yml に jobqueue/myscheduler 追加",
+    "Task 1.3: Makefile のヘルスチェック対象更新",
+    "Task 2.1: dev-hybrid.sh の DOCKER_SERVICES 変数更新",
+    "Task 2.2: dev-hybrid.sh にローカル起動関数追加",
+    "Task 2.3: dev-hybrid.sh の起動順序調整",
+    "Task 4.1: docs/arch/service-dependencies.md 更新",
+    "Task 4.2: docs/design/architecture-overview.md 更新"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "docker-compose.platform.yml から jobqueue/myscheduler 削除",
+      "estimated_hours": 0.5,
+      "deliverables": ["docker-compose.platform.yml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "docker-compose.agent.yml に jobqueue/myscheduler 追加",
+      "estimated_hours": 1,
+      "deliverables": ["docker-compose.agent.yml"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "Makefile のヘルスチェック対象更新",
+      "estimated_hours": 1,
+      "deliverables": ["Makefile"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "dev-hybrid.sh の DOCKER_SERVICES 変数更新",
+      "estimated_hours": 0.5,
+      "deliverables": ["scripts/dev-hybrid.sh"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "dev-hybrid.sh にローカル起動関数追加",
+      "estimated_hours": 1,
+      "deliverables": ["scripts/dev-hybrid.sh"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "dev-hybrid.sh の起動順序調整",
+      "estimated_hours": 0.5,
+      "deliverables": ["scripts/dev-hybrid.sh"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "docs/arch/service-dependencies.md 更新",
+      "estimated_hours": 0.5,
+      "deliverables": ["docs/arch/service-dependencies.md"],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "docs/design/architecture-overview.md 更新",
+      "estimated_hours": 0.5,
+      "deliverables": ["docs/design/architecture-overview.md"],
+      "dependencies": ["4.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "docker-compose.platform.yml",
+    "docker-compose.agent.yml",
+    "Makefile",
+    "scripts/dev-hybrid.sh",
+    "docs/arch/service-dependencies.md",
+    "docs/design/architecture-overview.md"
+  ],
+  "definition_of_done": [
+    "docker-compose.platform.yml から jobqueue/myscheduler が削除されている",
+    "docker-compose.agent.yml に jobqueue/myscheduler が追加されている",
+    "depends_on で依存関係が正しく設定されている",
+    "Makefile のヘルスチェックが正しい層に設定されている",
+    "dev-hybrid.sh で jobqueue/myscheduler がローカル起動される",
+    "ドキュメントが新しい層構造を反映している",
+    "pre-push-check-all.sh がパスする"
+  ],
+  "target_coverage": 90,
+  "layer_change_summary": {
+    "platform_before": ["valkey", "jobqueue", "myscheduler", "myvault", "langfuse-*"],
+    "platform_after": ["valkey", "myvault", "langfuse-*"],
+    "agent_before": ["expertagent", "graphaiserver"],
+    "agent_after": ["jobqueue", "myscheduler", "expertagent", "graphaiserver"]
+  }
+}

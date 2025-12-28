@@ -1,0 +1,24 @@
+{
+  "issue_number": 316,
+  "refactor_targets": [
+    "docker-compose.platform.yml",
+    "docker-compose.agent.yml",
+    "Makefile",
+    "scripts/dev-hybrid.sh",
+    "docs/arch/service-dependencies.md"
+  ],
+  "quality_metrics": {
+    "before_coverage": "N/A (Infrastructure changes only)",
+    "complexity_score": "N/A"
+  },
+  "design_patterns_to_apply": [
+    "既存パターンの維持",
+    "一貫性のある命名規則",
+    "DRYの適用"
+  ],
+  "improvement_goals": [
+    "Docker Compose構文の妥当性確認",
+    "シェルスクリプト構文の妥当性確認",
+    "ドキュメントの整合性確認"
+  ]
+}
