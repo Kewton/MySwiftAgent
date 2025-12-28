@@ -84,14 +84,11 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 
 				// Create job from master template
-				const jobResult = await jobQueueClient.createJobFromMaster(
-					jobVersion.externalJobMasterId,
-					{
-						name: `Run ${run.id}`,
-						body: bodyParams,
-						tags: [`run:${run.id}`, `workbench:${body.workbenchId}`]
-					}
-				);
+				const jobResult = await jobQueueClient.createJobFromMaster(jobVersion.externalJobMasterId, {
+					name: `Run ${run.id}`,
+					body: bodyParams,
+					tags: [`run:${run.id}`, `workbench:${body.workbenchId}`]
+				});
 
 				if (isOk(jobResult)) {
 					externalJobId = jobResult.value.job_id;

@@ -245,10 +245,7 @@ export class JobQueueClient extends ApiClient {
 		masterId: string,
 		request: JobCreateFromMasterRequest
 	): Promise<Result<JobCreateFromMasterResponse, ApiError>> {
-		return this.post<JobCreateFromMasterResponse>(
-			`/api/v1/jobs/from-master/${masterId}`,
-			request
-		);
+		return this.post<JobCreateFromMasterResponse>(`/api/v1/jobs/from-master/${masterId}`, request);
 	}
 
 	/**

@@ -8,6 +8,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { RUN_STATUS_CONFIG, getRunDuration, calculateProgress } from '$lib/types/run';
+	import { getFirstTaskInputSchema, type JSONSchema } from '$lib/utils/interface-schema';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -19,6 +20,44 @@
 	let showNewRunModal = $state(false);
 	let selectedJobVersionId = $state('');
 	let isCreatingRun = $state(false);
+	let executionParams = $state<Record<string, string>>({});
+
+	// Get the input schema for the selected job version
+	const selectedJobVersion = $derived(
+		data.activeJobVersions.find((jv) => jv.id === selectedJobVersionId)
+	);
+	const inputSchema = $derived(
+		selectedJobVersion ? getFirstTaskInputSchema(selectedJobVersion.interfaceDefinitions) : null
+	);
+
+	// Track previous job version to detect changes
+	let previousJobVersionId = $state('');
+
+	// Reset execution params when job version changes
+	$effect(() => {
+		// Only run when job version actually changes
+		if (selectedJobVersionId !== previousJobVersionId) {
+			previousJobVersionId = selectedJobVersionId;
+
+			if (selectedJobVersionId) {
+				// Create new params object based on schema
+				const newParams: Record<string, string> = {};
+				const schema = getFirstTaskInputSchema(
+					data.activeJobVersions.find((jv) => jv.id === selectedJobVersionId)?.interfaceDefinitions
+				);
+
+				if (schema?.properties) {
+					for (const key of Object.keys(schema.properties)) {
+						newParams[key] = '';
+					}
+				}
+
+				executionParams = newParams;
+			} else {
+				executionParams = {};
+			}
+		}
+	});
 
 	/**
 	 * Format date for display
@@ -51,12 +90,17 @@
 
 		isCreatingRun = true;
 		try {
+			// Build execution params from form values
+			const paramsToSend =
+				Object.keys(executionParams).length > 0 ? JSON.stringify(executionParams) : undefined;
+
 			const response = await fetch('/api/runs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					workbenchId,
-					jobVersionId: selectedJobVersionId
+					jobVersionId: selectedJobVersionId,
+					executionParams: paramsToSend
 				})
 			});
 
@@ -73,6 +117,14 @@
 			isCreatingRun = false;
 			showNewRunModal = false;
 		}
+	}
+
+	/**
+	 * Check if all required fields are filled
+	 */
+	function areRequiredFieldsFilled(): boolean {
+		if (!inputSchema?.required) return true;
+		return inputSchema.required.every((field) => executionParams[field]?.trim() !== '');
 	}
 </script>
 
@@ -147,12 +199,39 @@
 					{/each}
 				</select>
 			</div>
+
+			<!-- Dynamic Input Fields based on Schema -->
+			{#if inputSchema?.properties}
+				<div class="params-section">
+					<h4>Input Parameters</h4>
+					{#each Object.entries(inputSchema.properties) as [fieldName, fieldDef] (fieldName)}
+						{@const isRequired = inputSchema.required?.includes(fieldName)}
+						<div class="form-group">
+							<label for="param-{fieldName}">
+								{fieldName}
+								{#if isRequired}<span class="required">*</span>{/if}
+							</label>
+							{#if fieldDef.description}
+								<span class="field-description">{fieldDef.description}</span>
+							{/if}
+							<input
+								type="text"
+								id="param-{fieldName}"
+								bind:value={executionParams[fieldName]}
+								placeholder={fieldDef.default?.toString() ?? ''}
+								required={isRequired}
+							/>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			<div class="modal-actions">
 				<button class="btn-secondary" onclick={() => (showNewRunModal = false)}>Cancel</button>
 				<button
 					class="btn-primary"
 					onclick={handleCreateRun}
-					disabled={!selectedJobVersionId || isCreatingRun}
+					disabled={!selectedJobVersionId || isCreatingRun || !areRequiredFieldsFilled()}
 				>
 					{isCreatingRun ? 'Starting...' : 'Start Run'}
 				</button>
@@ -376,5 +455,45 @@
 	.btn-secondary:hover {
 		border-color: #cbd5e1;
 		color: #1e293b;
+	}
+
+	/* Input parameters section */
+	.params-section {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid #e2e8f0;
+	}
+
+	.params-section h4 {
+		margin: 0 0 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #374151;
+	}
+
+	.form-group input {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	.form-group input:focus {
+		outline: none;
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+	}
+
+	.required {
+		color: #ef4444;
+		margin-left: 0.125rem;
+	}
+
+	.field-description {
+		display: block;
+		font-size: 0.75rem;
+		color: #6b7280;
+		margin-bottom: 0.375rem;
 	}
 </style>
