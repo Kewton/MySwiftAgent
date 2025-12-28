@@ -6,8 +6,8 @@
 # MySwiftAgent microservices architecture.
 #
 # Architecture Layers:
-#   Platform  - Core infrastructure (valkey, jobqueue, myscheduler, myvault, langfuse)
-#   Agent     - AI services (expertagent, graphaiserver)
+#   Platform  - Core infrastructure (valkey, myvault, langfuse)
+#   Agent     - AI services (jobqueue, myscheduler, expertagent, graphaiserver)
 #   Frontend  - UI applications (commonui, myagentdesk)
 #
 # Usage:
@@ -133,12 +133,12 @@ network: ## Create Docker network if not exists
 # Startup Targets
 # =============================================================================
 
-dev-platform: _check-not-worktree network ## Start Platform layer (valkey, jobqueue, myscheduler, myvault, langfuse)
+dev-platform: _check-not-worktree network ## Start Platform layer (valkey, myvault, langfuse)
 	@echo "Starting Platform layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) up -d
 	@echo "Platform layer started successfully"
 
-dev-agent: _check-not-worktree _check-platform ## Start Agent layer (expertagent, graphaiserver) - requires Platform
+dev-agent: _check-not-worktree _check-platform ## Start Agent layer (jobqueue, myscheduler, expertagent, graphaiserver) - requires Platform
 	@echo "Starting Agent layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_AGENT) up -d
 	@echo "Agent layer started successfully"
@@ -296,9 +296,8 @@ clean: ## Stop all services and remove volumes/orphans (WARNING: data loss)
 
 _check-platform: ## [Internal] Check if Platform layer is running
 	@echo "🔍 Checking Platform layer dependencies..."
-	@myvault_ok=0; jobqueue_ok=0; \
+	@myvault_ok=0; \
 	if curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1; then myvault_ok=1; fi; \
-	if curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then jobqueue_ok=1; fi; \
 	if [ $$myvault_ok -eq 0 ]; then \
 		echo ""; \
 		echo "❌ ERROR: Platform layer is not running!"; \
@@ -309,17 +308,7 @@ _check-platform: ## [Internal] Check if Platform layer is running
 		echo ""; \
 		exit 1; \
 	fi; \
-	if [ $$jobqueue_ok -eq 0 ]; then \
-		echo ""; \
-		echo "❌ ERROR: Platform layer is not fully running!"; \
-		echo ""; \
-		echo "JobQueue health check failed (port $(JOBQUEUE_PORT))"; \
-		echo "Please wait for Platform services to be healthy or restart:"; \
-		echo "  make dev-platform"; \
-		echo ""; \
-		exit 1; \
-	fi; \
-	echo "✅ Platform layer is running (MyVault=OK, JobQueue=OK)"
+	echo "✅ Platform layer is running (MyVault=OK)"
 
 _check-agent: _check-platform ## [Internal] Check if Agent layer is running (implies Platform check)
 	@echo "🔍 Checking Agent layer dependencies..."
@@ -340,20 +329,19 @@ _wait-platform: ## [Internal] Wait for Platform services to be healthy
 	@attempt=1; \
 	max_attempts=$$(($(HEALTH_CHECK_TIMEOUT) / $(HEALTH_CHECK_INTERVAL))); \
 	while [ $$attempt -le $$max_attempts ]; do \
-		myvault_ok=0; jobqueue_ok=0; \
+		myvault_ok=0; \
 		if curl -sf http://localhost:$(MYVAULT_PORT)/health >/dev/null 2>&1; then myvault_ok=1; fi; \
-		if curl -sf http://localhost:$(JOBQUEUE_PORT)/health >/dev/null 2>&1; then jobqueue_ok=1; fi; \
-		if [ $$myvault_ok -eq 1 ] && [ $$jobqueue_ok -eq 1 ]; then \
+		if [ $$myvault_ok -eq 1 ]; then \
 			echo "✅ Platform services are healthy after $$((attempt * $(HEALTH_CHECK_INTERVAL))) seconds"; \
 			exit 0; \
 		fi; \
-		echo "⏳ Attempt $$attempt/$$max_attempts: MyVault=$$([ $$myvault_ok -eq 1 ] && echo 'OK' || echo 'waiting') JobQueue=$$([ $$jobqueue_ok -eq 1 ] && echo 'OK' || echo 'waiting')"; \
+		echo "⏳ Attempt $$attempt/$$max_attempts: MyVault=$$([ $$myvault_ok -eq 1 ] && echo 'OK' || echo 'waiting')"; \
 		sleep $(HEALTH_CHECK_INTERVAL); \
 		attempt=$$((attempt + 1)); \
 	done; \
 	echo "❌ Timeout waiting for Platform services after $(HEALTH_CHECK_TIMEOUT) seconds"; \
 	echo "Checking container logs for debugging..."; \
-	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) logs --tail=20 myvault jobqueue 2>/dev/null || true; \
+	$(DOCKER_COMPOSE) -f $(COMPOSE_PLATFORM) logs --tail=20 myvault 2>/dev/null || true; \
 	exit 1
 
 _wait-agent: ## [Internal] Wait for Agent services to be healthy
