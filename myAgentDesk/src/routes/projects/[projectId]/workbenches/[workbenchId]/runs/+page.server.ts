@@ -46,7 +46,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		activeJobVersions: activeJobVersions.map((jv) => ({
 			id: jv.id,
 			versionLabel: jv.versionLabel,
-			status: jv.status
+			status: jv.status as 'active' | 'deprecated' | 'generating' | 'success' | 'failed',
+			interfaceDefinitions: jv.interfaceDefinitions as string | null
 		}))
 	};
 };
