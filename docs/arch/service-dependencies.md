@@ -88,8 +88,8 @@ MySwiftAgentは7つのマイクロサービスで構成されています。各�
 
 | レイヤ | ファイル | 含まれるサービス | 依存関係 |
 |--------|---------|-----------------|----------|
-| **Platform** | `docker-compose.platform.yml` | valkey, jobqueue, myscheduler, myvault, langfuse-* | なし（基盤レイヤ） |
-| **Agent** | `docker-compose.agent.yml` | expertagent, graphaiserver | Platform層 |
+| **Platform** | `docker-compose.platform.yml` | valkey, myvault, langfuse-* | なし（基盤レイヤ） |
+| **Agent** | `docker-compose.agent.yml` | jobqueue, myscheduler, expertagent, graphaiserver | Platform層 |
 | **Frontend** | `docker-compose.frontend.yml` | commonui, myagentdesk | Agent層 |
 
 ### 統合ファイル (docker-compose.yml)

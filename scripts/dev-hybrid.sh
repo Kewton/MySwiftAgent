@@ -46,6 +46,8 @@ export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
 export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
 
 # Directories
+JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
+MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
 EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
 GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
 MYAGENTDESK_DIR="$PROJECT_ROOT/myAgentDesk"
@@ -55,17 +57,21 @@ LOG_DIR="$PROJECT_ROOT/logs"
 PID_DIR="$PROJECT_ROOT/.pids"
 
 # Log files
+JOBQUEUE_LOG="$LOG_DIR/jobqueue.log"
+MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
 EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 MYAGENTDESK_LOG="$LOG_DIR/myagentdesk.log"
 
 # PID files
+JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
+MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
 EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 MYAGENTDESK_PID="$PID_DIR/myagentdesk.pid"
 
-# Docker services (Platform layer)
-DOCKER_SERVICES="valkey myvault jobqueue myscheduler langfuse-db langfuse-clickhouse langfuse-redis langfuse-minio langfuse-worker langfuse-server"
+# Docker services (Platform layer only)
+DOCKER_SERVICES="valkey myvault langfuse-db langfuse-clickhouse langfuse-redis langfuse-minio langfuse-worker langfuse-server"
 
 # Banner
 show_banner() {
@@ -77,10 +83,10 @@ show_banner() {
 ║   ══════════════════════════════════════════════                              ║
 ║                                                                               ║
 ║   🐳 Docker (Platform):                                                       ║
-║      Valkey, JobQueue, MyScheduler, MyVault, Langfuse                         ║
+║      Valkey, MyVault, Langfuse                                                ║
 ║                                                                               ║
 ║   💻 Local (Agent):                                                           ║
-║      ExpertAgent, GraphAiServer, MyAgentDesk                                  ║
+║      JobQueue, MyScheduler, ExpertAgent, GraphAiServer, MyAgentDesk           ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -118,6 +124,8 @@ print_service() {
 # Initialize directories
 init_directories() {
     mkdir -p "$LOG_DIR" "$PID_DIR"
+    > "$JOBQUEUE_LOG" 2>/dev/null || true
+    > "$MYSCHEDULER_LOG" 2>/dev/null || true
     > "$EXPERTAGENT_LOG" 2>/dev/null || true
     > "$GRAPHAISERVER_LOG" 2>/dev/null || true
     > "$MYAGENTDESK_LOG" 2>/dev/null || true
@@ -217,14 +225,6 @@ start_docker_services() {
         print_warning "MyVault: May still be starting"
     fi
 
-    # Wait for JobQueue
-    echo -n "    JobQueue"
-    if wait_for_service "JobQueue" "http://localhost:$JOBQUEUE_PORT/health" 30; then
-        print_success "JobQueue: Ready"
-    else
-        print_warning "JobQueue: May still be starting"
-    fi
-
     print_success "Platform layer started"
 }
 
@@ -265,6 +265,87 @@ is_service_pid() {
     local service_pattern=$2
     local cmd=$(ps -p "$pid" -o command= 2>/dev/null || echo "")
     [[ "$cmd" == *"$service_pattern"* ]]
+}
+
+# Start JobQueue
+start_jobqueue() {
+    print_service "📦" "JobQueue" "Starting on port $JOBQUEUE_PORT..."
+
+    # Check if already running (verify it's actually JobQueue, not a stale PID)
+    if [[ -f "$JOBQUEUE_PID" ]]; then
+        local saved_pid=$(cat "$JOBQUEUE_PID")
+        if kill -0 "$saved_pid" 2>/dev/null && is_service_pid "$saved_pid" "jobqueue"; then
+            print_warning "JobQueue: Already running (PID: $saved_pid)"
+            return 0
+        else
+            rm -f "$JOBQUEUE_PID"
+        fi
+    fi
+
+    kill_port $JOBQUEUE_PORT "JobQueue"
+
+    install_deps "JobQueue" "$JOBQUEUE_DIR"
+
+    cd "$JOBQUEUE_DIR"
+
+    # Start service
+    nohup bash -c "JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db \
+        LOG_DIR=$LOG_DIR \
+        uv run uvicorn app.main:app --host 0.0.0.0 --port $JOBQUEUE_PORT --reload" > "$JOBQUEUE_LOG" 2>&1 &
+
+    echo $! > "$JOBQUEUE_PID"
+
+    cd "$PROJECT_ROOT"
+
+    # Wait for service
+    echo -n "    Waiting"
+    if wait_for_service "JobQueue" "http://localhost:$JOBQUEUE_PORT/health" 30; then
+        print_success "JobQueue: Started (PID: $(cat "$JOBQUEUE_PID"), Port: $JOBQUEUE_PORT)"
+    else
+        print_error "JobQueue: Failed to start (check $JOBQUEUE_LOG)"
+        return 1
+    fi
+}
+
+# Start MyScheduler
+start_myscheduler() {
+    print_service "📅" "MyScheduler" "Starting on port $MYSCHEDULER_PORT..."
+
+    # Check if already running (verify it's actually MyScheduler, not a stale PID)
+    if [[ -f "$MYSCHEDULER_PID" ]]; then
+        local saved_pid=$(cat "$MYSCHEDULER_PID")
+        if kill -0 "$saved_pid" 2>/dev/null && is_service_pid "$saved_pid" "myscheduler"; then
+            print_warning "MyScheduler: Already running (PID: $saved_pid)"
+            return 0
+        else
+            rm -f "$MYSCHEDULER_PID"
+        fi
+    fi
+
+    kill_port $MYSCHEDULER_PORT "MyScheduler"
+
+    install_deps "MyScheduler" "$MYSCHEDULER_DIR"
+
+    cd "$MYSCHEDULER_DIR"
+
+    # Start service
+    nohup bash -c "JOBQUEUE_API_URL=http://localhost:$JOBQUEUE_PORT \
+        DATABASE_URL=sqlite:///./data/jobs.db \
+        LOG_DIR=$LOG_DIR \
+        uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT --reload" > "$MYSCHEDULER_LOG" 2>&1 &
+
+    echo $! > "$MYSCHEDULER_PID"
+
+    cd "$PROJECT_ROOT"
+
+    # Wait for service
+    echo -n "    Waiting"
+    if wait_for_service "MyScheduler" "http://localhost:$MYSCHEDULER_PORT/health" 30; then
+        print_success "MyScheduler: Started (PID: $(cat "$MYSCHEDULER_PID"), Port: $MYSCHEDULER_PORT)"
+    else
+        print_error "MyScheduler: Failed to start (check $MYSCHEDULER_LOG)"
+        return 1
+    fi
 }
 
 # Start ExpertAgent
@@ -474,20 +555,6 @@ check_status() {
         print_error "MyVault: Not running"
     fi
 
-    # JobQueue
-    if curl -sf "http://localhost:$JOBQUEUE_PORT/health" >/dev/null 2>&1; then
-        print_success "JobQueue: Running (Port: $JOBQUEUE_PORT)"
-    else
-        print_error "JobQueue: Not running"
-    fi
-
-    # MyScheduler
-    if curl -sf "http://localhost:$MYSCHEDULER_PORT/health" >/dev/null 2>&1; then
-        print_success "MyScheduler: Running (Port: $MYSCHEDULER_PORT)"
-    else
-        print_error "MyScheduler: Not running"
-    fi
-
     # Langfuse
     if curl -sf "http://localhost:$LANGFUSE_PORT/api/public/health" >/dev/null 2>&1; then
         print_success "Langfuse: Running (Port: $LANGFUSE_PORT)"
@@ -497,6 +564,28 @@ check_status() {
 
     echo ""
     echo -e "${CYAN}=== Agent Layer (Local) ===${NC}"
+
+    # JobQueue
+    if [[ -f "$JOBQUEUE_PID" ]] && kill -0 "$(cat "$JOBQUEUE_PID")" 2>/dev/null; then
+        if curl -sf "http://localhost:$JOBQUEUE_PORT/health" >/dev/null 2>&1; then
+            print_success "JobQueue: Running (PID: $(cat "$JOBQUEUE_PID"), Port: $JOBQUEUE_PORT)"
+        else
+            print_warning "JobQueue: Running but unhealthy (PID: $(cat "$JOBQUEUE_PID"))"
+        fi
+    else
+        print_error "JobQueue: Not running"
+    fi
+
+    # MyScheduler
+    if [[ -f "$MYSCHEDULER_PID" ]] && kill -0 "$(cat "$MYSCHEDULER_PID")" 2>/dev/null; then
+        if curl -sf "http://localhost:$MYSCHEDULER_PORT/health" >/dev/null 2>&1; then
+            print_success "MyScheduler: Running (PID: $(cat "$MYSCHEDULER_PID"), Port: $MYSCHEDULER_PORT)"
+        else
+            print_warning "MyScheduler: Running but unhealthy (PID: $(cat "$MYSCHEDULER_PID"))"
+        fi
+    else
+        print_error "MyScheduler: Not running"
+    fi
 
     # ExpertAgent
     if [[ -f "$EXPERTAGENT_PID" ]] && kill -0 "$(cat "$EXPERTAGENT_PID")" 2>/dev/null; then
@@ -539,6 +628,14 @@ show_logs() {
     local service=$1
 
     case $service in
+        jobqueue)
+            print_info "Following JobQueue logs (Ctrl+C to stop):"
+            tail -f "$JOBQUEUE_LOG"
+            ;;
+        myscheduler)
+            print_info "Following MyScheduler logs (Ctrl+C to stop):"
+            tail -f "$MYSCHEDULER_LOG"
+            ;;
         expertagent)
             print_info "Following ExpertAgent logs (Ctrl+C to stop):"
             tail -f "$EXPERTAGENT_LOG"
@@ -558,6 +655,12 @@ show_logs() {
         *)
             print_step "Recent logs (last 20 lines each):"
             echo ""
+            echo -e "${YELLOW}=== JobQueue ===${NC}"
+            tail -n 20 "$JOBQUEUE_LOG" 2>/dev/null || echo "No logs"
+            echo ""
+            echo -e "${YELLOW}=== MyScheduler ===${NC}"
+            tail -n 20 "$MYSCHEDULER_LOG" 2>/dev/null || echo "No logs"
+            echo ""
             echo -e "${YELLOW}=== ExpertAgent ===${NC}"
             tail -n 20 "$EXPERTAGENT_LOG" 2>/dev/null || echo "No logs"
             echo ""
@@ -568,7 +671,7 @@ show_logs() {
             tail -n 20 "$MYAGENTDESK_LOG" 2>/dev/null || echo "No logs"
             echo ""
             print_info "Use '$0 logs <service>' to follow specific logs"
-            print_info "Services: expertagent, graphaiserver, myagentdesk, docker"
+            print_info "Services: jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, docker"
             ;;
     esac
 }
@@ -581,12 +684,12 @@ show_urls() {
     echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${NC}"
     echo -e "${CYAN}│${NC} 🐳 ${WHITE}Platform Layer (Docker)${NC}                                         ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    Valkey:          ${WHITE}redis://localhost:$VALKEY_PORT${NC}                          ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC}    JobQueue:        ${WHITE}http://localhost:$JOBQUEUE_PORT${NC}                          ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC}    MyScheduler:     ${WHITE}http://localhost:$MYSCHEDULER_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    MyVault:         ${WHITE}http://localhost:$MYVAULT_PORT${NC}                           ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    Langfuse:        ${WHITE}http://localhost:$LANGFUSE_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}                                                                    ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} 💻 ${WHITE}Agent Layer (Local)${NC}                                             ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC}    JobQueue:        ${WHITE}http://localhost:$JOBQUEUE_PORT${NC}                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC}    MyScheduler:     ${WHITE}http://localhost:$MYSCHEDULER_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    ExpertAgent:     ${WHITE}http://localhost:$EXPERTAGENT_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    GraphAiServer:   ${WHITE}http://localhost:$GRAPHAISERVER_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    MyAgentDesk:     ${WHITE}http://localhost:$MYAGENTDESK_PORT${NC}                          ${CYAN}│${NC}"
@@ -613,7 +716,7 @@ Options:
     --local-only    Only operate on local services
 
 Log services:
-    expertagent, graphaiserver, myagentdesk, docker
+    jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, docker
 
 Examples:
     $0                      # Start all services
@@ -621,6 +724,7 @@ Examples:
     $0 start --local-only   # Start only local Agent services
     $0 stop                 # Stop all services
     $0 status               # Check all service status
+    $0 logs jobqueue        # Follow JobQueue logs
     $0 logs expertagent     # Follow ExpertAgent logs
     $0 logs docker          # Follow Docker service logs
 EOF
@@ -679,6 +783,8 @@ main() {
             if [[ "$docker_only" != true ]]; then
                 echo ""
                 print_step "Starting Agent layer (Local)..."
+                start_jobqueue || exit 1
+                start_myscheduler || exit 1
                 start_expertagent || exit 1
                 start_graphaiserver || exit 1
                 start_myagentdesk || exit 1
@@ -698,6 +804,8 @@ main() {
                 stop_local_service "MyAgentDesk" "$MYAGENTDESK_PID" $MYAGENTDESK_PORT
                 stop_local_service "GraphAiServer" "$GRAPHAISERVER_PID" $GRAPHAISERVER_PORT
                 stop_local_service "ExpertAgent" "$EXPERTAGENT_PID" $EXPERTAGENT_PORT
+                stop_local_service "MyScheduler" "$MYSCHEDULER_PID" $MYSCHEDULER_PORT
+                stop_local_service "JobQueue" "$JOBQUEUE_PID" $JOBQUEUE_PORT
             fi
 
             if [[ "$local_only" != true ]]; then
