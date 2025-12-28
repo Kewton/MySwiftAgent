@@ -21,9 +21,7 @@
 
 	// Get input interface for first task (job input)
 	const jobInputInterface = $derived(
-		jv.tasks.length > 0
-			? (jv.tasks[0].inputInterface ?? null)
-			: jv.interfaceDefinitions.inputSchema
+		jv.tasks.length > 0 ? (jv.tasks[0].inputInterface ?? null) : jv.interfaceDefinitions.inputSchema
 	);
 
 	// Create a map of task_name to workflow for easy lookup

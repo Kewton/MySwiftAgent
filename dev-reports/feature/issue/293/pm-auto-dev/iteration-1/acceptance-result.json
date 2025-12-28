@@ -1,0 +1,257 @@
+{
+  "status": "partial",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "myAgentDesk",
+  "issue_number": 293,
+  "service_health": {
+    "myAgentDesk": {
+      "status": "running_wrong_worktree",
+      "url": "http://localhost:5173",
+      "issue": "Port 5173 is bound to feature-issue-292 worktree, not feature-issue-293",
+      "process_id": 47715,
+      "actual_path": "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-292/myAgentDesk"
+    },
+    "JobQueue": {
+      "status": "healthy",
+      "url": "http://localhost:8001"
+    }
+  },
+  "test_files_created": {
+    "pytest_acceptance": {
+      "file": "tests/acceptance/test_issue_293_acceptance.py",
+      "exists": true,
+      "size_bytes": 18627,
+      "test_count": 12,
+      "test_methods": [
+        "test_run_creation_api_returns_correct_response",
+        "test_run_creation_sets_initial_values",
+        "test_run_creation_rejects_nonexistent_job_version",
+        "test_run_creation_rejects_invalid_payload",
+        "test_status_api_returns_current_status",
+        "test_status_api_returns_progress_info",
+        "test_status_api_returns_404_for_nonexistent_run",
+        "test_rerun_api_creates_new_run_from_failed",
+        "test_rerun_api_rejects_success_run",
+        "test_runs_list_page_loads",
+        "test_polling_simulation",
+        "test_typescript_build_passes"
+      ]
+    },
+    "playwright_e2e": {
+      "file": "myAgentDesk/tests/e2e/runs.spec.ts",
+      "exists": true,
+      "size_bytes": 15218,
+      "test_suites": [
+        "Runs List Page",
+        "Run Detail Page",
+        "Run Polling",
+        "Run Actions",
+        "Error Handling",
+        "User Workflow"
+      ]
+    }
+  },
+  "code_quality_checks": {
+    "svelte_check": {
+      "status": "passed",
+      "errors": 0,
+      "warnings": 2,
+      "warning_details": [
+        "a11y_interactive_supports_focus in runs/+page.svelte:117",
+        "a11y_click_events_have_key_events in runs/+page.svelte:117"
+      ]
+    },
+    "eslint": {
+      "status": "passed",
+      "errors": 0,
+      "warnings": 16,
+      "note": "Pre-existing warnings in other files, not related to Issue #293"
+    },
+    "prettier": {
+      "status": "passed",
+      "note": "runs.spec.ts was auto-formatted"
+    }
+  },
+  "unit_test_results": {
+    "framework": "vitest",
+    "total_files": 52,
+    "passed_files": 51,
+    "failed_files": 1,
+    "total_tests": 781,
+    "passed_tests": 781,
+    "failed_tests": 0,
+    "failure_note": "1 test file (CreateProjectModal.test.ts) failed due to pre-existing SvelteKit import issue, not related to Issue #293",
+    "run_related_tests": [
+      {
+        "file": "tests/unit/types/run.test.ts",
+        "tests": 26,
+        "passed": 26
+      },
+      {
+        "file": "tests/unit/repositories/run.test.ts",
+        "tests": 29,
+        "passed": 29
+      },
+      {
+        "file": "tests/unit/stores/run-polling.test.ts",
+        "tests": 19,
+        "passed": 19
+      },
+      {
+        "file": "tests/unit/routes/api/runs.test.ts",
+        "tests": 17,
+        "passed": 17
+      }
+    ]
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_293_acceptance.py",
+    "status": "blocked",
+    "reason": "Cannot execute - myAgentDesk running from wrong worktree (feature-issue-292)",
+    "note": "Test file exists and is properly structured, but requires myAgentDesk from feature-issue-293 worktree"
+  },
+  "playwright_results": {
+    "required": true,
+    "test_file": "myAgentDesk/tests/e2e/runs.spec.ts",
+    "status": "blocked",
+    "reason": "Cannot execute - myAgentDesk running from wrong worktree (feature-issue-292)",
+    "note": "Test file exists and is properly structured, but requires myAgentDesk from feature-issue-293 worktree"
+  },
+  "implementation_status": {
+    "api_endpoints": {
+      "POST /api/runs": {
+        "file": "myAgentDesk/src/routes/api/runs/+server.ts",
+        "exists": true,
+        "implementation": "Creates new run with status=queued"
+      },
+      "GET /api/runs/:runId/status": {
+        "file": "myAgentDesk/src/routes/api/runs/[runId]/status/+server.ts",
+        "exists": true,
+        "implementation": "Returns run status for polling"
+      },
+      "POST /api/runs/:runId/rerun": {
+        "file": "myAgentDesk/src/routes/api/runs/[runId]/rerun/+server.ts",
+        "exists": true,
+        "implementation": "Creates new run from failed run"
+      }
+    },
+    "ui_pages": {
+      "runs_list": {
+        "file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+        "exists": true,
+        "features": ["Run list display", "New Run modal", "Status badges", "Progress bar"]
+      },
+      "run_detail": {
+        "file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte",
+        "exists": true,
+        "features": ["Status display", "Polling", "Langfuse trace link", "Rerun button"]
+      }
+    },
+    "stores": {
+      "run_polling": {
+        "file": "myAgentDesk/src/lib/stores/run-polling.svelte.ts",
+        "exists": true,
+        "features": ["5s interval polling", "30min timeout", "Terminal status detection", "Memory leak prevention"]
+      }
+    },
+    "repository": {
+      "run_repository": {
+        "file": "myAgentDesk/src/lib/server/repositories/run.ts",
+        "exists": true,
+        "methods": ["findById", "findByWorkbenchId", "findActiveRuns", "create", "updateStatus", "updateResult", "getRunWithJobVersion", "countByWorkbenchId", "getRecentRuns"]
+      }
+    }
+  },
+  "l3_test_plan_results": {
+    "source": "work-plan.md",
+    "status": "blocked",
+    "reason": "myAgentDesk on port 5173 is running from wrong worktree",
+    "test_commands": [
+      {
+        "name": "POST /api/runs (create run)",
+        "status": "blocked",
+        "reason": "Wrong worktree"
+      },
+      {
+        "name": "GET /api/runs/:runId/status",
+        "status": "blocked",
+        "reason": "Wrong worktree"
+      },
+      {
+        "name": "POST /api/runs/:runId/rerun",
+        "status": "blocked",
+        "reason": "Wrong worktree"
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "Run開始でRun(status=queued)が作成される",
+      "verified": false,
+      "verification_method": "blocked",
+      "implementation_ready": true,
+      "test_ready": true,
+      "reason": "Implementation and tests exist but cannot verify due to wrong worktree"
+    },
+    {
+      "criterion": "ステータスがqueued->running->success/failedと遷移する",
+      "verified": false,
+      "verification_method": "blocked",
+      "implementation_ready": true,
+      "test_ready": true,
+      "reason": "Implementation and tests exist but cannot verify"
+    },
+    {
+      "criterion": "プログレスがリアルタイム更新される",
+      "verified": false,
+      "verification_method": "blocked",
+      "implementation_ready": true,
+      "test_ready": true,
+      "reason": "Polling store with 5s interval exists but cannot verify"
+    },
+    {
+      "criterion": "external_trace_idでLangfuseリンクが生成される",
+      "verified": false,
+      "verification_method": "blocked",
+      "implementation_ready": true,
+      "test_ready": true,
+      "reason": "UI component with langfuseUrl exists but cannot verify"
+    },
+    {
+      "criterion": "失敗したRunをRerunできる",
+      "verified": false,
+      "verification_method": "blocked",
+      "implementation_ready": true,
+      "test_ready": true,
+      "reason": "Rerun endpoint and UI button exist but cannot verify"
+    }
+  ],
+  "summary": {
+    "test_files_created": true,
+    "unit_tests_passed": 781,
+    "code_quality_passed": true,
+    "service_available": false,
+    "l3_tests_executed": false
+  },
+  "next_steps": [
+    "1. Stop the current myAgentDesk process: kill 47715",
+    "2. Start myAgentDesk from the correct worktree:",
+    "   cd /Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-293/myAgentDesk && npm run dev",
+    "3. Re-run L3 acceptance tests:",
+    "   uv run pytest tests/acceptance/test_issue_293_acceptance.py -v",
+    "   cd myAgentDesk && npx playwright test tests/e2e/runs.spec.ts"
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_293_acceptance.py",
+    "myAgentDesk/tests/e2e/runs.spec.ts",
+    "myAgentDesk/src/routes/api/runs/+server.ts",
+    "myAgentDesk/src/routes/api/runs/[runId]/status/+server.ts",
+    "myAgentDesk/src/routes/api/runs/[runId]/rerun/+server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte",
+    "myAgentDesk/src/lib/stores/run-polling.svelte.ts",
+    "myAgentDesk/src/lib/server/repositories/run.ts"
+  ],
+  "message": "L3受入テスト: 部分的に完了。テストファイルは作成済み、単体テストは781件パス、コード品質チェックは合格。ただし、myAgentDeskが異なるworktree(feature-issue-292)で起動しているため、実際のL3テスト(pytest受入テスト・Playwrightテスト)は実行できません。正しいworktreeでmyAgentDeskを再起動してください。"
+}

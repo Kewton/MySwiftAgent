@@ -3,7 +3,8 @@
 This module provides the workflow tester node that:
 1. Validates workflow input/output schemas using Pydantic
 2. Registers the generated workflow to graphAiServer
-3. Executes workflow with sample input
+3. Updates TaskMaster body_template with correct model_name (Issue #293)
+4. Executes workflow with sample input
 """
 
 import logging
@@ -11,6 +12,10 @@ import os
 from typing import Any, Dict
 
 import httpx
+
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
+    JobqueueClient,
+)
 
 from ..state import WorkflowGeneratorState
 from .workflow_validator import WorkflowSchemaValidator
@@ -23,6 +28,12 @@ GRAPHAISERVER_BASE_URL = os.getenv(
     "http://localhost:8005",
 )
 
+# JobQueue API URL (default: 8001 per docs/ops/local-development.md)
+JOBQUEUE_API_URL = os.getenv(
+    "JOBQUEUE_API_URL",
+    "http://localhost:8001",
+)
+
 
 def _safe_json(response: httpx.Response) -> dict[str, Any]:
     try:
@@ -30,6 +41,51 @@ def _safe_json(response: httpx.Response) -> dict[str, Any]:
         return result
     except ValueError:
         return {"raw": response.text[:500]}
+
+
+async def _update_task_master_body_template(
+    task_master_id: str,
+    workflow_name: str,
+) -> bool:
+    """Update TaskMaster body_template with correct model_name.
+
+    After workflow registration, the TaskMaster needs to be updated with
+    the correct model_name so that JobQueue can execute the workflow.
+
+    Args:
+        task_master_id: TaskMaster ID to update
+        workflow_name: Name of the registered workflow
+
+    Returns:
+        True if update succeeded, False otherwise
+    """
+    model_name = f"taskmaster/{task_master_id}/{workflow_name}"
+    body_template = {
+        "user_input": "{{job.body}}",  # Pass entire job body to workflow
+        "model_name": model_name,
+    }
+
+    try:
+        client = JobqueueClient(base_url=JOBQUEUE_API_URL)
+        await client.update_task_master(
+            master_id=task_master_id,
+            body_template=body_template,
+            updated_by="workflow_tester",
+            change_reason=f"Set model_name for workflow: {workflow_name}",
+        )
+        logger.info(
+            "Updated TaskMaster %s body_template with model_name: %s",
+            task_master_id,
+            model_name,
+        )
+        return True
+    except Exception as e:
+        logger.error(
+            "Failed to update TaskMaster %s body_template: %s",
+            task_master_id,
+            e,
+        )
+        return False
 
 
 async def _register_workflow(
@@ -184,6 +240,26 @@ async def workflow_tester_node(
                     "status": "registration_failed",
                     "error_message": "Workflow registration failed",
                 }
+
+            # Step 1.5: Update TaskMaster body_template with model_name (Issue #293)
+            # This enables JobQueue to execute the workflow correctly
+            if task_master_id:
+                task_master_id_str = str(task_master_id)
+                body_template_updated = await _update_task_master_body_template(
+                    task_master_id_str,
+                    workflow_name,
+                )
+                if body_template_updated:
+                    logger.info(
+                        "TaskMaster %s body_template updated for workflow execution",
+                        task_master_id_str,
+                    )
+                else:
+                    logger.warning(
+                        "Failed to update TaskMaster %s body_template - "
+                        "workflow may not execute correctly from JobQueue",
+                        task_master_id_str,
+                    )
 
             # Step 2: Execute workflow
             execution_result, execution_status = await _execute_workflow(

@@ -248,6 +248,63 @@ class JobqueueClient:
         """
         return await self._request("GET", f"/api/v1/task-masters/{master_id}")
 
+    async def update_task_master(
+        self,
+        master_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        method: str | None = None,
+        url: str | None = None,
+        headers: dict | None = None,
+        body_template: dict | None = None,
+        timeout_sec: int | None = None,
+        updated_by: str = "job_task_generator",
+        change_reason: str | None = None,
+    ) -> dict:
+        """Update an existing TaskMaster.
+
+        Only provided fields will be updated. Other fields remain unchanged.
+
+        Args:
+            master_id: TaskMaster ID to update
+            name: New task name (optional)
+            description: New task description (optional)
+            method: New HTTP method (optional)
+            url: New API endpoint URL (optional)
+            headers: New HTTP headers (optional)
+            body_template: New request body template (optional)
+            timeout_sec: New timeout in seconds (optional)
+            updated_by: Updater identifier
+            change_reason: Reason for the change (optional)
+
+        Returns:
+            Update result with version information
+        """
+        # Build update payload with only non-None values
+        payload: dict[str, Any] = {"updated_by": updated_by}
+        if name is not None:
+            payload["name"] = name
+        if description is not None:
+            payload["description"] = description
+        if method is not None:
+            payload["method"] = method
+        if url is not None:
+            payload["url"] = url
+        if headers is not None:
+            payload["headers"] = headers
+        if body_template is not None:
+            payload["body_template"] = body_template
+        if timeout_sec is not None:
+            payload["timeout_sec"] = timeout_sec
+        if change_reason is not None:
+            payload["change_reason"] = change_reason
+
+        return await self._request(
+            "PUT",
+            f"/api/v1/task-masters/{master_id}",
+            json=payload,
+        )
+
     # ===== JobMaster =====
 
     async def create_job_master(

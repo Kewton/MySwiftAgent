@@ -188,3 +188,160 @@ class TestTemplateResolver:
     def test_has_template_variables_none(self) -> None:
         """Test detecting template variables in None."""
         assert not TemplateResolver.has_template_variables(None)
+
+
+class MockJob:
+    """Mock job object for testing."""
+
+    def __init__(
+        self,
+        body: dict[str, Any] | None = None,
+        input_data: dict[str, Any] | None = None,
+    ):
+        self.body = body
+        self.input_data = input_data
+
+
+class TestTemplateResolverJobVariables:
+    """Tests for job variable resolution."""
+
+    def test_resolve_job_body_entire(self) -> None:
+        """{{job.body}} resolves to entire body dict."""
+        tasks: list[MockTask] = []
+        job = MockJob(body={"user_input": "test query", "config": {"key": "value"}})
+        template = "{{job.body}}"
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result == {"user_input": "test query", "config": {"key": "value"}}
+
+    def test_resolve_job_body_field(self) -> None:
+        """{{job.body.user_input}} resolves to specific field."""
+        tasks: list[MockTask] = []
+        job = MockJob(body={"user_input": "分析対象の企業名"})
+        template = "{{job.body.user_input}}"
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result == "分析対象の企業名"
+
+    def test_resolve_job_body_nested(self) -> None:
+        """{{job.body.config.setting}} resolves nested fields."""
+        tasks: list[MockTask] = []
+        job = MockJob(body={"config": {"setting": {"enabled": True}}})
+        template = "{{job.body.config.setting.enabled}}"
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result is True
+
+    def test_resolve_job_body_missing_field(self) -> None:
+        """Missing field returns None."""
+        tasks: list[MockTask] = []
+        job = MockJob(body={"other": "value"})
+        template = "{{job.body.missing}}"
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result is None
+
+    def test_resolve_job_none(self) -> None:
+        """job=None returns None for job variables."""
+        tasks: list[MockTask] = []
+        template = "{{job.body.user_input}}"
+        result = TemplateResolver.resolve_template(template, tasks, job=None)
+        assert result is None
+
+    def test_resolve_job_input_data(self) -> None:
+        """{{job.input_data}} resolves correctly."""
+        tasks: list[MockTask] = []
+        job = MockJob(input_data={"param": "value"})
+        template = "{{job.input_data.param}}"
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result == "value"
+
+    def test_resolve_job_body_in_dict(self) -> None:
+        """job.body resolves within dict template."""
+        tasks: list[MockTask] = []
+        job = MockJob(body={"user_input": "query"})
+        template = {
+            "user_input": "{{job.body.user_input}}",
+            "model_name": "taskmaster/tm_001/workflow",
+        }
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result == {
+            "user_input": "query",
+            "model_name": "taskmaster/tm_001/workflow",
+        }
+
+
+class TestTemplateResolverCurrentTaskVariables:
+    """Tests for current task variable resolution."""
+
+    def test_resolve_task_input_data_entire(self) -> None:
+        """{{task.input_data}} resolves to entire input_data."""
+        tasks: list[MockTask] = []
+        current_task = MockTask(input_data={"key": "value"}, output_data=None)
+        template = "{{task.input_data}}"
+        result = TemplateResolver.resolve_template(
+            template, tasks, current_task=current_task
+        )
+        assert result == {"key": "value"}
+
+    def test_resolve_task_input_data_field(self) -> None:
+        """{{task.input_data.field}} resolves to specific field."""
+        tasks: list[MockTask] = []
+        current_task = MockTask(
+            input_data={"field": "specific value"}, output_data=None
+        )
+        template = "{{task.input_data.field}}"
+        result = TemplateResolver.resolve_template(
+            template, tasks, current_task=current_task
+        )
+        assert result == "specific value"
+
+    def test_resolve_current_task_none(self) -> None:
+        """current_task=None returns None."""
+        tasks: list[MockTask] = []
+        template = "{{task.input_data.field}}"
+        result = TemplateResolver.resolve_template(template, tasks, current_task=None)
+        assert result is None
+
+
+class TestTemplateResolverMixedVariables:
+    """Tests for mixed variable types in same template."""
+
+    def test_resolve_job_and_tasks_variables(self) -> None:
+        """Template with both {{job.body}} and {{tasks[0].output_data}}."""
+        tasks = [MockTask(None, {"result": "task_output"})]
+        job = MockJob(body={"user_input": "job_input"})
+        template = {
+            "from_job": "{{job.body.user_input}}",
+            "from_task": "{{tasks[0].output_data.result}}",
+        }
+        result = TemplateResolver.resolve_template(template, tasks, job=job)
+        assert result == {
+            "from_job": "job_input",
+            "from_task": "task_output",
+        }
+
+    def test_resolve_all_variable_types(self) -> None:
+        """Template with job, tasks, and current task variables."""
+        tasks = [MockTask(None, {"step1_result": "done"})]
+        job = MockJob(body={"user_input": "initial"})
+        current_task = MockTask(input_data={"task_param": "current"}, output_data=None)
+        template = {
+            "job_input": "{{job.body.user_input}}",
+            "prev_output": "{{tasks[0].output_data.step1_result}}",
+            "current_input": "{{task.input_data.task_param}}",
+        }
+        result = TemplateResolver.resolve_template(
+            template, tasks, job=job, current_task=current_task
+        )
+        assert result == {
+            "job_input": "initial",
+            "prev_output": "done",
+            "current_input": "current",
+        }
+
+    def test_has_template_variables_job_pattern(self) -> None:
+        """has_template_variables detects {{job.body.*}} pattern."""
+        assert TemplateResolver.has_template_variables("{{job.body.user_input}}")
+        assert TemplateResolver.has_template_variables({"key": "{{job.body.x}}"})
+
+    def test_has_template_variables_task_pattern(self) -> None:
+        """has_template_variables detects {{task.input_data.*}} pattern."""
+        assert TemplateResolver.has_template_variables("{{task.input_data.field}}")
+        assert TemplateResolver.has_template_variables({"key": "{{task.input_data}}"})

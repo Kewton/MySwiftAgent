@@ -86,6 +86,11 @@ class Settings(BaseSettings):
     # JobQueue API Configuration
     JOBQUEUE_API_URL: str = Field(default="http://localhost:8001")
 
+    # GraphAI Server Configuration
+    # Default: 8005 for local development
+    # Override via environment variable for Docker (graphaiserver:8000)
+    GRAPHAISERVER_BASE_URL: str = Field(default="http://localhost:8005")
+
     # Server Configuration
     HOST: str = Field(default="0.0.0.0")  # noqa: S104  # Development default, override via .env for production
     PORT: int = Field(default=8000)

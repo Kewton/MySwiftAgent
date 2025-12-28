@@ -1,0 +1,35 @@
+{
+  "issue_number": 293,
+  "refactor_targets": [
+    "myAgentDesk/src/lib/server/repositories/run.ts",
+    "myAgentDesk/src/lib/stores/run-polling.svelte.ts",
+    "myAgentDesk/src/routes/api/runs/+server.ts",
+    "myAgentDesk/src/routes/api/runs/[runId]/status/+server.ts",
+    "myAgentDesk/src/routes/api/runs/[runId]/rerun/+server.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/[runId]/+page.svelte"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "unit_tests_passed": 91,
+    "total_tests_passed": 781,
+    "svelte_check_errors": 0,
+    "eslint_errors": 0
+  },
+  "design_patterns_to_apply": [
+    "Repository Pattern (already applied)",
+    "Store Pattern for polling (already applied)",
+    "Error handling consistency"
+  ],
+  "improvement_goals": [
+    "Fix any a11y warnings",
+    "Ensure consistent error handling across API endpoints",
+    "Optimize polling store if needed",
+    "Remove any unused imports or dead code"
+  ],
+  "constraints": [
+    "All 91 Run-related tests must continue to pass",
+    "svelte-check must remain error-free",
+    "ESLint must remain error-free"
+  ]
+}

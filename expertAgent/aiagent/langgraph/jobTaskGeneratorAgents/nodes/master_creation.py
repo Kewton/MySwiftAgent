@@ -123,9 +123,10 @@ async def master_creation_node(
                     f"output={output_interface_id}"
                 )
 
-            # Get expertAgent base URL from settings
-            # Default: http://localhost:8004 for local development
-            task_url = f"{settings.EXPERTAGENT_BASE_URL}/api/v1/tasks/{task_id}"
+            # Get graphAiServer base URL from settings for workflow execution
+            # TaskMaster URL points to graphAiServer's /api/v1/myagent endpoint
+            # Docker: http://graphaiserver:8000, Local: http://localhost:8005
+            task_url = f"{settings.GRAPHAISERVER_BASE_URL}/api/v1/myagent"
 
             # Build description with recommended_apis
             base_description = task["description"]
@@ -144,6 +145,15 @@ async def master_creation_node(
                 enhanced_description = base_description
                 logger.debug("  No recommended APIs specified for this task")
 
+            # Prepare body_template for graphAiServer /api/v1/myagent endpoint
+            # Note: model_name will be set by workflow_tester after workflow registration
+            # user_input receives entire job.body (e.g., {"company_name": "富士通"})
+            # which is then injected into workflow's source node
+            task_body_template = {
+                "user_input": "{{job.body}}",  # Pass entire job body to workflow
+                # model_name is set after workflow registration by workflow_tester
+            }
+
             # Find or create TaskMaster with strict interface matching
             task_master = await matcher.find_or_create_task_master(
                 name=task_name,
@@ -152,6 +162,7 @@ async def master_creation_node(
                 url=task_url,
                 input_interface_id=input_interface_id,
                 output_interface_id=output_interface_id,
+                body_template=task_body_template,
                 timeout_sec=60,
             )
 
@@ -183,9 +194,9 @@ async def master_creation_node(
         job_name = f"Job: {user_requirement[:50]}"  # Truncate to 50 chars
         job_description = f"Auto-generated job from requirement: {user_requirement}"
         job_method = "POST"
-        job_url = (
-            "http://localhost:8005/api/v1/graphai/execute"  # GraphAI execution endpoint
-        )
+        # JobMaster URL points to graphAiServer's /api/v1/myagent endpoint
+        # Docker: http://graphaiserver:8000, Local: http://localhost:8005
+        job_url = f"{settings.GRAPHAISERVER_BASE_URL}/api/v1/myagent"
         job_timeout_sec = 300  # 5 minutes
 
         logger.info(f"Creating JobMaster: {job_name}")

@@ -69,6 +69,94 @@ export interface TaskMasterResponse {
 	order?: number;
 }
 
+// =============================================================================
+// Issue #293: Extended Types for Run Execution
+// =============================================================================
+
+/**
+ * Task status enumeration
+ */
+export type TaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'skipped';
+
+/**
+ * Job status enumeration
+ */
+export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'canceled';
+
+/**
+ * Request for creating a job from a master template
+ */
+export interface JobCreateFromMasterRequest {
+	name?: string;
+	headers?: Record<string, string>;
+	params?: Record<string, unknown>;
+	body?: Record<string, unknown>;
+	timeout_sec?: number;
+	priority?: number;
+	scheduled_at?: string;
+	max_attempts?: number;
+	tags?: string[];
+	validate_interfaces?: boolean;
+}
+
+/**
+ * Response for job creation from master
+ */
+export interface JobCreateFromMasterResponse {
+	job_id: string;
+	status: JobStatus;
+}
+
+/**
+ * Task detail from JobQueue API
+ */
+export interface TaskDetail {
+	id: string;
+	job_id: string;
+	master_id: string;
+	master_version: number | null;
+	order: number;
+	status: TaskStatus | string;
+	input_data: Record<string, unknown> | null;
+	output_data: Record<string, unknown> | null;
+	attempt: number;
+	error: string | null;
+	started_at: string | null;
+	finished_at: string | null;
+	duration_ms: number | null;
+	created_at: string;
+	updated_at: string;
+}
+
+/**
+ * Task list response from JobQueue API
+ */
+export interface TaskList {
+	job_id: string;
+	tasks: TaskDetail[];
+	total: number;
+}
+
+/**
+ * Job result response from JobQueue API
+ */
+export interface JobResultResponse {
+	job_id: string;
+	status: JobStatus | string;
+	result: Record<string, unknown> | null;
+	error: string | null;
+	finished_at: string | null;
+}
+
+/**
+ * Task retry response
+ */
+export interface TaskRetryResponse {
+	task_id: string;
+	status: string;
+	message: string;
+}
+
 /**
  * JobQueue API client
  */
@@ -139,5 +227,65 @@ export class JobQueueClient extends ApiClient {
 		request: Omit<JobMasterResponse, 'id'>
 	): Promise<Result<JobMasterResponse, ApiError>> {
 		return this.post<JobMasterResponse>('/api/v1/job-masters', request);
+	}
+
+	// =========================================================================
+	// Issue #293: Extended Methods for Run Execution
+	// =========================================================================
+
+	/**
+	 * Create a job from a master template.
+	 * This is used when starting a Run from a JobVersion.
+	 *
+	 * @param masterId - The job master ID (externalJobMasterId from JobVersion)
+	 * @param request - Job creation parameters including input data in body
+	 * @returns Created job response with job_id and status
+	 */
+	async createJobFromMaster(
+		masterId: string,
+		request: JobCreateFromMasterRequest
+	): Promise<Result<JobCreateFromMasterResponse, ApiError>> {
+		return this.post<JobCreateFromMasterResponse>(`/api/v1/jobs/from-master/${masterId}`, request);
+	}
+
+	/**
+	 * Get task list for a job.
+	 * Returns all tasks with their current status, input/output data.
+	 *
+	 * @param jobId - The job ID
+	 * @returns Task list with details for each task
+	 */
+	async getJobTasks(jobId: string): Promise<Result<TaskList, ApiError>> {
+		return this.get<TaskList>(`/api/v1/jobs/${jobId}/tasks`);
+	}
+
+	/**
+	 * Get the result of a completed job.
+	 *
+	 * @param jobId - The job ID
+	 * @returns Job result with final output data
+	 */
+	async getJobResult(jobId: string): Promise<Result<JobResultResponse, ApiError>> {
+		return this.get<JobResultResponse>(`/api/v1/jobs/${jobId}/result`);
+	}
+
+	/**
+	 * Cancel a running job.
+	 *
+	 * @param jobId - The job ID to cancel
+	 * @returns Updated job response with canceled status
+	 */
+	async cancelJob(jobId: string): Promise<Result<JobCreateFromMasterResponse, ApiError>> {
+		return this.post<JobCreateFromMasterResponse>(`/api/v1/jobs/${jobId}/cancel`, {});
+	}
+
+	/**
+	 * Retry a failed task.
+	 *
+	 * @param taskId - The task ID to retry
+	 * @returns Task retry response
+	 */
+	async retryTask(taskId: string): Promise<Result<TaskRetryResponse, ApiError>> {
+		return this.post<TaskRetryResponse>(`/api/v1/tasks/${taskId}/retry`, {});
 	}
 }
