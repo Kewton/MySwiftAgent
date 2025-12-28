@@ -89,6 +89,9 @@ class JobTaskGeneratorState(TypedDict, total=False):
     retry_count: int
     validation_errors: list[str]
 
+    # ===== Issue #293: Schema Validation Error Handling =====
+    schema_validation_errors: list[dict[str, Any]]
+
     # ===== Output =====
     job_id: str | None
     status: str
@@ -145,6 +148,8 @@ def create_initial_state(
         "validation_result": None,
         "retry_count": 0,
         "validation_errors": [],
+        # Issue #293: Schema Validation Error Handling
+        "schema_validation_errors": [],
         # Output
         "job_id": None,
         "status": "initialized",

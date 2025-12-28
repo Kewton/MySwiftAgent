@@ -14,7 +14,7 @@ from ..prompts.interface_schema import (
     create_interface_schema_prompt,
 )
 from ..state import JobTaskGeneratorState
-from ..utils.jobqueue_client import JobqueueClient
+from ..utils.jobqueue_client import JobqueueAPIError, JobqueueClient
 from ..utils.llm_invocation import StructuredLLMError, invoke_structured_llm
 from ..utils.schema_matcher import SchemaMatcher
 
@@ -34,6 +34,10 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
     - ["integer"] → {"type": "integer"}
     - ["number"] → {"type": "number"}
 
+    Additionally (Issue #293):
+    - Removes metadata fields that should not be in JSON Schema
+    - Handles non-dict "properties" values by converting to empty object
+
     Args:
         schema: JSON Schema dictionary (input_schema or output_schema)
 
@@ -52,8 +56,21 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
         >>> schema = {"properties": {"active": ["boolean"], "count": ["integer"]}}
         >>> normalize_json_schema_properties(schema)
         {"properties": {"active": {"type": "boolean"}, "count": {"type": "integer"}}}
+
+        >>> schema = {"properties": "boolean", "task_id": "task_001"}
+        >>> normalize_json_schema_properties(schema)
+        {"properties": {}}
     """
     valid_types = {"string", "boolean", "array", "object", "integer", "number", "null"}
+
+    # Issue #293: Metadata fields that LLM sometimes incorrectly includes in JSON Schema
+    # These should be filtered out as they are not valid JSON Schema keywords
+    metadata_fields_to_remove = {
+        "task_id",
+        "interface_name",
+        "output_schema",  # When incorrectly nested inside input_schema
+        "input_schema",  # When incorrectly nested inside output_schema
+    }
 
     def normalize_value(value: Any, prop_name: str = "") -> Any:
         """Normalize a single value in the schema."""
@@ -76,7 +93,9 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
         # Handle bare string type like "string", "boolean", etc.
         if isinstance(value, str):
             if value in valid_types:
-                logger.debug(f"Normalizing bare string type '{value}' → {{'type': '{value}'}}")
+                logger.debug(
+                    f"Normalizing bare string type '{value}' → {{'type': '{value}'}}"
+                )
                 return {"type": value}
             else:
                 # Handle arbitrary strings (likely descriptions placed incorrectly)
@@ -88,9 +107,15 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
         # Handle array shorthand like ["string"]
         if isinstance(value, list):
             # Check if it's a shorthand type like ["string"]
-            if len(value) == 1 and isinstance(value[0], str) and value[0] in valid_types:
+            if (
+                len(value) == 1
+                and isinstance(value[0], str)
+                and value[0] in valid_types
+            ):
                 type_name = value[0]
-                logger.debug(f"Normalizing shorthand type [{type_name}] → {{'type': '{type_name}'}}")
+                logger.debug(
+                    f"Normalizing shorthand type [{type_name}] → {{'type': '{type_name}'}}"
+                )
                 return {"type": type_name}
             # Check if it's a malformed enum pattern like:
             # [{'type': 'string', 'description': 'NEUTRAL'}, {'type': 'string', 'description': 'MALE'}]
@@ -127,13 +152,29 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
 
     def normalize_schema_dict(obj: dict[str, Any]) -> dict[str, Any]:
         """Recursively normalize all fields in a schema dict."""
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in obj.items():
-            if key == "properties" and isinstance(value, dict):
-                # Normalize each property
-                result[key] = {}
-                for prop_name, prop_value in value.items():
-                    result[key][prop_name] = normalize_value(prop_value, prop_name)
+            # Issue #293: Remove metadata fields that should not be in JSON Schema
+            if key in metadata_fields_to_remove:
+                logger.warning(
+                    f"Removing metadata field '{key}' from JSON Schema "
+                    f"(value: {str(value)[:50]}...)"
+                )
+                continue
+
+            if key == "properties":
+                # Issue #293: Handle non-dict properties values
+                if not isinstance(value, dict):
+                    logger.warning(
+                        f"properties is not a dict ({type(value).__name__}: {value}), "
+                        "converting to empty object"
+                    )
+                    result[key] = {}
+                else:
+                    # Normalize each property
+                    result[key] = {}
+                    for prop_name, prop_value in value.items():
+                        result[key][prop_name] = normalize_value(prop_value, prop_name)
             elif key == "items" and isinstance(value, (dict, list)):
                 # Handle array items
                 result[key] = normalize_value(value, "items")
@@ -349,6 +390,8 @@ async def interface_definition_node(
     client = JobqueueClient()
     matcher = SchemaMatcher(client)
     interface_masters: dict[str, dict[str, Any]] = {}
+    # Issue #293: Collect schema validation errors for evaluator feedback
+    schema_validation_errors: list[dict[str, Any]] = []
 
     for interface_def in response.interfaces:
         task_id = interface_def.task_id
@@ -360,43 +403,70 @@ async def interface_definition_node(
             interface_name,
         )
 
-        interface_master = await matcher.find_or_create_interface_master(
-            name=interface_name,
-            description=interface_def.description,
-            input_schema=interface_def.input_schema,
-            output_schema=interface_def.output_schema,
-        )
-
-        master_id = interface_master.get("id")
-        if not master_id:
-            logger.error(
-                "InterfaceMaster response missing id for task %s: %s",
-                task_id,
-                interface_master,
+        try:
+            interface_master = await matcher.find_or_create_interface_master(
+                name=interface_name,
+                description=interface_def.description,
+                input_schema=interface_def.input_schema,
+                output_schema=interface_def.output_schema,
             )
-            raise ValueError(f"InterfaceMaster creation failed for task {task_id}")
 
-        interface_masters[task_id] = {
-            "interface_master_id": master_id,
-            "input_interface_id": master_id,
-            "output_interface_id": master_id,
-            "interface_name": interface_name,
-            "input_schema": interface_def.input_schema,
-            "output_schema": interface_def.output_schema,
-        }
+            master_id = interface_master.get("id")
+            if not master_id:
+                logger.error(
+                    "InterfaceMaster response missing id for task %s: %s",
+                    task_id,
+                    interface_master,
+                )
+                raise ValueError(f"InterfaceMaster creation failed for task {task_id}")
+
+            interface_masters[task_id] = {
+                "interface_master_id": master_id,
+                "input_interface_id": master_id,
+                "output_interface_id": master_id,
+                "interface_name": interface_name,
+                "input_schema": interface_def.input_schema,
+                "output_schema": interface_def.output_schema,
+            }
+        except JobqueueAPIError as e:
+            # Issue #293: Capture schema validation errors for evaluator feedback
+            logger.warning(
+                "Schema validation failed for task %s (%s): %s",
+                task_id,
+                interface_name,
+                e.message,
+            )
+            schema_validation_errors.append(
+                {
+                    "task_id": task_id,
+                    "interface_name": interface_name,
+                    "error": e.message,
+                    "input_schema": interface_def.input_schema,
+                    "output_schema": interface_def.output_schema,
+                }
+            )
+            continue
 
     # Increment retry_count if this is a retry (from evaluator or validation)
+    # Issue #293: Also increment if there are schema validation errors
     current_retry = state.get("retry_count", 0)
     evaluation_feedback = state.get("evaluation_feedback")
     validation_result = state.get("validation_result")
 
-    if evaluation_feedback or (
-        validation_result and not validation_result.get("is_valid", True)
+    if (
+        evaluation_feedback
+        or (validation_result and not validation_result.get("is_valid", True))
+        or schema_validation_errors  # Issue #293: Increment on schema errors
     ):
         updated_retry = current_retry + 1
     else:
         updated_retry = 0
 
+    if schema_validation_errors:
+        logger.warning(
+            "Interface definition node completed with %s schema validation errors",
+            len(schema_validation_errors),
+        )
     logger.info(
         "Interface definition node completed with %s interfaces",
         len(interface_masters),
@@ -407,4 +477,6 @@ async def interface_definition_node(
         "interface_definitions": interface_masters,
         "evaluator_stage": "after_interface_definition",
         "retry_count": updated_retry,
+        # Issue #293: Include schema validation errors for evaluator feedback
+        "schema_validation_errors": schema_validation_errors,
     }

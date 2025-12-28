@@ -327,3 +327,78 @@ class TestEvaluatorRouter:
         # Router should route to requirement_analysis (retry)
         # all_tasks_feasible does not directly affect routing logic
         assert result == "requirement_analysis"
+
+    # ========================================================================
+    # Schema Validation Error Handling Tests (Issue #293)
+    # ========================================================================
+
+    def test_evaluator_router_with_schema_validation_errors_retry(self):
+        """Test routing to interface_definition when schema_validation_errors exist.
+
+        Priority: High
+        Issue #293: When schema validation errors are present and retry is available,
+        the router should route back to interface_definition for re-generation.
+        """
+        state = create_mock_workflow_state(
+            retry_count=1,  # < MAX_RETRY_COUNT (5)
+            evaluation_result={"is_valid": True, "all_tasks_feasible": True},
+            evaluator_stage="after_interface_definition",
+            interface_definitions={"task_1": {"interface_name": "Interface 1"}},
+            schema_validation_errors=[
+                {
+                    "task_id": "task_2",
+                    "interface_name": "invalid_interface",
+                    "error": "Invalid input_schema: Schema error",
+                }
+            ],
+        )
+
+        result = evaluator_router(state)
+
+        # Should route to interface_definition to regenerate failed schemas
+        assert result == "interface_definition"
+
+    def test_evaluator_router_with_schema_validation_errors_max_retries(self):
+        """Test routing to END when schema errors exist and max retries reached.
+
+        Priority: High
+        Issue #293: When schema validation errors are present and max retries reached,
+        the router should route to END.
+        """
+        state = create_mock_workflow_state(
+            retry_count=5,  # = MAX_RETRY_COUNT
+            evaluation_result={"is_valid": True, "all_tasks_feasible": True},
+            evaluator_stage="after_interface_definition",
+            interface_definitions={"task_1": {"interface_name": "Interface 1"}},
+            schema_validation_errors=[
+                {
+                    "task_id": "task_2",
+                    "interface_name": "invalid_interface",
+                    "error": "Invalid input_schema: Schema error",
+                }
+            ],
+        )
+
+        result = evaluator_router(state)
+
+        # Should route to END because max retries reached
+        assert result == "END"
+
+    def test_evaluator_router_no_schema_errors_proceeds(self):
+        """Test that router proceeds normally when no schema_validation_errors.
+
+        Priority: Medium
+        Issue #293: Verify normal flow when schema_validation_errors is empty or None.
+        """
+        state = create_mock_workflow_state(
+            retry_count=0,
+            evaluation_result={"is_valid": True, "all_tasks_feasible": True},
+            evaluator_stage="after_interface_definition",
+            interface_definitions={"task_1": {"interface_name": "Interface 1"}},
+            schema_validation_errors=[],  # Empty list
+        )
+
+        result = evaluator_router(state)
+
+        # Should proceed to master_creation
+        assert result == "master_creation"

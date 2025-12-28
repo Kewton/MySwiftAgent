@@ -141,6 +141,19 @@ def evaluator_router(
         return "END"
 
     if evaluator_stage == "after_interface_definition":
+        # Issue #293: Check for schema validation errors first
+        schema_errors = state.get("schema_validation_errors", [])
+        if schema_errors:
+            logger.warning(
+                "Schema validation errors detected (%d errors), "
+                "routing back to interface_definition",
+                len(schema_errors),
+            )
+            if retry_count < MAX_RETRY_COUNT:
+                return "interface_definition"
+            logger.error("Max retries reached with schema validation errors")
+            return "END"
+
         # Proceed only if both structure is valid AND all tasks are feasible
         if is_valid and all_tasks_feasible:
             return "master_creation"
