@@ -8,7 +8,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { RUN_STATUS_CONFIG, getRunDuration, calculateProgress } from '$lib/types/run';
-	import { getFirstTaskInputSchema, type JSONSchema } from '$lib/utils/interface-schema';
+	import { getFirstTaskInputSchema } from '$lib/utils/interface-schema';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();

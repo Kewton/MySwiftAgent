@@ -65,7 +65,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		});
 
 		let externalJobId: string | null = null;
-		let status = run.status;
+		const status = run.status;
 
 		// If JobVersion has externalJobMasterId, create job on JobQueue
 		if (jobVersion.externalJobMasterId) {
