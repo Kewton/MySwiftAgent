@@ -118,7 +118,13 @@ class JobExecutor:
                         f"[TASK] Resolving template variables for task {task.id}"
                     )
                     try:
-                        result = TemplateResolver.resolve_template(resolved_body, tasks)
+                        # Pass job and current_task for {{job.body.*}} and {{task.input_data}}
+                        result = TemplateResolver.resolve_template(
+                            resolved_body,
+                            tasks,
+                            job=job,
+                            current_task=task,
+                        )
                         # Template resolver can return str/list/None, but we expect dict
                         if isinstance(result, dict):
                             resolved_body = result
