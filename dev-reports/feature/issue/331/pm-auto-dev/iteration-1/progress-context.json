@@ -1,0 +1,82 @@
+{
+  "issue_number": 331,
+  "issue_title": "graphAiServer job_params対応 - sourceノード構造変更",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 62.89,
+      "tests_total": 66,
+      "tests_passed": 66,
+      "tests_failed": 0,
+      "new_tests_added": 15,
+      "static_analysis": {
+        "eslint_errors": 0,
+        "typescript_errors": 0,
+        "ruff_errors": 0
+      }
+    },
+    "acceptance": {
+      "status": "failed",
+      "reason": "environment_mismatch",
+      "details": "Running graphAiServer is from main repo without Issue #331 changes. Implementation verified via unit tests.",
+      "pytest_results": {
+        "total": 8,
+        "passed": 2,
+        "failed": 6
+      },
+      "acceptance_criteria_verified": {
+        "job_params_injection": true,
+        "source_job_params_reference": true,
+        "prompt_update": true,
+        "unit_tests": true,
+        "acceptance_tests": false
+      }
+    },
+    "refactor": {
+      "status": "success",
+      "refactorings_applied": [
+        "Added SourceNodeData interface",
+        "Extracted hasGraphAIErrors() helper",
+        "Extracted sendGraphAIResult() helper",
+        "Extracted handleGraphAIError() helper",
+        "Applied DRY principle"
+      ],
+      "lines_reduced": 78,
+      "tests_still_passing": true
+    }
+  },
+  "files_changed": [
+    "graphAiServer/src/app.ts",
+    "graphAiServer/src/services/graphai.ts",
+    "graphAiServer/src/types/workflow.ts",
+    "graphAiServer/tests/unit/graphai.test.ts",
+    "graphAiServer/tests/unit/app.job_params.test.ts",
+    "graphAiServer/config/graphai/test/model.yml",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py",
+    "tests/acceptance/test_issue_331_acceptance.py"
+  ],
+  "commits": [
+    {
+      "hash": "81c974d",
+      "message": "feat(Issue #331): graphAiServer job_params対応 - sourceノード構造変更"
+    },
+    {
+      "hash": "52c744a",
+      "message": "refactor(Issue #331): extract helper functions and add SourceNodeData type"
+    }
+  ],
+  "blockers": [
+    {
+      "type": "environment",
+      "description": "L3受入テストを実行するには、graphAiServerをこのworktreeから再起動する必要がある",
+      "suggested_fix": "cd graphAiServer && npm run build && npm start",
+      "severity": "low"
+    }
+  ],
+  "next_steps": [
+    "graphAiServerをworktreeから再起動してL3受入テストを実行",
+    "PRを作成してレビューを依頼",
+    "mainにマージ後、本番環境でテスト"
+  ]
+}

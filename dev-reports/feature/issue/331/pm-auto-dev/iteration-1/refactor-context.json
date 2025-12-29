@@ -1,0 +1,33 @@
+{
+  "issue_number": 331,
+  "refactor_targets": [
+    "graphAiServer/src/app.ts",
+    "graphAiServer/src/services/graphai.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 62.89,
+    "current_tests": 66,
+    "static_analysis_errors": 0
+  },
+  "design_patterns_to_apply": [
+    "Extract common request handling logic",
+    "Type safety improvements"
+  ],
+  "improvement_goals": [
+    "Extract duplicate job_params handling to reduce code duplication",
+    "Add TypeScript interface for source node structure",
+    "Improve debug logging consistency"
+  ],
+  "current_implementation": {
+    "app_ts_changes": [
+      "Line 81: Added job_params to path param endpoint destructuring",
+      "Line 101: Passing job_params to runGraphAI",
+      "Line 134: Added job_params to legacy endpoint destructuring",
+      "Line 145: Passing job_params to runGraphAI"
+    ],
+    "graphai_ts_changes": [
+      "Line 188: Added job_params parameter to runGraphAI",
+      "Line 207: Changed source injection to structured object"
+    ]
+  }
+}
