@@ -394,3 +394,202 @@ class TestMasterCreationNode:
             assert tm["order"] == i
             assert "id" in tm
             assert "name" in tm
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher"
+    )
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient"
+    )
+    async def test_body_template_task_chaining_first_task(
+        self, mock_jobqueue_client, mock_schema_matcher
+    ):
+        """Test that first task (order=0) receives {{job.body}} in body_template.
+
+        Priority: High
+        Issue: TaskMaster body_template task chaining implementation.
+        """
+        # Setup mock JobqueueClient
+        mock_client_instance = AsyncMock()
+        mock_client_instance.create_job_master = AsyncMock(
+            return_value={"id": "jm_001", "name": "Test Job"}
+        )
+        mock_client_instance.add_task_to_workflow = AsyncMock(
+            return_value={"id": "jmt_001", "order": 0}
+        )
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        # Track body_template passed to find_or_create_task_master
+        captured_body_templates = []
+
+        async def mock_find_or_create(*args, **kwargs):
+            captured_body_templates.append(kwargs.get("body_template"))
+            return {"id": "tm_001", "name": "Task 1"}
+
+        mock_matcher_instance = AsyncMock()
+        mock_matcher_instance.find_or_create_task_master = AsyncMock(
+            side_effect=mock_find_or_create
+        )
+        mock_schema_matcher.return_value = mock_matcher_instance
+
+        # Create test state with single task
+        task_breakdown = create_mock_task_breakdown(1)
+        interface_definitions = {
+            "task_1": {
+                "interface_master_id": "im_001",
+                "interface_name": "search_interface",
+            },
+        }
+        state = create_mock_workflow_state(
+            user_requirement="Single task workflow",
+            task_breakdown=task_breakdown,
+            interface_definitions=interface_definitions,
+        )
+
+        # Execute node
+        result = await master_creation_node(state)
+
+        # Verify success
+        assert "error_message" not in result
+        assert result["job_master_id"] == "jm_001"
+
+        # Verify first task body_template uses {{job.body}}
+        assert len(captured_body_templates) == 1
+        first_task_template = captured_body_templates[0]
+        assert first_task_template is not None
+        assert "user_input" in first_task_template
+        assert first_task_template["user_input"] == "{{job.body}}"
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher"
+    )
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient"
+    )
+    async def test_body_template_task_chaining_subsequent_tasks(
+        self, mock_jobqueue_client, mock_schema_matcher
+    ):
+        """Test that subsequent tasks (order>0) receive {{tasks[N-1].output_data}}.
+
+        Priority: High
+        Issue: TaskMaster body_template task chaining implementation.
+        """
+        # Setup mock JobqueueClient
+        mock_client_instance = AsyncMock()
+        mock_client_instance.create_job_master = AsyncMock(
+            return_value={"id": "jm_001", "name": "Test Job"}
+        )
+        mock_client_instance.add_task_to_workflow = AsyncMock(
+            side_effect=[
+                {"id": "jmt_001", "order": 0},
+                {"id": "jmt_002", "order": 1},
+                {"id": "jmt_003", "order": 2},
+            ]
+        )
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        # Track body_template passed to find_or_create_task_master
+        captured_body_templates = []
+
+        async def mock_find_or_create(*args, **kwargs):
+            captured_body_templates.append(kwargs.get("body_template"))
+            task_idx = len(captured_body_templates)
+            return {"id": f"tm_00{task_idx}", "name": f"Task {task_idx}"}
+
+        mock_matcher_instance = AsyncMock()
+        mock_matcher_instance.find_or_create_task_master = AsyncMock(
+            side_effect=mock_find_or_create
+        )
+        mock_schema_matcher.return_value = mock_matcher_instance
+
+        # Create test state with 3 tasks
+        task_breakdown = create_mock_task_breakdown(3)
+        interface_definitions = {
+            "task_1": {"interface_master_id": "im_001"},
+            "task_2": {"interface_master_id": "im_002"},
+            "task_3": {"interface_master_id": "im_003"},
+        }
+        state = create_mock_workflow_state(
+            user_requirement="Multi-task workflow",
+            task_breakdown=task_breakdown,
+            interface_definitions=interface_definitions,
+        )
+
+        # Execute node
+        result = await master_creation_node(state)
+
+        # Verify success
+        assert "error_message" not in result
+        assert result["job_master_id"] == "jm_001"
+
+        # Verify body_template for each task
+        assert len(captured_body_templates) == 3
+
+        # Task 0 (first): should use {{job.body}}
+        assert captured_body_templates[0]["user_input"] == "{{job.body}}"
+
+        # Task 1 (second): should use {{tasks[0].output_data}}
+        assert captured_body_templates[1]["user_input"] == "{{tasks[0].output_data}}"
+
+        # Task 2 (third): should use {{tasks[1].output_data}}
+        assert captured_body_templates[2]["user_input"] == "{{tasks[1].output_data}}"
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.SchemaMatcher"
+    )
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.master_creation.JobqueueClient"
+    )
+    async def test_body_template_preserves_model_name_placeholder(
+        self, mock_jobqueue_client, mock_schema_matcher
+    ):
+        """Test that body_template structure is preserved for model_name injection.
+
+        Priority: Medium
+        The workflow_tester sets model_name after workflow registration.
+        """
+        # Setup mocks
+        mock_client_instance = AsyncMock()
+        mock_client_instance.create_job_master = AsyncMock(
+            return_value={"id": "jm_001", "name": "Test Job"}
+        )
+        mock_client_instance.add_task_to_workflow = AsyncMock(
+            return_value={"id": "jmt_001", "order": 0}
+        )
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        captured_body_templates = []
+
+        async def mock_find_or_create(*args, **kwargs):
+            captured_body_templates.append(kwargs.get("body_template"))
+            return {"id": "tm_001", "name": "Task 1"}
+
+        mock_matcher_instance = AsyncMock()
+        mock_matcher_instance.find_or_create_task_master = AsyncMock(
+            side_effect=mock_find_or_create
+        )
+        mock_schema_matcher.return_value = mock_matcher_instance
+
+        # Create test state
+        task_breakdown = create_mock_task_breakdown(1)
+        interface_definitions = {
+            "task_1": {"interface_master_id": "im_001"},
+        }
+        state = create_mock_workflow_state(
+            user_requirement="Test workflow",
+            task_breakdown=task_breakdown,
+            interface_definitions=interface_definitions,
+        )
+
+        # Execute node
+        await master_creation_node(state)
+
+        # Verify body_template has only user_input (model_name set later)
+        assert len(captured_body_templates) == 1
+        template = captured_body_templates[0]
+        assert "user_input" in template
+        # model_name should not be in the template (set by workflow_tester)
+        assert "model_name" not in template or template.get("model_name") is None

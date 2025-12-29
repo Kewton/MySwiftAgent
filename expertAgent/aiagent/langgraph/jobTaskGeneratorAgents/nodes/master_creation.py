@@ -147,12 +147,26 @@ async def master_creation_node(
 
             # Prepare body_template for graphAiServer /api/v1/myagent endpoint
             # Note: model_name will be set by workflow_tester after workflow registration
-            # user_input receives entire job.body (e.g., {"company_name": "富士通"})
-            # which is then injected into workflow's source node
-            task_body_template = {
-                "user_input": "{{job.body}}",  # Pass entire job body to workflow
-                # model_name is set after workflow registration by workflow_tester
-            }
+            #
+            # Task chaining: Each task receives input from previous task's output
+            # - First task (order=0): receives job.body (initial parameters)
+            # - Subsequent tasks (order>0): receives previous task's output_data
+            if order == 0:
+                # First task: use job.body (initial parameters like query, max_results)
+                task_body_template = {
+                    "user_input": "{{job.body}}",
+                }
+                logger.debug(f"  Task chaining: order={order}, using {{{{job.body}}}}")
+            else:
+                # Subsequent tasks: use previous task's output
+                # jobqueue's TemplateResolver will resolve {{tasks[N].output_data}}
+                task_body_template = {
+                    "user_input": f"{{{{tasks[{order - 1}].output_data}}}}",
+                }
+                logger.debug(
+                    f"  Task chaining: order={order}, "
+                    f"using {{{{tasks[{order - 1}].output_data}}}}"
+                )
 
             # Find or create TaskMaster with strict interface matching
             task_master = await matcher.find_or_create_task_master(

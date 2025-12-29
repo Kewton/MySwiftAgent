@@ -9,10 +9,13 @@ This module provides a comprehensive client for interacting with jobqueue APIs:
 - Job creation
 """
 
+import logging
 import os
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class JobqueueAPIError(Exception):
@@ -195,6 +198,11 @@ class JobqueueClient:
         Returns:
             Created TaskMaster
         """
+        # Debug: Log the body_template being sent to jobqueue
+        logger.debug(
+            f"[JobqueueClient] Creating TaskMaster: name={name}, "
+            f"body_template={body_template}"
+        )
         return await self._request(
             "POST",
             "/api/v1/task-masters",

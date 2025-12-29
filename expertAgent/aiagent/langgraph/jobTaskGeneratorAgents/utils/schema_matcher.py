@@ -84,17 +84,19 @@ class SchemaMatcher:
         url: str,
         input_interface_id: str,
         output_interface_id: str,
+        body_template: dict | None = None,
     ) -> dict[str, Any] | None:
-        """Find TaskMaster by exact name, URL, and interface IDs match.
+        """Find TaskMaster by exact name, URL, interface IDs, and body_template match.
 
-        This method performs a strict search that includes interface IDs,
-        ensuring that reused TaskMasters have compatible interfaces.
+        This method performs a strict search that includes interface IDs and body_template,
+        ensuring that reused TaskMasters have compatible interfaces and task chaining.
 
         Args:
             name: Task name to search for
             url: Task URL to search for
             input_interface_id: Input InterfaceMaster ID to match
             output_interface_id: Output InterfaceMaster ID to match
+            body_template: Request body template to match (optional)
 
         Returns:
             TaskMaster dict if found, None otherwise
@@ -104,13 +106,24 @@ class SchemaMatcher:
             result = await self.client.list_task_masters(name=name, page=1, size=10)
             masters = result.get("masters", [])
 
-            # Then check URL and interface IDs exact match
+            # Then check URL, interface IDs, and body_template exact match
             for master in masters:
+                # Compare body_template with special handling for user_input field
+                # (model_name is added dynamically, so only compare user_input)
+                existing_body_template = master.get("body_template", {})
+                if body_template:
+                    existing_user_input = existing_body_template.get("user_input")
+                    new_user_input = body_template.get("user_input")
+                    body_template_matches = existing_user_input == new_user_input
+                else:
+                    body_template_matches = not existing_body_template
+
                 if (
                     master.get("name") == name
                     and master.get("url") == url
                     and master.get("input_interface_id") == input_interface_id
                     and master.get("output_interface_id") == output_interface_id
+                    and body_template_matches
                 ):
                     return cast(dict[str, Any], master)
 
@@ -189,14 +202,15 @@ class SchemaMatcher:
         Returns:
             TaskMaster (existing or newly created)
         """
-        # Try to find existing with strict interface ID matching
+        # Try to find existing with strict interface ID and body_template matching
         existing = await self.find_task_master_by_name_url_and_interfaces(
-            name, url, input_interface_id, output_interface_id
+            name, url, input_interface_id, output_interface_id, body_template
         )
         if existing:
             logger.info(
                 f"Reusing existing TaskMaster: {existing['id']} "
-                f"(name={name}, input={input_interface_id}, output={output_interface_id})"
+                f"(name={name}, input={input_interface_id}, output={output_interface_id}, "
+                f"body_template={body_template})"
             )
             return existing
 

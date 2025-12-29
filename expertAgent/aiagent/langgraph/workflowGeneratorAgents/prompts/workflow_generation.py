@@ -36,14 +36,14 @@ Key responsibilities:
 2. Select appropriate GraphAI agents and expertAgent APIs
 3. Generate syntactically correct YAML with proper data flow
 4. Ensure input/output interface compatibility
-5. Add clear comments and documentation
+5. Add YAML line comments (# ...) to explain each node's purpose
 
 Quality criteria:
 - YAML syntax must be 100% correct
 - All agent names must exist in available_agents list
 - Data flow must match input/output schemas
 - Error handling must be included
-- Comments must explain each node's purpose
+- Use YAML line comments (# ...) above nodes to explain their purpose
 
 CRITICAL REQUIREMENT:
 - When LLM prompts contain :source.field references in multi-line strings,
@@ -295,13 +295,24 @@ def create_workflow_generation_prompt(
 
 6. **Error Handling**:
    - Always validate required inputs
-   - Add comments for each node's purpose
 
-7. **Naming Convention**:
+7. **YAML Comments** (CRITICAL):
+   - ✅ Use YAML line comments (# ...) ABOVE each node to explain its purpose
+   - ❌ NEVER add 'comment:' field inside node definitions
+   - GraphAI does NOT support 'comment' attribute in computed nodes
+   - Example:
+     ```yaml
+     # Step 1: Build prompt for LLM processing
+     build_prompt:
+       agent: stringTemplateAgent
+       ...
+     ```
+
+8. **Naming Convention**:
    - workflow_name: snake_case (e.g., send_email_notification)
    - node_id: descriptive snake_case (e.g., fetch_user_data)
 
-8. **Example Workflow Structure**:
+9. **Example Workflow Structure**:
 
 **Example 1 - Using expertAgent jsonoutput API with Gemini (RECOMMENDED with stringTemplateAgent)**:
 ```yaml
@@ -525,7 +536,7 @@ Generate a complete, executable GraphAI workflow YAML that:
 - Accepts inputs matching the input_interface schema
 - Produces outputs matching the output_interface schema
 - Uses only available agents
-- Includes clear comments
+- Uses YAML line comments (# ...) above nodes - DO NOT use 'comment:' field
 - Is syntactically correct
 
 ## Response Format (MANDATORY)

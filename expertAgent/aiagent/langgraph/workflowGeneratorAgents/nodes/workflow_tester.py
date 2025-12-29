@@ -52,6 +52,10 @@ async def _update_task_master_body_template(
     After workflow registration, the TaskMaster needs to be updated with
     the correct model_name so that JobQueue can execute the workflow.
 
+    IMPORTANT: This function preserves the existing user_input value in body_template,
+    which contains the task chaining configuration (e.g., {{job.body}} for first task,
+    {{tasks[N-1].output_data}} for subsequent tasks).
+
     Args:
         task_master_id: TaskMaster ID to update
         workflow_name: Name of the registered workflow
@@ -60,13 +64,21 @@ async def _update_task_master_body_template(
         True if update succeeded, False otherwise
     """
     model_name = f"taskmaster/{task_master_id}/{workflow_name}"
-    body_template = {
-        "user_input": "{{job.body}}",  # Pass entire job body to workflow
-        "model_name": model_name,
-    }
 
     try:
         client = JobqueueClient(base_url=JOBQUEUE_API_URL)
+
+        # Fetch existing TaskMaster to preserve user_input (task chaining config)
+        existing_task_master = await client.get_task_master(task_master_id)
+        existing_body_template = existing_task_master.get("body_template", {}) or {}
+        existing_user_input = existing_body_template.get("user_input", "{{job.body}}")
+
+        # Build new body_template preserving user_input, only adding model_name
+        body_template = {
+            "user_input": existing_user_input,  # Preserve task chaining config
+            "model_name": model_name,
+        }
+
         await client.update_task_master(
             master_id=task_master_id,
             body_template=body_template,
@@ -74,9 +86,11 @@ async def _update_task_master_body_template(
             change_reason=f"Set model_name for workflow: {workflow_name}",
         )
         logger.info(
-            "Updated TaskMaster %s body_template with model_name: %s",
+            "Updated TaskMaster %s body_template with model_name: %s "
+            "(preserved user_input: %s)",
             task_master_id,
             model_name,
+            existing_user_input,
         )
         return True
     except Exception as e:
