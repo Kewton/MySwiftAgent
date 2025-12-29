@@ -78,7 +78,7 @@ app.get('/api/v1/test', async (_req: Request, res: Response) => {
 
 // GraphAI agent endpoint with path parameters (new format)
 app.post('/api/v1/myagent/:category/:model', async (req: Request, res: Response) => {
-  const { user_input, project } = req.body;
+  const { user_input, project, job_params } = req.body;
   const { category, model } = req.params;
 
   if (!user_input) {
@@ -98,7 +98,7 @@ app.post('/api/v1/myagent/:category/:model', async (req: Request, res: Response)
     // Construct model_name from category and model
     const model_name = `${category}/${model}`;
 
-    const result: GraphAIResponse = await runGraphAI(user_input, model_name, project);
+    const result: GraphAIResponse = await runGraphAI(user_input, model_name, project, job_params);
 
     // Check if there are any errors in the execution
     const hasErrors = Object.keys(result.errors).length > 0;
@@ -131,7 +131,7 @@ app.post('/api/v1/myagent/:category/:model', async (req: Request, res: Response)
 
 // GraphAI agent endpoint (legacy format for backward compatibility)
 app.post('/api/v1/myagent', async (req: Request, res: Response) => {
-  const { user_input, model_name, project } = req.body;
+  const { user_input, model_name, project, job_params } = req.body;
 
   if (!user_input) {
     return res.status(400).json({ error: 'user_input is required' });
@@ -142,7 +142,7 @@ app.post('/api/v1/myagent', async (req: Request, res: Response) => {
   }
 
   try {
-    const result: GraphAIResponse = await runGraphAI(user_input, model_name, project);
+    const result: GraphAIResponse = await runGraphAI(user_input, model_name, project, job_params);
 
     // Check if there are any errors in the execution
     const hasErrors = Object.keys(result.errors).length > 0;

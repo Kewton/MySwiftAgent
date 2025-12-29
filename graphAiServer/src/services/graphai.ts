@@ -183,9 +183,22 @@ async function injectSecretsToGraphData(graph_data: GraphData, project?: string)
 /**
  * GraphAIを実行（リクエスト毎に独立したgraph_dataオブジェクトを使用）
  *
+ * @param user_input - ユーザー入力（オブジェクトまたは文字列）
+ * @param model_name - ワークフローモデル名（例: "test/model"）
+ * @param project - プロジェクト名（オプション、シークレット取得に使用）
+ * @param job_params - 静的パラメータ（オプション、body_templateから注入）
  * @returns GraphAIResponse - 全ノードの結果、エラー情報、実行ログを含む
+ *
+ * sourceノード構造:
+ * - :source.user_input.* - 動的データ（タスクチェーンからの入力）
+ * - :source.job_params.* - 静的パラメータ（job.bodyから注入）
  */
-export const runGraphAI = async (user_input: string, model_name: string, project?: string): Promise<GraphAIResponse> => {
+export const runGraphAI = async (
+  user_input: unknown,
+  model_name: string,
+  project?: string,
+  job_params?: Record<string, unknown>
+): Promise<GraphAIResponse> => {
   console.log("Available agents:", Object.keys(agents_2));
 
   const modelpath = MODEL_BASE_PATH + model_name + ".yml";
@@ -204,12 +217,22 @@ export const runGraphAI = async (user_input: string, model_name: string, project
 
   // ③ このリクエスト専用のGraphAIインスタンスを生成
   const graph = new GraphAI(graph_data, agents_2);
-  graph.injectValue("source", user_input);
+
+  // sourceノードに構造化データを注入
+  // - :source.user_input.* で動的データにアクセス
+  // - :source.job_params.* で静的パラメータにアクセス
+  const sourceData = {
+    user_input: user_input,
+    job_params: job_params || {},
+  };
+  graph.injectValue("source", sourceData);
 
   // デバッグ: sourceノードに注入されたデータの型と内容を出力
   console.log("=== Source Node Injection ===");
   console.log("user_input type:", typeof user_input);
   console.log("user_input value:", JSON.stringify(user_input, null, 2));
+  console.log("job_params:", JSON.stringify(job_params || {}, null, 2));
+  console.log("source structure:", JSON.stringify(sourceData, null, 2));
   console.log("=============================");
 
   let results: Record<string, unknown> = {};
