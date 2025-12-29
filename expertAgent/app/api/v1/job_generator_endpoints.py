@@ -324,6 +324,9 @@ def _build_response_from_state(
     # Issue #310: Extract interface definitions
     interface_definitions = state.get("interface_definitions")
 
+    # Issue #321: Extract job body parameters
+    job_body_parameters = state.get("job_body_parameters", [])
+
     # Extract evaluation result
     evaluation_result = state.get("evaluation_result")
 
@@ -449,6 +452,7 @@ def _build_response_from_state(
         validation_errors=validation_errors,
         error_message=error_message,
         langfuse_trace_id=langfuse_trace_id,  # Issue #278
+        job_body_parameters=job_body_parameters,  # Issue #321
     )
 
 

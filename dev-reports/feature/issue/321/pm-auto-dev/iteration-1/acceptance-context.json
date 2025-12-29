@@ -1,0 +1,57 @@
+{
+  "issue_number": 321,
+  "feature_summary": "Job Generator: 要件から抽出した情報をJob bodyに自動含める",
+  "acceptance_criteria": [
+    "要件に含まれるメールアドレス等のパラメータがJob bodyに自動抽出される",
+    "複数の異なる種類のパラメータ（日付、ファイル名等）が正しく抽出される",
+    "パラメータが存在しない場合も正常に処理される（後方互換性）",
+    "機密パラメータ（パスワード、APIキー等）は抽出対象から除外される"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "jobqueue", "myVault"],
+  "external_dependencies": ["LLM API (OpenAI/Anthropic)", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "テストケース1: パラメータ抽出の検証",
+        "description": "ユーザー要件からメールアドレスがJob bodyに抽出されることを確認",
+        "command": "curl -X POST http://localhost:8004/api/v1/job-generator/generate -H 'Content-Type: application/json' -d '{\"user_requirement\": \"大谷翔平についてGoogle検索し、結果を2件取得して、newtons.boiled.clock@gmail.com にメールで送信してください\", \"project_id\": \"test-project-321\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_id", "job_body_parameters"]
+      },
+      {
+        "name": "テストケース2: 複数パラメータの抽出",
+        "description": "複数の異なる種類のパラメータが正しく抽出されることを確認",
+        "command": "curl -X POST http://localhost:8004/api/v1/job-generator/generate -H 'Content-Type: application/json' -d '{\"user_requirement\": \"2024年1月1日から2024年12月31日までの売上データを集計し、report.pdf として保存してください\", \"project_id\": \"test-project-321\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_body_parameters"]
+      },
+      {
+        "name": "テストケース3: パラメータなしの要件",
+        "description": "パラメータが抽出できない場合も正常に処理されることを確認",
+        "command": "curl -X POST http://localhost:8004/api/v1/job-generator/generate -H 'Content-Type: application/json' -d '{\"user_requirement\": \"システムの状態を確認してください\", \"project_id\": \"test-project-321\"}'",
+        "expected_status": 200
+      },
+      {
+        "name": "テストケース4: 機密パラメータの除外",
+        "description": "パスワードやAPIキーが抽出対象から除外されることを確認",
+        "command": "curl -X POST http://localhost:8004/api/v1/job-generator/generate -H 'Content-Type: application/json' -d '{\"user_requirement\": \"APIキー sk-1234567890 を使ってOpenAI APIを呼び出してください\", \"project_id\": \"test-project-321\"}'",
+        "expected_status": 200,
+        "expected_response_not_contains": ["sk-1234567890"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"},
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_321_acceptance.py"
+}

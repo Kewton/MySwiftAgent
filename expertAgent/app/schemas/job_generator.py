@@ -4,6 +4,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+    JobBodyParameter,
+)
 from app.schemas.prompt_config import PromptConfig
 
 
@@ -130,4 +133,10 @@ class JobGeneratorResponse(BaseModel):
         default=None,
         description="Langfuse trace ID for LLM observability and debugging",
         examples=["trace-abc123-def456"],
+    )
+
+    # Issue #321: Extracted job body parameters from user requirements
+    job_body_parameters: list[JobBodyParameter] = Field(
+        default_factory=list,
+        description="List of parameters extracted from user requirements for job body",
     )
