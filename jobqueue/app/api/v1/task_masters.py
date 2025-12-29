@@ -19,6 +19,7 @@ from app.schemas.task_master import (
     TaskMasterUpdateResponse,
 )
 from app.services.task_version_manager import TaskVersionManager
+from app.services.template_validator import TemplateValidator
 
 router = APIRouter()
 
@@ -80,6 +81,11 @@ async def create_task_master(
         updated_by=master_data.created_by,
     )
 
+    # Validate body_template if provided
+    template_validation = None
+    if master_data.body_template is not None:
+        template_validation = TemplateValidator.validate(master_data.body_template)
+
     db.add(master)
     await db.commit()
     await db.refresh(master)
@@ -89,6 +95,7 @@ async def create_task_master(
         id=master.id,
         name=master.name,
         current_version=master.current_version,
+        template_validation=template_validation,
     )
 
 
@@ -237,12 +244,21 @@ async def update_task_master(
     await db.commit()
     await db.refresh(master)
 
+    # Validate body_template if it was updated
+    template_validation = None
+    if master_data.body_template is not None:
+        template_validation = TemplateValidator.validate(master_data.body_template)
+    elif master.body_template is not None:
+        # Validate existing template if not updated in this request
+        template_validation = TemplateValidator.validate(master.body_template)
+
     return TaskMasterUpdateResponse(
         master_id=master.id,
         previous_version=previous_version,
         current_version=master.current_version,
         auto_versioned=should_version,
         version_reason=reason,
+        template_validation=template_validation,
     )
 
 
@@ -267,6 +283,7 @@ async def delete_task_master(
         id=master.id,
         name=master.name,
         current_version=master.current_version,
+        template_validation=None,  # No validation for delete response
     )
 
 

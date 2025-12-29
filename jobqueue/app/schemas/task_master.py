@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 
+from app.schemas.template_validation import TemplateValidationResult
+
 
 class TaskMasterCreate(BaseModel):
     """Task master creation schema."""
@@ -77,6 +79,10 @@ class TaskMasterResponse(BaseModel):
     id: str | None = Field(None, description="Task master ID (same as master_id)")
     name: str
     current_version: int
+    template_validation: TemplateValidationResult | None = Field(
+        None,
+        description="Template validation result (warnings and extracted variables)",
+    )
 
     @model_validator(mode="after")
     def set_id_from_master_id(self) -> "TaskMasterResponse":
@@ -126,3 +132,7 @@ class TaskMasterUpdateResponse(BaseModel):
     current_version: int
     auto_versioned: bool
     version_reason: str
+    template_validation: TemplateValidationResult | None = Field(
+        None,
+        description="Template validation result (warnings and extracted variables)",
+    )

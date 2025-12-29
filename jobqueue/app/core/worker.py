@@ -114,9 +114,24 @@ class JobExecutor:
                 if resolved_body and TemplateResolver.has_template_variables(
                     resolved_body
                 ):
+                    # Log template resolution context
+                    job_body_fields = list(job.body.keys()) if job.body else []
                     logger.info(
-                        f"[TASK] Resolving template variables for task {task.id}"
+                        f"[TASK] Template resolution context:\n"
+                        f"  TaskMaster: {task_master.id} ({task_master.name})\n"
+                        f"  Task: {task.id}\n"
+                        f"  Job: {job.id}\n"
+                        f"  Job body fields: {job_body_fields}"
                     )
+
+                    # Build log context for enhanced logging
+                    log_context = {
+                        "task_id": task.id,
+                        "task_master_id": task_master.id,
+                        "task_master_name": task_master.name,
+                        "job_id": job.id,
+                    }
+
                     try:
                         # Pass job and current_task for {{job.body.*}} and {{task.input_data}}
                         result = TemplateResolver.resolve_template(
@@ -124,10 +139,21 @@ class JobExecutor:
                             tasks,
                             job=job,
                             current_task=task,
+                            log_context=log_context,
                         )
                         # Template resolver can return str/list/None, but we expect dict
                         if isinstance(result, dict):
                             resolved_body = result
+
+                            # Detect null fields after template resolution
+                            null_fields = _find_null_fields(resolved_body)
+                            if null_fields:
+                                logger.warning(
+                                    f"[TASK] Null fields detected after template resolution:\n"
+                                    f"  Task: {task.id}\n"
+                                    f"  TaskMaster: {task_master.name}\n"
+                                    f"  Null fields: {null_fields}"
+                                )
                         else:
                             resolved_body = None
                     except TemplateResolverError as e:
@@ -549,3 +575,25 @@ class WorkerManager:
             await session.rollback()
             logger.debug(f"[WORKER] Job {candidate_id} was claimed by another worker")
             return None
+
+
+def _find_null_fields(data: dict[str, Any], prefix: str = "") -> list[str]:
+    """Recursively find null fields in a dictionary.
+
+    Args:
+        data: Dictionary to check for null fields
+        prefix: Current path prefix for nested fields
+
+    Returns:
+        List of field paths that have null values
+    """
+    null_fields: list[str] = []
+
+    for key, value in data.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if value is None:
+            null_fields.append(path)
+        elif isinstance(value, dict):
+            null_fields.extend(_find_null_fields(value, path))
+
+    return null_fields

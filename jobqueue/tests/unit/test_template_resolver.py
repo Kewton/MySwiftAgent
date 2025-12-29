@@ -345,3 +345,80 @@ class TestTemplateResolverMixedVariables:
         """has_template_variables detects {{task.input_data.*}} pattern."""
         assert TemplateResolver.has_template_variables("{{task.input_data.field}}")
         assert TemplateResolver.has_template_variables({"key": "{{task.input_data}}"})
+
+
+class TestTemplateResolverLogContext:
+    """Tests for log_context parameter."""
+
+    def test_resolve_with_log_context(self) -> None:
+        """log_context parameter is passed through resolution."""
+        tasks = [MockTask(None, {"result": "value"})]
+        log_context = {
+            "task_id": "t_123",
+            "task_master_name": "test_task_master",
+            "job_id": "job_456",
+        }
+        template = "{{tasks[0].output_data.result}}"
+        result = TemplateResolver.resolve_template(
+            template, tasks, log_context=log_context
+        )
+        assert result == "value"
+
+    def test_resolve_with_partial_log_context(self) -> None:
+        """Partial log_context works correctly."""
+        tasks = [MockTask(None, {"result": "value"})]
+        log_context = {"task_id": "t_123"}
+        template = "{{tasks[0].output_data.result}}"
+        result = TemplateResolver.resolve_template(
+            template, tasks, log_context=log_context
+        )
+        assert result == "value"
+
+    def test_resolve_with_empty_log_context(self) -> None:
+        """Empty log_context works correctly."""
+        tasks = [MockTask(None, {"result": "value"})]
+        log_context: dict[str, str] = {}
+        template = "{{tasks[0].output_data.result}}"
+        result = TemplateResolver.resolve_template(
+            template, tasks, log_context=log_context
+        )
+        assert result == "value"
+
+    def test_format_log_context(self) -> None:
+        """_format_log_context produces correct output."""
+        log_context = {
+            "task_id": "t_123",
+            "task_master_name": "my_task",
+            "job_id": "job_456",
+        }
+        result = TemplateResolver._format_log_context(log_context)
+        assert "Task: t_123" in result
+        assert "TaskMaster: my_task" in result
+        assert "Job: job_456" in result
+
+    def test_format_log_context_none(self) -> None:
+        """_format_log_context handles None."""
+        result = TemplateResolver._format_log_context(None)
+        assert result == ""
+
+    def test_format_log_context_empty(self) -> None:
+        """_format_log_context handles empty dict."""
+        result = TemplateResolver._format_log_context({})
+        assert result == ""
+
+
+class TestTemplateResolverPatternsFromSharedModule:
+    """Tests verifying patterns are from shared TemplatePatterns module."""
+
+    def test_patterns_are_from_shared_module(self) -> None:
+        """Verify patterns reference TemplatePatterns module."""
+        from app.services.template_patterns import TemplatePatterns
+
+        # These should be the same compiled pattern objects
+        assert TemplateResolver.VARIABLE_PATTERN is TemplatePatterns.TASK_VARIABLE
+        assert TemplateResolver.JOB_VARIABLE_PATTERN is TemplatePatterns.JOB_VARIABLE
+        assert (
+            TemplateResolver.CURRENT_TASK_PATTERN
+            is TemplatePatterns.CURRENT_TASK_VARIABLE
+        )
+        assert TemplateResolver.ANY_VARIABLE_PATTERN is TemplatePatterns.ANY_VARIABLE
