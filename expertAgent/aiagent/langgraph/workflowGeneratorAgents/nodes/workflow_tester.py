@@ -52,9 +52,11 @@ async def _update_task_master_body_template(
     After workflow registration, the TaskMaster needs to be updated with
     the correct model_name so that JobQueue can execute the workflow.
 
-    IMPORTANT: This function preserves the existing user_input value in body_template,
-    which contains the task chaining configuration (e.g., {{job.body}} for first task,
-    {{tasks[N-1].output_data}} for subsequent tasks).
+    IMPORTANT: This function preserves the existing user_input and job_params values
+    in body_template:
+    - user_input: Contains task chaining configuration (e.g., {{job.body}} for first task,
+      {{tasks[N-1].output_data}} for subsequent tasks)
+    - job_params: Contains {{job.body}} for static parameter access (Issue #325)
 
     Args:
         task_master_id: TaskMaster ID to update
@@ -68,14 +70,16 @@ async def _update_task_master_body_template(
     try:
         client = JobqueueClient(base_url=JOBQUEUE_API_URL)
 
-        # Fetch existing TaskMaster to preserve user_input (task chaining config)
+        # Fetch existing TaskMaster to preserve user_input and job_params
         existing_task_master = await client.get_task_master(task_master_id)
         existing_body_template = existing_task_master.get("body_template", {}) or {}
         existing_user_input = existing_body_template.get("user_input", "{{job.body}}")
+        existing_job_params = existing_body_template.get("job_params", "{{job.body}}")
 
-        # Build new body_template preserving user_input, only adding model_name
+        # Build new body_template preserving user_input and job_params, adding model_name
         body_template = {
             "user_input": existing_user_input,  # Preserve task chaining config
+            "job_params": existing_job_params,  # Issue #325: Preserve static params access
             "model_name": model_name,
         }
 
@@ -87,10 +91,11 @@ async def _update_task_master_body_template(
         )
         logger.info(
             "Updated TaskMaster %s body_template with model_name: %s "
-            "(preserved user_input: %s)",
+            "(preserved user_input: %s, job_params: %s)",
             task_master_id,
             model_name,
             existing_user_input,
+            existing_job_params,
         )
         return True
     except Exception as e:

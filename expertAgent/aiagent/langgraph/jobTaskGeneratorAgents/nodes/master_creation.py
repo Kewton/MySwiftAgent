@@ -151,10 +151,16 @@ async def master_creation_node(
             # Task chaining: Each task receives input from previous task's output
             # - First task (order=0): receives job.body (initial parameters)
             # - Subsequent tasks (order>0): receives previous task's output_data
+            #
+            # Issue #325: All tasks also receive job_params: {{job.body}}
+            # This allows all tasks to access static parameters (e.g., email recipient)
+            # that may not be passed through the task chain.
+            # Workflow YAML can reference static params via :source.job_params.field_name
             if order == 0:
                 # First task: use job.body (initial parameters like query, max_results)
                 task_body_template = {
                     "user_input": "{{job.body}}",
+                    "job_params": "{{job.body}}",  # Issue #325: Static params access
                 }
                 logger.debug(f"  Task chaining: order={order}, using {{{{job.body}}}}")
             else:
@@ -162,6 +168,7 @@ async def master_creation_node(
                 # jobqueue's TemplateResolver will resolve {{tasks[N].output_data}}
                 task_body_template = {
                     "user_input": f"{{{{tasks[{order - 1}].output_data}}}}",
+                    "job_params": "{{job.body}}",  # Issue #325: Static params access
                 }
                 logger.debug(
                     f"  Task chaining: order={order}, "

@@ -108,13 +108,19 @@ class SchemaMatcher:
 
             # Then check URL, interface IDs, and body_template exact match
             for master in masters:
-                # Compare body_template with special handling for user_input field
-                # (model_name is added dynamically, so only compare user_input)
+                # Compare body_template with special handling for user_input and job_params
+                # (model_name is added dynamically, so only compare user_input and job_params)
                 existing_body_template = master.get("body_template", {})
                 if body_template:
                     existing_user_input = existing_body_template.get("user_input")
                     new_user_input = body_template.get("user_input")
-                    body_template_matches = existing_user_input == new_user_input
+                    # Issue #325: Also compare job_params for static parameter access
+                    existing_job_params = existing_body_template.get("job_params")
+                    new_job_params = body_template.get("job_params")
+                    body_template_matches = (
+                        existing_user_input == new_user_input
+                        and existing_job_params == new_job_params
+                    )
                 else:
                     body_template_matches = not existing_body_template
 
