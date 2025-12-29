@@ -137,6 +137,9 @@ class TemplateValidator:
     ) -> None:
         """Recursively extract template variables from structure.
 
+        DRY principle: Delegates to TemplatePatterns.extract_all_variables
+        for string extraction, maintaining recursive structure traversal here.
+
         Args:
             template: Template structure to scan
             result: List to append found variables
@@ -151,13 +154,8 @@ class TemplateValidator:
             for item in template:
                 cls._extract_variables(item, result)
         elif isinstance(template, str):
-            # Extract all pattern types
-            for match in cls.VARIABLE_PATTERN.finditer(template):
-                result.append(match.group(0))
-            for match in cls.JOB_VARIABLE_PATTERN.finditer(template):
-                result.append(match.group(0))
-            for match in cls.CURRENT_TASK_PATTERN.finditer(template):
-                result.append(match.group(0))
+            # DRY: Use shared extraction from TemplatePatterns
+            result.extend(TemplatePatterns.extract_all_variables(template))
 
     @classmethod
     def _validate_syntax(

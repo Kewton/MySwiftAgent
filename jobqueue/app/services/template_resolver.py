@@ -199,7 +199,10 @@ class TemplateResolver:
         tasks: list[Any],
         log_context: dict[str, str] | None = None,
     ) -> Any:
-        """Extract value from task based on variable pattern."""
+        """Extract value from task based on variable pattern.
+
+        DRY refactoring: Delegates to _navigate_path for consistent path navigation.
+        """
         task_index = int(match.group(1))
         data_type = match.group(2)  # input_data or output_data
         path = match.group(3)  # .field.subfield or None
@@ -231,31 +234,10 @@ class TemplateResolver:
         if not path:
             return data
 
-        # Navigate through path (.field.subfield)
-        current = data
-        field_names = path.strip(".").split(".")
-
-        for field in field_names:
-            if isinstance(current, dict):
-                if field not in current:
-                    available_fields = list(current.keys())
-                    warning_msg = (
-                        f"Field '{field}' not found in task {task_index}.{data_type}. "
-                        f"Available fields: {available_fields}"
-                    )
-                    if ctx_str:
-                        warning_msg += f" [{ctx_str}]"
-                    logger.warning(warning_msg)
-                    return None
-                current = current.get(field)
-            else:
-                error_msg = f"Cannot access field '{field}' in non-dict value"
-                if ctx_str:
-                    error_msg += f" [{ctx_str}]"
-                logger.error(error_msg)
-                raise TemplateResolverError(error_msg)
-
-        return current
+        # Use shared path navigation logic (DRY principle)
+        return TemplateResolver._navigate_path(
+            data, path, f"task {task_index}.{data_type}", log_context
+        )
 
     @staticmethod
     def _navigate_path(
