@@ -1,0 +1,46 @@
+{
+  "issue_number": 331,
+  "feature_summary": "graphAiServer job_params対応 - sourceノード構造変更",
+  "acceptance_criteria": [
+    "graphAiServerが `job_params` を受け取り、sourceノードに注入する",
+    "ワークフローYAMLで `:source.job_params.*` が参照可能",
+    "ワークフロー生成プロンプトが新しい参照パスを説明",
+    "単体テスト追加",
+    "受入テスト合格"
+  ],
+  "labels": [],
+  "target_project": "graphAiServer",
+  "playwright_required": false,
+  "required_services": ["graphAiServer", "myVault", "expertAgent"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "issue_requirements",
+    "health_checks": [
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "expertAgent", "url": "http://localhost:8004/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系: job_params付きリクエスト（レガシーAPI）",
+        "command": "curl -s -X POST http://localhost:8005/api/v1/myagent -H 'Content-Type: application/json' -d '{\"user_input\": {\"test\": \"value1\"}, \"model_name\": \"test/model\", \"job_params\": {\"recipient_email\": \"test@example.com\"}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["results"]
+      },
+      {
+        "name": "正常系: job_params付きリクエスト（パスパラメータAPI）",
+        "command": "curl -s -X POST http://localhost:8005/api/v1/myagent/test/model -H 'Content-Type: application/json' -d '{\"user_input\": {\"test\": \"value1\"}, \"job_params\": {\"recipient_email\": \"test@example.com\"}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["results"]
+      },
+      {
+        "name": "後方互換性: job_paramsなしリクエスト",
+        "command": "curl -s -X POST http://localhost:8005/api/v1/myagent -H 'Content-Type: application/json' -d '{\"user_input\": {\"test\": \"value1\"}, \"model_name\": \"test/model\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["results"]
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_331_acceptance.py"
+}

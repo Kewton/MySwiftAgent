@@ -1,0 +1,12 @@
+# Test workflow for job_params unit tests
+version: "0.5"
+
+nodes:
+  source: {}
+
+  # Echo the source node content to verify structure
+  output:
+    agent: copyAgent
+    inputs:
+      result: :source
+    isResult: true

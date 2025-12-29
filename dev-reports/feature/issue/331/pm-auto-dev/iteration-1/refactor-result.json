@@ -1,0 +1,37 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 62.89,
+    "after_coverage": 62.89,
+    "tests_passed": 66,
+    "tests_total": 66
+  },
+  "refactorings_applied": [
+    "Added SourceNodeData interface for type-safe source node injection",
+    "Extracted hasGraphAIErrors() helper function to check for execution errors/timeouts",
+    "Extracted sendGraphAIResult() helper function for consistent response handling",
+    "Extracted handleGraphAIError() helper function for unified error response formatting",
+    "Added consistent debug logging for workflow execution in both endpoints",
+    "Applied DRY principle: removed 78 lines of duplicate code"
+  ],
+  "files_changed": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-331/graphAiServer/src/types/workflow.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-331/graphAiServer/src/services/graphai.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-331/graphAiServer/src/app.ts"
+  ],
+  "static_analysis": {
+    "eslint_errors_before": 0,
+    "eslint_errors_after": 0,
+    "typescript_errors_before": 0,
+    "typescript_errors_after": 0
+  },
+  "design_patterns_applied": [
+    "DRY (Don't Repeat Yourself) - Extracted common error handling logic",
+    "Single Responsibility - Each helper function has one clear purpose",
+    "Type Safety - Added SourceNodeData interface for type checking"
+  ],
+  "commits": [
+    "52c744a: refactor(Issue #331): extract helper functions and add SourceNodeData type"
+  ],
+  "message": "Refactoring completed successfully. Extracted 3 helper functions to eliminate code duplication in error handling. Added SourceNodeData TypeScript interface for type-safe source node data injection. All 66 tests pass, no static analysis errors."
+}

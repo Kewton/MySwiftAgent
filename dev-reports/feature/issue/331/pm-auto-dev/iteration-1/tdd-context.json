@@ -1,0 +1,61 @@
+{
+  "issue_number": 331,
+  "title": "graphAiServer job_params対応 - sourceノード構造変更",
+  "acceptance_criteria": [
+    "graphAiServerが `job_params` を受け取り、sourceノードに注入する",
+    "ワークフローYAMLで `:source.job_params.*` が参照可能",
+    "ワークフロー生成プロンプトが新しい参照パスを説明",
+    "単体テスト追加",
+    "受入テスト合格"
+  ],
+  "implementation_tasks": [
+    {
+      "id": 1,
+      "description": "graphAiServer/src/app.ts - `job_params` を `req.body` から抽出",
+      "files": ["graphAiServer/src/app.ts"],
+      "changes": [
+        "Line 81: /api/v1/myagent/:category/:model エンドポイントで job_params を抽出",
+        "Line 134: /api/v1/myagent レガシーエンドポイントで job_params を抽出",
+        "runGraphAI 呼び出しに job_params を渡す"
+      ]
+    },
+    {
+      "id": 2,
+      "description": "graphAiServer/src/services/graphai.ts - runGraphAI シグネチャ変更、sourceノード構造変更",
+      "files": ["graphAiServer/src/services/graphai.ts"],
+      "changes": [
+        "runGraphAI シグネチャに job_params?: Record<string, unknown> を追加",
+        "graph.injectValue('source', user_input) を構造化オブジェクトに変更",
+        "source = { user_input: user_input, job_params: job_params || {} }",
+        "後方互換性: job_params がない場合は空オブジェクト"
+      ]
+    },
+    {
+      "id": 3,
+      "description": "expertAgent ワークフロー生成プロンプト更新",
+      "files": ["expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py"],
+      "changes": [
+        "sourceNode説明セクションを更新",
+        "動的データ（タスクチェーン）: :source.user_input.*",
+        "静的パラメータ（job.body）: :source.job_params.*",
+        "参照パスの例を追加"
+      ]
+    }
+  ],
+  "test_requirements": {
+    "unit_tests": [
+      "graphAiServer: runGraphAI が job_params を受け取り source に注入することをテスト",
+      "graphAiServer: job_params がない場合、空オブジェクトが注入されることをテスト",
+      "graphAiServer: APIエンドポイントが job_params をパースすることをテスト"
+    ],
+    "integration_tests": [
+      "graphAiServer API /api/v1/myagent への job_params 付きリクエストが正常動作",
+      "ワークフロー内で :source.job_params.* が参照可能"
+    ]
+  },
+  "target_coverage": 90,
+  "backward_compatibility": {
+    "requirement": "job_params がない既存リクエストは従来通り動作",
+    "strategy": "job_params がない場合は空オブジェクトをデフォルト設定"
+  }
+}

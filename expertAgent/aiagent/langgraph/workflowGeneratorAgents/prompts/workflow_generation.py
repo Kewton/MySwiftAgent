@@ -205,15 +205,21 @@ def create_workflow_generation_prompt(
 
 3. **sourceNode and user_input Reference** (CRITICAL):
    - ALWAYS define source node as: source: {{}}
-   - user_input from API request is injected into source node as-is
-   - For object-type user_input (RECOMMENDED):
-     API request: {{"user_input": {{"test": "value1", "test2": "value2"}}}}
-     Access properties with :source.property_name
-     Example: :source.test, :source.test2, :source.email_address, :source.query
+   - Source node receives structured data with two properties:
+     * :source.user_input - Dynamic data from task chain (previous task output)
+     * :source.job_params - Static parameters from job.body (body_template configuration)
+   - API request example:
+     {{"user_input": {{"query": "search term"}}, "job_params": {{"template_id": "001", "debug": true}}}}
+   - Access dynamic data: :source.user_input.query, :source.user_input.email_address
+   - Access static params: :source.job_params.template_id, :source.job_params.debug
    - For string-type user_input (NOT RECOMMENDED):
      API request: {{"user_input": "simple string"}}
-     Access directly with :source
+     Access directly with :source.user_input
    - IMPORTANT: Never use jsonParserAgent to parse user_input object
+
+   **When to use which**:
+   - :source.user_input.* - For dynamic data that changes per task execution (e.g., search query, email content)
+   - :source.job_params.* - For static configuration that stays constant across executions (e.g., template IDs, API keys)
 
    **Variable Reference in Multi-line Strings** (CRITICAL):
    - When using :source.property in multi-line user_input for LLM prompts,
@@ -231,7 +237,7 @@ def create_workflow_generation_prompt(
      inputs:
        body:
          user_input: |
-           Keyword: :source.keyword  # ❌ Sent as literal string
+           Keyword: :source.user_input.keyword  # ❌ Sent as literal string
    ```
 
    Example - CORRECT (using stringTemplateAgent):
@@ -239,10 +245,12 @@ def create_workflow_generation_prompt(
    build_prompt:
      agent: stringTemplateAgent
      inputs:
-       keyword: :source.keyword  # ✅ Pass specific field
+       keyword: :source.user_input.keyword  # ✅ Pass dynamic data
+       template_id: :source.job_params.template_id  # ✅ Pass static param
      params:
        template: |-
          Keyword: ${{keyword}}  # ✅ Use template variable
+         Template: ${{template_id}}
 
    llm_node:
      agent: fetchAgent
@@ -321,15 +329,19 @@ nodes:
   source: {{}}  # REQUIRED: empty object
 
   # Step 1: Build prompt using stringTemplateAgent
+  # Access dynamic data via :source.user_input.*
+  # Access static params via :source.job_params.*
   build_prompt:
     agent: stringTemplateAgent
     inputs:
-      keyword: :source.keyword
-      target_audience: :source.target_audience
+      keyword: :source.user_input.keyword
+      target_audience: :source.user_input.target_audience
+      template_id: :source.job_params.template_id  # Static config
     params:
       template: |-
         Analyze the following keyword: ${{keyword}}
         Target audience: ${{target_audience}}
+        Template: ${{template_id}}
 
         Provide a JSON response with analysis results.
 
@@ -376,7 +388,7 @@ nodes:
       url: {EXPERTAGENT_API_URL}
       method: POST
       body:
-        user_input: :source.query  # ✅ OK: single field reference
+        user_input: :source.user_input.query  # ✅ OK: single field reference
         model_name: gpt-4o-mini
     timeout: 30000
 
@@ -397,16 +409,19 @@ nodes:
   source: {{}}
 
   # Step 1: Build complex prompt with multiple variables
+  # Mix dynamic data and static params
   build_prompt:
     agent: stringTemplateAgent
     inputs:
-      data: :source.data
-      context: :source.context
+      data: :source.user_input.data
+      context: :source.user_input.context
+      debug_mode: :source.job_params.debug  # Static config
     params:
       template: |-
         Process the following data: ${{data}}
 
         Context: ${{context}}
+        Debug mode: ${{debug_mode}}
 
         Generate high-quality analysis in JSON format.
 
