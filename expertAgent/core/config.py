@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 
@@ -41,7 +41,11 @@ class Settings(BaseSettings):
     )  # Default project for Google APIs (gmail, drive, sheets)
 
     # Admin Configuration
-    ADMIN_TOKEN: str = Field(default="")  # For reload secrets endpoint
+    # Uses EXPERTAGENT_ADMIN_TOKEN preferentially to avoid conflicts with other services
+    ADMIN_TOKEN: str = Field(
+        default="",
+        validation_alias=AliasChoices("EXPERTAGENT_ADMIN_TOKEN", "ADMIN_TOKEN"),
+    )
 
     # Job/Task Generator Configuration (Issue #111)
     JOB_GENERATOR_MAX_TOKENS: int = Field(default=32768)
