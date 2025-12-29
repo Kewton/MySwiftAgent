@@ -1,6 +1,10 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.utilitySchemas import (
+    JsonStringifyRequest,
+    JsonStringifyResponse,
     SearchUtilityRequest,
     SearchUtilityResponse,
     UtilityRequest,
@@ -115,4 +119,34 @@ async def get_overview_by_google_serper_api(request: SearchUtilityRequest):
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
             status_code=500, detail="An internal server error occurred in the utility."
+        ) from e
+
+
+@router.post(
+    "/utility/json_stringify",
+    response_model=JsonStringifyResponse,
+    summary="Convert data to JSON string",
+    description="Converts any JSON-serializable data to a JSON string. "
+    "Useful for GraphAI workflows that need to embed objects in string templates.",
+)
+async def json_stringify_api(request: JsonStringifyRequest) -> JsonStringifyResponse:
+    """
+    Convert any JSON-serializable data to a JSON string.
+
+    This utility is designed for GraphAI workflows where stringTemplateAgent
+    needs to embed complex objects (arrays, nested objects) in string templates.
+    Without JSON serialization, objects become "[object Object]" in templates.
+
+    Args:
+        request: Contains the data to be JSON-stringified
+
+    Returns:
+        JsonStringifyResponse with the JSON string representation
+    """
+    try:
+        json_string = json.dumps(request.data, ensure_ascii=False, indent=2)
+        return JsonStringifyResponse(json_string=json_string)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(
+            status_code=400, detail=f"Data is not JSON-serializable: {e}"
         ) from e

@@ -183,3 +183,75 @@ export function getTaskName(
 
 	return iface?.interface_name || `Task ${order}`;
 }
+
+/**
+ * Convert string parameters to proper types based on JSON Schema.
+ * HTML form inputs always return strings, so we need to convert them
+ * to the types specified in the schema (integer, number, boolean, etc.)
+ *
+ * @param params - Record of string parameters from form inputs
+ * @param schema - JSON Schema with type definitions
+ * @returns Record with properly typed values
+ */
+export function convertParamsToSchemaTypes(
+	params: Record<string, string>,
+	schema: JSONSchema | null | undefined
+): Record<string, unknown> {
+	if (!schema?.properties) {
+		// No schema available, return params as-is
+		return { ...params };
+	}
+
+	const result: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(params)) {
+		const propSchema = schema.properties[key];
+
+		if (!propSchema) {
+			// Property not in schema, keep as string
+			result[key] = value;
+			continue;
+		}
+
+		// Convert based on schema type
+		switch (propSchema.type) {
+			case 'integer': {
+				const parsed = parseInt(value, 10);
+				result[key] = isNaN(parsed) ? value : parsed;
+				break;
+			}
+			case 'number': {
+				const parsed = parseFloat(value);
+				result[key] = isNaN(parsed) ? value : parsed;
+				break;
+			}
+			case 'boolean': {
+				result[key] = value === 'true' || value === '1';
+				break;
+			}
+			case 'array': {
+				// Try to parse as JSON array, otherwise split by comma
+				try {
+					result[key] = JSON.parse(value);
+				} catch {
+					result[key] = value.split(',').map((s) => s.trim());
+				}
+				break;
+			}
+			case 'object': {
+				// Try to parse as JSON object
+				try {
+					result[key] = JSON.parse(value);
+				} catch {
+					result[key] = value;
+				}
+				break;
+			}
+			default:
+				// String or unknown type, keep as-is
+				result[key] = value;
+		}
+	}
+
+	return result;
+}

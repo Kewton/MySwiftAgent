@@ -59,9 +59,11 @@
 	}
 
 	// Format timestamp for display
-	function formatTime(date: Date | undefined): string {
+	function formatTime(date: Date | string | undefined): string {
 		if (!date) return '-';
-		return date.toLocaleTimeString('ja-JP', {
+		const dateObj = date instanceof Date ? date : new Date(date);
+		if (isNaN(dateObj.getTime())) return '-';
+		return dateObj.toLocaleTimeString('ja-JP', {
 			hour: '2-digit',
 			minute: '2-digit',
 			second: '2-digit'

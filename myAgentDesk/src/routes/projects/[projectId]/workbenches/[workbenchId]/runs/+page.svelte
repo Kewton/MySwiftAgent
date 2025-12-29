@@ -8,7 +8,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { RUN_STATUS_CONFIG, getRunDuration, calculateProgress } from '$lib/types/run';
-	import { getFirstTaskInputSchema } from '$lib/utils/interface-schema';
+	import { getFirstTaskInputSchema, convertParamsToSchemaTypes } from '$lib/utils/interface-schema';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -90,9 +90,10 @@
 
 		isCreatingRun = true;
 		try {
-			// Build execution params from form values
+			// Build execution params from form values, converting types based on schema
+			const typedParams = convertParamsToSchemaTypes(executionParams, inputSchema);
 			const paramsToSend =
-				Object.keys(executionParams).length > 0 ? JSON.stringify(executionParams) : undefined;
+				Object.keys(typedParams).length > 0 ? JSON.stringify(typedParams) : undefined;
 
 			const response = await fetch('/api/runs', {
 				method: 'POST',
