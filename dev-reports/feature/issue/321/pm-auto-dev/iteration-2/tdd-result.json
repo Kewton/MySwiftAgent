@@ -1,0 +1,30 @@
+{
+  "status": "success",
+  "iteration": 2,
+  "coverage": 70.83,
+  "unit_tests": {
+    "total": 32,
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0,
+    "new_tests_added": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_changed": [
+    "expertAgent/app/schemas/job_generator.py",
+    "expertAgent/app/api/v1/job_generator_endpoints.py",
+    "tests/acceptance/test_issue_321_acceptance.py"
+  ],
+  "commits": [
+    "4159131: fix(Issue #321): JobGeneratorResponse にjob_body_parametersフィールド追加"
+  ],
+  "fixes_applied": [
+    "JobGeneratorResponse に job_body_parameters フィールド追加",
+    "_build_response_from_state() で job_body_parameters を State から抽出",
+    "受入テストのエンドポイントURL修正 (/api/v1/job-generator/generate → /v1/job-generator)"
+  ],
+  "message": "イテレーション2完了。受入テスト失敗で指摘された問題を修正しました。"
+}

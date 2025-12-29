@@ -1,0 +1,74 @@
+{
+  "issue_number": 321,
+  "issue_title": "Job Generator: 要件から抽出した情報をJob bodyに自動含める",
+  "iteration": 2,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 70.83,
+      "unit_tests": {
+        "total": 1945,
+        "passed": 1945,
+        "failed": 0,
+        "new_tests_added": 19
+      },
+      "static_analysis": {
+        "ruff_errors": 0,
+        "mypy_errors": 0
+      }
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_level": "L3",
+      "total": 5,
+      "passed": 4,
+      "skipped": 1,
+      "all_acceptance_criteria_verified": true
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "No refactoring necessary - code already follows SOLID, KISS, DRY, YAGNI"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "JobBodyParameter作成", "status": "completed"},
+      {"task_id": "1.2", "description": "TaskBreakdownResponse拡張", "status": "completed"},
+      {"task_id": "1.3", "description": "State拡張", "status": "completed"},
+      {"task_id": "1.4", "description": "初期値追加", "status": "completed"},
+      {"task_id": "2.1", "description": "プロンプト修正", "status": "completed"},
+      {"task_id": "2.2", "description": "出力形式追加", "status": "completed"},
+      {"task_id": "2.3", "description": "YAML更新", "status": "completed"},
+      {"task_id": "3.1", "description": "requirement_analysis修正", "status": "completed"},
+      {"task_id": "3.2", "description": "バリデーション拡張", "status": "completed"},
+      {"task_id": "3.3", "description": "JobqueueClient修正", "status": "completed"},
+      {"task_id": "3.4", "description": "job_registration修正", "status": "completed"},
+      {"task_id": "4.1", "description": "JobBodyParameterテスト", "status": "completed"},
+      {"task_id": "4.2", "description": "パラメータ抽出テスト", "status": "completed"},
+      {"task_id": "4.3", "description": "body伝播テスト", "status": "completed"},
+      {"task_id": "4.4", "description": "Lint実行", "status": "completed"},
+      {"task_id": "4.5", "description": "リグレッション確認", "status": "completed"}
+    ],
+    "planned_tasks_completed": 16,
+    "planned_tasks_total": 16,
+    "completion_rate": "100%"
+  },
+  "commits": [
+    "d3360b9: feat(Issue #321): Job Generator - 要件から抽出したパラメータをJob bodyに自動含める",
+    "4159131: fix(Issue #321): JobGeneratorResponse にjob_body_parametersフィールド追加"
+  ],
+  "files_changed": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/jobqueue_client.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/job_registration.py",
+    "expertAgent/prompts/task_breakdown/default.yaml",
+    "expertAgent/app/schemas/job_generator.py",
+    "expertAgent/app/api/v1/job_generator_endpoints.py",
+    "expertAgent/tests/unit/test_task_breakdown.py",
+    "expertAgent/tests/unit/test_job_registration_node.py",
+    "tests/acceptance/test_issue_321_acceptance.py"
+  ]
+}

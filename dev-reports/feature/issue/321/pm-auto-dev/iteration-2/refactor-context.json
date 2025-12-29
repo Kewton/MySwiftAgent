@@ -1,0 +1,21 @@
+{
+  "issue_number": 321,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/job_registration.py",
+    "expertAgent/app/api/v1/job_generator_endpoints.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 70.83,
+    "complexity_score": "not measured"
+  },
+  "design_patterns_to_apply": [
+    "Pydanticモデルの型安全性向上",
+    "単一責任原則の確認"
+  ],
+  "improvement_goals": [
+    "コード重複の削除（あれば）",
+    "型アノテーションの整合性確認",
+    "既存テストが全て通過することの確認"
+  ]
+}

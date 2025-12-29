@@ -1,0 +1,29 @@
+{
+  "issue_number": 321,
+  "iteration": 2,
+  "feature_summary": "Job Generator: 要件から抽出した情報をJob bodyに自動含める",
+  "acceptance_criteria": [
+    "要件に含まれるメールアドレス等のパラメータがJob bodyに自動抽出される",
+    "複数の異なる種類のパラメータ（日付、ファイル名等）が正しく抽出される",
+    "パラメータが存在しない場合も正常に処理される（後方互換性）",
+    "機密パラメータ（パスワード、APIキー等）は抽出対象から除外される"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "jobqueue", "myVault"],
+  "fixes_from_iteration_1": [
+    "エンドポイントURL修正: /v1/job-generator",
+    "JobGeneratorResponse に job_body_parameters フィールド追加",
+    "_build_response_from_state() で job_body_parameters 抽出"
+  ],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_321_acceptance.py"
+}
