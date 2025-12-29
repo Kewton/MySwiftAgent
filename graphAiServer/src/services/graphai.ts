@@ -7,6 +7,7 @@ import { fileReadAgent, fileWriteAgent, pathUtilsAgent } from "@graphai/vanilla_
 import dotenv from 'dotenv';
 import { secretsManager } from './secretsManager.js';
 import { settings } from '../config/settings.js';
+import type { SourceNodeData } from '../types/workflow.js';
 
 dotenv.config();
 
@@ -221,7 +222,7 @@ export const runGraphAI = async (
   // sourceノードに構造化データを注入
   // - :source.user_input.* で動的データにアクセス
   // - :source.job_params.* で静的パラメータにアクセス
-  const sourceData = {
+  const sourceData: SourceNodeData = {
     user_input: user_input,
     job_params: job_params || {},
   };

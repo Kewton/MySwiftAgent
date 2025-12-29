@@ -1,6 +1,28 @@
 // src/types/workflow.ts
 
 /**
+ * Source node data structure for GraphAI workflows
+ *
+ * This interface defines the structured data injected into the source node.
+ * Workflows can access these values using:
+ * - :source.user_input.* - Dynamic data from task chain or user input
+ * - :source.job_params.* - Static parameters from job body_template
+ */
+export interface SourceNodeData {
+  /**
+   * Dynamic user input data
+   * Can be any type depending on the workflow requirements
+   */
+  user_input: unknown;
+
+  /**
+   * Static parameters injected from job body_template
+   * Used for configuration values that don't change between task executions
+   */
+  job_params: Record<string, unknown>;
+}
+
+/**
  * Request body for workflow registration endpoint
  */
 export interface WorkflowRegisterRequest {

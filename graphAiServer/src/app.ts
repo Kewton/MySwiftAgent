@@ -17,6 +17,48 @@ import type {
 
 const app = express();
 
+/**
+ * Helper: Check if GraphAI result contains errors or timeouts
+ */
+function hasGraphAIErrors(result: GraphAIResponse): boolean {
+  const hasErrors = Object.keys(result.errors).length > 0;
+  const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
+  return hasErrors || hasTimedOutNodes;
+}
+
+/**
+ * Helper: Send GraphAI result response with appropriate status code
+ */
+function sendGraphAIResult(res: Response, result: GraphAIResponse): void {
+  if (hasGraphAIErrors(result)) {
+    // Return 500 if there are errors or timeouts, but include full details
+    res.status(500).json(result);
+  } else {
+    // Return 200 for successful execution
+    res.json(result);
+  }
+}
+
+/**
+ * Helper: Handle GraphAI execution errors and send error response
+ */
+function handleGraphAIError(res: Response, error: unknown): void {
+  console.error("Error executing GraphAI:", error);
+
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
+  res.status(500).json({
+    error: 'An error occurred while executing the GraphAI workflow.',
+    details: {
+      message: errorMessage,
+      type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
+      timestamp: new Date().toISOString(),
+    },
+    ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
+  });
+}
+
 // Configuration: Workflow directory path (resolve from process.cwd())
 const WORKFLOW_DIR = path.resolve(process.cwd(), 'config/graphai');
 
@@ -46,33 +88,9 @@ app.get('/api/v1/test', async (_req: Request, res: Response) => {
     console.log("Executing GraphAI sample...");
     const result: GraphAIResponse = await testGraphAI();
     console.log("GraphAI sample finished.");
-
-    // Check if there are any errors in the execution
-    const hasErrors = Object.keys(result.errors).length > 0;
-    const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
-
-    if (hasErrors || hasTimedOutNodes) {
-      // Return 500 if there are errors or timeouts, but include full details
-      res.status(500).json(result);
-    } else {
-      // Return 200 for successful execution
-      res.json(result);
-    }
+    sendGraphAIResult(res, result);
   } catch (error) {
-    console.error("Error executing GraphAI sample:", error);
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-
-    res.status(500).json({
-      error: 'An error occurred while executing the GraphAI sample.',
-      details: {
-        message: errorMessage,
-        type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
-        timestamp: new Date().toISOString(),
-      },
-      ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
-    });
+    handleGraphAIError(res, error);
   }
 });
 
@@ -97,35 +115,12 @@ app.post('/api/v1/myagent/:category/:model', async (req: Request, res: Response)
   try {
     // Construct model_name from category and model
     const model_name = `${category}/${model}`;
+    console.log(`Executing GraphAI workflow: ${model_name} (project: ${project || 'default'})`);
 
     const result: GraphAIResponse = await runGraphAI(user_input, model_name, project, job_params);
-
-    // Check if there are any errors in the execution
-    const hasErrors = Object.keys(result.errors).length > 0;
-    const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
-
-    if (hasErrors || hasTimedOutNodes) {
-      // Return 500 if there are errors or timeouts, but include full details
-      res.status(500).json(result);
-    } else {
-      // Return 200 for successful execution
-      res.json(result);
-    }
+    sendGraphAIResult(res, result);
   } catch (error) {
-    console.error("Error executing GraphAI sample:", error);
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-
-    res.status(500).json({
-      error: 'An error occurred while executing the GraphAI sample.',
-      details: {
-        message: errorMessage,
-        type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
-        timestamp: new Date().toISOString(),
-      },
-      ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
-    });
+    handleGraphAIError(res, error);
   }
 });
 
@@ -142,34 +137,11 @@ app.post('/api/v1/myagent', async (req: Request, res: Response) => {
   }
 
   try {
+    console.log(`Executing GraphAI workflow: ${model_name} (project: ${project || 'default'})`);
     const result: GraphAIResponse = await runGraphAI(user_input, model_name, project, job_params);
-
-    // Check if there are any errors in the execution
-    const hasErrors = Object.keys(result.errors).length > 0;
-    const hasTimedOutNodes = result.logs.some(log => log.state === 'timed-out');
-
-    if (hasErrors || hasTimedOutNodes) {
-      // Return 500 if there are errors or timeouts, but include full details
-      res.status(500).json(result);
-    } else {
-      // Return 200 for successful execution
-      res.json(result);
-    }
+    sendGraphAIResult(res, result);
   } catch (error) {
-    console.error("Error executing GraphAI sample:", error);
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-
-    res.status(500).json({
-      error: 'An error occurred while executing the GraphAI sample.',
-      details: {
-        message: errorMessage,
-        type: errorMessage.includes('Timeout') ? 'timeout' : 'initialization_error',
-        timestamp: new Date().toISOString(),
-      },
-      ...(process.env.NODE_ENV !== 'production' && { stack: errorStack })
-    });
+    handleGraphAIError(res, error);
   }
 });
 
