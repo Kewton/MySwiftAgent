@@ -37,11 +37,13 @@ MYVAULT_PORT="${MYVAULT_PORT:-8003}"
 EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
 GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
 MYAGENTDESK_PORT="${MYAGENTDESK_PORT:-8000}"
+COMMONUI_PORT="${COMMONUI_PORT:-8501}"
 LANGFUSE_PORT="${LANGFUSE_PORT:-3001}"
 
 # Service URLs for local services
 export MYVAULT_BASE_URL="http://localhost:${MYVAULT_PORT}"
 export JOBQUEUE_BASE_URL="http://localhost:${JOBQUEUE_PORT}"
+export MYSCHEDULER_BASE_URL="http://localhost:${MYSCHEDULER_PORT}"
 export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
 export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
 
@@ -51,6 +53,7 @@ MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
 EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
 GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
 MYAGENTDESK_DIR="$PROJECT_ROOT/myAgentDesk"
+COMMONUI_DIR="$PROJECT_ROOT/commonUI"
 
 # Log and PID directories
 LOG_DIR="$PROJECT_ROOT/logs"
@@ -62,6 +65,7 @@ MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
 EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
 MYAGENTDESK_LOG="$LOG_DIR/myagentdesk.log"
+COMMONUI_LOG="$LOG_DIR/commonui.log"
 
 # PID files
 JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
@@ -69,6 +73,7 @@ MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
 EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
 MYAGENTDESK_PID="$PID_DIR/myagentdesk.pid"
+COMMONUI_PID="$PID_DIR/commonui.pid"
 
 # Docker services (Platform layer only)
 DOCKER_SERVICES="valkey myvault langfuse-db langfuse-clickhouse langfuse-redis langfuse-minio langfuse-worker langfuse-server"
@@ -86,7 +91,7 @@ show_banner() {
 ║      Valkey, MyVault, Langfuse                                                ║
 ║                                                                               ║
 ║   💻 Local (Agent):                                                           ║
-║      JobQueue, MyScheduler, ExpertAgent, GraphAiServer, MyAgentDesk           ║
+║      JobQueue, MyScheduler, ExpertAgent, GraphAiServer, MyAgentDesk, CommonUI ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -129,6 +134,7 @@ init_directories() {
     > "$EXPERTAGENT_LOG" 2>/dev/null || true
     > "$GRAPHAISERVER_LOG" 2>/dev/null || true
     > "$MYAGENTDESK_LOG" 2>/dev/null || true
+    > "$COMMONUI_LOG" 2>/dev/null || true
 }
 
 # Check if port is in use
@@ -486,6 +492,61 @@ start_myagentdesk() {
     return 1
 }
 
+# Start CommonUI
+start_commonui() {
+    print_service "🖥️ " "CommonUI" "Starting on port $COMMONUI_PORT..."
+
+    # Check if already running (verify it's actually CommonUI, not a stale PID)
+    if [[ -f "$COMMONUI_PID" ]]; then
+        local saved_pid=$(cat "$COMMONUI_PID")
+        if kill -0 "$saved_pid" 2>/dev/null && is_service_pid "$saved_pid" "commonUI"; then
+            print_warning "CommonUI: Already running (PID: $saved_pid)"
+            return 0
+        else
+            # Stale PID file, remove it
+            rm -f "$COMMONUI_PID"
+        fi
+    fi
+
+    kill_port $COMMONUI_PORT "CommonUI"
+
+    install_deps "CommonUI" "$COMMONUI_DIR"
+
+    cd "$COMMONUI_DIR"
+
+    # Start service with local service URLs
+    nohup bash -c "PORT=$COMMONUI_PORT \
+        MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT \
+        JOBQUEUE_BASE_URL=http://localhost:$JOBQUEUE_PORT \
+        MYSCHEDULER_BASE_URL=http://localhost:$MYSCHEDULER_PORT \
+        EXPERTAGENT_BASE_URL=http://localhost:$EXPERTAGENT_PORT \
+        GRAPHAISERVER_BASE_URL=http://localhost:$GRAPHAISERVER_PORT \
+        LOG_DIR=$LOG_DIR \
+        uv run streamlit run Home.py --server.port $COMMONUI_PORT --server.address 0.0.0.0" > "$COMMONUI_LOG" 2>&1 &
+
+    echo $! > "$COMMONUI_PID"
+
+    cd "$PROJECT_ROOT"
+
+    # Wait for service (Streamlit health check)
+    print_info "CommonUI: Waiting for service to start..."
+    local attempt=1
+    local max_attempts=30
+    while [[ $attempt -le $max_attempts ]]; do
+        if check_port $COMMONUI_PORT; then
+            print_success "CommonUI: Started (PID: $(cat "$COMMONUI_PID"), Port: $COMMONUI_PORT)"
+            return 0
+        fi
+        echo -n "."
+        sleep 1
+        ((attempt++))
+    done
+
+    echo ""
+    print_error "CommonUI: Failed to start (check $COMMONUI_LOG)"
+    return 1
+}
+
 # Stop a local service
 stop_local_service() {
     local name=$1
@@ -620,6 +681,17 @@ check_status() {
         print_error "MyAgentDesk: Not running"
     fi
 
+    # CommonUI
+    if [[ -f "$COMMONUI_PID" ]] && kill -0 "$(cat "$COMMONUI_PID")" 2>/dev/null; then
+        if check_port $COMMONUI_PORT; then
+            print_success "CommonUI: Running (PID: $(cat "$COMMONUI_PID"), Port: $COMMONUI_PORT)"
+        else
+            print_warning "CommonUI: Process exists but port not listening"
+        fi
+    else
+        print_error "CommonUI: Not running"
+    fi
+
     echo ""
 }
 
@@ -648,6 +720,10 @@ show_logs() {
             print_info "Following MyAgentDesk logs (Ctrl+C to stop):"
             tail -f "$MYAGENTDESK_LOG"
             ;;
+        commonui)
+            print_info "Following CommonUI logs (Ctrl+C to stop):"
+            tail -f "$COMMONUI_LOG"
+            ;;
         docker)
             print_info "Following Docker logs (Ctrl+C to stop):"
             docker-compose logs -f $DOCKER_SERVICES
@@ -670,8 +746,11 @@ show_logs() {
             echo -e "${YELLOW}=== MyAgentDesk ===${NC}"
             tail -n 20 "$MYAGENTDESK_LOG" 2>/dev/null || echo "No logs"
             echo ""
+            echo -e "${YELLOW}=== CommonUI ===${NC}"
+            tail -n 20 "$COMMONUI_LOG" 2>/dev/null || echo "No logs"
+            echo ""
             print_info "Use '$0 logs <service>' to follow specific logs"
-            print_info "Services: jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, docker"
+            print_info "Services: jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, commonui, docker"
             ;;
     esac
 }
@@ -693,6 +772,7 @@ show_urls() {
     echo -e "${CYAN}│${NC}    ExpertAgent:     ${WHITE}http://localhost:$EXPERTAGENT_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    GraphAiServer:   ${WHITE}http://localhost:$GRAPHAISERVER_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    MyAgentDesk:     ${WHITE}http://localhost:$MYAGENTDESK_PORT${NC}                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC}    CommonUI:        ${WHITE}http://localhost:$COMMONUI_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${NC}"
     echo ""
 }
@@ -716,7 +796,7 @@ Options:
     --local-only    Only operate on local services
 
 Log services:
-    jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, docker
+    jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, commonui, docker
 
 Examples:
     $0                      # Start all services
@@ -788,6 +868,7 @@ main() {
                 start_expertagent || exit 1
                 start_graphaiserver || exit 1
                 start_myagentdesk || exit 1
+                start_commonui || exit 1
             fi
 
             echo ""
@@ -801,6 +882,7 @@ main() {
         stop)
             if [[ "$docker_only" != true ]]; then
                 print_step "Stopping Agent layer (Local)..."
+                stop_local_service "CommonUI" "$COMMONUI_PID" $COMMONUI_PORT
                 stop_local_service "MyAgentDesk" "$MYAGENTDESK_PID" $MYAGENTDESK_PORT
                 stop_local_service "GraphAiServer" "$GRAPHAISERVER_PID" $GRAPHAISERVER_PORT
                 stop_local_service "ExpertAgent" "$EXPERTAGENT_PID" $EXPERTAGENT_PORT
