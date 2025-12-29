@@ -1,0 +1,35 @@
+{
+  "issue_number": 322,
+  "refactor_targets": [
+    "jobqueue/app/services/template_patterns.py",
+    "jobqueue/app/services/template_validator.py",
+    "jobqueue/app/services/template_resolver.py",
+    "jobqueue/app/api/v1/task_masters.py",
+    "jobqueue/app/core/worker.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": {
+      "template_patterns": 97,
+      "template_validator": 98,
+      "template_resolver": 86,
+      "template_validation": 100
+    },
+    "tests_passed": 263,
+    "tests_failed": 0
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle - 各モジュールが単一の責任を持つ",
+    "DRY - 正規表現パターンの共通化（TemplatePatterns）",
+    "Dependency Injection - log_context パラメータ"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持しつつコード品質を向上",
+    "重複コードの削除",
+    "ログ出力の改善"
+  ],
+  "code_quality_checks": [
+    "Ruff静的解析エラー0件",
+    "MyPyエラー0件",
+    "全テストパス"
+  ]
+}

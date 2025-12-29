@@ -434,7 +434,11 @@ class TestResultSummaryGeneratorHelpers:
 
         state_with_errors = {
             **success_state,
-            "validation_errors": ["yaml syntax error", "graphai node error", "output error"],
+            "validation_errors": [
+                "yaml syntax error",
+                "graphai node error",
+                "output error",
+            ],
             "test_http_status": 500,
         }
 
@@ -544,7 +548,10 @@ class TestResultSummaryGeneratorHelpers:
             **success_state,
             "repair_history": [
                 {"type": "test_data_regeneration", "details": "regen1"},
-                {"type": "workflow_repair", "details": "repair1"},  # Should be filtered out
+                {
+                    "type": "workflow_repair",
+                    "details": "repair1",
+                },  # Should be filtered out
                 {"type": "test_data_regeneration", "details": "regen2"},
             ],
             "test_data_regeneration_count": 2,

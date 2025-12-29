@@ -228,11 +228,15 @@ class TestExtractCauseFromValidationErrors:
 
         assert cause is not None
         assert cause["category"] == "input"
-        assert "voice" in cause.get("problem_field", "").lower() or "body.voice" in str(cause)
+        assert "voice" in cause.get("problem_field", "").lower() or "body.voice" in str(
+            cause
+        )
 
     def test_extract_output_category(self) -> None:
         """Test extracting cause for output category error."""
-        errors = ["[output] Type mismatch at result.content: expected string, got number"]
+        errors = [
+            "[output] Type mismatch at result.content: expected string, got number"
+        ]
         cause = extract_cause_from_validation_errors(errors)
 
         assert cause is not None
@@ -345,7 +349,9 @@ class TestGenerateDefaultRecommendations:
 
         assert len(recommendations) > 0
         # Should suggest schema or test data fixes
-        assert any("schema" in r.lower() or "test" in r.lower() for r in recommendations)
+        assert any(
+            "schema" in r.lower() or "test" in r.lower() for r in recommendations
+        )
 
     def test_recommendations_for_workflow_execution(self) -> None:
         """Test default recommendations for workflow_execution stage."""

@@ -82,9 +82,14 @@ class TestToParseJson:
 
     def test_parse_yaml_code_block_object(self):
         """Test parsing YAML from ```yaml``` code block (object)."""
-        content = '```yaml\nworkflow_name: test_workflow\nyaml_content: "version: 0.5"\n```'
+        content = (
+            '```yaml\nworkflow_name: test_workflow\nyaml_content: "version: 0.5"\n```'
+        )
         result = to_parse_json(content)
-        assert result == {"workflow_name": "test_workflow", "yaml_content": "version: 0.5"}
+        assert result == {
+            "workflow_name": "test_workflow",
+            "yaml_content": "version: 0.5",
+        }
 
     def test_parse_yaml_code_block_array(self):
         """Test parsing YAML from ```yaml``` code block (array)."""
@@ -94,7 +99,7 @@ class TestToParseJson:
 
     def test_parse_yml_code_block(self):
         """Test parsing YAML from ```yml``` code block (alternative extension)."""
-        content = '```yml\ndata:\n  key: value\n  items:\n    - 1\n    - 2\n```'
+        content = "```yml\ndata:\n  key: value\n  items:\n    - 1\n    - 2\n```"
         result = to_parse_json(content)
         assert result == {"data": {"key": "value", "items": [1, 2]}}
 
@@ -115,11 +120,11 @@ reasoning: Test reasoning
 
     def test_parse_yaml_code_block_with_json_inside(self):
         """Test parsing YAML that contains JSON-like structure."""
-        content = '''```yaml
+        content = """```yaml
 workflow_name: api_workflow
 yaml_content: "{\\"key\\": \\"value\\"}"
 reasoning: Contains JSON in string
-```'''
+```"""
         result = to_parse_json(content)
         assert result["workflow_name"] == "api_workflow"
         assert result["reasoning"] == "Contains JSON in string"

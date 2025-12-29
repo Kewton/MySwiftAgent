@@ -585,7 +585,10 @@ class TestFallbackEvaluation:
 
             # Fallback should have higher scores for valid state
             assert result["evaluation_score"] == 70  # Base score for valid
-            assert "Rule-based validation passed" in result["llm_evaluation_result"]["strengths"]
+            assert (
+                "Rule-based validation passed"
+                in result["llm_evaluation_result"]["strengths"]
+            )
 
 
 class TestFormatFeedback:

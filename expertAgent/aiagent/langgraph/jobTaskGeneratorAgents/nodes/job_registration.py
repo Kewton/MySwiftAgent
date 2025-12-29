@@ -122,9 +122,7 @@ async def job_registration_node(
         job_body_parameters = state.get("job_body_parameters", [])
         job_body = _build_job_body(job_body_parameters)
         if job_body:
-            logger.info(
-                f"Job body parameters: {list(job_body.keys())}"
-            )
+            logger.info(f"Job body parameters: {list(job_body.keys())}")
 
         # Create Job with method and url from JobMaster
         job_name = f"Job: {user_requirement[:50]} - {datetime.now().isoformat()}"

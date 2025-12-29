@@ -32,6 +32,7 @@ def _format_recommended_apis(apis: list[Any] | None) -> str:
 
     return ", ".join(formatted) if formatted else "None specified"
 
+
 TEST_DATA_REGENERATION_SYSTEM_PROMPT = """You are a test data generation expert.
 Generate appropriate and realistic test data based on the given task information and input schema.
 

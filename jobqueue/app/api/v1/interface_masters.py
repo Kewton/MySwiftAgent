@@ -36,15 +36,20 @@ async def create_interface_master(
     """Create a new interface master with JSON Schema V7 validation."""
     import json
     import logging
+
     logger = logging.getLogger(__name__)
     # Validate input schema if provided
     if interface_data.input_schema:
         try:
             # DEBUG: Log the input_schema for debugging Issue #310 schema validation error
-            logger.error(f"DEBUG input_schema: {json.dumps(interface_data.input_schema, ensure_ascii=False, indent=2)}")
+            logger.error(
+                f"DEBUG input_schema: {json.dumps(interface_data.input_schema, ensure_ascii=False, indent=2)}"
+            )
             InterfaceValidator.validate_json_schema_v7(interface_data.input_schema)
         except InterfaceValidationError as e:
-            logger.error(f"Schema validation failed. input_schema: {json.dumps(interface_data.input_schema, ensure_ascii=False, indent=2)}")
+            logger.error(
+                f"Schema validation failed. input_schema: {json.dumps(interface_data.input_schema, ensure_ascii=False, indent=2)}"
+            )
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid input_schema: {'; '.join(e.errors)}",

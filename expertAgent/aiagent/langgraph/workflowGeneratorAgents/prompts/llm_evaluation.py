@@ -32,6 +32,7 @@ def _format_recommended_apis(apis: list[Any] | None) -> str:
 
     return ", ".join(formatted) if formatted else "None specified"
 
+
 LLM_EVALUATION_SYSTEM_PROMPT = """You are an expert GraphAI workflow quality evaluator.
 Evaluate the given workflow across the following dimensions and return a structured JSON response.
 
