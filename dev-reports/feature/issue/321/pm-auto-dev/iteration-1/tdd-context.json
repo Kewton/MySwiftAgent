@@ -1,0 +1,208 @@
+{
+  "issue_number": 321,
+  "issue_title": "Job Generator: 要件から抽出した情報をJob bodyに自動含める",
+  "parent_issue": 325,
+  "target_project": "expertAgent",
+  "acceptance_criteria": [
+    "要件に含まれるメールアドレス等のパラメータがJob bodyに自動抽出される",
+    "複数の異なる種類のパラメータ（日付、ファイル名等）が正しく抽出される",
+    "パラメータが存在しない場合も正常に処理される（後方互換性）",
+    "機密パラメータ（パスワード、APIキー等）は抽出対象から除外される"
+  ],
+  "implementation_tasks": [
+    "1.1 JobBodyParameter Pydanticモデル作成 (prompts/task_breakdown.py)",
+    "1.2 TaskBreakdownResponse に job_body_parameters フィールド追加",
+    "1.3 JobTaskGeneratorState に job_body_parameters フィールド追加 (state.py)",
+    "1.4 create_initial_state() に初期値追加",
+    "2.1 システムプロンプトにパラメータ抽出指示追加",
+    "2.2 出力形式例に job_body_parameters 追加",
+    "2.3 task_breakdown.yaml にサンプル追加",
+    "3.1 requirement_analysis_node でパラメータをStateに格納",
+    "3.2 _validate_task_breakdown_response 拡張",
+    "3.3 JobqueueClient.create_job() に body パラメータ追加",
+    "3.4 job_registration_node でbodyを組み立てて渡す",
+    "4.1 JobBodyParameter 単体テスト追加",
+    "4.2 パラメータ抽出の単体テスト追加",
+    "4.3 job_registration_node body伝播テスト",
+    "4.4 静的解析・Lint実行",
+    "4.5 既存テスト全体実行（リグレッション確認）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "JobBodyParameter Pydanticモデル作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "TaskBreakdownResponse に job_body_parameters フィールド追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "JobTaskGeneratorState に job_body_parameters フィールド追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.4",
+      "description": "create_initial_state() に初期値追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "システムプロンプトにパラメータ抽出指示追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "出力形式例に job_body_parameters 追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "task_breakdown.yaml にサンプル追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.yaml"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "requirement_analysis_node でパラメータをStateに格納",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py"],
+      "dependencies": ["2.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "_validate_task_breakdown_response 拡張",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "JobqueueClient.create_job() に body パラメータ追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/jobqueue_client.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.4",
+      "description": "job_registration_node でbodyを組み立てて渡す",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/job_registration.py"],
+      "dependencies": ["3.3", "1.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "JobBodyParameter 単体テスト追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/tests/unit/test_task_breakdown.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "パラメータ抽出の単体テスト追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/tests/unit/test_task_breakdown.py"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "job_registration_node body伝播テスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/tests/unit/test_job_registration.py"],
+      "dependencies": ["3.4"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "静的解析・Lint実行",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["4.1", "4.2", "4.3"]
+    },
+    {
+      "task_id": "4.5",
+      "description": "既存テスト全体実行（リグレッション確認）",
+      "estimated_hours": 0.25,
+      "deliverables": [],
+      "dependencies": ["4.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/jobqueue_client.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/job_registration.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.yaml",
+    "expertAgent/tests/unit/test_task_breakdown.py",
+    "expertAgent/tests/unit/test_job_registration.py"
+  ],
+  "definition_of_done": [
+    "全タスク（1.1〜4.5）が完了している",
+    "単体テストカバレッジ 90%以上を維持",
+    "Ruff / MyPy エラーがゼロ",
+    "./scripts/pre-push-check-all.sh が成功",
+    "JobBodyParameter に型制限（JobBodyValueType）が適用されている",
+    "機密パラメータ名のバリデーションが動作する",
+    "requirement_analysis_node が job_body_parameters を State に格納する",
+    "job_registration_node が body パラメータを JobQueue API に渡す",
+    "パラメータ抽出が空の場合も正常に処理される（後方互換性）"
+  ],
+  "target_coverage": 90,
+  "files_to_modify": [
+    {
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.py",
+      "change_type": "modify",
+      "phases": ["1", "2"]
+    },
+    {
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
+      "change_type": "modify",
+      "phases": ["1"]
+    },
+    {
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py",
+      "change_type": "modify",
+      "phases": ["3"]
+    },
+    {
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/jobqueue_client.py",
+      "change_type": "modify",
+      "phases": ["3"]
+    },
+    {
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/job_registration.py",
+      "change_type": "modify",
+      "phases": ["3"]
+    },
+    {
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/task_breakdown.yaml",
+      "change_type": "modify",
+      "phases": ["2"]
+    },
+    {
+      "file": "expertAgent/tests/unit/test_task_breakdown.py",
+      "change_type": "modify",
+      "phases": ["4"]
+    },
+    {
+      "file": "expertAgent/tests/unit/test_job_registration.py",
+      "change_type": "new_or_modify",
+      "phases": ["4"]
+    }
+  ]
+}

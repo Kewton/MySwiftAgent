@@ -6,6 +6,7 @@ requirements.
 
 Issue #305: Extended with workflow_results and phase fields for workflow
 generation tracking.
+Issue #321: Extended with job_body_parameters for automatic parameter extraction.
 """
 
 from typing import Any, TypedDict
@@ -104,6 +105,10 @@ class JobTaskGeneratorState(TypedDict, total=False):
     # This is different from job_id which is the JobQueue Job ID
     tracking_job_id: str | None
 
+    # ===== Issue #321: Job Body Parameters =====
+    # Parameters extracted from user requirements to be included in Job body
+    job_body_parameters: list[dict[str, Any]]
+
 
 def create_initial_state(
     user_requirement: str,
@@ -158,4 +163,6 @@ def create_initial_state(
         "workflow_results": [],
         "phase": "task_analysis",
         "tracking_job_id": tracking_job_id,
+        # Issue #321: Job Body Parameters
+        "job_body_parameters": [],
     }

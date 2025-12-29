@@ -232,6 +232,50 @@ system_prompt: |
   }
   ```
 
+  # パラメータ抽出 (Issue #321)
+
+  ユーザー要求に含まれる具体的なパラメータ値を抽出し、`job_body_parameters` として出力してください。
+
+  ## 抽出対象のパラメータ
+
+  以下のような具体的な値がユーザー要求に含まれている場合は抽出してください：
+
+  | パラメータ種別 | 例 | name例 |
+  |--------------|-----|--------|
+  | メールアドレス | `test@example.com` | `recipient_email` |
+  | 検索キーワード | `「大谷翔平」`, `"AI trends"` | `query`, `search_keyword` |
+  | 数量指定 | `5件`, `最大10個` | `num_results`, `max_count` |
+  | 日付・期間 | `2024年1月`, `過去7日間` | `target_date`, `date_range` |
+  | ファイル名 | `report.pdf`, `output.csv` | `filename`, `output_name` |
+  | URL | `https://example.com` | `target_url` |
+
+  ## 抽出しないパラメータ（機密情報）
+
+  以下のパラメータは**絶対に抽出しないでください**：
+  - password, passwd（パスワード）
+  - api_key, apikey, token（APIキー・トークン）
+  - secret, credential（シークレット・認証情報）
+  - auth, private_key（認証・秘密鍵）
+
+  ## job_body_parameters の形式
+
+  ```json
+  "job_body_parameters": [
+    {
+      "name": "recipient_email",
+      "value": "test@example.com",
+      "source": "user_requirement",
+      "description": "メール送信先アドレス"
+    },
+    {
+      "name": "query",
+      "value": "大谷翔平",
+      "source": "user_requirement",
+      "description": "検索キーワード"
+    }
+  ]
+  ```
+
   # 出力形式
 
   JSON形式で以下の構造で出力してください：
@@ -256,7 +300,15 @@ system_prompt: |
         ]
       }
     ],
-    "overall_summary": "ワークフロー全体の概要"
+    "overall_summary": "ワークフロー全体の概要",
+    "job_body_parameters": [
+      {
+        "name": "パラメータ名",
+        "value": "抽出した値",
+        "source": "user_requirement",
+        "description": "パラメータの説明（任意）"
+      }
+    ]
   }
   ```
 

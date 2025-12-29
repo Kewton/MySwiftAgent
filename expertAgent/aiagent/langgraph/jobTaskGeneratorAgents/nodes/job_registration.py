@@ -2,15 +2,43 @@
 
 This module provides the job registration node that creates a Job instance
 from the validated JobMaster, making it executable.
+
+Issue #321: Extended to pass job_body_parameters to Job body.
 """
 
 import logging
 from datetime import datetime
+from typing import Any
 
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueClient
 
 logger = logging.getLogger(__name__)
+
+
+def _build_job_body(job_body_parameters: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Build Job body from job_body_parameters.
+
+    Issue #321: Converts the list of JobBodyParameter dicts to a flat dict
+    suitable for Job body.
+
+    Args:
+        job_body_parameters: List of parameter dicts with name, value, source
+
+    Returns:
+        Dict of parameter name to value, or None if no parameters
+    """
+    if not job_body_parameters:
+        return None
+
+    body: dict[str, Any] = {}
+    for param in job_body_parameters:
+        name = param.get("name")
+        value = param.get("value")
+        if name and value is not None:
+            body[name] = value
+
+    return body if body else None
 
 
 async def job_registration_node(
@@ -90,6 +118,14 @@ async def job_registration_node(
         # In a more sophisticated implementation, we would pass initial parameters here
         tasks = None
 
+        # Issue #321: Build job body from job_body_parameters
+        job_body_parameters = state.get("job_body_parameters", [])
+        job_body = _build_job_body(job_body_parameters)
+        if job_body:
+            logger.info(
+                f"Job body parameters: {list(job_body.keys())}"
+            )
+
         # Create Job with method and url from JobMaster
         job_name = f"Job: {user_requirement[:50]} - {datetime.now().isoformat()}"
         priority = 5  # Default priority
@@ -109,6 +145,7 @@ async def job_registration_node(
             priority=priority,
             scheduled_at=None,  # Execute immediately
             timeout_sec=job_timeout_sec,
+            body=job_body,  # Issue #321: Pass job body parameters
         )
 
         # JobResponse has 'job_id' field, not 'id'

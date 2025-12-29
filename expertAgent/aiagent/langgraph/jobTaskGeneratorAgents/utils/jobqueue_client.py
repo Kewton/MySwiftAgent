@@ -446,6 +446,7 @@ class JobqueueClient:
         priority: int = 5,
         scheduled_at: str | None = None,
         timeout_sec: int = 120,
+        body: dict[str, Any] | None = None,
     ) -> dict:
         """Create new Job from JobMaster.
 
@@ -458,21 +459,28 @@ class JobqueueClient:
             priority: Job priority (1=highest, 10=lowest)
             scheduled_at: Scheduled execution time (ISO 8601 format, optional)
             timeout_sec: Request timeout in seconds
+            body: Issue #321: Job body parameters extracted from user requirements
 
         Returns:
             Created Job
         """
         # Use /jobs/from-master/{master_id} endpoint with JobCreateFromMaster schema
+        request_payload: dict[str, Any] = {
+            "name": name,
+            "tasks": tasks,
+            "priority": priority,
+            "scheduled_at": scheduled_at,
+            "timeout_sec": timeout_sec,
+        }
+
+        # Issue #321: Include body if provided
+        if body:
+            request_payload["body"] = body
+
         return await self._request(
             "POST",
             f"/api/v1/jobs/from-master/{master_id}",
-            json={
-                "name": name,
-                "tasks": tasks,
-                "priority": priority,
-                "scheduled_at": scheduled_at,
-                "timeout_sec": timeout_sec,
-            },
+            json=request_payload,
         )
 
     async def get_job(self, job_id: str) -> dict:

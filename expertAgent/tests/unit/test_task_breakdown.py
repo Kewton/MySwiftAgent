@@ -1,9 +1,12 @@
-"""Unit tests for task_breakdown prompt module - Issue #270.
+"""Unit tests for task_breakdown prompt module - Issue #270, #321.
 
 Tests for:
 1. Schema hint generation for LLM prompts
 2. Expert agent capabilities building with schema information
+3. Issue #321: JobBodyParameter model for automatic parameter extraction
 """
+
+import pytest
 
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
     _build_expert_agent_capabilities,
@@ -281,3 +284,190 @@ class TestConvertStringApisToObjects:
         assert len(item.recommended_apis) == 1
         api = item.recommended_apis[0]
         assert api.endpoint == "/v1/utility/gmail/send"
+
+
+class TestJobBodyParameter:
+    """Test JobBodyParameter model for Issue #321.
+
+    Tests for automatic extraction of parameters from user requirements.
+    """
+
+    def test_job_body_parameter_creation_with_string(self) -> None:
+        """Test creating JobBodyParameter with string value."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            JobBodyParameter,
+        )
+
+        param = JobBodyParameter(
+            name="recipient_email",
+            value="test@example.com",
+            source="user_requirement",
+        )
+        assert param.name == "recipient_email"
+        assert param.value == "test@example.com"
+        assert param.source == "user_requirement"
+
+    def test_job_body_parameter_creation_with_integer(self) -> None:
+        """Test creating JobBodyParameter with integer value."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            JobBodyParameter,
+        )
+
+        param = JobBodyParameter(
+            name="num_results",
+            value=10,
+            source="user_requirement",
+        )
+        assert param.name == "num_results"
+        assert param.value == 10
+
+    def test_job_body_parameter_creation_with_list(self) -> None:
+        """Test creating JobBodyParameter with list value."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            JobBodyParameter,
+        )
+
+        param = JobBodyParameter(
+            name="keywords",
+            value=["keyword1", "keyword2"],
+            source="user_requirement",
+        )
+        assert param.name == "keywords"
+        assert param.value == ["keyword1", "keyword2"]
+
+    def test_job_body_parameter_sensitive_parameter_rejected(self) -> None:
+        """Test that sensitive parameter names are rejected."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            JobBodyParameter,
+        )
+
+        # password should be rejected
+        with pytest.raises(ValueError, match="sensitive"):
+            JobBodyParameter(
+                name="password",
+                value="secret123",
+                source="user_requirement",
+            )
+
+        # api_key should be rejected
+        with pytest.raises(ValueError, match="sensitive"):
+            JobBodyParameter(
+                name="api_key",
+                value="sk-xxx",
+                source="user_requirement",
+            )
+
+        # secret should be rejected
+        with pytest.raises(ValueError, match="sensitive"):
+            JobBodyParameter(
+                name="my_secret",
+                value="secret_value",
+                source="user_requirement",
+            )
+
+    def test_job_body_parameter_optional_description(self) -> None:
+        """Test JobBodyParameter with optional description."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            JobBodyParameter,
+        )
+
+        param = JobBodyParameter(
+            name="query",
+            value="search term",
+            source="user_requirement",
+            description="Search query extracted from user request",
+        )
+        assert param.description == "Search query extracted from user request"
+
+
+class TestTaskBreakdownResponseWithJobBodyParameters:
+    """Test TaskBreakdownResponse with job_body_parameters field - Issue #321."""
+
+    def test_task_breakdown_response_with_job_body_parameters(self) -> None:
+        """Test TaskBreakdownResponse includes job_body_parameters field."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            JobBodyParameter,
+            TaskBreakdownResponse,
+        )
+
+        response = TaskBreakdownResponse(
+            tasks=[],
+            overall_summary="Test workflow",
+            job_body_parameters=[
+                JobBodyParameter(
+                    name="recipient_email",
+                    value="test@example.com",
+                    source="user_requirement",
+                ),
+                JobBodyParameter(
+                    name="query",
+                    value="test query",
+                    source="user_requirement",
+                ),
+            ],
+        )
+        assert len(response.job_body_parameters) == 2
+        assert response.job_body_parameters[0].name == "recipient_email"
+        assert response.job_body_parameters[1].name == "query"
+
+    def test_task_breakdown_response_job_body_parameters_optional(self) -> None:
+        """Test job_body_parameters is optional for backward compatibility."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownResponse,
+        )
+
+        # Should work without job_body_parameters (backward compatibility)
+        response = TaskBreakdownResponse(
+            tasks=[],
+            overall_summary="Test workflow",
+        )
+        assert response.job_body_parameters == []
+
+    def test_task_breakdown_response_with_dict_input(self) -> None:
+        """Test TaskBreakdownResponse accepts dict format for job_body_parameters."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
+            TaskBreakdownResponse,
+        )
+
+        response = TaskBreakdownResponse(
+            tasks=[],
+            overall_summary="Test workflow",
+            job_body_parameters=[
+                {
+                    "name": "recipient_email",
+                    "value": "test@example.com",
+                    "source": "user_requirement",
+                }
+            ],
+        )
+        assert len(response.job_body_parameters) == 1
+        assert response.job_body_parameters[0].name == "recipient_email"
+
+
+class TestSystemPromptIncludesParameterExtraction:
+    """Test that system prompt includes parameter extraction instructions - Issue #321."""
+
+    def test_system_prompt_includes_parameter_extraction_section(self) -> None:
+        """Test that system prompt includes job_body_parameters extraction instructions."""
+        prompt = _build_task_breakdown_system_prompt()
+
+        # Should mention job_body_parameters in the prompt
+        assert "job_body_parameters" in prompt
+
+    def test_system_prompt_mentions_email_extraction(self) -> None:
+        """Test that system prompt mentions email address extraction."""
+        prompt = _build_task_breakdown_system_prompt()
+
+        # Should mention email extraction
+        assert "email" in prompt.lower() or "recipient" in prompt.lower()
+
+    def test_system_prompt_mentions_sensitive_exclusion(self) -> None:
+        """Test that system prompt mentions excluding sensitive parameters."""
+        prompt = _build_task_breakdown_system_prompt()
+
+        # Should mention sensitive/password/api_key exclusion
+        assert (
+            "sensitive" in prompt.lower()
+            or "password" in prompt.lower()
+            or "api_key" in prompt.lower()
+        )
