@@ -7,8 +7,10 @@ These tests verify the job registration node's behavior including:
 - Empty workflow tasks handling
 - Exception handling during Job creation
 - Job name generation logic
+- Issue #321: Job body parameter propagation
 
 Issue #111: Comprehensive test coverage for all workflow nodes.
+Issue #321: Job body parameters from user requirements.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -459,3 +461,213 @@ class TestJobRegistrationNode:
         assert "missing job_id field" in result["error_message"]
         # Error message should include available keys for debugging
         assert "Available keys" in result["error_message"]
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient"
+    )
+    async def test_job_registration_with_job_body_parameters(self, mock_jobqueue_client):
+        """Test Job registration with job_body_parameters - Issue #321.
+
+        This tests that job_body_parameters from state are passed to Job creation.
+        """
+        # Setup mock JobqueueClient
+        mock_client_instance = AsyncMock()
+        mock_client_instance.list_workflow_tasks = AsyncMock(
+            return_value=[
+                {"id": "jmt_001", "order": 0, "task_master_id": "tm_001"},
+            ]
+        )
+        mock_client_instance.create_job = AsyncMock(
+            return_value={
+                "job_id": "job_with_body_12345",
+                "name": "Job: Search and email",
+            }
+        )
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        # Create test state WITH job_body_parameters
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Search for 'test query' and send to test@example.com",
+            job_master_id="jm_001",
+            job_master={
+                "id": "jm_001",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+                "timeout_sec": 120,
+            },
+            job_body_parameters=[
+                {
+                    "name": "recipient_email",
+                    "value": "test@example.com",
+                    "source": "user_requirement",
+                },
+                {
+                    "name": "query",
+                    "value": "test query",
+                    "source": "user_requirement",
+                },
+            ],
+        )
+
+        # Execute node
+        result = await job_registration_node(state)
+
+        # Verify Job creation succeeded
+        assert result["job_id"] == "job_with_body_12345"
+        assert result["status"] == "completed"
+
+        # Verify create_job was called with body parameter
+        call_args = mock_client_instance.create_job.call_args
+        assert call_args is not None
+
+        # The body should be built from job_body_parameters
+        if "body" in call_args.kwargs:
+            body = call_args.kwargs["body"]
+            assert body is not None
+            assert body.get("recipient_email") == "test@example.com"
+            assert body.get("query") == "test query"
+
+    @pytest.mark.asyncio
+    @patch(
+        "aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient"
+    )
+    async def test_job_registration_without_job_body_parameters(
+        self, mock_jobqueue_client
+    ):
+        """Test backward compatibility - Job registration works without job_body_parameters.
+
+        Issue #321: Ensure backward compatibility when job_body_parameters is not provided.
+        """
+        # Setup mock JobqueueClient
+        mock_client_instance = AsyncMock()
+        mock_client_instance.list_workflow_tasks = AsyncMock(return_value=[])
+        mock_client_instance.create_job = AsyncMock(
+            return_value={
+                "job_id": "job_no_body_67890",
+                "name": "Job: No body params",
+            }
+        )
+        mock_jobqueue_client.return_value = mock_client_instance
+
+        # Create test state WITHOUT job_body_parameters
+        state = create_mock_workflow_state(
+            retry_count=0,
+            user_requirement="Simple requirement",
+            job_master_id="jm_001",
+            job_master={
+                "id": "jm_001",
+                "method": "POST",
+                "url": "http://localhost:8105/api/v1/graphai/execute",
+            },
+            # No job_body_parameters!
+        )
+
+        # Execute node
+        result = await job_registration_node(state)
+
+        # Verify Job creation succeeded
+        assert result["job_id"] == "job_no_body_67890"
+        assert result["status"] == "completed"
+
+        # Verify create_job was called (body may be None or empty)
+        mock_client_instance.create_job.assert_called_once()
+
+
+class TestBuildJobBody:
+    """Unit tests for _build_job_body helper function - Issue #321."""
+
+    def test_build_job_body_with_valid_parameters(self) -> None:
+        """Test building job body from valid parameters."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration import (
+            _build_job_body,
+        )
+
+        params = [
+            {"name": "recipient_email", "value": "test@example.com", "source": "user_requirement"},
+            {"name": "query", "value": "test query", "source": "user_requirement"},
+            {"name": "num_results", "value": 5, "source": "user_requirement"},
+        ]
+
+        body = _build_job_body(params)
+
+        assert body is not None
+        assert body["recipient_email"] == "test@example.com"
+        assert body["query"] == "test query"
+        assert body["num_results"] == 5
+
+    def test_build_job_body_empty_list(self) -> None:
+        """Test building job body from empty list returns None."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration import (
+            _build_job_body,
+        )
+
+        body = _build_job_body([])
+        assert body is None
+
+    def test_build_job_body_none_value_skipped(self) -> None:
+        """Test that parameters with None value are skipped."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration import (
+            _build_job_body,
+        )
+
+        params = [
+            {"name": "valid_param", "value": "valid_value", "source": "user_requirement"},
+            {"name": "none_param", "value": None, "source": "user_requirement"},
+        ]
+
+        body = _build_job_body(params)
+
+        assert body is not None
+        assert "valid_param" in body
+        assert "none_param" not in body
+
+    def test_build_job_body_missing_name_skipped(self) -> None:
+        """Test that parameters without name are skipped."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration import (
+            _build_job_body,
+        )
+
+        params = [
+            {"name": "valid_param", "value": "valid_value", "source": "user_requirement"},
+            {"value": "orphan_value", "source": "user_requirement"},  # No name
+        ]
+
+        body = _build_job_body(params)
+
+        assert body is not None
+        assert "valid_param" in body
+        assert len(body) == 1
+
+    def test_build_job_body_with_boolean_value(self) -> None:
+        """Test building job body with boolean value."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration import (
+            _build_job_body,
+        )
+
+        params = [
+            {"name": "is_active", "value": True, "source": "user_requirement"},
+            {"name": "is_disabled", "value": False, "source": "user_requirement"},
+        ]
+
+        body = _build_job_body(params)
+
+        assert body is not None
+        assert body["is_active"] is True
+        assert body["is_disabled"] is False
+
+    def test_build_job_body_with_list_value(self) -> None:
+        """Test building job body with list value."""
+        from aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration import (
+            _build_job_body,
+        )
+
+        params = [
+            {"name": "keywords", "value": ["keyword1", "keyword2", "keyword3"], "source": "user_requirement"},
+        ]
+
+        body = _build_job_body(params)
+
+        assert body is not None
+        assert body["keywords"] == ["keyword1", "keyword2", "keyword3"]

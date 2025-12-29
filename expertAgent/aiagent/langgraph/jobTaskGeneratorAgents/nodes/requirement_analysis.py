@@ -191,10 +191,22 @@ async def requirement_analysis_node(
     else:
         updated_retry = 0
 
+    # Issue #321: Store job_body_parameters in state
+    job_body_parameters = [
+        param.model_dump() for param in response.job_body_parameters
+    ]
+    if job_body_parameters:
+        logger.info(
+            "Extracted %d job body parameters: %s",
+            len(job_body_parameters),
+            [p["name"] for p in job_body_parameters],
+        )
+
     return {
         **state,
         "task_breakdown": [task.model_dump() for task in response.tasks],
         "overall_summary": response.overall_summary,
         "evaluator_stage": "after_task_breakdown",
         "retry_count": updated_retry,
+        "job_body_parameters": job_body_parameters,
     }

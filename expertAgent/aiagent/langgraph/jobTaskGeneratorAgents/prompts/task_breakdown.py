@@ -9,6 +9,7 @@ requirements into executable tasks following 4 principles:
 """
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -174,6 +175,80 @@ def _build_expert_agent_capabilities() -> str:
     return "\n".join(lines)
 
 
+# Issue #321: Sensitive parameter names that should be excluded from job body
+SENSITIVE_PARAMETER_PATTERNS = frozenset(
+    [
+        "password",
+        "passwd",
+        "secret",
+        "api_key",
+        "apikey",
+        "token",
+        "credential",
+        "auth",
+        "private_key",
+        "privatekey",
+    ]
+)
+
+
+class JobBodyParameter(BaseModel):
+    """Parameter extracted from user requirements for Job body.
+
+    Issue #321: This model represents a parameter that should be included in
+    the Job body when creating a Job from user requirements. Parameters like
+    email addresses, search queries, file names, and other user-specified
+    values are automatically extracted and included.
+
+    Attributes:
+        name: Parameter name (e.g., "recipient_email", "query", "num_results")
+        value: Parameter value (can be string, number, boolean, or list)
+        source: Source of the parameter (e.g., "user_requirement")
+        description: Optional description of what this parameter represents
+    """
+
+    name: str = Field(
+        description="Parameter name (e.g., 'recipient_email', 'query', 'num_results')"
+    )
+    value: str | int | float | bool | list[Any] = Field(
+        description="Parameter value extracted from user requirements"
+    )
+    source: str = Field(
+        default="user_requirement",
+        description="Source of the parameter (typically 'user_requirement')",
+    )
+    description: str | None = Field(
+        default=None,
+        description="Optional description of what this parameter represents",
+    )
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_not_sensitive(cls, v: str) -> str:
+        """Validate that parameter name is not sensitive.
+
+        Args:
+            v: Parameter name to validate
+
+        Returns:
+            The parameter name if valid
+
+        Raises:
+            ValueError: If the parameter name matches a sensitive pattern
+        """
+        if not isinstance(v, str):
+            return v
+
+        name_lower = v.lower()
+        for pattern in SENSITIVE_PARAMETER_PATTERNS:
+            if pattern in name_lower:
+                raise ValueError(
+                    f"Parameter name '{v}' contains sensitive pattern '{pattern}'. "
+                    f"Sensitive parameters should not be extracted from user requirements."
+                )
+        return v
+
+
 class RecommendedAPI(BaseModel):
     """Recommended API specification for a task."""
 
@@ -268,7 +343,11 @@ class TaskBreakdownItem(BaseModel):
 
 
 class TaskBreakdownResponse(BaseModel):
-    """Task breakdown response from LLM."""
+    """Task breakdown response from LLM.
+
+    Issue #321: Extended with job_body_parameters field for automatic
+    parameter extraction from user requirements.
+    """
 
     tasks: list[TaskBreakdownItem] = Field(
         default_factory=list,
@@ -277,6 +356,13 @@ class TaskBreakdownResponse(BaseModel):
     overall_summary: str = Field(
         default="",
         description="Summary of the entire workflow and task relationships",
+    )
+    job_body_parameters: list[JobBodyParameter] = Field(
+        default_factory=list,
+        description=(
+            "Issue #321: Parameters extracted from user requirements "
+            "to be included in Job body (e.g., email addresses, search queries)"
+        ),
     )
 
 
