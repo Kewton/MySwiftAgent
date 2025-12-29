@@ -7,7 +7,6 @@ Issue #305: These tests were added after discovering a TypeError
 when recommended_apis was passed as list[dict] instead of list[str].
 """
 
-
 from aiagent.langgraph.workflowGeneratorAgents.prompts.llm_evaluation import (
     _format_recommended_apis,
     create_llm_evaluation_prompt,
@@ -24,27 +23,33 @@ class TestFormatRecommendedApis:
 
     def test_format_with_dict_list(self) -> None:
         """Test formatting with list[dict] input - actual data format from TaskMaster."""
-        result = _format_recommended_apis([
-            {"name": "gmail_api", "endpoint": "/api/v1/gmail"},
-            {"name": "drive_api", "endpoint": "/api/v1/drive"},
-        ])
+        result = _format_recommended_apis(
+            [
+                {"name": "gmail_api", "endpoint": "/api/v1/gmail"},
+                {"name": "drive_api", "endpoint": "/api/v1/drive"},
+            ]
+        )
         assert result == "gmail_api, drive_api"
 
     def test_format_with_dict_list_using_api_name_key(self) -> None:
         """Test formatting with dict using 'api_name' key instead of 'name'."""
-        result = _format_recommended_apis([
-            {"api_name": "search_api"},
-            {"api_name": "calendar_api"},
-        ])
+        result = _format_recommended_apis(
+            [
+                {"api_name": "search_api"},
+                {"api_name": "calendar_api"},
+            ]
+        )
         assert result == "search_api, calendar_api"
 
     def test_format_with_mixed_list(self) -> None:
         """Test formatting with mixed list of str and dict."""
-        result = _format_recommended_apis([
-            "string_api",
-            {"name": "dict_api"},
-            123,  # Non-standard type
-        ])
+        result = _format_recommended_apis(
+            [
+                "string_api",
+                {"name": "dict_api"},
+                123,  # Non-standard type
+            ]
+        )
         assert "string_api" in result
         assert "dict_api" in result
         assert "123" in result
@@ -61,9 +66,11 @@ class TestFormatRecommendedApis:
 
     def test_format_with_dict_without_name_key(self) -> None:
         """Test formatting with dict that doesn't have 'name' or 'api_name' key."""
-        result = _format_recommended_apis([
-            {"endpoint": "/api/v1/test", "method": "GET"},
-        ])
+        result = _format_recommended_apis(
+            [
+                {"endpoint": "/api/v1/test", "method": "GET"},
+            ]
+        )
         # Should fallback to str(dict)
         assert "endpoint" in result or "{" in result
 

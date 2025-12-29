@@ -202,7 +202,9 @@ class TestCreateInitialState:
 
         assert state["task_master_id"] == 789
         assert state["max_retry"] == 2  # Reduced from 5 to 2 in fast_mode
-        assert state["max_test_data_regeneration"] == 1  # Reduced from 2 to 1 in fast_mode
+        assert (
+            state["max_test_data_regeneration"] == 1
+        )  # Reduced from 2 to 1 in fast_mode
         assert state["fast_mode"] is True
 
     def test_create_initial_state_fast_mode_default(self):

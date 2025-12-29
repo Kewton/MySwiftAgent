@@ -1,0 +1,97 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "jobqueue",
+  "service_health": {
+    "jobqueue": {
+      "status": "healthy",
+      "url": "http://localhost:8001",
+      "response": {"message": "JobQueue API is healthy", "status": "healthy", "version": "0.1.0"}
+    }
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_322_acceptance.py",
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "test_cases": [
+      {
+        "method": "test_case_1_no_template_variables",
+        "status": "passed",
+        "description": "テンプレート変数なしのTaskMaster作成でtemplate_validationが返される"
+      },
+      {
+        "method": "test_case_2_job_body_reference_with_warning",
+        "status": "passed",
+        "description": "job.body参照テンプレートで警告が含まれる"
+      },
+      {
+        "method": "test_case_3_task_reference_template",
+        "status": "passed",
+        "description": "tasks参照テンプレートで変数が抽出される"
+      },
+      {
+        "method": "test_case_4_nonexistent_task_master",
+        "status": "passed",
+        "description": "存在しないTaskMasterの取得で404を返す"
+      },
+      {
+        "method": "test_case_5_update_task_master_validation",
+        "status": "passed",
+        "description": "TaskMaster更新時にtemplate_validationが返される"
+      },
+      {
+        "method": "test_case_6_template_size_limit",
+        "status": "passed",
+        "description": "過大なテンプレートでバリデーションが実行される"
+      }
+    ]
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'jobqueue' does not require Playwright testing"
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "TaskMaster作成時にtemplate_validationフィールドが返される",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_case_1_no_template_variables"
+    },
+    {
+      "criterion": "TaskMaster更新時にtemplate_validationフィールドが返される",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_case_5_update_task_master_validation"
+    },
+    {
+      "criterion": "job.body参照のテンプレート変数は警告を出力する",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_case_2_job_body_reference_with_warning"
+    },
+    {
+      "criterion": "tasks参照のテンプレート変数が正しく抽出される",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_case_3_task_reference_template"
+    },
+    {
+      "criterion": "存在しないTaskMasterの取得で404を返す",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_case_4_nonexistent_task_master"
+    },
+    {
+      "criterion": "過大なテンプレートでバリデーションが実行される",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_case_6_template_size_limit"
+    }
+  ],
+  "evidence_files": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent-worktrees/feature-issue-322/tests/acceptance/test_issue_322_acceptance.py"
+  ]
+}

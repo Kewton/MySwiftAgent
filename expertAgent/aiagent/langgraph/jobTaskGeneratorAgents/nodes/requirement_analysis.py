@@ -192,9 +192,7 @@ async def requirement_analysis_node(
         updated_retry = 0
 
     # Issue #321: Store job_body_parameters in state
-    job_body_parameters = [
-        param.model_dump() for param in response.job_body_parameters
-    ]
+    job_body_parameters = [param.model_dump() for param in response.job_body_parameters]
     if job_body_parameters:
         logger.info(
             "Extracted %d job body parameters: %s",

@@ -26,18 +26,22 @@ class TestFormatRecommendedApis:
 
     def test_format_with_dict_list_name_key(self):
         """Test formatting with list[dict] using 'name' key."""
-        result = _format_recommended_apis([
-            {"name": "gmail_api", "endpoint": "/api/v1/gmail"},
-            {"name": "drive_api", "endpoint": "/api/v1/drive"},
-        ])
+        result = _format_recommended_apis(
+            [
+                {"name": "gmail_api", "endpoint": "/api/v1/gmail"},
+                {"name": "drive_api", "endpoint": "/api/v1/drive"},
+            ]
+        )
         assert result == "gmail_api, drive_api"
 
     def test_format_with_dict_list_api_name_key(self):
         """Test formatting with list[dict] using 'api_name' key."""
-        result = _format_recommended_apis([
-            {"api_name": "search_api"},
-            {"api_name": "calendar_api"},
-        ])
+        result = _format_recommended_apis(
+            [
+                {"api_name": "search_api"},
+                {"api_name": "calendar_api"},
+            ]
+        )
         assert result == "search_api, calendar_api"
 
     def test_format_with_empty_list(self):
@@ -52,11 +56,13 @@ class TestFormatRecommendedApis:
 
     def test_format_with_mixed_list(self):
         """Test formatting with mixed list of str and dict."""
-        result = _format_recommended_apis([
-            "string_api",
-            {"name": "dict_api"},
-            {"api_name": "another_api"},
-        ])
+        result = _format_recommended_apis(
+            [
+                "string_api",
+                {"name": "dict_api"},
+                {"api_name": "another_api"},
+            ]
+        )
         assert "string_api" in result
         assert "dict_api" in result
         assert "another_api" in result

@@ -149,5 +149,9 @@ class TestConvertSampleInputEdgeCases:
     def test_scientific_notation_float(self):
         """Test that scientific notation floats are handled."""
         result = convert_sample_input_to_dict_or_str(1e10)
-        assert "10000000000" in result or "1e+10" in result.lower() or "1e10" in result.lower()
+        assert (
+            "10000000000" in result
+            or "1e+10" in result.lower()
+            or "1e10" in result.lower()
+        )
         assert isinstance(result, str)

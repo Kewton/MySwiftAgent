@@ -160,9 +160,7 @@ def _build_expert_agent_capabilities() -> str:
     if task_api_mapping:
         lines.append("**タスク種別ごとの推奨API**:")
         lines.append("")
-        lines.append(
-            "| タスク種別 | 推奨API | エンドポイント | 理由 |"
-        )
+        lines.append("| タスク種別 | 推奨API | エンドポイント | 理由 |")
         lines.append("|-----------|---------|---------------|------|")
         for mapping in task_api_mapping:
             task_type = mapping.get("task_type", "")

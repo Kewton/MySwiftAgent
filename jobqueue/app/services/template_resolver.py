@@ -4,6 +4,8 @@ import logging
 import re
 from typing import Any
 
+from app.services.template_patterns import TemplatePatterns
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,21 +18,11 @@ class TemplateResolverError(Exception):
 class TemplateResolver:
     """Service for resolving template variables in task bodies."""
 
-    # Pattern for template variables: {{tasks[0].output_data.field.subfield}}
-    VARIABLE_PATTERN = re.compile(
-        r"\{\{tasks\[(\d+)\]\.(input_data|output_data)(\.[\w.]+)?\}\}"
-    )
-
-    # Pattern for job variables: {{job.body.field}} or {{job.input_data.field}}
-    JOB_VARIABLE_PATTERN = re.compile(r"\{\{job\.(body|input_data)(\.[\w.]+)?\}\}")
-
-    # Pattern for current task variables: {{task.input_data.field}}
-    CURRENT_TASK_PATTERN = re.compile(r"\{\{task\.(input_data)(\.[\w.]+)?\}\}")
-
-    # Combined pattern for has_template_variables detection
-    ANY_VARIABLE_PATTERN = re.compile(
-        r"\{\{(tasks\[\d+\]|job|task)\.(input_data|output_data|body)(\.[\w.]+)?\}\}"
-    )
+    # Use shared patterns from TemplatePatterns module (DRY principle)
+    VARIABLE_PATTERN = TemplatePatterns.TASK_VARIABLE
+    JOB_VARIABLE_PATTERN = TemplatePatterns.JOB_VARIABLE
+    CURRENT_TASK_PATTERN = TemplatePatterns.CURRENT_TASK_VARIABLE
+    ANY_VARIABLE_PATTERN = TemplatePatterns.ANY_VARIABLE
 
     @staticmethod
     def resolve_template(
@@ -38,6 +30,7 @@ class TemplateResolver:
         tasks: list[Any],
         job: Any | None = None,
         current_task: Any | None = None,
+        log_context: dict[str, str] | None = None,
     ) -> dict[str, Any] | str | list[Any] | None:
         """
         Resolve template variables in a template dict/string/list.
@@ -47,6 +40,7 @@ class TemplateResolver:
             tasks: List of task objects with input_data and output_data
             job: Optional job object with body and input_data attributes
             current_task: Optional current task object with input_data attribute
+            log_context: Optional context for enhanced logging (task_id, task_master_name, etc.)
 
         Returns:
             Resolved template with actual values
@@ -67,11 +61,17 @@ class TemplateResolver:
             return None
 
         if isinstance(template, dict):
-            return TemplateResolver._resolve_dict(template, tasks, job, current_task)
+            return TemplateResolver._resolve_dict(
+                template, tasks, job, current_task, log_context
+            )
         elif isinstance(template, str):
-            return TemplateResolver._resolve_string(template, tasks, job, current_task)
+            return TemplateResolver._resolve_string(
+                template, tasks, job, current_task, log_context
+            )
         elif isinstance(template, list):
-            return TemplateResolver._resolve_list(template, tasks, job, current_task)
+            return TemplateResolver._resolve_list(
+                template, tasks, job, current_task, log_context
+            )
         else:
             return template
 
@@ -81,12 +81,13 @@ class TemplateResolver:
         tasks: list[Any],
         job: Any | None = None,
         current_task: Any | None = None,
+        log_context: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Resolve template variables in a dictionary."""
         resolved = {}
         for key, value in template_dict.items():
             resolved[key] = TemplateResolver.resolve_template(
-                value, tasks, job, current_task
+                value, tasks, job, current_task, log_context
             )
         return resolved
 
@@ -96,10 +97,13 @@ class TemplateResolver:
         tasks: list[Any],
         job: Any | None = None,
         current_task: Any | None = None,
+        log_context: dict[str, str] | None = None,
     ) -> list[Any]:
         """Resolve template variables in a list."""
         return [
-            TemplateResolver.resolve_template(item, tasks, job, current_task)
+            TemplateResolver.resolve_template(
+                item, tasks, job, current_task, log_context
+            )
             for item in template_list
         ]
 
@@ -109,6 +113,7 @@ class TemplateResolver:
         tasks: list[Any],
         job: Any | None = None,
         current_task: Any | None = None,
+        log_context: dict[str, str] | None = None,
     ) -> str | Any:
         """Resolve template variables in a string."""
         if not isinstance(template_str, str):
@@ -139,14 +144,14 @@ class TemplateResolver:
         if len(all_matches) == 1 and all_matches[0][0].group(0) == template_str:
             match, match_type = all_matches[0]
             return TemplateResolver._get_value_by_type(
-                match, match_type, tasks, job, current_task
+                match, match_type, tasks, job, current_task, log_context
             )
 
         # Replace all variables in the string (reverse order to maintain positions)
         result = template_str
         for match, match_type in reversed(all_matches):
             value = TemplateResolver._get_value_by_type(
-                match, match_type, tasks, job, current_task
+                match, match_type, tasks, job, current_task, log_context
             )
             # Convert value to string for replacement
             value_str = str(value) if value is not None else ""
@@ -161,30 +166,56 @@ class TemplateResolver:
         tasks: list[Any],
         job: Any | None,
         current_task: Any | None,
+        log_context: dict[str, str] | None = None,
     ) -> Any:
         """Get variable value based on match type."""
         if match_type == "task_ref":
-            return TemplateResolver._get_variable_value(match, tasks)
+            return TemplateResolver._get_variable_value(match, tasks, log_context)
         elif match_type == "job":
-            return TemplateResolver._get_job_variable_value(match, job)
+            return TemplateResolver._get_job_variable_value(match, job, log_context)
         elif match_type == "current_task":
             return TemplateResolver._get_current_task_variable_value(
-                match, current_task
+                match, current_task, log_context
             )
         return None
 
     @staticmethod
-    def _get_variable_value(match: re.Match[str], tasks: list[Any]) -> Any:
-        """Extract value from task based on variable pattern."""
+    def _format_log_context(log_context: dict[str, str] | None) -> str:
+        """Format log context for log messages."""
+        if not log_context:
+            return ""
+        parts = []
+        if "task_id" in log_context:
+            parts.append(f"Task: {log_context['task_id']}")
+        if "task_master_name" in log_context:
+            parts.append(f"TaskMaster: {log_context['task_master_name']}")
+        if "job_id" in log_context:
+            parts.append(f"Job: {log_context['job_id']}")
+        return " | ".join(parts) if parts else ""
+
+    @staticmethod
+    def _get_variable_value(
+        match: re.Match[str],
+        tasks: list[Any],
+        log_context: dict[str, str] | None = None,
+    ) -> Any:
+        """Extract value from task based on variable pattern.
+
+        DRY refactoring: Delegates to _navigate_path for consistent path navigation.
+        """
         task_index = int(match.group(1))
         data_type = match.group(2)  # input_data or output_data
         path = match.group(3)  # .field.subfield or None
+
+        ctx_str = TemplateResolver._format_log_context(log_context)
 
         # Validate task index
         if task_index >= len(tasks):
             error_msg = (
                 f"Task index {task_index} out of range (available: 0-{len(tasks) - 1})"
             )
+            if ctx_str:
+                error_msg += f" [{ctx_str}]"
             logger.error(error_msg)
             raise TemplateResolverError(error_msg)
 
@@ -193,41 +224,35 @@ class TemplateResolver:
         # Get data dict (input_data or output_data)
         data = getattr(task, data_type, None)
         if data is None:
-            error_msg = f"Task {task_index} has no {data_type}"
-            logger.warning(error_msg)
+            warning_msg = f"Task {task_index} has no {data_type}"
+            if ctx_str:
+                warning_msg += f" [{ctx_str}]"
+            logger.warning(warning_msg)
             return None
 
         # If no path, return entire data
         if not path:
             return data
 
-        # Navigate through path (.field.subfield)
-        current = data
-        field_names = path.strip(".").split(".")
-
-        for field in field_names:
-            if isinstance(current, dict):
-                current = current.get(field)
-                if current is None:
-                    logger.warning(
-                        f"Field '{field}' not found in task {task_index}.{data_type}"
-                    )
-                    return None
-            else:
-                error_msg = f"Cannot access field '{field}' in non-dict value"
-                logger.error(error_msg)
-                raise TemplateResolverError(error_msg)
-
-        return current
+        # Use shared path navigation logic (DRY principle)
+        return TemplateResolver._navigate_path(
+            data, path, f"task {task_index}.{data_type}", log_context
+        )
 
     @staticmethod
-    def _navigate_path(data: Any, path: str, context: str) -> Any:
+    def _navigate_path(
+        data: Any,
+        path: str,
+        context: str,
+        log_context: dict[str, str] | None = None,
+    ) -> Any:
         """Navigate through a dot-separated path in a dict.
 
         Args:
             data: Starting data (should be dict)
             path: Dot-separated path like ".field.subfield"
             context: Context string for error messages
+            log_context: Optional context for enhanced logging
 
         Returns:
             Value at path, or None if not found
@@ -235,24 +260,38 @@ class TemplateResolver:
         if not path:
             return data
 
+        ctx_str = TemplateResolver._format_log_context(log_context)
         current = data
         field_names = path.strip(".").split(".")
 
         for field in field_names:
             if isinstance(current, dict):
-                current = current.get(field)
-                if current is None:
-                    logger.warning(f"Field '{field}' not found in {context}")
+                if field not in current:
+                    available_fields = list(current.keys())
+                    warning_msg = (
+                        f"Field '{field}' not found in {context}. "
+                        f"Available fields: {available_fields}"
+                    )
+                    if ctx_str:
+                        warning_msg += f" [{ctx_str}]"
+                    logger.warning(warning_msg)
                     return None
+                current = current.get(field)
             else:
                 error_msg = f"Cannot access field '{field}' in non-dict value"
+                if ctx_str:
+                    error_msg += f" [{ctx_str}]"
                 logger.error(error_msg)
                 raise TemplateResolverError(error_msg)
 
         return current
 
     @staticmethod
-    def _get_job_variable_value(match: re.Match[str], job: Any | None) -> Any:
+    def _get_job_variable_value(
+        match: re.Match[str],
+        job: Any | None,
+        log_context: dict[str, str] | None = None,
+    ) -> Any:
         """Extract value from job based on variable pattern.
 
         Supports:
@@ -261,8 +300,13 @@ class TemplateResolver:
         - {{job.input_data}} - entire input_data dict
         - {{job.input_data.field}} - specific field
         """
+        ctx_str = TemplateResolver._format_log_context(log_context)
+
         if job is None:
-            logger.warning("Job is None, cannot resolve job variable")
+            warning_msg = "Job is None, cannot resolve job variable"
+            if ctx_str:
+                warning_msg += f" [{ctx_str}]"
+            logger.warning(warning_msg)
             return None
 
         data_type = match.group(1)  # body or input_data
@@ -271,18 +315,25 @@ class TemplateResolver:
         # Get data dict (body or input_data)
         data = getattr(job, data_type, None)
         if data is None:
-            logger.warning(f"Job has no {data_type}")
+            warning_msg = f"Job has no {data_type}"
+            if ctx_str:
+                warning_msg += f" [{ctx_str}]"
+            logger.warning(warning_msg)
             return None
 
         # If no path, return entire data
         if not path:
             return data
 
-        return TemplateResolver._navigate_path(data, path, f"job.{data_type}")
+        return TemplateResolver._navigate_path(
+            data, path, f"job.{data_type}", log_context
+        )
 
     @staticmethod
     def _get_current_task_variable_value(
-        match: re.Match[str], current_task: Any | None
+        match: re.Match[str],
+        current_task: Any | None,
+        log_context: dict[str, str] | None = None,
     ) -> Any:
         """Extract value from current task based on variable pattern.
 
@@ -290,8 +341,13 @@ class TemplateResolver:
         - {{task.input_data}} - entire input_data dict
         - {{task.input_data.field}} - specific field
         """
+        ctx_str = TemplateResolver._format_log_context(log_context)
+
         if current_task is None:
-            logger.warning("Current task is None, cannot resolve task variable")
+            warning_msg = "Current task is None, cannot resolve task variable"
+            if ctx_str:
+                warning_msg += f" [{ctx_str}]"
+            logger.warning(warning_msg)
             return None
 
         data_type = match.group(1)  # input_data
@@ -299,13 +355,18 @@ class TemplateResolver:
 
         data = getattr(current_task, data_type, None)
         if data is None:
-            logger.warning(f"Current task has no {data_type}")
+            warning_msg = f"Current task has no {data_type}"
+            if ctx_str:
+                warning_msg += f" [{ctx_str}]"
+            logger.warning(warning_msg)
             return None
 
         if not path:
             return data
 
-        return TemplateResolver._navigate_path(data, path, f"task.{data_type}")
+        return TemplateResolver._navigate_path(
+            data, path, f"task.{data_type}", log_context
+        )
 
     @staticmethod
     def has_template_variables(

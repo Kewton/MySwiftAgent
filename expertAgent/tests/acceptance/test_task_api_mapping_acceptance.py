@@ -135,9 +135,9 @@ class TestFileReaderAgentRecommendation:
                 f"{self.EXPERT_AGENT_URL}/v1/jobs/{job_id}/status",
                 timeout=10,
             )
-            assert (
-                status_response.status_code == 200
-            ), f"Status check failed: {status_response.text}"
+            assert status_response.status_code == 200, (
+                f"Status check failed: {status_response.text}"
+            )
 
             status_data = status_response.json()
             status = status_data.get("status")

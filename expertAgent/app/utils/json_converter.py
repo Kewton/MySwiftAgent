@@ -86,8 +86,12 @@ def to_parse_json(content: str) -> dict | list[Any]:
                     logger.info("Successfully parsed YAML from code block (fallback)")
                     return cast(dict[Any, Any] | list[Any], parsed_yaml)
                 else:
-                    logger.warning(f"YAML parsed but unexpected type: {type(parsed_yaml)}")
-                    raise ValueError(f"YAML parsed to unexpected type: {type(parsed_yaml)}")
+                    logger.warning(
+                        f"YAML parsed but unexpected type: {type(parsed_yaml)}"
+                    )
+                    raise ValueError(
+                        f"YAML parsed to unexpected type: {type(parsed_yaml)}"
+                    )
             except yaml.YAMLError as yaml_err:
                 logger.error(f"YAMLError after regex extraction: {yaml_err}")
                 raise ValueError(

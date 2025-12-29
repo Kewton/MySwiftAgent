@@ -1,0 +1,86 @@
+{
+  "issue_number": 322,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "tests_passed": 263,
+      "tests_failed": 0,
+      "coverage": {
+        "template_patterns": 97,
+        "template_validator": 98,
+        "template_resolver": 86,
+        "template_validation": 100
+      },
+      "files_created": [
+        "jobqueue/app/services/template_patterns.py",
+        "jobqueue/app/schemas/template_validation.py",
+        "jobqueue/app/services/template_validator.py",
+        "jobqueue/tests/unit/test_template_patterns.py",
+        "jobqueue/tests/unit/test_template_validator.py",
+        "jobqueue/tests/integration/test_task_master_validation.py"
+      ],
+      "files_modified": [
+        "jobqueue/app/services/template_resolver.py",
+        "jobqueue/app/schemas/task_master.py",
+        "jobqueue/app/api/v1/task_masters.py",
+        "jobqueue/app/core/worker.py",
+        "jobqueue/tests/unit/test_template_resolver.py"
+      ]
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_level": "L3",
+      "tests_passed": 6,
+      "tests_failed": 0,
+      "acceptance_criteria_verified": 6
+    },
+    "refactor": {
+      "status": "success",
+      "coverage_before": 91,
+      "coverage_after": 92,
+      "lines_reduced": 20,
+      "principles_applied": ["DRY", "KISS", "SRP"]
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "TemplatePatterns 共通モジュール作成", "status": "completed"},
+      {"task_id": "1.2", "description": "スキーマ作成", "status": "completed"},
+      {"task_id": "1.3", "description": "パターンテスト", "status": "completed"},
+      {"task_id": "2.1", "description": "TemplateValidator実装", "status": "completed"},
+      {"task_id": "2.2", "description": "Validatorテスト", "status": "completed"},
+      {"task_id": "3.1", "description": "パターン共通化", "status": "completed"},
+      {"task_id": "3.2", "description": "log_context追加", "status": "completed"},
+      {"task_id": "3.3", "description": "テスト更新", "status": "completed"},
+      {"task_id": "4.1", "description": "スキーマ拡張", "status": "completed"},
+      {"task_id": "4.2", "description": "POST追加", "status": "completed"},
+      {"task_id": "4.3", "description": "PUT追加", "status": "completed"},
+      {"task_id": "4.4", "description": "結合テスト", "status": "completed"},
+      {"task_id": "5.1", "description": "ログ強化", "status": "completed"},
+      {"task_id": "5.2", "description": "null検出", "status": "completed"},
+      {"task_id": "5.3", "description": "警告ログ", "status": "completed"},
+      {"task_id": "5.4", "description": "統合テスト", "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "jobqueue/app/services/template_patterns.py", "created": true},
+      {"file": "jobqueue/app/schemas/template_validation.py", "created": true},
+      {"file": "jobqueue/app/services/template_validator.py", "created": true},
+      {"file": "jobqueue/tests/unit/test_template_patterns.py", "created": true},
+      {"file": "jobqueue/tests/unit/test_template_validator.py", "created": true},
+      {"file": "jobqueue/tests/integration/test_task_master_validation.py", "created": true},
+      {"file": "tests/acceptance/test_issue_322_acceptance.py", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "全タスク完了", "verified": true},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": true},
+      {"criterion": "Ruff/MyPyエラーゼロ", "verified": true},
+      {"criterion": "L3受入テストパス", "verified": true}
+    ],
+    "estimated_vs_actual": {
+      "estimated_hours": 7.5,
+      "actual_hours": null
+    }
+  }
+}

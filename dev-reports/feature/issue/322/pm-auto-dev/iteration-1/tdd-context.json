@@ -1,0 +1,191 @@
+{
+  "issue_number": 322,
+  "title": "TaskMaster: body_template のテンプレート変数参照先検証機能",
+  "target_project": "jobqueue",
+  "acceptance_criteria": [
+    "TaskMaster作成/更新時にテンプレート変数を検証し、警告を出力する",
+    "テンプレート解決でnullになった必須フィールドをログ出力する",
+    "TemplatePatterns共通モジュールでパターンを共通化する",
+    "TemplateValidatorがサイズ・変数数・パス深度を制限する",
+    "TaskMasterResponseにtemplate_validationフィールドが含まれる"
+  ],
+  "implementation_tasks": [
+    "1.1: TemplatePatterns 共通モジュール作成 (services/template_patterns.py)",
+    "1.2: TemplateValidationResult, TemplateValidationWarning スキーマ作成 (schemas/template_validation.py)",
+    "1.3: TemplatePatterns 単体テスト (tests/unit/test_template_patterns.py)",
+    "2.1: TemplateValidator クラス実装 (services/template_validator.py)",
+    "2.2: TemplateValidator 単体テスト (tests/unit/test_template_validator.py)",
+    "3.1: TemplateResolver のパターン参照を共通モジュールに変更 (services/template_resolver.py)",
+    "3.2: log_context パラメータ追加、詳細ログ強化 (services/template_resolver.py)",
+    "3.3: 単体テスト更新 (tests/unit/test_template_resolver.py)",
+    "4.1: TaskMasterResponse にバリデーション結果フィールド追加 (schemas/task_master.py)",
+    "4.2: POST /task-masters に検証呼び出し追加 (api/v1/task_masters.py)",
+    "4.3: PUT /task-masters/{id} に検証呼び出し追加 (api/v1/task_masters.py)",
+    "4.4: API 結合テスト作成 (tests/integration/test_task_master_validation.py)",
+    "5.1: _execute_tasks のログ強化 (core/worker.py)",
+    "5.2: _find_null_fields ヘルパー実装 (core/worker.py)",
+    "5.3: null フィールド検出ログ追加 (core/worker.py)",
+    "5.4: Worker 統合テスト更新 (tests/integration/test_task_execution_flow.py)"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "TemplatePatterns 共通モジュール作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/app/services/template_patterns.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "TemplateValidationResult, TemplateValidationWarning スキーマ作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/app/schemas/template_validation.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3",
+      "description": "TemplatePatterns 単体テスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/tests/unit/test_template_patterns.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "TemplateValidator クラス実装",
+      "estimated_hours": 1.0,
+      "deliverables": ["jobqueue/app/services/template_validator.py"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "TemplateValidator 単体テスト",
+      "estimated_hours": 1.0,
+      "deliverables": ["jobqueue/tests/unit/test_template_validator.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "TemplateResolver のパターン参照を共通モジュールに変更",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/app/services/template_resolver.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "log_context パラメータ追加、詳細ログ強化",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/app/services/template_resolver.py"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "単体テスト更新",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/tests/unit/test_template_resolver.py"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "TaskMasterResponse にバリデーション結果フィールド追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/app/schemas/task_master.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "POST /task-masters に検証呼び出し追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/app/api/v1/task_masters.py"],
+      "dependencies": ["2.1", "4.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "PUT /task-masters/{id} に検証呼び出し追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/app/api/v1/task_masters.py"],
+      "dependencies": ["4.2"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "API 結合テスト作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["jobqueue/tests/integration/test_task_master_validation.py"],
+      "dependencies": ["4.3"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "_execute_tasks のログ強化",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/app/core/worker.py"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "5.2",
+      "description": "_find_null_fields ヘルパー実装",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/app/core/worker.py"],
+      "dependencies": ["5.1"]
+    },
+    {
+      "task_id": "5.3",
+      "description": "null フィールド検出ログ追加",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/app/core/worker.py"],
+      "dependencies": ["5.2"]
+    },
+    {
+      "task_id": "5.4",
+      "description": "Worker 統合テスト更新",
+      "estimated_hours": 0.25,
+      "deliverables": ["jobqueue/tests/integration/test_task_execution_flow.py"],
+      "dependencies": ["5.3"]
+    }
+  ],
+  "deliverables_checklist": [
+    "jobqueue/app/services/template_patterns.py",
+    "jobqueue/app/schemas/template_validation.py",
+    "jobqueue/app/services/template_validator.py",
+    "jobqueue/app/services/template_resolver.py",
+    "jobqueue/app/schemas/task_master.py",
+    "jobqueue/app/api/v1/task_masters.py",
+    "jobqueue/app/core/worker.py",
+    "jobqueue/tests/unit/test_template_patterns.py",
+    "jobqueue/tests/unit/test_template_validator.py",
+    "jobqueue/tests/unit/test_template_resolver.py",
+    "jobqueue/tests/integration/test_task_master_validation.py",
+    "jobqueue/tests/integration/test_task_execution_flow.py"
+  ],
+  "definition_of_done": [
+    "全タスク（1.1〜5.4）が完了している",
+    "単体テストカバレッジ 90%以上を維持",
+    "Ruff / MyPy エラーがゼロ",
+    "./scripts/pre-push-check-all.sh が成功",
+    "TemplatePatterns で正規表現パターンが共通化されている",
+    "TemplateValidator がサイズ・変数数・パス深度を制限している",
+    "TaskMasterResponse に template_validation フィールドが含まれる",
+    "TemplateResolver が log_context を受け取り詳細ログを出力する",
+    "Worker が null フィールドを検出してログ出力する"
+  ],
+  "target_coverage": 90,
+  "existing_files_to_modify": [
+    "jobqueue/app/services/template_resolver.py",
+    "jobqueue/app/schemas/task_master.py",
+    "jobqueue/app/api/v1/task_masters.py",
+    "jobqueue/app/core/worker.py",
+    "jobqueue/tests/unit/test_template_resolver.py",
+    "jobqueue/tests/integration/test_task_execution_flow.py"
+  ],
+  "new_files_to_create": [
+    "jobqueue/app/services/template_patterns.py",
+    "jobqueue/app/schemas/template_validation.py",
+    "jobqueue/app/services/template_validator.py",
+    "jobqueue/tests/unit/test_template_patterns.py",
+    "jobqueue/tests/unit/test_template_validator.py",
+    "jobqueue/tests/integration/test_task_master_validation.py"
+  ],
+  "design_references": [
+    "dev-reports/feature/issue/322/design-policy.md",
+    "dev-reports/feature/issue/322/architecture-review.md",
+    "dev-reports/feature/issue/322/work-plan.md"
+  ]
+}

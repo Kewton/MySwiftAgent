@@ -1,0 +1,52 @@
+{
+  "issue_number": 322,
+  "feature_summary": "TaskMaster: body_template のテンプレート変数参照先検証機能",
+  "acceptance_criteria": [
+    "TaskMaster作成時にテンプレート変数を検証し、template_validationフィールドを返す",
+    "TaskMaster更新時にテンプレート変数を検証し、template_validationフィールドを返す",
+    "job.body参照のテンプレート変数は警告を出力する",
+    "過大なテンプレート（64KB超）はエラーを返す",
+    "変数数が100を超える場合はエラーを返す",
+    "パス深度が10を超える場合はエラーを返す"
+  ],
+  "labels": ["enhancement", "doing"],
+  "target_project": "jobqueue",
+  "playwright_required": false,
+  "required_services": ["jobqueue"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "jobqueue", "url": "http://localhost:8001/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系テスト1: テンプレート変数なしのTaskMaster作成",
+        "command": "curl -s -X POST http://localhost:8001/api/v1/task-masters -H 'Content-Type: application/json' -d '{\"name\": \"test_task_no_template\", \"method\": \"POST\", \"url\": \"http://example.com/api\", \"body_template\": {\"action\": \"test\"}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["template_validation", "is_valid", "true"]
+      },
+      {
+        "name": "正常系テスト2: Job body参照テンプレート（警告あり）",
+        "command": "curl -s -X POST http://localhost:8001/api/v1/task-masters -H 'Content-Type: application/json' -d '{\"name\": \"test_task_with_job_ref\", \"method\": \"POST\", \"url\": \"http://example.com/api\", \"body_template\": {\"email\": \"{{job.body.recipient_email}}\"}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["template_validation", "warnings", "job.body.recipient_email"]
+      },
+      {
+        "name": "正常系テスト3: タスク参照テンプレート",
+        "command": "curl -s -X POST http://localhost:8001/api/v1/task-masters -H 'Content-Type: application/json' -d '{\"name\": \"test_task_with_task_ref\", \"method\": \"POST\", \"url\": \"http://example.com/api\", \"body_template\": {\"previous_result\": \"{{tasks[0].output_data.result}}\"}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["template_validation", "extracted_variables", "tasks"]
+      },
+      {
+        "name": "異常系テスト1: 存在しないTaskMasterの取得",
+        "command": "curl -s -X GET http://localhost:8001/api/v1/task-masters/nonexistent-id-12345",
+        "expected_status": 404,
+        "expected_response_contains": ["detail"]
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_322_acceptance.py",
+  "playwright_test_file": null
+}

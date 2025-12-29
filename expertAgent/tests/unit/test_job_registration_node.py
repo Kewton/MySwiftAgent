@@ -466,7 +466,9 @@ class TestJobRegistrationNode:
     @patch(
         "aiagent.langgraph.jobTaskGeneratorAgents.nodes.job_registration.JobqueueClient"
     )
-    async def test_job_registration_with_job_body_parameters(self, mock_jobqueue_client):
+    async def test_job_registration_with_job_body_parameters(
+        self, mock_jobqueue_client
+    ):
         """Test Job registration with job_body_parameters - Issue #321.
 
         This tests that job_body_parameters from state are passed to Job creation.
@@ -585,7 +587,11 @@ class TestBuildJobBody:
         )
 
         params = [
-            {"name": "recipient_email", "value": "test@example.com", "source": "user_requirement"},
+            {
+                "name": "recipient_email",
+                "value": "test@example.com",
+                "source": "user_requirement",
+            },
             {"name": "query", "value": "test query", "source": "user_requirement"},
             {"name": "num_results", "value": 5, "source": "user_requirement"},
         ]
@@ -613,7 +619,11 @@ class TestBuildJobBody:
         )
 
         params = [
-            {"name": "valid_param", "value": "valid_value", "source": "user_requirement"},
+            {
+                "name": "valid_param",
+                "value": "valid_value",
+                "source": "user_requirement",
+            },
             {"name": "none_param", "value": None, "source": "user_requirement"},
         ]
 
@@ -630,7 +640,11 @@ class TestBuildJobBody:
         )
 
         params = [
-            {"name": "valid_param", "value": "valid_value", "source": "user_requirement"},
+            {
+                "name": "valid_param",
+                "value": "valid_value",
+                "source": "user_requirement",
+            },
             {"value": "orphan_value", "source": "user_requirement"},  # No name
         ]
 
@@ -664,7 +678,11 @@ class TestBuildJobBody:
         )
 
         params = [
-            {"name": "keywords", "value": ["keyword1", "keyword2", "keyword3"], "source": "user_requirement"},
+            {
+                "name": "keywords",
+                "value": ["keyword1", "keyword2", "keyword3"],
+                "source": "user_requirement",
+            },
         ]
 
         body = _build_job_body(params)
