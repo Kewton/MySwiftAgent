@@ -1,6 +1,12 @@
+"""Schema definitions for Standard AI Agent API.
+
+Issue #333: Added system_prompt field and backward compatibility for system_imput.
+"""
+
+import warnings
 from typing import Any, List, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 # チャットメッセージの形式を表すモデル
@@ -15,7 +21,16 @@ class StandardAiAgentResponse(BaseModel):
 
 
 class ExpertAiAgentRequest(BaseModel):
+    """Expert AI Agent request schema.
+
+    Issue #333: Added system_prompt as the correct field name.
+    system_imput is kept for backward compatibility but is deprecated.
+    """
+
     user_input: str
+    # Issue #333: system_prompt is the correct field name
+    system_prompt: str | None = None
+    # Issue #333: Backward compatibility - system_imput is deprecated
     system_imput: str | None = None
     model_name: str | None = None
     project: str | None = None  # MyVault project name for secrets
@@ -26,6 +41,29 @@ class ExpertAiAgentRequest(BaseModel):
     language: str | None = None  # Language parameter for some agents (e.g., wikipedia)
     user_id: str | None = None  # User ID for Langfuse tracing (Issue #113)
     session_id: str | None = None  # Session ID for Langfuse tracing (Issue #113)
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_system_imput_deprecation(cls, data: Any) -> Any:
+        """Handle deprecated system_imput field.
+
+        Issue #333: Map system_imput to system_prompt for backward compatibility.
+        system_prompt takes precedence if both are provided.
+        """
+        if isinstance(data, dict):
+            system_imput = data.get("system_imput")
+            system_prompt = data.get("system_prompt")
+
+            # If system_imput is provided but system_prompt is not, use system_imput
+            if system_imput is not None and system_prompt is None:
+                warnings.warn(
+                    "system_imput is deprecated, use system_prompt instead",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                data["system_prompt"] = system_imput
+
+        return data
 
 
 class ExpertAiAgentResponse(BaseModel):

@@ -122,6 +122,11 @@ class WorkflowGeneratorState(TypedDict, total=False):
     validation_summary: dict[str, Any] | None
     summary_markdown: str | None
 
+    # ===== Schema Validation (Issue #333) =====
+    schema_validation_result: dict[str, Any] | None
+    schema_validation_issues: list[dict[str, Any]]
+    has_schema_errors: bool
+
     # ===== Self-Repair =====
     retry_count: int
     error_feedback: str | None
@@ -196,6 +201,10 @@ def create_initial_state(
         # Result Summary (Issue #305)
         "validation_summary": None,
         "summary_markdown": None,
+        # Schema Validation (Issue #333)
+        "schema_validation_result": None,
+        "schema_validation_issues": [],
+        "has_schema_errors": False,
         # Self-Repair
         "retry_count": 0,
         "error_feedback": None,

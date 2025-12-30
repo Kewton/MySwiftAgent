@@ -2,6 +2,8 @@
 
 This module provides prompts and schemas for generating GraphAI workflow YAML
 files from TaskMaster metadata using LLM.
+
+Issue #333: Added TYPE_VALIDATION_RULES for API type and field name validation.
 """
 
 import re
@@ -18,6 +20,56 @@ from core.config import settings
 EXPERTAGENT_API_URL = (
     f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
 )
+
+# Issue #333: Type validation rules for workflow generation
+# These rules help prevent type mismatches and field name errors at generation time
+TYPE_VALIDATION_RULES = """
+## Important Type Validation Rules (Issue #333)
+
+### fetchAgent Output Type
+- fetchAgent output is always Object type (dictionary)
+- :previous_node references the entire output of the previous node (Object type)
+- :previous_node.field accesses a specific field from the output
+- Example: :fetch_data returns {"result": {...}, "status": "ok"} -> Object type
+
+### API Expected Types - CRITICAL
+- `/v1/aiagent/utility/jsonoutput` expects `user_input` as **String type**
+- If you need to pass Object type data to user_input, convert it first:
+  * Use stringTemplateAgent with JSON.stringify pattern
+  * Or use stringTemplateAgent to build a text prompt
+
+### stringTemplateAgent Type Conversion Pattern
+When you need to convert Object type to String type:
+```yaml
+# Step 1: Convert Object to String using JSON.stringify
+convert_to_string:
+  agent: stringTemplateAgent
+  inputs:
+    data: :fetch_data  # Object type input
+  params:
+    template: "${JSON.stringify(data)}"
+
+# Step 2: Now use the String type result
+process_data:
+  agent: fetchAgent
+  inputs:
+    url: http://localhost:8004/aiagent-api/v1/aiagent/utility/jsonoutput
+    method: POST
+    body:
+      user_input: :convert_to_string  # Now String type
+```
+
+### Field Name Validation - CRITICAL
+- Always use EXACT field names from capabilities.yaml Request Schema
+- Common mistake: `system_imput` (typo) vs `system_prompt` (correct)
+- The correct field name for system prompt is: **system_prompt**
+- Check Request Schema in API documentation for correct field names
+
+### Reference Type Compatibility
+- :node returns the full output object (Object type)
+- :node.field returns a specific field (type depends on field definition)
+- When API expects String, ensure you're not passing Object directly
+"""
 
 # Load prompt from YAML
 _loader = PromptLoader.create_default()
