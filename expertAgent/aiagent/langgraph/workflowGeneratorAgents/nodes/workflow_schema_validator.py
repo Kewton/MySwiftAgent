@@ -25,12 +25,8 @@ JSONOUTPUT_ENDPOINTS = [
     "/aiagent-api/v1/aiagent/utility/jsonoutput",
 ]
 
-# Field name corrections (typo -> correct)
-FIELD_NAME_CORRECTIONS = {
-    "system_imput": "system_prompt",
-}
-
-# Deprecated field names (still work but should be corrected)
+# Deprecated field names mapping (typo/old name -> correct name)
+# Note: This single mapping handles both field name corrections and deprecation warnings
 DEPRECATED_FIELDS = {
     "system_imput": "system_prompt",
 }
@@ -244,6 +240,36 @@ def _validate_fetch_agent_nodes(
     return issues
 
 
+def _create_error_state(
+    state: WorkflowGeneratorState,
+    error_message: str,
+) -> WorkflowGeneratorState:
+    """Create an error state with a YAML parse error issue (DRY helper).
+
+    Args:
+        state: Current workflow generator state
+        error_message: Error message to include in the issue
+
+    Returns:
+        Updated state with error information
+    """
+    error_issue = _issue(
+        node_id="yaml",
+        issue_type="yaml_parse_error",
+        message=error_message,
+        severity="error",
+    )
+    return {
+        **state,
+        "schema_validation_result": {
+            "is_valid": False,
+            "issues": [error_issue],
+        },
+        "schema_validation_issues": [error_issue],
+        "has_schema_errors": True,
+    }
+
+
 async def workflow_schema_validator_node(
     state: WorkflowGeneratorState,
 ) -> WorkflowGeneratorState:
@@ -284,54 +310,10 @@ async def workflow_schema_validator_node(
             raise ValueError("YAML content is not a dictionary")
     except yaml.YAMLError as e:
         logger.error(f"YAML parse error: {e}")
-        return {
-            **state,
-            "schema_validation_result": {
-                "is_valid": False,
-                "issues": [
-                    _issue(
-                        node_id="yaml",
-                        issue_type="yaml_parse_error",
-                        message=f"YAML parse error: {e}",
-                        severity="error",
-                    )
-                ],
-            },
-            "schema_validation_issues": [
-                _issue(
-                    node_id="yaml",
-                    issue_type="yaml_parse_error",
-                    message=f"YAML parse error: {e}",
-                    severity="error",
-                )
-            ],
-            "has_schema_errors": True,
-        }
+        return _create_error_state(state, f"YAML parse error: {e}")
     except ValueError as e:
         logger.error(f"Invalid YAML structure: {e}")
-        return {
-            **state,
-            "schema_validation_result": {
-                "is_valid": False,
-                "issues": [
-                    _issue(
-                        node_id="yaml",
-                        issue_type="yaml_parse_error",
-                        message=str(e),
-                        severity="error",
-                    )
-                ],
-            },
-            "schema_validation_issues": [
-                _issue(
-                    node_id="yaml",
-                    issue_type="yaml_parse_error",
-                    message=str(e),
-                    severity="error",
-                )
-            ],
-            "has_schema_errors": True,
-        }
+        return _create_error_state(state, str(e))
 
     # Validate fetchAgent nodes
     issues = _validate_fetch_agent_nodes(workflow)
