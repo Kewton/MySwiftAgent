@@ -710,7 +710,9 @@ class TestHelperFunctions:
         result = _validate_fetch_agent_nodes(workflow)
         assert result == []
 
-    def test_create_error_state_creates_valid_state(self, base_task_data: dict[str, Any]):
+    def test_create_error_state_creates_valid_state(
+        self, base_task_data: dict[str, Any]
+    ):
         """_create_error_state() should create a valid error state."""
         state = create_initial_state("test_id", base_task_data)
         error_message = "Test error message"

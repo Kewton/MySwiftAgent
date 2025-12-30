@@ -3,18 +3,20 @@
 This module provides the main LangGraph agent that orchestrates the workflow
 for automatically generating and validating GraphAI workflow YAML files.
 
-Updated Workflow (Issue #305):
+Updated Workflow (Issue #333):
 1. generator -> Generate YAML from TaskMaster metadata using LLM
-2. sample_input_generator -> Generate sample input from Input Interface
-3. workflow_tester -> Register and execute workflow on graphAiServer
-4. validator -> Validate execution results (non-LLM)
-5. llm_evaluator -> LLM-based semantic evaluation
-6. Conditional routing:
+2. schema_validator -> Validate API type and field name compatibility (Issue #333)
+3. sample_input_generator -> Generate sample input from Input Interface
+4. workflow_tester -> Register and execute workflow on graphAiServer
+5. validator -> Validate execution results (non-LLM)
+6. llm_evaluator -> LLM-based semantic evaluation
+7. Conditional routing:
    - test_data_regenerator -> Regenerate test data if quality is low
    - self_repair -> Fix workflow issues and retry
    - result_summary_generator -> Generate summary and END
 
 The agent uses conditional routing to handle:
+- Schema validation failure (-> self_repair -> generator) (Issue #333)
 - Test data quality issues (-> test_data_regenerator -> workflow_tester)
 - Validation failure with retries left (-> self_repair -> generator)
 - Validation success (-> result_summary_generator -> END)
@@ -34,11 +36,41 @@ from .nodes import (
     self_repair_node,
     test_data_regenerator_node,
     validator_node,
+    workflow_schema_validator_node,
     workflow_tester_node,
 )
 from .state import WorkflowGeneratorState
 
 logger = logging.getLogger(__name__)
+
+
+def schema_validator_router(
+    state: WorkflowGeneratorState,
+) -> Literal["sample_input_generator", "self_repair"]:
+    """Route after schema_validator node based on validation results.
+
+    Issue #333: Added schema validation step after generator.
+
+    Args:
+        state: Current workflow generator state
+
+    Returns:
+        "self_repair" if schema validation failed
+        "sample_input_generator" if validation passed
+    """
+    has_schema_errors = state.get("has_schema_errors", False)
+
+    if has_schema_errors:
+        schema_issues = state.get("schema_validation_issues", [])
+        error_count = len([i for i in schema_issues if i.get("severity") == "error"])
+        logger.info(
+            f"Schema validation failed with {error_count} errors, "
+            "routing to self_repair"
+        )
+        return "self_repair"
+
+    logger.info("Schema validation passed, routing to sample_input_generator")
+    return "sample_input_generator"
 
 
 def validator_router(
@@ -186,6 +218,8 @@ def create_workflow_generator_graph() -> Any:
 
     # Add nodes
     workflow.add_node("generator", generator_node)
+    # Issue #333: Add schema validator after generator
+    workflow.add_node("schema_validator", workflow_schema_validator_node)
     workflow.add_node("sample_input_generator", sample_input_generator_node)
     workflow.add_node("workflow_tester", workflow_tester_node)
     workflow.add_node("validator", validator_node)
@@ -198,8 +232,19 @@ def create_workflow_generator_graph() -> Any:
     # Entry point -> generator
     workflow.set_entry_point("generator")
 
-    # generator -> sample_input_generator
-    workflow.add_edge("generator", "sample_input_generator")
+    # generator -> schema_validator (Issue #333)
+    workflow.add_edge("generator", "schema_validator")
+
+    # schema_validator -> (conditional) -> sample_input_generator or self_repair
+    # Issue #333: Route based on schema validation results
+    workflow.add_conditional_edges(
+        "schema_validator",
+        schema_validator_router,
+        {
+            "sample_input_generator": "sample_input_generator",
+            "self_repair": "self_repair",
+        },
+    )
 
     # sample_input_generator -> workflow_tester
     workflow.add_edge("sample_input_generator", "workflow_tester")

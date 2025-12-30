@@ -244,6 +244,8 @@ def create_workflow_generation_prompt(
 
 {api_list}
 
+{TYPE_VALIDATION_RULES}
+
 ## YAML Generation Rules
 
 1. **Basic Structure**:

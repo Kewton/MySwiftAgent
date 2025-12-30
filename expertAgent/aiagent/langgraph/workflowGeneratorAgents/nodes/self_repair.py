@@ -17,7 +17,7 @@ async def self_repair_node(
     """Analyze validation errors and prepare error feedback for LLM.
 
     This node:
-    1. Extracts validation errors from state
+    1. Extracts validation errors from state (including schema validation - Issue #333)
     2. Creates detailed error feedback for LLM regeneration
     3. Increments retry_count
     4. Records repair attempt in repair_history
@@ -41,6 +41,20 @@ async def self_repair_node(
             for item in issues
             if isinstance(item, dict)
         ]
+
+    # Issue #333: Include schema validation issues
+    schema_validation_issues = state.get("schema_validation_issues", [])
+    if isinstance(schema_validation_issues, list):
+        for issue in schema_validation_issues:
+            if isinstance(issue, dict) and issue.get("severity") == "error":
+                issue_type = issue.get("issue_type", "unknown")
+                message = issue.get("message", "")
+                suggestion = issue.get("suggestion", "")
+                error_text = f"[schema:{issue_type}] {message}"
+                if suggestion:
+                    error_text += f" (Suggestion: {suggestion})"
+                validation_errors.append(error_text)
+
     retry_count = state.get("retry_count", 0)
     workflow_name = state.get("workflow_name", "unknown")
 
@@ -62,6 +76,19 @@ async def self_repair_node(
     for i, error in enumerate(validation_errors, 1):
         error_feedback_lines.append(f"{i}. {error}")
 
+    # Issue #333: Add schema validation guidance if schema errors exist
+    has_schema_errors = state.get("has_schema_errors", False)
+    schema_guidance = []
+    if has_schema_errors:
+        schema_guidance = [
+            "",
+            "SCHEMA VALIDATION ERRORS DETECTED (Issue #333):",
+            "- Type mismatch: user_input expects String, not Object reference",
+            "- Use stringTemplateAgent to convert Object to String before passing to API",
+            "- Use correct field names: 'system_prompt' (not 'system_imput')",
+            "- Access specific fields with :node.field syntax instead of :node",
+        ]
+
     error_feedback_lines.extend(
         [
             "",
@@ -73,6 +100,7 @@ async def self_repair_node(
             "- HTTP API calls use fetchAgent with correct URL/method/body",
             "- Final output node has isResult: true",
         ]
+        + schema_guidance
     )
 
     error_feedback = "\n".join(error_feedback_lines)

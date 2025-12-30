@@ -159,3 +159,86 @@ class WorkflowGeneratorResponse(BaseModel):
         description="Langfuse trace ID for LLM observability and debugging",
         examples=["trace-abc123-def456"],
     )
+
+
+# Issue #333: Schema validation endpoint schemas
+class SchemaValidationIssue(BaseModel):
+    """Schema validation issue details.
+
+    Attributes:
+        node_id: ID of the node with the issue
+        issue_type: Type of validation issue
+        message: Human-readable error message
+        severity: Issue severity (error or warning)
+        field_name: Name of the problematic field
+        expected_value: Expected value or type
+        actual_value: Actual value or type found
+        suggestion: Suggestion for fixing the issue
+    """
+
+    node_id: str = Field(..., description="ID of the node with the issue")
+    issue_type: str = Field(
+        ...,
+        description="Type of issue: type_mismatch, deprecated_field, yaml_parse_error, etc.",
+    )
+    message: str = Field(..., description="Human-readable error message")
+    severity: str = Field(..., description='Issue severity: "error" or "warning"')
+    field_name: str = Field(default="", description="Name of the problematic field")
+    expected_value: str = Field(default="", description="Expected value or type")
+    actual_value: str = Field(default="", description="Actual value or type found")
+    suggestion: str | None = Field(
+        default=None, description="Suggestion for fixing the issue"
+    )
+
+
+class SchemaValidationRequest(BaseModel):
+    """Request schema for workflow schema validation (Issue #333).
+
+    Attributes:
+        yaml_content: YAML content to validate
+    """
+
+    yaml_content: str = Field(
+        ...,
+        description="GraphAI workflow YAML content to validate",
+        examples=[
+            """version: 0.5
+nodes:
+  source: {}
+  llm_call:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :source.user_input.query
+        system_prompt: "You are a helpful assistant"
+"""
+        ],
+    )
+
+
+class SchemaValidationResponse(BaseModel):
+    """Response schema for workflow schema validation (Issue #333).
+
+    Attributes:
+        is_valid: Whether the workflow passes schema validation
+        issues: List of validation issues found
+        validated_nodes: Number of nodes validated
+        api_calls_detected: Number of API calls detected
+        warning_count: Number of warnings
+        error_count: Number of errors
+    """
+
+    is_valid: bool = Field(
+        ..., description="Whether the workflow passes schema validation (no errors)"
+    )
+    issues: list[SchemaValidationIssue] = Field(
+        default_factory=list, description="List of validation issues found"
+    )
+    validated_nodes: int = Field(default=0, description="Number of nodes validated")
+    api_calls_detected: int = Field(
+        default=0, description="Number of fetchAgent API calls detected"
+    )
+    warning_count: int = Field(default=0, description="Number of warnings")
+    error_count: int = Field(default=0, description="Number of errors")

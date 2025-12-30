@@ -19,6 +19,9 @@ from aiagent.langgraph.workflowGeneratorAgents.utils.task_data_fetcher import (
     TaskDataFetcher,
 )
 from app.schemas.workflow_generator import (
+    SchemaValidationIssue,
+    SchemaValidationRequest,
+    SchemaValidationResponse,
     WorkflowGeneratorRequest,
     WorkflowGeneratorResponse,
     WorkflowResult,
@@ -202,3 +205,140 @@ async def generate_workflow(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}",
         ) from e
+
+
+@router.post(
+    "/workflow-generator/validate-schema",
+    response_model=SchemaValidationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Validate GraphAI Workflow Schema (Issue #333)",
+    description="Validate GraphAI workflow YAML for API type compatibility and field name correctness. "
+    "This endpoint performs rule-based validation without LLM calls.",
+)
+async def validate_workflow_schema(
+    request: SchemaValidationRequest,
+) -> SchemaValidationResponse:
+    """Validate GraphAI workflow YAML schema (Issue #333).
+
+    This endpoint validates:
+    1. Type compatibility (Object vs String for API fields)
+    2. Field name correctness (e.g., system_prompt vs system_imput typo)
+    3. Required fields presence
+
+    No LLM calls are made - this is pure rule-based validation.
+
+    Args:
+        request: SchemaValidationRequest with yaml_content
+
+    Returns:
+        SchemaValidationResponse with validation results
+    """
+    import yaml
+
+    from aiagent.langgraph.workflowGeneratorAgents.nodes.workflow_schema_validator import (
+        _check_field_names,
+        _check_type_mismatch,
+    )
+
+    yaml_content = request.yaml_content
+
+    # Handle empty YAML
+    if not yaml_content or not yaml_content.strip():
+        return SchemaValidationResponse(
+            is_valid=True,
+            issues=[],
+            validated_nodes=0,
+            api_calls_detected=0,
+            warning_count=0,
+            error_count=0,
+        )
+
+    # Parse YAML
+    try:
+        workflow = yaml.safe_load(yaml_content)
+        if not isinstance(workflow, dict):
+            return SchemaValidationResponse(
+                is_valid=False,
+                issues=[
+                    SchemaValidationIssue(
+                        node_id="yaml",
+                        issue_type="yaml_parse_error",
+                        message="YAML content is not a dictionary",
+                        severity="error",
+                    )
+                ],
+                validated_nodes=0,
+                api_calls_detected=0,
+                warning_count=0,
+                error_count=1,
+            )
+    except yaml.YAMLError as e:
+        return SchemaValidationResponse(
+            is_valid=False,
+            issues=[
+                SchemaValidationIssue(
+                    node_id="yaml",
+                    issue_type="yaml_parse_error",
+                    message=f"YAML parse error: {e}",
+                    severity="error",
+                )
+            ],
+            validated_nodes=0,
+            api_calls_detected=0,
+            warning_count=0,
+            error_count=1,
+        )
+
+    # Validate nodes
+    issues_raw: list[dict] = []
+    nodes = workflow.get("nodes", {})
+    validated_nodes = len(nodes) if isinstance(nodes, dict) else 0
+    api_calls_detected = 0
+
+    if isinstance(nodes, dict):
+        for node_id, node_def in nodes.items():
+            if not isinstance(node_def, dict):
+                continue
+
+            agent = node_def.get("agent")
+            if agent != "fetchAgent":
+                continue
+
+            api_calls_detected += 1
+
+            # Get URL from inputs
+            inputs = node_def.get("inputs", {})
+            url = inputs.get("url", "")
+
+            # Check type mismatches
+            issues_raw.extend(_check_type_mismatch(node_id, node_def, url))
+
+            # Check field names
+            issues_raw.extend(_check_field_names(node_id, node_def))
+
+    # Convert to Pydantic models
+    issues = [
+        SchemaValidationIssue(
+            node_id=i.get("node_id", ""),
+            issue_type=i.get("issue_type", ""),
+            message=i.get("message", ""),
+            severity=i.get("severity", "error"),
+            field_name=i.get("field_name", ""),
+            expected_value=i.get("expected_value", ""),
+            actual_value=i.get("actual_value", ""),
+            suggestion=i.get("suggestion"),
+        )
+        for i in issues_raw
+    ]
+
+    warning_count = sum(1 for i in issues if i.severity == "warning")
+    error_count = sum(1 for i in issues if i.severity == "error")
+
+    return SchemaValidationResponse(
+        is_valid=error_count == 0,
+        issues=issues,
+        validated_nodes=validated_nodes,
+        api_calls_detected=api_calls_detected,
+        warning_count=warning_count,
+        error_count=error_count,
+    )
