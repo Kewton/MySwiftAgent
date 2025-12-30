@@ -222,8 +222,17 @@ export const runGraphAI = async (
   // sourceノードに構造化データを注入
   // - :source.user_input.* で動的データにアクセス
   // - :source.job_params.* で静的パラメータにアクセス
+  //
+  // Issue #331 改善: 後続タスクでも静的パラメータに :source.user_input.* でアクセス可能にする
+  // job_paramsをベースにuser_inputでマージ（user_inputが優先）
+  // これにより、ワークフローYAMLは常に :source.user_input.* を使用すれば良い
+  const mergedUserInput =
+    typeof user_input === "object" && user_input !== null
+      ? { ...(job_params || {}), ...(user_input as Record<string, unknown>) }
+      : user_input;
+
   const sourceData: SourceNodeData = {
-    user_input: user_input,
+    user_input: mergedUserInput,
     job_params: job_params || {},
   };
   graph.injectValue("source", sourceData);

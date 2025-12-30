@@ -3,6 +3,10 @@
  *
  * Tests that API endpoints correctly extract job_params from request body
  * and pass it to runGraphAI. Uses real test workflow to validate.
+ *
+ * Issue #331 改善: user_inputにjob_paramsがマージされることを検証
+ * - job_paramsをベースにuser_inputでマージ（user_inputが優先）
+ * - これにより、ワークフローYAMLは常に :source.user_input.* を使用可能
  */
 
 import request from 'supertest';
@@ -24,11 +28,12 @@ describe('API Endpoints - job_params support', () => {
       expect(response.status).toBe(200);
 
       // Verify source node structure in response
+      // Issue #331 改善: user_inputにjob_paramsがマージされている
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
       expect(outputResult.result).toEqual({
-        user_input: requestBody.user_input,
+        user_input: { ...requestBody.job_params, ...requestBody.user_input },
         job_params: requestBody.job_params,
       });
     });
@@ -47,6 +52,7 @@ describe('API Endpoints - job_params support', () => {
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
+      // job_paramsがない場合、user_inputはそのまま
       expect(outputResult.result).toEqual({
         user_input: requestBody.user_input,
         job_params: {},
@@ -69,8 +75,9 @@ describe('API Endpoints - job_params support', () => {
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
+      // Issue #331 改善: user_inputにjob_paramsがマージされている
       expect(outputResult.result).toEqual({
-        user_input: requestBody.user_input,
+        user_input: { ...requestBody.job_params, ...requestBody.user_input },
         job_params: requestBody.job_params,
       });
     });
@@ -93,8 +100,35 @@ describe('API Endpoints - job_params support', () => {
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
+      // Issue #331 改善: user_inputにjob_paramsがマージされている
       expect(outputResult.result).toEqual({
-        user_input: requestBody.user_input,
+        user_input: { ...requestBody.job_params, ...requestBody.user_input },
+        job_params: requestBody.job_params,
+      });
+    });
+
+    it('should prioritize user_input over job_params when keys conflict', async () => {
+      const requestBody = {
+        user_input: { query: 'user value', unique_to_user: 'user only' },
+        job_params: { query: 'job value', unique_to_job: 'job only' },
+      };
+
+      const response = await request(app)
+        .post('/api/v1/myagent/test/model')
+        .send(requestBody);
+
+      expect(response.status).toBe(200);
+
+      const outputResult = response.body.results.output as {
+        result: { user_input: unknown; job_params: unknown };
+      };
+      // user_inputのqueryが優先される（マージ順序: job_params -> user_input）
+      expect(outputResult.result).toEqual({
+        user_input: {
+          query: 'user value',  // user_inputが優先
+          unique_to_user: 'user only',
+          unique_to_job: 'job only',  // job_paramsから追加
+        },
         job_params: requestBody.job_params,
       });
     });
@@ -117,8 +151,9 @@ describe('API Endpoints - job_params support', () => {
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
+      // Issue #331 改善: user_inputにjob_paramsがマージされている
       expect(outputResult.result).toEqual({
-        user_input: requestBody.user_input,
+        user_input: { ...requestBody.job_params, ...requestBody.user_input },
         job_params: requestBody.job_params,
       });
     });
@@ -138,6 +173,7 @@ describe('API Endpoints - job_params support', () => {
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
+      // job_paramsがない場合、user_inputはそのまま
       expect(outputResult.result).toEqual({
         user_input: requestBody.user_input,
         job_params: {},
@@ -161,8 +197,9 @@ describe('API Endpoints - job_params support', () => {
       const outputResult = response.body.results.output as {
         result: { user_input: unknown; job_params: unknown };
       };
+      // Issue #331 改善: user_inputにjob_paramsがマージされている
       expect(outputResult.result).toEqual({
-        user_input: requestBody.user_input,
+        user_input: { ...requestBody.job_params, ...requestBody.user_input },
         job_params: requestBody.job_params,
       });
     });
