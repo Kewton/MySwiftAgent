@@ -107,9 +107,54 @@ curl -sf http://localhost:8101/health && echo "✅ jobqueue: healthy"
 curl -sf http://localhost:8105/health && echo "✅ graphAiServer: healthy"
 ```
 
-### Step 3: pytest受入テストファイル実行【必須】
+### Step 3: pytest受入テストファイル存在確認【必須】（Issue #333教訓）
 
-**必須**: `tests/acceptance/test_issue_{issue_number}_acceptance.py` を実行します。
+**必須**: まず `tests/acceptance/test_issue_{issue_number}_acceptance.py` が存在することを確認します。
+
+```bash
+# 受入テストファイル存在確認
+ACCEPTANCE_TEST_FILE="tests/acceptance/test_issue_{issue_number}_acceptance.py"
+
+if [ ! -f "$ACCEPTANCE_TEST_FILE" ]; then
+  echo "❌ 受入テストファイルが存在しません: $ACCEPTANCE_TEST_FILE"
+  echo "→ Phase 3-4 (pm-auto-dev.md) でファイルを作成してください"
+
+  # 結果ファイルに記録
+  cat > acceptance-result.json << 'EOF'
+{
+  "status": "failed",
+  "test_level": "L3",
+  "error": "受入テストファイルが存在しません",
+  "missing_file": "tests/acceptance/test_issue_{issue_number}_acceptance.py",
+  "action_required": "Phase 3-4 を再実行してファイルを作成"
+}
+EOF
+  exit 1
+fi
+
+echo "✅ 受入テストファイル存在確認: $ACCEPTANCE_TEST_FILE"
+
+# テストケース数を確認
+TEST_COUNT=$(grep -c "def test_" "$ACCEPTANCE_TEST_FILE" || echo "0")
+echo "📋 テストケース数: $TEST_COUNT"
+
+if [ "$TEST_COUNT" -eq 0 ]; then
+  echo "❌ テストケースが存在しません"
+  exit 1
+fi
+
+# 実API呼び出しがあるか確認
+API_CALL_COUNT=$(grep -cE "requests\.(get|post|put|delete|patch)" "$ACCEPTANCE_TEST_FILE" || echo "0")
+echo "🌐 API呼び出し数: $API_CALL_COUNT"
+
+if [ "$API_CALL_COUNT" -eq 0 ]; then
+  echo "⚠️ 警告: 実API呼び出しが検出されませんでした（モックのみの可能性）"
+fi
+```
+
+### Step 4: pytest受入テストファイル実行【必須】
+
+**必須**: 存在確認後、`tests/acceptance/test_issue_{issue_number}_acceptance.py` を実行します。
 
 ```bash
 # pytest受入テスト実行
@@ -133,7 +178,7 @@ cat /tmp/acceptance_pytest_output.log
 
 **pytestが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
 
-### Step 4: L3テスト計画のコマンド実行（work-plan.md由来）
+### Step 5: L3テスト計画のコマンド実行（work-plan.md由来）
 
 コンテキストファイルの `l3_test_plan.test_commands` を順次実行します。
 
@@ -166,7 +211,7 @@ else
 fi
 ```
 
-### Step 5: Playwrightテスト実行（myAgentDesk/commonUI対象時）【条件付き必須】
+### Step 6: Playwrightテスト実行（myAgentDesk/commonUI対象時）【条件付き必須】
 
 **対象プロジェクト**: `myAgentDesk`, `commonUI`
 
@@ -214,7 +259,7 @@ fi
 
 **Playwrightが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
 
-### Step 6: 外部サービス連携確認（該当する場合）
+### Step 7: 外部サービス連携確認（該当する場合）
 
 ```bash
 # LLM API連携
@@ -229,7 +274,7 @@ curl -s http://localhost:3001/api/public/health
 docker exec myswiftagent-valkey redis-cli PING
 ```
 
-### Step 7: エビデンス収集
+### Step 8: エビデンス収集
 
 ```bash
 # pytestログ確認
@@ -521,3 +566,73 @@ tail -50 expertAgent/logs/expertagent.log | grep -E "(ERROR|WARNING|INFO)"
 5. **pytestが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
 6. **Playwrightが失敗した場合**: Phase 3は失敗として終了（Phase 2に戻る）
 7. **エビデンス収集は必須**: pytestログ、Playwrightログ、APIレスポンス、サービスログを保存
+
+---
+
+## 🚨 E2E確認の必須化（Issue #333教訓）
+
+### 絶対禁止事項
+
+以下の行為は **絶対に禁止** です：
+
+| 禁止事項 | 理由 |
+|---------|------|
+| 「単体テストで検証済み」として受入条件をパスさせる | 単体テストは機能の存在を確認するが、実動作を確認しない |
+| ヘルスチェックのみで「合格」とする | ヘルスチェックは基本的なサービス起動確認でしかない |
+| 機能の動作確認をせずに「合格」とする | 実際のAPIを呼んで動作することを確認すべき |
+| E2E確認をスキップして `status: "passed"` を返す | E2E確認なしでは受入テストの意味がない |
+
+### 検証方法の優先順位
+
+| 優先度 | 方法 | 有効性 | 使用可否 |
+|--------|------|--------|---------|
+| 1 | 実際のAPIエンドポイント呼び出し | 最も有効 | ✅ 必須 |
+| 2 | pytest 受入テスト実行 | 有効 | ✅ 必須 |
+| 3 | curl コマンドによる手動確認 | 有効 | ✅ 推奨 |
+| 4 | 単体テスト結果の引用 | 無効 | ❌ **禁止** |
+
+### 結果報告の必須フィールド
+
+```json
+{
+  "status": "passed" | "failed" | "skipped",
+  "e2e_verification": {
+    "performed": true,
+    "method": "api_call",
+    "actual_behavior_confirmed": true
+  },
+  "unit_test_only": false,
+  "acceptance_criteria_status": [
+    {
+      "criterion": "型ミスマッチが検出される",
+      "verified_by": "e2e_test",
+      "actual_result": "APIを呼び出し、検出されることを確認"
+    }
+  ]
+}
+```
+
+**重要ルール**:
+- `e2e_verification.performed` が `false` の場合、`status: "passed"` は禁止
+- `unit_test_only` が `true` の場合、`status: "passed"` は禁止
+- `verified_by` が `"unit_test"` のみの場合、`status: "passed"` は禁止
+
+### 受入条件の検証例
+
+**❌ 不正な検証**:
+```json
+{
+  "criterion": "ワークフロー生成時に型ミスマッチが検出される",
+  "verified_by": "unit_test",
+  "evidence": "test_detect_type_mismatch がパス"
+}
+```
+
+**✅ 正しい検証**:
+```json
+{
+  "criterion": "ワークフロー生成時に型ミスマッチが検出される",
+  "verified_by": "e2e_test",
+  "evidence": "POST /v1/workflow/generate を呼び出し、レスポンスに schema_validation_issues が含まれることを確認"
+}
+```

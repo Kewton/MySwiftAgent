@@ -38,7 +38,9 @@ Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリ�
 ```
 - [ ] Phase 1: Issue情報収集
 - [ ] Phase 2: TDD実装 (イテレーション 0/3)
+- [ ] Phase 2.5: TDD結果検証【必須】
 - [ ] Phase 3: 受入テスト
+- [ ] Phase 3.5: 受入テストファイル検証【必須】
 - [ ] Phase 4: リファクタリング
 - [ ] Phase 5: 進捗報告
 ```
@@ -217,9 +219,7 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.
 }
 ```
 
-→ **Phase 3へ進む**
-
-TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定。
+→ **Phase 2.5（TDD結果検証）へ進む**
 
 ##### ケース2: TDD実装失敗 (`status: "failed"`)
 
@@ -252,6 +252,97 @@ TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定。
     2. 手動でテストを追加する
     3. Issue要件を見直す
     ```
+
+---
+
+### Phase 2.5: TDD結果の検証【必須】（Issue #333教訓）
+
+**重要**: TDDサブエージェントの「成功」報告を鵜呑みにせず、以下を必ず検証してください。
+
+#### 2.5-1. ファイル変更の確認
+
+```bash
+# tdd-result.json から変更ファイルを確認
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.json | jq '.files_modified'
+```
+
+**確認項目**:
+- 期待されるファイルが `files_modified` に含まれているか
+- 統合ファイル（`agent.py`, `__init__.py` 等）が含まれているか
+
+#### 2.5-2. 統合の確認
+
+新規コードが実際に使用されているか、Grepツールで確認：
+
+```bash
+# 新規ノードがグラフに組み込まれているか
+grep -n "new_node_name" path/to/agent.py
+
+# 新規定数が実際に使用されているか
+grep -rn "NEW_CONSTANT" path/to/project/
+
+# エクスポートが追加されているか
+grep -n "new_function" path/to/nodes/__init__.py
+```
+
+**確認項目**:
+| チェック項目 | 確認方法 | 期待値 |
+|-------------|---------|--------|
+| グラフに組み込まれているか | `agent.py` に `add_node` があるか | マッチあり |
+| 定数が使用されているか | 参照箇所が存在するか | マッチあり |
+| エクスポートが追加されているか | `__init__.py` に追加されているか | マッチあり |
+
+#### 2.5-3. 不足タスクの検出
+
+tdd-context.json の `implementation_tasks` と tdd-result.json を比較：
+
+```bash
+# 期待されるタスク一覧を確認
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-context.json | jq '.implementation_tasks'
+
+# 実行されたタスクを確認（files_modified から推測）
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.json | jq '.files_modified'
+```
+
+**不足タスクのパターン**:
+
+| 期待されるタスク | files_modified に期待されるファイル | 不足判定 |
+|----------------|----------------------------------|---------|
+| グラフエッジ追加 | `agent.py` | 含まれていなければ不足 |
+| プロンプトへのルール組み込み | 定数を使用する `.py` ファイル | Grepでマッチなければ不足 |
+| 結合テスト作成 | `tests/integration/test_*.py` | 存在しなければ不足 |
+
+#### 2.5-4. 判定基準
+
+| 状態 | 次のアクション |
+|------|--------------|
+| 全タスク完了 & 統合確認OK | → Phase 3 へ進む |
+| 不足タスクあり（1-2件） | → Phase 2 を再実行（不足タスクのみ指示） |
+| 重大な不足あり（3件以上） | → ユーザーにエスカレーション |
+
+**Phase 2 再実行時のコンテキスト例**:
+
+```json
+{
+  "issue_number": 333,
+  "retry_reason": "Phase 2.5 検証で不足タスクを検出",
+  "missing_tasks": [
+    "グラフエッジ追加（agent.py への組み込み）",
+    "TYPE_VALIDATION_RULES のプロンプトへの組み込み"
+  ],
+  "already_completed": [
+    "workflow_schema_validator.py 作成",
+    "state.py フィールド追加"
+  ]
+}
+```
+
+#### 2.5-5. 検証完了
+
+検証がすべてパスしたら：
+
+1. TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定
+2. Phase 3（受入テスト）へ進む
 
 ---
 
@@ -748,6 +839,76 @@ TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定。
 ```
 
 → **Phase 4へ進む**（ドキュメントのみの変更のため）
+
+---
+
+### Phase 3.5: 受入テストファイル検証【必須】（Issue #333教訓）
+
+**重要**: 受入テストサブエージェントの「成功」報告を鵜呑みにせず、以下を必ず検証してください。
+
+#### 3.5-1. 受入テストファイル存在確認
+
+```bash
+# 受入テストファイルが存在するか確認
+ls tests/acceptance/test_issue_{issue_number}_acceptance.py
+
+# ファイルが存在しない場合
+if [ ! -f "tests/acceptance/test_issue_{issue_number}_acceptance.py" ]; then
+  echo "❌ 受入テストファイルが存在しません"
+  echo "→ Phase 3-4 を再実行してください"
+fi
+```
+
+#### 3.5-2. 受入テスト内容確認
+
+受入テストファイルが存在する場合、内容を確認：
+
+```bash
+# テストケース数を確認
+grep -c "def test_" tests/acceptance/test_issue_{issue_number}_acceptance.py
+
+# 実際のAPI呼び出しがあるか確認
+grep -E "requests\.(get|post|put|delete)" tests/acceptance/test_issue_{issue_number}_acceptance.py
+```
+
+**確認項目**:
+| チェック項目 | 期待値 | 不合格時のアクション |
+|-------------|--------|-------------------|
+| テストファイル存在 | ファイルあり | Phase 3-4 を再実行 |
+| テストケース数 | 1件以上 | テストケースを追加 |
+| 実API呼び出し | requests使用あり | モックのみは不可 |
+
+#### 3.5-3. 受入テスト実行確認
+
+acceptance-result.json で実際にテストが実行されたか確認：
+
+```bash
+# pytest_results が存在するか確認
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-result.json | jq '.pytest_results'
+
+# pytest_results.total が 0 でないか確認
+TOTAL=$(cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-result.json | jq '.pytest_results.total // 0')
+if [ "$TOTAL" -eq 0 ]; then
+  echo "❌ 受入テストが実行されていません"
+  echo "→ Phase 3-5 を再実行してください"
+fi
+```
+
+#### 3.5-4. 判定基準
+
+| 状態 | 次のアクション |
+|------|--------------|
+| ファイル存在 & テスト実行済み & 全パス | → Phase 4 へ進む |
+| ファイル不存在 | → Phase 3-4 を再実行（ファイル作成から） |
+| テスト未実行 (total=0) | → Phase 3-5 を再実行（サブエージェント再呼び出し） |
+| テスト失敗 | → Phase 2 を再実行（TDD実装からやり直し） |
+
+#### 3.5-5. 検証完了
+
+検証がすべてパスしたら：
+
+1. TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定
+2. Phase 4（リファクタリング）へ進む
 
 ---
 
