@@ -219,8 +219,12 @@ class JobExecutor:
                                         f"Output validation failed: {'; '.join(e.errors)}"
                                     ) from e
 
-                    # Store output
-                    task.output_data = output_data
+                    # Store output (extract GraphAI output node result for task chains)
+                    task.output_data = (
+                        _extract_graphai_output(output_data)
+                        if output_data
+                        else output_data
+                    )
                     task.status = (
                         TaskStatus.SUCCEEDED
                         if response.is_success
@@ -597,3 +601,61 @@ def _find_null_fields(data: dict[str, Any], prefix: str = "") -> list[str]:
             null_fields.extend(_find_null_fields(value, path))
 
     return null_fields
+
+
+def _extract_graphai_output(response_data: Any) -> Any:
+    """Extract output node result from GraphAI response.
+
+    GraphAI returns a response in the format:
+    {
+        "results": {
+            "output": { "result": { ... } },  # or just the result directly
+            ...other_nodes...
+        },
+        "errors": {},
+        "logs": [...]
+    }
+
+    For task chains, we need to extract `results.output.result` (or `results.output`)
+    to pass to the next task as `user_input`.
+
+    Args:
+        response_data: Raw response from GraphAI server
+
+    Returns:
+        Extracted output data suitable for task chain consumption
+    """
+    # Check if this is a GraphAI response (has "results" key)
+    if not isinstance(response_data, dict):
+        return response_data
+
+    if "results" not in response_data:
+        # Not a GraphAI response, return as-is
+        return response_data
+
+    results = response_data.get("results", {})
+    if not isinstance(results, dict):
+        return response_data
+
+    # Extract output node
+    output_node = results.get("output")
+    if output_node is None:
+        # No output node, return full results
+        logger.debug("[GRAPHAI_EXTRACT] No 'output' node found, returning full results")
+        return results
+
+    # Check if output has a nested "result" field
+    if isinstance(output_node, dict) and "result" in output_node:
+        extracted = output_node["result"]
+        logger.info(
+            f"[GRAPHAI_EXTRACT] Extracted results.output.result: "
+            f"keys={list(extracted.keys()) if isinstance(extracted, dict) else type(extracted).__name__}"
+        )
+        return extracted
+
+    # Return output node directly
+    logger.info(
+        f"[GRAPHAI_EXTRACT] Extracted results.output: "
+        f"keys={list(output_node.keys()) if isinstance(output_node, dict) else type(output_node).__name__}"
+    )
+    return output_node

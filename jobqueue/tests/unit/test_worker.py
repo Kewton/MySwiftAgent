@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.core.worker import JobExecutor, WorkerManager
+from app.core.worker import JobExecutor, WorkerManager, _extract_graphai_output
 from app.models.job import BackoffStrategy, Job, JobStatus
 
 
@@ -265,3 +265,142 @@ class TestWorkerManager:
                     await asyncio.wait_for(start_task, timeout=1.0)
                 except (TimeoutError, asyncio.CancelledError):
                     pass
+
+
+class TestExtractGraphaiOutput:
+    """Test _extract_graphai_output function for task chain data flow."""
+
+    def test_extract_graphai_output_with_result_nested(self):
+        """Test extraction of results.output.result from GraphAI response."""
+        graphai_response = {
+            "results": {
+                "output": {
+                    "result": {
+                        "summary_text": "テストサマリー",
+                        "key_points": "ポイント1\nポイント2",
+                        "sources": "https://example.com",
+                    }
+                },
+                "other_node": {"data": "value"},
+            },
+            "errors": {},
+            "logs": ["log1", "log2"],
+        }
+
+        result = _extract_graphai_output(graphai_response)
+
+        assert result == {
+            "summary_text": "テストサマリー",
+            "key_points": "ポイント1\nポイント2",
+            "sources": "https://example.com",
+        }
+
+    def test_extract_graphai_output_without_result_key(self):
+        """Test extraction when output node doesn't have nested 'result' key."""
+        graphai_response = {
+            "results": {
+                "output": {
+                    "success": True,
+                    "message_id": "msg_123",
+                    "error_message": "",
+                }
+            },
+            "errors": {},
+            "logs": [],
+        }
+
+        result = _extract_graphai_output(graphai_response)
+
+        # Should return output directly when no "result" key
+        assert result == {
+            "success": True,
+            "message_id": "msg_123",
+            "error_message": "",
+        }
+
+    def test_extract_graphai_output_non_graphai_response(self):
+        """Test that non-GraphAI responses are returned as-is."""
+        non_graphai_response = {
+            "data": "some value",
+            "status": "ok",
+        }
+
+        result = _extract_graphai_output(non_graphai_response)
+
+        assert result == non_graphai_response
+
+    def test_extract_graphai_output_no_output_node(self):
+        """Test handling when GraphAI response has no output node."""
+        graphai_response = {
+            "results": {
+                "fetch_data": {"data": "value"},
+                "process_data": {"processed": True},
+            },
+            "errors": {},
+            "logs": [],
+        }
+
+        result = _extract_graphai_output(graphai_response)
+
+        # Should return full results when no output node
+        assert result == {
+            "fetch_data": {"data": "value"},
+            "process_data": {"processed": True},
+        }
+
+    def test_extract_graphai_output_empty_results(self):
+        """Test handling of empty results."""
+        graphai_response = {
+            "results": {},
+            "errors": {},
+            "logs": [],
+        }
+
+        result = _extract_graphai_output(graphai_response)
+
+        assert result == {}
+
+    def test_extract_graphai_output_non_dict_input(self):
+        """Test handling of non-dict input."""
+        result = _extract_graphai_output("string value")  # type: ignore
+        assert result == "string value"
+
+        result = _extract_graphai_output(None)  # type: ignore
+        assert result is None
+
+    def test_extract_graphai_output_real_world_scenario(self):
+        """Test with a real-world GraphAI response from google_search_execution.yml."""
+        # Simulating response from google_search_execution.yml
+        graphai_response = {
+            "results": {
+                "source": {"user_input": {"query": "Python", "max_results": 5}},
+                "fetch_search_results": {
+                    "search_results": [
+                        {"title": "Result 1", "link": "https://example.com/1"},
+                        {"title": "Result 2", "link": "https://example.com/2"},
+                    ],
+                    "search_results_count": 2,
+                },
+                "output": {
+                    "result": {
+                        "success": True,
+                        "results": [
+                            {"title": "Result 1", "link": "https://example.com/1"},
+                            {"title": "Result 2", "link": "https://example.com/2"},
+                        ],
+                        "count": 2,
+                        "error_message": "",
+                    }
+                },
+            },
+            "errors": {},
+            "logs": ["Running google_search...", "Completed"],
+        }
+
+        result = _extract_graphai_output(graphai_response)
+
+        # Should extract the result from output node
+        assert result["success"] is True
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["error_message"] == ""
