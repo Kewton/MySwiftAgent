@@ -583,7 +583,7 @@ class TestHelperFunctions:
                 "body": {"user_input": ":fetch_data"},
             },
         }
-        result = _check_type_mismatch("test_node", node_def, "http://example.com/api")
+        result = _check_type_mismatch("test_node", node_def, "http://example.com/api", {})
         assert result == []
 
     def test_check_type_mismatch_with_field_reference(self):
@@ -596,7 +596,7 @@ class TestHelperFunctions:
             },
         }
         result = _check_type_mismatch(
-            "test_node", node_def, "/v1/aiagent/utility/jsonoutput"
+            "test_node", node_def, "/v1/aiagent/utility/jsonoutput", {}
         )
         assert result == []
 
@@ -609,8 +609,10 @@ class TestHelperFunctions:
                 "body": {"user_input": ":fetch_data"},
             },
         }
+        # fetch_data is a generic node (not a string output agent)
+        workflow_nodes = {"fetch_data": {"agent": "fetchAgent"}}
         result = _check_type_mismatch(
-            "test_node", node_def, "/v1/aiagent/utility/jsonoutput"
+            "test_node", node_def, "/v1/aiagent/utility/jsonoutput", workflow_nodes
         )
         assert len(result) == 1
         assert result[0]["issue_type"] == "type_mismatch"
@@ -626,7 +628,7 @@ class TestHelperFunctions:
             },
         }
         result = _check_type_mismatch(
-            "test_node", node_def, "/v1/aiagent/utility/jsonoutput"
+            "test_node", node_def, "/v1/aiagent/utility/jsonoutput", {}
         )
         assert result == []
 
@@ -640,8 +642,53 @@ class TestHelperFunctions:
             },
         }
         result = _check_type_mismatch(
-            "test_node", node_def, "/v1/aiagent/utility/jsonoutput"
+            "test_node", node_def, "/v1/aiagent/utility/jsonoutput", {}
         )
+        assert result == []
+
+    def test_check_type_mismatch_with_string_template_agent_reference(self):
+        """_check_type_mismatch() should NOT flag stringTemplateAgent references.
+
+        Issue #333 fix: stringTemplateAgent outputs String type, not Object.
+        References to stringTemplateAgent nodes should not trigger type_mismatch errors.
+        """
+        node_def = {
+            "agent": "fetchAgent",
+            "inputs": {
+                "url": "/v1/aiagent/utility/jsonoutput",
+                "body": {"user_input": ":build_summary_prompt"},
+            },
+        }
+        # build_summary_prompt is a stringTemplateAgent node (outputs String)
+        workflow_nodes = {
+            "build_summary_prompt": {"agent": "stringTemplateAgent"},
+        }
+        result = _check_type_mismatch(
+            "test_node", node_def, "/v1/aiagent/utility/jsonoutput", workflow_nodes
+        )
+        # Should NOT flag as error because stringTemplateAgent outputs String
+        assert result == []
+
+    def test_check_type_mismatch_with_sleeper_agent_reference(self):
+        """_check_type_mismatch() should NOT flag sleeperAgent references.
+
+        sleeperAgent is a simple value passthrough that outputs String type.
+        """
+        node_def = {
+            "agent": "fetchAgent",
+            "inputs": {
+                "url": "/v1/aiagent/utility/jsonoutput",
+                "body": {"user_input": ":delay_node"},
+            },
+        }
+        # delay_node is a sleeperAgent (outputs String)
+        workflow_nodes = {
+            "delay_node": {"agent": "sleeperAgent"},
+        }
+        result = _check_type_mismatch(
+            "test_node", node_def, "/v1/aiagent/utility/jsonoutput", workflow_nodes
+        )
+        # Should NOT flag as error because sleeperAgent outputs String
         assert result == []
 
     def test_check_field_names_with_deprecated_field(self):

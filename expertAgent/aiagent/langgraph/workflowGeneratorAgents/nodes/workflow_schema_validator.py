@@ -34,6 +34,13 @@ DEPRECATED_FIELDS = {
 # Fields that expect String type
 STRING_TYPE_FIELDS = ["user_input", "system_prompt"]
 
+# Agents that output String type (not Object)
+# These agents' outputs should not be flagged as Object references
+STRING_OUTPUT_AGENTS = [
+    "stringTemplateAgent",  # Template expansion outputs String
+    "sleeperAgent",  # Simple value passthrough
+]
+
 
 def _issue(
     node_id: str,
@@ -79,17 +86,21 @@ def _issue(
     }
 
 
-def _is_object_reference(value: Any) -> bool:
+def _is_object_reference(value: Any, workflow_nodes: dict[str, Any] | None = None) -> bool:
     """Check if a value is an object reference (e.g., :node_name without field access).
 
     Object references like ':fetch_data' return the entire node output (Object type).
     Field references like ':fetch_data.result' return a specific field.
 
+    However, some agents like stringTemplateAgent output String type, so references
+    to those nodes should not be considered Object references.
+
     Args:
         value: Value to check
+        workflow_nodes: Optional dict of workflow nodes to check agent types
 
     Returns:
-        True if value is an object reference
+        True if value is an object reference that outputs Object type
     """
     if not isinstance(value, str):
         return False
@@ -105,17 +116,31 @@ def _is_object_reference(value: Any) -> bool:
     # :node_name.field -> Field reference (could be any type)
     reference_part = value[1:]  # Remove leading :
 
-    # If there's no dot, it's a full object reference
-    if "." not in reference_part:
-        return True
+    # If there's a dot, it's a field reference (not a full object)
+    if "." in reference_part:
+        return False
 
-    return False
+    # Extract node name (handle potential nested references)
+    node_name = reference_part.split(".")[0]
+
+    # Check if the referenced node is a String-output agent
+    if workflow_nodes and node_name in workflow_nodes:
+        node_def = workflow_nodes[node_name]
+        if isinstance(node_def, dict):
+            agent = node_def.get("agent")
+            if agent in STRING_OUTPUT_AGENTS:
+                # This agent outputs String, not Object
+                return False
+
+    # Default: node reference without dot is an Object reference
+    return True
 
 
 def _check_type_mismatch(
     node_id: str,
     node_def: dict[str, Any],
     endpoint: str,
+    workflow_nodes: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """Check for type mismatches in API calls.
 
@@ -123,6 +148,7 @@ def _check_type_mismatch(
         node_id: Node ID being checked
         node_def: Node definition from YAML
         endpoint: API endpoint being called
+        workflow_nodes: All workflow nodes for checking agent types
 
     Returns:
         List of type mismatch issues
@@ -143,7 +169,7 @@ def _check_type_mismatch(
 
     # Check user_input field
     user_input = body.get("user_input")
-    if user_input is not None and _is_object_reference(user_input):
+    if user_input is not None and _is_object_reference(user_input, workflow_nodes):
         issues.append(
             _issue(
                 node_id=node_id,
@@ -231,8 +257,8 @@ def _validate_fetch_agent_nodes(
         inputs = node_def.get("inputs", {})
         url = inputs.get("url", "")
 
-        # Check type mismatches
-        issues.extend(_check_type_mismatch(node_id, node_def, url))
+        # Check type mismatches (pass nodes to check agent types)
+        issues.extend(_check_type_mismatch(node_id, node_def, url, nodes))
 
         # Check field names
         issues.extend(_check_field_names(node_id, node_def))
