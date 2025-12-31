@@ -51,31 +51,71 @@ class TestTtsAndUploadDrive:
 
 
 class TestGoogleSearchBySerper:
-    """Test Google search by Serper endpoint."""
+    """Test Google search by Serper endpoint.
+
+    Note: The response format was changed from SearchUtilityResponse to GoogleSearchResponse
+    to provide predictable field names for workflow generation.
+
+    Old format: {"result": {"text": "ok", "result": [...]}}
+    New format: {"search_results": [...], "search_results_count": N, "status": "ok"}
+    """
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")
     async def test_google_search_without_num(self, mock_search):
         """Test Google search without num parameter."""
-        mock_search.return_value = {"data": "Search results"}
+        mock_search.return_value = {
+            "text": "ok",
+            "result": [
+                {"title": "Result 1", "link": "https://example.com/1"},
+                {"title": "Result 2", "link": "https://example.com/2"},
+            ],
+        }
         request = SearchUtilityRequest(queries=["test query", "another query"])
 
         result = await google_search_by_serper_api(request)
 
-        assert result.result == {"data": "Search results"}
+        # Verify new response format (GoogleSearchResponse)
+        assert result.search_results == [
+            {"title": "Result 1", "link": "https://example.com/1"},
+            {"title": "Result 2", "link": "https://example.com/2"},
+        ]
+        assert result.search_results_count == 2
+        assert result.status == "ok"
         mock_search.assert_called_once_with(["test query", "another query"])
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")
     async def test_google_search_with_num(self, mock_search):
         """Test Google search with num parameter."""
-        mock_search.return_value = {"data": "Search results"}
+        mock_search.return_value = {
+            "text": "ok",
+            "result": [{"title": "Result 1", "link": "https://example.com/1"}],
+        }
         request = SearchUtilityRequest(queries=["test query"], num=10)
 
         result = await google_search_by_serper_api(request)
 
-        assert result.result == {"data": "Search results"}
+        # Verify new response format (GoogleSearchResponse)
+        assert result.search_results == [
+            {"title": "Result 1", "link": "https://example.com/1"}
+        ]
+        assert result.search_results_count == 1
+        assert result.status == "ok"
         mock_search.assert_called_once_with(["test query"], 10)
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")
+    async def test_google_search_empty_results(self, mock_search):
+        """Test Google search with empty results."""
+        mock_search.return_value = {"text": "ok", "result": []}
+        request = SearchUtilityRequest(queries=["test query"])
+
+        result = await google_search_by_serper_api(request)
+
+        assert result.search_results == []
+        assert result.search_results_count == 0
+        assert result.status == "ok"
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")

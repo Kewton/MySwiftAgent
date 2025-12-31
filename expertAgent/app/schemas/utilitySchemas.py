@@ -37,3 +37,17 @@ class SearchUtilityRequest(BaseModel):
 
 class SearchUtilityResponse(BaseModel):
     result: dict
+
+
+class GoogleSearchResponse(BaseModel):
+    """Response schema for Google Search API.
+
+    Designed for predictable field names in workflow generation.
+    Workflows can reference fields directly:
+    - :fetch_search_results.search_results
+    - :fetch_search_results.search_results_count
+    """
+
+    search_results: List[dict]  # List of search result items
+    search_results_count: int  # Number of results
+    status: str = "ok"  # Status indicator

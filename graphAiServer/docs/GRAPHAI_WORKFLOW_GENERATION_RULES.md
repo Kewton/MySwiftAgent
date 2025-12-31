@@ -1614,7 +1614,33 @@ google_search:
       num: 3                                # オプション: 1クエリあたりの結果数
 ```
 
-**レスポンス**: `result` (検索結果リスト: タイトル、URL、スニペット)
+**レスポンス**:
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `search_results` | array | 検索結果の配列 |
+| `search_results_count` | integer | 検索結果の件数 |
+| `status` | string | ステータス（通常は "ok"） |
+
+**レスポンス例**:
+```json
+{
+  "search_results": [
+    {"title": "...", "link": "...", "knowledge": "...", "original_query": "..."}
+  ],
+  "search_results_count": 3,
+  "status": "ok"
+}
+```
+
+**ワークフローでの参照方法**:
+```yaml
+# 検索結果配列へのアクセス
+results: :google_search.search_results
+
+# 検索結果件数へのアクセス
+count: :google_search.search_results_count
+```
 
 **POST** `/aiagent-api/v1/utility/google_search_overview`
 
@@ -1622,7 +1648,7 @@ google_search:
 
 **リクエスト**: 同上
 
-**レスポンス**: `result` (検索結果の概要サマリ)
+**レスポンス**: `result` (検索結果の概要サマリ) ※旧形式
 
 #### 1.4 Google Drive UploadAPI
 

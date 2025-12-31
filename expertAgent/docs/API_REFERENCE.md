@@ -572,6 +572,47 @@ curl -X POST http://localhost:8000/api/v1/utility/google_search \
   }'
 ```
 
+#### Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `search_results` | array | 検索結果の配列 |
+| `search_results_count` | integer | 検索結果の件数 |
+| `status` | string | ステータス（通常は "ok"） |
+
+#### Response Example
+
+```json
+{
+  "search_results": [
+    {
+      "title": "FastAPI Tutorial",
+      "link": "https://fastapi.tiangolo.com/tutorial/",
+      "knowledge": "FastAPIの公式チュートリアル...",
+      "original_query": "Python FastAPI tutorial"
+    },
+    {
+      "title": "Google Drive API Overview",
+      "link": "https://developers.google.com/drive/api",
+      "knowledge": "Google Drive APIの概要...",
+      "original_query": "Google Drive API"
+    }
+  ],
+  "search_results_count": 2,
+  "status": "ok"
+}
+```
+
+#### ワークフローでの参照方法
+
+```yaml
+# 検索結果配列へのアクセス
+results: :fetch_search_results.search_results
+
+# 検索結果件数へのアクセス
+count: :fetch_search_results.search_results_count
+```
+
 ---
 
 ### Google Search Overview

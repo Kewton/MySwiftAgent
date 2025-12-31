@@ -583,7 +583,9 @@ class TestHelperFunctions:
                 "body": {"user_input": ":fetch_data"},
             },
         }
-        result = _check_type_mismatch("test_node", node_def, "http://example.com/api", {})
+        result = _check_type_mismatch(
+            "test_node", node_def, "http://example.com/api", {}
+        )
         assert result == []
 
     def test_check_type_mismatch_with_field_reference(self):

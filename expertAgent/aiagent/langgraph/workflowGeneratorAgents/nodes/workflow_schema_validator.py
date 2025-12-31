@@ -86,7 +86,9 @@ def _issue(
     }
 
 
-def _is_object_reference(value: Any, workflow_nodes: dict[str, Any] | None = None) -> bool:
+def _is_object_reference(
+    value: Any, workflow_nodes: dict[str, Any] | None = None
+) -> bool:
     """Check if a value is an object reference (e.g., :node_name without field access).
 
     Object references like ':fetch_data' return the entire node output (Object type).

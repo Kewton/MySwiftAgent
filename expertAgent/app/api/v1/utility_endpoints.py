@@ -1,8 +1,10 @@
 import json
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.utilitySchemas import (
+    GoogleSearchResponse,
     JsonStringifyRequest,
     JsonStringifyResponse,
     SearchUtilityRequest,
@@ -75,8 +77,27 @@ async def tts_and_upload_drive_api(request: UtilityRequest):
 
 
 # search_tool
-@router.post("/utility/google_search", summary="", description="")
-async def google_search_by_serper_api(request: SearchUtilityRequest):
+@router.post(
+    "/utility/google_search",
+    response_model=GoogleSearchResponse,
+    summary="Google Search via Serper API",
+    description="Performs Google search and returns results with predictable field names for workflow generation.",
+)
+async def google_search_by_serper_api(
+    request: SearchUtilityRequest,
+) -> GoogleSearchResponse | Any:
+    """
+    Google検索を実行し、ワークフロー生成で予測しやすい形式で結果を返す。
+
+    レスポンス形式:
+    - search_results: 検索結果の配列
+    - search_results_count: 結果件数
+    - status: ステータス
+
+    ワークフローでの参照例:
+    - :fetch_search_results.search_results
+    - :fetch_search_results.search_results_count
+    """
     print(f"request: {request}")
     try:
         # Test mode check using common handler
@@ -90,7 +111,16 @@ async def google_search_by_serper_api(request: SearchUtilityRequest):
             result = await google_search_by_serper_list(request.queries)
         else:
             result = await google_search_by_serper_list(request.queries, request.num)
-        return SearchUtilityResponse(result=result)
+
+        # Extract search results from the nested structure
+        # Original format: {"text": "ok", "result": [...]}
+        search_results = result.get("result", [])
+
+        return GoogleSearchResponse(
+            search_results=search_results,
+            search_results_count=len(search_results),
+            status=result.get("text", "ok"),
+        )
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(
