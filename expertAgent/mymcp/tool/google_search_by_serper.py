@@ -218,8 +218,20 @@ def get_entry_summary(_organic: dict, _original_query: str):
             "Skipping knowledge extraction." % (title, link)
         )
     elif markdown_extraction_successful:
-        window_size = 2000
-        overlap = 200
+        # 文字数上限: 最大20000文字に制限（大きなページでの処理時間短縮）
+        max_text_length = 20000
+        if len(result_text) > max_text_length:
+            logger.info(
+                "Truncating text from %s to %s chars for: %s",
+                len(result_text),
+                max_text_length,
+                title,
+            )
+            result_text = result_text[:max_text_length]
+
+        # window_size拡大: 2000 → 4000 でスニペット数を半減
+        window_size = 4000
+        overlap = 400
         snippets = []
         start = 0
         while start < len(result_text):
@@ -228,6 +240,18 @@ def get_entry_summary(_organic: dict, _original_query: str):
             if end == len(result_text):
                 break
             start += window_size - overlap
+
+        # スニペット数上限: 最大10個に制限
+        max_snippets = 10
+        if len(snippets) > max_snippets:
+            logger.info(
+                "Limiting snippets from %s to %s for: %s",
+                len(snippets),
+                max_snippets,
+                title,
+            )
+            snippets = snippets[:max_snippets]
+
         knowledges = []
 
         logger.info(

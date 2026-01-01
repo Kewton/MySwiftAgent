@@ -11,6 +11,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.graphai_capabilities import (
+    get_api_by_name,
+)
 from app.services.prompt_loader import PromptLoader
 from core.config import settings
 
@@ -148,12 +151,39 @@ def create_workflow_generation_prompt(
     input_interface = task_data.get("input_interface", {})
     output_interface = task_data.get("output_interface", {})
 
-    # Extract recommended APIs from description
+    # Extract recommended APIs from description and enrich with endpoint information
     recommended_apis_match = re.search(r"\*\*推奨API\*\*:\s*([^\n]+)", task_description)
     recommended_apis = ""
     if recommended_apis_match:
+        # Parse API names and look up their endpoints
+        api_names_str = recommended_apis_match.group(1)
+        api_names = [name.strip() for name in api_names_str.split(",")]
+        enriched_apis = []
+        for api_name in api_names:
+            api_info = get_api_by_name(api_name)
+            if api_info and api_info.endpoint:
+                # Include full API details for Direct APIs
+                api_detail = (
+                    f"  - **{api_name}**\n"
+                    f"    - URL: http://localhost:8004/aiagent-api{api_info.endpoint}\n"
+                    f"    - Method: {api_info.method or 'POST'}\n"
+                    f"    - Agent: fetchAgent (DIRECT CALL - DO NOT use jsonoutput)"
+                )
+                # Add request schema if available
+                if api_info.request_schema:
+                    schema_lines = []
+                    for field, info in api_info.request_schema.items():
+                        req = "(required)" if info.get("required") else "(optional)"
+                        schema_lines.append(f"      - {field}: {info.get('type', 'unknown')} {req}")
+                    api_detail += "\n    - Request fields:\n" + "\n".join(schema_lines)
+                enriched_apis.append(api_detail)
+            else:
+                enriched_apis.append(f"  - {api_name}")
         recommended_apis = (
-            f"\n\n**Recommended APIs (PRIORITY)**: {recommended_apis_match.group(1)}"
+            "\n\n## ⚠️ MANDATORY API USAGE (HIGHEST PRIORITY)\n\n"
+            "The following APIs are REQUIRED for this task. DO NOT substitute with jsonoutput API.\n"
+            "These are DIRECT API endpoints that perform specific functions.\n\n"
+            + "\n".join(enriched_apis)
         )
 
     # Extract interface schemas
@@ -323,17 +353,18 @@ def create_workflow_generation_prompt(
    - Ensure output matches output_interface schema
 
 5. **Agent Selection** (CRITICAL):
-   - **PRIORITY**: If "Recommended APIs" are specified in task description, use them first
+   - **HIGHEST PRIORITY - MANDATORY APIs**:
+     * If "MANDATORY API USAGE" section exists above, you MUST use those APIs directly
+     * DO NOT substitute with jsonoutput API - these are specialized endpoints
+     * Call them directly via fetchAgent with the specified URL
    - **IMPORTANT**: NEVER use GraphAI standard LLM agents (geminiAgent, openAIAgent, anthropicAgent, groqAgent, replicateAgent)
-   - For LLM processing:
-     * ALWAYS use fetchAgent to call expertAgent jsonoutput API
+   - For LLM text generation/analysis (ONLY when no MANDATORY API is specified):
+     * Use fetchAgent to call expertAgent jsonoutput API
      * URL: {EXPERTAGENT_API_URL}
      * Default model: gemini-2.5-flash (recommended)
-     * Fallback model: gpt-4o-mini
-     * High-quality model: claude-3-5-sonnet
      * **MANDATORY**: When building LLM prompts with multiple source fields, use stringTemplateAgent FIRST
    - For HTTP API calls:
-     * fetchAgent: For external API calls and expertAgent jsonoutput API
+     * fetchAgent: For external API calls and expertAgent APIs
      * **CRITICAL fetchAgent structure**: url, method, and body MUST be in inputs (NOT params)
      * expertAgent APIs: Use Direct API endpoints (e.g., /api/v1/search)
    - For data formatting:

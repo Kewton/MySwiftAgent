@@ -9,7 +9,11 @@ Note: Uses lazy import to avoid circular dependency with workflowGeneratorAgents
 """
 
 import logging
+import re
+from pathlib import Path
 from typing import Any, Optional
+
+import yaml
 
 from app.services.failure_details_builder import build_failure_details
 from app.services.job_creation_state import (
@@ -20,6 +24,102 @@ from app.services.job_creation_state import (
 )
 
 logger = logging.getLogger(__name__)
+
+# API endpoint to recommended timeout mapping (in milliseconds)
+# Loaded from expert_agent_capabilities.yaml
+_API_TIMEOUT_OVERRIDES: dict[str, int] | None = None
+
+
+def _load_api_timeout_overrides() -> dict[str, int]:
+    """Load recommended timeout values from expert_agent_capabilities.yaml.
+
+    Returns:
+        Dict mapping endpoint paths to timeout in milliseconds.
+    """
+    global _API_TIMEOUT_OVERRIDES
+    if _API_TIMEOUT_OVERRIDES is not None:
+        return _API_TIMEOUT_OVERRIDES
+
+    _API_TIMEOUT_OVERRIDES = {}
+    config_path = Path(__file__).parent / "config" / "expert_agent_capabilities.yaml"
+
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        # Process utility_apis
+        for api in config.get("utility_apis", []):
+            if "recommended_timeout" in api and "endpoint" in api:
+                # Convert seconds to milliseconds
+                timeout_ms = api["recommended_timeout"] * 1000
+                _API_TIMEOUT_OVERRIDES[api["endpoint"]] = timeout_ms
+                logger.debug(
+                    f"Loaded timeout override: {api['endpoint']} -> {timeout_ms}ms"
+                )
+
+        # Process ai_agent_apis
+        for api in config.get("ai_agent_apis", []):
+            if "recommended_timeout" in api and "endpoint" in api:
+                timeout_ms = api["recommended_timeout"] * 1000
+                _API_TIMEOUT_OVERRIDES[api["endpoint"]] = timeout_ms
+
+        logger.info(f"Loaded {len(_API_TIMEOUT_OVERRIDES)} API timeout overrides")
+
+    except Exception as e:
+        logger.warning(f"Failed to load API timeout overrides: {e}")
+
+    return _API_TIMEOUT_OVERRIDES
+
+
+def _apply_timeout_overrides(yaml_content: str) -> str:
+    """Apply recommended timeout values to generated workflow YAML.
+
+    This function post-processes the generated YAML to update timeout values
+    for APIs that have recommended_timeout defined in expert_agent_capabilities.yaml.
+
+    Args:
+        yaml_content: Original YAML content
+
+    Returns:
+        Modified YAML content with updated timeout values
+    """
+    if not yaml_content:
+        return yaml_content
+
+    timeout_overrides = _load_api_timeout_overrides()
+    if not timeout_overrides:
+        return yaml_content
+
+    modified = yaml_content
+
+    for endpoint, timeout_ms in timeout_overrides.items():
+        # Find nodes that call this endpoint and update their timeout
+        # Pattern: url containing the endpoint followed by timeout setting
+        # Example:
+        #   url: http://localhost:8004/aiagent-api/v1/utility/google_search
+        #   ...
+        #   timeout: 60000
+        pattern = rf"(url:\s*[^\n]*{re.escape(endpoint)}[^\n]*\n(?:[^\n]*\n)*?\s*)(timeout:\s*)(\d+)"
+
+        def make_replace_timeout(ep: str, tm: int):  # noqa: E306
+            """Create a replacement function with bound variables."""
+
+            def replace_timeout(match: re.Match) -> str:
+                prefix = match.group(1)
+                timeout_key = match.group(2)
+                old_timeout = int(match.group(3))
+                if old_timeout < tm:
+                    logger.info(
+                        f"Updating timeout for {ep}: {old_timeout}ms -> {tm}ms"
+                    )
+                    return f"{prefix}{timeout_key}{tm}"
+                return match.group(0)
+
+            return replace_timeout
+
+        modified = re.sub(pattern, make_replace_timeout(endpoint, timeout_ms), modified)
+
+    return modified
 
 
 def _build_summary_from_state(state: dict[str, Any]) -> WorkflowGenerationSummary:
@@ -156,6 +256,10 @@ async def generate_workflow_for_task(
         # Check if workflow generation was successful
         if result.get("status") == "success" or result.get("is_valid", False):
             yaml_content = result.get("workflow_yaml", result.get("yaml_content", ""))
+
+            # Apply timeout overrides based on API configuration
+            yaml_content = _apply_timeout_overrides(yaml_content)
+
             workflow_name = f"workflow_{task_id}"
 
             logger.info(

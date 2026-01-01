@@ -16,6 +16,9 @@ import httpx
 from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
     JobqueueClient,
 )
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.workflow_helper import (
+    _apply_timeout_overrides,
+)
 
 from ..state import WorkflowGeneratorState
 from .workflow_validator import WorkflowSchemaValidator
@@ -206,6 +209,11 @@ async def workflow_tester_node(
             "status": "failed",
             "error_message": message,
         }
+
+    # Apply API-specific timeout overrides before testing
+    # This ensures workflows use correct timeout values for heavy processing APIs
+    yaml_content = _apply_timeout_overrides(yaml_content)
+    logger.debug("Applied timeout overrides to yaml_content")
 
     if sample_input is None:
         logger.info("Sample input missing; defaulting to empty object")

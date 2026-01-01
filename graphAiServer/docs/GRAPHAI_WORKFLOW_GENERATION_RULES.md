@@ -389,8 +389,19 @@ node_name:
 
 - ✅ **インターフェース定義**: リクエスト/レスポンス形式を明確に定義すること
 - ✅ **タイムアウト設定**: 適切なタイムアウト値を設定すること（デフォルト30秒）
+  - **重要**: API定義に `recommended_timeout` がある場合はその値を使用すること
+  - 例: Google検索API (`/v1/utility/google_search`) は `timeout: 180` を設定すること（LLMナレッジ抽出のため処理時間が長い）
 - ✅ **エラーハンドリング**: APIエラー時の動作を考慮すること
 - ✅ **デバッグログ**: `console.after: true`でレスポンスを確認すること
+
+#### 処理時間の長いAPI
+
+以下のAPIはLLM処理を含むため、タイムアウトを長めに設定すること：
+
+| API | 推奨timeout | 理由 |
+|-----|------------|------|
+| `/v1/utility/google_search` | 180秒 | 検索結果ごとにLLMナレッジ抽出を実行 |
+| `/v1/utility/google_search_overview` | 60秒 | LLMを使用しないが、複数クエリで時間がかかる場合あり |
 
 ### anthropicAgent
 
