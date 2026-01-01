@@ -85,12 +85,16 @@ utility_apis:
         required: true
       body:
         type: "string"
-        description: "メール本文"
+        description: "メール本文（プレーンテキスト）"
         required: true
-      html:
-        type: "boolean"
-        description: "HTML形式で送信するかどうか"
-        default: false
+      html_body:
+        type: "string"
+        description: "HTML本文（html_bodyを指定した場合、bodyより優先される）"
+        required: false
+      project:
+        type: "string"
+        description: "MyVaultプロジェクト名（認証情報取得用）"
+        required: false
     response_schema:
       result:
         type: "string"
@@ -103,12 +107,14 @@ utility_apis:
   - name: "Google検索"
     endpoint: "/v1/utility/google_search"
     method: "POST"
-    description: "Web検索（Serper API使用）"
+    description: "Web検索（Serper API使用）。LLMによるナレッジ抽出を含むため処理時間が長い。"
+    recommended_timeout: 180  # 秒。LLMナレッジ抽出を含むため180秒を推奨
     use_cases:
       - "キーワード検索"
       - "複数クエリ一括検索（queries配列）"
       - "検索結果件数指定（num）"
-    implementation: "Serper API経由でGoogle検索"
+    implementation: "Serper API経由でGoogle検索 + LLMナレッジ抽出"
+    performance_note: "各検索結果に対してLLMでナレッジ抽出を行うため、num=3で約2分程度かかる場合がある"
     request_schema:
       queries:
         type: "array"
