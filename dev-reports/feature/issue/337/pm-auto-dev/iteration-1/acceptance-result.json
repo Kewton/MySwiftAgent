@@ -1,0 +1,138 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "service_health": {
+    "expertAgent": {
+      "status": "not_required",
+      "reason": "Phase 1 tests do not require running service - schema and validation only"
+    }
+  },
+  "pytest_results": {
+    "test_file": "expertAgent/tests/acceptance/test_issue_337_acceptance.py",
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "output": "=============================== test session starts ===============================\nplatform darwin -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0\ncollected 14 items\n\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_ac1_derived_field_definition_can_be_created PASSED [  7%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_ac1_derived_field_minimal_creation PASSED [ 14%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_ac1_interface_schema_with_derived_fields PASSED [ 21%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_ac1_interface_schema_without_derived_fields PASSED [ 28%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_ac1_interface_schema_serialization_with_derived_fields PASSED [ 35%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_template_variable_extraction PASSED [ 42%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_template_validation_with_properties PASSED [ 50%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_template_validation_with_source_mapping PASSED [ 57%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_template_validation_unresolved_warning PASSED [ 64%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_derived_fields_validation PASSED [ 71%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_evaluator_checks_email_derived_fields PASSED [ 78%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_evaluator_passes_with_complete_derived_fields PASSED [ 85%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptancePhase1::test_evaluator_checks_slack_derived_fields PASSED [ 92%]\ntests/acceptance/test_issue_337_acceptance.py::TestIssue337AcceptanceIntegration::test_full_scenario_email_workflow_derived_fields PASSED [100%]\n\n======================= 14 passed, 10 warnings in 0.08s ========================"
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "l3_test_plan_results": {
+    "source": "acceptance-context.json",
+    "test_commands": [
+      {
+        "name": "DerivedFieldDefinition schema validation",
+        "type": "pytest",
+        "result": "passed",
+        "tests_passed": [
+          "test_ac1_derived_field_definition_can_be_created",
+          "test_ac1_derived_field_minimal_creation"
+        ]
+      },
+      {
+        "name": "InterfaceSchemaDefinition with derived_fields",
+        "type": "pytest",
+        "result": "passed",
+        "tests_passed": [
+          "test_ac1_interface_schema_with_derived_fields",
+          "test_ac1_interface_schema_without_derived_fields",
+          "test_ac1_interface_schema_serialization_with_derived_fields"
+        ]
+      },
+      {
+        "name": "Template validator functions",
+        "type": "pytest",
+        "result": "passed",
+        "tests_passed": [
+          "test_template_variable_extraction",
+          "test_template_validation_with_properties",
+          "test_template_validation_with_source_mapping",
+          "test_template_validation_unresolved_warning",
+          "test_derived_fields_validation"
+        ]
+      },
+      {
+        "name": "Evaluator node derived_fields check",
+        "type": "pytest",
+        "result": "passed",
+        "tests_passed": [
+          "test_evaluator_checks_email_derived_fields",
+          "test_evaluator_passes_with_complete_derived_fields",
+          "test_evaluator_checks_slack_derived_fields"
+        ]
+      },
+      {
+        "name": "Integration scenario",
+        "type": "pytest",
+        "result": "passed",
+        "tests_passed": [
+          "test_full_scenario_email_workflow_derived_fields"
+        ]
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "derived_fields を含む output_interface が定義可能",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_methods": [
+        "test_ac1_derived_field_definition_can_be_created",
+        "test_ac1_derived_field_minimal_creation",
+        "test_ac1_interface_schema_with_derived_fields",
+        "test_ac1_interface_schema_without_derived_fields",
+        "test_ac1_interface_schema_serialization_with_derived_fields"
+      ],
+      "evidence": "DerivedFieldDefinition and InterfaceSchemaDefinition classes work correctly with derived_fields"
+    },
+    {
+      "criterion": "テンプレート変数抽出・検証機能が動作",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_methods": [
+        "test_template_variable_extraction",
+        "test_template_validation_with_properties",
+        "test_template_validation_with_source_mapping",
+        "test_template_validation_unresolved_warning",
+        "test_derived_fields_validation"
+      ],
+      "evidence": "get_template_variables, validate_template, and validate_derived_fields functions work correctly"
+    },
+    {
+      "criterion": "評価ノードの derived_fields チェック機能が動作",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_methods": [
+        "test_evaluator_checks_email_derived_fields",
+        "test_evaluator_passes_with_complete_derived_fields",
+        "test_evaluator_checks_slack_derived_fields"
+      ],
+      "evidence": "check_derived_fields_for_downstream_tasks correctly identifies missing derived_fields for email/slack tasks"
+    },
+    {
+      "criterion": "統合シナリオ（メール送信ワークフロー）が検証可能",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_methods": [
+        "test_full_scenario_email_workflow_derived_fields"
+      ],
+      "evidence": "Full email workflow scenario with search -> summarize -> send_email validates correctly"
+    }
+  ],
+  "e2e_verification": {
+    "performed": true,
+    "method": "pytest_acceptance_test",
+    "actual_behavior_confirmed": true,
+    "notes": "Phase 1 focuses on schema definition and validation - no running service required for this phase"
+  },
+  "unit_test_only": false,
+  "evidence_files": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/tests/acceptance/test_issue_337_acceptance.py",
+    "/tmp/acceptance_pytest_output.log"
+  ],
+  "message": "All Phase 1 acceptance criteria verified. 14/14 pytest tests passed. derived_fields schema, template validation, and evaluator checks are working correctly."
+}

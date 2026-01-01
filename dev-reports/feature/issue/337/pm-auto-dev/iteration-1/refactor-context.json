@@ -1,0 +1,26 @@
+{
+  "issue_number": 337,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/template_validator.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100,
+    "complexity_score": null
+  },
+  "design_patterns_to_apply": [
+    "Single Responsibility Principle",
+    "DRY - consolidate duplicate validation logic"
+  ],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "docstring の追加・改善",
+    "型ヒントの確認",
+    "静的解析エラーの確認"
+  ],
+  "notes": [
+    "新規実装のため大規模なリファクタリングは不要",
+    "主に docstring とコードスタイルの確認"
+  ]
+}

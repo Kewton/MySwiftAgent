@@ -1,0 +1,24 @@
+{
+  "status": "success",
+  "issue_number": 337,
+  "quality_metrics": {
+    "before_coverage": 100,
+    "after_coverage": 100,
+    "before_complexity": null,
+    "after_complexity": null
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "refactorings_applied": [
+    "新規実装のため大規模リファクタリング不要",
+    "静的解析（Ruff, MyPy）クリア確認"
+  ],
+  "notes": [
+    "DerivedFieldDefinition: Pydantic v2 ConfigDict 使用済み",
+    "template_validator.py: 型ヒント完備",
+    "evaluator.py: check_derived_fields_for_downstream_tasks 関数追加済み"
+  ],
+  "message": "新規実装のためリファクタリングは軽微。静的解析エラー 0 件。"
+}

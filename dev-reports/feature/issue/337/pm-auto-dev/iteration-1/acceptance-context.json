@@ -1,0 +1,73 @@
+{
+  "issue_number": 337,
+  "feature_summary": "タスクチェーン Ready-to-Use Output 原則の導入",
+  "acceptance_criteria": [
+    "derived_fields を含む output_interface が定義可能",
+    "ワークフロー生成LLMが derived_fields を正しく出力に含める",
+    "下流タスクが文字列加工なしでデータを使用可能"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "DerivedFieldDefinition スキーマ検証",
+        "type": "unit_test",
+        "command": "uv run pytest tests/unit/test_derived_fields.py -v",
+        "expected_status": 0
+      },
+      {
+        "name": "テンプレートバリデータ検証",
+        "type": "unit_test",
+        "command": "uv run pytest tests/unit/test_template_validator.py -v",
+        "expected_status": 0
+      },
+      {
+        "name": "評価ノード derived_fields チェック検証",
+        "type": "unit_test",
+        "command": "uv run pytest tests/unit/test_evaluator_node.py::TestCheckDerivedFieldsForDownstreamTasks -v",
+        "expected_status": 0
+      }
+    ],
+    "integration_tests": [
+      {
+        "name": "DerivedFieldDefinition インスタンス生成",
+        "description": "テンプレート文字列と source_mapping を含む DerivedFieldDefinition が正しく生成されるか確認"
+      },
+      {
+        "name": "InterfaceSchemaDefinition に derived_fields 追加",
+        "description": "InterfaceSchemaDefinition に derived_fields フィールドが含まれ、JSON シリアライズ可能か確認"
+      },
+      {
+        "name": "テンプレート変数抽出",
+        "description": "get_template_variables が {variable} 形式の変数を正しく抽出するか確認"
+      },
+      {
+        "name": "テンプレート検証（properties 参照）",
+        "description": "validate_template が properties に存在する変数を解決済みとして扱うか確認"
+      },
+      {
+        "name": "テンプレート検証（source_mapping 参照）",
+        "description": "validate_template が source_mapping で指定された変数を解決済みとして扱うか確認"
+      },
+      {
+        "name": "下流タスク derived_fields チェック",
+        "description": "check_derived_fields_for_downstream_tasks がメール送信タスクに対して email_subject/email_body を要求するか確認"
+      }
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_337_acceptance.py",
+  "playwright_test_file": null,
+  "notes": [
+    "Phase 1 の受入条件を対象とする",
+    "LLM統合は別途テスト（YAML プロンプト拡張は Phase 2）",
+    "スキーマ定義とバリデーション機能の動作確認が主目的"
+  ]
+}

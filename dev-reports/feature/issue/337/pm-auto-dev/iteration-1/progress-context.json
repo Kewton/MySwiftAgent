@@ -1,0 +1,75 @@
+{
+  "issue_number": 337,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 100,
+      "unit_tests": {
+        "total": 54,
+        "passed": 54,
+        "failed": 0
+      },
+      "static_analysis": {
+        "ruff_errors": 0,
+        "mypy_errors": 0
+      },
+      "executed_tasks": ["1.1", "1.4", "3.3", "2.1"],
+      "skipped_tasks": ["1.2", "1.3"]
+    },
+    "acceptance": {
+      "status": "passed",
+      "total_tests": 14,
+      "passed_tests": 14,
+      "failed_tests": 0
+    },
+    "refactor": {
+      "status": "success",
+      "ruff_errors": 0,
+      "mypy_errors": 0
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "DerivedFieldDefinition スキーマ追加", "status": "completed"},
+      {"task_id": "1.2", "description": "interface_schema プロンプト拡張", "status": "skipped", "reason": "Phase 2 作業（LLM統合テスト必要）"},
+      {"task_id": "1.3", "description": "ワークフロー生成プロンプト拡張", "status": "skipped", "reason": "Phase 2 作業（LLM統合テスト必要）"},
+      {"task_id": "1.4", "description": "テンプレート検証ユーティリティ作成", "status": "completed"},
+      {"task_id": "2.1", "description": "単体テスト作成", "status": "completed"},
+      {"task_id": "3.3", "description": "評価ノード拡張", "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "prompts/interface_schema.py", "status": "modified"},
+      {"file": "utils/template_validator.py", "status": "created"},
+      {"file": "utils/__init__.py", "status": "modified"},
+      {"file": "nodes/evaluator.py", "status": "modified"},
+      {"file": "tests/unit/test_derived_fields.py", "status": "created"},
+      {"file": "tests/unit/test_template_validator.py", "status": "created"},
+      {"file": "tests/unit/test_evaluator_node.py", "status": "modified"},
+      {"file": "tests/acceptance/test_issue_337_acceptance.py", "status": "created"}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "DerivedFieldDefinition がバリデーション可能", "verified": true},
+      {"criterion": "source_mapping フィールドが正しく動作", "verified": true},
+      {"criterion": "validate_template が変数抽出・検証可能", "verified": true},
+      {"criterion": "validate_derived_fields が全フィールドを検証", "verified": true},
+      {"criterion": "評価ノードで derived_fields チェックが動作", "verified": true},
+      {"criterion": "単体テストカバレッジ 90% 以上", "verified": true},
+      {"criterion": "静的解析エラー 0 件", "verified": true}
+    ]
+  },
+  "commits": [
+    {
+      "hash": "9bc8fc5",
+      "message": "feat(Issue #337): derived_fields schema and template validator for Ready-to-Use Output principle"
+    }
+  ],
+  "blockers": [],
+  "next_steps": [
+    "Task 1.2: interface_schema.yaml プロンプト拡張（Phase 2）",
+    "Task 1.3: workflow_generation.yaml プロンプト拡張（Phase 2）",
+    "LLM 統合テスト実施",
+    "E2E 検証（メール送信ワークフロー）"
+  ]
+}
