@@ -27,6 +27,61 @@ logger = logging.getLogger(__name__)
 MAX_RETRY_COUNT = 5
 
 
+def check_interface_compatibility(tasks: list[dict]) -> list[str]:
+    """Check output/input interface compatibility across task chain.
+
+    Issue #338 Phase 4: This function validates that the output_interface
+    of task N provides all required fields for input_interface of task N+1.
+
+    Args:
+        tasks: List of task definitions with input_interface and output_interface
+
+    Returns:
+        List of warnings about missing required fields
+    """
+    warnings: list[str] = []
+
+    if len(tasks) < 2:
+        return warnings
+
+    for i in range(len(tasks) - 1):
+        current_task = tasks[i]
+        next_task = tasks[i + 1]
+
+        # Get output_interface from current task
+        output_interface = current_task.get("output_interface", {})
+        output_properties = output_interface.get("properties", {})
+        output_fields = set(output_properties.keys())
+
+        # Get input_interface from next task
+        input_interface = next_task.get("input_interface", {})
+        required_fields = input_interface.get("required", [])
+
+        # Check if all required fields from next task input are provided
+        # by current task output
+        missing_fields = [
+            field for field in required_fields if field not in output_fields
+        ]
+
+        if missing_fields:
+            current_id = current_task.get("task_id", f"task_{i + 1}")
+            next_id = next_task.get("task_id", f"task_{i + 2}")
+            current_name = current_task.get("name", current_id)
+            next_name = next_task.get("name", next_id)
+
+            for field in missing_fields:
+                warnings.append(
+                    f"Task {i + 1} ({current_name}) output does not provide "
+                    f"required field '{field}' for task {i + 2} ({next_name}) input"
+                )
+                logger.warning(
+                    f"Interface compatibility issue: {current_id} -> {next_id} "
+                    f"missing field '{field}'"
+                )
+
+    return warnings
+
+
 def check_derived_fields_for_downstream_tasks(
     tasks: list[dict],
     interface_definitions: dict[str, dict],
@@ -77,7 +132,7 @@ def check_derived_fields_for_downstream_tasks(
                 prev_task = tasks[i - 1]
                 prev_task_id = prev_task.get("task_id", "")
                 prev_task_name = prev_task.get(
-                    "task_name", prev_task.get("task_id", f"task_{i-1}")
+                    "task_name", prev_task.get("task_id", f"task_{i - 1}")
                 )
                 prev_interface = interface_definitions.get(prev_task_id, {})
                 output_schema = prev_interface.get("output_schema", {})
@@ -100,7 +155,7 @@ def check_derived_fields_for_downstream_tasks(
                 prev_task = tasks[i - 1]
                 prev_task_id = prev_task.get("task_id", "")
                 prev_task_name = prev_task.get(
-                    "task_name", prev_task.get("task_id", f"task_{i-1}")
+                    "task_name", prev_task.get("task_id", f"task_{i - 1}")
                 )
                 prev_interface = interface_definitions.get(prev_task_id, {})
                 output_schema = prev_interface.get("output_schema", {})

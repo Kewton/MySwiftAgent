@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from sqlalchemy import and_, or_, select
@@ -601,6 +601,206 @@ def _find_null_fields(data: dict[str, Any], prefix: str = "") -> list[str]:
             null_fields.extend(_find_null_fields(value, path))
 
     return null_fields
+
+
+def _transform_to_interface(
+    raw_output: Any,
+    output_interface: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Transform raw output to match output_interface definition.
+
+    Issue #338: This function extracts fields defined in output_interface
+    from the raw GraphAI output, normalizing the data structure for
+    downstream tasks in the chain.
+
+    Args:
+        raw_output: Raw output from GraphAI (can be nested)
+        output_interface: Interface definition with properties and required fields
+
+    Returns:
+        Transformed output matching the interface schema
+    """
+    # If no output_interface defined, return raw output as-is
+    if output_interface is None:
+        return raw_output if isinstance(raw_output, dict) else {"value": raw_output}
+
+    # Handle non-dict input gracefully
+    if not isinstance(raw_output, dict):
+        logger.warning(
+            f"[TRANSFORM] raw_output is not a dict: {type(raw_output).__name__}"
+        )
+        return raw_output  # type: ignore
+
+    try:
+        result: dict[str, Any] = {}
+        properties = output_interface.get("properties", {})
+
+        for field_name, field_def in properties.items():
+            # Determine search strategy based on field definition
+            strategy = _determine_search_strategy(field_name, field_def)
+            value = _find_field_value(raw_output, field_name, strategy)
+            result[field_name] = value
+
+            # Log field extraction (with masking for sensitive fields)
+            _log_transformation(field_name, value, value is not None)
+
+        # Validate required fields
+        required_fields = output_interface.get("required", [])
+        missing = [f for f in required_fields if result.get(f) is None]
+        if missing:
+            logger.warning(
+                f"[TRANSFORM] Missing required fields after transformation: {missing}"
+            )
+
+        return result
+
+    except RecursionError:
+        logger.error("[TRANSFORM] Max recursion depth exceeded")
+        return raw_output
+    except (TypeError, KeyError) as e:
+        logger.error(f"[TRANSFORM] Data structure error: {e}")
+        return raw_output
+
+
+def _determine_search_strategy(
+    field_name: str,
+    field_def: dict[str, Any],
+) -> Literal["direct", "recursive", "path"]:
+    """Determine the search strategy for a field.
+
+    Args:
+        field_name: Name of the field to search
+        field_def: Field definition from output_interface
+
+    Returns:
+        Search strategy: "direct", "recursive", or "path"
+    """
+    # If source_mapping is defined, use path-based search
+    if "source_mapping" in field_def:
+        return "path"
+
+    # Default to recursive strategy for flexibility
+    return "recursive"
+
+
+def _find_field_value(
+    data: dict[str, Any],
+    field_name: str,
+    search_strategy: Literal["direct", "recursive", "path"] = "recursive",
+) -> Any:
+    """Find a field value in the data using the specified strategy.
+
+    Issue #338: This function supports multiple search strategies to handle
+    various GraphAI output structures.
+
+    Args:
+        data: Data dictionary to search
+        field_name: Field name to find
+        search_strategy:
+            - "direct": Only check direct key access
+            - "recursive": Depth-first search through nested dicts
+            - "path": Dot-separated path access (e.g., "node.field.subfield")
+
+    Returns:
+        Found value or None
+    """
+    if search_strategy == "direct":
+        return data.get(field_name)
+
+    if search_strategy == "recursive":
+        return _recursive_search(data, field_name)
+
+    if search_strategy == "path":
+        return _path_based_search(data, field_name)
+
+    return None
+
+
+def _recursive_search(
+    data: dict[str, Any],
+    field_name: str,
+    max_depth: int = 5,
+) -> Any:
+    """Recursively search for a field in nested dictionaries.
+
+    Args:
+        data: Dictionary to search
+        field_name: Field name to find
+        max_depth: Maximum recursion depth to prevent infinite loops
+
+    Returns:
+        Found value or None
+    """
+    if max_depth <= 0:
+        return None
+
+    # Direct access first (priority)
+    if field_name in data:
+        return data[field_name]
+
+    # Search nested dictionaries
+    for _key, value in data.items():
+        if isinstance(value, dict):
+            result = _recursive_search(value, field_name, max_depth - 1)
+            if result is not None:
+                return result
+
+    return None
+
+
+def _path_based_search(
+    data: dict[str, Any],
+    field_path: str,
+) -> Any:
+    """Search for a field using dot-separated path.
+
+    Args:
+        data: Dictionary to search
+        field_path: Dot-separated path (e.g., "execute_search.search_results")
+
+    Returns:
+        Found value or None
+    """
+    if not field_path:
+        return data
+
+    parts = field_path.split(".")
+    current = data
+
+    for part in parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return None
+
+    return current
+
+
+# Sensitive field patterns for log masking
+_SENSITIVE_FIELD_PATTERNS = {
+    "api_key", "password", "token", "secret", "credential",
+    "private_key", "access_key", "auth", "bearer",
+}
+
+
+def _is_sensitive_field(field_name: str) -> bool:
+    """Check if a field name indicates sensitive data."""
+    field_lower = field_name.lower()
+    return any(pattern in field_lower for pattern in _SENSITIVE_FIELD_PATTERNS)
+
+
+def _log_transformation(field_name: str, value: Any, found: bool) -> None:
+    """Log transformation result with sensitive data masking."""
+    if _is_sensitive_field(field_name):
+        log_value = "[MASKED]" if found else "[NOT FOUND]"
+    else:
+        if found:
+            str_value = str(value)
+            log_value = str_value[:100] + "..." if len(str_value) > 100 else str_value
+        else:
+            log_value = "[NOT FOUND]"
+
+    logger.debug(f"[TRANSFORM] {field_name}: {log_value}")
 
 
 def _extract_graphai_output(response_data: Any) -> Any:

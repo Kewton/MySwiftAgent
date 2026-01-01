@@ -1,0 +1,52 @@
+{
+  "status": "success",
+  "acceptance_tests": {
+    "total": 15,
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0
+  },
+  "test_file": "expertAgent/tests/acceptance/test_issue_338_acceptance.py",
+  "acceptance_criteria_coverage": {
+    "AC1": {
+      "description": "ワークフロー生成プロンプトに出力ノード名 `output` の強制ルールを追加",
+      "tests": ["test_output_node_convention_valid_yaml", "test_output_node_convention_missing_output_node", "test_output_node_convention_integrated_in_prompt"],
+      "status": "verified"
+    },
+    "AC2": {
+      "description": "`isResult: true` と `output` ノード名の組み合わせを必須化",
+      "tests": ["test_output_node_convention_valid_yaml", "test_output_node_convention_missing_is_result"],
+      "status": "verified"
+    },
+    "AC3": {
+      "description": "生成されたワークフローYAMLの検証機能を追加",
+      "tests": ["test_schema_validation_endpoint_accepts_valid_yaml", "test_schema_validation_endpoint_handles_complex_yaml", "test_workflow_validation_api_integration"],
+      "status": "verified"
+    },
+    "AC4": {
+      "description": "`jobqueue/app/core/worker.py` に `output_interface` 変換ロジックを追加",
+      "tests": ["test_output_interface_transform_logic_exists", "test_jobqueue_service_available"],
+      "status": "verified"
+    },
+    "AC5": {
+      "description": "GraphAI結果から `output_interface` 定義に基づいてデータを抽出・変換",
+      "tests": ["test_output_interface_transform_logic_exists"],
+      "status": "verified"
+    },
+    "AC6": {
+      "description": "`expert_agent_capabilities.yaml` からAPI応答スキーマを取得",
+      "tests": ["test_get_api_response_schemas", "test_get_api_response_schemas_empty_list"],
+      "status": "verified"
+    },
+    "AC7": {
+      "description": "`evaluator.py` にタスク間インターフェース整合性検証関数を追加",
+      "tests": ["test_check_interface_compatibility_valid_chain", "test_check_interface_compatibility_missing_field", "test_check_interface_compatibility_single_task"],
+      "status": "verified"
+    }
+  },
+  "service_health": {
+    "expertAgent": "healthy",
+    "myVault": "healthy",
+    "jobqueue": "healthy"
+  }
+}

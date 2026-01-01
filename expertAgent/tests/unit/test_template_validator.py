@@ -124,7 +124,9 @@ class TestValidateTemplate:
 
     def test_no_variables_template(self) -> None:
         """Test template without any variables."""
-        unresolved = validate_template("Static text only", {"field": {"type": "string"}})
+        unresolved = validate_template(
+            "Static text only", {"field": {"type": "string"}}
+        )
         assert unresolved == []
 
 

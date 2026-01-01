@@ -280,9 +280,7 @@ def _build_expert_agent_capabilities() -> str:
     utility_apis = config.get("utility_apis", [])
     if utility_apis:
         lines.append("#### Utility API (Direct API)")
-        lines.append(
-            "| API | エンドポイント | 用途 | 推奨timeout | 使用例 |"
-        )
+        lines.append("| API | エンドポイント | 用途 | 推奨timeout | 使用例 |")
         lines.append("|-----|-------------|------|------------|-------|")
         for api in utility_apis:
             use_cases = "、".join(api.get("use_cases", []))
@@ -299,9 +297,7 @@ def _build_expert_agent_capabilities() -> str:
     ai_agent_apis = config.get("ai_agent_apis", [])
     if ai_agent_apis:
         lines.append("#### AI Agent API (Direct API)")
-        lines.append(
-            "| Agent | エンドポイント | 用途 | 推奨timeout | 使用例 |"
-        )
+        lines.append("| Agent | エンドポイント | 用途 | 推奨timeout | 使用例 |")
         lines.append("|-------|-------------|------|------------|-------|")
         for api in ai_agent_apis:
             use_cases = "、".join(api.get("use_cases", []))
@@ -315,7 +311,9 @@ def _build_expert_agent_capabilities() -> str:
 
     # Add note about timeout
     lines.append("")
-    lines.append("**注意**: 推奨timeoutが30秒より長いAPIは、LLM処理等で時間がかかるため、")
+    lines.append(
+        "**注意**: 推奨timeoutが30秒より長いAPIは、LLM処理等で時間がかかるため、"
+    )
     lines.append("ワークフロー生成時に適切なtimeout値を設定すること。")
 
     return "\n".join(lines)

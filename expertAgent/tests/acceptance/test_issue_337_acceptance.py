@@ -17,10 +17,14 @@ Phase 2 受入条件（LLM統合）は別途テストします。
 前提条件:
 - expertAgent がインストールされていること
 """
+
 from typing import Any
 
 import pytest
 
+from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import (
+    check_derived_fields_for_downstream_tasks,
+)
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.interface_schema import (
     DerivedFieldDefinition,
     InterfaceSchemaDefinition,
@@ -29,9 +33,6 @@ from aiagent.langgraph.jobTaskGeneratorAgents.utils.template_validator import (
     get_template_variables,
     validate_derived_fields,
     validate_template,
-)
-from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import (
-    check_derived_fields_for_downstream_tasks,
 )
 
 
@@ -76,9 +77,7 @@ class TestIssue337AcceptancePhase1:
         template のみ必須、他はオプション
         """
         # Arrange & Act
-        derived_field = DerivedFieldDefinition(
-            template="{summary_text}"
-        )
+        derived_field = DerivedFieldDefinition(template="{summary_text}")
 
         # Assert
         assert derived_field.template == "{summary_text}"
@@ -130,7 +129,10 @@ class TestIssue337AcceptancePhase1:
         assert len(interface_schema.derived_fields) == 2
         assert "email_subject" in interface_schema.derived_fields
         assert "email_body" in interface_schema.derived_fields
-        assert interface_schema.derived_fields["email_subject"].template == "検索結果サマリ: {query}"
+        assert (
+            interface_schema.derived_fields["email_subject"].template
+            == "検索結果サマリ: {query}"
+        )
 
     def test_ac1_interface_schema_without_derived_fields(self) -> None:
         """受入条件1-4: derived_fields なしの InterfaceSchemaDefinition（後方互換性）
@@ -178,7 +180,10 @@ class TestIssue337AcceptancePhase1:
         # Assert
         assert "derived_fields" in serialized
         assert "formatted_result" in serialized["derived_fields"]
-        assert serialized["derived_fields"]["formatted_result"]["template"] == "結果: {result}"
+        assert (
+            serialized["derived_fields"]["formatted_result"]["template"]
+            == "結果: {result}"
+        )
         assert serialized["derived_fields"]["formatted_result"]["source_mapping"] == {
             "result": "task_1.result"
         }
@@ -190,7 +195,9 @@ class TestIssue337AcceptancePhase1:
     def test_template_variable_extraction(self) -> None:
         """テンプレート変数抽出: {variable} 形式の変数が正しく抽出される"""
         # Arrange
-        template = "検索結果サマリ: {query}\n\n{summary_text}\n\n重要ポイント:\n{key_points}"
+        template = (
+            "検索結果サマリ: {query}\n\n{summary_text}\n\n重要ポイント:\n{key_points}"
+        )
 
         # Act
         variables = get_template_variables(template)
@@ -445,7 +452,9 @@ class TestIssue337AcceptanceIntegration:
                     },
                     "x-derived-fields": {
                         "email_subject": {"template": "検索結果サマリ: {query}"},
-                        "email_body": {"template": "{summary_text}\n\n重要ポイント:\n{key_points}"},
+                        "email_body": {
+                            "template": "{summary_text}\n\n重要ポイント:\n{key_points}"
+                        },
                     },
                 },
             },

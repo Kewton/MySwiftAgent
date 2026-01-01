@@ -29,6 +29,88 @@ logger = logging.getLogger(__name__)
 # Loaded from expert_agent_capabilities.yaml
 _API_TIMEOUT_OVERRIDES: dict[str, int] | None = None
 
+# Cache for API capabilities
+_API_CAPABILITIES: dict[str, Any] | None = None
+
+
+def _load_api_capabilities() -> dict[str, Any]:
+    """Load API capabilities from expert_agent_capabilities.yaml.
+
+    Returns:
+        Full capabilities dictionary including utility_apis and ai_agent_apis.
+    """
+    global _API_CAPABILITIES
+    if _API_CAPABILITIES is not None:
+        return _API_CAPABILITIES
+
+    config_path = Path(__file__).parent / "config" / "expert_agent_capabilities.yaml"
+
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            _API_CAPABILITIES = yaml.safe_load(f)
+            logger.info("Loaded API capabilities from expert_agent_capabilities.yaml")
+    except Exception as e:
+        logger.warning(f"Failed to load API capabilities: {e}")
+        _API_CAPABILITIES = {}
+
+    return _API_CAPABILITIES or {}
+
+
+async def get_api_response_schemas(recommended_apis: list[str]) -> dict[str, Any]:
+    """Get API response schemas for recommended APIs.
+
+    Issue #338 Phase 3: This function retrieves response schemas from
+    expert_agent_capabilities.yaml to provide LLM with accurate field names.
+
+    Args:
+        recommended_apis: List of API endpoint paths (e.g., ["/v1/utility/google_search"])
+
+    Returns:
+        Dict mapping endpoint paths to their response schemas
+    """
+    if not recommended_apis:
+        return {}
+
+    capabilities = _load_api_capabilities()
+    schemas: dict[str, Any] = {}
+
+    # Combine all API definitions
+    all_apis: list[dict[str, Any]] = []
+    all_apis.extend(capabilities.get("utility_apis", []))
+    all_apis.extend(capabilities.get("ai_agent_apis", []))
+
+    for api_path in recommended_apis:
+        # Find matching API definition
+        for api_def in all_apis:
+            endpoint = api_def.get("endpoint", "")
+            if endpoint == api_path or api_path.endswith(endpoint):
+                schema_info: dict[str, Any] = {}
+
+                # Include response schema if available
+                if "response_schema" in api_def:
+                    schema_info["response_schema"] = api_def["response_schema"]
+
+                # Include request schema for validation hints
+                if "request_schema" in api_def:
+                    schema_info["request_schema"] = api_def["request_schema"]
+
+                # Include API name for better context
+                if "name" in api_def:
+                    schema_info["name"] = api_def["name"]
+
+                # Include description
+                if "description" in api_def:
+                    schema_info["description"] = api_def["description"]
+
+                if schema_info:
+                    schemas[api_path] = schema_info
+                    logger.debug(f"Found schema for API: {api_path}")
+
+                break
+
+    logger.info(f"Retrieved schemas for {len(schemas)}/{len(recommended_apis)} APIs")
+    return schemas
+
 
 def _load_api_timeout_overrides() -> dict[str, int]:
     """Load recommended timeout values from expert_agent_capabilities.yaml.
@@ -109,9 +191,7 @@ def _apply_timeout_overrides(yaml_content: str) -> str:
                 timeout_key = match.group(2)
                 old_timeout = int(match.group(3))
                 if old_timeout < tm:
-                    logger.info(
-                        f"Updating timeout for {ep}: {old_timeout}ms -> {tm}ms"
-                    )
+                    logger.info(f"Updating timeout for {ep}: {old_timeout}ms -> {tm}ms")
                     return f"{prefix}{timeout_key}{tm}"
                 return match.group(0)
 

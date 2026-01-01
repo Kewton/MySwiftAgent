@@ -86,7 +86,10 @@ class TestInterfaceSchemaDefinitionWithDerivedFields:
             task_id="task_001",
             interface_name="gmail_search_interface",
             description="Gmail search interface",
-            input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+            },
             output_schema={
                 "type": "object",
                 "properties": {"results": {"type": "array"}},
@@ -140,7 +143,9 @@ class TestInterfaceSchemaDefinitionWithDerivedFields:
         data = interface.model_dump()
         assert "derived_fields" in data
         assert "formatted_result" in data["derived_fields"]
-        assert data["derived_fields"]["formatted_result"]["template"] == "Result: {data}"
+        assert (
+            data["derived_fields"]["formatted_result"]["template"] == "Result: {data}"
+        )
         assert data["derived_fields"]["formatted_result"]["source_mapping"] == {
             "data": "prev_task.output.data"
         }

@@ -311,7 +311,7 @@ async def validate_workflow_schema(
             url = inputs.get("url", "")
 
             # Check type mismatches
-            issues_raw.extend(_check_type_mismatch(node_id, node_def, url))
+            issues_raw.extend(_check_type_mismatch(node_id, node_def, url, nodes))
 
             # Check field names
             issues_raw.extend(_check_field_names(node_id, node_def))

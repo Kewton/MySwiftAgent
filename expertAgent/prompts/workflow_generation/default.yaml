@@ -22,7 +22,18 @@ system_prompt: |
   - Error handling must be included
   - Comments must explain each node's purpose
 
-  CRITICAL REQUIREMENT:
+  CRITICAL REQUIREMENT - OUTPUT NODE (Issue #338):
+  - The output node MUST be named exactly "output" (not "format_results", "final_output", etc.)
+  - The output node MUST have "isResult: true"
+  - This naming convention is MANDATORY for task chain interface contracts
+  - Example:
+    output:
+      agent: copyAgent
+      inputs:
+        result: :previous_node.data
+      isResult: true
+
+  CRITICAL REQUIREMENT - TEMPLATE VARIABLES:
   - When LLM prompts contain :source.field references in multi-line strings,
     you MUST use stringTemplateAgent to build the prompt first
   - NEVER embed :source.field directly in fetchAgent user_input multi-line strings

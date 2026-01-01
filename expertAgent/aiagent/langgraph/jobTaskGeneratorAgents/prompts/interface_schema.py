@@ -33,17 +33,13 @@ class DerivedFieldDefinition(BaseModel):
     template: str = Field(
         description="Template string. Use {field_name} to reference source data"
     )
-    type: str = Field(
-        default="string",
-        description="Type of the generated value"
-    )
+    type: str = Field(default="string", description="Type of the generated value")
     description: str | None = Field(
-        default=None,
-        description="Description of the derived field"
+        default=None, description="Description of the derived field"
     )
     source_mapping: dict[str, str] | None = Field(
         default=None,
-        description="Explicit mapping of variable names to source paths (optional)"
+        description="Explicit mapping of variable names to source paths (optional)",
     )
 
 
@@ -67,7 +63,7 @@ class InterfaceSchemaDefinition(BaseModel):
     )
     derived_fields: dict[str, DerivedFieldDefinition] = Field(
         default_factory=dict,
-        description="Derived field definitions for downstream tasks (ready-to-use data)"
+        description="Derived field definitions for downstream tasks (ready-to-use data)",
     )
 
     @field_validator("input_schema", "output_schema", mode="before")

@@ -174,7 +174,9 @@ def create_workflow_generation_prompt(
                     schema_lines = []
                     for field, info in api_info.request_schema.items():
                         req = "(required)" if info.get("required") else "(optional)"
-                        schema_lines.append(f"      - {field}: {info.get('type', 'unknown')} {req}")
+                        schema_lines.append(
+                            f"      - {field}: {info.get('type', 'unknown')} {req}"
+                        )
                     api_detail += "\n    - Request fields:\n" + "\n".join(schema_lines)
                 enriched_apis.append(api_detail)
             else:

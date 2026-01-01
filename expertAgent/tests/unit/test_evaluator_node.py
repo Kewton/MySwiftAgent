@@ -636,7 +636,11 @@ class TestCheckDerivedFieldsForDownstreamTasks:
         """Test with tasks that don't require derived_fields."""
         tasks = [
             {"task_id": "search", "task_type": "search", "task_name": "Google Search"},
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
         ]
         interfaces: dict = {}
 
@@ -646,8 +650,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_email_task_with_missing_derived_fields(self) -> None:
         """Test that missing email derived_fields are detected."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "send_email",
+                "task_type": "email_send",
+                "task_name": "Send Email",
+            },
         ]
         interfaces = {
             "summarize": {
@@ -667,8 +679,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_email_task_with_complete_derived_fields(self) -> None:
         """Test that properly defined derived_fields pass validation."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "send_email",
+                "task_type": "email_send",
+                "task_name": "Send Email",
+            },
         ]
         interfaces = {
             "summarize": {
@@ -688,8 +708,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_email_task_with_partial_derived_fields(self) -> None:
         """Test that partial derived_fields are detected."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "send_email",
+                "task_type": "email_send",
+                "task_name": "Send Email",
+            },
         ]
         interfaces = {
             "summarize": {
@@ -710,8 +738,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_mail_task_type_variation(self) -> None:
         """Test that 'mail' in task_type is also detected."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "send_mail", "task_type": "gmail_send", "task_name": "Send Mail"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "send_mail",
+                "task_type": "gmail_send",
+                "task_name": "Send Mail",
+            },
         ]
         interfaces = {
             "summarize": {
@@ -727,8 +763,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_slack_task_with_missing_derived_fields(self) -> None:
         """Test that missing Slack derived_fields are detected."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "notify_slack", "task_type": "slack_notification", "task_name": "Slack Notify"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "notify_slack",
+                "task_type": "slack_notification",
+                "task_name": "Slack Notify",
+            },
         ]
         interfaces = {
             "summarize": {
@@ -745,8 +789,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_slack_task_with_slack_message(self) -> None:
         """Test that slack_message alone satisfies Slack requirement."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "notify_slack", "task_type": "slack_notification", "task_name": "Slack Notify"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "notify_slack",
+                "task_type": "slack_notification",
+                "task_name": "Slack Notify",
+            },
         ]
         interfaces = {
             "summarize": {
@@ -765,7 +817,11 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_first_task_is_email(self) -> None:
         """Test that first task being email doesn't cause issues."""
         tasks = [
-            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+            {
+                "task_id": "send_email",
+                "task_type": "email_send",
+                "task_name": "Send Email",
+            },
         ]
         interfaces: dict = {}
 
@@ -778,7 +834,11 @@ class TestCheckDerivedFieldsForDownstreamTasks:
         tasks = [
             {"task_id": "search", "task_type": "search", "task_name": "Search"},
             {"task_id": "email1", "task_type": "email_send", "task_name": "Email 1"},
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
             {"task_id": "email2", "task_type": "email_send", "task_name": "Email 2"},
         ]
         interfaces = {
@@ -813,8 +873,16 @@ class TestCheckDerivedFieldsForDownstreamTasks:
     def test_missing_interface_for_task(self) -> None:
         """Test when interface definition is missing for a task."""
         tasks = [
-            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
-            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+            {
+                "task_id": "summarize",
+                "task_type": "summarization",
+                "task_name": "Summarize",
+            },
+            {
+                "task_id": "send_email",
+                "task_type": "email_send",
+                "task_name": "Send Email",
+            },
         ]
         interfaces: dict = {}  # No interfaces defined
 

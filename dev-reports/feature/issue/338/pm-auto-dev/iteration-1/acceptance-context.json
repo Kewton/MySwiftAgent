@@ -1,0 +1,52 @@
+{
+  "issue_number": 338,
+  "title": "タスクチェーン インターフェース契約強制メカニズムの導入",
+  "acceptance_tests": [
+    {
+      "test_id": "L3-1",
+      "description": "サービス起動確認",
+      "verification_points": [
+        "jobqueue (localhost:8001) ヘルスチェック成功",
+        "myVault (localhost:8003) ヘルスチェック成功",
+        "expertAgent (localhost:8004) ヘルスチェック成功",
+        "graphAiServer (localhost:8005) ヘルスチェック成功"
+      ]
+    },
+    {
+      "test_id": "L3-2",
+      "description": "ワークフロー生成テスト（Phase 1検証）",
+      "verification_points": [
+        "ワークフローYAMLに 'output:' ノードが存在",
+        "'isResult: true' が設定されている",
+        "正しいAPI応答パス参照"
+      ]
+    },
+    {
+      "test_id": "L3-3",
+      "description": "タスクチェーン実行テスト（Phase 2検証）",
+      "verification_points": [
+        "output_dataがoutput_interface定義に準拠",
+        "フラットな構造（ネストなし）",
+        "必須フィールドが存在"
+      ]
+    },
+    {
+      "test_id": "L3-4",
+      "description": "インターフェース整合性検証テスト（Phase 4検証）",
+      "verification_points": [
+        "不整合時に警告メッセージ出力",
+        "check_interface_compatibility関数が動作"
+      ]
+    }
+  ],
+  "test_file_location": "expertAgent/tests/acceptance/test_issue_338_acceptance.py",
+  "execution_method": "pytest expertAgent/tests/acceptance/test_issue_338_acceptance.py -v",
+  "dependencies": ["dev-hybrid.sh起動済み", "全サービス稼働中"],
+  "implemented_functions": {
+    "validate_output_node_convention": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/utils/workflow_validator.py:28",
+    "_transform_to_interface": "jobqueue/app/core/worker.py:606",
+    "_find_field_value": "jobqueue/app/core/worker.py:686",
+    "get_api_response_schemas": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/workflow_helper.py:59",
+    "check_interface_compatibility": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py:30"
+  }
+}

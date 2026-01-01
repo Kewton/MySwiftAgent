@@ -1,0 +1,140 @@
+{
+  "issue_number": 338,
+  "title": "タスクチェーン インターフェース契約強制メカニズムの導入",
+  "acceptance_criteria": [
+    "ワークフロー生成プロンプトに出力ノード名 `output` の強制ルールを追加",
+    "`isResult: true` と `output` ノード名の組み合わせを必須化",
+    "生成されたワークフローYAMLの検証機能を追加",
+    "`jobqueue/app/core/worker.py` に `output_interface` 変換ロジックを追加",
+    "GraphAI結果から `output_interface` 定義に基づいてデータを抽出・変換",
+    "変換後データを `task.output_data` に設定",
+    "`expert_agent_capabilities.yaml` にAPI応答スキーマを追加",
+    "ワークフロー生成コンテキストにAPI応答スキーマを自動注入",
+    "Google Search API等の正確なフィールド名参照を保証",
+    "`evaluator.py` にタスク間インターフェース整合性検証関数を追加",
+    "ジョブ生成時に `output_interface` → `input_interface` の整合性チェック",
+    "不整合時の警告出力"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ワークフロー生成プロンプト拡張",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/workflow_generation.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "ワークフロー生成後検証ロジック",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "命名規約検証 単体テスト",
+      "deliverables": ["expertAgent/tests/unit/test_workflow_output_validation.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "_transform_to_interface 関数実装",
+      "deliverables": ["jobqueue/app/core/worker.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "_execute_tasks での変換呼び出し",
+      "deliverables": ["jobqueue/app/core/worker.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "output_interface 取得処理",
+      "deliverables": ["jobqueue/app/repositories/task_master.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.4",
+      "description": "変換ロジック 単体テスト",
+      "deliverables": ["jobqueue/tests/unit/test_interface_transformer.py"],
+      "dependencies": ["2.1", "2.2"]
+    },
+    {
+      "task_id": "2.5",
+      "description": "タスクチェーン変換 結合テスト",
+      "deliverables": ["jobqueue/tests/integration/test_task_chain_transformation.py"],
+      "dependencies": ["2.2", "2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "スキーマ取得関数",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/workflow_helper.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.2",
+      "description": "プロンプトへのスキーマ注入",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/workflow_generation.yaml"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "ワークフロー生成コンテキスト拡張",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py"],
+      "dependencies": ["3.1", "3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "スキーマ注入 単体テスト",
+      "deliverables": ["expertAgent/tests/unit/test_api_schema_injection.py"],
+      "dependencies": ["3.3"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "check_interface_compatibility 関数",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "4.2",
+      "description": "evaluator_node への統合",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py"],
+      "dependencies": ["4.1"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "整合性検証 単体テスト",
+      "deliverables": ["expertAgent/tests/unit/test_interface_compatibility.py"],
+      "dependencies": ["4.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/workflow_generation.yaml",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/workflow_helper.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+    "expertAgent/tests/unit/test_workflow_output_validation.py",
+    "expertAgent/tests/unit/test_api_schema_injection.py",
+    "expertAgent/tests/unit/test_interface_compatibility.py",
+    "jobqueue/app/core/worker.py",
+    "jobqueue/app/repositories/task_master.py",
+    "jobqueue/tests/unit/test_interface_transformer.py",
+    "jobqueue/tests/integration/test_task_chain_transformation.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全シナリオパス",
+    "Ruff/MyPy エラーゼロ",
+    "CI/CD グリーン"
+  ],
+  "target_coverage": 90,
+  "target_projects": ["expertAgent", "jobqueue"],
+  "architecture_notes": {
+    "important": "Phase 1-2 は同時実装必須（アーキテクチャレビュー指示）",
+    "design_documents": [
+      "dev-reports/feature/issue/338/design-policy.md",
+      "dev-reports/feature/issue/338/architecture-review.md",
+      "dev-reports/feature/issue/338/implementation-summary.md"
+    ]
+  }
+}
