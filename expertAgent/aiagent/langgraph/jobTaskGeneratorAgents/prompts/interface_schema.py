@@ -12,6 +12,41 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.services.prompt_loader import PromptLoader
 
 
+class DerivedFieldDefinition(BaseModel):
+    """Derived field definition for downstream tasks.
+
+    Derived fields are pre-processed data outputs that downstream tasks can use
+    directly without additional string manipulation. This supports the
+    "Ready-to-Use Output" principle (Issue #337).
+
+    Example:
+        email_subject:
+            template: "Search results: {query}"
+            type: string
+            description: "Email subject line"
+            source_mapping:
+                query: "source.user_input.query"
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    template: str = Field(
+        description="Template string. Use {field_name} to reference source data"
+    )
+    type: str = Field(
+        default="string",
+        description="Type of the generated value"
+    )
+    description: str | None = Field(
+        default=None,
+        description="Description of the derived field"
+    )
+    source_mapping: dict[str, str] | None = Field(
+        default=None,
+        description="Explicit mapping of variable names to source paths (optional)"
+    )
+
+
 class InterfaceSchemaDefinition(BaseModel):
     """Interface schema for a single task."""
 
@@ -29,6 +64,10 @@ class InterfaceSchemaDefinition(BaseModel):
     )
     output_schema: dict[str, Any] = Field(
         description="JSON Schema for output (must be valid JSON Schema)"
+    )
+    derived_fields: dict[str, DerivedFieldDefinition] = Field(
+        default_factory=dict,
+        description="Derived field definitions for downstream tasks (ready-to-use data)"
     )
 
     @field_validator("input_schema", "output_schema", mode="before")

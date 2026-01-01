@@ -9,6 +9,7 @@ These tests verify the evaluator node's behavior including:
 - Empty task breakdown error handling
 - LLM error handling
 - Retry count reset behavior
+- Derived fields check for downstream tasks (Issue #337)
 
 Issue #111: Comprehensive test coverage for all workflow nodes.
 """
@@ -17,7 +18,10 @@ from unittest.mock import patch
 
 import pytest
 
-from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import evaluator_node
+from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import (
+    check_derived_fields_for_downstream_tasks,
+    evaluator_node,
+)
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.evaluation import (
     AlternativeProposal,
     APIExtensionProposal,
@@ -618,3 +622,201 @@ class TestEvaluatorNode:
 
         # No evaluation feedback should be generated for valid result
         assert result.get("evaluation_feedback") is None
+
+
+@pytest.mark.unit
+class TestCheckDerivedFieldsForDownstreamTasks:
+    """Unit tests for check_derived_fields_for_downstream_tasks function.
+
+    Issue #337: Ready-to-Use Output principle - ensure derived_fields
+    are defined for downstream tasks that need them.
+    """
+
+    def test_no_email_task(self) -> None:
+        """Test with tasks that don't require derived_fields."""
+        tasks = [
+            {"task_id": "search", "task_type": "search", "task_name": "Google Search"},
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+        ]
+        interfaces: dict = {}
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert issues == []
+
+    def test_email_task_with_missing_derived_fields(self) -> None:
+        """Test that missing email derived_fields are detected."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+        ]
+        interfaces = {
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                    # Missing x-derived-fields!
+                }
+            }
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert len(issues) == 2
+        assert any("email_subject" in issue for issue in issues)
+        assert any("email_body" in issue for issue in issues)
+        assert any("Summarize" in issue for issue in issues)
+
+    def test_email_task_with_complete_derived_fields(self) -> None:
+        """Test that properly defined derived_fields pass validation."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+        ]
+        interfaces = {
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                    "x-derived-fields": {
+                        "email_subject": {"template": "Summary: {query}"},
+                        "email_body": {"template": "{summary}"},
+                    },
+                }
+            }
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert issues == []
+
+    def test_email_task_with_partial_derived_fields(self) -> None:
+        """Test that partial derived_fields are detected."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+        ]
+        interfaces = {
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                    "x-derived-fields": {
+                        "email_subject": {"template": "Summary: {query}"},
+                        # Missing email_body!
+                    },
+                }
+            }
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert len(issues) == 1
+        assert "email_body" in issues[0]
+
+    def test_mail_task_type_variation(self) -> None:
+        """Test that 'mail' in task_type is also detected."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "send_mail", "task_type": "gmail_send", "task_name": "Send Mail"},
+        ]
+        interfaces = {
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                }
+            }
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert len(issues) == 2
+
+    def test_slack_task_with_missing_derived_fields(self) -> None:
+        """Test that missing Slack derived_fields are detected."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "notify_slack", "task_type": "slack_notification", "task_name": "Slack Notify"},
+        ]
+        interfaces = {
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                }
+            }
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert len(issues) == 1
+        assert "slack" in issues[0].lower()
+
+    def test_slack_task_with_slack_message(self) -> None:
+        """Test that slack_message alone satisfies Slack requirement."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "notify_slack", "task_type": "slack_notification", "task_name": "Slack Notify"},
+        ]
+        interfaces = {
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                    "x-derived-fields": {
+                        "slack_message": {"template": "{summary}"},
+                    },
+                }
+            }
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert issues == []
+
+    def test_first_task_is_email(self) -> None:
+        """Test that first task being email doesn't cause issues."""
+        tasks = [
+            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+        ]
+        interfaces: dict = {}
+
+        # First task has no preceding task, so no derived_fields needed
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert issues == []
+
+    def test_multiple_email_tasks(self) -> None:
+        """Test chain with multiple email tasks."""
+        tasks = [
+            {"task_id": "search", "task_type": "search", "task_name": "Search"},
+            {"task_id": "email1", "task_type": "email_send", "task_name": "Email 1"},
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "email2", "task_type": "email_send", "task_name": "Email 2"},
+        ]
+        interfaces = {
+            "search": {
+                "output_schema": {
+                    "properties": {"results": {"type": "array"}},
+                    # Missing derived_fields for email1
+                }
+            },
+            "summarize": {
+                "output_schema": {
+                    "properties": {"summary": {"type": "string"}},
+                    "x-derived-fields": {
+                        "email_subject": {"template": "Summary"},
+                        "email_body": {"template": "{summary}"},
+                    },
+                }
+            },
+        }
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        # Only email1's preceding task (search) is missing derived_fields
+        assert len(issues) == 2
+        assert any("Search" in issue for issue in issues)
+        assert not any("Summarize" in issue for issue in issues)
+
+    def test_empty_tasks_list(self) -> None:
+        """Test with empty tasks list."""
+        issues = check_derived_fields_for_downstream_tasks([], {})
+        assert issues == []
+
+    def test_missing_interface_for_task(self) -> None:
+        """Test when interface definition is missing for a task."""
+        tasks = [
+            {"task_id": "summarize", "task_type": "summarization", "task_name": "Summarize"},
+            {"task_id": "send_email", "task_type": "email_send", "task_name": "Send Email"},
+        ]
+        interfaces: dict = {}  # No interfaces defined
+
+        issues = check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        assert len(issues) == 2  # Both email_subject and email_body missing

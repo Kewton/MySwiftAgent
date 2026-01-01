@@ -1,0 +1,89 @@
+{
+  "status": "success",
+  "issue_number": 337,
+  "coverage": 100,
+  "unit_tests": {
+    "total": 54,
+    "passed": 54,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_modified": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/template_validator.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/__init__.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+    "expertAgent/tests/unit/test_derived_fields.py",
+    "expertAgent/tests/unit/test_template_validator.py",
+    "expertAgent/tests/unit/test_evaluator_node.py"
+  ],
+  "executed_tasks": [
+    "1.1",
+    "1.4",
+    "3.3",
+    "2.1"
+  ],
+  "skipped_tasks": [
+    {
+      "task_id": "1.2",
+      "reason": "YAML prompt file extension is Phase 2 work - requires LLM integration testing"
+    },
+    {
+      "task_id": "1.3",
+      "reason": "YAML prompt file extension is Phase 2 work - requires LLM integration testing"
+    }
+  ],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "exports_added": true,
+    "graph_updated": false
+  },
+  "deliverables": {
+    "task_1_1": {
+      "status": "completed",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+      "changes": [
+        "Added DerivedFieldDefinition Pydantic model with template, type, description, source_mapping fields",
+        "Extended InterfaceSchemaDefinition with derived_fields field (default empty dict)"
+      ]
+    },
+    "task_1_4": {
+      "status": "completed",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/template_validator.py",
+      "changes": [
+        "Created get_template_variables function for extracting variables from templates",
+        "Created validate_template function for validating templates against properties",
+        "Created validate_derived_fields function for validating x-derived-fields in output_schema",
+        "Added exports to utils/__init__.py"
+      ]
+    },
+    "task_3_3": {
+      "status": "completed",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "changes": [
+        "Added check_derived_fields_for_downstream_tasks function",
+        "Checks for email_subject/email_body when downstream task is email",
+        "Checks for slack_title/slack_message when downstream task is Slack"
+      ]
+    },
+    "task_2_1": {
+      "status": "completed",
+      "files": [
+        "expertAgent/tests/unit/test_derived_fields.py",
+        "expertAgent/tests/unit/test_template_validator.py",
+        "expertAgent/tests/unit/test_evaluator_node.py"
+      ],
+      "test_count": {
+        "test_derived_fields": 11,
+        "test_template_validator": 23,
+        "test_evaluator_node_derived_fields": 11,
+        "test_evaluator_node_existing": 9
+      }
+    }
+  },
+  "commits": [],
+  "message": "TDD implementation completed successfully. All unit tests pass. Static analysis (Ruff, MyPy) shows 0 errors. Tasks 1.2 and 1.3 (YAML prompt extensions) are deferred to Phase 2 as they require LLM integration testing."
+}

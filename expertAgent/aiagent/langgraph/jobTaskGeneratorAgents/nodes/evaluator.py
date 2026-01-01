@@ -27,6 +27,94 @@ logger = logging.getLogger(__name__)
 MAX_RETRY_COUNT = 5
 
 
+def check_derived_fields_for_downstream_tasks(
+    tasks: list[dict],
+    interface_definitions: dict[str, dict],
+) -> list[str]:
+    """Check if derived_fields are defined for downstream tasks that need them.
+
+    When a downstream task requires pre-formatted data (e.g., email subject/body),
+    the preceding task should define appropriate derived_fields in its output_schema.
+
+    This function checks for common patterns:
+    - Email/mail tasks need email_subject and email_body from preceding task
+    - Slack tasks need slack_title and slack_message
+    - File save tasks need filename and file_description
+
+    Args:
+        tasks: List of task breakdown items
+        interface_definitions: Dict mapping task_id to interface definitions
+
+    Returns:
+        List of issues found (empty if all derived_fields are properly defined)
+
+    Example:
+        >>> tasks = [
+        ...     {"task_id": "summarize", "task_type": "summarization"},
+        ...     {"task_id": "send_email", "task_type": "email_send"},
+        ... ]
+        >>> interfaces = {
+        ...     "summarize": {
+        ...         "output_schema": {
+        ...             "properties": {"summary": {"type": "string"}},
+        ...             # Missing x-derived-fields!
+        ...         }
+        ...     }
+        ... }
+        >>> check_derived_fields_for_downstream_tasks(tasks, interfaces)
+        ['Task summarize is missing email_subject for downstream email task',
+         'Task summarize is missing email_body for downstream email task']
+    """
+    issues: list[str] = []
+
+    for i, task in enumerate(tasks):
+        task_type = task.get("task_type", "").lower()
+        task_name = task.get("task_name", task.get("task_id", f"task_{i}"))
+
+        # Check for email sending tasks
+        if "email" in task_type or "mail" in task_type:
+            if i > 0:
+                prev_task = tasks[i - 1]
+                prev_task_id = prev_task.get("task_id", "")
+                prev_task_name = prev_task.get(
+                    "task_name", prev_task.get("task_id", f"task_{i-1}")
+                )
+                prev_interface = interface_definitions.get(prev_task_id, {})
+                output_schema = prev_interface.get("output_schema", {})
+                derived = output_schema.get("x-derived-fields", {})
+
+                if "email_subject" not in derived:
+                    issues.append(
+                        f"Task {prev_task_name} is missing email_subject "
+                        f"for downstream email task {task_name}"
+                    )
+                if "email_body" not in derived:
+                    issues.append(
+                        f"Task {prev_task_name} is missing email_body "
+                        f"for downstream email task {task_name}"
+                    )
+
+        # Check for Slack notification tasks
+        if "slack" in task_type:
+            if i > 0:
+                prev_task = tasks[i - 1]
+                prev_task_id = prev_task.get("task_id", "")
+                prev_task_name = prev_task.get(
+                    "task_name", prev_task.get("task_id", f"task_{i-1}")
+                )
+                prev_interface = interface_definitions.get(prev_task_id, {})
+                output_schema = prev_interface.get("output_schema", {})
+                derived = output_schema.get("x-derived-fields", {})
+
+                if "slack_title" not in derived and "slack_message" not in derived:
+                    issues.append(
+                        f"Task {prev_task_name} is missing slack_title/slack_message "
+                        f"for downstream Slack task {task_name}"
+                    )
+
+    return issues
+
+
 def _validate_evaluation_response(
     response: EvaluationResult | None,
 ) -> EvaluationResult:

@@ -1,0 +1,138 @@
+{
+  "issue_number": 337,
+  "issue_title": "タスクチェーン Ready-to-Use Output 原則の導入",
+  "acceptance_criteria": [
+    "derived_fields を含む output_interface が定義可能",
+    "ワークフロー生成LLMが derived_fields を正しく出力に含める",
+    "下流タスクが文字列加工なしでデータを使用可能"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "DerivedFieldDefinition スキーマ追加",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+      "deliverables": [
+        "DerivedFieldDefinition クラス追加",
+        "InterfaceSchemaDefinition に derived_fields フィールド追加",
+        "source_mapping フィールド対応"
+      ]
+    },
+    {
+      "task_id": "1.2",
+      "description": "interface_schema プロンプト拡張",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.yaml",
+      "deliverables": [
+        "derived_fields の目的と使用ケース説明",
+        "x-derived-fields の定義方法",
+        "テンプレート変数のソース解決ルール"
+      ]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ワークフロー生成プロンプト拡張",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/workflow_generation.yaml",
+      "deliverables": [
+        "x-derived-fields 処理ルール",
+        "stringTemplateAgent ノード生成ルール",
+        "変数ソース解決の優先順位ルール",
+        "GraphAI 参照形式の統一"
+      ]
+    },
+    {
+      "task_id": "1.4",
+      "description": "テンプレート検証ユーティリティ作成",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/template_validator.py",
+      "deliverables": [
+        "validate_template 関数",
+        "validate_derived_fields 関数",
+        "get_template_variables 関数"
+      ]
+    },
+    {
+      "task_id": "3.3",
+      "description": "評価ノード拡張",
+      "target_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "deliverables": [
+        "check_derived_fields_in_evaluator 関数",
+        "メール送信タスク検出時の derived_fields チェック"
+      ]
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "DerivedFieldDefinition スキーマ追加",
+      "estimated_hours": 2,
+      "deliverables": ["prompts/interface_schema.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "interface_schema プロンプト拡張",
+      "estimated_hours": 2,
+      "deliverables": ["prompts/interface_schema.yaml"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ワークフロー生成プロンプト拡張",
+      "estimated_hours": 2,
+      "deliverables": ["prompts/workflow_generation.yaml"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "テンプレート検証ユーティリティ作成",
+      "estimated_hours": 3,
+      "deliverables": ["utils/template_validator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト作成",
+      "estimated_hours": 3,
+      "deliverables": ["tests/unit/test_derived_fields.py", "tests/unit/test_template_validator.py"],
+      "dependencies": ["1.1", "1.4"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "評価ノード拡張",
+      "estimated_hours": 2,
+      "deliverables": ["nodes/evaluator.py"],
+      "dependencies": ["1.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.yaml",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/workflow_generation.yaml",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/template_validator.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+    "expertAgent/tests/unit/test_derived_fields.py",
+    "expertAgent/tests/unit/test_template_validator.py"
+  ],
+  "definition_of_done": [
+    "DerivedFieldDefinition クラスがバリデーション可能",
+    "source_mapping フィールドが正しく動作",
+    "validate_template が変数抽出・検証可能",
+    "validate_derived_fields が全フィールドを検証",
+    "評価ノードで derived_fields チェックが動作",
+    "単体テストカバレッジ 90% 以上",
+    "静的解析エラー 0 件"
+  ],
+  "target_coverage": 90,
+  "design_documents": {
+    "design_policy": "dev-reports/feature/issue/337/design-policy.md",
+    "architecture_review": "dev-reports/feature/issue/337/architecture-review.md",
+    "issue_summary": "dev-reports/feature/issue/337/issue-337-summary.md"
+  },
+  "technical_notes": {
+    "template_variable_resolution": [
+      "優先順位1: 同一タスクの output_schema.properties に存在 → 同一タスク出力から取得",
+      "優先順位2: properties に存在しない → source.user_input から取得",
+      "優先順位3: source_mapping で明示的に指定 → 指定パスから取得"
+    ],
+    "graphai_reference_format": ":node_name.field 形式を推奨",
+    "backward_compatibility": "x-derived-fields はオプショナル、既存タスクは影響なし"
+  }
+}
