@@ -107,3 +107,12 @@ class TestTypeValidationRulesContent:
         assert "${" in TYPE_VALIDATION_RULES
         # Should explain that only simple substitution works
         assert "variable" in TYPE_VALIDATION_RULES.lower() or "変数" in TYPE_VALIDATION_RULES
+
+    def test_contains_reference_syntax_location_rule(self):
+        """TYPE_VALIDATION_RULES should document where :reference syntax works."""
+        # Should explain that :reference only works in inputs: block
+        assert "inputs" in TYPE_VALIDATION_RULES.lower()
+        # Should warn about string literals
+        assert "文字列" in TYPE_VALIDATION_RULES or "string" in TYPE_VALIDATION_RULES.lower()
+        # Should have the mandatory rule
+        assert "MANDATORY" in TYPE_VALIDATION_RULES or "必須" in TYPE_VALIDATION_RULES

@@ -107,6 +107,44 @@ llm_node:
 - :node.field returns a specific field (type depends on field definition)
 - When API expects String, ensure you're not passing Object directly
 - Use stringTemplateAgent to build String from multiple fields
+
+### ⚠️ 最重要ルール: :reference 構文の使用場所 - MANDATORY
+
+**:reference 構文は inputs: ブロック内の値としてのみ機能します。文字列リテラル内では動作しません。**
+
+❌ 絶対禁止（動作しない）:
+```yaml
+# 文字列リテラル内の :reference は単なるテキストになる
+user_input: |-
+  検索結果: :previous_node
+  クエリ: :source.user_input.query
+```
+
+✅ 正しいパターン（必須）:
+```yaml
+# Step 1: stringTemplateAgent で動的データをプロンプトに組み込む
+build_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    search_data: :previous_node      # ← inputs 内なので参照として機能
+    query: :source.user_input.query  # ← inputs 内なので参照として機能
+  params:
+    template: |-
+      検索結果: ${search_data}
+      クエリ: ${query}
+
+# Step 2: fetchAgent で LLM を呼び出す
+call_llm:
+  agent: fetchAgent
+  inputs:
+    body:
+      user_input: :build_prompt  # ← inputs 内なので参照として機能（String型）
+```
+
+**なぜこのルールが重要か**:
+- GraphAI は inputs: ブロックを解析して :reference を解決する
+- 文字列値の内部は解析されないため、":reference" は文字通りのテキストになる
+- このパターンに従わないワークフローは必ず失敗する
 """
 
 # Load prompt from YAML
