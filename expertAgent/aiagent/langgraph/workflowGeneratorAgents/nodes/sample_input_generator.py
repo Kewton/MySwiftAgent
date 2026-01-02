@@ -2,14 +2,156 @@
 
 This module provides the sample input generator node that creates sample
 user_input data from Input Interface JSON Schema for workflow testing.
+
+Issue #340: Added object array validation for stringTemplateAgent inputs
+to prevent [object Object] conversion issues.
 """
 
 import logging
 from typing import Any
 
+import yaml
+
 from ..state import WorkflowGeneratorState
 
 logger = logging.getLogger(__name__)
+
+
+def _get_string_template_input_fields(yaml_content: str) -> set[str]:
+    """Extract user_input field names used by stringTemplateAgent nodes.
+
+    This function parses the workflow YAML and identifies which user_input
+    fields are passed to stringTemplateAgent nodes via :source.user_input.xxx
+    references. These fields need to be validated for primitive array types
+    to prevent [object Object] conversion issues.
+
+    Args:
+        yaml_content: Workflow YAML content
+
+    Returns:
+        Set of field names from user_input that are used by stringTemplateAgent
+    """
+    if not yaml_content:
+        return set()
+
+    try:
+        workflow = yaml.safe_load(yaml_content)
+    except yaml.YAMLError:
+        logger.warning("Failed to parse YAML for stringTemplateAgent field extraction")
+        return set()
+
+    if not isinstance(workflow, dict):
+        return set()
+
+    nodes = workflow.get("nodes", {})
+    if not isinstance(nodes, dict):
+        return set()
+
+    fields: set[str] = set()
+
+    for _node_id, node_def in nodes.items():
+        if not isinstance(node_def, dict):
+            continue
+
+        agent = node_def.get("agent")
+        if agent != "stringTemplateAgent":
+            continue
+
+        inputs = node_def.get("inputs", {})
+        if not isinstance(inputs, dict):
+            continue
+
+        for _field_name, field_ref in inputs.items():
+            if not isinstance(field_ref, str):
+                continue
+
+            # Extract field name from :source.user_input.xxx pattern
+            if field_ref.startswith(":source.user_input."):
+                # Extract the field name after :source.user_input.
+                field_parts = field_ref.split(".")
+                if len(field_parts) >= 3:
+                    # The field name is the third part (index 2)
+                    user_input_field = field_parts[2]
+                    fields.add(user_input_field)
+
+    return fields
+
+
+def _object_array_issue(
+    field_name: str,
+    index: int,
+    actual_type: str,
+) -> dict[str, Any]:
+    """Create standardized issue dict for object in array detection.
+
+    Following the same pattern as workflow_schema_validator._issue().
+
+    Args:
+        field_name: Name of the array field containing object
+        index: Index of the object in the array
+        actual_type: Actual type of the element (e.g., 'dict')
+
+    Returns:
+        Standardized issue dictionary
+    """
+    return {
+        "node_id": "sample_input",
+        "issue_type": "object_in_array",
+        "message": (
+            f"Array field '{field_name}' contains object at index {index}. "
+            f"stringTemplateAgent will convert this to '[object Object]'."
+        ),
+        "severity": "error",
+        "field_name": field_name,
+        "expected_value": "primitive type (string, number, boolean)",
+        "actual_value": actual_type,
+        "suggestion": (
+            "Use primitive types in arrays, or serialize objects before "
+            "passing to stringTemplateAgent. Consider extracting specific "
+            "fields from objects instead of passing entire objects."
+        ),
+    }
+
+
+def _validate_primitive_arrays(
+    sample_input: dict[str, Any],
+    target_fields: set[str],
+) -> list[dict[str, Any]]:
+    """Validate that array elements in target fields are primitive types.
+
+    Only validates arrays in fields that are identified as being passed
+    to stringTemplateAgent nodes (target_fields). Non-target fields are
+    ignored to prevent false positives.
+
+    Args:
+        sample_input: Sample input data to validate
+        target_fields: Set of field names to validate (from stringTemplateAgent inputs)
+
+    Returns:
+        List of validation issues for object arrays
+    """
+    if not sample_input or not target_fields:
+        return []
+
+    issues: list[dict[str, Any]] = []
+
+    for field_name, value in sample_input.items():
+        # Only validate target fields (stringTemplateAgent inputs)
+        if field_name not in target_fields:
+            continue
+
+        # Only validate array fields
+        if not isinstance(value, list):
+            continue
+
+        # Check each element in the array
+        for index, item in enumerate(value):
+            if isinstance(item, dict):
+                issues.append(
+                    _object_array_issue(field_name, index, type(item).__name__)
+                )
+
+    return issues
 
 
 SchemaValue = dict[str, Any] | str | int | float | bool | list[Any] | None

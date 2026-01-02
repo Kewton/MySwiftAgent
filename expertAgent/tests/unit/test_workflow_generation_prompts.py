@@ -119,6 +119,33 @@ class TestTypeValidationRulesContent:
         assert "MANDATORY" in TYPE_VALIDATION_RULES or "必須" in TYPE_VALIDATION_RULES
 
 
+class TestArrayTypeConstraints:
+    """Tests for array type constraints in TYPE_VALIDATION_RULES (Issue #340)."""
+
+    def test_type_validation_rules_contains_array_constraint(self):
+        """TYPE_VALIDATION_RULES should contain array type constraint warning.
+
+        Issue #340: stringTemplateAgent converts object arrays to [object Object].
+        The prompt should warn about this limitation.
+        """
+        # Should mention array type constraints
+        assert "配列" in TYPE_VALIDATION_RULES or "array" in TYPE_VALIDATION_RULES.lower()
+
+    def test_type_validation_rules_mentions_object_object(self):
+        """TYPE_VALIDATION_RULES should mention [object Object] issue."""
+        # Should warn about [object Object] conversion
+        assert "[object Object]" in TYPE_VALIDATION_RULES
+
+    def test_type_validation_rules_mentions_primitive_types(self):
+        """TYPE_VALIDATION_RULES should recommend primitive types for arrays."""
+        # Should mention that arrays should contain primitive types
+        assert (
+            "プリミティブ" in TYPE_VALIDATION_RULES
+            or "primitive" in TYPE_VALIDATION_RULES.lower()
+            or "string" in TYPE_VALIDATION_RULES.lower()
+        )
+
+
 class TestApiUrlConfiguration:
     """Tests for API URL configuration (Issue #333 fix)."""
 

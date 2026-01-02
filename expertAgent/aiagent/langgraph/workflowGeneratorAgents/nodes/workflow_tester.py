@@ -5,6 +5,7 @@ This module provides the workflow tester node that:
 2. Registers the generated workflow to graphAiServer
 3. Updates TaskMaster body_template with correct model_name (Issue #293)
 4. Executes workflow with sample input
+5. Detects [object Object] patterns in execution results (Issue #340)
 """
 
 import logging
@@ -24,6 +25,58 @@ from ..state import WorkflowGeneratorState
 from .workflow_validator import WorkflowSchemaValidator
 
 logger = logging.getLogger(__name__)
+
+
+def _detect_object_object_pattern(
+    execution_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Recursively detect [object Object] patterns in execution result.
+
+    This is Layer 3 (runtime detection) of the Issue #340 validation.
+    It catches [object Object] patterns that were not detected by Layer 1
+    (test data validation) at generation time.
+
+    Args:
+        execution_result: Execution result from graphAiServer
+
+    Returns:
+        List of issues with [object Object] pattern detection info
+    """
+    issues: list[dict[str, Any]] = []
+
+    def _scan(obj: Any, path: str = "") -> None:
+        """Recursively scan object for [object Object] patterns."""
+        if isinstance(obj, str):
+            if "[object Object]" in obj:
+                # Truncate long values for readability
+                actual_value = obj[:100] + "..." if len(obj) > 100 else obj
+                issues.append(
+                    {
+                        "node_id": "workflow_execution",
+                        "issue_type": "object_object_detected",
+                        "message": f"[object Object] pattern detected at '{path}'",
+                        "severity": "error",
+                        "field_name": path,
+                        "actual_value": actual_value,
+                        "suggestion": (
+                            "Ensure all objects are serialized before passing to "
+                            "stringTemplateAgent. Use primitive types in arrays or "
+                            "extract specific fields from objects."
+                        ),
+                    }
+                )
+        elif isinstance(obj, dict):
+            for key, value in obj.items():
+                new_path = f"{path}.{key}" if path else key
+                _scan(value, new_path)
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                new_path = f"{path}[{i}]"
+                _scan(item, new_path)
+
+    _scan(execution_result)
+    return issues
+
 
 # GraphAI Server URL (default: 8005 per docs/ops/local-development.md)
 GRAPHAISERVER_BASE_URL = os.getenv(

@@ -127,6 +127,10 @@ class WorkflowGeneratorState(TypedDict, total=False):
     schema_validation_issues: list[dict[str, Any]]
     has_schema_errors: bool
 
+    # ===== Object Array Validation (Issue #340) =====
+    object_array_issues: list[dict[str, Any]]
+    has_object_array_errors: bool
+
     # ===== Self-Repair =====
     retry_count: int
     error_feedback: str | None
@@ -205,6 +209,9 @@ def create_initial_state(
         "schema_validation_result": None,
         "schema_validation_issues": [],
         "has_schema_errors": False,
+        # Object Array Validation (Issue #340)
+        "object_array_issues": [],
+        "has_object_array_errors": False,
         # Self-Repair
         "retry_count": 0,
         "error_feedback": None,

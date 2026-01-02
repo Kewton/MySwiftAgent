@@ -21,9 +21,7 @@ from core.config import settings
 # Default: http://localhost:8004 for local development
 # Override via EXPERTAGENT_BASE_URL environment variable
 # Fix: Removed incorrect /aiagent-api prefix (Issue #333)
-EXPERTAGENT_API_URL = (
-    f"{settings.EXPERTAGENT_BASE_URL}/v1/aiagent/utility/jsonoutput"
-)
+EXPERTAGENT_API_URL = f"{settings.EXPERTAGENT_BASE_URL}/v1/aiagent/utility/jsonoutput"
 
 # Issue #333: Type validation rules for workflow generation
 # These rules help prevent type mismatches and field name errors at generation time
@@ -52,6 +50,51 @@ TYPE_VALIDATION_RULES = """
 
 ✅ 許可される構文:
 - `${variable}` - シンプルな変数参照のみ
+
+### 配列の型制約 - Issue #340 CRITICAL
+
+**stringTemplateAgent にオブジェクト配列を渡すと [object Object] に変換されます。**
+
+❌ 禁止パターン（[object Object] になる）:
+```yaml
+# search_results が [{title: "...", url: "..."}, ...] の場合
+build_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    results: :source.user_input.search_results  # オブジェクト配列
+  params:
+    template: "検索結果: ${results}"
+# 出力: "検索結果: [object Object],[object Object]"
+```
+
+✅ 正しいパターン:
+
+**パターン1: プリミティブ型配列を使用**
+```yaml
+# focus_points が ["ニュース", "技術"] の場合（文字列配列）
+build_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    points: :source.user_input.focus_points  # プリミティブ配列はOK
+  params:
+    template: "フォーカス: ${points}"
+# 出力: "フォーカス: ニュース,技術"
+```
+
+**パターン2: 配列から個別フィールドを展開**
+```yaml
+# オブジェクト配列の場合は個別フィールドを抽出
+build_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    title1: :source.user_input.search_results[0].title
+    url1: :source.user_input.search_results[0].url
+  params:
+    template: "結果1: ${title1} (${url1})"
+```
+
+**重要**: テストデータ生成時に、stringTemplateAgent に渡すフィールドには
+プリミティブ型（string, number, boolean）のみを含む配列を使用してください。
 
 ### Object 型データを LLM プロンプトに含める正しい方法
 
