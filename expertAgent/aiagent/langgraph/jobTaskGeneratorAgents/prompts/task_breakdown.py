@@ -18,8 +18,9 @@ from app.services.prompt_loader import PromptLoader
 from core.config import settings
 
 # Dynamic API URL for LLM processing
+# Fix: Removed incorrect /aiagent-api prefix (Issue #333)
 EXPERTAGENT_JSONOUTPUT_URL = (
-    f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+    f"{settings.EXPERTAGENT_BASE_URL}/v1/aiagent/utility/jsonoutput"
 )
 
 
