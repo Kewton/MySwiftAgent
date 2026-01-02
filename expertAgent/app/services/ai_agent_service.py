@@ -120,7 +120,7 @@ class AiAgentService(BaseService):
             },
         )
 
-        prompt = self._build_prompt(request.user_input)
+        prompt = self._build_prompt(request.user_input, request.system_prompt)
 
         max_attempts = 1
         if request.force_json:
@@ -225,7 +225,7 @@ class AiAgentService(BaseService):
         if langfuse_handler:
             langchain_config["callbacks"] = [langfuse_handler]
 
-        prompt = self._build_prompt(request.user_input)
+        prompt = self._build_prompt(request.user_input, request.system_prompt)
         model_name = request.model_name or "gpt-4o-mini"
 
         agent_type = "generic"
@@ -321,8 +321,20 @@ class AiAgentService(BaseService):
             trace_id=trace_id,
         )
 
-    def _build_prompt(self, user_input: str) -> str:
-        return (
-            f"# メタ情報:\n- 現在の時刻は「{datetime.now()}」です。\n\n"
-            f"# 指示書\n{user_input}"
-        )
+    def _build_prompt(self, user_input: str, system_prompt: str | None = None) -> str:
+        """Build prompt with optional system prompt.
+
+        Issue #333: Added system_prompt support to enable JSON output instructions
+        and other system-level guidance for LLM responses.
+
+        Args:
+            user_input: The user's input/instruction
+            system_prompt: Optional system prompt for LLM behavior guidance
+
+        Returns:
+            Formatted prompt string
+        """
+        base = f"# メタ情報:\n- 現在の時刻は「{datetime.now()}」です。\n\n"
+        if system_prompt:
+            base += f"# システムプロンプト\n{system_prompt}\n\n"
+        return base + f"# 指示書\n{user_input}"

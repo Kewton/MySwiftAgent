@@ -458,6 +458,7 @@ ai_agent_apis:
     endpoint: "/v1/aiagent/utility/jsonoutput"
     method: "POST"
     description: "構造化JSON出力専用エージェント"
+    recommended_timeout: 90  # 秒。LLM処理のため90秒を推奨
     use_cases:
       - "自然言語→JSON変換"
       - "常にJSON形式で返却"

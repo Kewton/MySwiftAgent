@@ -327,6 +327,7 @@ async def workflow_tester_node(
                 "test_http_status": execution_status,
                 "validation_errors": output_validation_errors,
                 "status": "workflow_tested",
+                "yaml_content": yaml_content,  # Issue #338: Return updated yaml with timeout overrides
             }
 
     except httpx.TimeoutException as e:

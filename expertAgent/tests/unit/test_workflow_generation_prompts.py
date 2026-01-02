@@ -74,10 +74,14 @@ class TestPromptIntegration:
 class TestTypeValidationRulesContent:
     """Detailed tests for TYPE_VALIDATION_RULES content quality."""
 
-    def test_contains_object_to_string_conversion_example(self):
-        """TYPE_VALIDATION_RULES should contain example of Object to String conversion."""
-        # Should have an example showing how to convert Object to String
-        assert "convert" in TYPE_VALIDATION_RULES.lower()
+    def test_contains_object_to_string_handling_example(self):
+        """TYPE_VALIDATION_RULES should contain example of Object to String handling."""
+        # Should have examples showing how to handle Object type data for LLM prompts
+        # Check for the pattern examples in the rules
+        assert "stringTemplateAgent" in TYPE_VALIDATION_RULES
+        # Should explain correct usage pattern
+        assert "inputs:" in TYPE_VALIDATION_RULES
+        assert "template:" in TYPE_VALIDATION_RULES
 
     def test_contains_reference_syntax_explanation(self):
         """TYPE_VALIDATION_RULES should explain :previous_node reference syntax."""
@@ -89,3 +93,17 @@ class TestTypeValidationRulesContent:
     def test_contains_capability_reference(self):
         """TYPE_VALIDATION_RULES should reference capabilities.yaml."""
         assert "capabilities" in TYPE_VALIDATION_RULES.lower()
+
+    def test_contains_string_template_agent_limitations(self):
+        """TYPE_VALIDATION_RULES should document stringTemplateAgent limitations."""
+        # Should clearly state that JS functions don't work
+        assert "JavaScript" in TYPE_VALIDATION_RULES or "javascript" in TYPE_VALIDATION_RULES.lower()
+        # Should prohibit JSON.stringify usage
+        assert "JSON.stringify" in TYPE_VALIDATION_RULES
+
+    def test_contains_correct_syntax_examples(self):
+        """TYPE_VALIDATION_RULES should show correct ${variable} syntax."""
+        # Should have examples of correct simple variable syntax
+        assert "${" in TYPE_VALIDATION_RULES
+        # Should explain that only simple substitution works
+        assert "variable" in TYPE_VALIDATION_RULES.lower() or "変数" in TYPE_VALIDATION_RULES

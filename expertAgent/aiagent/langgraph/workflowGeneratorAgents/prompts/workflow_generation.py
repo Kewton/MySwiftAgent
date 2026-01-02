@@ -26,6 +26,7 @@ EXPERTAGENT_API_URL = (
 
 # Issue #333: Type validation rules for workflow generation
 # These rules help prevent type mismatches and field name errors at generation time
+# Fix: Removed incorrect JSON.stringify instruction (stringTemplateAgent doesn't support JS functions)
 TYPE_VALIDATION_RULES = """
 ## Important Type Validation Rules (Issue #333)
 
@@ -37,29 +38,62 @@ TYPE_VALIDATION_RULES = """
 
 ### API Expected Types - CRITICAL
 - `/v1/aiagent/utility/jsonoutput` expects `user_input` as **String type**
-- If you need to pass Object type data to user_input, convert it first:
-  * Use stringTemplateAgent with JSON.stringify pattern
-  * Or use stringTemplateAgent to build a text prompt
+- If you need to pass Object type data to user_input, use stringTemplateAgent to build a text prompt
 
-### stringTemplateAgent Type Conversion Pattern
-When you need to convert Object type to String type:
+### stringTemplateAgent 重要な制限事項 - CRITICAL
+
+**stringTemplateAgent は単純な変数置換のみをサポートします。JavaScript 関数は使用できません。**
+
+❌ 使用禁止（動作しない）:
+- `${JSON.stringify(data)}` - JavaScript 関数は評価されない
+- `${data.field}` - ネストアクセスは動作しない
+- `${data + other}` - 式は評価されない
+
+✅ 許可される構文:
+- `${variable}` - シンプルな変数参照のみ
+
+### Object 型データを LLM プロンプトに含める正しい方法
+
+**方法1: 個別フィールドを inputs で展開（推奨）**
 ```yaml
-# Step 1: Convert Object to String using JSON.stringify
-convert_to_string:
+build_prompt:
   agent: stringTemplateAgent
   inputs:
-    data: :fetch_data  # Object type input
+    title: :search_result.result.title
+    url: :search_result.result.url
+    snippet: :search_result.result.snippet
   params:
-    template: "${JSON.stringify(data)}"
+    template: |-
+      検索結果を分析してください。
 
-# Step 2: Now use the String type result
-process_data:
+      タイトル: ${title}
+      URL: ${url}
+      スニペット: ${snippet}
+
+      # RESPONSE_FORMAT:
+      {"analysis": "分析結果"}
+```
+
+**方法2: 配列データは各要素のフィールドを展開**
+```yaml
+# 配列の最初の要素を使う場合
+build_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    first_result: :search_results.result[0]
+  params:
+    template: |-
+      最初の検索結果: ${first_result}
+```
+
+**方法3: 単一フィールド参照（シンプルなケース）**
+```yaml
+# stringTemplateAgent 不要 - 直接参照可能
+llm_node:
   agent: fetchAgent
   inputs:
-    url: http://localhost:8004/aiagent-api/v1/aiagent/utility/jsonoutput
-    method: POST
     body:
-      user_input: :convert_to_string  # Now String type
+      user_input: :build_prompt  # stringTemplateAgent の出力（String型）
 ```
 
 ### Field Name Validation - CRITICAL
@@ -72,6 +106,7 @@ process_data:
 - :node returns the full output object (Object type)
 - :node.field returns a specific field (type depends on field definition)
 - When API expects String, ensure you're not passing Object directly
+- Use stringTemplateAgent to build String from multiple fields
 """
 
 # Load prompt from YAML
