@@ -372,6 +372,25 @@ async def sample_input_generator_node(
         logger.info(f"Generated sample input: {sample_input}")
         logger.debug(f"Sample input type: {type(sample_input)}")
 
+        # Issue #340: Validate object arrays in sample_input for stringTemplateAgent
+        yaml_content = state.get("yaml_content", "")
+        if yaml_content and isinstance(sample_input, dict):
+            target_fields = _get_string_template_input_fields(yaml_content)
+            object_issues = _validate_primitive_arrays(sample_input, target_fields)
+            if object_issues:
+                logger.warning(
+                    "[OBJECT_ARRAY_VALIDATION] Detected object arrays in sample_input: %s",
+                    object_issues,
+                )
+                return {
+                    **state,
+                    "sample_input": sample_input,
+                    "object_array_issues": object_issues,
+                    "has_object_array_errors": True,
+                    "needs_test_data_regeneration": True,
+                    "status": "object_array_detected",
+                }
+
         # Update state
         return {
             **state,

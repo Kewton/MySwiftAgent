@@ -1,0 +1,56 @@
+{
+  "issue_number": 340,
+  "feature_summary": "stringTemplateAgent がオブジェクトを [object Object] に変換し HTTP 500 を引き起こす問題の修正",
+  "acceptance_criteria": [
+    "stringTemplateAgent にオブジェクトを渡した場合、[object Object] ではなく適切な文字列表現を生成",
+    "テストデータ生成時にオブジェクト配列が不適切に使用されないようバリデーション",
+    "workflow_tester で [object Object] パターンを検出した場合にエラーまたは警告を出力",
+    "v1.36 で失敗した「検索結果の分析」タスクが成功することを確認"
+  ],
+  "labels": ["bug"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "graphAiServer", "jobqueue", "myVault"],
+  "external_dependencies": ["LLM API (Gemini)", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_scenarios": [
+      {
+        "name": "シナリオ1: オブジェクト配列検出テスト",
+        "description": "sample_input_generator_node が stringTemplateAgent 入力フィールドのオブジェクト配列を検出する",
+        "test_type": "unit_integration",
+        "verification": "検出された場合に object_array_issues が設定され、has_object_array_errors=True"
+      },
+      {
+        "name": "シナリオ2: [object Object] ランタイム検出テスト",
+        "description": "workflow_tester_node が実行結果の [object Object] パターンを検出する",
+        "test_type": "unit_integration",
+        "verification": "検出された場合にログ出力され、object_array_issues に追加"
+      },
+      {
+        "name": "シナリオ3: TYPE_VALIDATION_RULES 配列制約確認",
+        "description": "プロンプトに配列型制約ルールが含まれている",
+        "test_type": "unit",
+        "verification": "TYPE_VALIDATION_RULES に Issue #340 配列制約セクションが存在"
+      },
+      {
+        "name": "シナリオ4: ワークフロー生成API E2Eテスト",
+        "description": "workflow-generator API でオブジェクト配列検出が動作する",
+        "test_type": "e2e",
+        "verification": "API呼び出しが正常に動作し、バリデーションが機能する"
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"},
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"}
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_340_acceptance.py",
+  "playwright_test_file": null
+}

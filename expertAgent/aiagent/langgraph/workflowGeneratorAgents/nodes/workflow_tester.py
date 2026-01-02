@@ -349,6 +349,32 @@ async def workflow_tester_node(
                 task_master_id,
             )
 
+            # Issue #340: Detect [object Object] pattern in execution result
+            if execution_status == 200 and isinstance(execution_result, dict):
+                object_object_issues = _detect_object_object_pattern(execution_result)
+                if object_object_issues:
+                    logger.error(
+                        "[OBJECT_OBJECT_DETECTION] Detected [object Object] pattern "
+                        "in execution result: %s",
+                        object_object_issues,
+                    )
+                    existing_issues = list(state.get("object_array_issues", []) or [])
+                    return {
+                        **state,
+                        "workflow_registered": True,
+                        "workflow_file_path": workflow_file_path,
+                        "test_execution_result": execution_result,
+                        "test_http_status": execution_status,
+                        "object_array_issues": existing_issues + object_object_issues,
+                        "has_object_array_errors": True,
+                        "validation_errors": [],
+                        "status": "object_object_detected",
+                        "error_message": (
+                            "Detected [object Object] pattern in workflow execution result"
+                        ),
+                        "yaml_content": yaml_content,
+                    }
+
             # Step 3: Post-execution output validation (if execution succeeded)
             output_validation_errors: list[str] = []
             if (

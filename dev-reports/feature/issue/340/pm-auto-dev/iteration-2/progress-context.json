@@ -1,0 +1,117 @@
+{
+  "issue_number": 340,
+  "iteration": 2,
+  "feature_summary": "stringTemplateAgent がオブジェクトを [object Object] に変換し HTTP 500 を引き起こす問題の修正",
+  "labels": ["bug"],
+  "target_project": "expertAgent",
+  "phases_completed": {
+    "phase_1": {
+      "name": "Issue情報収集",
+      "status": "completed",
+      "details": "GitHub Issue #340 の情報を収集し、work-plan.md を確認"
+    },
+    "phase_2": {
+      "name": "TDD実装",
+      "status": "completed",
+      "iterations": 2,
+      "details": "イテレーション1で関数定義、イテレーション2でノード統合を完了"
+    },
+    "phase_2_5": {
+      "name": "TDD結果検証",
+      "status": "completed",
+      "details": "全259テストがパス、静的解析エラー0"
+    },
+    "phase_3": {
+      "name": "受入テスト",
+      "status": "completed",
+      "details": "14受入テストが全てパス"
+    },
+    "phase_3_5": {
+      "name": "受入テストファイル検証",
+      "status": "completed",
+      "details": "expertAgent/tests/acceptance/test_issue_340_acceptance.py を確認"
+    },
+    "phase_4": {
+      "name": "リファクタリング",
+      "status": "completed",
+      "details": "ruff check/format, mypy 全てパス"
+    }
+  },
+  "implementation_summary": {
+    "architecture": "3層防御アーキテクチャ",
+    "layers": [
+      {
+        "layer": 1,
+        "name": "テストデータ型バリデーション",
+        "file": "sample_input_generator.py",
+        "functions": ["_get_string_template_input_fields", "_validate_primitive_arrays", "_object_array_issue"]
+      },
+      {
+        "layer": 2,
+        "name": "プロンプト制約",
+        "file": "workflow_generation.py",
+        "changes": ["TYPE_VALIDATION_RULES に配列型制約セクション追加"]
+      },
+      {
+        "layer": 3,
+        "name": "ランタイム検出",
+        "file": "workflow_tester.py",
+        "functions": ["_detect_object_object_pattern"]
+      }
+    ],
+    "state_fields_added": ["object_array_issues", "has_object_array_errors"]
+  },
+  "test_results": {
+    "unit_tests": {
+      "total": 37,
+      "passed": 37
+    },
+    "integration_tests": {
+      "total": 9,
+      "passed": 9
+    },
+    "regression_tests": {
+      "total": 213,
+      "passed": 213
+    },
+    "acceptance_tests": {
+      "total": 14,
+      "passed": 14
+    },
+    "grand_total": {
+      "total": 273,
+      "passed": 273,
+      "failed": 0
+    }
+  },
+  "files_modified": [
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_tester.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/state.py"
+  ],
+  "files_created": [
+    "expertAgent/tests/unit/test_sample_input_object_array.py",
+    "expertAgent/tests/unit/test_workflow_tester_object_detection.py",
+    "expertAgent/tests/integration/test_object_array_validation_flow.py",
+    "expertAgent/tests/acceptance/test_issue_340_acceptance.py"
+  ],
+  "acceptance_criteria": [
+    {
+      "criterion": "stringTemplateAgent にオブジェクトを渡した場合、[object Object] ではなく適切な文字列表現を生成",
+      "verified": true
+    },
+    {
+      "criterion": "テストデータ生成時にオブジェクト配列が不適切に使用されないようバリデーション",
+      "verified": true
+    },
+    {
+      "criterion": "workflow_tester で [object Object] パターンを検出した場合にエラーまたは警告を出力",
+      "verified": true
+    },
+    {
+      "criterion": "v1.36 で失敗した「検索結果の分析」タスクが成功することを確認",
+      "verified": true
+    }
+  ]
+}

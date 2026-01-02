@@ -1,0 +1,57 @@
+{
+  "issue_number": 340,
+  "iteration": 2,
+  "retry_reason": "Phase 2.5 検証で不足タスクを検出 - 関数は定義済みだがノードへの統合が未完了",
+  "missing_tasks": [
+    {
+      "task_id": "1.4-integration",
+      "description": "sample_input_generator_node() 内で _validate_primitive_arrays() を呼び出し、オブジェクト配列を検出した場合に state の object_array_issues と has_object_array_errors を設定",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
+      "implementation_guide": "sample_input 生成後、yaml_content から stringTemplateAgent 入力フィールドを抽出し、_validate_primitive_arrays で検証。検出された場合は state に issues を設定して needs_test_data_regeneration=True を設定"
+    },
+    {
+      "task_id": "3.2-integration",
+      "description": "workflow_tester_node() 内で _detect_object_object_pattern() を呼び出し、[object Object] パターンを検出した場合にログ出力とエラー処理",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_tester.py",
+      "implementation_guide": "execution_result 取得後、_detect_object_object_pattern で検出。検出された場合は WARNING ログを出力し、object_array_issues に追加"
+    }
+  ],
+  "already_completed": [
+    "_get_string_template_input_fields() 定義 (sample_input_generator.py:80)",
+    "_validate_primitive_arrays() 定義 (sample_input_generator.py:116)",
+    "_object_array_issue() 定義 (sample_input_generator.py:143)",
+    "_detect_object_object_pattern() 定義 (workflow_tester.py:30)",
+    "State fields: object_array_issues, has_object_array_errors (state.py)",
+    "TYPE_VALIDATION_RULES 配列制約追加 (workflow_generation.py)",
+    "単体テスト: test_sample_input_object_array.py",
+    "単体テスト: test_workflow_tester_object_detection.py",
+    "結合テスト: test_object_array_validation_flow.py"
+  ],
+  "requirements": {
+    "sample_input_generator_node_integration": {
+      "location": "sample_input_generator_node() の try ブロック内、sample_input 生成後",
+      "logic": [
+        "1. state から yaml_content を取得",
+        "2. _get_string_template_input_fields(yaml_content) で対象フィールドを抽出",
+        "3. _validate_primitive_arrays(sample_input, target_fields) で検証",
+        "4. issues がある場合: object_array_issues に設定、has_object_array_errors=True、needs_test_data_regeneration=True"
+      ],
+      "code_example": "yaml_content = state.get('yaml_content', '')\ntarget_fields = _get_string_template_input_fields(yaml_content)\nobject_issues = _validate_primitive_arrays(sample_input, target_fields)\nif object_issues:\n    logger.warning('Detected object arrays in sample_input: %s', object_issues)\n    return {\n        **state,\n        'sample_input': sample_input,\n        'object_array_issues': object_issues,\n        'has_object_array_errors': True,\n        'needs_test_data_regeneration': True,\n        'status': 'object_array_detected',\n    }"
+    },
+    "workflow_tester_node_integration": {
+      "location": "workflow_tester_node() の execution_result 取得後、return 前",
+      "logic": [
+        "1. execution_result が dict の場合、_detect_object_object_pattern(execution_result) で検出",
+        "2. issues がある場合: logger.error でログ出力、object_array_issues に追加"
+      ],
+      "code_example": "# Issue #340: Detect [object Object] pattern in execution result\nif isinstance(execution_result, dict):\n    object_object_issues = _detect_object_object_pattern(execution_result)\n    if object_object_issues:\n        logger.error(\n            '[OBJECT_OBJECT_DETECTION] Detected [object Object] pattern in execution result: %s',\n            object_object_issues\n        )\n        existing_issues = state.get('object_array_issues', [])\n        return {\n            **state,\n            'workflow_registered': True,\n            'workflow_file_path': workflow_file_path,\n            'test_execution_result': execution_result,\n            'test_http_status': execution_status,\n            'object_array_issues': existing_issues + object_object_issues,\n            'has_object_array_errors': True,\n            'validation_errors': output_validation_errors,\n            'status': 'object_object_detected',\n            'error_message': 'Detected [object Object] pattern in workflow execution result',\n            'yaml_content': yaml_content,\n        }"
+    }
+  },
+  "test_verification": {
+    "after_integration": [
+      "uv run pytest expertAgent/tests/unit/test_sample_input_object_array.py -v",
+      "uv run pytest expertAgent/tests/unit/test_workflow_tester_object_detection.py -v",
+      "uv run pytest expertAgent/tests/integration/test_object_array_validation_flow.py -v"
+    ]
+  }
+}
