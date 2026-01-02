@@ -51,6 +51,7 @@ def _issue(
         "missing_required",
         "unknown_agent",
         "yaml_parse_error",
+        "nested_reference",  # Issue #337: copyAgent nested reference detection
     ],
     message: str,
     severity: Literal["error", "warning"] = "error",
@@ -268,6 +269,124 @@ def _validate_fetch_agent_nodes(
     return issues
 
 
+def _is_reference(value: Any) -> bool:
+    """Check if a value is a GraphAI reference (starts with :).
+
+    Args:
+        value: Value to check
+
+    Returns:
+        True if the value is a reference string
+    """
+    return isinstance(value, str) and value.strip().startswith(":")
+
+
+def _find_nested_references(
+    obj: Any,
+    path: str = "",
+    depth: int = 0,
+) -> list[tuple[str, str]]:
+    """Recursively find references inside nested objects (Issue #337).
+
+    GraphAI only resolves references at the direct level of inputs.
+    References inside nested objects (depth > 0) will NOT be resolved.
+
+    Args:
+        obj: Object to search for references
+        path: Current path in the object (for error messages)
+        depth: Current nesting depth (0 = direct level of inputs)
+
+    Returns:
+        List of tuples (path, reference_value) for nested references found
+    """
+    nested_refs: list[tuple[str, str]] = []
+
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            current_path = f"{path}.{key}" if path else key
+
+            if depth > 0 and _is_reference(value):
+                # Found a reference inside a nested object
+                nested_refs.append((current_path, str(value)))
+            elif isinstance(value, dict):
+                # Recurse into nested dict
+                nested_refs.extend(
+                    _find_nested_references(value, current_path, depth + 1)
+                )
+            elif isinstance(value, list):
+                # Check list items
+                for i, item in enumerate(value):
+                    item_path = f"{current_path}[{i}]"
+                    if depth > 0 and _is_reference(item):
+                        nested_refs.append((item_path, str(item)))
+                    elif isinstance(item, dict):
+                        nested_refs.extend(
+                            _find_nested_references(item, item_path, depth + 1)
+                        )
+
+    return nested_refs
+
+
+def _validate_copy_agent_nodes(
+    workflow: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Validate copyAgent nodes for nested reference issues (Issue #337).
+
+    GraphAI resolves :reference ONLY at the direct level of inputs.
+    References inside nested objects are NOT resolved and will be missing.
+
+    Args:
+        workflow: Parsed workflow YAML
+
+    Returns:
+        List of validation issues
+    """
+    issues: list[dict[str, Any]] = []
+
+    nodes = workflow.get("nodes", {})
+    if not isinstance(nodes, dict):
+        return issues
+
+    for node_id, node_def in nodes.items():
+        if not isinstance(node_def, dict):
+            continue
+
+        agent = node_def.get("agent")
+        if agent != "copyAgent":
+            continue
+
+        inputs = node_def.get("inputs", {})
+        if not isinstance(inputs, dict):
+            continue
+
+        # Check for nested references
+        nested_refs = _find_nested_references(inputs)
+
+        for path, ref_value in nested_refs:
+            issues.append(
+                _issue(
+                    node_id=node_id,
+                    issue_type="nested_reference",
+                    message=(
+                        f"Nested reference '{ref_value}' at 'inputs.{path}' will NOT be resolved. "
+                        f"GraphAI only resolves references at the direct level of inputs."
+                    ),
+                    severity="error",
+                    field_name=path,
+                    expected_value="Direct reference at inputs level",
+                    actual_value=f"Nested reference: {ref_value}",
+                    suggestion=(
+                        "Move the reference to the direct level of inputs, "
+                        "or pass the entire object instead of individual fields. "
+                        "Example: 'inputs.result: :node.result' instead of "
+                        "'inputs.result.field: :node.result.field'"
+                    ),
+                )
+            )
+
+    return issues
+
+
 def _create_error_state(
     state: WorkflowGeneratorState,
     error_message: str,
@@ -345,6 +464,9 @@ async def workflow_schema_validator_node(
 
     # Validate fetchAgent nodes
     issues = _validate_fetch_agent_nodes(workflow)
+
+    # Validate copyAgent nodes for nested references (Issue #337)
+    issues.extend(_validate_copy_agent_nodes(workflow))
 
     # Count statistics
     nodes = workflow.get("nodes", {})

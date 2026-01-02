@@ -15,8 +15,11 @@ from aiagent.langgraph.workflowGeneratorAgents.nodes.workflow_schema_validator i
     _check_field_names,
     _check_type_mismatch,
     _create_error_state,
+    _find_nested_references,
     _is_object_reference,
+    _is_reference,
     _issue,
+    _validate_copy_agent_nodes,
     _validate_fetch_agent_nodes,
     workflow_schema_validator_node,
 )
@@ -817,3 +820,267 @@ class TestYamlParsingErrors:
         assert "YAML content is not a dictionary" in str(
             result["schema_validation_issues"]
         )
+
+
+class TestCopyAgentNestedReferenceValidation:
+    """Tests for copyAgent nested reference validation (Issue #337).
+
+    GraphAI only resolves :reference at the direct level of inputs.
+    References inside nested objects are NOT resolved and will be missing.
+    """
+
+    def test_is_reference_detects_references(self):
+        """_is_reference() should detect GraphAI references."""
+        assert _is_reference(":node") is True
+        assert _is_reference(":node.field") is True
+        assert _is_reference(":source.user_input") is True
+        assert _is_reference("  :node  ") is True
+
+    def test_is_reference_rejects_non_references(self):
+        """_is_reference() should reject non-references."""
+        assert _is_reference("node") is False
+        assert _is_reference("hello") is False
+        assert _is_reference("") is False
+        assert _is_reference(123) is False
+        assert _is_reference(None) is False
+        assert _is_reference({"key": "value"}) is False
+
+    def test_find_nested_references_at_direct_level(self):
+        """_find_nested_references() should NOT flag direct-level references."""
+        inputs = {
+            "field1": ":node.result",
+            "field2": ":source.user_input",
+            "static": "static_value",
+        }
+        result = _find_nested_references(inputs)
+        # Direct-level references should NOT be flagged
+        assert len(result) == 0
+
+    def test_find_nested_references_in_nested_object(self):
+        """_find_nested_references() should flag references inside nested objects."""
+        inputs = {
+            "result": {
+                "success": True,
+                "field1": ":generate_content.result.field1",
+                "field2": ":generate_content.result.field2",
+                "error_message": "",
+            }
+        }
+        result = _find_nested_references(inputs)
+        # Nested references should be flagged
+        assert len(result) == 2
+        paths = [r[0] for r in result]
+        assert "result.field1" in paths
+        assert "result.field2" in paths
+
+    def test_find_nested_references_in_deeply_nested_object(self):
+        """_find_nested_references() should flag deeply nested references."""
+        inputs = {
+            "wrapper": {
+                "inner": {
+                    "data": ":node.result",
+                }
+            }
+        }
+        result = _find_nested_references(inputs)
+        assert len(result) == 1
+        assert result[0][0] == "wrapper.inner.data"
+        assert result[0][1] == ":node.result"
+
+    def test_find_nested_references_in_array(self):
+        """_find_nested_references() should flag references inside arrays in nested objects."""
+        inputs = {
+            "wrapper": {
+                "items": [":item1", ":item2"],
+            }
+        }
+        result = _find_nested_references(inputs)
+        # Arrays inside nested objects should also be checked
+        assert len(result) == 2
+
+    def test_find_nested_references_empty_inputs(self):
+        """_find_nested_references() should handle empty inputs."""
+        result = _find_nested_references({})
+        assert result == []
+
+    def test_find_nested_references_static_values_only(self):
+        """_find_nested_references() should return empty for static values only."""
+        inputs = {
+            "result": {
+                "success": True,
+                "error_message": "",
+            }
+        }
+        result = _find_nested_references(inputs)
+        assert result == []
+
+    def test_validate_copy_agent_nodes_with_nested_reference(self):
+        """_validate_copy_agent_nodes() should detect nested references in copyAgent."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "generate": {"agent": "fetchAgent"},
+                "output": {
+                    "agent": "copyAgent",
+                    "inputs": {
+                        "result": {
+                            "success": True,
+                            "data": ":generate.result.data",
+                        }
+                    },
+                    "isResult": True,
+                },
+            }
+        }
+        result = _validate_copy_agent_nodes(workflow)
+        assert len(result) == 1
+        assert result[0]["issue_type"] == "nested_reference"
+        assert result[0]["node_id"] == "output"
+        assert "data" in result[0]["field_name"]
+
+    def test_validate_copy_agent_nodes_with_direct_reference(self):
+        """_validate_copy_agent_nodes() should NOT flag direct references."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "generate": {"agent": "fetchAgent"},
+                "output": {
+                    "agent": "copyAgent",
+                    "inputs": {
+                        "result": ":generate.result",  # Direct reference - OK
+                    },
+                    "isResult": True,
+                },
+            }
+        }
+        result = _validate_copy_agent_nodes(workflow)
+        assert len(result) == 0
+
+    def test_validate_copy_agent_nodes_skips_non_copyagent(self):
+        """_validate_copy_agent_nodes() should skip non-copyAgent nodes."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "fetch": {
+                    "agent": "fetchAgent",
+                    "inputs": {
+                        "body": {
+                            "nested": ":source.data",  # Nested, but not copyAgent
+                        }
+                    },
+                },
+            }
+        }
+        result = _validate_copy_agent_nodes(workflow)
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_workflow_validator_detects_nested_reference(
+        self, base_task_data: dict[str, Any]
+    ):
+        """workflow_schema_validator_node should detect nested references in copyAgent."""
+        yaml_content = """version: 0.5
+nodes:
+  source: {}
+
+  generate_content:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :source.user_input.query
+
+  # BAD: Nested references in copyAgent output
+  output:
+    agent: copyAgent
+    inputs:
+      result:
+        success: true
+        data: :generate_content.result.data
+        error_message: ""
+    isResult: true
+"""
+        state = create_initial_state("test_id", base_task_data)
+        state["yaml_content"] = yaml_content
+        state["workflow_name"] = "test_workflow"
+
+        result = await workflow_schema_validator_node(state)
+
+        # Should detect nested reference error
+        assert result["has_schema_errors"] is True
+        issues = result["schema_validation_issues"]
+        nested_issues = [i for i in issues if i.get("issue_type") == "nested_reference"]
+        assert len(nested_issues) > 0
+
+    @pytest.mark.asyncio
+    async def test_workflow_validator_accepts_flat_copyagent(
+        self, base_task_data: dict[str, Any]
+    ):
+        """workflow_schema_validator_node should accept flat copyAgent inputs."""
+        yaml_content = """version: 0.5
+nodes:
+  source: {}
+
+  generate_content:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :source.user_input.query
+
+  # GOOD: Flat inputs with direct references
+  output:
+    agent: copyAgent
+    inputs:
+      success: true
+      data: :generate_content.result.data
+      error_message: ""
+    isResult: true
+"""
+        state = create_initial_state("test_id", base_task_data)
+        state["yaml_content"] = yaml_content
+        state["workflow_name"] = "test_workflow"
+
+        result = await workflow_schema_validator_node(state)
+
+        # Should NOT have nested reference errors
+        issues = result["schema_validation_issues"]
+        nested_issues = [i for i in issues if i.get("issue_type") == "nested_reference"]
+        assert len(nested_issues) == 0
+
+    @pytest.mark.asyncio
+    async def test_workflow_validator_accepts_entire_object_reference(
+        self, base_task_data: dict[str, Any]
+    ):
+        """workflow_schema_validator_node should accept entire object reference."""
+        yaml_content = """version: 0.5
+nodes:
+  source: {}
+
+  generate_content:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :source.user_input.query
+
+  # GOOD: Pass entire result object
+  output:
+    agent: copyAgent
+    inputs:
+      result: :generate_content.result
+    isResult: true
+"""
+        state = create_initial_state("test_id", base_task_data)
+        state["yaml_content"] = yaml_content
+        state["workflow_name"] = "test_workflow"
+
+        result = await workflow_schema_validator_node(state)
+
+        # Should NOT have nested reference errors
+        issues = result["schema_validation_issues"]
+        nested_issues = [i for i in issues if i.get("issue_type") == "nested_reference"]
+        assert len(nested_issues) == 0

@@ -623,21 +623,58 @@ nodes:
 3. generate_content: fetchAgent - LLM call via expertAgent jsonoutput API
 4. output: copyAgent with direct references - Final output (REQUIRED with isResult: true)
 
-**Examples of GOOD direct reference patterns**:
+**⚠️ CRITICAL - copyAgent Reference Resolution Rules** (Issue #337):
+
+GraphAI resolves `:reference` ONLY at the **direct level of inputs**.
+References inside nested objects are NOT resolved and will be missing from output.
+
 ```yaml
-# ✅ GOOD: Direct reference in output node
+# ❌ WRONG: Nested references are NOT resolved (data will be missing!)
 output:
   agent: copyAgent
   inputs:
     result:
       success: true
-      field1: :generate_content.result.field1
-      field2: :generate_content.result.field2
-      error_message: ""
+      field1: :generate_content.result.field1  # ← NOT resolved!
+      field2: :generate_content.result.field2  # ← NOT resolved!
+  isResult: true
+# Output: {{"result": {{"success": true}}}}  ← field1, field2 missing!
+```
+
+```yaml
+# ✅ CORRECT: Use flat inputs with direct references
+output:
+  agent: copyAgent
+  inputs:
+    success: true
+    field1: :generate_content.result.field1  # ← Resolved correctly
+    field2: :generate_content.result.field2  # ← Resolved correctly
+    error_message: ""
+  isResult: true
+# Output: {{"success": true, "field1": "...", "field2": "...", "error_message": ""}}
+```
+
+```yaml
+# ✅ CORRECT: Pass entire result object
+output:
+  agent: copyAgent
+  inputs:
+    result: :generate_content.result  # ← Pass entire object
+  isResult: true
+# Output: {{"result": {{...entire result object...}}}}
+```
+
+```yaml
+# ✅ CORRECT: Use bypassAgent for simple passthrough
+output:
+  agent: bypassAgent
+  inputs:
+    array:
+      - :generate_content.result
   isResult: true
 ```
 
-**Examples of BAD unnecessary extraction**:
+**Examples of BAD patterns to avoid**:
 ```yaml
 # ❌ BAD: Unnecessary extract node
 extract_result:

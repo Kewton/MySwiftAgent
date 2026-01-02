@@ -134,11 +134,21 @@ async def generate_workflow(
             else:
                 result_status = "failed"
 
+            # Issue #337: Clear yaml_content for failed workflows to prevent execution
+            # This ensures that failed workflow generations cannot be registered and executed
+            final_yaml_content = yaml_content if result_status == "success" else ""
+            if result_status != "success" and yaml_content:
+                logger.warning(
+                    f"[WORKFLOW_GENERATOR] Clearing yaml_content for failed workflow "
+                    f"(task_master_id={task_master_id_value}, status={result_status}). "
+                    f"This prevents invalid workflows from being executed."
+                )
+
             workflow_result = WorkflowResult(
                 task_master_id=task_master_id_value,
                 task_name=task_data["name"],
                 workflow_name=workflow_name,
-                yaml_content=yaml_content,
+                yaml_content=final_yaml_content,  # Issue #337: Empty for failed workflows
                 status=result_status,
                 retry_count=retry_count,
                 error_message=error_message,
