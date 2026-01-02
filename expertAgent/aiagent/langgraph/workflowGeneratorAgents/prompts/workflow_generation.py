@@ -20,8 +20,9 @@ from core.config import settings
 # Dynamic API URL based on environment configuration
 # Default: http://localhost:8004 for local development
 # Override via EXPERTAGENT_BASE_URL environment variable
+# Fix: Removed incorrect /aiagent-api prefix (Issue #333)
 EXPERTAGENT_API_URL = (
-    f"{settings.EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput"
+    f"{settings.EXPERTAGENT_BASE_URL}/v1/aiagent/utility/jsonoutput"
 )
 
 # Issue #333: Type validation rules for workflow generation
@@ -236,9 +237,10 @@ def create_workflow_generation_prompt(
             api_info = get_api_by_name(api_name)
             if api_info and api_info.endpoint:
                 # Include full API details for Direct APIs
+                # Fix: Removed incorrect /aiagent-api prefix (Issue #333)
                 api_detail = (
                     f"  - **{api_name}**\n"
-                    f"    - URL: http://localhost:8004/aiagent-api{api_info.endpoint}\n"
+                    f"    - URL: http://localhost:8004{api_info.endpoint}\n"
                     f"    - Method: {api_info.method or 'POST'}\n"
                     f"    - Agent: fetchAgent (DIRECT CALL - DO NOT use jsonoutput)"
                 )

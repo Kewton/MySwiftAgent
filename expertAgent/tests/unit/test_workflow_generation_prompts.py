@@ -5,6 +5,7 @@ the workflow generation prompt.
 """
 
 from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+    EXPERTAGENT_API_URL,
     TYPE_VALIDATION_RULES,
     WORKFLOW_GENERATION_SYSTEM_PROMPT,
     create_workflow_generation_prompt,
@@ -116,3 +117,40 @@ class TestTypeValidationRulesContent:
         assert "文字列" in TYPE_VALIDATION_RULES or "string" in TYPE_VALIDATION_RULES.lower()
         # Should have the mandatory rule
         assert "MANDATORY" in TYPE_VALIDATION_RULES or "必須" in TYPE_VALIDATION_RULES
+
+
+class TestApiUrlConfiguration:
+    """Tests for API URL configuration (Issue #333 fix)."""
+
+    def test_expertagent_api_url_has_no_aiagent_api_prefix(self):
+        """EXPERTAGENT_API_URL should NOT contain /aiagent-api prefix.
+
+        The correct path is /v1/aiagent/utility/jsonoutput, not
+        /aiagent-api/v1/aiagent/utility/jsonoutput.
+        """
+        assert "/aiagent-api/" not in EXPERTAGENT_API_URL
+        # Should contain the correct path
+        assert "/v1/aiagent/utility/jsonoutput" in EXPERTAGENT_API_URL
+
+    def test_expertagent_api_url_format(self):
+        """EXPERTAGENT_API_URL should have correct format."""
+        # Should end with the endpoint path
+        assert EXPERTAGENT_API_URL.endswith("/v1/aiagent/utility/jsonoutput")
+
+    def test_create_prompt_does_not_include_aiagent_api_prefix(self):
+        """Generated prompt should not contain /aiagent-api prefix in URLs."""
+        task_data = {
+            "name": "Test Task",
+            "description": "Test description **推奨API**: google_search",
+            "input_interface": {"type": "json_schema", "schema": {}},
+            "output_interface": {"type": "json_schema", "schema": {}},
+        }
+        graphai_capabilities = {"agents": []}
+        expert_agent_capabilities = {"utility_apis": [], "ai_agent_apis": []}
+
+        prompt = create_workflow_generation_prompt(
+            task_data, graphai_capabilities, expert_agent_capabilities
+        )
+
+        # The prompt should not contain the incorrect prefix
+        assert "/aiagent-api/v1/" not in prompt
