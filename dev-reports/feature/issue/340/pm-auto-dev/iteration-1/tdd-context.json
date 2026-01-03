@@ -1,6 +1,7 @@
 {
   "issue_number": 340,
-  "title": "stringTemplateAgent がオブジェクトを [object Object] に変換し HTTP 500 を引き起こす",
+  "issue_title": "stringTemplateAgent がオブジェクトを [object Object] に変換し HTTP 500 を引き起こす",
+  "phase": "P0",
   "acceptance_criteria": [
     "stringTemplateAgent にオブジェクトを渡した場合、[object Object] ではなく適切な文字列表現を生成",
     "テストデータ生成時にオブジェクト配列が不適切に使用されないようバリデーション",
@@ -10,88 +11,116 @@
   "implementation_tasks": [
     {
       "task_id": "1.1",
-      "phase": "Layer 1: テストデータ型検証",
-      "description": "_get_string_template_input_fields() 関数追加",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
-      "dependencies": []
+      "description": "State フィールド追加（MF-1対応）",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/state.py",
+      "changes": [
+        "object_array_regeneration_count: int 追加",
+        "max_object_array_regeneration: int 追加",
+        "create_initial_state に初期値設定"
+      ]
     },
     {
       "task_id": "1.2",
-      "phase": "Layer 1: テストデータ型検証",
-      "description": "_validate_primitive_arrays() 関数追加",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
-      "dependencies": ["1.1"]
+      "description": "P0-1 Interface Schema プロンプト修正",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+      "changes": [
+        "default値生成ルールをプロンプトに追加",
+        "禁止パターン/正しいパターンの例示"
+      ]
     },
     {
       "task_id": "1.3",
-      "phase": "Layer 1: テストデータ型検証",
-      "description": "_object_array_issue() 関数追加",
+      "description": "P0-2 _enum_or_default 型検証追加",
       "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
-      "dependencies": []
+      "changes": [
+        "string, number, integer, boolean 配列の型検証",
+        "オブジェクト配列検出時は None を返却",
+        "警告ログ出力"
+      ]
     },
     {
       "task_id": "1.4",
-      "phase": "Layer 1: テストデータ型検証",
-      "description": "sample_input_generator_node() に検証ロジック統合",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
-      "dependencies": ["1.1", "1.2", "1.3"]
+      "description": "P0-3 sample_input_router 実装",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/routers/sample_input_router.py",
+      "changes": [
+        "sample_input_router 関数実装（新規ファイル）",
+        "無限ループ防止ロジック（MF-1）",
+        "再生成カウンタチェック"
+      ]
     },
     {
       "task_id": "1.5",
-      "phase": "Layer 1: テストデータ型検証",
-      "description": "State拡張 (object_array_issues, has_object_array_errors)",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/state.py",
-      "dependencies": []
+      "description": "P0-3 agent.py グラフ構造修正",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
+      "changes": [
+        "直接エッジを条件分岐に変更",
+        "sample_input_router をインポート・登録"
+      ]
     },
     {
       "task_id": "1.6",
-      "phase": "Layer 1: テストデータ型検証",
-      "description": "test_data_regenerator_node の拡張（オブジェクト配列エラー対応）",
+      "description": "test_data_regenerator_node 修正",
       "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/test_data_regenerator.py",
-      "dependencies": ["1.5"]
-    },
+      "changes": [
+        "再生成カウンタのインクリメント追加",
+        "object_array_regeneration_count の更新"
+      ]
+    }
+  ],
+  "test_tasks": [
     {
       "task_id": "2.1",
-      "phase": "Layer 2: プロンプト型制約",
-      "description": "TYPE_VALIDATION_RULES に配列型制約ルール追加",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py",
-      "dependencies": []
+      "description": "単体テスト - _enum_or_default 型検証",
+      "file": "expertAgent/tests/unit/test_enum_or_default_type_validation.py",
+      "test_cases": [
+        "string配列: 有効ケース",
+        "string配列: 無効ケース（オブジェクト含む）",
+        "number/integer配列: 有効/無効ケース",
+        "boolean配列: 有効/無効ケース（MF-2）"
+      ]
     },
     {
-      "task_id": "3.1",
-      "phase": "Layer 3: 実行時検出",
-      "description": "_detect_object_object_pattern() 関数追加",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_tester.py",
-      "dependencies": []
+      "task_id": "2.2",
+      "description": "単体テスト - sample_input_router",
+      "file": "expertAgent/tests/unit/test_sample_input_router.py",
+      "test_cases": [
+        "エラーなし→workflow_tester",
+        "エラーあり（初回）→test_data_regenerator",
+        "エラーあり（上限超過）→workflow_tester（MF-1）",
+        "カウンタインクリメント確認"
+      ]
     },
     {
-      "task_id": "3.2",
-      "phase": "Layer 3: 実行時検出",
-      "description": "workflow_tester_node() に検出ロジック統合",
-      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_tester.py",
-      "dependencies": ["3.1"]
+      "task_id": "2.3",
+      "description": "結合テスト - オブジェクト配列ルーティング",
+      "file": "expertAgent/tests/integration/test_object_array_routing.py",
+      "test_cases": [
+        "sample_input_generator → router → workflow_tester（正常フロー）",
+        "sample_input_generator → router → test_data_regenerator（エラーフロー）",
+        "再生成後の正常フロー",
+        "再生成上限超過フロー（MF-1）"
+      ]
     }
   ],
   "deliverables_checklist": [
-    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
     "expertAgent/aiagent/langgraph/workflowGeneratorAgents/state.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/routers/sample_input_router.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
     "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/test_data_regenerator.py",
-    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py",
-    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_tester.py",
-    "expertAgent/tests/unit/test_sample_input_object_array.py",
-    "expertAgent/tests/unit/test_workflow_tester_object_detection.py",
-    "expertAgent/tests/integration/test_object_array_validation_flow.py"
+    "expertAgent/tests/unit/test_enum_or_default_type_validation.py",
+    "expertAgent/tests/unit/test_sample_input_router.py",
+    "expertAgent/tests/integration/test_object_array_routing.py"
   ],
   "definition_of_done": [
     "すべての実装タスクが完了",
     "単体テストカバレッジ90%以上",
     "結合テスト全シナリオパス",
-    "静的解析エラー0件（Ruff, MyPy）"
+    "静的解析エラー0件（Ruff, MyPy）",
+    "[object Object] パターンが発生しないことを確認"
   ],
   "target_coverage": 90,
-  "design_documents": [
-    "dev-reports/feature/issue/340/design-policy.md",
-    "dev-reports/feature/issue/340/architecture-review.md",
-    "dev-reports/feature/issue/340/work-plan.md"
-  ]
+  "design_policy_file": "dev-reports/feature/issue/340/bug-analysis/design-policy.md",
+  "work_plan_file": "dev-reports/feature/issue/340/bug-analysis/work-plan.md"
 }

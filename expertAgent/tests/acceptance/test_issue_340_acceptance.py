@@ -10,8 +10,10 @@ Issue #340 受入テスト（L3: ローカル受入テスト）
 
 Issue #340: stringTemplateAgent がオブジェクトを [object Object] に変換し HTTP 500 を引き起こす
 """
-import pytest
+
 from typing import Any
+
+import pytest
 
 from aiagent.langgraph.workflowGeneratorAgents.nodes.sample_input_generator import (
     _get_string_template_input_fields,
@@ -222,7 +224,10 @@ nodes:
         検証: Issue #340 の配列制約セクションが存在する
         """
         # 受入基準: 配列型制約セクションが存在する
-        assert "配列の型制約" in TYPE_VALIDATION_RULES or "Issue #340" in TYPE_VALIDATION_RULES
+        assert (
+            "配列の型制約" in TYPE_VALIDATION_RULES
+            or "Issue #340" in TYPE_VALIDATION_RULES
+        )
         assert "[object Object]" in TYPE_VALIDATION_RULES
         assert "stringTemplateAgent" in TYPE_VALIDATION_RULES
 
@@ -287,7 +292,11 @@ nodes:
         # Step 2: v1.36相当の問題のあるテストデータ
         problematic_sample_input: dict[str, Any] = {
             "search_results": [
-                {"title": "Sample Title", "link": "https://example.com", "snippet": "sample_text"}
+                {
+                    "title": "Sample Title",
+                    "link": "https://example.com",
+                    "snippet": "sample_text",
+                }
             ],
             "focus_points": [
                 {"type": "string", "description": "最新ニュース"},

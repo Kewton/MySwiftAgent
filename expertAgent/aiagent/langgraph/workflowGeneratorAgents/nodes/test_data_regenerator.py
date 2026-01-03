@@ -74,13 +74,28 @@ def _build_regenerator_input(
     raw_sample_input = state.get("sample_input")
     sample_input = convert_sample_input_to_dict_or_str(raw_sample_input)
 
+    # Issue #340: Include object_array_issues in regeneration feedback
+    # Merge test_data_issues with object_array_issues for comprehensive feedback
+    base_test_data_issues = state.get("test_data_issues", [])
+    object_array_issues = state.get("object_array_issues", [])
+
+    # Convert object_array_issues to string messages for the prompt
+    object_array_messages = [
+        f"[object_array:{issue.get('issue_type', 'unknown')}] "
+        f"{issue.get('message', '')} - Suggestion: {issue.get('suggestion', '')}"
+        for issue in object_array_issues
+        if isinstance(issue, dict)
+    ]
+
+    merged_test_data_issues = base_test_data_issues + object_array_messages
+
     return create_test_data_regeneration_prompt(
         task_name=task_data.get("name", "Unknown"),
         task_description=task_data.get("description", ""),
         input_schema=input_interface.get("schema", {}),
         recommended_apis=task_data.get("recommended_apis", []),
         previous_sample_input=sample_input,
-        test_data_issues=state.get("test_data_issues", []),
+        test_data_issues=merged_test_data_issues,
         suggested_test_data=state.get("suggested_test_data"),
     )
 
@@ -93,6 +108,9 @@ async def test_data_regenerator_node(
     Regenerates test data when the LLM Evaluator detects quality issues.
     Uses LLM suggested data if available, otherwise calls LLM for new data.
 
+    Issue #340: Also handles object array regeneration with separate counter.
+    MF-1: Increment object_array_regeneration_count to prevent infinite loops.
+
     Args:
         state: Current workflow generator state
 
@@ -103,6 +121,9 @@ async def test_data_regenerator_node(
 
     current_count = state.get("test_data_regeneration_count", 0)
     max_count = state.get("max_test_data_regeneration", 2)
+
+    # Issue #340 MF-1: Track object array regeneration count
+    object_array_regen_count = state.get("object_array_regeneration_count", 0)
 
     # Check if max regeneration count reached
     if current_count >= max_count:
@@ -143,7 +164,11 @@ async def test_data_regenerator_node(
         return {
             **state,
             "test_data_regeneration_count": current_count + 1,
+            # Issue #340 MF-1: Increment object array regeneration count
+            "object_array_regeneration_count": object_array_regen_count + 1,
             "needs_test_data_regeneration": False,
+            # Issue #340: Clear object array errors after regeneration attempt
+            "has_object_array_errors": False,
             "status": "test_data_regeneration_failed",
         }
 
@@ -154,6 +179,11 @@ async def test_data_regenerator_node(
         "sample_input": new_sample_input,
         "regenerated_sample_input": new_sample_input,
         "test_data_regeneration_count": current_count + 1,
+        # Issue #340 MF-1: Increment object array regeneration count
+        "object_array_regeneration_count": object_array_regen_count + 1,
         "needs_test_data_regeneration": False,
+        # Issue #340: Clear object array errors after successful regeneration
+        "has_object_array_errors": False,
+        "object_array_issues": [],
         "status": "test_data_regenerated",
     }

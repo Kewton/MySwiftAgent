@@ -55,6 +55,19 @@ async def self_repair_node(
                     error_text += f" (Suggestion: {suggestion})"
                 validation_errors.append(error_text)
 
+    # Issue #340: Include object_array_issues in repair feedback
+    object_array_issues = state.get("object_array_issues", [])
+    if isinstance(object_array_issues, list):
+        for issue in object_array_issues:
+            if isinstance(issue, dict):
+                issue_type = issue.get("issue_type", "unknown")
+                message = issue.get("message", "")
+                suggestion = issue.get("suggestion", "")
+                error_text = f"[object_array:{issue_type}] {message}"
+                if suggestion:
+                    error_text += f"\n  Suggestion: {suggestion}"
+                validation_errors.append(error_text)
+
     retry_count = state.get("retry_count", 0)
     workflow_name = state.get("workflow_name", "unknown")
 
@@ -89,6 +102,26 @@ async def self_repair_node(
             "- Access specific fields with :node.field syntax instead of :node",
         ]
 
+    # Issue #340: Add object array guidance if object array errors exist
+    object_array_guidance = []
+    if object_array_issues:
+        object_array_guidance = [
+            "",
+            "OBJECT ARRAY ISSUES DETECTED - Issue #340",
+            "",
+            "The workflow has object arrays being passed to stringTemplateAgent, which will",
+            "cause [object Object] conversion errors. To fix:",
+            "",
+            "1. Ensure all array fields passed to stringTemplateAgent contain only primitive",
+            "   types (string, number, boolean)",
+            "2. If you need to pass object data, extract specific fields first using copyAgent",
+            "3. Alternatively, serialize objects to JSON strings before passing to templates",
+            "",
+            "Example fix:",
+            '  Before: focus_points: [{"type": "string", "description": "..."}]',
+            '  After:  focus_points: ["Latest news", "Main topics"]',
+        ]
+
     error_feedback_lines.extend(
         [
             "",
@@ -101,6 +134,7 @@ async def self_repair_node(
             "- Final output node has isResult: true",
         ]
         + schema_guidance
+        + object_array_guidance
     )
 
     error_feedback = "\n".join(error_feedback_lines)
@@ -136,10 +170,15 @@ async def self_repair_node(
         logger.info(f"Preparing for retry {new_retry_count}/{max_retry}")
 
     # Update state
+    # Issue #340: Reset object array state for next iteration
     return {
         **state,
         "error_feedback": error_feedback,
         "retry_count": new_retry_count,
         "repair_history": repair_history,
         "status": status,
+        # Issue #340: Reset object array issues for next iteration
+        "object_array_issues": [],
+        "has_object_array_errors": False,
+        "object_array_regeneration_count": 0,  # MF-1: Reset regeneration count
     }

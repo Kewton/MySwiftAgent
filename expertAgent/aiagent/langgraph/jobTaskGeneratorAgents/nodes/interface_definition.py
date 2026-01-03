@@ -21,6 +21,59 @@ from ..utils.schema_matcher import SchemaMatcher
 logger = logging.getLogger(__name__)
 
 
+def _validate_array_default(
+    prop_name: str,
+    prop_def: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate and clean default values for array types.
+
+    Issue #340: Check if array default values contain objects when items.type
+    is a primitive type (string, number, integer, boolean). If so, remove
+    the invalid default to prevent [object Object] issues.
+
+    Args:
+        prop_name: Name of the property being validated
+        prop_def: Property definition dictionary
+
+    Returns:
+        Property definition with invalid default removed if necessary
+    """
+    if prop_def.get("type") != "array":
+        return prop_def
+
+    default = prop_def.get("default")
+    if default is None:
+        return prop_def
+
+    if not isinstance(default, list):
+        return prop_def
+
+    items_def = prop_def.get("items", {})
+    if not isinstance(items_def, dict):
+        return prop_def
+
+    items_type = items_def.get("type")
+
+    # Only validate for primitive items types
+    if items_type not in ("string", "number", "integer", "boolean"):
+        return prop_def
+
+    # Check if any element in default is an object
+    has_objects = any(isinstance(item, dict) for item in default)
+    if not has_objects:
+        return prop_def
+
+    # Issue #340: Remove invalid default that contains objects
+    logger.warning(
+        f"Issue #340: Removing invalid default for '{prop_name}': "
+        f"expected {items_type} array, got object array"
+    )
+
+    # Create a copy without the default
+    result = {k: v for k, v in prop_def.items() if k != "default"}
+    return result
+
+
 def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
     """Normalize LLM-generated JSON Schema to valid JSON Schema Draft 7.
 
@@ -37,6 +90,9 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
     Additionally (Issue #293):
     - Removes metadata fields that should not be in JSON Schema
     - Handles non-dict "properties" values by converting to empty object
+
+    Issue #340: Validates array default values
+    - Removes default if items.type is primitive but default contains objects
 
     Args:
         schema: JSON Schema dictionary (input_schema or output_schema)
@@ -141,6 +197,8 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
 
     # JSON Schema keywords that contain string arrays (property names, type names, etc.)
     # These should NOT be normalized as they are not schema definitions
+    # Issue #340: Added "default" to prevent valid primitive array defaults from
+    # being incorrectly converted to objects
     string_array_keywords = {
         "required",
         "enum",
@@ -148,6 +206,8 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
         "anyOf",
         "oneOf",
         "dependencies",
+        "default",  # Issue #340: Preserve default values as-is
+        "examples",  # Also preserve examples values
     }
 
     def normalize_schema_dict(obj: dict[str, Any]) -> dict[str, Any]:
@@ -174,7 +234,13 @@ def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
                     # Normalize each property
                     result[key] = {}
                     for prop_name, prop_value in value.items():
-                        result[key][prop_name] = normalize_value(prop_value, prop_name)
+                        # Issue #340: Validate array default values BEFORE normalization
+                        # This prevents valid primitive arrays from being incorrectly
+                        # converted to objects by normalize_value
+                        if isinstance(prop_value, dict):
+                            prop_value = _validate_array_default(prop_name, prop_value)
+                        normalized_prop = normalize_value(prop_value, prop_name)
+                        result[key][prop_name] = normalized_prop
             elif key == "items" and isinstance(value, (dict, list)):
                 # Handle array items
                 result[key] = normalize_value(value, "items")

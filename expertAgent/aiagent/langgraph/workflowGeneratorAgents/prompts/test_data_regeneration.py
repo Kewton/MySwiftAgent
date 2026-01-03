@@ -56,6 +56,34 @@ Generate appropriate and realistic test data based on the given task information
    - Values that test the normal path
    - Values that pass through all processing paths
 
+## Array Type Constraints - Issue #340
+
+When generating array fields for stringTemplateAgent, the following constraints apply:
+
+1. **Primitive Types Only**: Array elements must be string, number, or boolean only
+2. **Objects Prohibited**: The format [{...}, {...}] is forbidden
+3. **Type Consistency**: Only use types matching items.type
+
+WRONG PATTERN (forbidden):
+```json
+{
+  "focus_points": [
+    {"type": "string", "description": "Latest news"}
+  ]
+}
+```
+
+CORRECT PATTERN:
+```json
+{
+  "focus_points": ["Latest news", "Main topics"]
+}
+```
+
+If the schema defines `items.type: "string"`, generate a string array.
+If the schema defines `items.type: "number"`, generate a number array.
+Never include objects in arrays that will be passed to stringTemplateAgent.
+
 ## Output Format
 Return ONLY the following JSON format (no markdown, no comments):
 {

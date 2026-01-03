@@ -98,7 +98,10 @@ class TestTypeValidationRulesContent:
     def test_contains_string_template_agent_limitations(self):
         """TYPE_VALIDATION_RULES should document stringTemplateAgent limitations."""
         # Should clearly state that JS functions don't work
-        assert "JavaScript" in TYPE_VALIDATION_RULES or "javascript" in TYPE_VALIDATION_RULES.lower()
+        assert (
+            "JavaScript" in TYPE_VALIDATION_RULES
+            or "javascript" in TYPE_VALIDATION_RULES.lower()
+        )
         # Should prohibit JSON.stringify usage
         assert "JSON.stringify" in TYPE_VALIDATION_RULES
 
@@ -107,14 +110,20 @@ class TestTypeValidationRulesContent:
         # Should have examples of correct simple variable syntax
         assert "${" in TYPE_VALIDATION_RULES
         # Should explain that only simple substitution works
-        assert "variable" in TYPE_VALIDATION_RULES.lower() or "変数" in TYPE_VALIDATION_RULES
+        assert (
+            "variable" in TYPE_VALIDATION_RULES.lower()
+            or "変数" in TYPE_VALIDATION_RULES
+        )
 
     def test_contains_reference_syntax_location_rule(self):
         """TYPE_VALIDATION_RULES should document where :reference syntax works."""
         # Should explain that :reference only works in inputs: block
         assert "inputs" in TYPE_VALIDATION_RULES.lower()
         # Should warn about string literals
-        assert "文字列" in TYPE_VALIDATION_RULES or "string" in TYPE_VALIDATION_RULES.lower()
+        assert (
+            "文字列" in TYPE_VALIDATION_RULES
+            or "string" in TYPE_VALIDATION_RULES.lower()
+        )
         # Should have the mandatory rule
         assert "MANDATORY" in TYPE_VALIDATION_RULES or "必須" in TYPE_VALIDATION_RULES
 
@@ -129,7 +138,9 @@ class TestArrayTypeConstraints:
         The prompt should warn about this limitation.
         """
         # Should mention array type constraints
-        assert "配列" in TYPE_VALIDATION_RULES or "array" in TYPE_VALIDATION_RULES.lower()
+        assert (
+            "配列" in TYPE_VALIDATION_RULES or "array" in TYPE_VALIDATION_RULES.lower()
+        )
 
     def test_type_validation_rules_mentions_object_object(self):
         """TYPE_VALIDATION_RULES should mention [object Object] issue."""

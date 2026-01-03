@@ -3,20 +3,22 @@
 This module provides the main LangGraph agent that orchestrates the workflow
 for automatically generating and validating GraphAI workflow YAML files.
 
-Updated Workflow (Issue #333):
+Updated Workflow (Issue #340):
 1. generator -> Generate YAML from TaskMaster metadata using LLM
 2. schema_validator -> Validate API type and field name compatibility (Issue #333)
 3. sample_input_generator -> Generate sample input from Input Interface
-4. workflow_tester -> Register and execute workflow on graphAiServer
-5. validator -> Validate execution results (non-LLM)
-6. llm_evaluator -> LLM-based semantic evaluation
-7. Conditional routing:
+4. sample_input_router -> Route based on object array detection (Issue #340)
+5. workflow_tester -> Register and execute workflow on graphAiServer
+6. validator -> Validate execution results (non-LLM)
+7. llm_evaluator -> LLM-based semantic evaluation
+8. Conditional routing:
    - test_data_regenerator -> Regenerate test data if quality is low
    - self_repair -> Fix workflow issues and retry
    - result_summary_generator -> Generate summary and END
 
 The agent uses conditional routing to handle:
 - Schema validation failure (-> self_repair -> generator) (Issue #333)
+- Object array detection (-> test_data_regenerator) (Issue #340)
 - Test data quality issues (-> test_data_regenerator -> workflow_tester)
 - Validation failure with retries left (-> self_repair -> generator)
 - Validation success (-> result_summary_generator -> END)
@@ -39,6 +41,7 @@ from .nodes import (
     workflow_schema_validator_node,
     workflow_tester_node,
 )
+from .routers.sample_input_router import sample_input_router
 from .state import WorkflowGeneratorState
 
 logger = logging.getLogger(__name__)
@@ -140,14 +143,14 @@ def llm_evaluator_router(
         return "self_repair"
 
     # Check LLM evaluation score
-    evaluation_result = state.get("llm_evaluation_result", {})
+    evaluation_result = state.get("llm_evaluation_result") or {}
     failure_reason = evaluation_result.get("failure_reason", "none")
 
     if failure_reason in ("workflow_quality", "both"):
         logger.info("Workflow quality insufficient, routing to self_repair")
         return "self_repair"
 
-    evaluation_score = state.get("evaluation_score", 0)
+    evaluation_score = state.get("evaluation_score") or 0
     if evaluation_score < 70:
         logger.info(
             f"LLM evaluation score ({evaluation_score}) below threshold, routing to self_repair"
@@ -246,8 +249,16 @@ def create_workflow_generator_graph() -> Any:
         },
     )
 
-    # sample_input_generator -> workflow_tester
-    workflow.add_edge("sample_input_generator", "workflow_tester")
+    # Issue #340: sample_input_generator -> (conditional) -> workflow_tester or test_data_regenerator
+    # Route based on object array detection results
+    workflow.add_conditional_edges(
+        "sample_input_generator",
+        sample_input_router,
+        {
+            "workflow_tester": "workflow_tester",
+            "test_data_regenerator": "test_data_regenerator",
+        },
+    )
 
     # workflow_tester -> validator
     workflow.add_edge("workflow_tester", "validator")

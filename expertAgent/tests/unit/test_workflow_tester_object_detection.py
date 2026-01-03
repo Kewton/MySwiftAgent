@@ -6,8 +6,6 @@ in workflow execution results to catch missed validations.
 
 from typing import Any
 
-import pytest
-
 from aiagent.langgraph.workflowGeneratorAgents.nodes.workflow_tester import (
     _detect_object_object_pattern,
 )

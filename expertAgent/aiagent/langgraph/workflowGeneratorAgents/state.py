@@ -130,6 +130,9 @@ class WorkflowGeneratorState(TypedDict, total=False):
     # ===== Object Array Validation (Issue #340) =====
     object_array_issues: list[dict[str, Any]]
     has_object_array_errors: bool
+    # MF-1: Infinite loop prevention for object array regeneration
+    object_array_regeneration_count: int
+    max_object_array_regeneration: int
 
     # ===== Self-Repair =====
     retry_count: int
@@ -212,6 +215,9 @@ def create_initial_state(
         # Object Array Validation (Issue #340)
         "object_array_issues": [],
         "has_object_array_errors": False,
+        # MF-1: Infinite loop prevention for object array regeneration
+        "object_array_regeneration_count": 0,
+        "max_object_array_regeneration": effective_max_test_data_regen,
         # Self-Repair
         "retry_count": 0,
         "error_feedback": None,

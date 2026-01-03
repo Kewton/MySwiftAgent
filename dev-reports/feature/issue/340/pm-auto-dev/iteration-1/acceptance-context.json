@@ -1,0 +1,15 @@
+{
+  "issue_number": 340,
+  "feature_summary": "stringTemplateAgent がオブジェクトを [object Object] に変換し HTTP 500 を引き起こす問題の修正（P0フェーズ）",
+  "acceptance_criteria": [
+    "stringTemplateAgent にオブジェクトを渡した場合、[object Object] ではなく適切な文字列表現を生成",
+    "テストデータ生成時にオブジェクト配列が不適切に使用されないようバリデーション",
+    "workflow_tester で [object Object] パターンを検出した場合にエラーまたは警告を出力",
+    "v1.36 で失敗した「検索結果の分析」タスクが成功することを確認"
+  ],
+  "labels": ["bug"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "graphAiServer"],
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_340_p0_acceptance.py"
+}

@@ -150,6 +150,9 @@ async def llm_evaluator_node(
     - Error handling
     - Test data quality
 
+    Issue #340: Also checks for object_array_issues and triggers
+    test data regeneration if object array errors are detected.
+
     Args:
         state: Current workflow generator state
 
@@ -157,6 +160,25 @@ async def llm_evaluator_node(
         Updated state with LLM evaluation results
     """
     logger.info("Starting LLM evaluator node")
+
+    # Issue #340: Check for object array issues before LLM evaluation
+    object_array_issues = state.get("object_array_issues", [])
+    has_object_array_errors = state.get("has_object_array_errors", False)
+
+    if has_object_array_errors and object_array_issues:
+        logger.warning(
+            f"Issue #340: {len(object_array_issues)} object array issues detected, "
+            "triggering test data regeneration"
+        )
+        return {
+            **state,
+            "needs_test_data_regeneration": True,
+            "llm_evaluation_result": {
+                "failure_reason": "test_data_quality",
+                "details": f"{len(object_array_issues)} object array issues detected",
+                "object_array_issues": object_array_issues,
+            },
+        }
 
     # Extract required data
     task_data = state.get("task_data", {})

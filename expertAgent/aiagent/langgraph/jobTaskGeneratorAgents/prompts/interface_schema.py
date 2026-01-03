@@ -392,6 +392,39 @@ JSON形式で以下の構造で出力してください：
    - ✅ 正しい: `"pattern": "^\\d{4}..."` (2重エスケープ)
    - ✅ 正しい: `"pattern": "^[a-zA-Z0-9_]+$"` (通常の文字クラス)
    - ✅ 正しい: `"pattern": "^[\\p{L}\\p{N}\\s\\-\\.\\(\\)&]+$"` (Unicode property escapes)
+
+## default値の生成ルール - Issue #340 CRITICAL
+
+**重要**: default値は実際のデータ値であり、スキーマ定義ではありません。
+
+❌ 禁止パターン（オブジェクト配列をdefaultに含める）:
+```json
+{
+  "focus_points": {
+    "type": "array",
+    "items": {"type": "string"},
+    "default": [{"type": "string", "description": "最新ニュース"}]
+  }
+}
+```
+
+✅ 正しいパターン（プリミティブ値の配列をdefaultに含める）:
+```json
+{
+  "focus_points": {
+    "type": "array",
+    "items": {"type": "string"},
+    "default": ["最新ニュース", "主要なトピック"]
+  }
+}
+```
+
+**ルール**:
+- default値は items.type と一致する型の値のみ使用
+- items.type="string" なら default は文字列配列 (例: `["a", "b"]`)
+- items.type="number" なら default は数値配列 (例: `[1, 2, 3]`)
+- items.type="boolean" なら default は真偽値配列 (例: `[true, false]`)
+- オブジェクト（{...}）を配列の default に含めることは禁止
 """
 
 

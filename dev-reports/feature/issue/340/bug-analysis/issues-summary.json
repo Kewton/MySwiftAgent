@@ -1,0 +1,111 @@
+{
+  "analysis_date": "2026-01-03",
+  "issue_number": 340,
+  "trigger": {
+    "error_type": "HTTP 500",
+    "failing_task": "task_002 (検索結果の分析とサマリ生成)",
+    "failing_node": "generate_summary",
+    "version": "v1.38"
+  },
+  "root_cause": {
+    "summary": "Interface Schema生成時にLLMがスキーマオブジェクトをdefault値として設定",
+    "example": {
+      "field": "focus_points",
+      "actual_default": [
+        {"type": "string", "description": "最新ニュース"},
+        {"type": "string", "description": "主要なトピック"}
+      ],
+      "expected_default": ["最新ニュース", "主要なトピック"]
+    }
+  },
+  "identified_issues": [
+    {
+      "id": 1,
+      "priority": "P0",
+      "title": "Interface Schemaプロンプトにdefault値ルールがない",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+      "line": null,
+      "description": "LLMがスキーマオブジェクトをdefault値として生成する原因"
+    },
+    {
+      "id": 2,
+      "priority": "P0",
+      "title": "_enum_or_defaultがdefault値の型検証をしない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
+      "line": "181-196",
+      "description": "default値をそのまま返却、型チェックなし"
+    },
+    {
+      "id": 3,
+      "priority": "P0",
+      "title": "sample_input_generator後に条件分岐がない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
+      "line": "250",
+      "description": "検出してもhas_object_array_errors=Trueで直接エッジでフロー継続"
+    },
+    {
+      "id": 4,
+      "priority": "P1",
+      "title": "test_data_regeneration.pyに配列制約ルールがない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/test_data_regeneration.py",
+      "line": null,
+      "description": "再生成時も配列制約が適用されない"
+    },
+    {
+      "id": 5,
+      "priority": "P1",
+      "title": "object_array_issuesがtest_data_regeneratorに渡されない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/test_data_regenerator.py",
+      "line": "83",
+      "description": "test_data_issuesのみ参照、object_array_issues未参照"
+    },
+    {
+      "id": 6,
+      "priority": "P1",
+      "title": "LLM Evaluationプロンプトに配列制約ルールがない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/llm_evaluation.py",
+      "line": null,
+      "description": "評価基準に配列要素型が含まれない"
+    },
+    {
+      "id": 7,
+      "priority": "P1",
+      "title": "self_repair_nodeにobject_array_issuesフィードバックがない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/self_repair.py",
+      "line": null,
+      "description": "schema_validation_issuesのみ処理"
+    },
+    {
+      "id": 8,
+      "priority": "P2",
+      "title": "workflow_validatorが配列要素型を検証しない",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_validator.py",
+      "line": null,
+      "description": "array→listマッピングのみ"
+    },
+    {
+      "id": 9,
+      "priority": "P2",
+      "title": "interface_definition.pyがdefault値の型を検証しない",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py",
+      "line": null,
+      "description": "normalize_json_schema_propertiesで未検証"
+    }
+  ],
+  "recommended_fix_order": {
+    "v1.39_P0": [1, 2, 3],
+    "v1.40_P1": [4, 5, 6, 7],
+    "v1.41_P2": [8, 9]
+  },
+  "affected_files": [
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/sample_input_generator.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/agent.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/test_data_regeneration.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/test_data_regenerator.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/llm_evaluation.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/self_repair.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/workflow_validator.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py"
+  ]
+}

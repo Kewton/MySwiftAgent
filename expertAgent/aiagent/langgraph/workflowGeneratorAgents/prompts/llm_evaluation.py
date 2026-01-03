@@ -81,6 +81,28 @@ Strictly evaluate the quality of test data (sample input):
 If test data is inappropriate, set `needs_test_data_regeneration: true`
 and propose appropriate test data in `suggested_test_data`.
 
+## Test Data Quality Evaluation Criteria - Issue #340
+
+Evaluate test data quality from the following perspectives:
+
+### Array Field Validation
+
+1. **stringTemplateAgent Input Arrays**:
+   - Arrays with items.type="string" should contain only strings
+   - Objects ({...}) should not be mixed into arrays
+
+2. **[object Object] Pattern Detection**:
+   - Check if test results contain "[object Object]" string
+   - If present, set `failure_reason: "test_data_quality"`
+
+### Score Impact
+
+| Issue | Score Deduction |
+|-------|-----------------|
+| Object array detected | -20 points |
+| [object Object] in output | -30 points |
+| Issue persists after regeneration | -40 points |
+
 ## Output Format
 Return ONLY the following JSON format (no markdown, no comments):
 {

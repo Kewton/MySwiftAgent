@@ -1,0 +1,55 @@
+{
+  "issue_number": 340,
+  "iteration": 3,
+  "phase": "P2",
+  "summary": "P2フェーズ: Layer 4 ワークフロー検証強化",
+  "design_policy_path": "dev-reports/feature/issue/340/bug-analysis/design-policy.md",
+  "implementation_tasks": [
+    {
+      "task_id": "P2-8",
+      "description": "workflow_validator 配列検証 - ワークフロー内の配列要素型を検証",
+      "file_path": "aiagent/langgraph/workflowGeneratorAgents/utils/workflow_validator.py",
+      "changes": [
+        "validate_workflow_arrays関数を追加",
+        "stringTemplateAgentに渡される配列フィールドのプリミティブ型チェック",
+        "オブジェクト配列を検出した場合はvalidation_issuesに追加"
+      ]
+    },
+    {
+      "task_id": "P2-9",
+      "description": "interface_definition default検証 - normalize_json_schema_propertiesでdefault値の型検証を追加",
+      "file_path": "aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py",
+      "changes": [
+        "normalize_json_schema_propertiesにdefault値の型検証を追加",
+        "配列のdefault値がitems.typeと一致するかチェック",
+        "オブジェクト配列のdefaultを検出した場合は警告ログ出力しdefaultを除去"
+      ]
+    }
+  ],
+  "test_tasks": [
+    {
+      "task_id": "T1",
+      "description": "P2-8 workflow_validator 配列検証の単体テスト",
+      "file_path": "tests/unit/test_p2_workflow_array_validation.py",
+      "test_cases": [
+        "オブジェクト配列を検出してissueを返す",
+        "プリミティブ配列は問題なしと判定",
+        "stringTemplateAgent以外のノードはスキップ"
+      ]
+    },
+    {
+      "task_id": "T2",
+      "description": "P2-9 interface_definition default検証の単体テスト",
+      "file_path": "tests/unit/test_p2_interface_default_validation.py",
+      "test_cases": [
+        "オブジェクト配列defaultを検出して除去",
+        "正しいプリミティブ配列defaultは保持",
+        "items.typeとdefault型の不一致を検出"
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "ワークフロー生成時にオブジェクト配列が検出される",
+    "Interface Schema生成時にdefault値の型検証が行われる"
+  ]
+}

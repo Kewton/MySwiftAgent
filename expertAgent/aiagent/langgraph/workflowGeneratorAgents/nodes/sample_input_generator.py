@@ -179,20 +179,73 @@ def _resolve_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def _enum_or_default(schema: dict[str, Any]) -> SchemaValue:
+    """Extract enum, default, or example value with type validation.
+
+    Issue #340: Added type validation for default values to prevent
+    object arrays from being used as string array defaults, which causes
+    [object Object] conversion issues in stringTemplateAgent.
+
+    MF-2: Added boolean array validation for completeness.
+
+    Priority order: const > enum > examples > default > example
+    """
     if "const" in schema:
         return schema["const"]  # type: ignore[no-any-return]
+
     enums = schema.get("enum")
     if isinstance(enums, list) and enums:
         return enums[0]  # type: ignore[no-any-return]
+
     examples = schema.get("examples")
     if isinstance(examples, list) and examples:
         return examples[0]  # type: ignore[no-any-return]
+
     default = schema.get("default")
     if default is not None:
+        # Issue #340: Validate default value type for arrays
+        if isinstance(default, list):
+            items_type = schema.get("items", {}).get("type")
+            if items_type == "string":
+                # All elements must be strings
+                if all(isinstance(item, str) for item in default):
+                    return default  # type: ignore[no-any-return]
+                # Object array detected, skip this default
+                logger.warning(
+                    "Skipping invalid default: expected string array, "
+                    f"got {[type(x).__name__ for x in default]}"
+                )
+                return None
+            elif items_type in ("number", "integer"):
+                # All elements must be numbers
+                if all(isinstance(item, (int, float)) for item in default):
+                    return default  # type: ignore[no-any-return]
+                logger.warning(
+                    "Skipping invalid default: expected number array, "
+                    f"got {[type(x).__name__ for x in default]}"
+                )
+                return None
+            elif items_type == "boolean":
+                # MF-2: All elements must be booleans
+                if all(isinstance(item, bool) for item in default):
+                    return default  # type: ignore[no-any-return]
+                logger.warning(
+                    "Skipping invalid default: expected boolean array, "
+                    f"got {[type(x).__name__ for x in default]}"
+                )
+                return None
+            # For other types (object, array, or no items.type), allow as-is
+            # but log warning if contains dict elements for non-object types
+            if items_type is None and any(isinstance(item, dict) for item in default):
+                logger.warning(
+                    f"Array default contains objects without items.type: "
+                    f"{[type(x).__name__ for x in default]}"
+                )
         return default  # type: ignore[no-any-return]
+
     example = schema.get("example")
     if example is not None:
         return example  # type: ignore[no-any-return]
+
     return None
 
 
