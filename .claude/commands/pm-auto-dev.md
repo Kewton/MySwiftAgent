@@ -39,6 +39,8 @@ Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリ�
 - [ ] Phase 1: Issue情報収集
 - [ ] Phase 2: TDD実装 (イテレーション 0/3)
 - [ ] Phase 2.5: TDD結果検証【必須】
+- [ ] Phase 2.6: 実装機能一覧の生成【必須】
+- [ ] Phase 2.7: 実装検証【必須】（デッドコード検出）
 - [ ] Phase 3: 受入テスト
 - [ ] Phase 3.5: 受入テストファイル検証【必須】
 - [ ] Phase 4: リファクタリング
@@ -341,7 +343,250 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.
 
 検証がすべてパスしたら：
 
-1. TodoWriteでPhase 2を`completed`に、Phase 3を`in_progress`に設定
+1. TodoWriteでPhase 2.5を`completed`に、Phase 2.6を`in_progress`に設定
+2. Phase 2.6（実装機能一覧の生成）へ進む
+
+---
+
+### Phase 2.6: 実装機能一覧の生成【必須】（Issue #338教訓）
+
+**重要**: TDD実装で作成した機能を一覧化し、Phase 2.7での統合検証に使用します。
+
+#### 2.6-1. 実装機能の抽出
+
+tdd-result.json の `files_modified` から実装した機能を抽出します：
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.json | jq '.files_modified'
+```
+
+各ファイルについて、新規追加した関数/クラス/定数を特定してください。
+
+#### 2.6-2. 実装機能一覧ファイルの作成
+
+Writeツールで以下のファイルを作成：
+
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/implemented-features.json
+```
+
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "function_name",
+      "type": "function",
+      "file_path": "path/to/file.py",
+      "line_number": 100,
+      "description": "機能の説明",
+      "expected_callers": ["caller_function_name"],
+      "expected_call_location": "path/to/caller.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "ClassName",
+      "type": "class",
+      "file_path": "path/to/file.py",
+      "line_number": 50,
+      "description": "クラスの説明",
+      "expected_callers": ["main_module"],
+      "expected_call_location": "path/to/main.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "CONSTANT_NAME",
+      "type": "constant",
+      "file_path": "path/to/constants.py",
+      "line_number": 10,
+      "description": "定数の説明",
+      "expected_callers": ["function_using_constant"],
+      "expected_call_location": "path/to/user.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "PROMPT_RULE_NAME",
+      "type": "prompt_rule",
+      "file_path": "prompts/default.yaml",
+      "line_number": 25,
+      "description": "プロンプトルールの説明",
+      "expected_callers": ["LLM via prompt"],
+      "expected_call_location": "ワークフロー生成時"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_function_name_*"],
+      "integration_tests": ["test_caller_uses_function_name"],
+      "acceptance_tests": ["test_issue_{issue_number}_scenario_1"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "path/to/agent.py",
+      "integration_type": "graph_node",
+      "integration_method": "add_node('node_name', function_name)"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "path/to/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .module import ClassName"
+    }
+  ]
+}
+```
+
+**重要**:
+- 全ての新規実装機能を漏れなくリストアップ
+- `expected_callers` は必須（どこから呼ばれるべきか）
+- `expected_call_location` は必須（どのファイルで呼ばれるべきか）
+- `integration_points` で統合方法を明確化
+
+#### 2.6-3. 次のフェーズへ
+
+1. TodoWriteでPhase 2.6を`completed`に、Phase 2.7を`in_progress`に設定
+2. Phase 2.7（実装検証）へ進む
+
+---
+
+### Phase 2.7: 実装検証【必須】（Issue #338教訓）
+
+**重要**: 実装した機能が実際にコードベースに統合されているかを検証します。
+**デッドコード（定義されているが呼び出されていない関数）を検出します。**
+
+#### 2.7-1. 実装検証サブエージェント呼び出し
+
+以下のテキストを記述してください：
+
+```
+Use implementation-verification-agent to verify Issue #{issue_number} implementation.
+
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/implemented-features.json
+Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/implementation-verification-result.json
+
+Please verify:
+1. Each function/class is actually CALLED (not just defined)
+2. Each constant is actually USED (not just defined)
+3. Each prompt rule is actually INCLUDED in prompts
+4. Integration tests exist that verify actual usage
+
+CRITICAL: Detect DEAD CODE - functions that exist but are never called.
+```
+
+#### 2.7-2. 結果確認
+
+Readツールで結果ファイルを確認：
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/implementation-verification-result.json
+```
+
+**結果判定**:
+
+##### ケース1: 全機能が統合済み (`status: "passed"`)
+
+```json
+{
+  "status": "passed",
+  "summary": {
+    "total_features": 3,
+    "passed": 3,
+    "dead_code": 0,
+    "missing_tests": 0
+  },
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "_transform_to_interface",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true },
+        "is_called": { "passed": true, "evidence": "Called at worker.py:223" },
+        "has_integration_test": { "passed": true }
+      }
+    }
+  ]
+}
+```
+
+→ **Phase 3へ進む**
+
+TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定。
+
+##### ケース2: デッドコード検出 (`status: "failed"`)
+
+```json
+{
+  "status": "failed",
+  "summary": {
+    "total_features": 3,
+    "passed": 1,
+    "dead_code": 2,
+    "missing_tests": 0
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F1",
+      "name": "_transform_to_interface",
+      "file": "jobqueue/app/core/worker.py",
+      "line": 606,
+      "recommended_caller": "_execute_tasks",
+      "recommended_location": "jobqueue/app/core/worker.py:223"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F1",
+      "action": "Add call to _transform_to_interface in _execute_tasks",
+      "file": "jobqueue/app/core/worker.py",
+      "line": 223
+    }
+  ]
+}
+```
+
+→ **Phase 2に戻る**
+
+デッドコードが検出された場合：
+
+1. `recommended_actions` を tdd-context.json の `implementation_tasks` に追加
+2. Phase 2（TDD実装）を再実行
+3. イテレーション回数を+1
+
+**Phase 2 再実行時のコンテキスト例**:
+
+```json
+{
+  "issue_number": 338,
+  "retry_reason": "Phase 2.7 でデッドコードを検出",
+  "dead_code_fixes": [
+    {
+      "feature": "_transform_to_interface",
+      "action": "worker.py の _execute_tasks 内で呼び出しを追加",
+      "file": "jobqueue/app/core/worker.py",
+      "line": 223
+    }
+  ],
+  "already_completed": [
+    "_transform_to_interface 関数の実装",
+    "単体テストの作成"
+  ]
+}
+```
+
+#### 2.7-3. 検証完了
+
+検証がすべてパスしたら：
+
+1. TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定
 2. Phase 3（受入テスト）へ進む
 
 ---
@@ -1112,24 +1357,36 @@ TodoWriteでPhase 5を`completed`に設定。
 
 ### イテレーションが必要になるケース
 
-1. **TDD実装失敗** (Phase 2-3):
+1. **TDD実装失敗** (Phase 2):
    - カバレッジ不足
    - 静的解析エラー
    - テスト失敗
 
-2. **受入テスト失敗** (Phase 3-3):
+2. **デッドコード検出** (Phase 2.7)【Issue #338教訓】:
+   - 関数が定義されているが呼び出されていない
+   - 定数が定義されているが使用されていない
+   - 統合テストが不足している
+
+3. **受入テスト失敗** (Phase 3):
    - テストシナリオ失敗
    - 受入条件未達成
 
 ### イテレーション処理フロー
 
 ```
-Phase 2 → Phase 3 → 受入テスト失敗
-  ↓                    ↓
-  ←──────────────────┘
-  (イテレーション+1)
+Phase 2 → Phase 2.5 → Phase 2.6 → Phase 2.7
+                                      ↓
+                              デッドコード検出?
+                                   ↓ Yes
+                       ←──────────┘
+                     (イテレーション+1)
+                                   ↓ No
+Phase 3 → Phase 3.5 → 受入テスト失敗?
+                           ↓ Yes
+          ←───────────────┘
+        (イテレーション+1)
 
-Phase 2 (イテレーション2) → Phase 3 → ...
+Phase 2 (イテレーション2) → Phase 2.7 → Phase 3 → ...
 ```
 
 ### 最大イテレーション到達時
@@ -1162,18 +1419,20 @@ dev-reports/feature/issue/{issue_number}/
 ├── work-plan.md                  ← 作業計画（/work-plan で作成）
 └── pm-auto-dev/
     ├── iteration-1/
-    │   ├── tdd-context.json          ← TDD実装の入力（作業計画情報含む）
-    │   ├── tdd-result.json           ← TDD実装の出力
-    │   ├── acceptance-context.json   ← 受入テストの入力
-    │   ├── acceptance-result.json    ← 受入テストの出力
-    │   ├── refactor-context.json     ← リファクタリングの入力
-    │   ├── refactor-result.json      ← リファクタリングの出力
-    │   ├── progress-context.json     ← 進捗レポートの入力（作業計画比較含む）
-    │   └── progress-report.md        ← 進捗レポート（Markdown）
-    ├── iteration-2/                  ← イテレーション2（失敗時）
+    │   ├── tdd-context.json                        ← TDD実装の入力（作業計画情報含む）
+    │   ├── tdd-result.json                         ← TDD実装の出力
+    │   ├── implemented-features.json               ← 【新規】実装機能一覧
+    │   ├── implementation-verification-result.json ← 【新規】実装検証結果
+    │   ├── acceptance-context.json                 ← 受入テストの入力
+    │   ├── acceptance-result.json                  ← 受入テストの出力
+    │   ├── refactor-context.json                   ← リファクタリングの入力
+    │   ├── refactor-result.json                    ← リファクタリングの出力
+    │   ├── progress-context.json                   ← 進捗レポートの入力（作業計画比較含む）
+    │   └── progress-report.md                      ← 進捗レポート（Markdown）
+    ├── iteration-2/                                ← イテレーション2（失敗時）
     │   ├── tdd-context.json
     │   └── ...
-    └── iteration-3/                  ← イテレーション3（失敗時）
+    └── iteration-3/                                ← イテレーション3（失敗時）
         └── ...
 ```
 
@@ -1185,7 +1444,11 @@ dev-reports/feature/issue/{issue_number}/
 
 - ✅ Phase 1: Issue情報収集完了
 - ✅ Phase 2: TDD実装成功（カバレッジ90%以上、静的解析エラー0件）
+- ✅ Phase 2.5: TDD結果検証完了
+- ✅ Phase 2.6: 実装機能一覧の生成完了
+- ✅ Phase 2.7: 実装検証成功（デッドコード0件）【Issue #338教訓】
 - ✅ Phase 3: 受入テスト成功（全シナリオ合格、全受入条件検証済み）
+- ✅ Phase 3.5: 受入テストファイル検証完了
 - ✅ Phase 4: リファクタリング完了（または失敗時は理由報告）
 - ✅ Phase 5: 進捗レポート作成完了
 
