@@ -503,9 +503,46 @@ async def evaluator_node(
     else:
         evaluation_result["all_apis_specific"] = True
 
+    # Issue #338 Phase 4: Interface compatibility check
+    # Merge interface_definitions into task_breakdown and check compatibility
+    interface_warnings: list[str] = []
+
+    if len(task_breakdown) >= 2 and interface_definitions:
+        try:
+            # Merge interface info from interface_definitions into task_breakdown
+            tasks_with_interfaces: list[dict] = []
+            for task_dict in task_breakdown:
+                task_id = task_dict.get("task_id")
+                task_with_interface = dict(task_dict)  # Create a copy
+
+                if task_id and task_id in interface_definitions:
+                    interface_bundle = interface_definitions[task_id]
+                    task_with_interface["input_interface"] = interface_bundle.get(
+                        "input_schema", {}
+                    )
+                    task_with_interface["output_interface"] = interface_bundle.get(
+                        "output_schema", {}
+                    )
+
+                tasks_with_interfaces.append(task_with_interface)
+
+            # Run interface compatibility check
+            interface_warnings = check_interface_compatibility(tasks_with_interfaces)
+
+            if interface_warnings:
+                logger.warning(
+                    "Interface compatibility issues detected (%d warnings): %s",
+                    len(interface_warnings),
+                    interface_warnings,
+                )
+        except Exception as compat_error:
+            logger.error(f"Interface compatibility check failed: {compat_error}")
+            interface_warnings = [f"Compatibility check error: {compat_error}"]
+
     # NOTE: Do not modify retry_count here - it's managed by requirement_analysis/interface_definition nodes
     return {
         **state,
         "evaluation_result": evaluation_result,
         "evaluation_feedback": evaluation_feedback,
+        "interface_warnings": interface_warnings,
     }

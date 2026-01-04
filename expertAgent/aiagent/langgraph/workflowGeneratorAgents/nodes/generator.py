@@ -9,6 +9,9 @@ from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
     StructuredLLMError,
     invoke_structured_llm,
 )
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.workflow_helper import (
+    get_api_response_schemas,
+)
 
 from ..prompts.workflow_generation import (
     WORKFLOW_GENERATION_SYSTEM_PROMPT,
@@ -88,17 +91,33 @@ async def generator_node(
     logger.debug("Loading GraphAI and ExpertAgent capabilities")
     graphai_capabilities, expert_agent_capabilities = _load_capabilities()
 
-    # Create prompt (with feedback if available)
+    # Issue #338 Phase 3: Get API response schemas for recommended APIs
+    recommended_apis = task_data.get("recommended_apis", [])
+    api_schemas: dict = {}
+    if recommended_apis:
+        try:
+            api_schemas = await get_api_response_schemas(recommended_apis)
+            logger.info(
+                "Retrieved API schemas for %d APIs: %s",
+                len(api_schemas),
+                list(api_schemas.keys()),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to get API schemas: {e}")
+            # Continue without schemas (non-blocking)
+
+    # Create prompt (with feedback and API schemas if available)
     if error_feedback:
         user_prompt = create_workflow_generation_prompt_with_feedback(
             task_data,
             graphai_capabilities,
             expert_agent_capabilities,
             error_feedback,
+            api_schemas=api_schemas,
         )
     else:
         user_prompt = create_workflow_generation_prompt(
-            task_data, graphai_capabilities, expert_agent_capabilities
+            task_data, graphai_capabilities, expert_agent_capabilities, api_schemas
         )
 
     logger.debug(

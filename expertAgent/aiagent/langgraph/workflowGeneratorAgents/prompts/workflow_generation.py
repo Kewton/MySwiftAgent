@@ -4,8 +4,10 @@ This module provides prompts and schemas for generating GraphAI workflow YAML
 files from TaskMaster metadata using LLM.
 
 Issue #333: Added TYPE_VALIDATION_RULES for API type and field name validation.
+Issue #338: Added api_schemas parameter for API response schema injection.
 """
 
+import json
 import re
 from typing import Any
 
@@ -252,6 +254,7 @@ def create_workflow_generation_prompt(
     task_data: dict[str, Any],
     graphai_capabilities: dict[str, Any],
     expert_agent_capabilities: dict[str, Any],
+    api_schemas: dict[str, Any] | None = None,
 ) -> str:
     """Create workflow generation prompt from task metadata and capabilities.
 
@@ -259,6 +262,7 @@ def create_workflow_generation_prompt(
         task_data: TaskMaster metadata with interfaces
         graphai_capabilities: Available GraphAI agents and their descriptions
         expert_agent_capabilities: Available expertAgent APIs
+        api_schemas: API response schemas for recommended APIs (Issue #338 Phase 3)
 
     Returns:
         Formatted prompt string
@@ -813,6 +817,34 @@ IMPORTANT:
 - Only output the JSON object, no additional text
 """
 
+    # Issue #338 Phase 3: Add API response schemas section if available
+    if api_schemas:
+        api_schemas_section = "\n\n## API Response Schemas (Issue #338)\n\n"
+        api_schemas_section += (
+            "Use the following response field names when referencing API outputs.\n"
+            "**CRITICAL**: Use EXACT field names from these schemas.\n\n"
+        )
+        for api_path, schema_info in api_schemas.items():
+            api_schemas_section += f"### {api_path}\n"
+            if "name" in schema_info:
+                api_schemas_section += f"**API Name**: {schema_info['name']}\n"
+            if "description" in schema_info:
+                api_schemas_section += f"**Description**: {schema_info['description']}\n"
+            if "response_schema" in schema_info:
+                api_schemas_section += "**Response Schema**:\n```json\n"
+                api_schemas_section += json.dumps(
+                    schema_info["response_schema"], indent=2, ensure_ascii=False
+                )
+                api_schemas_section += "\n```\n"
+            if "request_schema" in schema_info:
+                api_schemas_section += "**Request Schema**:\n```json\n"
+                api_schemas_section += json.dumps(
+                    schema_info["request_schema"], indent=2, ensure_ascii=False
+                )
+                api_schemas_section += "\n```\n"
+            api_schemas_section += "\n"
+        prompt += api_schemas_section
+
     return prompt
 
 
@@ -821,6 +853,7 @@ def create_workflow_generation_prompt_with_feedback(
     graphai_capabilities: dict[str, Any],
     expert_agent_capabilities: dict[str, Any],
     error_feedback: str,
+    api_schemas: dict[str, Any] | None = None,
 ) -> str:
     """Create workflow generation prompt with error feedback for self-repair.
 
@@ -829,12 +862,13 @@ def create_workflow_generation_prompt_with_feedback(
         graphai_capabilities: Available GraphAI agents
         expert_agent_capabilities: Available expertAgent APIs
         error_feedback: Error messages and validation failures
+        api_schemas: API response schemas for recommended APIs (Issue #338 Phase 3)
 
     Returns:
         Formatted prompt string with error feedback
     """
     base_prompt = create_workflow_generation_prompt(
-        task_data, graphai_capabilities, expert_agent_capabilities
+        task_data, graphai_capabilities, expert_agent_capabilities, api_schemas
     )
 
     feedback_section = f"""

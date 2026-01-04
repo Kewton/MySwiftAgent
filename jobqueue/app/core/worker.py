@@ -200,7 +200,10 @@ class JobExecutor:
                         except json.JSONDecodeError:
                             output_data = {"text": response.text}
 
-                    # Validate output data against interfaces
+                    # Validate output data against interfaces AND collect schema for transformation
+                    # Issue #338 FIX-P2: Capture output_schema during validation loop
+                    output_schema_for_transform: dict[str, Any] | None = None
+
                     if output_data:
                         interfaces = await self.session.scalars(
                             select(TaskMasterInterface)
@@ -219,12 +222,32 @@ class JobExecutor:
                                         f"Output validation failed: {'; '.join(e.errors)}"
                                     ) from e
 
-                    # Store output (extract GraphAI output node result for task chains)
-                    task.output_data = (
-                        _extract_graphai_output(output_data)
-                        if output_data
-                        else output_data
+                                # Issue #338: Capture first required output_schema for transformation
+                                if output_schema_for_transform is None:
+                                    output_schema_for_transform = (
+                                        assoc.interface_master.output_schema
+                                    )
+
+                    # Store output with interface transformation (Issue #338 Phase 2)
+                    # 1. Extract GraphAI output node result for task chains
+                    # 2. Transform to match output_interface definition
+                    extracted = (
+                        _extract_graphai_output(output_data) if output_data else output_data
                     )
+                    try:
+                        task.output_data = _transform_to_interface(
+                            extracted, output_schema_for_transform
+                        )
+                        logger.debug(
+                            f"[TRANSFORM] Applied output_interface transformation for task {task.id}, "
+                            f"schema_applied={output_schema_for_transform is not None}"
+                        )
+                    except Exception as transform_error:
+                        # Fallback: use extracted data without transformation
+                        logger.error(
+                            f"[TRANSFORM] Interface transformation failed for task {task.id}: {transform_error}"
+                        )
+                        task.output_data = extracted
                     task.status = (
                         TaskStatus.SUCCEEDED
                         if response.is_success

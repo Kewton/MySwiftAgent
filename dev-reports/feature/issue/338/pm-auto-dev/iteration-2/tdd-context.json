@@ -1,0 +1,111 @@
+{
+  "issue_number": 338,
+  "iteration": 2,
+  "issue_title": "タスクチェーン インターフェース契約強制メカニズムの導入",
+  "retry_reason": "Phase 2.7相当の検証でデッドコードを検出（fix-plan.mdで分析済み）",
+  "problem_summary": "Phase 2-4の関数が定義されているが、実際のワークフローに統合されていない（デッドコード状態）",
+  "dead_code_fixes": [
+    {
+      "feature_id": "P2",
+      "feature": "_transform_to_interface",
+      "action": "worker.pyの_execute_tasks内で呼び出しを追加",
+      "file": "jobqueue/app/core/worker.py",
+      "current_line": 223,
+      "details": "ループ内でoutput_schema_for_transformを保持し、ループ後に_transform_to_interfaceを呼び出す"
+    },
+    {
+      "feature_id": "P3",
+      "feature": "get_api_response_schemas",
+      "action": "generator_node内で呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+      "details": "task_dataからrecommended_apisを取得し、スキーマを取得してプロンプトに注入"
+    },
+    {
+      "feature_id": "P4",
+      "feature": "check_interface_compatibility",
+      "action": "evaluator_node内で呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "details": "task_breakdownとinterface_definitionsをマージしてcheck_interface_compatibilityを呼び出す"
+    }
+  ],
+  "already_completed": [
+    "_transform_to_interface関数の実装 (worker.py:606)",
+    "get_api_response_schemas関数の実装 (workflow_helper.py:59)",
+    "check_interface_compatibility関数の実装 (evaluator.py:30)",
+    "単体テストの作成（67テスト）",
+    "存在確認テストの作成"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "FIX-P2",
+      "priority": "P0",
+      "description": "worker.pyで_transform_to_interface呼び出しを追加",
+      "file": "jobqueue/app/core/worker.py",
+      "line_range": "205-227",
+      "change_type": "integration",
+      "details": "output_schema_for_transform変数を追加し、ループ内で保持、ループ後に_transform_to_interfaceを呼び出す"
+    },
+    {
+      "task_id": "FIX-P3",
+      "priority": "P1",
+      "description": "generator.pyでget_api_response_schemas呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+      "change_type": "integration",
+      "details": "get_api_response_schemasをimportし、recommended_apisからスキーマ取得、create_workflow_generation_promptに渡す"
+    },
+    {
+      "task_id": "FIX-P3-PROMPT",
+      "priority": "P1",
+      "description": "workflow_generation.pyにapi_schemasパラメータを追加",
+      "file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py",
+      "change_type": "parameter_addition",
+      "details": "create_workflow_generation_promptとcreate_workflow_generation_prompt_with_feedbackにapi_schemasパラメータを追加"
+    },
+    {
+      "task_id": "FIX-P4",
+      "priority": "P0",
+      "description": "evaluator.pyでcheck_interface_compatibility呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "change_type": "integration",
+      "details": "evaluator_node関数内でtask_breakdownとinterface_definitionsをマージし、check_interface_compatibilityを呼び出す"
+    },
+    {
+      "task_id": "FIX-P4-STATE",
+      "priority": "P0",
+      "description": "state.pyにinterface_warningsフィールドを追加",
+      "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
+      "change_type": "field_addition",
+      "details": "JobTaskGeneratorStateにinterface_warnings: list[str]を追加、create_initial_stateに初期値を追加"
+    },
+    {
+      "task_id": "TEST-INTEGRATION",
+      "priority": "P0",
+      "description": "統合確認テストを追加",
+      "files": [
+        "jobqueue/tests/integration/test_task_chain_transformation.py",
+        "expertAgent/tests/integration/test_evaluator_compatibility_check.py"
+      ],
+      "change_type": "test_addition",
+      "details": "関数が実際に呼び出されることを確認するテストを追加"
+    }
+  ],
+  "verification_commands": [
+    {
+      "description": "Phase 2統合確認",
+      "command": "grep -n '_transform_to_interface' jobqueue/app/core/worker.py | grep -v '^.*:def '"
+    },
+    {
+      "description": "Phase 3統合確認",
+      "command": "grep -n 'get_api_response_schemas' expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py"
+    },
+    {
+      "description": "Phase 4統合確認",
+      "command": "grep -n 'check_interface_compatibility' expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py | grep -v '^.*:def '"
+    }
+  ],
+  "target_coverage": 90,
+  "reference_documents": [
+    "dev-reports/feature/issue/338/fix-plan.md",
+    "dev-reports/feature/issue/338/bug/bug-report.md"
+  ]
+}

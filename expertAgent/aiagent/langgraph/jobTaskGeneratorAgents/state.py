@@ -109,6 +109,10 @@ class JobTaskGeneratorState(TypedDict, total=False):
     # Parameters extracted from user requirements to be included in Job body
     job_body_parameters: list[dict[str, Any]]
 
+    # ===== Issue #338: Interface Compatibility =====
+    # Warnings from interface compatibility check between task chain nodes
+    interface_warnings: list[str]
+
 
 def create_initial_state(
     user_requirement: str,
@@ -165,4 +169,6 @@ def create_initial_state(
         "tracking_job_id": tracking_job_id,
         # Issue #321: Job Body Parameters
         "job_body_parameters": [],
+        # Issue #338: Interface Compatibility
+        "interface_warnings": [],
     }
