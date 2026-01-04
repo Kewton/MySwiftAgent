@@ -191,6 +191,114 @@ call_llm:
 - GraphAI は inputs: ブロックを解析して :reference を解決する
 - 文字列値の内部は解析されないため、":reference" は文字通りのテキストになる
 - このパターンに従わないワークフローは必ず失敗する
+
+## タスクチェーン連携ルール (Issue #338) - 必須
+
+タスクチェーン（複数タスクが順番に実行されるジョブ）では、前タスクの出力が次タスクの入力になります。
+**以下のルールは必須です。違反するとワークフローは必ず失敗します。**
+
+### 1. 配列処理には shiftAgent を使用（必須）
+
+**重要**: 配列から要素を取得するには **必ず shiftAgent を使用**してください。
+
+❌ **絶対禁止**: `[0]` や `[1]` などのインデックス参照は**動作しません**。使用禁止です。
+```yaml
+# ❌ 禁止 - インデックス参照は動作しない
+build_prompt:
+  inputs:
+    title: :source.user_input.articles[0].title  # ❌ 絶対禁止！
+```
+
+✅ **必須パターン**: shiftAgent を使用し、`.item` でアクセスする
+```yaml
+# ✅ 必須 - shiftAgent を使用
+extract_first:
+  agent: shiftAgent
+  inputs:
+    array: :source.user_input.articles  # 配列を入力
+
+build_prompt:
+  agent: stringTemplateAgent
+  inputs:
+    title: :extract_first.item.title     # ✅ .item で要素にアクセス
+    snippet: :extract_first.item.snippet # ✅ プリミティブ型のみ
+  params:
+    template: |-
+      タイトル: ${{title}}
+      内容: ${{snippet}}
+```
+
+### 2. タスクチェーン間のフィールド名を一致させる
+
+前タスクの出力フィールド名と、次タスクの入力参照を**完全に一致**させること。
+
+❌ 禁止（フィールド名不一致）:
+```yaml
+# Task 0 output: "results" として出力
+output:
+  inputs:
+    results: :data
+
+# Task 1 input: 異なるフィールド名 "search_results" を参照
+extract:
+  inputs:
+    array: :source.user_input.search_results  # ❌ 存在しない！
+```
+
+✅ 正解（フィールド名一致）:
+```yaml
+# Task 0 output: "results" として出力
+output:
+  inputs:
+    results: :data
+
+# Task 1 input: 同じフィールド名 "results" を参照
+extract:
+  inputs:
+    array: :source.user_input.results  # ✅ 一致
+```
+
+**エラー例**: `shiftAgent: namedInputs.array is UNDEFINED!`
+
+### 3. ネストされた出力の参照
+
+前タスクがネストされたオブジェクトを出力する場合、ドット記法で**完全パス**を指定します。
+
+```yaml
+# 前タスクが email_content: {{subject, body}} を出力する場合
+# ❌ 禁止: フラットなフィールドを期待
+send_email:
+  inputs:
+    body:
+      subject: :source.user_input.subject  # ❌ 存在しない
+      body: :source.user_input.body        # ❌ 存在しない
+
+# ✅ 正解: ネストパスで参照
+send_email:
+  inputs:
+    body:
+      subject: :source.user_input.email_content.subject  # ✅ ネストパス
+      body: :source.user_input.email_content.body        # ✅ ネストパス
+```
+
+**エラー例**: HTTP 422（必須パラメータ不足）
+
+### 4. fetchAgent の応答は .result で参照
+
+fetchAgent の応答データは `.result` プロパティに格納されます。
+
+```yaml
+# ❌ 禁止: 直接参照
+output:
+  inputs:
+    success: :api_call.success  # ❌ 存在しない
+
+# ✅ 正解: .result 経由で参照
+output:
+  inputs:
+    success: :api_call.result.success  # ✅ fetchAgent応答は.resultに格納
+    data: :api_call.result.data        # ✅
+```
 """
 
 # Load prompt from YAML
@@ -246,7 +354,8 @@ class WorkflowGenerationResponse(BaseModel):
         description="Complete GraphAI workflow YAML content with proper indentation"
     )
     reasoning: str = Field(
-        description="Explanation of design decisions and agent choices"
+        default="",
+        description="Explanation of design decisions and agent choices (optional)",
     )
 
 
@@ -654,6 +763,72 @@ nodes:
       result: :llm_process.result
     isResult: true
 ```
+
+**Example 4 - Task Chain Compatible Workflow (CRITICAL for multi-task jobs)**:
+
+タスクチェーンの一部として動作するワークフローを生成する場合、
+前タスクの出力形式と次タスクの入力期待を考慮すること。
+
+```yaml
+version: 0.5
+nodes:
+  source: {{}}
+
+  # Step 1: 配列から最初の要素を取得（shiftAgent使用）
+  # 前タスクが results 配列を出力する場合
+  extract_first:
+    agent: shiftAgent
+    inputs:
+      array: :source.user_input.results  # 前タスクの出力フィールド名と一致
+
+  # Step 2: プリミティブフィールドのみを使用してプロンプト構築
+  # stringTemplateAgent にはオブジェクト/配列を渡さない
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      title: :extract_first.item.title      # .item で要素アクセス
+      snippet: :extract_first.item.snippet  # プリミティブ型のみ
+    params:
+      template: |-
+        以下の情報を分析してください。
+
+        タイトル: ${{title}}
+        内容: ${{snippet}}
+
+        # RESPONSE_FORMAT:
+        {{
+          "title": "サマリタイトル",
+          "key_points": ["ポイント1", "ポイント2"],
+          "detailed_description": "詳細説明"
+        }}
+
+  # Step 3: LLM処理
+  generate:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: :build_prompt
+        model_name: gemini-2.5-flash
+    timeout: 90000
+
+  # Step 4: 次タスクが期待するフィールド名で出力
+  # 次タスクの入力スキーマを確認し、フィールド名を一致させる
+  output:
+    agent: copyAgent
+    inputs:
+      success: true
+      summary_data: :generate.result  # 次タスクが summary_data を期待する場合
+      error_message: ""
+    isResult: true
+```
+
+**Key Points**:
+1. `shiftAgent` で配列から要素を取得し、`.item` でアクセス
+2. `stringTemplateAgent` にはプリミティブ型のみを渡す
+3. 出力フィールド名は次タスクの入力期待と一致させる
+4. `fetchAgent` の結果は `.result` で参照
 
 ## Best Practices from Tutorial Patterns
 

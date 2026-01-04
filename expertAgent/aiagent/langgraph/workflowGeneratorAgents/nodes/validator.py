@@ -97,6 +97,57 @@ def _validate_output_schema(
     return []
 
 
+def _validate_output_content(
+    execution_result: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    """Validate output content for semantic correctness.
+
+    Issue #338: Check for explicit failure indicators in output.
+
+    Checks:
+    1. success field is not explicitly False
+    2. results array is not empty when error_message exists
+
+    Args:
+        execution_result: The execution result from workflow test
+
+    Returns:
+        List of validation issues (empty if valid)
+    """
+    if execution_result is None:
+        return []
+
+    results = execution_result.get("results", {})
+    if not results or not isinstance(results, dict):
+        return []
+
+    issues: list[dict[str, str]] = []
+
+    # Check 1: success field is explicitly False
+    success = results.get("success")
+    if success is False:
+        error_msg = results.get("error_message", "Unknown error")
+        issues.append(
+            _issue(
+                "output_content",
+                f"Workflow output indicates failure: {error_msg}",
+                "success=false",
+            )
+        )
+
+    # Check 2: empty results array WITH error_message
+    result_data = results.get("results")
+    error_msg = results.get("error_message", "")
+    if isinstance(result_data, list) and len(result_data) == 0 and error_msg:
+        issues.append(
+            _issue(
+                "output_content", f"Empty results with error: {error_msg}", "results=[]"
+            )
+        )
+
+    return issues
+
+
 async def validator_node(
     state: WorkflowGeneratorState,
 ) -> WorkflowGeneratorState:
@@ -107,6 +158,7 @@ async def validator_node(
     2. HTTP status code check (200 = success)
     3. GraphAI errors and timeout check
     4. Output schema compatibility check
+    5. Output content validation (Issue #338: success=false detection)
 
     Args:
         state: Current workflow generator state
@@ -156,6 +208,7 @@ async def validator_node(
         lambda: _validate_http_status(test_http_status),
         lambda: _validate_graphai_execution(test_execution_result),
         lambda: _validate_output_schema(test_execution_result, output_schema),
+        lambda: _validate_output_content(test_execution_result),  # Issue #338
     ]
 
     issues: list[dict[str, str]] = []
