@@ -1,0 +1,19 @@
+{
+  "issue_number": 338,
+  "refactor_targets": [
+    "jobqueue/app/core/worker.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 92.5,
+    "complexity_score": 12
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "エラーハンドリングの強化",
+    "ドキュメント整備"
+  ],
+  "notes": "今回の修正はデッドコードの呼び出し追加が主であり、大規模なリファクタリングは不要。コード品質の軽微な改善のみ検討。"
+}

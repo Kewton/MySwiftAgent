@@ -1258,7 +1258,8 @@ def render_model_settings_section() -> None:
 
     # Get current values from MyVault
     current_secrets = {
-        s["path"]: s for s in st.session_state.myvault_secrets
+        s["path"]: s
+        for s in st.session_state.myvault_secrets
         if s.get("project") == selected_project
     }
 
@@ -1298,7 +1299,9 @@ def render_model_settings_section() -> None:
                     selected_model = st.selectbox(
                         name,
                         options=model_options,
-                        index=model_options.index(display_value) if display_value in model_options else 0,
+                        index=model_options.index(display_value)
+                        if display_value in model_options
+                        else 0,
                         format_func=lambda x: model_display.get(x, x),
                         help=f"{description} (Default: {default})",
                         key=f"model_setting_{key}",
@@ -1447,12 +1450,14 @@ def main() -> None:
 
     # Create tabs for different sections
     # Issue #269: Added Model Settings tab
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Projects",
-        "Secrets",
-        "Model Settings",
-        "Google Auth",
-    ])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "Projects",
+            "Secrets",
+            "Model Settings",
+            "Google Auth",
+        ],
+    )
 
     with tab1:
         render_projects_section()

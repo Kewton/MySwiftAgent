@@ -128,7 +128,9 @@ def render_task_interface_info(task: dict[str, Any]) -> None:
         st.write(f"**Input:** {input_name}")
         if input_interface:
             render_interface_schema_expander(
-                input_interface, "Input Schema", schema_key="input_schema",
+                input_interface,
+                "Input Schema",
+                schema_key="input_schema",
             )
 
     with col2:
@@ -138,7 +140,9 @@ def render_task_interface_info(task: dict[str, Any]) -> None:
         st.write(f"**Output:** {output_name}")
         if output_interface:
             render_interface_schema_expander(
-                output_interface, "Output Schema", schema_key="output_schema",
+                output_interface,
+                "Output Schema",
+                schema_key="output_schema",
             )
 
 

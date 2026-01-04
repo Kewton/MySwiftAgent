@@ -6,11 +6,16 @@ in the generator node flow, not just that it exists.
 Issue #338: Dead code detection - get_api_response_schemas must be called.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
+import pytest
+
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+    StructuredCallResult,
+)
 from aiagent.langgraph.workflowGeneratorAgents.nodes.generator import generator_node
 from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+    WorkflowGenerationResponse,
     create_workflow_generation_prompt,
     create_workflow_generation_prompt_with_feedback,
 )
@@ -53,13 +58,6 @@ class TestGeneratorSchemaInjectionIntegration:
         }
 
         # Mock LLM response
-        from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
-            WorkflowGenerationResponse,
-        )
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredCallResult,
-        )
-
         mock_invoke_llm.return_value = StructuredCallResult(
             result=WorkflowGenerationResponse(
                 workflow_name="test_workflow",
@@ -114,13 +112,6 @@ class TestGeneratorSchemaInjectionIntegration:
         mock_get_schemas.side_effect = Exception("Schema retrieval failed")
 
         # Mock LLM response
-        from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
-            WorkflowGenerationResponse,
-        )
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredCallResult,
-        )
-
         mock_invoke_llm.return_value = StructuredCallResult(
             result=WorkflowGenerationResponse(
                 workflow_name="test_workflow",

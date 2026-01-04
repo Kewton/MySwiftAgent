@@ -6,8 +6,9 @@ in the evaluator node flow, not just that it exists.
 Issue #338: Dead code detection - check_interface_compatibility must be called.
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import (
     check_interface_compatibility,
@@ -15,6 +16,9 @@ from aiagent.langgraph.jobTaskGeneratorAgents.nodes.evaluator import (
 )
 from aiagent.langgraph.jobTaskGeneratorAgents.prompts.evaluation import (
     EvaluationResult,
+)
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+    StructuredCallResult,
 )
 
 
@@ -49,10 +53,6 @@ class TestEvaluatorCompatibilityIntegration:
             api_extension_proposals=[],
             issues=[],
             improvement_suggestions=[],
-        )
-
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredCallResult,
         )
 
         mock_invoke_llm.return_value = StructuredCallResult(
@@ -93,7 +93,7 @@ class TestEvaluatorCompatibilityIntegration:
         ) as mock_check:
             mock_check.return_value = []  # No warnings
 
-            result = await evaluator_node(state)
+            await evaluator_node(state)
 
             # Verify check_interface_compatibility was called
             mock_check.assert_called_once()
@@ -102,7 +102,9 @@ class TestEvaluatorCompatibilityIntegration:
             call_args = mock_check.call_args[0][0]  # First positional arg
             assert len(call_args) == 2
             # Tasks should have interface info merged
-            assert "output_interface" in call_args[0] or "input_interface" in call_args[0]
+            assert (
+                "output_interface" in call_args[0] or "input_interface" in call_args[0]
+            )
 
     @pytest.mark.asyncio
     @patch(
@@ -124,10 +126,6 @@ class TestEvaluatorCompatibilityIntegration:
             api_extension_proposals=[],
             issues=[],
             improvement_suggestions=[],
-        )
-
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredCallResult,
         )
 
         mock_invoke_llm.return_value = StructuredCallResult(

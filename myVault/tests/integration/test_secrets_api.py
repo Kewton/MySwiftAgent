@@ -55,9 +55,7 @@ def test_create_secret_duplicate(
     assert "already exists" in response.json()["detail"]
 
 
-def test_get_secret_not_found(
-    client: TestClient, auth_headers: dict[str, str]
-) -> None:
+def test_get_secret_not_found(client: TestClient, auth_headers: dict[str, str]) -> None:
     """Test getting a non-existent secret returns 404."""
     response = client.get("/api/secrets/test/non-existent/key", headers=auth_headers)
     assert response.status_code == 404
@@ -81,9 +79,7 @@ def test_delete_secret_not_found(
     client: TestClient, auth_headers: dict[str, str]
 ) -> None:
     """Test deleting a non-existent secret returns 404."""
-    response = client.delete(
-        "/api/secrets/test/non-existent/key", headers=auth_headers
-    )
+    response = client.delete("/api/secrets/test/non-existent/key", headers=auth_headers)
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
 

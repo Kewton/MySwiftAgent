@@ -1,0 +1,107 @@
+{
+  "issue_number": 338,
+  "iteration": 2,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "_transform_to_interface call integration",
+      "type": "integration",
+      "file_path": "jobqueue/app/core/worker.py",
+      "line_number": 238,
+      "description": "GraphAI結果をoutput_interfaceに基づいて変換する呼び出しを追加",
+      "expected_callers": ["_execute_tasks method"],
+      "expected_call_location": "jobqueue/app/core/worker.py",
+      "verification_command": "grep -n '_transform_to_interface' jobqueue/app/core/worker.py | grep -v '^.*:def '"
+    },
+    {
+      "feature_id": "F2",
+      "name": "get_api_response_schemas call integration",
+      "type": "integration",
+      "file_path": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+      "line_number": 99,
+      "description": "ワークフロー生成時にAPIスキーマを取得する呼び出しを追加",
+      "expected_callers": ["generator_node function"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+      "verification_command": "grep -n 'get_api_response_schemas' expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "api_schemas parameter addition",
+      "type": "parameter_addition",
+      "file_path": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py",
+      "description": "create_workflow_generation_promptにapi_schemasパラメータを追加",
+      "expected_callers": ["generator_node"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "check_interface_compatibility call integration",
+      "type": "integration",
+      "file_path": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "line_number": 530,
+      "description": "タスク間インターフェース整合性検証の呼び出しを追加",
+      "expected_callers": ["evaluator_node function"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "verification_command": "grep -n 'check_interface_compatibility' expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py | grep -v '^.*:def '"
+    },
+    {
+      "feature_id": "F5",
+      "name": "interface_warnings field",
+      "type": "field_addition",
+      "file_path": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
+      "line_number": 114,
+      "description": "JobTaskGeneratorStateにinterface_warningsフィールドを追加",
+      "expected_callers": ["evaluator_node"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_interface_transformer.py"],
+      "integration_tests": ["test_issue_338_worker_transform.py"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_api_schema_injection.py"],
+      "integration_tests": ["test_issue_338_generator_schemas.py"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_interface_compatibility.py"],
+      "integration_tests": ["test_issue_338_evaluator_compatibility.py"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "jobqueue/app/core/worker.py",
+      "integration_type": "function_call",
+      "integration_method": "task.output_data = _transform_to_interface(extracted, output_schema_for_transform)"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+      "integration_type": "import_and_call",
+      "integration_method": "from ... import get_api_response_schemas; api_schemas = await get_api_response_schemas(recommended_apis)"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "integration_type": "function_call",
+      "integration_method": "interface_warnings = check_interface_compatibility(tasks_with_interfaces)"
+    }
+  ],
+  "files_modified": [
+    "jobqueue/app/core/worker.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/nodes/generator.py",
+    "expertAgent/aiagent/langgraph/workflowGeneratorAgents/prompts/workflow_generation.py"
+  ],
+  "files_created": [
+    "jobqueue/tests/integration/test_issue_338_worker_transform.py",
+    "expertAgent/tests/integration/test_issue_338_evaluator_compatibility.py",
+    "expertAgent/tests/integration/test_issue_338_generator_schemas.py"
+  ]
+}

@@ -1,12 +1,12 @@
 """Unit tests for the created_at migration script."""
 
 import sqlite3
-import tempfile
-from pathlib import Path
-from datetime import datetime
-from contextlib import closing
-import pytest
 import sys
+import tempfile
+from contextlib import closing
+from pathlib import Path
+
+import pytest
 
 # Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 from migrate_add_created_at import (
     check_column_exists,
     migrate_database,
-    verify_migration
+    verify_migration,
 )
 
 
@@ -60,19 +60,46 @@ def test_db():
         """)
 
         test_data = [
-            ("test_project", "API_KEY_1", b"encrypted1", b"iv1", b"tag1", 1,
-             "2024-01-01 10:00:00", "user1"),
-            ("test_project", "API_KEY_2", b"encrypted2", b"iv2", b"tag2", 1,
-             "2024-02-01 11:00:00", "user2"),
-            ("test_project", "API_KEY_3", b"encrypted3", b"iv3", b"tag3", 2,
-             "2024-03-01 12:00:00", "user3"),
+            (
+                "test_project",
+                "API_KEY_1",
+                b"encrypted1",
+                b"iv1",
+                b"tag1",
+                1,
+                "2024-01-01 10:00:00",
+                "user1",
+            ),
+            (
+                "test_project",
+                "API_KEY_2",
+                b"encrypted2",
+                b"iv2",
+                b"tag2",
+                1,
+                "2024-02-01 11:00:00",
+                "user2",
+            ),
+            (
+                "test_project",
+                "API_KEY_3",
+                b"encrypted3",
+                b"iv3",
+                b"tag3",
+                2,
+                "2024-03-01 12:00:00",
+                "user3",
+            ),
         ]
 
-        cursor.executemany("""
+        cursor.executemany(
+            """
             INSERT INTO secrets (project, path, encrypted_value, encryption_iv,
                                encryption_tag, version, updated_at, updated_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, test_data)
+        """,
+            test_data,
+        )
 
         conn.commit()
 

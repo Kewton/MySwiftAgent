@@ -6,15 +6,11 @@ This module tests the end-to-end task chain transformation flow:
 - Data flow to subsequent tasks
 """
 
-from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.core.worker import JobExecutor, _extract_graphai_output, _transform_to_interface
-from app.models.job import Job, JobStatus
-from app.models.task import Task, TaskStatus
-from app.models.task_master import TaskMaster
+from app.core.worker import _extract_graphai_output, _transform_to_interface
 
 
 class TestTaskChainTransformation:
@@ -41,14 +37,6 @@ class TestTaskChainTransformation:
         self, mock_session, mock_settings
     ):
         """Test that GraphAI output is transformed before being passed to next task."""
-        # Setup mock task master with output_interface
-        task_master = TaskMaster(
-            id="tm_001",
-            name="Google Search",
-            method="POST",
-            url="http://graphai:8005/api/v1/execute",
-        )
-
         # Simulate output_interface (stored as JSON or retrieved separately)
         output_interface = {
             "type": "object",
@@ -253,8 +241,16 @@ class TestTaskChainTransformation:
                 "source": {"user_input": {"query": "Python best practices"}},
                 "fetch_search": {
                     "search_results": [
-                        {"title": "PEP 8", "link": "https://peps.python.org/pep-0008/", "knowledge": "Style guide"},
-                        {"title": "Clean Code", "link": "https://example.com/clean-code", "knowledge": "Best practices"},
+                        {
+                            "title": "PEP 8",
+                            "link": "https://peps.python.org/pep-0008/",
+                            "knowledge": "Style guide",
+                        },
+                        {
+                            "title": "Clean Code",
+                            "link": "https://example.com/clean-code",
+                            "knowledge": "Best practices",
+                        },
                     ],
                     "search_results_count": 2,
                     "status": "ok",
@@ -262,8 +258,16 @@ class TestTaskChainTransformation:
                 "output": {
                     "success": True,
                     "search_results": [
-                        {"title": "PEP 8", "link": "https://peps.python.org/pep-0008/", "knowledge": "Style guide"},
-                        {"title": "Clean Code", "link": "https://example.com/clean-code", "knowledge": "Best practices"},
+                        {
+                            "title": "PEP 8",
+                            "link": "https://peps.python.org/pep-0008/",
+                            "knowledge": "Style guide",
+                        },
+                        {
+                            "title": "Clean Code",
+                            "link": "https://example.com/clean-code",
+                            "knowledge": "Best practices",
+                        },
                     ],
                     "search_results_count": 2,
                     "error_message": "",
@@ -273,7 +277,9 @@ class TestTaskChainTransformation:
 
         # Extract and transform search results
         search_extracted = _extract_graphai_output(search_graphai_response)
-        search_output = _transform_to_interface(search_extracted, search_output_interface)
+        search_output = _transform_to_interface(
+            search_extracted, search_output_interface
+        )
 
         # Verify search output
         assert search_output["success"] is True
@@ -352,11 +358,7 @@ class TestEdgeCases:
         }
 
         raw_output = {
-            "level1": {
-                "level2": {
-                    "results": [{"data": "value1"}, {"data": "value2"}]
-                }
-            }
+            "level1": {"level2": {"results": [{"data": "value1"}, {"data": "value2"}]}}
         }
 
         transformed = _transform_to_interface(raw_output, output_interface)

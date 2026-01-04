@@ -536,7 +536,9 @@ async def evaluator_node(
                     interface_warnings,
                 )
         except Exception as compat_error:
-            logger.error(f"Interface compatibility check failed: {compat_error}")
+            logger.error(
+                "Interface compatibility check failed: %s", compat_error, exc_info=True
+            )
             interface_warnings = [f"Compatibility check error: {compat_error}"]
 
     # NOTE: Do not modify retry_count here - it's managed by requirement_analysis/interface_definition nodes

@@ -72,7 +72,9 @@ def main():
             else:
                 print(f"🔄 Setting project '{name}' as default...")
                 # First, unset any existing default
-                cursor.execute("UPDATE projects SET is_default = 0 WHERE is_default = 1")
+                cursor.execute(
+                    "UPDATE projects SET is_default = 0 WHERE is_default = 1"
+                )
                 # Set default_project as default
                 cursor.execute(
                     "UPDATE projects SET is_default = 1 WHERE name = 'default_project'"
@@ -96,7 +98,7 @@ def main():
         projects = cursor.fetchall()
 
         print("\n📦 Current projects:")
-        for project_id, name, is_default in projects:
+        for _project_id, name, is_default in projects:
             default_marker = "⭐ (default)" if is_default else ""
             print(f"  - {name} {default_marker}")
 

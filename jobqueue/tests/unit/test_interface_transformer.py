@@ -10,8 +10,6 @@ The transformation layer ensures that:
 - Sensitive data is masked in logs
 """
 
-import pytest
-
 from app.core.worker import (
     _find_field_value,
     _path_based_search,
@@ -325,8 +323,16 @@ class TestTransformationRealWorldScenarios:
             "source": {"user_input": {"query": "AI news"}},
             "execute_search": {
                 "search_results": [
-                    {"title": "AI News 1", "link": "https://example.com/1", "knowledge": "..."},
-                    {"title": "AI News 2", "link": "https://example.com/2", "knowledge": "..."},
+                    {
+                        "title": "AI News 1",
+                        "link": "https://example.com/1",
+                        "knowledge": "...",
+                    },
+                    {
+                        "title": "AI News 2",
+                        "link": "https://example.com/2",
+                        "knowledge": "...",
+                    },
                 ],
                 "search_results_count": 2,
                 "status": "ok",

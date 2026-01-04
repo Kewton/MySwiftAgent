@@ -6,8 +6,9 @@ in the worker execution flow, not just that it exists.
 Issue #338: Dead code detection - _transform_to_interface must be called.
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.mark.integration
@@ -22,19 +23,18 @@ class TestWorkerTransformIntegration:
         into the worker's task execution flow.
         """
         # We'll patch _transform_to_interface to verify it's called
-        with patch(
-            "app.core.worker._transform_to_interface"
-        ) as mock_transform, patch(
-            "app.core.worker._extract_graphai_output"
-        ) as mock_extract:
+        with (
+            patch("app.core.worker._transform_to_interface") as mock_transform,
+            patch("app.core.worker._extract_graphai_output") as mock_extract,
+        ):
             # Setup mocks
             mock_extract.return_value = {"result": "extracted_data"}
             mock_transform.return_value = {"transformed": "output"}
 
             # Import after patching
             from app.core.worker import (
-                _transform_to_interface,
                 _extract_graphai_output,
+                _transform_to_interface,
             )
 
             # Simulate the worker's output processing logic
@@ -49,7 +49,7 @@ class TestWorkerTransformIntegration:
             extracted = _extract_graphai_output(output_data)
 
             # Then transformation should be called
-            result = _transform_to_interface(extracted, output_schema_for_transform)
+            _transform_to_interface(extracted, output_schema_for_transform)
 
             # Verify the function was called
             mock_extract.assert_called_once()

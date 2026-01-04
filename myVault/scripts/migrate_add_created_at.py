@@ -5,11 +5,10 @@ This script adds the missing created_at column to the secrets table
 and populates it with the existing updated_at values for backward compatibility.
 """
 
-import sys
-from pathlib import Path
-from datetime import datetime
 import sqlite3
+import sys
 from contextlib import closing
+from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -60,7 +59,9 @@ def migrate_database(db_path: str) -> None:
             null_count = cursor.fetchone()[0]
 
             if null_count > 0:
-                raise Exception(f"Migration failed: {null_count} records have NULL created_at")
+                raise Exception(
+                    f"Migration failed: {null_count} records have NULL created_at"
+                )
 
             # Commit transaction
             conn.commit()
@@ -69,7 +70,9 @@ def migrate_database(db_path: str) -> None:
             if check_column_exists(cursor, "secrets", "created_at"):
                 cursor.execute("SELECT COUNT(*) FROM secrets")
                 total_count = cursor.fetchone()[0]
-                print(f"✅ Successfully added created_at column to {total_count} records")
+                print(
+                    f"✅ Successfully added created_at column to {total_count} records"
+                )
             else:
                 raise Exception("Column was not added successfully")
 
@@ -121,16 +124,18 @@ def main():
     """Main entry point for the migration script."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Add created_at column to secrets table")
+    parser = argparse.ArgumentParser(
+        description="Add created_at column to secrets table"
+    )
     parser.add_argument(
         "--db-path",
         default="/app/data/myvault.db",
-        help="Path to the SQLite database file (default: /app/data/myvault.db)"
+        help="Path to the SQLite database file (default: /app/data/myvault.db)",
     )
     parser.add_argument(
         "--verify-only",
         action="store_true",
-        help="Only verify the migration without making changes"
+        help="Only verify the migration without making changes",
     )
 
     args = parser.parse_args()

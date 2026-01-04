@@ -1,0 +1,35 @@
+{
+  "issue_number": 338,
+  "feature_summary": "タスクチェーン インターフェース契約強制メカニズムの導入",
+  "acceptance_criteria": [
+    "ワークフロー生成プロンプトに出力ノード名 `output` の強制ルールが追加されている",
+    "`isResult: true` と `output` ノード名の組み合わせが必須化されている",
+    "生成されたワークフローYAMLの検証機能が動作する",
+    "`jobqueue/app/core/worker.py` の `output_interface` 変換ロジックが動作する",
+    "GraphAI結果から `output_interface` 定義に基づいてデータを抽出・変換できる",
+    "`expert_agent_capabilities.yaml` からAPI応答スキーマを取得できる",
+    "`evaluator.py` のタスク間インターフェース整合性検証関数が動作する"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "jobqueue"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "existing acceptance test file",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "pytest受入テスト実行",
+        "command": "cd expertAgent && uv run pytest tests/acceptance/test_issue_338_acceptance.py -v",
+        "expected_status": 0,
+        "expected_response_contains": ["passed"]
+      }
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_338_acceptance.py"
+}

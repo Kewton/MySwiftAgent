@@ -829,7 +829,9 @@ IMPORTANT:
             if "name" in schema_info:
                 api_schemas_section += f"**API Name**: {schema_info['name']}\n"
             if "description" in schema_info:
-                api_schemas_section += f"**Description**: {schema_info['description']}\n"
+                api_schemas_section += (
+                    f"**Description**: {schema_info['description']}\n"
+                )
             if "response_schema" in schema_info:
                 api_schemas_section += "**Response Schema**:\n```json\n"
                 api_schemas_section += json.dumps(

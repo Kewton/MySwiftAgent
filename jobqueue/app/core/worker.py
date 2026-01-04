@@ -232,7 +232,9 @@ class JobExecutor:
                     # 1. Extract GraphAI output node result for task chains
                     # 2. Transform to match output_interface definition
                     extracted = (
-                        _extract_graphai_output(output_data) if output_data else output_data
+                        _extract_graphai_output(output_data)
+                        if output_data
+                        else output_data
                     )
                     try:
                         task.output_data = _transform_to_interface(
@@ -801,8 +803,15 @@ def _path_based_search(
 
 # Sensitive field patterns for log masking
 _SENSITIVE_FIELD_PATTERNS = {
-    "api_key", "password", "token", "secret", "credential",
-    "private_key", "access_key", "auth", "bearer",
+    "api_key",
+    "password",
+    "token",
+    "secret",
+    "credential",
+    "private_key",
+    "access_key",
+    "auth",
+    "bearer",
 }
 
 

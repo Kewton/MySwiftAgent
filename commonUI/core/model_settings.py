@@ -30,7 +30,9 @@ class ModelSettingsLoader:
         if config_path is None:
             # Try Docker path first, then local development path
             docker_path = Path("/app/config/available_models.yaml")
-            local_path = Path(__file__).parent.parent / "config" / "available_models.yaml"
+            local_path = (
+                Path(__file__).parent.parent / "config" / "available_models.yaml"
+            )
 
             config_path = docker_path if docker_path.exists() else local_path
 
@@ -76,11 +78,13 @@ class ModelSettingsLoader:
 
         for provider_id, provider_data in config.get("providers", {}).items():
             for model in provider_data.get("models", []):
-                models.append({
-                    "provider": provider_id,
-                    "provider_name": provider_data.get("name", provider_id),
-                    **model,
-                })
+                models.append(
+                    {
+                        "provider": provider_id,
+                        "provider_name": provider_data.get("name", provider_id),
+                        **model,
+                    },
+                )
 
         return models
 
@@ -142,11 +146,13 @@ class ModelSettingsLoader:
 
         for category_id, category_data in categories.items():
             for setting in category_data.get("settings", []):
-                settings.append({
-                    "category": category_id,
-                    "category_name": category_data.get("name", category_id),
-                    **setting,
-                })
+                settings.append(
+                    {
+                        "category": category_id,
+                        "category_name": category_data.get("name", category_id),
+                        **setting,
+                    },
+                )
 
         return settings
 
@@ -191,10 +197,7 @@ def get_model_options() -> list[tuple[str, str]]:
         List of (model_id, display_name) tuples
     """
     models = model_settings_loader.get_all_models()
-    return [
-        (m["id"], f"{m['provider_name']}: {m['name']}")
-        for m in models
-    ]
+    return [(m["id"], f"{m['provider_name']}: {m['name']}") for m in models]
 
 
 def get_model_display_name(model_id: str) -> str:
