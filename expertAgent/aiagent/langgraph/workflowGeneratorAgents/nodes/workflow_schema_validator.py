@@ -164,7 +164,7 @@ def _check_type_mismatch(
         return issues
 
     # Get body from inputs
-    inputs = node_def.get("inputs", {})
+    inputs = node_def.get("inputs") or {}
     body = inputs.get("body", {})
 
     if not isinstance(body, dict):
@@ -205,7 +205,7 @@ def _check_field_names(
     issues: list[dict[str, Any]] = []
 
     # Get body from inputs
-    inputs = node_def.get("inputs", {})
+    inputs = node_def.get("inputs") or {}
     body = inputs.get("body", {})
 
     if not isinstance(body, dict):
@@ -257,7 +257,7 @@ def _validate_fetch_agent_nodes(
             continue
 
         # Get URL from inputs
-        inputs = node_def.get("inputs", {})
+        inputs = node_def.get("inputs") or {}
         url = inputs.get("url", "")
 
         # Check type mismatches (pass nodes to check agent types)
@@ -355,7 +355,7 @@ def _validate_copy_agent_nodes(
         if agent != "copyAgent":
             continue
 
-        inputs = node_def.get("inputs", {})
+        inputs = node_def.get("inputs") or {}
         if not isinstance(inputs, dict):
             continue
 

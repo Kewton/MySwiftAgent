@@ -176,6 +176,118 @@ class TestLLMEvaluatorRouter:
         assert result == "test_data_regenerator"
 
 
+class TestIssue338CriticalWeaknessRouting:
+    """Test Issue #338: Critical weakness detection and routing."""
+
+    def test_router_to_self_repair_on_is_acceptable_false(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test routing to self_repair when is_acceptable is False."""
+        from aiagent.langgraph.workflowGeneratorAgents.agent import llm_evaluator_router
+
+        state_not_acceptable = {
+            **base_state,
+            "is_valid": True,
+            "is_acceptable": False,  # Issue #338: Not acceptable
+            "evaluation_score": 72,  # Above threshold
+            "needs_test_data_regeneration": False,
+        }
+
+        result = llm_evaluator_router(state_not_acceptable)
+        assert result == "self_repair"
+
+    def test_router_to_self_repair_on_critical_weakness(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test routing to self_repair when has_critical_weakness is True."""
+        from aiagent.langgraph.workflowGeneratorAgents.agent import llm_evaluator_router
+
+        state_critical = {
+            **base_state,
+            "is_valid": True,
+            "is_acceptable": True,
+            "has_critical_weakness": True,  # Issue #338: Critical weakness
+            "critical_issues": ["Critical: Missing output node"],
+            "evaluation_score": 72,  # Above threshold
+            "needs_test_data_regeneration": False,
+        }
+
+        result = llm_evaluator_router(state_critical)
+        assert result == "self_repair"
+
+    def test_router_success_with_no_critical_weakness(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test successful routing when no critical weakness."""
+        from aiagent.langgraph.workflowGeneratorAgents.agent import llm_evaluator_router
+
+        state_no_critical = {
+            **base_state,
+            "is_valid": True,
+            "is_acceptable": True,  # Issue #338: Acceptable
+            "has_critical_weakness": False,  # Issue #338: No critical
+            "critical_issues": [],
+            "evaluation_score": 85,
+            "needs_test_data_regeneration": False,
+            "llm_evaluation_result": {
+                "overall_score": 85,
+                "failure_reason": "none",
+            },
+        }
+
+        result = llm_evaluator_router(state_no_critical)
+        assert result == "result_summary_generator"
+
+    def test_router_critical_weakness_overrides_high_score(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test that critical weakness triggers self_repair even with high score."""
+        from aiagent.langgraph.workflowGeneratorAgents.agent import llm_evaluator_router
+
+        # Root cause 2-A: Critical weakness with high score should still fail
+        state_critical_high_score = {
+            **base_state,
+            "is_valid": True,
+            "is_acceptable": True,  # is_acceptable calculated without critical check
+            "has_critical_weakness": True,  # Critical detected
+            "critical_issues": ["Critical: Output node missing search_results"],
+            "evaluation_score": 72,  # Above threshold
+            "needs_test_data_regeneration": False,
+            "llm_evaluation_result": {
+                "overall_score": 72,
+                "failure_reason": "none",  # LLM didn't set failure_reason
+            },
+        }
+
+        result = llm_evaluator_router(state_critical_high_score)
+        assert result == "self_repair"
+
+    def test_router_is_acceptable_false_overrides_high_score(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test that is_acceptable=False triggers self_repair even with high score."""
+        from aiagent.langgraph.workflowGeneratorAgents.agent import llm_evaluator_router
+
+        # Root cause 2-B: is_acceptable should be used in routing
+        state_not_acceptable_high_score = {
+            **base_state,
+            "is_valid": True,
+            "is_acceptable": False,  # Due to low test_data_quality_score
+            "has_critical_weakness": False,
+            "critical_issues": [],
+            "evaluation_score": 72,  # Above threshold
+            "needs_test_data_regeneration": False,
+            "llm_evaluation_result": {
+                "overall_score": 72,
+                "failure_reason": "none",
+                "test_data_quality_score": 25,  # Low quality
+            },
+        }
+
+        result = llm_evaluator_router(state_not_acceptable_high_score)
+        assert result == "self_repair"
+
+
 class TestTestDataRegeneratorRouter:
     """Test test_data_regenerator_router."""
 

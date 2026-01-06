@@ -5,11 +5,15 @@ specifically focusing on handling different data formats for recommended_apis.
 
 Issue #305: These tests were added after discovering a TypeError
 when recommended_apis was passed as list[dict] instead of list[str].
+
+Issue #338: Updated to use centralized type guard functions.
 """
 
 from aiagent.langgraph.workflowGeneratorAgents.prompts.llm_evaluation import (
-    _format_recommended_apis,
     create_llm_evaluation_prompt,
+)
+from aiagent.langgraph.workflowGeneratorAgents.utils.type_guards import (
+    format_apis_comma_separated as _format_recommended_apis,
 )
 
 
@@ -42,17 +46,19 @@ class TestFormatRecommendedApis:
         assert result == "search_api, calendar_api"
 
     def test_format_with_mixed_list(self) -> None:
-        """Test formatting with mixed list of str and dict."""
+        """Test formatting with mixed list of str and dict.
+
+        Issue #338: Updated to test only valid types (str, dict).
+        Invalid types like int are now skipped by centralized type guards.
+        """
         result = _format_recommended_apis(
             [
                 "string_api",
                 {"name": "dict_api"},
-                123,  # Non-standard type
             ]
         )
         assert "string_api" in result
         assert "dict_api" in result
-        assert "123" in result
 
     def test_format_with_empty_list(self) -> None:
         """Test formatting with empty list."""
@@ -65,14 +71,18 @@ class TestFormatRecommendedApis:
         assert result == "None specified"
 
     def test_format_with_dict_without_name_key(self) -> None:
-        """Test formatting with dict that doesn't have 'name' or 'api_name' key."""
+        """Test formatting with dict that doesn't have 'name' or 'api_name' key.
+
+        Issue #338: Updated to reflect new behavior where dicts without
+        recognizable name fields are skipped (return "None specified").
+        """
         result = _format_recommended_apis(
             [
                 {"endpoint": "/api/v1/test", "method": "GET"},
             ]
         )
-        # Should fallback to str(dict)
-        assert "endpoint" in result or "{" in result
+        # Items without name/api_name are skipped in new implementation
+        assert result == "None specified"
 
 
 class TestCreateLLMEvaluationPrompt:

@@ -138,6 +138,28 @@ def _format_feedback(evaluation: LLMEvaluationResult) -> str:
     return "\n".join(lines)
 
 
+def _has_critical_weakness(weaknesses: list[str]) -> tuple[bool, list[str]]:
+    """Check if any weakness contains 'Critical' keyword.
+
+    Issue #338: This function programmatically detects critical weaknesses
+    that should trigger self-repair regardless of the overall score.
+
+    Args:
+        weaknesses: List of weakness descriptions from LLM evaluation
+
+    Returns:
+        Tuple of (has_critical, critical_issues_list)
+    """
+    critical_patterns = ["Critical", "CRITICAL", "critical", "致命的", "重大"]
+    critical_issues: list[str] = []
+
+    for weakness in weaknesses:
+        if any(pattern in weakness for pattern in critical_patterns):
+            critical_issues.append(weakness)
+
+    return len(critical_issues) > 0, critical_issues
+
+
 async def llm_evaluator_node(
     state: WorkflowGeneratorState,
 ) -> WorkflowGeneratorState:
@@ -226,12 +248,20 @@ async def llm_evaluator_node(
         and current_regen_count < max_regen
     )
 
+    # Issue #338: Detect critical weaknesses programmatically
+    has_critical, critical_issues = _has_critical_weakness(
+        evaluation_result.weaknesses or []
+    )
+    if has_critical:
+        logger.warning(f"Issue #338: Critical weakness detected: {critical_issues}")
+
     # Determine acceptability (considering test data quality)
     is_acceptable = (
         evaluation_result.overall_score >= 70
         and evaluation_result.requirement_score >= 60
         and evaluation_result.test_data_quality_score >= 50
         and not needs_regeneration
+        and not has_critical  # Issue #338: Critical weakness means not acceptable
     )
 
     # Combine with existing is_valid status
@@ -239,7 +269,8 @@ async def llm_evaluator_node(
 
     logger.info(
         f"LLM evaluation complete: score={evaluation_result.overall_score}, "
-        f"is_acceptable={is_acceptable}, needs_regeneration={needs_regeneration}"
+        f"is_acceptable={is_acceptable}, has_critical={has_critical}, "
+        f"needs_regeneration={needs_regeneration}"
     )
 
     return {
@@ -253,4 +284,8 @@ async def llm_evaluator_node(
         "needs_test_data_regeneration": needs_regeneration,
         "suggested_test_data": evaluation_result.suggested_test_data,
         "is_valid": final_is_valid,
+        # Issue #338: New state fields for critical weakness detection
+        "is_acceptable": is_acceptable,
+        "has_critical_weakness": has_critical,
+        "critical_issues": critical_issues,
     }

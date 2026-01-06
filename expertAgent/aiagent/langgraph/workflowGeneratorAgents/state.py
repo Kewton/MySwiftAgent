@@ -67,6 +67,11 @@ class WorkflowGeneratorState(TypedDict, total=False):
         validation_summary: Complete validation summary dictionary
         summary_markdown: Markdown-formatted summary
 
+        # Critical Weakness Detection fields (Issue #338)
+        is_acceptable: Combined acceptability from LLM evaluation
+        has_critical_weakness: Whether critical weakness was detected in evaluation
+        critical_issues: List of critical issues found during evaluation
+
         # Self-Repair fields
         retry_count: Current self-repair retry count
         error_feedback: Error feedback for LLM to fix issues
@@ -133,6 +138,11 @@ class WorkflowGeneratorState(TypedDict, total=False):
     # MF-1: Infinite loop prevention for object array regeneration
     object_array_regeneration_count: int
     max_object_array_regeneration: int
+
+    # ===== Critical Weakness Detection (Issue #338) =====
+    is_acceptable: bool  # Combined acceptability from LLM evaluation
+    has_critical_weakness: bool  # Whether critical weakness was detected
+    critical_issues: list[str]  # List of critical issues found
 
     # ===== Self-Repair =====
     retry_count: int
@@ -218,6 +228,10 @@ def create_initial_state(
         # MF-1: Infinite loop prevention for object array regeneration
         "object_array_regeneration_count": 0,
         "max_object_array_regeneration": effective_max_test_data_regen,
+        # Critical Weakness Detection (Issue #338)
+        "is_acceptable": True,  # Default to True, set by llm_evaluator_node
+        "has_critical_weakness": False,
+        "critical_issues": [],
         # Self-Repair
         "retry_count": 0,
         "error_feedback": None,

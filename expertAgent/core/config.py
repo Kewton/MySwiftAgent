@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     JOB_GENERATOR_VALIDATION_MODEL: str = Field(default="claude-haiku-4-5")
 
     # Workflow Generator Configuration (Issue #110)
-    # Issue #338: Changed from claude-haiku-4-5 to gemini-3-flash-preview for better rule compliance
-    WORKFLOW_GENERATOR_MODEL: str = Field(default="gemini-3-flash-preview")
+    # Issue #338: Changed to gemini-3-pro-preview for better workflow quality and rule compliance
+    WORKFLOW_GENERATOR_MODEL: str = Field(default="gemini-3-pro-preview")
     WORKFLOW_GENERATOR_MAX_TOKENS: int = Field(default=16384)
 
     # LLM Evaluator Configuration (Issue #305)

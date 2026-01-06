@@ -98,7 +98,7 @@ class TestGetModelConfig:
             ("JOB_GENERATOR_EVALUATOR_MODEL", "claude-haiku-4-5"),
             ("JOB_GENERATOR_INTERFACE_DEFINITION_MODEL", "claude-haiku-4-5"),
             ("JOB_GENERATOR_VALIDATION_MODEL", "claude-haiku-4-5"),
-            ("WORKFLOW_GENERATOR_MODEL", "gemini-3-flash-preview"),
+            ("WORKFLOW_GENERATOR_MODEL", "gemini-3-pro-preview"),
         ]
 
         for key, default in model_keys:
@@ -175,6 +175,7 @@ class TestModelConfigConstants:
             "gemini-2.0-flash",
             "gemini-2.5-flash",
             "gemini-3-flash-preview",
+            "gemini-3-pro-preview",
             "gemini-1.5-pro",
             "claude-haiku-4-5",
             "claude-sonnet-4-20250514",
@@ -190,7 +191,7 @@ class TestModelConfigConstants:
             "JOB_GENERATOR_EVALUATOR_MODEL": "claude-haiku-4-5",
             "JOB_GENERATOR_INTERFACE_DEFINITION_MODEL": "claude-haiku-4-5",
             "JOB_GENERATOR_VALIDATION_MODEL": "claude-haiku-4-5",
-            "WORKFLOW_GENERATOR_MODEL": "gemini-3-flash-preview",
+            "WORKFLOW_GENERATOR_MODEL": "gemini-3-pro-preview",
         }
 
         for key, default in default_models.items():

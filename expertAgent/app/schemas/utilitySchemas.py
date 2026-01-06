@@ -1,6 +1,6 @@
 from typing import Any, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class UtilityRequest(BaseModel):
@@ -29,10 +29,10 @@ class UtilityResponse(BaseModel):
 
 class SearchUtilityRequest(BaseModel):
     queries: List[str]
-    num: int | None = None
+    num: int | None = Field(default=None, le=3, description="Number of results per query (max=3 to prevent timeout)")
     project: str | None = None  # MyVault project name for secrets
     test_mode: bool = False  # Test mode flag for development/debugging
-    test_response: dict | str | None = None  # Mock response for test mode
+    test_response: dict | None = None  # Mock response for test mode
 
 
 class SearchUtilityResponse(BaseModel):

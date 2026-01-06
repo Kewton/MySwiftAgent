@@ -127,25 +127,46 @@ utility_apis:
         description: "各クエリの検索結果件数"
         default: 10
     response_schema:
-      results:
+      search_results:
         type: "array"
-        description: "検索結果のリスト"
+        description: "検索結果のリスト（クエリごとに1つのオブジェクト）"
         items:
           type: "object"
           properties:
-            query:
+            title:
               type: "string"
-            organic:
-              type: "array"
-              items:
-                type: "object"
-                properties:
-                  title:
-                    type: "string"
-                  link:
-                    type: "string"
-                  snippet:
-                    type: "string"
+              description: "検索結果のタイトル"
+            link:
+              type: "string"
+              description: "検索結果のURL"
+            knowledge:
+              type: "string"
+              description: "LLMが抽出したナレッジ情報"
+            original_query:
+              type: "string"
+              description: "元の検索クエリ"
+      search_results_count:
+        type: "integer"
+        description: "検索結果の件数"
+      status:
+        type: "string"
+        description: "ステータス（通常 'ok'）"
+    workflow_usage_example: |
+      # fetchAgentでAPIを呼び出した後、結果を参照するパターン:
+      # 1. APIレスポンス全体: :google_search_api
+      # 2. 検索結果配列: :google_search_api.result.search_results
+      # 3. 最初の検索結果: :google_search_api.result.search_results[0]
+      #
+      # shiftAgentを使う場合（推奨）:
+      # extract_first:
+      #   agent: shiftAgent
+      #   inputs:
+      #     array: :google_search_api.result.search_results
+      #
+      # その後: :extract_first.item.title, :extract_first.item.link, :extract_first.item.knowledge でアクセス
+      #
+      # 注意: fetchAgentのレスポンスは .result プロパティに格納されるため、
+      # :api_node.result.search_results のようにアクセスする必要がある
 
   - name: "Google検索概要"
     endpoint: "/v1/utility/google_search_overview"
@@ -166,14 +187,52 @@ utility_apis:
         description: "各クエリの検索結果件数"
         default: 10
     response_schema:
-      overview:
-        type: "string"
-        description: "検索結果の概要サマリー"
-      results:
-        type: "array"
-        description: "検索結果のリスト"
-        items:
-          type: "object"
+      result:
+        type: "object"
+        description: "API応答のラッパーオブジェクト"
+        properties:
+          text:
+            type: "string"
+            description: "ステータスメッセージ（通常 'ok'）"
+          result:
+            type: "array"
+            description: "検索結果の配列（各クエリごとに1つのオブジェクト）"
+            items:
+              type: "object"
+              properties:
+                organic:
+                  type: "array"
+                  description: "オーガニック検索結果のリスト"
+                  items:
+                    type: "object"
+                    properties:
+                      title:
+                        type: "string"
+                        description: "検索結果のタイトル"
+                      link:
+                        type: "string"
+                        description: "検索結果のURL"
+                      snippet:
+                        type: "string"
+                        description: "検索結果のスニペット"
+                      position:
+                        type: "integer"
+                        description: "検索結果の順位"
+    workflow_usage_example: |
+      # fetchAgentでAPIを呼び出した後、結果を参照するパターン:
+      # 1. APIレスポンス全体: :search_api
+      # 2. resultオブジェクト: :search_api.result
+      # 3. 検索結果配列: :search_api.result.result
+      # 4. 最初のクエリの結果: :search_api.result.result[0]
+      # 5. organic検索結果: :search_api.result.result[0].organic
+      #
+      # shiftAgentを使う場合（推奨）:
+      # extract_first:
+      #   agent: shiftAgent
+      #   inputs:
+      #     array: :search_api.result.result
+      #
+      # その後: :extract_first.item.organic でアクセス
 
   # Google Drive APIs
   - name: "Google Drive Upload"

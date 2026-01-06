@@ -5,6 +5,7 @@ the workflow generation prompt.
 """
 
 from aiagent.langgraph.workflowGeneratorAgents.prompts.workflow_generation import (
+    DYNAMIC_ARRAY_PROCESSING_PATTERNS,
     EXPERTAGENT_API_URL,
     TYPE_VALIDATION_RULES,
     WORKFLOW_GENERATION_SYSTEM_PROMPT,
@@ -192,3 +193,110 @@ class TestApiUrlConfiguration:
 
         # The prompt should not contain the incorrect prefix
         assert "/aiagent-api/v1/" not in prompt
+
+
+class TestDynamicArrayProcessingPatterns:
+    """Tests for DYNAMIC_ARRAY_PROCESSING_PATTERNS constant (Issue #338 Phase 6)."""
+
+    def test_constant_exists(self):
+        """DYNAMIC_ARRAY_PROCESSING_PATTERNS constant should exist."""
+        assert DYNAMIC_ARRAY_PROCESSING_PATTERNS is not None
+        assert isinstance(DYNAMIC_ARRAY_PROCESSING_PATTERNS, str)
+        assert len(DYNAMIC_ARRAY_PROCESSING_PATTERNS) > 0
+
+    def test_contains_map_agent_pattern(self):
+        """Should contain mapAgent usage pattern."""
+        assert "mapAgent" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+
+    def test_contains_array_join_agent_pattern(self):
+        """Should contain arrayJoinAgent usage pattern."""
+        assert "arrayJoinAgent" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+
+    def test_contains_do_not_hardcode_warning(self):
+        """Should warn against hardcoding fixed number of nodes."""
+        # Should warn about hardcoded extraction patterns
+        assert "extract_result_0" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
+               "Hardcode" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
+               "hardcode" in DYNAMIC_ARRAY_PROCESSING_PATTERNS.lower()
+
+    def test_contains_index_access_warning(self):
+        """Should warn against index access like [0], [1]."""
+        assert "[0]" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
+               "[1]" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+
+    def test_contains_yaml_example(self):
+        """Should contain YAML example for mapAgent."""
+        assert "```yaml" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+        assert "process_results:" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
+               "aggregate_results:" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+
+    def test_contains_issue_reference(self):
+        """Should reference Issue #338."""
+        assert "#338" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+
+
+class TestDynamicArrayPatternsIntegration:
+    """Tests for DYNAMIC_ARRAY_PROCESSING_PATTERNS integration into prompts."""
+
+    def test_prompt_contains_dynamic_array_patterns(self):
+        """create_workflow_generation_prompt should include dynamic array patterns."""
+        task_data = {
+            "name": "Search Result Processor",
+            "description": "Process search results of unknown length",
+            "input_interface": {
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "results": {"type": "array", "items": {"type": "object"}}
+                    }
+                }
+            },
+            "output_interface": {"type": "json_schema", "schema": {}},
+        }
+        graphai_capabilities = {"agents": []}
+        expert_agent_capabilities = {"utility_apis": [], "ai_agent_apis": []}
+
+        prompt = create_workflow_generation_prompt(
+            task_data, graphai_capabilities, expert_agent_capabilities
+        )
+
+        # The prompt should contain mapAgent reference from dynamic patterns
+        assert "mapAgent" in prompt
+
+    def test_prompt_contains_array_join_agent(self):
+        """Generated prompt should mention arrayJoinAgent for aggregation."""
+        task_data = {
+            "name": "Aggregate Results",
+            "description": "Aggregate results from multiple sources",
+            "input_interface": {"type": "json_schema", "schema": {}},
+            "output_interface": {"type": "json_schema", "schema": {}},
+        }
+        graphai_capabilities = {"agents": []}
+        expert_agent_capabilities = {"utility_apis": [], "ai_agent_apis": []}
+
+        prompt = create_workflow_generation_prompt(
+            task_data, graphai_capabilities, expert_agent_capabilities
+        )
+
+        # The prompt should contain arrayJoinAgent reference
+        assert "arrayJoinAgent" in prompt
+
+    def test_prompt_warns_against_hardcoded_patterns(self):
+        """Generated prompt should warn against hardcoded extraction patterns."""
+        task_data = {
+            "name": "Test Task",
+            "description": "Test",
+            "input_interface": {"type": "json_schema", "schema": {}},
+            "output_interface": {"type": "json_schema", "schema": {}},
+        }
+        graphai_capabilities = {"agents": []}
+        expert_agent_capabilities = {"utility_apis": [], "ai_agent_apis": []}
+
+        prompt = create_workflow_generation_prompt(
+            task_data, graphai_capabilities, expert_agent_capabilities
+        )
+
+        # Should warn about hardcoding patterns
+        assert "Hardcode" in prompt or "hardcode" in prompt.lower() or \
+               "fixed" in prompt.lower()

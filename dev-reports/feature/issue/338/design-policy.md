@@ -1,8 +1,8 @@
-# 設計方針書: タスクチェーン インターフェース契約強制メカニズム
+# 設計方針書: Issue #338 タスクチェーン インターフェース契約強制メカニズム
 
-**Issue**: #338
-**作成日**: 2026-01-02
-**関連Issue**: #337, #333
+**作成日**: 2026-01-06
+**Issue**: [#338 Task Chain Interface Contract Enforcement](https://github.com/Kewton/MySwiftAgent/issues/338)
+**関連Issue**: #337, #340
 
 ---
 
@@ -10,95 +10,136 @@
 
 ### 対象プロジェクト
 
-| プロジェクト | 主要モジュール | 役割 |
-|-------------|--------------|------|
-| **jobqueue** | `app/core/worker.py` | GraphAI結果抽出、タスク実行 |
-| **jobqueue** | `app/services/template_resolver.py` | テンプレート変数解決 |
-| **expertAgent** | `aiagent/langgraph/.../evaluator.py` | 実現可能性評価 |
-| **expertAgent** | `aiagent/langgraph/.../workflow_generation.py` | ワークフローYAML生成 |
-| **graphAiServer** | `src/services/graphai.ts` | GraphAI実行エンジン |
+- **プロジェクト名**: expertAgent
+- **主要モジュール**:
+  - `aiagent/langgraph/workflowGeneratorAgents/` - GraphAIワークフロー生成
+  - `aiagent/langgraph/jobTaskGeneratorAgents/` - Job/Task生成
+- **関連サービス**: graphAiServer, jobqueue
 
 ### 既存アーキテクチャパターン
 
 | パターン | 使用箇所 | 目的 |
 |---------|---------|------|
-| **段階的フォールバック** | `_extract_graphai_output` | 予期しないデータ構造に対応 |
-| **多層検証** | `evaluator.py` | 構造妥当性→実現可能性→API具体性 |
-| **再帰的解決** | `template_resolver.py` | ネスト構造のテンプレート処理 |
-| **リトライ管理** | `evaluator.py` | 最大リトライでのグレースフルデグラデーション |
-| **DRY原則** | `template_resolver.py` | 共通パス解決ロジック |
+| **LangGraph StateGraph** | `agent.py` | 状態遷移ベースのワークフロー実行 |
+| **Router Pattern** | `*_router()` 関数群 | 条件分岐による動的ルーティング |
+| **Pydantic BaseModel** | `models/`, `state.py` | スキーマ定義・バリデーション |
+| **Node Pattern** | `nodes/*.py` | 単一責任の処理ユニット |
+| **Prompt Engineering** | `prompts/*.py` | LLM向けプロンプト生成 |
 
-### 問題の真因（根本原因分析より）
+### 類似機能の設計
+
+| 機能 | 設計概要 |
+|------|---------|
+| `evaluator_node` (jobTaskGenerator) | LLMによる実現可能性評価、`check_interface_compatibility()` 関数 |
+| `llm_evaluator_node` (workflowGenerator) | LLMによるワークフロー品質評価、スコアベース合否判定 |
+| `schema_enrichment_node` | OpenAPI仕様との照合・補完 |
+| `validation_node` | ルールベース検証 |
+
+### モジュール間依存関係
 
 ```
-表層問題
-├── 問題1: ワークフローYAMLノード参照エラー
-├── 問題2: ワークフロー出力 ↔ output_interface不一致
-└── 問題3: タスク間データパス不一致
-
-真因（Root Cause）
-└── インターフェース契約の強制メカニズムが存在しない
-    - input_interface / output_interface は「宣言」のみ
-    - 実際のデータフローは契約を無視して動作
-    - 違反を検出するバリデーションがない
+expertAgent
+├── aiagent/langgraph/
+│   ├── jobTaskGeneratorAgents/     # Job/Task生成
+│   │   ├── agent.py               # LangGraph定義
+│   │   ├── nodes/                 # 処理ノード
+│   │   │   ├── evaluator.py      # 実現可能性評価
+│   │   │   └── ...
+│   │   └── prompts/              # LLMプロンプト
+│   │
+│   └── workflowGeneratorAgents/   # ワークフロー生成
+│       ├── agent.py              # LangGraph定義
+│       ├── nodes/
+│       │   ├── generator.py      # YAML生成
+│       │   ├── llm_evaluator.py  # 品質評価
+│       │   └── ...
+│       └── prompts/
+│
+└── app/api/v1/                   # REST API
+    └── job_generator_endpoints.py
 ```
 
-### 設計上の制約
+### 既存API設計パターン
 
-1. **既存ワークフローとの互換性**: 既存の `isResult: true` ノードを持つワークフローが動作継続
-2. **パフォーマンス**: 変換レイヤーによるオーバーヘッド最小化
-3. **LLM依存**: ワークフロー生成はLLMに依存するため、100%の精度保証は不可能
-4. **後方互換性**: 既存のJobMaster/TaskMaster定義が破壊されない
+- **エンドポイント命名規則**: `/v1/{resource}` (RESTful)
+- **レスポンス形式**: JSON (`{"status": ..., "result": ...}`)
+- **エラーハンドリング**: HTTPステータス + `error_message` フィールド
 
 ### 参照したドキュメント
 
 | ドキュメント | 関連内容 |
-|-------------|---------|
-| `docs/design/architecture-overview.md` | サービス構成、ポート設定 |
+|------------|---------|
+| `docs/spec/job-generation-workflow.md` | LangGraph 7段階ワークフロー設計 |
 | `docs/arch/service-dependencies.md` | サービス間通信フロー |
-| `docs/spec/job-generation-workflow.md` | LangGraphエージェント設計 |
-| `graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md` | ワークフロー生成ルール |
-| `dev-reports/feature/issue/337/task-chain-failure-analysis.md` | 根本原因分析 |
+| `docs/design/architecture-overview.md` | 4層アーキテクチャ |
+| `root-cause-analysis.md` | 6つの真因と改善提案 |
+
+### 設計上の制約
+
+1. **後方互換性**: 既存APIインターフェースを維持
+2. **LangGraph互換**: StateGraph/Router パターンに準拠
+3. **非破壊的変更**: 既存ワークフローの動作を保証
+4. **テストカバレッジ**: 単体90%/結合50%維持
 
 ---
 
 ## アーキテクチャ設計
 
-### システム構成図（変更後）
+### システム構成図
 
 ```mermaid
-graph TD
-    subgraph "expertAgent"
-        WG[Workflow Generator] --> |YAML生成| VAL[Workflow Validator]
-        EVAL[Evaluator Node] --> |インターフェース検証| IC[Interface Checker]
+graph TB
+    subgraph "Workflow Generator (改善対象)"
+        GEN[generator_node]
+        COMP[completeness_validator]
+        SCHEMA[schema_validator_node]
+        TEST[workflow_tester_node]
+        SAMPLE[sample_input_generator_node]
+        EVAL[llm_evaluator_node]
+        REPAIR[self_repair_node]
     end
 
-    subgraph "jobqueue"
-        W[Worker] --> |実行| GAS[GraphAI Server]
-        GAS --> |結果| EXT[Output Extractor]
-        EXT --> |変換| TRANS[Interface Transformer]
-        TRANS --> |格納| TD[task.output_data]
-        TD --> |参照| TR[Template Resolver]
+    subgraph "新規追加コンポーネント"
+        CV[Critical Weakness<br/>Validator]
+        IC[Interface Contract<br/>Validator]
+        TV[Type Validator]
     end
 
-    WG -.-> |命名規約強制| EXT
-    IC -.-> |スキーマ共有| TRANS
+    subgraph "Routing Layer (改善対象)"
+        R1[schema_validator_router]
+        R2[llm_evaluator_router]
+        R3[self_repair_router]
+    end
 
-    style TRANS fill:#90EE90
-    style VAL fill:#90EE90
-    style IC fill:#90EE90
+    GEN --> COMP
+    COMP --> SCHEMA
+    SCHEMA --> R1
+    R1 -->|valid| TEST
+    R1 -->|invalid| REPAIR
+
+    TEST --> SAMPLE
+    SAMPLE --> EVAL
+    EVAL --> CV
+    CV --> R2
+    R2 -->|pass| SUCCESS[result_summary]
+    R2 -->|fail| REPAIR
+
+    REPAIR --> R3
+    R3 -->|retry| GEN
+    R3 -->|max_retry| END[END]
+
+    IC -.->|Phase 1-B| EVAL
+    TV -.->|Phase 2-C| GEN
 ```
 
 ### レイヤー構成
 
-本機能は既存のレイヤー構成を維持しつつ、以下の責務を追加：
-
-| レイヤー | 既存責務 | 追加責務 |
-|---------|---------|---------|
-| **ワークフロー生成層** | LLMによるYAML生成 | 出力ノード命名規約強制、API応答スキーマ注入 |
-| **評価層** | 実現可能性評価 | インターフェース整合性検証 |
-| **実行層** | タスク実行 | output_interface変換 |
-| **データ連携層** | テンプレート解決 | 変換済みデータの参照 |
+| レイヤー | 責務 | 改善対象 |
+|---------|------|---------|
+| **Routing Layer** | 条件分岐ロジック | `llm_evaluator_router` の改善 |
+| **Validation Layer** | 検証ロジック | Critical Weakness検出、型検証 |
+| **Generation Layer** | LLM呼び出し・YAML生成 | プロンプト改善 |
+| **State Layer** | 状態管理 | `is_acceptable` フラグ伝播 |
 
 ---
 
@@ -106,591 +147,460 @@ graph TD
 
 | カテゴリ | 選定技術 | 選定理由 | 既存との整合性 |
 |---------|---------|---------|---------------|
-| 変換ロジック | Python (Pydantic) | 型安全な変換、既存パターン踏襲 | evaluator.pyで既に使用 |
-| スキーマ定義 | JSON Schema | output_interface既存形式 | 互換性維持 |
-| 検証ロジック | Python (既存evaluator拡張) | LangGraphノードとして統合 | アーキテクチャ一貫性 |
-| プロンプト拡張 | YAML | 既存プロンプト形式 | 既存パターン踏襲 |
+| **状態管理** | LangGraph TypedDict | 型安全な状態定義 | 既存パターン踏襲 |
+| **バリデーション** | Pydantic v2 | スキーマ検証 | 既存パターン踏襲 |
+| **ルーティング** | 関数ベースRouter | 条件分岐の明示化 | 既存パターン踏襲 |
+| **テスト** | pytest + pytest-asyncio | 非同期テスト対応 | 既存パターン踏襲 |
+| **型チェック** | `isinstance()` + Union types | ランタイム型検証 | Python標準 |
 
 ---
 
 ## 設計パターン
 
-### 採用パターンと理由
+### 採用パターン
 
-| パターン | 適用箇所 | 理由 |
-|---------|---------|------|
-| **Strategy Pattern** | 出力変換 | output_interface有無による分岐 |
-| **Decorator Pattern** | ワークフロー検証 | 既存生成ロジックを変更せず検証追加 |
-| **Chain of Responsibility** | 多層検証 | 既存evaluatorパターン踏襲 |
-| **Template Method** | 変換処理 | フィールド抽出ロジックの標準化 |
+#### 1. Strategy Pattern (評価戦略)
 
-### 既存パターンとの整合性
+**目的**: Critical Weakness検出ロジックの差し替え可能化
 
-- **段階的フォールバック**: `_extract_graphai_output`の既存ロジックを維持
-- **多層検証**: evaluator.pyの3層構造に4層目（インターフェース整合性）を追加
-- **リトライ管理**: 既存のMAX_RETRY_COUNT連携
+```python
+# 既存パターン: 単純なスコア閾値
+if evaluation_score < 70:
+    return "self_repair"
+
+# 新規: Strategy Patternによる複合評価
+class EvaluationStrategy(Protocol):
+    def should_reject(self, result: LLMEvaluationResult) -> bool: ...
+
+class CriticalWeaknessStrategy:
+    def should_reject(self, result: LLMEvaluationResult) -> bool:
+        return any("Critical" in w for w in result.weaknesses)
+
+class CompositeStrategy:
+    def __init__(self, strategies: list[EvaluationStrategy]):
+        self.strategies = strategies
+
+    def should_reject(self, result: LLMEvaluationResult) -> bool:
+        return any(s.should_reject(result) for s in self.strategies)
+```
+
+**既存パターンとの整合性**: `evaluator_node` の `check_interface_compatibility()` と同様の関数分離パターン
+
+#### 2. Chain of Responsibility (検証チェーン)
+
+**目的**: 複数の検証ロジックを順次適用
+
+```python
+# 既存: 単一ルーターで複数条件チェック
+def llm_evaluator_router(state):
+    if needs_test_data_regeneration:
+        return "test_data_regenerator"
+    if not is_rule_valid:
+        return "self_repair"
+    if failure_reason in ("workflow_quality", "both"):
+        return "self_repair"
+    if evaluation_score < 70:
+        return "self_repair"
+    return "result_summary_generator"
+
+# 新規: 検証チェーンの明示化
+validators = [
+    TestDataRegenerationValidator(),
+    RuleBasedValidator(),
+    CriticalWeaknessValidator(),  # 新規追加
+    AcceptabilityValidator(),      # 新規追加
+    ScoreThresholdValidator(),
+]
+```
+
+#### 3. Type Guard Pattern (型検証)
+
+**目的**: `recommended_apis` の型安全性確保
+
+```python
+# 真因2-C対応: 型ガード関数
+def normalize_api_item(api: str | dict) -> dict[str, str]:
+    """Normalize API item to dict format."""
+    if isinstance(api, str):
+        return {"api_name": api, "endpoint": api}
+    if isinstance(api, dict):
+        return {
+            "api_name": api.get("api_name") or api.get("name") or "",
+            "endpoint": api.get("endpoint") or "",
+        }
+    raise TypeError(f"Expected str or dict, got {type(api)}")
+```
 
 ---
 
 ## データモデル設計
 
-### 変換後データフロー
+### ER図 (State拡張)
 
 ```mermaid
 erDiagram
-    TASK_MASTER ||--o| OUTPUT_INTERFACE : defines
-    OUTPUT_INTERFACE ||--o{ FIELD_DEFINITION : contains
-    GRAPHAI_RESULT ||--|{ NODE_RESULT : contains
-    NODE_RESULT ||--o| OUTPUT_NODE : "output"
+    WorkflowGeneratorState ||--|| EvaluationResult : has
+    EvaluationResult ||--o{ Weakness : contains
+    EvaluationResult ||--o| CriticalStatus : has
 
-    OUTPUT_INTERFACE {
-        string type
-        object properties
-        array required
+    WorkflowGeneratorState {
+        str yaml_content
+        dict task_data
+        dict sample_input
+        bool is_valid
+        bool is_acceptable "新規追加"
+        int evaluation_score
     }
 
-    FIELD_DEFINITION {
-        string name
-        string type
-        string description
+    EvaluationResult {
+        int overall_score
+        list weaknesses
+        str failure_reason
+        bool has_critical "新規追加"
     }
 
-    TRANSFORMED_OUTPUT {
-        field1 any
-        field2 any
-        fieldN any
+    Weakness {
+        str severity "Critical/Warning/Info"
+        str message
+        str suggestion
+    }
+
+    CriticalStatus {
+        bool detected
+        list critical_issues
     }
 ```
 
-### 変換処理の入出力
+### State拡張
 
-**入力（GraphAI結果）**:
-```json
-{
-  "results": {
-    "source": {...},
-    "execute_search": {
-      "search_results": [...],
-      "search_results_count": 2,
-      "status": "ok"
-    },
-    "format_results": {
-      "success": true,
-      "error_message": ""
-    }
-  }
-}
-```
+```python
+class WorkflowGeneratorState(TypedDict):
+    # 既存フィールド
+    yaml_content: str
+    task_data: dict
+    sample_input: dict | str | None
+    is_valid: bool
+    evaluation_score: int
+    llm_evaluation_result: dict
 
-**output_interface定義**:
-```json
-{
-  "type": "object",
-  "properties": {
-    "success": {"type": "boolean"},
-    "search_results": {"type": "array"},
-    "error_message": {"type": "string"}
-  },
-  "required": ["success", "search_results"]
-}
-```
-
-**出力（変換後）**:
-```json
-{
-  "success": true,
-  "search_results": [...],
-  "error_message": ""
-}
+    # 新規追加フィールド (Phase 4)
+    is_acceptable: bool  # 真因2-B対応
+    has_critical_weakness: bool  # 真因2-A対応
+    critical_issues: list[str]  # 真因2-A対応
 ```
 
 ---
 
 ## API設計
 
-### 変更なし
+### 既存APIへの影響
 
-本Issue は内部処理の変更であり、外部API仕様の変更は発生しない。
+**変更なし** - 内部実装のみの改善
 
 ### 内部インターフェース変更
 
-#### 1. `_extract_graphai_output` → `_transform_to_interface`
-
-**現状**:
-```python
-def _extract_graphai_output(response_data: Any) -> Any:
-    # outputノードを探して抽出
-```
-
-**変更後**:
-```python
-def _extract_graphai_output(response_data: Any) -> Any:
-    # 既存ロジック維持（後方互換性）
-
-def _transform_to_interface(
-    raw_output: dict,
-    output_interface: dict | None
-) -> dict:
-    """output_interface定義に基づいてデータを変換"""
-    if output_interface is None:
-        return raw_output  # 未定義時はそのまま返却
-
-    result = {}
-    properties = output_interface.get("properties", {})
-
-    for field_name in properties.keys():
-        value = _find_field_value(raw_output, field_name)
-        result[field_name] = value
-
-    # 必須フィールドの存在確認
-    required_fields = output_interface.get("required", [])
-    missing = [f for f in required_fields if result.get(f) is None]
-    if missing:
-        logger.warning(
-            f"[TRANSFORM] Missing required fields after transformation: {missing}"
-        )
-
-    return result
-```
-
-#### 2. `_find_field_value` フィールド探索戦略
-
-**設計方針**: 3つの探索戦略をサポートし、段階的にフォールバック
+#### llm_evaluator_router (改善)
 
 ```python
-def _find_field_value(
-    data: dict,
-    field_name: str,
-    search_strategy: Literal["direct", "recursive", "path"] = "recursive"
-) -> Any:
+def llm_evaluator_router(
+    state: WorkflowGeneratorState,
+) -> Literal["test_data_regenerator", "self_repair", "result_summary_generator"]:
     """
-    output_interface定義のフィールドをGraphAI結果から探索
-
-    Args:
-        data: GraphAI結果（全ノード含む）
-        field_name: 探索するフィールド名
-        search_strategy:
-            - "direct": data[field_name] のみ
-            - "recursive": ネスト構造を深さ優先探索
-            - "path": output_interface に source_path 定義があれば使用
-
-    Returns:
-        見つかった値、または None
+    改善点:
+    1. is_acceptable フラグを判定に使用 (真因2-B)
+    2. Critical weakness検出で自動失敗 (真因2-A)
     """
-    if search_strategy == "direct":
-        return data.get(field_name)
+    # 既存ロジック
+    needs_test_data_regeneration = state.get("needs_test_data_regeneration", False)
+    if needs_test_data_regeneration:
+        return "test_data_regenerator"
 
-    if search_strategy == "recursive":
-        return _recursive_search(data, field_name)
+    is_rule_valid = state.get("is_valid", False)
+    if not is_rule_valid:
+        return "self_repair"
 
-    if search_strategy == "path":
-        # Issue #337 derived_fields の source_mapping を使用
-        return _path_based_search(data, field_name)
+    # 新規: is_acceptable フラグを使用 (真因2-B)
+    is_acceptable = state.get("is_acceptable", True)
+    if not is_acceptable:
+        logger.info("Workflow not acceptable (is_acceptable=False), routing to self_repair")
+        return "self_repair"
 
-    return None
+    # 新規: Critical weakness検出 (真因2-A)
+    has_critical = state.get("has_critical_weakness", False)
+    if has_critical:
+        logger.info("Critical weakness detected, routing to self_repair")
+        return "self_repair"
 
+    # 既存ロジック継続
+    evaluation_result = state.get("llm_evaluation_result") or {}
+    failure_reason = evaluation_result.get("failure_reason", "none")
+    if failure_reason in ("workflow_quality", "both"):
+        return "self_repair"
 
-def _recursive_search(data: dict, field_name: str, max_depth: int = 5) -> Any:
-    """
-    ネスト構造を深さ優先探索でフィールドを探索
+    evaluation_score = state.get("evaluation_score") or 0
+    if evaluation_score < 70:
+        return "self_repair"
 
-    Args:
-        data: 探索対象のdict
-        field_name: 探索するフィールド名
-        max_depth: 最大探索深度（無限ループ防止）
-
-    Returns:
-        見つかった値、または None
-    """
-    if max_depth <= 0:
-        return None
-
-    # 直接アクセス優先
-    if field_name in data:
-        return data[field_name]
-
-    # ネスト構造を探索
-    for key, value in data.items():
-        if isinstance(value, dict):
-            result = _recursive_search(value, field_name, max_depth - 1)
-            if result is not None:
-                return result
-
-    return None
-
-
-def _path_based_search(data: dict, field_path: str) -> Any:
-    """
-    ドット区切りパスでフィールドを探索
-
-    Args:
-        data: 探索対象のdict
-        field_path: ドット区切りパス（例: "execute_search.search_results"）
-
-    Returns:
-        見つかった値、または None
-    """
-    parts = field_path.split(".")
-    current = data
-
-    for part in parts:
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-        else:
-            return None
-
-    return current
-```
-
-**探索戦略の選択ロジック**:
-
-```python
-def _determine_search_strategy(
-    field_name: str,
-    field_def: dict
-) -> Literal["direct", "recursive", "path"]:
-    """フィールド定義に基づき探索戦略を決定"""
-
-    # source_mapping がある場合は path 戦略
-    if "source_mapping" in field_def:
-        return "path"
-
-    # デフォルトは recursive 戦略
-    return "recursive"
-```
-
-**探索優先順位**:
-1. `output` ノード内を直接探索
-2. `isResult: true` ノード内を探索
-3. 全ノードを再帰的に探索
-4. 見つからない場合は `None` を返却（ログ出力）
-
-#### 3. evaluator.py 拡張
-
-```python
-def check_interface_compatibility(tasks: list[dict]) -> list[str]:
-    """タスク間インターフェース整合性検証"""
-    warnings = []
-
-    for i in range(len(tasks) - 1):
-        current_output = tasks[i].get("output_interface", {})
-        next_input = tasks[i + 1].get("input_interface", {})
-
-        required_fields = next_input.get("required", [])
-        available_fields = current_output.get("properties", {}).keys()
-
-        for field in required_fields:
-            if field not in available_fields:
-                warnings.append(
-                    f"Task {i+1} output missing '{field}' required by Task {i+2}"
-                )
-
-    return warnings
+    return "result_summary_generator"
 ```
 
 ---
 
 ## セキュリティ設計
 
-### セキュリティ影響評価
-
-本Issue はデータ変換ロジックの追加であり、新たな外部接点は発生しない。ただし、以下の対策を実装する。
-
-### 対策1: 機密フィールドマスキング
-
-変換処理のデバッグログで機密データが露出しないよう、フィールドマスキングを実装:
-
-```python
-# 機密フィールドのパターン定義
-SENSITIVE_FIELD_PATTERNS = {
-    "api_key", "password", "token", "secret", "credential",
-    "private_key", "access_key", "auth", "bearer"
-}
-
-def _is_sensitive_field(field_name: str) -> bool:
-    """フィールド名が機密パターンに該当するか判定"""
-    field_lower = field_name.lower()
-    return any(pattern in field_lower for pattern in SENSITIVE_FIELD_PATTERNS)
-
-def _mask_value(value: Any) -> str:
-    """機密値をマスキング"""
-    if value is None:
-        return "None"
-    str_value = str(value)
-    if len(str_value) <= 4:
-        return "[MASKED]"
-    return f"{str_value[:2]}***{str_value[-2:]}"
-
-def _log_transformation(field_name: str, value: Any, found: bool) -> None:
-    """変換結果のログ出力（機密フィールドはマスキング）"""
-    if _is_sensitive_field(field_name):
-        log_value = _mask_value(value) if found else "[NOT FOUND]"
-    else:
-        log_value = str(value)[:100] if found else "[NOT FOUND]"
-
-    logger.debug(f"[TRANSFORM] {field_name}: {log_value}")
-```
-
-### 対策2: 例外ハンドリング
-
-不正データによるDoS攻撃を防ぐため、変換処理に安全な例外ハンドリングを追加:
-
-```python
-def _transform_to_interface(
-    raw_output: dict,
-    output_interface: dict | None
-) -> dict:
-    try:
-        # 変換処理
-        ...
-    except RecursionError:
-        logger.error("[TRANSFORM] Max recursion depth exceeded")
-        return raw_output  # フォールバック
-    except (TypeError, KeyError) as e:
-        logger.error(f"[TRANSFORM] Data structure error: {e}")
-        return raw_output  # フォールバック
-```
-
-### 対策3: 入力サイズ制限
-
-```python
-MAX_OUTPUT_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
-MAX_FIELD_COUNT = 100
-
-def _validate_input_size(raw_output: dict) -> bool:
-    """入力サイズの妥当性検証"""
-    import json
-    output_size = len(json.dumps(raw_output))
-    if output_size > MAX_OUTPUT_SIZE_BYTES:
-        logger.warning(f"[TRANSFORM] Output size exceeds limit: {output_size} bytes")
-        return False
-    return True
-```
+**変更なし** - 既存のセキュリティ実装を継続
 
 ---
 
 ## パフォーマンス設計
 
-### 影響分析
+### 検証処理の最適化
 
-| 処理 | 追加オーバーヘッド | 許容範囲 |
-|------|------------------|---------|
-| 出力変換 | O(n) n=フィールド数 | 通常10フィールド以下、無視可能 |
-| インターフェース検証 | O(n*m) n=タスク数, m=フィールド数 | 通常5タスク以下、無視可能 |
-| ワークフロー検証 | 既存LLM呼び出しに含む | 追加コストなし |
+| 項目 | 現状 | 改善後 |
+|------|------|--------|
+| Critical検出 | LLM判断のみ | プログラム的検出追加 |
+| 型検証 | 実行時エラー | 事前検証 |
+| 早期終了 | スコア閾値のみ | 複合条件で早期終了 |
 
-### 最適化戦略
+### 期待される効果
 
-1. **遅延変換**: output_interfaceが未定義の場合は変換スキップ
-2. **キャッシュ**: output_interface定義のメモリキャッシュ（TaskMaster取得時）
-3. **早期終了**: 検証失敗時は即座にエラー返却
-
-### オブザーバビリティ（メトリクス）
-
-変換処理の監視・デバッグ・パフォーマンス分析のためのメトリクスを追加:
-
-```python
-from prometheus_client import Counter, Histogram
-
-# 変換処理のカウンター
-transformation_counter = Counter(
-    "interface_transformation_total",
-    "Total interface transformations",
-    ["status", "task_master_name"]
-)
-
-# フィールド探索の所要時間
-field_search_histogram = Histogram(
-    "field_search_duration_seconds",
-    "Field search duration",
-    ["strategy"]
-)
-
-# 必須フィールド欠落の検出
-missing_field_counter = Counter(
-    "interface_missing_required_fields_total",
-    "Count of missing required fields after transformation",
-    ["task_master_name", "field_name"]
-)
-```
-
-**Langfuse連携**:
-```python
-# 変換処理のトレース
-with langfuse.trace("interface_transformation") as trace:
-    trace.update(metadata={
-        "task_master_id": task_master_id,
-        "output_interface_fields": list(properties.keys()),
-        "search_strategy": strategy
-    })
-    result = _transform_to_interface(raw_output, output_interface)
-    trace.update(output={"transformed_fields": list(result.keys())})
-```
+- **不要なリトライ削減**: Critical検出で早期終了
+- **ランタイムエラー削減**: 型検証で事前検出
+- **評価精度向上**: 複合評価による誤判定削減
 
 ---
 
 ## 設計判断とトレードオフ
 
-### 判断1: 変換レイヤーの配置場所
+### 判断1: Critical Weakness の検出方法
 
-**選択肢**:
-- A) jobqueue worker内（採用）
-- B) graphAiServer内
-- C) expertAgent内
+| 選択肢 | メリット | デメリット | 採用 |
+|--------|---------|-----------|------|
+| **A. LLMに`failure_reason`設定を強制** | 変更少 | LLM依存度高 | - |
+| **B. プログラム的に`weaknesses`を解析** | 確実 | 文字列マッチング | 採用 |
+| **C. 新規フィールド`has_critical`追加** | 明示的 | 既存LLMプロンプト変更必要 | - |
 
-**採用理由**:
-- jobqueue workerは既に`_extract_graphai_output`でGraphAI結果を処理
-- 既存の責務に沿った配置
-- graphAiServerは汎用エンジンのため、アプリケーション固有ロジックを避ける
+**採用理由**: 選択肢Bは既存のLLMレスポンスを変更せず、確実に検出可能
 
-### 判断2: 出力ノード命名規約の強制方法
+```python
+def _has_critical_weakness(weaknesses: list[str]) -> bool:
+    """Check if any weakness contains 'Critical' keyword."""
+    critical_patterns = ["Critical", "CRITICAL", "critical", "致命的"]
+    return any(
+        any(pattern in w for pattern in critical_patterns)
+        for w in weaknesses
+    )
+```
 
-**選択肢**:
-- A) プロンプトでの強制（採用）
-- B) 生成後のYAML書き換え
-- C) `isResult: true`ノードの自動検出
+### 判断2: is_acceptable フラグの伝播
 
-**採用理由**:
-- プロンプト強制はLLMの理解を促進
-- YAML書き換えは複雑で副作用リスク
-- `isResult`検出は既存ワークフローで複数ノードに設定されている可能性
+| 選択肢 | メリット | デメリット | 採用 |
+|--------|---------|-----------|------|
+| **A. State に新規フィールド追加** | 明示的 | State変更 | 採用 |
+| **B. llm_evaluation_result 内で計算** | 変更少 | 責務混在 | - |
 
-### 判断3: インターフェース不整合時の動作
+**採用理由**: 選択肢Aは責務が明確で、テストが容易
 
-**選択肢**:
-- A) 警告出力のみ（採用 - Phase 1）
-- B) エラーで処理中断
-- C) 自動修正試行
+### 判断3: 型バリデーションの実装箇所
 
-**採用理由**:
-- 段階的導入により既存ワークフローへの影響を最小化
-- Phase 2以降でエラー化を検討
-- 自動修正は複雑でリスク高
+| 選択肢 | メリット | デメリット | 採用 |
+|--------|---------|-----------|------|
+| **A. 各利用箇所でガード** | 局所的 | 重複コード | - |
+| **B. ユーティリティ関数で一元化** | DRY | 呼び出し漏れリスク | 採用 |
+| **C. Pydantic Validatorで強制** | 自動 | State変更大 | - |
 
-### 判断4: API応答スキーマの提供方法
-
-**選択肢**:
-- A) capabilities.yamlからの自動注入（採用）
-- B) プロンプトへの静的記載
-- C) ワークフロー生成時のAPI呼び出し
-
-**採用理由**:
-- capabilities.yamlは既にresponse_schemaを持つ（Issue #270で追加済み）
-- 静的記載はメンテナンス負荷
-- API呼び出しはレイテンシ増加
+**採用理由**: 選択肢Bは既存コードへの影響最小でDRY原則に準拠
 
 ---
 
 ## 実装フェーズ
 
-> **重要**: アーキテクチャレビューにより、**Phase 1-2 は同一リリースでの実装を推奨**。
->
-> Phase 1（命名規約強制）のみでは、問題2（output_interface不一致）・問題3（タスク間データパス不一致）は未解決のままとなる。
-> タスクチェーン障害の再発防止のため、Phase 1-2 を同一イテレーションで実装すること。
+### Phase 4: 評価ルーティングの改善 (高優先度)
 
-### Phase 1: 出力ノード命名規約の強制（難易度: 低）
+| タスク | 対象ファイル | 内容 |
+|--------|------------|------|
+| 4-1 | `llm_evaluator.py` | `_has_critical_weakness()` 関数追加 |
+| 4-2 | `llm_evaluator.py` | `has_critical_weakness` をStateに設定 |
+| 4-3 | `agent.py` | `llm_evaluator_router` でis_acceptable使用 |
+| 4-4 | `state.py` | `is_acceptable`, `has_critical_weakness` フィールド追加 |
+| 4-5 | `tests/unit/` | 単体テスト追加 |
 
-| タスク | ファイル | 変更内容 |
-|--------|---------|---------|
-| 1.1 | `expertAgent/.../prompts/workflow_generation.yaml` | `output`ノード強制ルール追加 |
-| 1.2 | `expertAgent/.../workflow_generation.py` | 生成後検証ロジック追加 |
-| 1.3 | 単体テスト | 命名規約検証テスト |
+### Phase 5: 型バリデーション強化 (高優先度)
 
-**成果物**: ワークフロー生成時に`output`ノード使用を強制
+| タスク | 対象ファイル | 内容 |
+|--------|------------|------|
+| 5-1 | `utils/type_guards.py` | `normalize_api_item()` 関数作成 |
+| 5-2 | `nodes/*.py` | 各ノードで型ガード適用 |
+| 5-3 | `tests/unit/` | 単体テスト追加 |
 
-### Phase 2: output_interface変換レイヤー（難易度: 中）
+### Phase 6: 動的配列処理パターン (中優先度)
 
-| タスク | ファイル | 変更内容 |
-|--------|---------|---------|
-| 2.1 | `jobqueue/app/core/worker.py` | `_transform_to_interface`関数追加 |
-| 2.2 | `jobqueue/app/core/worker.py` | `_execute_tasks`での変換呼び出し |
-| 2.3 | `jobqueue/app/repositories/task_master.py` | output_interface取得 |
-| 2.4 | 単体テスト | 変換ロジックテスト |
-| 2.5 | 結合テスト | タスクチェーン変換テスト |
+| タスク | 対象ファイル | 内容 |
+|--------|------------|------|
+| 6-1 | `prompts/workflow_generation.py` | 配列処理パターンをプロンプトに追加 |
+| 6-2 | `tests/unit/` | プロンプトテスト追加 |
 
-**成果物**: GraphAI結果がoutput_interface定義に従って変換される
+### Phase 7: タスクチェーンインターフェース検証 (中優先度)
 
-### Phase 3: API応答スキーマ提供（難易度: 中）
-
-| タスク | ファイル | 変更内容 |
-|--------|---------|---------|
-| 3.1 | `expertAgent/.../utils/workflow_helper.py` | スキーマ取得関数 |
-| 3.2 | `expertAgent/.../prompts/workflow_generation.yaml` | スキーマ注入プレースホルダー |
-| 3.3 | `expertAgent/.../workflow_generation.py` | コンテキストにスキーマ追加 |
-| 3.4 | 単体テスト | スキーマ注入テスト |
-
-**成果物**: ワークフロー生成時にAPI応答スキーマがLLMに提供される
-
-### Phase 4: インターフェース整合性検証（難易度: 低）
-
-| タスク | ファイル | 変更内容 |
-|--------|---------|---------|
-| 4.1 | `expertAgent/.../nodes/evaluator.py` | `check_interface_compatibility`関数追加 |
-| 4.2 | `expertAgent/.../nodes/evaluator.py` | evaluator_nodeでの呼び出し |
-| 4.3 | 単体テスト | 整合性検証テスト |
-
-**成果物**: ジョブ生成時にインターフェース不整合を警告
+| タスク | 対象ファイル | 内容 |
+|--------|------------|------|
+| 7-1 | `nodes/interface_validator.py` | 新規バリデーターノード作成 |
+| 7-2 | `agent.py` | グラフにノード追加 |
+| 7-3 | `tests/unit/` | 単体テスト追加 |
 
 ---
 
-## 受入条件マッピング
+## テスト計画
 
-| Issue受入条件 | 設計フェーズ | 検証方法 |
-|--------------|-------------|---------|
-| ワークフロー生成プロンプトに出力ノード名 `output` の強制ルールを追加 | Phase 1.1 | プロンプトレビュー |
-| `isResult: true` と `output` ノード名の組み合わせを必須化 | Phase 1.1 | 単体テスト |
-| 生成されたワークフローYAMLの検証機能を追加 | Phase 1.2 | 単体テスト |
-| `jobqueue/app/core/worker.py` に `output_interface` 変換ロジックを追加 | Phase 2.1 | 単体テスト |
-| GraphAI結果から `output_interface` 定義に基づいてデータを抽出・変換 | Phase 2.1-2.2 | 結合テスト |
-| 変換後データを `task.output_data` に設定 | Phase 2.2 | 結合テスト |
-| `expert_agent_capabilities.yaml` にAPI応答スキーマを追加 | 既存（Issue #270） | 確認済み |
-| ワークフロー生成コンテキストにAPI応答スキーマを自動注入 | Phase 3.2-3.3 | 単体テスト |
-| Google Search API等の正確なフィールド名参照を保証 | Phase 3 | E2Eテスト |
-| `evaluator.py` にタスク間インターフェース整合性検証関数を追加 | Phase 4.1 | 単体テスト |
-| ジョブ生成時に `output_interface` → `input_interface` の整合性チェック | Phase 4.2 | 単体テスト |
-| 不整合時の警告出力 | Phase 4.2 | 単体テスト |
+### 単体テスト
 
----
+```python
+# tests/unit/test_critical_weakness_detection.py
+class TestCriticalWeaknessDetection:
+    def test_detect_critical_keyword(self):
+        weaknesses = ["Critical: Missing output node"]
+        assert _has_critical_weakness(weaknesses) is True
 
-## リスクと対策
+    def test_no_critical(self):
+        weaknesses = ["Warning: Consider adding error handling"]
+        assert _has_critical_weakness(weaknesses) is False
 
-| リスク | 影響度 | 発生確率 | 対策 |
-|-------|-------|---------|------|
-| 既存ワークフローの動作破壊 | 高 | 低 | 変換ロジックはoutput_interface定義時のみ動作 |
-| LLMが命名規約を無視 | 中 | 中 | 生成後検証で再生成促進 |
-| 変換処理のパフォーマンス低下 | 低 | 低 | 遅延変換、キャッシュ戦略 |
-| フィールド探索の失敗 | 中 | 中 | ログ出力、フォールバック |
+    def test_japanese_critical(self):
+        weaknesses = ["致命的: 出力ノードがありません"]
+        assert _has_critical_weakness(weaknesses) is True
+```
 
----
+### 結合テスト
 
-## 品質基準
+```python
+# tests/integration/test_issue_338_routing.py
+class TestIssue338Routing:
+    async def test_critical_weakness_triggers_self_repair(self):
+        """Critical weaknessが検出された場合、self_repairにルーティングされる"""
+        state = {
+            "evaluation_score": 72,  # 閾値以上
+            "llm_evaluation_result": {
+                "weaknesses": ["Critical: Output node missing search_results"],
+                "failure_reason": "none",  # LLMはnoneを返す
+            },
+            "is_valid": True,
+        }
+        result = llm_evaluator_router(state)
+        assert result == "self_repair"
 
-- 単体テストカバレッジ: **90%以上**
-- 静的解析: **Ruff/MyPyエラーゼロ**
-- 既存テスト: **全パス維持**
-- 受入テスト: **全Issue受入条件を検証**
-
----
-
-## 改訂履歴
-
-| 日付 | 版 | 変更内容 |
-|------|---|---------|
-| 2026-01-02 | 1.0 | 初版作成 |
-| 2026-01-02 | 1.1 | アーキテクチャレビュー改善反映 |
-
-### v1.1 改善内容（アーキテクチャレビュー反映）
-
-| 項目 | 改善内容 | 対応セクション |
-|------|---------|---------------|
-| **MF-1** | `_find_field_value` フィールド探索戦略の詳細設計追加 | 内部インターフェース変更 §2 |
-| **MF-2** | Phase 1-2 同時リリース推奨を明記 | 実装フェーズ（注記追加） |
-| **SF-1** | 変換後の必須フィールド検証追加 | `_transform_to_interface` 関数内 |
-| **SF-2** | メトリクス/オブザーバビリティ追加 | パフォーマンス設計 §3 |
-| **Security** | 機密フィールドマスキング、例外ハンドリング、入力サイズ制限 | セキュリティ設計 §1-3 |
+    async def test_is_acceptable_false_triggers_self_repair(self):
+        """is_acceptable=Falseの場合、self_repairにルーティングされる"""
+        state = {
+            "evaluation_score": 72,
+            "is_acceptable": False,  # 新規フラグ
+            "is_valid": True,
+        }
+        result = llm_evaluator_router(state)
+        assert result == "self_repair"
+```
 
 ---
 
-**設計方針書作成完了**
+## 参照ドキュメント
 
-**承認ステータス**: アーキテクチャレビュー条件付き承認 → **改善反映完了**
+- [Issue #338](https://github.com/Kewton/MySwiftAgent/issues/338)
+- [root-cause-analysis.md](./root-cause-analysis.md)
+- [job-generation-workflow.md](../../../docs/spec/job-generation-workflow.md)
+- [service-dependencies.md](../../../docs/arch/service-dependencies.md)
+- [GRAPHAI_WORKFLOW_GENERATION_RULES.md](../../../graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)
+
+---
+
+## 実装状況
+
+| フェーズ | 状態 | 完了日 |
+|---------|------|--------|
+| Phase 4: 評価ルーティング改善 | ✅ 完了 | 2026-01-06 |
+| Phase 5: 型バリデーション強化 | ✅ 完了 | 2026-01-06 |
+| Phase 6: 動的配列処理パターン | ✅ 完了 | 2026-01-06 |
+| Phase 7: タスクチェーンIF検証 | ✅ 完了 | 2026-01-06 |
+
+### Phase 4 実装詳細
+
+**変更ファイル:**
+- `state.py`: `is_acceptable`, `has_critical_weakness`, `critical_issues` フィールド追加
+- `llm_evaluator.py`: `_has_critical_weakness()` 関数追加、`llm_evaluator_node` で新フィールド設定
+- `agent.py`: `llm_evaluator_router` に `is_acceptable` と `has_critical_weakness` チェック追加
+
+**追加テスト:**
+- `test_llm_evaluator_node.py`: `TestHasCriticalWeakness` (8テスト), `TestLLMEvaluatorNodeCriticalWeakness` (3テスト)
+- `test_llm_evaluator_routers.py`: `TestIssue338CriticalWeaknessRouting` (5テスト)
+- `test_issue_338_critical_weakness_routing.py`: 結合テスト (7テスト)
+
+### Phase 5 実装詳細
+
+**対応した真因:** 真因2-C (型バリデーション不足)
+
+**新規ファイル:**
+- `utils/type_guards.py`: 型ガード関数モジュール
+  - `normalize_api_item()`: str/dict を統一形式に変換
+  - `normalize_recommended_apis()`: APIリストを正規化
+  - `get_api_name()`, `get_api_endpoint()`: 安全なアクセサ
+  - `format_apis_comma_separated()`: プロンプト用フォーマット
+  - `format_apis_for_prompt()`: 詳細フォーマット
+
+**変更ファイル:**
+- `utils/__init__.py`: 型ガード関数をエクスポート
+- `prompts/llm_evaluation.py`: `_format_recommended_apis()` を `format_apis_comma_separated()` に置換
+- `prompts/test_data_regeneration.py`: 同上
+
+**追加テスト:**
+- `test_type_guards.py`: 39テスト（単体テスト）
+- `test_type_guard_integration.py`: 9テスト（結合テスト）
+- 既存テスト更新: `test_llm_evaluation_prompt.py`, `test_test_data_regeneration_prompt.py`
+
+### Phase 6 実装詳細
+
+**対応した真因:** 真因1-A (LLMが固定長の配列処理を生成)
+
+**新規定数:**
+- `DYNAMIC_ARRAY_PROCESSING_PATTERNS`: 動的配列処理パターンのガイドライン
+  - `mapAgent` を使用した均一処理パターン
+  - `reduceAgent` を使用した集約パターン
+  - ハードコードされた固定長パターンの禁止
+
+**変更ファイル:**
+- `prompts/workflow_generation.py`: `DYNAMIC_ARRAY_PROCESSING_PATTERNS` 定数追加、プロンプトに統合
+
+**追加テスト:**
+- `test_workflow_generation_prompts.py`:
+  - `TestDynamicArrayProcessingPatterns` (7テスト): 定数内容テスト
+  - `TestDynamicArrayPatternsIntegration` (3テスト): プロンプト統合テスト
+
+### Phase 7 実装詳細
+
+**対応した真因:** 真因1-B (タスクチェーンのインターフェース不整合)
+
+**新規ファイル:**
+- `utils/interface_validator.py`: インターフェース検証モジュール
+  - `InterfaceIssue`: 検証問題を表すモデル
+  - `InterfaceValidationResult`: 検証結果モデル
+  - `validate_interface_compatibility()`: 2タスク間の互換性検証
+  - `validate_task_chain_interfaces()`: タスクチェーン全体の検証
+  - `format_interface_issues()`: 問題のフォーマット出力
+
+**変更ファイル:**
+- `utils/__init__.py`: インターフェース検証関数をエクスポート
+
+**追加テスト:**
+- `test_interface_validator.py`: 24テスト（単体テスト）
+  - 互換性検証: 必須フィールド欠落、型不一致、互換型
+  - タスクチェーン検証: 空チェーン、単一タスク、複数タスク
+  - フォーマット: エラー/警告の表示
+
+---
+
+## 変更履歴
+
+| 日付 | バージョン | 変更内容 |
+|------|-----------|---------|
+| 2026-01-06 | 1.0 | 初版作成 |
+| 2026-01-06 | 1.1 | Phase 4 実装完了 |
+| 2026-01-06 | 1.2 | Phase 5 実装完了 |
+| 2026-01-06 | 1.3 | Phase 6 実装完了 (動的配列処理パターン) |
+| 2026-01-06 | 1.4 | Phase 7 実装完了 (インターフェース検証) |

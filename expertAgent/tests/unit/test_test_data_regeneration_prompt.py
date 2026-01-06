@@ -4,12 +4,16 @@ This module tests the prompt generation functions for test data regeneration.
 
 Issue #305: Added tests for handling both list[str] and list[dict] formats
 for recommended_apis parameter.
+
+Issue #338: Updated to use centralized type guard functions.
 """
 
 from aiagent.langgraph.workflowGeneratorAgents.prompts.test_data_regeneration import (
     TEST_DATA_REGENERATION_SYSTEM_PROMPT,
-    _format_recommended_apis,
     create_test_data_regeneration_prompt,
+)
+from aiagent.langgraph.workflowGeneratorAgents.utils.type_guards import (
+    format_apis_comma_separated as _format_recommended_apis,
 )
 
 

@@ -25,6 +25,67 @@ from core.config import settings
 # Fix: Removed incorrect /aiagent-api prefix (Issue #333)
 EXPERTAGENT_API_URL = f"{settings.EXPERTAGENT_BASE_URL}/v1/aiagent/utility/jsonoutput"
 
+# Issue #338: Dynamic array processing patterns
+# These patterns help LLM generate workflows that handle arrays of unknown length
+DYNAMIC_ARRAY_PROCESSING_PATTERNS = """
+## Dynamic Array Processing Patterns (Issue #338)
+
+When processing arrays of unknown length (e.g., search results, email list):
+
+### DO:
+- Use `mapAgent` to process all elements uniformly
+- Use `arrayJoinAgent` to combine array elements into a string
+- Design for 0-N elements (handle empty arrays gracefully)
+
+### DON'T:
+- Hardcode fixed number of extraction nodes (extract_result_0, extract_result_1, ...)
+- Assume specific array lengths (e.g., always 3 results)
+- Use index access like `[0]`, `[1]` for multiple elements
+- **NEVER use `reduceAgent`** - it is NOT available in this GraphAI environment
+
+### Example Pattern - mapAgent (parallel processing):
+```yaml
+process_results:
+  agent: mapAgent
+  inputs:
+    rows: :search_node.result.items
+  graph:
+    version: 0.5
+    nodes:
+      extract:
+        agent: copyAgent
+        inputs:
+          title: :row.title
+          snippet: :row.snippet
+        isResult: true
+```
+
+### Example Pattern - arrayJoinAgent (array to string):
+```yaml
+# First, extract titles with mapAgent
+extract_titles:
+  agent: mapAgent
+  inputs:
+    rows: :search_node.result.items
+  graph:
+    version: 0.5
+    nodes:
+      get_title:
+        agent: copyAgent
+        inputs:
+          title: :row.title
+        isResult: true
+
+# Then, join the titles into a single string
+join_titles:
+  agent: arrayJoinAgent
+  inputs:
+    array: :extract_titles
+  params:
+    separator: "\\n- "
+```
+"""
+
 # Issue #333: Type validation rules for workflow generation
 # These rules help prevent type mismatches and field name errors at generation time
 # Fix: Removed incorrect JSON.stringify instruction (stringTemplateAgent doesn't support JS functions)
@@ -260,6 +321,80 @@ extract:
 
 **エラー例**: `shiftAgent: namedInputs.array is UNDEFINED!`
 
+### 2.5 動的配列処理パターン (Issue #338) - mapAgent の使用
+
+**重要**: 配列の全要素を処理する場合は **mapAgent** を使用してください。
+固定数のノード（extract_result_0, extract_result_1, ...）を作成しないでください。
+
+❌ **禁止**: 固定数のノードを作成する
+```yaml
+# ❌ 禁止 - 配列の長さが変わると壊れる
+extract_result_0:
+  agent: copyAgent
+  inputs:
+    data: :results[0]
+
+extract_result_1:
+  agent: copyAgent
+  inputs:
+    data: :results[1]
+
+extract_result_2:
+  agent: copyAgent
+  inputs:
+    data: :results[2]
+
+# 結果が2件の場合 extract_result_2 はエラー
+# 結果が5件の場合 extract_result_3, 4 が処理されない
+```
+
+✅ **推奨**: mapAgent で動的に全要素を処理
+```yaml
+# ✅ 推奨 - 配列の長さに依存しない
+process_all_results:
+  agent: mapAgent
+  inputs:
+    rows: :search_results.result.items  # 配列を入力
+  graph:
+    version: 0.5
+    nodes:
+      extract:
+        agent: copyAgent
+        inputs:
+          title: :row.title
+          url: :row.url
+          snippet: :row.snippet
+        isResult: true
+  # 出力: 各要素の処理結果を配列で返す
+```
+
+**mapAgent のルール**:
+1. `inputs.rows` に配列を渡す
+2. `graph.nodes` 内では `:row` で各要素にアクセス
+3. 0件の場合は空配列を返す（エラーにならない）
+4. N件の場合は全要素を処理した結果配列を返す
+
+**集約が必要な場合**: reduceAgent と組み合わせる
+```yaml
+# 配列を1つの値に集約
+summarize_results:
+  agent: reduceAgent
+  inputs:
+    array: :process_all_results  # mapAgent の出力
+    initial: ""
+  graph:
+    version: 0.5
+    nodes:
+      concat:
+        agent: stringTemplateAgent
+        inputs:
+          acc: :acc
+          item: :item.title
+        params:
+          template: "${{acc}}\n- ${{item}}"
+        isResult: true
+```
+
 ### 3. ネストされた出力の参照
 
 前タスクがネストされたオブジェクトを出力する場合、ドット記法で**完全パス**を指定します。
@@ -332,6 +467,33 @@ CRITICAL REQUIREMENT:
   you MUST use stringTemplateAgent to build the prompt first
 - NEVER embed :source.field directly in fetchAgent user_input multi-line strings
 - This is a GraphAI technical limitation and MANDATORY
+
+## WORKFLOW COMPLETENESS REQUIREMENT (Issue #338) - MANDATORY
+
+**You MUST generate a COMPLETE and STRUCTURALLY VALID workflow. Incomplete workflows are REJECTED.**
+
+### Completeness Checklist (VERIFY BEFORE OUTPUT):
+1. ✅ `version: 0.5` - REQUIRED at the top
+2. ✅ `nodes:` - REQUIRED section containing all nodes
+3. ✅ `source: {}` - REQUIRED empty object for user input
+4. ✅ Output node with `isResult: true` - REQUIRED for workflow to return results
+5. ✅ All template blocks (`template: |-`) MUST be COMPLETE - no truncation
+6. ✅ All node definitions MUST have required fields (agent, inputs, etc.)
+
+### Common Incomplete Workflow Patterns (AVOID):
+❌ Missing output node
+❌ Template blocks that end abruptly mid-sentence
+❌ Missing `isResult: true` on final output
+❌ Unclosed YAML structures (missing closing braces/brackets)
+
+### Self-Verification (MANDATORY):
+Before generating your response, mentally verify:
+1. Does the workflow have a source node?
+2. Does the workflow have an output node with isResult: true?
+3. Are all template strings complete (not truncated)?
+4. Is the YAML syntactically valid?
+
+**If ANY check fails, you MUST regenerate a complete workflow.**
 
 OUTPUT FORMAT REQUIREMENT:
 You MUST respond in JSON format with exactly these fields:
@@ -508,6 +670,8 @@ def create_workflow_generation_prompt(
 {api_list}
 
 {TYPE_VALIDATION_RULES}
+
+{DYNAMIC_ARRAY_PROCESSING_PATTERNS}
 
 ## YAML Generation Rules
 
@@ -1019,6 +1183,14 @@ IMPORTANT:
                     schema_info["request_schema"], indent=2, ensure_ascii=False
                 )
                 api_schemas_section += "\n```\n"
+            # Issue #338: Include workflow usage example for correct data path reference
+            if "workflow_usage_example" in schema_info:
+                api_schemas_section += (
+                    "**Workflow Usage Example** (CRITICAL - follow this pattern):\n"
+                    "```yaml\n"
+                )
+                api_schemas_section += schema_info["workflow_usage_example"]
+                api_schemas_section += "```\n"
             api_schemas_section += "\n"
         prompt += api_schemas_section
 

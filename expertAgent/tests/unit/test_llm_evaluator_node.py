@@ -591,6 +591,229 @@ class TestFallbackEvaluation:
             )
 
 
+class TestHasCriticalWeakness:
+    """Test Issue #338: _has_critical_weakness function."""
+
+    def test_detect_critical_keyword(self):
+        """Test detection of 'Critical' keyword in weaknesses."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = ["Critical: Missing output node"]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is True
+        assert len(issues) == 1
+        assert "Critical" in issues[0]
+
+    def test_detect_critical_uppercase(self):
+        """Test detection of 'CRITICAL' uppercase keyword."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = ["CRITICAL: Search results not returned"]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is True
+        assert len(issues) == 1
+
+    def test_detect_critical_lowercase(self):
+        """Test detection of 'critical' lowercase keyword."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = ["critical issue: data format mismatch"]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is True
+        assert len(issues) == 1
+
+    def test_detect_japanese_critical(self):
+        """Test detection of Japanese '致命的' keyword."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = ["致命的: 出力ノードがありません"]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is True
+        assert len(issues) == 1
+
+    def test_detect_japanese_juudai(self):
+        """Test detection of Japanese '重大' keyword."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = ["重大な問題: インターフェース不整合"]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is True
+        assert len(issues) == 1
+
+    def test_no_critical_with_warning(self):
+        """Test no critical detected with only warnings."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = [
+            "Warning: Consider adding error handling",
+            "Minor: Inefficient loop structure",
+        ]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is False
+        assert len(issues) == 0
+
+    def test_no_critical_with_empty_list(self):
+        """Test no critical detected with empty weaknesses."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        has_critical, issues = _has_critical_weakness([])
+
+        assert has_critical is False
+        assert len(issues) == 0
+
+    def test_multiple_critical_issues(self):
+        """Test detection of multiple critical issues."""
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            _has_critical_weakness,
+        )
+
+        weaknesses = [
+            "Critical: Missing output node",
+            "Warning: Consider adding docs",
+            "Critical: Schema mismatch",
+            "致命的: データ形式エラー",
+        ]
+        has_critical, issues = _has_critical_weakness(weaknesses)
+
+        assert has_critical is True
+        assert len(issues) == 3  # 2 Critical + 1 致命的
+
+
+class TestLLMEvaluatorNodeCriticalWeakness:
+    """Test Issue #338: llm_evaluator_node critical weakness detection."""
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_detects_critical_weakness(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test that llm_evaluator_node sets has_critical_weakness."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        critical_result = {
+            "overall_score": 72,  # Above threshold
+            "structural_score": 75,
+            "requirement_score": 70,
+            "output_quality_score": 70,
+            "error_handling_score": 70,
+            "test_data_quality_score": 60,
+            "test_data_issues": [],
+            "needs_test_data_regeneration": False,
+            "suggested_test_data": None,
+            "strengths": ["Good structure"],
+            "weaknesses": ["Critical: Missing search_results in output"],
+            "suggestions": ["Add search_results to output"],
+            "is_acceptable": True,  # LLM says acceptable
+            "failure_reason": "none",  # LLM didn't set failure
+            "confidence": 0.8,
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**critical_result)
+
+            result = await llm_evaluator_node(base_state)
+
+            # Issue #338: Should detect critical weakness programmatically
+            assert result["has_critical_weakness"] is True
+            assert len(result["critical_issues"]) == 1
+            assert "Critical" in result["critical_issues"][0]
+            # is_acceptable should be False due to critical weakness
+            assert result["is_acceptable"] is False
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_no_critical_weakness(
+        self, base_state: WorkflowGeneratorState, mock_evaluation_result: dict[str, Any]
+    ):
+        """Test that llm_evaluator_node sets has_critical_weakness=False."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**mock_evaluation_result)
+
+            result = await llm_evaluator_node(base_state)
+
+            # No critical weakness
+            assert result["has_critical_weakness"] is False
+            assert result["critical_issues"] == []
+            # Should be acceptable (high scores, no critical)
+            assert result["is_acceptable"] is True
+
+    @pytest.mark.asyncio
+    async def test_llm_evaluator_is_acceptable_includes_critical_check(
+        self, base_state: WorkflowGeneratorState
+    ):
+        """Test that is_acceptable considers critical weakness."""
+        from aiagent.langgraph.workflowGeneratorAgents.models.evaluation import (
+            LLMEvaluationResult,
+        )
+        from aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator import (
+            llm_evaluator_node,
+        )
+
+        # All scores high but has critical weakness
+        high_score_critical_result = {
+            "overall_score": 85,
+            "structural_score": 90,
+            "requirement_score": 85,
+            "output_quality_score": 80,
+            "error_handling_score": 80,
+            "test_data_quality_score": 85,
+            "test_data_issues": [],
+            "needs_test_data_regeneration": False,
+            "suggested_test_data": None,
+            "strengths": ["Excellent structure"],
+            "weaknesses": ["Critical: Data type mismatch"],
+            "suggestions": [],
+            "is_acceptable": True,
+            "failure_reason": "none",
+            "confidence": 0.9,
+        }
+
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.llm_evaluator._call_llm_evaluator"
+        ) as mock_call:
+            mock_call.return_value = LLMEvaluationResult(**high_score_critical_result)
+
+            result = await llm_evaluator_node(base_state)
+
+            # Even with high scores, critical weakness should make it not acceptable
+            assert result["has_critical_weakness"] is True
+            assert result["is_acceptable"] is False
+
+
 class TestFormatFeedback:
     """Test _format_feedback function."""
 

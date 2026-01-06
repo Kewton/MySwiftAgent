@@ -72,10 +72,20 @@ class TestGeneratorNode:
         with patch(
             "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
         ) as mock_invoke_llm:
-            # Setup mock LLM response
+            # Setup mock LLM response with structurally complete YAML
+            # Issue #338: YAML must have source node and output node with isResult: true
+            complete_yaml = """version: 0.5
+nodes:
+  source: {}
+  output:
+    agent: copyAgent
+    inputs:
+      result: :source
+    isResult: true
+"""
             mock_response = WorkflowGenerationResponse(
                 workflow_name="send_email_notification",
-                yaml_content="version: 0.5\nnodes:\n  node1: {}\n",
+                yaml_content=complete_yaml,
                 reasoning="Generated workflow using Gmail API",
             )
 
@@ -111,9 +121,23 @@ class TestGeneratorNode:
         with patch(
             "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
         ) as mock_invoke_llm:
+            # Issue #338: YAML must be structurally complete
+            complete_yaml = """version: 0.5
+nodes:
+  source: {}
+  validNode:
+    agent: copyAgent
+    inputs:
+      data: :source
+  output:
+    agent: copyAgent
+    inputs:
+      result: :validNode
+    isResult: true
+"""
             mock_response = WorkflowGenerationResponse(
                 workflow_name="send_email_notification_fixed",
-                yaml_content="version: 0.5\nnodes:\n  validNode: {}\n",
+                yaml_content=complete_yaml,
                 reasoning="Fixed: using valid agent node",
             )
 
@@ -132,6 +156,49 @@ class TestGeneratorNode:
 
             assert result["workflow_name"] == "send_email_notification_fixed"
             assert "validNode" in result["yaml_content"]
+            assert result["status"] == "yaml_generated"
+
+    @pytest.mark.asyncio
+    async def test_generator_node_incomplete_workflow(self, base_state):
+        """Test generator node detects and rejects incomplete workflows (Issue #338)."""
+        with patch(
+            "aiagent.langgraph.workflowGeneratorAgents.nodes.generator.invoke_structured_llm"
+        ) as mock_invoke_llm:
+            # Setup mock LLM response with incomplete YAML (missing isResult: true)
+            incomplete_yaml = """version: 0.5
+nodes:
+  source: {}
+  output:
+    agent: copyAgent
+    inputs:
+      result: :source
+"""
+            mock_response = WorkflowGenerationResponse(
+                workflow_name="incomplete_workflow",
+                yaml_content=incomplete_yaml,
+                reasoning="Generated incomplete workflow",
+            )
+
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
+                StructuredCallResult,
+            )
+
+            mock_invoke_llm.return_value = StructuredCallResult(
+                result=mock_response,
+                recovered_via_json=False,
+                raw_text=None,
+                model_name="test-model",
+            )
+
+            result = await generator_node(base_state)
+
+            # Should detect incompleteness and set error state
+            assert result["status"] == "incomplete_workflow"
+            assert result["has_schema_errors"] is True
+            assert "WORKFLOW COMPLETENESS ERRORS" in result["error_feedback"]
+            assert "Missing output node with 'isResult: true'" in str(
+                result["validation_errors"]
+            )
 
     @pytest.mark.asyncio
     async def test_generator_node_llm_error(self, base_state):

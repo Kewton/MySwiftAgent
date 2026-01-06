@@ -79,7 +79,17 @@ async def get_api_response_schemas(recommended_apis: list[str]) -> dict[str, Any
     all_apis.extend(capabilities.get("utility_apis", []))
     all_apis.extend(capabilities.get("ai_agent_apis", []))
 
-    for api_path in recommended_apis:
+    for api_item in recommended_apis:
+        # Handle both string and dict formats for recommended_apis
+        # Issue #338: recommended_apis can be list[str] or list[dict] with "endpoint" key
+        if isinstance(api_item, dict):
+            api_path = api_item.get("endpoint", "")
+        else:
+            api_path = str(api_item)
+
+        if not api_path:
+            continue
+
         # Find matching API definition
         for api_def in all_apis:
             endpoint = api_def.get("endpoint", "")
@@ -101,6 +111,12 @@ async def get_api_response_schemas(recommended_apis: list[str]) -> dict[str, Any
                 # Include description
                 if "description" in api_def:
                     schema_info["description"] = api_def["description"]
+
+                # Issue #338: Include workflow usage example for correct data path
+                if "workflow_usage_example" in api_def:
+                    schema_info["workflow_usage_example"] = api_def[
+                        "workflow_usage_example"
+                    ]
 
                 if schema_info:
                     schemas[api_path] = schema_info

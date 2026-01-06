@@ -154,6 +154,24 @@ def evaluator_router(
             logger.error("Max retries reached with schema validation errors")
             return "END"
 
+        # Issue #338: Check for interface compatibility warnings
+        # If there are interface warnings, route back for re-definition
+        interface_warnings = state.get("interface_warnings", [])
+        if interface_warnings:
+            logger.warning(
+                "Issue #338: Interface compatibility warnings detected (%d warnings), "
+                "routing back to interface_definition for fixes",
+                len(interface_warnings),
+            )
+            for warning in interface_warnings:
+                logger.warning("  - %s", warning)
+            if retry_count < MAX_RETRY_COUNT:
+                return "interface_definition"
+            logger.warning(
+                "Max retries reached with interface warnings, proceeding with caution"
+            )
+            # At max retry, proceed to avoid infinite loop but log warnings
+
         # Proceed only if both structure is valid AND all tasks are feasible
         if is_valid and all_tasks_feasible:
             return "master_creation"

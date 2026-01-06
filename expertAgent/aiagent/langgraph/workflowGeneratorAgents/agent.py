@@ -114,10 +114,14 @@ def llm_evaluator_router(
 ) -> Literal["test_data_regenerator", "result_summary_generator", "self_repair"]:
     """Route after llm_evaluator node based on evaluation results.
 
-    Routing logic:
+    Routing logic (Issue #338 enhanced):
     1. Test data regeneration needed & count < max -> test_data_regenerator
-    2. Workflow quality issue (rule-based or LLM) -> self_repair
-    3. Success -> result_summary_generator
+    2. Rule-based validation failed -> self_repair
+    3. is_acceptable=False (combined LLM evaluation) -> self_repair (Issue #338)
+    4. has_critical_weakness=True -> self_repair (Issue #338)
+    5. Workflow quality issue (failure_reason) -> self_repair
+    6. Evaluation score < 70 -> self_repair
+    7. Success -> result_summary_generator
 
     Args:
         state: Current workflow generator state
@@ -142,7 +146,26 @@ def llm_evaluator_router(
         logger.info("Rule-based validation failed, routing to self_repair")
         return "self_repair"
 
-    # Check LLM evaluation score
+    # Issue #338: Check is_acceptable flag (combined evaluation criteria)
+    is_acceptable = state.get("is_acceptable", True)
+    if not is_acceptable:
+        logger.info(
+            "Issue #338: Workflow not acceptable (is_acceptable=False), "
+            "routing to self_repair"
+        )
+        return "self_repair"
+
+    # Issue #338: Check for critical weakness
+    has_critical_weakness = state.get("has_critical_weakness", False)
+    if has_critical_weakness:
+        critical_issues = state.get("critical_issues", [])
+        logger.info(
+            f"Issue #338: Critical weakness detected: {critical_issues}, "
+            "routing to self_repair"
+        )
+        return "self_repair"
+
+    # Check LLM evaluation failure_reason
     evaluation_result = state.get("llm_evaluation_result") or {}
     failure_reason = evaluation_result.get("failure_reason", "none")
 

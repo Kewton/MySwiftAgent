@@ -1,0 +1,15 @@
+version: 0.5
+nodes:
+  source: {}
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      search_results: :source.user_input.search_results
+      focus_points: :source.user_input.focus_points
+    params:
+      template: "テスト: ${search_results} / ${focus_points}"
+  output:
+    agent: copyAgent
+    inputs:
+      result: :build_prompt
+    isResult: true

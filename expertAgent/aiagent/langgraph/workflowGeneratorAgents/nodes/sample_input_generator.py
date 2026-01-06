@@ -16,6 +16,83 @@ from ..state import WorkflowGeneratorState
 
 logger = logging.getLogger(__name__)
 
+# Task context for keyword-aware sample generation
+_TASK_CONTEXT: dict[str, Any] = {}
+
+
+def _extract_keywords_from_description(description: str) -> list[str]:
+    """Extract keywords from task description for contextual sample generation.
+
+    This function identifies key terms in the task description that should be
+    used for generating realistic test data instead of generic "sample_text".
+
+    Args:
+        description: Task description text
+
+    Returns:
+        List of extracted keywords (e.g., ["大谷翔平", "ニュース"])
+    """
+    if not description:
+        return []
+
+    keywords: list[str] = []
+
+    # Common patterns for extracting key entities
+    # Japanese patterns
+    import re
+
+    # Extract quoted strings
+    quoted = re.findall(r'「(.+?)」', description)
+    keywords.extend(quoted)
+
+    # Extract terms before common action words
+    patterns = [
+        r'(.+?)(?:に関する|について|の最新|をGoogle|で検索|を検索|を取得)',
+        r'(.+?)(?:ニュース|情報|データ)',
+    ]
+    for pattern in patterns:
+        matches = re.findall(pattern, description)
+        for match in matches:
+            # Clean up and add if not too long
+            cleaned = match.strip()
+            if cleaned and len(cleaned) <= 20 and cleaned not in keywords:
+                keywords.append(cleaned)
+
+    # Filter out common generic terms
+    generic_terms = {'最新', 'ニュース', '情報', 'データ', 'サマリ', 'メール'}
+    keywords = [k for k in keywords if k not in generic_terms]
+
+    logger.debug(f"Extracted keywords from description: {keywords}")
+    return keywords
+
+
+def _set_task_context(task_data: dict[str, Any] | None) -> None:
+    """Set the task context for keyword-aware sample generation.
+
+    Args:
+        task_data: Task data containing description, name, etc.
+    """
+    global _TASK_CONTEXT
+    if task_data is None:
+        _TASK_CONTEXT = {}
+        return
+
+    description = task_data.get("description", "")
+    name = task_data.get("name", "")
+
+    keywords = _extract_keywords_from_description(description)
+    # Also try to extract from task name
+    name_keywords = _extract_keywords_from_description(name)
+    all_keywords = list(dict.fromkeys(keywords + name_keywords))  # Dedupe
+
+    _TASK_CONTEXT = {
+        "description": description,
+        "name": name,
+        "keywords": all_keywords,
+        "primary_keyword": all_keywords[0] if all_keywords else None,
+    }
+    logger.info(f"Task context set: keywords={all_keywords}")
+
 
 def _get_string_template_input_fields(yaml_content: str) -> set[str]:
     """Extract user_input field names used by stringTemplateAgent nodes.
@@ -262,7 +339,10 @@ def _normalise_type(value: Any) -> str | None:
 
 
 def _generate_string_sample(schema: dict[str, Any], prop_name: str = "") -> str:
-    """Generate appropriate string sample based on property name and schema.
+    """Generate appropriate string sample based on property name, schema, and task context.
+
+    Uses task context (extracted keywords from user requirement) to generate
+    realistic test data instead of generic "sample_text".
 
     Args:
         schema: JSON Schema for the string property
@@ -321,7 +401,21 @@ def _generate_string_sample(schema: dict[str, Any], prop_name: str = "") -> str:
     if "script" in prop_lower or "text" in prop_lower or "content" in prop_lower:
         return "これはサンプルテキストです。テスト用の内容が含まれています。"
 
-    # Default
+    # Issue #338: Use task context keywords for query/search/keyword fields
+    # This ensures test data matches the user's actual requirement
+    query_patterns = ["query", "keyword", "search", "term", "input", "subject", "topic"]
+    if any(pattern in prop_lower for pattern in query_patterns):
+        primary_keyword = _TASK_CONTEXT.get("primary_keyword")
+        if primary_keyword:
+            logger.debug(
+                f"Using task keyword '{primary_keyword}' for property '{prop_name}'"
+            )
+            return primary_keyword
+
+    # Default: use task keyword if available, otherwise generic sample
+    primary_keyword = _TASK_CONTEXT.get("primary_keyword")
+    if primary_keyword:
+        return primary_keyword
     return "sample_text"
 
 
@@ -413,13 +507,18 @@ async def sample_input_generator_node(
             "status": "failed",
             "error_message": message,
         }
+
+    # Issue #338: Set task context for keyword-aware sample generation
+    # This extracts keywords like "大谷翔平" from the task description
+    _set_task_context(task_data)
+
     input_interface = task_data.get("input_interface", {})
     input_schema = input_interface.get("schema", {})
 
     logger.debug(f"Input schema: {input_schema}")
 
     try:
-        # Generate sample input from schema
+        # Generate sample input from schema (now uses task context for keywords)
         sample_input = _generate_sample_from_schema(input_schema)
 
         logger.info(f"Generated sample input: {sample_input}")
