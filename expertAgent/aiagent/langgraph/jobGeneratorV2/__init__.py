@@ -57,6 +57,12 @@ from .types import (
     WorkflowGenInput,
     WorkflowGenOutput,
 )
+from .workflows.task_breakdown import (
+    AlternativeSubWorkflow,
+    FeasibilitySubWorkflow,
+    TaskBreakdownWorkflow,
+    TaskDecomposerSubWorkflow,
+)
 
 __all__ = [
     # Enums
@@ -103,4 +109,9 @@ __all__ = [
     "ErrorRecoveryManager",
     # Orchestrator
     "JobGenerationOrchestrator",
+    # Workflows
+    "TaskBreakdownWorkflow",
+    "TaskDecomposerSubWorkflow",
+    "FeasibilitySubWorkflow",
+    "AlternativeSubWorkflow",
 ]
