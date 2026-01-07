@@ -14,6 +14,7 @@ The key improvement is in error recovery:
 - Prevents infinite loops by always decrementing retry budget
 """
 
+from .adapter import JobGeneratorV2Adapter, invoke_structured_llm_real
 from .context import (
     ContextBuilder,
     ExecutionContext,
@@ -23,6 +24,7 @@ from .context import (
     StorageContext,
 )
 from .orchestrator import JobGenerationOrchestrator
+from .progress import JobStateProgressReporter
 from .protocols import (
     ErrorType,
     PhaseExecution,
@@ -57,7 +59,6 @@ from .types import (
     WorkflowGenInput,
     WorkflowGenOutput,
 )
-from .adapter import JobGeneratorV2Adapter, invoke_structured_llm_real
 from .workflows.task_breakdown import (
     AlternativeSubWorkflow,
     FeasibilitySubWorkflow,
@@ -118,4 +119,6 @@ __all__ = [
     # Adapter (Phase E integration)
     "JobGeneratorV2Adapter",
     "invoke_structured_llm_real",
+    # Progress reporting (Issue #342-V2-UX)
+    "JobStateProgressReporter",
 ]

@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     StructuredLLMError,
+    get_callbacks_from_context,
     invoke_structured_llm,
 )
 from aiagent.langgraph.jobGeneratorV2.types import (
@@ -251,6 +252,9 @@ class AlternativeSubWorkflow:
             {"role": "user", "content": user_prompt},
         ]
 
+        # Issue #342 V2: Extract callbacks for Langfuse tracing
+        callbacks = get_callbacks_from_context(context)
+
         try:
             call_result = await invoke_structured_llm(
                 messages=messages,
@@ -258,6 +262,7 @@ class AlternativeSubWorkflow:
                 context_label="alternative_generator",
                 model_env_var="JOB_GENERATOR_EVALUATOR_MODEL",
                 default_model=context.llm.model_name,
+                callbacks=callbacks,
             )
         except StructuredLLMError as exc:
             logger.error("Alternative generation failed: %s", exc)

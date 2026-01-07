@@ -23,6 +23,7 @@ from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     StructuredLLMError,
     _build_task_breakdown_system_prompt,
     create_task_breakdown_prompt,
+    get_callbacks_from_context,
     invoke_structured_llm,
 )
 from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
@@ -110,18 +111,18 @@ def _convert_to_task_definition(task_item: object) -> TaskDefinition:
     )
 
 
-def _infer_task_type(description: str, api: str) -> str:
+def _infer_task_type(description: str, api: str | None) -> str:
     """Infer task type from description and API.
 
     Args:
         description: Task description
-        api: Recommended API endpoint
+        api: Recommended API endpoint (can be None)
 
     Returns:
         Inferred task type string
     """
     description_lower = description.lower()
-    api_lower = api.lower()
+    api_lower = api.lower() if api else ""
 
     if "gmail" in api_lower:
         if "search" in api_lower:
@@ -205,6 +206,9 @@ class TaskDecomposerSubWorkflow:
             {"role": "user", "content": user_prompt},
         ]
 
+        # Issue #342 V2: Extract callbacks for Langfuse tracing
+        callbacks = get_callbacks_from_context(context)
+
         try:
             call_result = await invoke_structured_llm(
                 messages=messages,
@@ -213,6 +217,7 @@ class TaskDecomposerSubWorkflow:
                 model_env_var="JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL",
                 default_model=context.llm.model_name,
                 validator=_validate_task_breakdown_response,
+                callbacks=callbacks,
             )
         except StructuredLLMError as exc:
             logger.error("Task decomposition failed: %s", exc)

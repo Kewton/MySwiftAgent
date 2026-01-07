@@ -23,6 +23,7 @@ from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     INTERFACE_SCHEMA_SYSTEM_PROMPT,
     StructuredLLMError,
     create_interface_schema_prompt,
+    get_callbacks_from_context,
     invoke_structured_llm,
 )
 from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
@@ -274,11 +275,16 @@ class SchemaGeneratorSubWorkflow:
             for t in tasks
         ]
 
-        user_prompt = create_interface_schema_prompt(task_dicts, context.user_requirement)
+        user_prompt = create_interface_schema_prompt(
+            task_dicts, context.user_requirement
+        )
         messages = [
             {"role": "system", "content": INTERFACE_SCHEMA_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ]
+
+        # Issue #342 V2: Extract callbacks for Langfuse tracing
+        callbacks = get_callbacks_from_context(context)
 
         try:
             call_result = await invoke_structured_llm(
@@ -288,6 +294,7 @@ class SchemaGeneratorSubWorkflow:
                 model_env_var="JOB_GENERATOR_INTERFACE_DEFINITION_MODEL",
                 default_model=context.llm.model_name,
                 validator=_validate_schema_response,
+                callbacks=callbacks,
             )
         except StructuredLLMError as exc:
             logger.error("Schema generation failed: %s", exc)
@@ -304,15 +311,54 @@ class SchemaGeneratorSubWorkflow:
             call_result.model_name,
         )
 
+        # Debug: log expected task IDs vs received task IDs
+        expected_task_ids = [t.id for t in tasks]
+        received_task_ids = [iface.task_id for iface in response.interfaces]
+        logger.info(
+            "Expected task_ids: %s, Received task_ids from LLM: %s",
+            expected_task_ids,
+            received_task_ids,
+        )
+
+        # Check for task_id mismatch and determine if remapping is needed
+        needs_remapping = False
+        if set(received_task_ids) != set(expected_task_ids):
+            if len(response.interfaces) == len(tasks):
+                logger.warning(
+                    "Task ID mismatch detected. LLM returned %s but expected %s. "
+                    "Will remap interfaces to expected task_ids by order.",
+                    received_task_ids,
+                    expected_task_ids,
+                )
+                needs_remapping = True
+            else:
+                logger.warning(
+                    "Task ID mismatch and count mismatch (%d vs %d). "
+                    "Using LLM-provided task_ids as-is.",
+                    len(response.interfaces),
+                    len(tasks),
+                )
+
         # Normalize schemas and convert to InterfaceSchema
         interfaces: dict[str, InterfaceSchema] = {}
-        for iface in response.interfaces:
+        for idx, iface in enumerate(response.interfaces):
             # Normalize LLM output
             input_schema = normalize_json_schema_properties(iface.input_schema)
             output_schema = normalize_json_schema_properties(iface.output_schema)
 
-            interfaces[iface.task_id] = InterfaceSchema(
-                task_id=iface.task_id,
+            # Use expected task_id if remapping is needed
+            if needs_remapping and idx < len(expected_task_ids):
+                actual_task_id = expected_task_ids[idx]
+                logger.debug(
+                    "Remapping interface from task_id '%s' to '%s'",
+                    iface.task_id,
+                    actual_task_id,
+                )
+            else:
+                actual_task_id = iface.task_id
+
+            interfaces[actual_task_id] = InterfaceSchema(
+                task_id=actual_task_id,
                 input_schema=input_schema,
                 output_schema=output_schema,
                 description=iface.description,

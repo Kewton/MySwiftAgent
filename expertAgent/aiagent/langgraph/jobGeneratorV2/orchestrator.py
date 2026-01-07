@@ -6,11 +6,14 @@ of all workflow phases with proper error recovery.
 Issue #342: The orchestrator uses ErrorRecoveryManager to make intelligent
 decisions about retry, rollback, and relaxation, preventing infinite loops.
 
+Issue #342-V2-UX: Added integration with JobStateProgressReporter for
+real-time progress tracking during polling (same UX as V1).
+
 Key responsibilities:
 1. Execute phases in correct order
 2. Handle errors with recovery manager
 3. Transform outputs between phases
-4. Report progress
+4. Report progress to job_state_manager via progress reporter
 """
 
 import logging
@@ -135,25 +138,32 @@ class JobGenerationOrchestrator:
     async def run_workflow(
         self,
         request: JobGenerationRequest,
+        context: ExecutionContext | None = None,
     ) -> JobGenerationResult:
         """Run the complete job generation workflow.
 
         Args:
             request: The job generation request
+            context: Optional ExecutionContext (created if not provided).
+                     Issue #342 V2: When provided, enables Langfuse tracing
+                     through the observability.tracer field.
 
         Returns:
             JobGenerationResult with the outcome
         """
-        job_id = str(uuid.uuid4())
-        logger.info("Starting job generation workflow: %s", job_id)
-
-        # Create execution context
-        context = (
-            ContextBuilder()
-            .with_job_id(job_id)
-            .with_user_requirement(request.user_requirement)
-            .build()
-        )
+        # Issue #342 V2: Use provided context or create default
+        if context is not None:
+            job_id = context.job_id
+            logger.info("Using provided context for job: %s", job_id)
+        else:
+            job_id = str(uuid.uuid4())
+            logger.info("Creating default context for job: %s", job_id)
+            context = (
+                ContextBuilder()
+                .with_job_id(job_id)
+                .with_user_requirement(request.user_requirement)
+                .build()
+            )
 
         try:
             # Execute phases in order
@@ -173,6 +183,10 @@ class JobGenerationOrchestrator:
 
                 # Transform input from previous phase
                 phase_input = self._create_phase_input(phase, request, phase_outputs)
+
+                # Issue #342-V2-UX: Initialize workflow statuses before WORKFLOW_GEN
+                if phase == Phase.WORKFLOW_GEN:
+                    await self._init_workflow_statuses(phase_outputs)
 
                 # Execute phase
                 output = await self.execute_phase(
@@ -198,6 +212,16 @@ class JobGenerationOrchestrator:
                     )
 
                 phase_outputs[phase] = output
+
+                # Issue #342-V2-UX: Update task breakdown after TASK_BREAKDOWN phase
+                if phase == Phase.TASK_BREAKDOWN:
+                    await self._set_task_breakdown(output)
+
+            # Issue #342-V2-UX: Mark all workflow statuses as success
+            await self._mark_workflow_statuses_complete(phase_outputs, context)
+
+            # Issue #342-V2-UX: Mark complete
+            await self._mark_complete()
 
             # Extract final result
             return self._create_result(phase_outputs)
@@ -368,7 +392,12 @@ class JobGenerationOrchestrator:
 
         Returns:
             JobGenerationResult
+
+        Issue #342: Extended to include tasks and interfaces for adapter conversion.
         """
+        # Extract outputs from all phases
+        breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
+        interface_output: InterfaceDesignOutput = phase_outputs[Phase.INTERFACE_DESIGN]
         registration_output: RegistrationOutput = phase_outputs[Phase.REGISTRATION]
         workflow_output: WorkflowGenOutput = phase_outputs[Phase.WORKFLOW_GEN]
 
@@ -378,4 +407,134 @@ class JobGenerationOrchestrator:
             job_master_id=registration_output.job_master_id,
             task_master_ids=registration_output.task_master_ids,
             workflow_yaml=workflow_output.workflow_yaml,
+            # Issue #342: Include task/interface info for adapter conversion
+            tasks=breakdown_output.tasks,
+            interfaces=interface_output.interfaces,
         )
+
+    # Issue #342-V2-UX: Helper methods for progress reporting
+
+    async def _set_task_breakdown(
+        self,
+        breakdown_output: TaskBreakdownOutput,
+    ) -> None:
+        """Set task breakdown in progress reporter.
+
+        Args:
+            breakdown_output: Output from TASK_BREAKDOWN phase
+        """
+        if self.progress_reporter is None:
+            return
+
+        # Check if reporter is JobStateProgressReporter
+        from .progress import JobStateProgressReporter
+
+        if isinstance(self.progress_reporter, JobStateProgressReporter):
+            await self.progress_reporter.set_task_breakdown(breakdown_output.tasks)
+            logger.info(
+                "Task breakdown set via progress reporter: %d tasks",
+                len(breakdown_output.tasks),
+            )
+
+    async def _init_workflow_statuses(
+        self,
+        phase_outputs: dict[Phase, Any],
+    ) -> None:
+        """Initialize workflow statuses before WORKFLOW_GEN phase.
+
+        Args:
+            phase_outputs: Outputs from previous phases
+        """
+        if self.progress_reporter is None:
+            return
+
+        # Check if reporter is JobStateProgressReporter
+        from .progress import JobStateProgressReporter
+
+        if isinstance(self.progress_reporter, JobStateProgressReporter):
+            breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
+            await self.progress_reporter.init_workflow_statuses(breakdown_output.tasks)
+            logger.info(
+                "Workflow statuses initialized via progress reporter: %d tasks",
+                len(breakdown_output.tasks),
+            )
+
+    async def _mark_workflow_statuses_complete(
+        self,
+        phase_outputs: dict[Phase, Any],
+        context: "ExecutionContext",
+    ) -> None:
+        """Mark all workflow statuses as success after WORKFLOW_GEN phase.
+
+        Issue #342: Extended to include langfuse_trace_id and summary (YAML)
+        for each task's workflow status.
+
+        Args:
+            phase_outputs: Outputs from all phases
+            context: Execution context with observability info
+        """
+        if self.progress_reporter is None:
+            return
+
+        # Check if reporter is JobStateProgressReporter
+        from .progress import JobStateProgressReporter
+
+        if isinstance(self.progress_reporter, JobStateProgressReporter):
+            from app.services.job_creation_state import WorkflowGenerationSummary
+            from app.services.langfuse_service import LangfuseService
+
+            breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
+
+            # Issue #342: Get workflow YAML from WORKFLOW_GEN output
+            workflow_gen_output: WorkflowGenOutput = phase_outputs.get(
+                Phase.WORKFLOW_GEN
+            )
+            workflow_yaml = (
+                workflow_gen_output.workflow_yaml if workflow_gen_output else None
+            )
+
+            # Issue #342: Extract langfuse_trace_id from context
+            langfuse_trace_id = None
+            if context.observability and context.observability.tracer:
+                langfuse_trace_id = LangfuseService.extract_trace_id(
+                    context.observability.tracer
+                )
+
+            # Mark each task's workflow status as success with summary
+            for task in breakdown_output.tasks:
+                # Create summary with YAML content for UI display
+                summary = None
+                if workflow_yaml:
+                    yaml_preview = (
+                        workflow_yaml[:500] if len(workflow_yaml) > 500 else workflow_yaml
+                    )
+                    summary = WorkflowGenerationSummary(
+                        yaml_preview=yaml_preview,
+                        yaml_content=workflow_yaml,
+                    )
+
+                await self.progress_reporter.update_workflow_status(
+                    task_id=task.id,
+                    status="success",
+                    workflow_name=f"workflow_{task.id}",
+                    langfuse_trace_id=langfuse_trace_id,
+                    summary=summary,
+                )
+
+            logger.info(
+                "Workflow statuses marked as success: %d tasks (trace_id: %s)",
+                len(breakdown_output.tasks),
+                langfuse_trace_id,
+            )
+
+    async def _mark_complete(self) -> None:
+        """Mark job as complete via progress reporter."""
+        if self.progress_reporter is None:
+            return
+
+        # Check if reporter is JobStateProgressReporter
+        from .progress import JobStateProgressReporter
+
+        if isinstance(self.progress_reporter, JobStateProgressReporter):
+            await self.progress_reporter.mark_complete()
+            logger.info("Job marked as complete via progress reporter")

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     StructuredLLMError,
+    get_callbacks_from_context,
     invoke_structured_llm,
 )
 
@@ -43,12 +44,9 @@ class WorkflowYAMLResponse(BaseModel):
     structured output for consistency.
     """
 
-    yaml_content: str = Field(
-        description="Complete GraphAI workflow YAML content"
-    )
+    yaml_content: str = Field(description="Complete GraphAI workflow YAML content")
     workflow_name: str = Field(
-        default="generated_workflow",
-        description="Name for the workflow"
+        default="generated_workflow", description="Name for the workflow"
     )
 
 
@@ -123,9 +121,9 @@ class LLMGeneratorSubWorkflow:
 
         try:
             if self._use_structured_output:
-                result = await self._generate_structured(prompt)
+                result = await self._generate_structured(prompt, context)
             else:
-                result = await self._generate_raw(prompt)
+                result = await self._generate_raw(prompt, context)
 
             logger.info(
                 "Workflow generated successfully: %s (%d nodes)",
@@ -141,16 +139,22 @@ class LLMGeneratorSubWorkflow:
             raise StructuredLLMError(f"Workflow generation failed: {e}") from e
 
     async def _generate_structured(
-        self, prompt: WorkflowPrompt
+        self,
+        prompt: WorkflowPrompt,
+        context: "ExecutionContext | None" = None,
     ) -> LLMGenerationResult:
         """Generate using Pydantic structured output.
 
         Args:
             prompt: WorkflowPrompt with prompts
+            context: Optional ExecutionContext for callbacks
 
         Returns:
             LLMGenerationResult with generated YAML
         """
+        # Issue #342 V2: Extract callbacks for Langfuse tracing
+        callbacks = get_callbacks_from_context(context) if context else []
+
         result = await invoke_structured_llm(
             system_prompt=prompt.system,
             user_prompt=prompt.render(),
@@ -160,6 +164,7 @@ class LLMGeneratorSubWorkflow:
             context_label="workflow_gen_v2",
             model_env_var=MODEL_ENV_VAR,
             default_model=DEFAULT_MODEL,
+            callbacks=callbacks if callbacks else None,
         )
 
         schema: GraphAIWorkflowSchema = result.result
@@ -174,16 +179,22 @@ class LLMGeneratorSubWorkflow:
         )
 
     async def _generate_raw(
-        self, prompt: WorkflowPrompt
+        self,
+        prompt: WorkflowPrompt,
+        context: "ExecutionContext | None" = None,
     ) -> LLMGenerationResult:
         """Generate using raw YAML output.
 
         Args:
             prompt: WorkflowPrompt with prompts
+            context: Optional ExecutionContext for callbacks
 
         Returns:
             LLMGenerationResult with generated YAML
         """
+        # Issue #342 V2: Extract callbacks for Langfuse tracing
+        callbacks = get_callbacks_from_context(context) if context else []
+
         result = await invoke_structured_llm(
             system_prompt=prompt.system,
             user_prompt=prompt.render(),
@@ -193,6 +204,7 @@ class LLMGeneratorSubWorkflow:
             context_label="workflow_gen_v2_raw",
             model_env_var=MODEL_ENV_VAR,
             default_model=DEFAULT_MODEL,
+            callbacks=callbacks if callbacks else None,
         )
 
         response: WorkflowYAMLResponse = result.result
@@ -201,6 +213,7 @@ class LLMGeneratorSubWorkflow:
         node_count = 0
         try:
             import yaml
+
             parsed = yaml.safe_load(response.yaml_content)
             if parsed and isinstance(parsed.get("nodes"), dict):
                 node_count = len(parsed["nodes"])
