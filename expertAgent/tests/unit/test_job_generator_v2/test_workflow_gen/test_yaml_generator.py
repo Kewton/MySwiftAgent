@@ -364,32 +364,26 @@ class TestYamlGeneratorInitialization:
         assert generator._use_llm_generation is True
 
 
-class TestCreateYamlGenerationPrompt:
-    """Test prompt creation helper function."""
+class TestDeadCodeRemoval:
+    """Test that dead code has been removed.
 
-    def test_create_prompt_includes_tasks(self):
-        """Prompt should include task information."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_generator import (
-            create_yaml_generation_prompt,
+    Issue #342 V2: create_yaml_generation_prompt was removed and superseded
+    by PromptBuilderSubWorkflow.build()
+    """
+
+    def test_create_yaml_generation_prompt_removed(self):
+        """create_yaml_generation_prompt should no longer exist."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import yaml_generator
+
+        # Function was removed in Issue #342 V2
+        assert not hasattr(yaml_generator, "create_yaml_generation_prompt")
+
+    def test_prompt_builder_exists_as_replacement(self):
+        """PromptBuilderSubWorkflow should exist as the replacement."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder import (
+            PromptBuilderSubWorkflow,
         )
 
-        task_descriptions = [
-            {"name": "Search Gmail", "description": "Search for emails", "recommended_api": "/gmail/search"},
-        ]
-
-        prompt = create_yaml_generation_prompt(task_descriptions, {})
-
-        assert "Search Gmail" in prompt
-        assert "Search for emails" in prompt
-        assert "/gmail/search" in prompt
-
-    def test_create_prompt_handles_empty_tasks(self):
-        """Prompt should handle empty task list."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_generator import (
-            create_yaml_generation_prompt,
-        )
-
-        prompt = create_yaml_generation_prompt([], {})
-
-        assert "## Tasks" in prompt
-        assert "## Requirements" in prompt
+        builder = PromptBuilderSubWorkflow()
+        assert hasattr(builder, "build")
+        assert callable(builder.build)

@@ -8,10 +8,15 @@ This module provides the YamlGeneratorSubWorkflow that:
 Issue #342 Phase D.2: Migrated logic from jobTaskGeneratorAgents
 without importing from the old code.
 
+Issue #342 V2 Workflow Quality Improvement:
+- LLM-first generation with template fallback
+- Deprecated template-only methods (generate, _build_workflow_nodes, _generate_yaml)
+- Removed dead code (create_yaml_generation_prompt)
+
 Key design decisions:
 - Uses ExecutionContext for LLM access (dependency injection)
 - Does NOT import from langgraph or old jobTaskGeneratorAgents
-- Supports both template-based and LLM-based YAML generation
+- Default: LLM-based generation with automatic template fallback
 """
 
 from __future__ import annotations
@@ -140,7 +145,12 @@ class YamlGeneratorSubWorkflow:
         interfaces: dict[str, InterfaceSchema],
         context: "ExecutionContext",
     ) -> YamlGenerationResult:
-        """Generate GraphAI YAML workflow.
+        """Generate GraphAI YAML workflow using template-based approach.
+
+        .. deprecated::
+            Issue #342 V2: This method is deprecated. Use `generate_with_llm()`
+            instead for LLM-first generation with automatic template fallback.
+            This method is kept for backward compatibility only.
 
         Args:
             task_master_ids: List of TaskMaster IDs (in execution order)
@@ -154,8 +164,17 @@ class YamlGeneratorSubWorkflow:
         Raises:
             WorkflowError: If YAML generation fails
         """
+        import warnings
+
+        warnings.warn(
+            "generate() is deprecated. Use generate_with_llm() instead. "
+            "Issue #342 V2 Workflow Quality Improvement.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         logger.info(
-            "Generating GraphAI YAML for job %s with %d tasks",
+            "Generating GraphAI YAML for job %s with %d tasks (DEPRECATED template)",
             context.job_id,
             len(task_master_ids),
         )
@@ -193,6 +212,10 @@ class YamlGeneratorSubWorkflow:
         interfaces: dict[str, InterfaceSchema],
     ) -> list[WorkflowNodeDefinition]:
         """Build workflow node definitions from task masters.
+
+        .. deprecated::
+            Issue #342 V2: This method is deprecated as part of template-based
+            generation. LLM-based generation is now preferred.
 
         Args:
             task_master_ids: List of TaskMaster IDs
@@ -248,6 +271,10 @@ class YamlGeneratorSubWorkflow:
     ) -> str:
         """Generate YAML string from node definitions.
 
+        .. deprecated::
+            Issue #342 V2: This method is deprecated as part of template-based
+            generation. LLM-based generation is now preferred.
+
         Args:
             workflow_name: Name of the workflow
             nodes: List of node definitions
@@ -258,7 +285,7 @@ class YamlGeneratorSubWorkflow:
         # Build YAML manually (avoiding yaml dependency for simplicity)
         lines = [
             f"# GraphAI Workflow: {workflow_name}",
-            f"version: \"{self._graphai_version}\"",
+            f'version: "{self._graphai_version}"',
             "",
             "nodes:",
         ]
@@ -361,9 +388,7 @@ class YamlGeneratorSubWorkflow:
         while attempt <= max_retries:
             try:
                 # Generate using LLMGeneratorSubWorkflow
-                task_name = (
-                    result_interface.interface_name or f"task_{result_task_id}"
-                )
+                task_name = result_interface.interface_name or f"task_{result_task_id}"
                 llm_result = await llm_generator.generate_from_task(
                     task_name=task_name,
                     task_description=task_description,
@@ -470,39 +495,11 @@ class YamlGeneratorSubWorkflow:
         apis: set[str] = set()
         for interface in interfaces.values():
             # Check for recommended_api field in interface
-            if hasattr(interface, 'recommended_api') and interface.recommended_api:
+            if hasattr(interface, "recommended_api") and interface.recommended_api:
                 apis.add(interface.recommended_api)
         return list(apis)
 
 
-def create_yaml_generation_prompt(
-    task_descriptions: list[dict[str, Any]],
-    interfaces: dict[str, InterfaceSchema],
-) -> str:
-    """Create prompt for LLM-based YAML generation.
-
-    Args:
-        task_descriptions: List of task description dicts
-        interfaces: Interface schemas
-
-    Returns:
-        Formatted prompt string
-    """
-    task_info_lines = []
-    for task in task_descriptions:
-        task_info_lines.append(f"Task: {task.get('name', 'Unknown')}")
-        task_info_lines.append(f"  Description: {task.get('description', 'N/A')}")
-        task_info_lines.append(f"  API: {task.get('recommended_api', 'N/A')}")
-
-    return f"""## Tasks
-{chr(10).join(task_info_lines)}
-
-## Requirements
-Generate a GraphAI YAML workflow that:
-1. Chains the tasks in order
-2. Maps data flow correctly between nodes
-3. Uses appropriate agents for each task type
-4. Returns the final result
-
-Please generate valid GraphAI YAML.
-"""
+# Issue #342 V2: Dead code removed - create_yaml_generation_prompt()
+# This function was superseded by PromptBuilderSubWorkflow.build()
+# in Issue #342 Phase F: WorkflowGen V2 LLM Integration

@@ -3,6 +3,7 @@
 This module provides LLM-based YAML workflow generation.
 
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
+Issue #342 V2 Workflow Quality Improvement: AgentSelector/ParameterMapper integration
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +21,8 @@ from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     invoke_structured_llm,
 )
 
+from .agent_selector import AgentSelector
+from .parameter_mapper import ParameterMapper
 from .prompt_builder import PromptBuilderSubWorkflow, WorkflowPrompt
 from .schemas import GraphAIWorkflowSchema
 
@@ -72,6 +75,9 @@ class LLMGeneratorSubWorkflow:
 
     Uses structured output to generate GraphAI workflows from prompts.
     Supports both structured schema output and raw YAML output.
+
+    Issue #342 V2: Integrates AgentSelector and ParameterMapper for
+    improved workflow quality and GraphAI spec compliance.
     """
 
     def __init__(
@@ -94,6 +100,10 @@ class LLMGeneratorSubWorkflow:
             temp_str = os.environ.get(TEMPERATURE_ENV_VAR, str(DEFAULT_TEMPERATURE))
             self._temperature = float(temp_str)
         self._use_structured_output = use_structured_output
+
+        # Issue #342 V2: Initialize AgentSelector and ParameterMapper
+        self._agent_selector = AgentSelector()
+        self._parameter_mapper = ParameterMapper()
 
     async def generate(
         self,
@@ -241,6 +251,9 @@ class LLMGeneratorSubWorkflow:
 
         Convenience method that builds prompt and generates in one call.
 
+        Issue #342 V2: Enhanced with AgentSelector and ParameterMapper
+        to provide better API mapping information to LLM.
+
         Args:
             task_name: Name of the task
             task_description: Task description
@@ -253,6 +266,9 @@ class LLMGeneratorSubWorkflow:
         Returns:
             LLMGenerationResult with generated YAML
         """
+        # Issue #342 V2: Enrich prompt with AgentSelector information
+        api_mappings = self._get_api_mappings(recommended_apis)
+
         prompt_builder = PromptBuilderSubWorkflow()
         prompt = prompt_builder.build(
             task_name=task_name,
@@ -262,6 +278,72 @@ class LLMGeneratorSubWorkflow:
             recommended_apis=recommended_apis,
             dependencies=dependencies,
             context=context,
+            api_mappings=api_mappings,
         )
 
         return await self.generate(prompt, context)
+
+    def _get_api_mappings(
+        self,
+        recommended_apis: list[str] | None,
+    ) -> list[dict[str, Any]]:
+        """Get API mapping information for recommended APIs.
+
+        Issue #342 V2: Uses AgentSelector to get endpoint and method info.
+
+        Args:
+            recommended_apis: List of recommended API names
+
+        Returns:
+            List of API mapping dictionaries with url, method info
+        """
+        if not recommended_apis:
+            return []
+
+        mappings = []
+        for api_name in recommended_apis:
+            mapping = self._agent_selector.select_agent(api_name)
+            if mapping:
+                mappings.append({
+                    "api_name": api_name,
+                    "agent_type": mapping.agent_type,
+                    "endpoint_url": f"${{EXPERTAGENT_BASE_URL}}{mapping.endpoint_path}",
+                    "http_method": mapping.http_method,
+                    "description": mapping.description,
+                })
+            else:
+                # Unknown API - provide generic mapping
+                mappings.append({
+                    "api_name": api_name,
+                    "agent_type": "fetchAgent",
+                    "endpoint_url": f"${{EXPERTAGENT_BASE_URL}}/aiagent-api/v1/utility/{api_name}",  # noqa: E501
+                    "http_method": "POST",
+                    "description": f"API call to {api_name}",
+                })
+
+        return mappings
+
+    def get_parameter_mapping(
+        self,
+        api_name: str,
+        interface_inputs: dict[str, Any],
+        source_node: str = "user_input",
+    ) -> dict[str, Any]:
+        """Get parameter mapping for API inputs block.
+
+        Issue #342 V2: Uses ParameterMapper to create GraphAI-compliant
+        inputs block with url, method, body.
+
+        Args:
+            api_name: API name
+            interface_inputs: Input field definitions
+            source_node: Source node name for references
+
+        Returns:
+            GraphAI inputs block dictionary
+        """
+        return self._parameter_mapper.create_fetchagent_inputs(
+            api_name=api_name,
+            input_params=interface_inputs,
+            source_node=source_node,
+        )

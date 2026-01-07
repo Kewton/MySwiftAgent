@@ -6,6 +6,7 @@ This module implements the main WorkflowGenWorkflow that:
 3. Returns WorkflowGenOutput with appropriate PhaseStatus
 
 Issue #342 Phase D.2: Main workflow orchestrating sub-workflows
+Issue #342 V2 Workflow Quality Improvement: LLM-first generation
 
 Key design decisions:
 - Implements WorkflowProtocol for use with JobGenerationOrchestrator
@@ -13,6 +14,7 @@ Key design decisions:
 - Returns SUCCESS when YAML generated and tests pass
 - Returns NEEDS_RETRY when YAML generation fails
 - Uses ExecutionContext's phase-specific retry state
+- Default: LLM-based generation with template fallback
 """
 
 from __future__ import annotations
@@ -60,15 +62,19 @@ class WorkflowGenWorkflow:
         self,
         enable_testing: bool = False,
         graphai_version: str = "0.6",
+        use_llm_generation: bool = True,
     ) -> None:
         """Initialize WorkflowGenWorkflow.
 
         Args:
             enable_testing: Whether to run workflow tests
             graphai_version: GraphAI version for YAML
+            use_llm_generation: Whether to use LLM-based generation (default True)
+                               Falls back to template generation if LLM fails
         """
         self._enable_testing = enable_testing
         self._graphai_version = graphai_version
+        self._use_llm_generation = use_llm_generation
         self._retry_policy: RetryPolicy = RetryPolicy(
             max_retries=3,
             backoff_factor=1.5,
@@ -126,17 +132,29 @@ class WorkflowGenWorkflow:
             )
 
         # Step 1: Generate YAML workflow
+        # Issue #342 V2: Use LLM-based generation by default with template fallback
         yaml_generator = YamlGeneratorSubWorkflow(
             graphai_version=self._graphai_version,
+            use_llm_generation=self._use_llm_generation,
         )
 
         try:
-            yaml_result = await yaml_generator.generate(
-                task_master_ids=task_master_ids,
-                job_master_id=job_master_id,
-                interfaces=interfaces,
-                context=context,
-            )
+            if self._use_llm_generation:
+                # LLM-first approach with automatic template fallback
+                yaml_result = await yaml_generator.generate_with_llm(
+                    task_master_ids=task_master_ids,
+                    job_master_id=job_master_id,
+                    interfaces=interfaces,
+                    context=context,
+                )
+            else:
+                # Template-only approach (deprecated, for backward compatibility)
+                yaml_result = await yaml_generator.generate(
+                    task_master_ids=task_master_ids,
+                    job_master_id=job_master_id,
+                    interfaces=interfaces,
+                    context=context,
+                )
         except WorkflowError:
             raise
         except Exception as e:

@@ -1,0 +1,63 @@
+# Few-shot example: Gmail Send pattern
+# Email sending workflow with input mapping
+name: "gmail_send_pattern"
+description: "Gmail send pattern with recipient, subject, and body mapping"
+applicable_apis:
+  - "gmail_send"
+  - "gmail_send_email"
+  - "email_send"
+
+task_example:
+  name: "Send Email Task"
+  description: "Send an email with specified recipient, subject, and body content"
+  input_schema:
+    type: object
+    properties:
+      to:
+        type: string
+        description: "Recipient email address"
+      subject:
+        type: string
+        description: "Email subject line"
+      body:
+        type: string
+        description: "Email body content"
+    required:
+      - to
+      - subject
+      - body
+  output_schema:
+    type: object
+    properties:
+      result:
+        type: string
+        description: "Send result status"
+      message_id:
+        type: string
+        description: "Sent message ID from Gmail"
+
+workflow_yaml: |
+  version: "0.5"
+  nodes:
+    source: {}
+
+    send_email:
+      agent: fetchAgent
+      inputs:
+        url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/gmail/send
+        method: POST
+        body:
+          to: :source.to
+          subject: :source.subject
+          body: :source.body
+      console:
+        after: true
+
+    format_result:
+      agent: copyAgent
+      inputs:
+        result: :send_email.result.result
+        message_id: :send_email.result.message_id
+      params:
+        namedKey: result
+      isResult: true

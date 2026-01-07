@@ -54,6 +54,7 @@ class PromptBuilderSubWorkflow:
         recommended_apis: list[str] | None = None,
         dependencies: list[str] | None = None,
         context: "ExecutionContext | None" = None,
+        api_mappings: list[dict[str, Any]] | None = None,
     ) -> WorkflowPrompt:
         """Build workflow generation prompt.
 
@@ -65,6 +66,7 @@ class PromptBuilderSubWorkflow:
             recommended_apis: List of recommended API names
             dependencies: List of dependent task IDs
             context: Execution context (for logging)
+            api_mappings: Issue #342 V2 - API mapping info from AgentSelector
 
         Returns:
             WorkflowPrompt with all components assembled
@@ -80,6 +82,7 @@ class PromptBuilderSubWorkflow:
             dependencies=dependencies,
             error_feedback="",
             verbose=self._verbose,
+            api_mappings=api_mappings,
         )
 
     def build_with_errors(
@@ -128,9 +131,7 @@ class PromptBuilderSubWorkflow:
             verbose=self._verbose,
         )
 
-    def _build_error_feedback(
-        self, errors: list["ValidationError"]
-    ) -> str:
+    def _build_error_feedback(self, errors: list["ValidationError"]) -> str:
         """Build error feedback section.
 
         Args:

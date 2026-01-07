@@ -1,0 +1,61 @@
+# Few-shot example: Slack Notify pattern
+# Slack notification workflow with channel and message mapping
+name: "slack_notify_pattern"
+description: "Slack notification pattern with channel and message mapping"
+applicable_apis:
+  - "slack_notify"
+  - "slack_send"
+  - "slack_message"
+
+task_example:
+  name: "Slack Notification Task"
+  description: "Send a notification message to a Slack channel"
+  input_schema:
+    type: object
+    properties:
+      channel:
+        type: string
+        description: "Slack channel name or ID"
+      message:
+        type: string
+        description: "Notification message content"
+      username:
+        type: string
+        description: "Bot username (optional)"
+    required:
+      - channel
+      - message
+  output_schema:
+    type: object
+    properties:
+      ok:
+        type: boolean
+        description: "Success status"
+      ts:
+        type: string
+        description: "Message timestamp ID"
+
+workflow_yaml: |
+  version: "0.5"
+  nodes:
+    source: {}
+
+    notify_slack:
+      agent: fetchAgent
+      inputs:
+        url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/slack/notify
+        method: POST
+        body:
+          channel: :source.channel
+          message: :source.message
+      console:
+        after: true
+
+    format_result:
+      agent: copyAgent
+      inputs:
+        ok: :notify_slack.result.ok
+        ts: :notify_slack.result.ts
+      params:
+        namedKey: result
+      isResult: true

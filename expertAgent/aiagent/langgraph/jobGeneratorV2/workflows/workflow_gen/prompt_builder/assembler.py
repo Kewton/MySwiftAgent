@@ -112,17 +112,52 @@ def build_task_context(
         lines.append("")
         lines.append(f"### Dependencies: {', '.join(dependencies)}")
 
-    lines.extend([
+    lines.extend(
+        [
+            "",
+            "## Instructions",
+            "Generate a GraphAI workflow YAML that:",
+            "1. Accepts input matching the input schema via the source node",
+            "2. Produces output matching the output schema",
+            "3. Uses appropriate agents for the task",
+            "4. Includes proper error handling (timeouts, console logging)",
+            "",
+            "Return ONLY the YAML content, no explanations.",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+def _format_api_mappings(api_mappings: list[dict[str, Any]] | None) -> str:
+    """Format API mappings for prompt inclusion.
+
+    Issue #342 V2: Provides explicit API endpoint and method info.
+
+    Args:
+        api_mappings: List of API mapping dictionaries
+
+    Returns:
+        Formatted API mapping section string
+    """
+    if not api_mappings:
+        return ""
+
+    lines = [
+        "\n## API Endpoint Mappings (MUST USE EXACTLY)",
         "",
-        "## Instructions",
-        "Generate a GraphAI workflow YAML that:",
-        "1. Accepts input matching the input schema via the source node",
-        "2. Produces output matching the output schema",
-        "3. Uses appropriate agents for the task",
-        "4. Includes proper error handling (timeouts, console logging)",
+        "Use these EXACT URLs and methods in your inputs block:",
         "",
-        "Return ONLY the YAML content, no explanations.",
-    ])
+    ]
+
+    for mapping in api_mappings:
+        lines.append(f"### {mapping['api_name']}")
+        lines.append(f"- URL: `{mapping['endpoint_url']}`")
+        lines.append(f"- Method: `{mapping['http_method']}`")
+        lines.append(f"- Agent: `{mapping['agent_type']}`")
+        if mapping.get("description"):
+            lines.append(f"- Description: {mapping['description']}")
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -136,6 +171,7 @@ def assemble_prompt(
     dependencies: list[str] | None = None,
     error_feedback: str = "",
     verbose: bool = True,
+    api_mappings: list[dict[str, Any]] | None = None,
 ) -> WorkflowPrompt:
     """Assemble the complete workflow generation prompt.
 
@@ -148,6 +184,7 @@ def assemble_prompt(
         dependencies: List of dependent task IDs
         error_feedback: Previous error feedback (for retries)
         verbose: Use verbose prompts
+        api_mappings: Issue #342 V2 - API mapping info from AgentSelector
 
     Returns:
         WorkflowPrompt with all components assembled
@@ -168,6 +205,11 @@ def assemble_prompt(
     api_constraints = ""
     if recommended_apis:
         api_constraints = format_multiple_api_constraints(recommended_apis)
+
+    # Issue #342 V2: Add API mappings section if provided
+    api_mappings_section = _format_api_mappings(api_mappings)
+    if api_mappings_section:
+        api_constraints = api_constraints + "\n" + api_mappings_section
 
     # Select few-shot examples
     examples = select_few_shot_examples(

@@ -103,9 +103,7 @@ def _has_array_output(schema: dict[str, Any] | None) -> bool:
     if schema.get("type") == "array":
         return True
     properties = schema.get("properties", {})
-    return any(
-        prop.get("type") == "array" for prop in properties.values()
-    )
+    return any(prop.get("type") == "array" for prop in properties.values())
 
 
 def _has_nested_object_output(schema: dict[str, Any] | None) -> bool:
@@ -123,7 +121,10 @@ def _has_nested_object_output(schema: dict[str, Any] | None) -> bool:
     for prop in properties.values():
         if prop.get("type") == "object":
             return True
-        if prop.get("type") == "array" and prop.get("items", {}).get("type") == "object":
+        if (
+            prop.get("type") == "array"
+            and prop.get("items", {}).get("type") == "object"
+        ):
             return True
     return False
 
@@ -142,9 +143,7 @@ def _has_array_input(schema: dict[str, Any] | None) -> bool:
     if schema.get("type") == "array":
         return True
     properties = schema.get("properties", {})
-    return any(
-        prop.get("type") == "array" for prop in properties.values()
-    )
+    return any(prop.get("type") == "array" for prop in properties.values())
 
 
 def select_few_shot_examples(
@@ -175,45 +174,71 @@ def select_few_shot_examples(
     scored_patterns: dict[str, float] = {}
 
     # 1. API type scoring
-    for api in (recommended_apis or []):
+    for api in recommended_apis or []:
         api_lower = api.lower()
         if "search" in api_lower or "google_search" in api_lower:
-            scored_patterns["search_pattern"] = scored_patterns.get("search_pattern", 0) + 1.0
+            scored_patterns["search_pattern"] = (
+                scored_patterns.get("search_pattern", 0) + 1.0
+            )
         if "gmail" in api_lower and "send" in api_lower:
-            scored_patterns["api_call_pattern"] = scored_patterns.get("api_call_pattern", 0) + 1.0
+            # Issue #342: Prefer gmail_send_pattern for gmail send APIs
+            scored_patterns["gmail_send_pattern"] = (
+                scored_patterns.get("gmail_send_pattern", 0) + 1.5
+            )
+            scored_patterns["api_call_pattern"] = (
+                scored_patterns.get("api_call_pattern", 0) + 1.0
+            )
+        if "slack" in api_lower:
+            # Issue #342: Prefer slack_notify_pattern for slack APIs
+            scored_patterns["slack_notify_pattern"] = (
+                scored_patterns.get("slack_notify_pattern", 0) + 1.5
+            )
+            scored_patterns["api_call_pattern"] = (
+                scored_patterns.get("api_call_pattern", 0) + 0.8
+            )
         if "drive" in api_lower or "upload" in api_lower:
-            scored_patterns["api_call_pattern"] = scored_patterns.get("api_call_pattern", 0) + 0.8
+            scored_patterns["api_call_pattern"] = (
+                scored_patterns.get("api_call_pattern", 0) + 0.8
+            )
         if "tts" in api_lower or "speech" in api_lower:
-            scored_patterns["api_call_pattern"] = scored_patterns.get("api_call_pattern", 0) + 0.8
+            scored_patterns["api_call_pattern"] = (
+                scored_patterns.get("api_call_pattern", 0) + 0.8
+            )
         if "explorer" in api_lower or "llm" in api_lower or "gemini" in api_lower:
-            scored_patterns["llm_chain_pattern"] = scored_patterns.get("llm_chain_pattern", 0) + 1.0
+            scored_patterns["llm_chain_pattern"] = (
+                scored_patterns.get("llm_chain_pattern", 0) + 1.0
+            )
         if "jsonoutput" in api_lower:
-            scored_patterns["llm_chain_pattern"] = scored_patterns.get("llm_chain_pattern", 0) + 1.2
+            scored_patterns["llm_chain_pattern"] = (
+                scored_patterns.get("llm_chain_pattern", 0) + 1.2
+            )
 
     # 2. Output schema scoring
     if _has_array_output(output_schema):
         scored_patterns["map_pattern"] = scored_patterns.get("map_pattern", 0) + 1.5
 
     if _has_nested_object_output(output_schema):
-        scored_patterns["llm_chain_pattern"] = scored_patterns.get("llm_chain_pattern", 0) + 1.0
+        scored_patterns["llm_chain_pattern"] = (
+            scored_patterns.get("llm_chain_pattern", 0) + 1.0
+        )
 
     # 3. Dependency complexity scoring
     dependency_count = len(dependencies or [])
     if dependency_count > 2:
-        scored_patterns["llm_chain_pattern"] = scored_patterns.get("llm_chain_pattern", 0) + 1.2
+        scored_patterns["llm_chain_pattern"] = (
+            scored_patterns.get("llm_chain_pattern", 0) + 1.2
+        )
     elif dependency_count > 0:
-        scored_patterns["api_call_pattern"] = scored_patterns.get("api_call_pattern", 0) + 0.5
+        scored_patterns["api_call_pattern"] = (
+            scored_patterns.get("api_call_pattern", 0) + 0.5
+        )
 
     # 4. Input schema scoring
     if _has_array_input(input_schema):
         scored_patterns["map_pattern"] = scored_patterns.get("map_pattern", 0) + 1.0
 
     # Sort by score and select top patterns
-    sorted_patterns = sorted(
-        scored_patterns.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    sorted_patterns = sorted(scored_patterns.items(), key=lambda x: x[1], reverse=True)
 
     selected_names = [pattern for pattern, _ in sorted_patterns[:max_examples]]
 

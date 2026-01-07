@@ -136,6 +136,8 @@ class TestWorkflowGenWorkflowExecute:
         )
 
         mock_yaml_generator = AsyncMock()
+        # Issue #342 V2: Mock generate_with_llm() as it's now the default
+        mock_yaml_generator.generate_with_llm = AsyncMock(return_value=mock_yaml_result)
         mock_yaml_generator.generate = AsyncMock(return_value=mock_yaml_result)
 
         with patch(
@@ -171,6 +173,8 @@ class TestWorkflowGenWorkflowExecute:
         )
 
         mock_yaml_generator = AsyncMock()
+        # Issue #342 V2: Mock generate_with_llm() as it's now the default
+        mock_yaml_generator.generate_with_llm = AsyncMock(return_value=mock_yaml_result)
         mock_yaml_generator.generate = AsyncMock(return_value=mock_yaml_result)
 
         with patch(
@@ -285,6 +289,8 @@ class TestWorkflowGenWorkflowWithTesting:
         )
 
         mock_yaml_generator = MagicMock()
+        # Issue #342 V2: Mock generate_with_llm() as it's now the default
+        mock_yaml_generator.generate_with_llm = AsyncMock(return_value=mock_yaml_result)
         mock_yaml_generator.generate = AsyncMock(return_value=mock_yaml_result)
 
         mock_test_runner = MagicMock()
@@ -333,6 +339,8 @@ class TestWorkflowGenWorkflowWithTesting:
         )
 
         mock_yaml_generator = MagicMock()
+        # Issue #342 V2: Mock generate_with_llm() as it's now the default
+        mock_yaml_generator.generate_with_llm = AsyncMock(return_value=mock_yaml_result)
         mock_yaml_generator.generate = AsyncMock(return_value=mock_yaml_result)
 
         mock_test_runner = MagicMock()
@@ -461,6 +469,8 @@ class TestWorkflowGenWorkflowSubWorkflowOrchestration:
         )
 
         mock_yaml_generator = MagicMock()
+        # Issue #342 V2: Mock generate_with_llm() as it's now the default
+        mock_yaml_generator.generate_with_llm = AsyncMock(return_value=mock_yaml_result)
         mock_yaml_generator.generate = AsyncMock(return_value=mock_yaml_result)
 
         with patch(
@@ -470,7 +480,8 @@ class TestWorkflowGenWorkflowSubWorkflowOrchestration:
             workflow = WorkflowGenWorkflow(enable_testing=False)
             await workflow.execute(sample_input, mock_context)
 
-            mock_yaml_generator.generate.assert_called_once()
+            # Issue #342 V2: Now calls generate_with_llm() by default
+            mock_yaml_generator.generate_with_llm.assert_called_once()
 
 
 class TestWorkflowGenWorkflowInitialization:
@@ -485,6 +496,8 @@ class TestWorkflowGenWorkflowInitialization:
         workflow = WorkflowGenWorkflow()
         assert workflow._enable_testing is False
         assert workflow._graphai_version == "0.6"
+        # Issue #342 V2: LLM generation is enabled by default
+        assert workflow._use_llm_generation is True
 
     def test_custom_initialization(self):
         """Should initialize with custom values."""
@@ -495,6 +508,9 @@ class TestWorkflowGenWorkflowInitialization:
         workflow = WorkflowGenWorkflow(
             enable_testing=True,
             graphai_version="0.7",
+            use_llm_generation=False,
         )
         assert workflow._enable_testing is True
         assert workflow._graphai_version == "0.7"
+        # Issue #342 V2: Can disable LLM generation
+        assert workflow._use_llm_generation is False
