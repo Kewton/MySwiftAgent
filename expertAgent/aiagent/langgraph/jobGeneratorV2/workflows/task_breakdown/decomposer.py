@@ -19,20 +19,18 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from aiagent.langgraph.jobGeneratorV2.llm_utils import (
+    StructuredLLMError,
+    _build_task_breakdown_system_prompt,
+    create_task_breakdown_prompt,
+    invoke_structured_llm,
+)
 from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
 from aiagent.langgraph.jobGeneratorV2.types import (
     Phase,
     TaskBreakdownInput,
-    TaskDefinition,
-)
-from aiagent.langgraph.jobTaskGeneratorAgents.prompts.task_breakdown import (
     TaskBreakdownResponse,
-    _build_task_breakdown_system_prompt,
-    create_task_breakdown_prompt,
-)
-from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-    StructuredLLMError,
-    invoke_structured_llm,
+    TaskDefinition,
 )
 
 if TYPE_CHECKING:
@@ -90,8 +88,8 @@ def _convert_to_task_definition(task_item: object) -> TaskDefinition:
     """
     # Extract recommended API from first recommendation if available
     recommended_api = ""
-    if hasattr(task_item, "recommended_apis") and getattr(task_item, "recommended_apis"):
-        first_api = getattr(task_item, "recommended_apis")[0]
+    if hasattr(task_item, "recommended_apis") and task_item.recommended_apis:
+        first_api = task_item.recommended_apis[0]
         if hasattr(first_api, "endpoint"):
             recommended_api = getattr(first_api, "endpoint", "")
 

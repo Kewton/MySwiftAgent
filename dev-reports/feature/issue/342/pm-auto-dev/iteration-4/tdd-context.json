@@ -1,0 +1,110 @@
+{
+  "issue_number": 342,
+  "issue_title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新",
+  "phase": "Phase D: Registration/WorkflowGen",
+  "iteration": 4,
+  "tasks": [
+    {
+      "id": "D.1",
+      "name": "RegistrationWorkflow 実装",
+      "description": "Master登録 (InterfaceMaster, TaskMaster, JobMaster) とJob/JobQueue登録を統合したワークフロー",
+      "files_to_create": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/__init__.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/workflow.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/job_registrar.py"
+      ],
+      "migration_source": [
+        "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py",
+        "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/validation.py",
+        "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/job_registration.py"
+      ],
+      "key_functionality": [
+        "InterfaceMaster 作成・登録",
+        "TaskMaster 作成・登録",
+        "JobMaster 作成・登録",
+        "Master データ検証",
+        "Job 登録 (jobqueue)",
+        "ExecutionContext を使用した API 呼び出し"
+      ]
+    },
+    {
+      "id": "D.2",
+      "name": "WorkflowGenWorkflow 実装",
+      "description": "GraphAI YAML 生成とサンプル入力生成・テスト実行",
+      "files_to_create": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/__init__.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/test_runner.py"
+      ],
+      "migration_source": [
+        "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/workflow_generation.py"
+      ],
+      "key_functionality": [
+        "GraphAI YAML 生成",
+        "タスクチェーン定義",
+        "サンプル入力生成",
+        "ワークフローテスト実行（オプション）",
+        "LLM を使用した YAML 生成"
+      ]
+    },
+    {
+      "id": "D.3",
+      "name": "Registration/WorkflowGen 単体テスト作成",
+      "description": "Phase D のワークフローに対する単体テスト（カバレッジ90%目標）",
+      "files_to_create": [
+        "expertAgent/tests/unit/test_job_generator_v2/test_registration/__init__.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_workflow.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_job_registrar.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_workflow_gen/__init__.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_workflow_gen/test_workflow.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_workflow_gen/test_yaml_generator.py",
+        "expertAgent/tests/unit/test_job_generator_v2/test_workflow_gen/test_test_runner.py"
+      ]
+    }
+  ],
+  "type_definitions": {
+    "RegistrationInput": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py:524-536",
+      "fields": ["tasks: list[TaskDefinition]", "interfaces: dict[str, InterfaceSchema]", "project_id: str"]
+    },
+    "RegistrationOutput": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py:591-607",
+      "fields": ["status: PhaseStatus", "job_master_id: str | None", "task_master_ids: list[str]", "interface_master_ids: list[str]", "job_id: str | None"]
+    },
+    "WorkflowGenInput": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py:539-551",
+      "fields": ["task_master_ids: list[str]", "job_master_id: str", "interfaces: dict[str, InterfaceSchema]"]
+    },
+    "WorkflowGenOutput": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py:610-622",
+      "fields": ["status: PhaseStatus", "workflow_yaml: str | None", "test_result: dict[str, Any] | None"]
+    }
+  },
+  "context_dependencies": {
+    "ExecutionContext": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+    "WorkflowProtocol": "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+    "Phase": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py"
+  },
+  "design_principles": [
+    "依存性逆転: ExecutionContext を通じて外部サービスにアクセス",
+    "旧コード (jobTaskGeneratorAgents) への依存を完全に排除",
+    "langgraph ライブラリへの直接依存を回避",
+    "WorkflowProtocol を実装",
+    "適切なエラーハンドリングと WorkflowError の使用"
+  ],
+  "test_requirements": {
+    "coverage_target": "90%",
+    "async_support": "pytest-asyncio",
+    "mock_external_calls": true,
+    "avoid_langgraph_imports": true
+  },
+  "previous_iterations": {
+    "iteration_1": "Phase A (Foundation) - 95 tests",
+    "iteration_2": "Phase B (TaskBreakdown) - 43 tests",
+    "iteration_3": "Phase C (InterfaceDesign) - 53 tests"
+  },
+  "total_tests_before": 191
+}

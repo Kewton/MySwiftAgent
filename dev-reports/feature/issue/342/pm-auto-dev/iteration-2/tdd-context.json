@@ -1,0 +1,51 @@
+{
+  "issue_number": 342,
+  "iteration": 2,
+  "focus_phase": "Phase B: TaskBreakdownWorkflow",
+  "previous_iteration": {
+    "completed": ["Phase A: Foundation (types.py, protocols.py, context.py, recovery.py, orchestrator.py)"],
+    "coverage": 89.85,
+    "tests_passed": 95
+  },
+  "implementation_tasks": [
+    "B.1: TaskDecomposerSubWorkflow実装 - 現行requirement_analysis.pyのロジック移植",
+    "B.2: FeasibilitySubWorkflow実装 - capabilities.yamlとの照合",
+    "B.3: AlternativeSubWorkflow実装 - 代替案生成ロジック",
+    "B.4: TaskBreakdownWorkflow統合 - 3つのサブワークフロー統合",
+    "B.5: TaskBreakdown単体テスト"
+  ],
+  "deliverables": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/__init__.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_task_breakdown/"
+  ],
+  "source_files_to_migrate": [
+    {
+      "old": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py",
+      "new": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
+      "logic": "タスク分解ロジック"
+    },
+    {
+      "old": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
+      "new": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py",
+      "logic": "実現可能性評価ロジック（capabilities.yaml照合）"
+    }
+  ],
+  "protocol_to_implement": "WorkflowProtocol",
+  "integration_with_foundation": {
+    "use_types": ["Phase", "PhaseStatus", "RetryState", "TaskBreakdownInput", "TaskBreakdownOutput", "TaskDefinition"],
+    "use_context": ["ExecutionContext", "LLMContext"],
+    "use_protocols": ["WorkflowProtocol"]
+  },
+  "acceptance_criteria_for_phase_b": [
+    "自然言語要件をタスクリストに分解できる",
+    "capabilities.yamlとの照合で実現可能性を評価できる",
+    "実現不可能なタスクに対して代替案を提案できる",
+    "WorkflowProtocolを正しく実装している",
+    "単体テストカバレッジ90%以上"
+  ],
+  "target_coverage": 90
+}

@@ -220,6 +220,7 @@ async def _create_job_in_background(
     """Background task for job creation.
 
     Issue #278: Added langfuse_handler parameter for tracing integration.
+    Issue #342: Added V2 architecture support via feature flag.
 
     Args:
         job_id: Unique job ID
@@ -227,7 +228,20 @@ async def _create_job_in_background(
         max_retry: Maximum retry count
         langfuse_handler: Optional Langfuse CallbackHandler for tracing
     """
-    logger.info(f"[BG:{job_id}] Starting background job creation")
+    # Issue #342: Check feature flag for V2 architecture
+    from core.feature_flags import use_job_generator_v2
+
+    if use_job_generator_v2():
+        await _create_job_in_background_v2(
+            job_id=job_id,
+            user_requirement=user_requirement,
+            max_retry=max_retry,
+            langfuse_handler=langfuse_handler,
+        )
+        return
+
+    # V1 implementation below
+    logger.info(f"[BG:{job_id}] Starting background job creation (V1)")
 
     try:
         # Create initial state with tracking_job_id for progress tracking (Issue #305)
@@ -293,6 +307,79 @@ async def _create_job_in_background(
         await job_state_manager.mark_failed_async(
             job_id=job_id,
             error_message=f"Job creation failed: {str(e)}",
+        )
+
+
+async def _create_job_in_background_v2(
+    job_id: str,
+    user_requirement: str,
+    max_retry: int,
+    langfuse_handler: Any = None,
+) -> None:
+    """Background task for job creation using V2 architecture.
+
+    Issue #342: V2 implementation with improved retry management.
+
+    Args:
+        job_id: Unique job ID
+        user_requirement: User requirement text
+        max_retry: Maximum retry count
+        langfuse_handler: Optional Langfuse CallbackHandler for tracing
+    """
+    from aiagent.langgraph.jobGeneratorV2 import JobGeneratorV2Adapter
+
+    logger.info(f"[BG:{job_id}] Starting background job creation (V2)")
+
+    try:
+        # Issue #305: Set initial phase
+        await job_state_manager.update_phase_async(job_id, "task_analysis")
+        await job_state_manager.update_progress_async(job_id, 10)
+
+        # Create V2 adapter
+        adapter = JobGeneratorV2Adapter(
+            max_retry=max_retry,
+            langfuse_handler=langfuse_handler,
+        )
+
+        await job_state_manager.update_progress_async(job_id, 20)
+
+        # Generate job using V2 architecture
+        logger.info(f"[BG:{job_id}] Invoking V2 Orchestrator")
+        response = await adapter.generate(
+            user_requirement=user_requirement,
+            job_id=job_id,
+        )
+
+        await job_state_manager.update_progress_async(job_id, 90)
+
+        logger.info(f"[BG:{job_id}] V2 generation completed")
+
+        # Flush Langfuse traces
+        if langfuse_handler is not None:
+            langfuse_service.flush()
+
+        # Update job state based on response
+        if response.status == "success":
+            await job_state_manager.mark_completed_async(
+                job_id=job_id,
+                job_master_id=response.job_master_id,
+                result=response.model_dump(),
+            )
+            logger.info(f"[BG:{job_id}] Job creation completed successfully (V2)")
+        else:
+            await job_state_manager.mark_failed_async(
+                job_id=job_id,
+                error_message=response.error_message or "Job generation failed",
+            )
+            logger.warning(f"[BG:{job_id}] Job creation failed (V2): {response.error_message}")
+
+    except Exception as e:
+        logger.error(f"[BG:{job_id}] Job creation failed (V2): {e}", exc_info=True)
+        if langfuse_handler is not None:
+            langfuse_service.flush()
+        await job_state_manager.mark_failed_async(
+            job_id=job_id,
+            error_message=f"Job creation failed (V2): {str(e)}",
         )
 
 

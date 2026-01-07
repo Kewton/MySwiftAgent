@@ -1,0 +1,321 @@
+"""SchemaGeneratorSubWorkflow for Job Generator V2.
+
+This module implements the JSON Schema generation sub-workflow that:
+1. Takes task definitions as input
+2. Uses LLM to generate JSON Schema for each task's I/O
+3. Returns a dict of InterfaceSchema
+
+Issue #342 Phase C.1: Migrate logic from interface_definition.py and interface_schema.py
+
+Key design decisions:
+- Uses structured LLM output for reliability
+- Validates generated schemas
+- Normalizes LLM output to valid JSON Schema
+- Respects ExecutionContext's retry state (bug fix)
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING, Any
+
+from aiagent.langgraph.jobGeneratorV2.llm_utils import (
+    INTERFACE_SCHEMA_SYSTEM_PROMPT,
+    StructuredLLMError,
+    create_interface_schema_prompt,
+    invoke_structured_llm,
+)
+from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
+from aiagent.langgraph.jobGeneratorV2.types import (
+    InterfaceSchema,
+    InterfaceSchemaResponse,
+    Phase,
+    TaskDefinition,
+)
+
+if TYPE_CHECKING:
+    from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
+
+logger = logging.getLogger(__name__)
+
+
+def normalize_json_schema_properties(schema: dict[str, Any]) -> dict[str, Any]:
+    """Normalize LLM-generated JSON Schema to valid JSON Schema Draft 7.
+
+    This function fixes common LLM errors where property types are specified as
+    shorthand formats instead of proper JSON Schema objects:
+    - "string" -> {"type": "string"} (bare string type)
+    - ["string"] -> {"type": "string"} (array shorthand)
+    - ["boolean"] -> {"type": "boolean"}
+    - ["array"] -> {"type": "array"}
+    - ["object"] -> {"type": "object"}
+    - ["integer"] -> {"type": "integer"}
+    - ["number"] -> {"type": "number"}
+
+    Args:
+        schema: JSON Schema dictionary (input_schema or output_schema)
+
+    Returns:
+        Normalized JSON Schema dictionary with correct property definitions
+
+    Examples:
+        >>> schema = {"properties": {"name": "string"}}
+        >>> normalize_json_schema_properties(schema)
+        {"properties": {"name": {"type": "string"}}}
+
+        >>> schema = {"properties": {"name": ["string"]}}
+        >>> normalize_json_schema_properties(schema)
+        {"properties": {"name": {"type": "string"}}}
+    """
+    valid_types = {"string", "boolean", "array", "object", "integer", "number", "null"}
+
+    # Metadata fields that LLM sometimes incorrectly includes in JSON Schema
+    metadata_fields_to_remove = {
+        "task_id",
+        "interface_name",
+        "output_schema",  # When incorrectly nested inside input_schema
+        "input_schema",  # When incorrectly nested inside output_schema
+    }
+
+    # JSON Schema keywords that contain string arrays
+    string_array_keywords = {
+        "required",
+        "enum",
+        "allOf",
+        "anyOf",
+        "oneOf",
+        "dependencies",
+        "default",
+        "examples",
+    }
+
+    def normalize_value(value: Any, prop_name: str = "") -> Any:
+        """Normalize a single value in the schema."""
+        if value is None:
+            logger.warning(
+                f"Found null value for property '{prop_name}', defaulting to {{'type': 'string'}}"
+            )
+            return {"type": "string"}
+
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            logger.warning(
+                f"Found numeric value {value} for property '{prop_name}', "
+                f"converting to {{'type': 'integer', 'default': {value}}}"
+            )
+            if isinstance(value, int):
+                return {"type": "integer", "default": value}
+            else:
+                return {"type": "number", "default": value}
+
+        if isinstance(value, str):
+            if value in valid_types:
+                logger.debug(
+                    f"Normalizing bare string type '{value}' -> {{'type': '{value}'}}"
+                )
+                return {"type": value}
+            else:
+                logger.warning(
+                    f"Found non-type string '{value[:50]}...' for property '{prop_name}', "
+                    f"converting to {{'type': 'string', 'description': ...}}"
+                )
+                return {"type": "string", "description": value}
+
+        if isinstance(value, list):
+            if (
+                len(value) == 1
+                and isinstance(value[0], str)
+                and value[0] in valid_types
+            ):
+                type_name = value[0]
+                logger.debug(
+                    f"Normalizing shorthand type [{type_name}] -> {{'type': '{type_name}'}}"
+                )
+                return {"type": type_name}
+
+            if (
+                len(value) > 0
+                and all(isinstance(item, dict) for item in value)
+                and all("type" in item and "description" in item for item in value)
+            ):
+                enum_values = [item.get("description", "") for item in value]
+                base_type = value[0].get("type", "string")
+                logger.warning(
+                    f"Found malformed enum pattern for property '{prop_name}', "
+                    f"converting to {{'type': '{base_type}', 'enum': {enum_values}}}"
+                )
+                return {"type": base_type, "enum": enum_values}
+
+            return [normalize_value(item) for item in value]
+        elif isinstance(value, dict):
+            return normalize_schema_dict(value)
+
+        return value
+
+    def normalize_schema_dict(obj: dict[str, Any]) -> dict[str, Any]:
+        """Recursively normalize all fields in a schema dict."""
+        result: dict[str, Any] = {}
+        for key, value in obj.items():
+            if key in metadata_fields_to_remove:
+                logger.warning(
+                    f"Removing metadata field '{key}' from JSON Schema "
+                    f"(value: {str(value)[:50]}...)"
+                )
+                continue
+
+            if key == "properties":
+                if not isinstance(value, dict):
+                    logger.warning(
+                        f"properties is not a dict ({type(value).__name__}: {value}), "
+                        "converting to empty object"
+                    )
+                    result[key] = {}
+                else:
+                    result[key] = {}
+                    for prop_name, prop_value in value.items():
+                        normalized_prop = normalize_value(prop_value, prop_name)
+                        result[key][prop_name] = normalized_prop
+            elif key == "items":
+                # Handle items which can be dict, list, or bare string type
+                result[key] = normalize_value(value, "items")
+            elif key in string_array_keywords:
+                result[key] = value
+            elif isinstance(value, dict):
+                result[key] = normalize_schema_dict(value)
+            elif isinstance(value, list):
+                result[key] = [normalize_value(item, key) for item in value]
+            else:
+                result[key] = value
+
+        return result
+
+    if not isinstance(schema, dict):
+        return schema
+
+    return normalize_schema_dict(schema)
+
+
+def _validate_schema_response(
+    response: InterfaceSchemaResponse | None,
+) -> InterfaceSchemaResponse:
+    """Validate that the LLM response contains interface definitions.
+
+    Args:
+        response: The LLM response to validate
+
+    Returns:
+        The validated response
+
+    Raises:
+        ValueError: If response is None or missing required fields
+    """
+    if response is None:
+        logger.error("LLM structured output returned None for interface definition")
+        raise ValueError("Interface definition failed: structured output was empty.")
+
+    if not response.interfaces:
+        logger.error("LLM structured output missing interfaces array")
+        raise ValueError("Interface definition failed: no interfaces were generated.")
+
+    return response
+
+
+class SchemaGeneratorSubWorkflow:
+    """Sub-workflow for generating JSON Schema from task definitions.
+
+    This class handles the LLM-based generation of JSON Schema for each
+    task's input and output interfaces.
+
+    Example:
+        generator = SchemaGeneratorSubWorkflow()
+        interfaces = await generator.generate(tasks, context)
+    """
+
+    async def generate(
+        self,
+        tasks: list[TaskDefinition],
+        context: "ExecutionContext",
+    ) -> dict[str, InterfaceSchema]:
+        """Generate JSON Schema for task interfaces.
+
+        Args:
+            tasks: List of task definitions
+            context: Execution context with LLM configuration
+
+        Returns:
+            Dict mapping task_id to InterfaceSchema
+
+        Raises:
+            WorkflowError: If generation fails
+        """
+        logger.info(
+            "Starting schema generation for %d tasks (job %s)",
+            len(tasks),
+            context.job_id,
+        )
+
+        if not tasks:
+            raise WorkflowError(
+                "Cannot generate schemas for empty task list",
+                ErrorType.VALIDATION,
+                Phase.INTERFACE_DESIGN,
+            )
+
+        # Convert TaskDefinition to dict for prompt
+        task_dicts = [
+            {
+                "task_id": t.id,
+                "name": t.name,
+                "description": t.description,
+                "task_type": t.task_type,
+                "recommended_api": t.recommended_api,
+                "priority": t.priority,
+                "dependencies": t.dependencies,
+            }
+            for t in tasks
+        ]
+
+        user_prompt = create_interface_schema_prompt(task_dicts, context.user_requirement)
+        messages = [
+            {"role": "system", "content": INTERFACE_SCHEMA_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        try:
+            call_result = await invoke_structured_llm(
+                messages=messages,
+                response_model=InterfaceSchemaResponse,
+                context_label="schema_generator",
+                model_env_var="JOB_GENERATOR_INTERFACE_DEFINITION_MODEL",
+                default_model=context.llm.model_name,
+                validator=_validate_schema_response,
+            )
+        except StructuredLLMError as exc:
+            logger.error("Schema generation failed: %s", exc)
+            raise WorkflowError(
+                f"LLM schema generation failed: {exc}",
+                ErrorType.TRANSIENT,
+                Phase.INTERFACE_DESIGN,
+            ) from exc
+
+        response = call_result.result
+        logger.info(
+            "Generated %d interface schemas (model=%s)",
+            len(response.interfaces),
+            call_result.model_name,
+        )
+
+        # Normalize schemas and convert to InterfaceSchema
+        interfaces: dict[str, InterfaceSchema] = {}
+        for iface in response.interfaces:
+            # Normalize LLM output
+            input_schema = normalize_json_schema_properties(iface.input_schema)
+            output_schema = normalize_json_schema_properties(iface.output_schema)
+
+            interfaces[iface.task_id] = InterfaceSchema(
+                task_id=iface.task_id,
+                input_schema=input_schema,
+                output_schema=output_schema,
+                description=iface.description,
+            )
+
+        return interfaces

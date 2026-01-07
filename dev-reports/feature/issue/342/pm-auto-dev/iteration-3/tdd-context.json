@@ -1,0 +1,68 @@
+{
+  "issue_number": 342,
+  "iteration": 3,
+  "focus_phase": "Phase C: InterfaceDesignWorkflow",
+  "previous_iterations": {
+    "iteration_1": {
+      "completed": ["Phase A: Foundation (types.py, protocols.py, context.py, recovery.py, orchestrator.py)"],
+      "coverage": 89.85,
+      "tests_passed": 95
+    },
+    "iteration_2": {
+      "completed": ["Phase B: TaskBreakdownWorkflow (decomposer.py, feasibility.py, alternative.py, workflow.py)"],
+      "tests_passed": 43
+    }
+  },
+  "implementation_tasks": [
+    "C.1: SchemaGeneratorSubWorkflow実装 - JSON Schema生成ロジック",
+    "C.2: CompatibilityCheckerSubWorkflow実装 - グラフ互換性検証",
+    "C.3: SchemaEnricherSubWorkflow実装 - derived_fields追加",
+    "C.4: InterfaceDesignWorkflow統合 - 3つのサブワークフロー統合",
+    "C.5: InterfaceDesign単体テスト - retry_countバグ修正確認含む"
+  ],
+  "deliverables": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/__init__.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/workflow.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/compatibility.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/enricher.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_interface_design/"
+  ],
+  "source_files_to_reference": [
+    {
+      "old": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py",
+      "functions": ["interface_definition_node", "_validate_interface_response", "normalize_json_schema_properties"],
+      "logic": "インターフェース定義ノードのメインロジック、JSON Schema正規化"
+    },
+    {
+      "old": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py",
+      "classes": ["InterfaceSchemaDefinition", "InterfaceSchemaResponse", "DerivedFieldDefinition"],
+      "functions": ["create_interface_schema_prompt"],
+      "logic": "スキーマ生成プロンプト、derived_fields定義"
+    }
+  ],
+  "protocol_to_implement": "WorkflowProtocol",
+  "integration_with_foundation": {
+    "use_types": ["Phase", "PhaseStatus", "RetryState", "InterfaceDesignInput", "InterfaceDesignOutput"],
+    "use_context": ["ExecutionContext", "LLMContext"],
+    "use_protocols": ["WorkflowProtocol"],
+    "use_recovery": ["ErrorRecoveryManager"]
+  },
+  "critical_bug_fix_verification": {
+    "description": "Phase Cでretry_countバグ修正が正しく機能することを検証",
+    "tests_required": [
+      "test_schema_generation_uses_context_retry_state",
+      "test_compatibility_check_records_retry_on_failure",
+      "test_interface_design_workflow_respects_retry_limits"
+    ]
+  },
+  "acceptance_criteria_for_phase_c": [
+    "タスク定義からJSON Schemaを生成できる",
+    "生成されたSchemaのGraphAI互換性を検証できる",
+    "derived_fieldsを適切に追加できる",
+    "WorkflowProtocolを正しく実装している",
+    "retry_countがフェーズ間で正しく管理される",
+    "単体テストカバレッジ90%以上"
+  ],
+  "target_coverage": 90
+}

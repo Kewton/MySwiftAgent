@@ -20,14 +20,14 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
+from aiagent.langgraph.jobGeneratorV2.llm_utils import (
+    StructuredLLMError,
+    invoke_structured_llm,
+)
 from aiagent.langgraph.jobGeneratorV2.types import (
     Capability,
     RelaxationSuggestion,
     TaskDefinition,
-)
-from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-    StructuredLLMError,
-    invoke_structured_llm,
 )
 
 if TYPE_CHECKING:
@@ -45,7 +45,9 @@ class AlternativeTaskItem(BaseModel):
     task_id: str = Field(description="Task ID for alternative (e.g., 'task_001_alt')")
     name: str = Field(description="Task name")
     description: str = Field(description="Task description")
-    dependencies: list[str] = Field(default_factory=list, description="Task dependencies")
+    dependencies: list[str] = Field(
+        default_factory=list, description="Task dependencies"
+    )
     expected_output: str = Field(description="Expected output")
     priority: int = Field(default=5, description="Task priority (1-10)")
     recommended_apis: list[dict] = Field(
@@ -93,8 +95,7 @@ def _build_alternative_system_prompt(capabilities: list[Capability]) -> str:
         System prompt string
     """
     cap_list = "\n".join(
-        f"- {cap.name}: {cap.endpoint} - {cap.description}"
-        for cap in capabilities
+        f"- {cap.name}: {cap.endpoint} - {cap.description}" for cap in capabilities
     )
 
     return f"""You are an expert at finding alternative implementations for workflows.
@@ -275,8 +276,7 @@ class AlternativeSubWorkflow:
 
         # Convert alternatives to TaskDefinition
         alternative_tasks = [
-            _convert_alternative_to_task(alt)
-            for alt in response.alternatives
+            _convert_alternative_to_task(alt) for alt in response.alternatives
         ]
 
         # Create relaxation suggestions

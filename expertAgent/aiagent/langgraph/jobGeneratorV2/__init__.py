@@ -57,6 +57,7 @@ from .types import (
     WorkflowGenInput,
     WorkflowGenOutput,
 )
+from .adapter import JobGeneratorV2Adapter, invoke_structured_llm_real
 from .workflows.task_breakdown import (
     AlternativeSubWorkflow,
     FeasibilitySubWorkflow,
@@ -114,4 +115,7 @@ __all__ = [
     "TaskDecomposerSubWorkflow",
     "FeasibilitySubWorkflow",
     "AlternativeSubWorkflow",
+    # Adapter (Phase E integration)
+    "JobGeneratorV2Adapter",
+    "invoke_structured_llm_real",
 ]

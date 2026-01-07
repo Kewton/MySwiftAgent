@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     # JobQueue API Configuration
     JOBQUEUE_API_URL: str = Field(default="http://localhost:8001")
 
+    # Job Generator V2 Feature Flag (Issue #342)
+    USE_JOB_GENERATOR_V2: bool = Field(
+        default=False,
+        description="Enable new Job Generator V2 architecture with improved retry management"
+    )
+
     # GraphAI Server Configuration
     # Default: 8005 for local development
     # Override via environment variable for Docker (graphaiserver:8000)

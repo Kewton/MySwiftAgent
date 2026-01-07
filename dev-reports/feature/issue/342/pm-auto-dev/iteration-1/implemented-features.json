@@ -1,0 +1,292 @@
+{
+  "issue_number": 342,
+  "iteration": 1,
+  "phase_completed": "Phase A (Foundation)",
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "Phase",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 25,
+      "description": "ジョブ生成のフェーズ定義（TASK_BREAKDOWN, INTERFACE_DESIGN, REGISTRATION, WORKFLOW_GEN）",
+      "expected_callers": ["JobGenerationOrchestrator", "ErrorRecoveryManager", "ExecutionContext"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "PhaseStatus",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 35,
+      "description": "フェーズ実行結果ステータス（SUCCESS, FAILED, NEEDS_RETRY, NEEDS_RELAXATION）",
+      "expected_callers": ["WorkflowProtocol implementations", "JobGenerationOrchestrator"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "RetryState",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 62,
+      "description": "各フェーズのリトライ状態管理（count, max_count, history）。Critical Bug Fixの核心部分。",
+      "expected_callers": ["ExecutionContext.get_phase_retry_state", "ExecutionContext.can_retry"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "RetryState.can_retry",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 80,
+      "description": "リトライ可能かを判定（count < max_count）。無限ループ防止の核心。",
+      "expected_callers": ["ExecutionContext.can_retry", "ErrorRecoveryManager.decide_recovery"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "RetryState.record",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 84,
+      "description": "リトライ履歴を記録し、countをインクリメント",
+      "expected_callers": ["ExecutionContext.record_retry"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "WorkflowProtocol",
+      "type": "protocol",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+      "line_number": 82,
+      "description": "全ワークフローが実装すべきプロトコル（execute, get_retry_policy）",
+      "expected_callers": ["TaskBreakdownWorkflow", "InterfaceDesignWorkflow", "RegistrationWorkflow", "WorkflowGenWorkflow"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/"
+    },
+    {
+      "feature_id": "F7",
+      "name": "ErrorType",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+      "line_number": 35,
+      "description": "エラー種別（TRANSIENT, VALIDATION, COMPATIBILITY, BUSINESS, FATAL）",
+      "expected_callers": ["WorkflowError", "ErrorRecoveryManager._get_base_strategy"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py"
+    },
+    {
+      "feature_id": "F8",
+      "name": "WorkflowError",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+      "line_number": 48,
+      "description": "ワークフロー実行時のエラー",
+      "expected_callers": ["各ワークフロー実装", "ErrorRecoveryManager.decide_recovery"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F9",
+      "name": "ExecutionContext",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+      "line_number": 96,
+      "description": "ジョブ生成ワークフローの実行コンテキスト。フェーズごとのRetryState管理。",
+      "expected_callers": ["JobGenerationOrchestrator.execute_phase", "ErrorRecoveryManager.decide_recovery"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F10",
+      "name": "ExecutionContext.can_retry",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+      "line_number": 145,
+      "description": "特定フェーズがリトライ可能か判定。Critical Bug Fixの統合ポイント。",
+      "expected_callers": ["ErrorRecoveryManager.decide_recovery", "JobGenerationOrchestrator"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py"
+    },
+    {
+      "feature_id": "F11",
+      "name": "ExecutionContext.record_retry",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+      "line_number": 159,
+      "description": "リトライを記録（RetryState.recordを呼び出し）",
+      "expected_callers": ["JobGenerationOrchestrator._apply_recovery"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F12",
+      "name": "ErrorRecoveryStrategy",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py",
+      "line_number": 26,
+      "description": "エラー回復戦略（FAIL_FAST, RETRY_CURRENT, ROLLBACK_ONE, ROLLBACK_TO_BREAKDOWN, RELAXATION）",
+      "expected_callers": ["ErrorRecoveryManager.decide_recovery", "JobGenerationOrchestrator._apply_recovery"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F13",
+      "name": "ErrorRecoveryManager",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py",
+      "line_number": 77,
+      "description": "エラー回復戦略を決定・実行。Critical Bug Fixの核心。",
+      "expected_callers": ["JobGenerationOrchestrator.execute_phase"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F14",
+      "name": "ErrorRecoveryManager.decide_recovery",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py",
+      "line_number": 100,
+      "description": "エラーに対する回復戦略を決定。context.can_retry()を呼び出してリトライ可否を判定。",
+      "expected_callers": ["JobGenerationOrchestrator.execute_phase"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F15",
+      "name": "JobGenerationOrchestrator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 35,
+      "description": "ジョブ生成全体を制御するオーケストレーター",
+      "expected_callers": ["API Layer (job_generator_endpoints.py)"],
+      "expected_call_location": "expertAgent/app/api/v1/job_generator_endpoints.py"
+    },
+    {
+      "feature_id": "F16",
+      "name": "JobGenerationOrchestrator.execute_phase",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 130,
+      "description": "特定フェーズを実行し、エラー時はErrorRecoveryManagerで回復戦略を決定",
+      "expected_callers": ["JobGenerationOrchestrator.run_workflow"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F17",
+      "name": "ContextBuilder",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+      "line_number": 185,
+      "description": "ExecutionContextのFluent Builder",
+      "expected_callers": ["API Layer", "Integration Tests"],
+      "expected_call_location": "expertAgent/app/api/v1/job_generator_endpoints.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_types.py::TestRetryState::*"],
+      "integration_tests": ["test_context.py::TestCanRetryBehavior::*"],
+      "acceptance_tests": ["test_issue_342_acceptance.py::test_retry_limit_enforced"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_types.py::TestRetryState::test_can_retry_*"],
+      "integration_tests": ["test_context.py::TestCanRetryBehavior::test_can_retry_*"],
+      "acceptance_tests": ["test_issue_342_acceptance.py::test_no_infinite_loop"]
+    },
+    {
+      "feature_id": "F10",
+      "unit_tests": ["test_context.py::TestExecutionContext::test_can_retry_*"],
+      "integration_tests": ["test_recovery.py::TestRetryCountBugFix::*"],
+      "acceptance_tests": ["test_issue_342_acceptance.py::test_retry_limit_enforced"]
+    },
+    {
+      "feature_id": "F13",
+      "unit_tests": ["test_recovery.py::TestErrorRecoveryManager::*"],
+      "integration_tests": ["test_recovery.py::TestRetryCountBugFix::*"],
+      "acceptance_tests": ["test_issue_342_acceptance.py::test_error_recovery"]
+    },
+    {
+      "feature_id": "F14",
+      "unit_tests": ["test_recovery.py::TestDecideRecovery::*"],
+      "integration_tests": ["test_recovery.py::TestRetryCountBugFix::test_retry_count_not_reset_*"],
+      "acceptance_tests": ["test_issue_342_acceptance.py::test_no_infinite_loop"]
+    },
+    {
+      "feature_id": "F15",
+      "unit_tests": ["test_orchestrator.py::TestJobGenerationOrchestrator::*"],
+      "integration_tests": ["test_job_generator_v2_integration.py::*"],
+      "acceptance_tests": ["test_issue_342_acceptance.py::test_job_generation_e2e"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+      "integration_type": "dataclass_field",
+      "integration_method": "_phase_retry_states: dict[Phase, RetryState]",
+      "status": "integrated"
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/",
+      "integration_type": "protocol_implementation",
+      "integration_method": "class TaskBreakdownWorkflow(WorkflowProtocol)",
+      "status": "pending"
+    },
+    {
+      "feature_id": "F13",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "constructor_injection",
+      "integration_method": "__init__(self, recovery_manager: ErrorRecoveryManager)",
+      "status": "integrated"
+    },
+    {
+      "feature_id": "F15",
+      "integration_file": "expertAgent/app/api/v1/job_generator_endpoints.py",
+      "integration_type": "api_endpoint",
+      "integration_method": "Feature flag: USE_JOB_GENERATOR_V2",
+      "status": "pending"
+    }
+  ],
+  "critical_bug_fix_chain": {
+    "description": "retry_count が常に0にリセットされる問題の修正チェーン",
+    "original_bug_location": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py:536-543",
+    "fix_components": [
+      {
+        "component": "RetryState.can_retry()",
+        "role": "count >= max_count の場合 False を返す",
+        "status": "implemented"
+      },
+      {
+        "component": "RetryState.record()",
+        "role": "count をインクリメント",
+        "status": "implemented"
+      },
+      {
+        "component": "ExecutionContext._phase_retry_states",
+        "role": "フェーズごとのRetryStateを管理",
+        "status": "implemented"
+      },
+      {
+        "component": "ExecutionContext.can_retry(phase)",
+        "role": "特定フェーズのリトライ可否を判定",
+        "status": "implemented"
+      },
+      {
+        "component": "ErrorRecoveryManager.decide_recovery()",
+        "role": "context.can_retry() でリトライ可否をチェック",
+        "status": "implemented"
+      },
+      {
+        "component": "JobGenerationOrchestrator.execute_phase()",
+        "role": "ErrorRecoveryManagerの判断に従って処理",
+        "status": "implemented"
+      }
+    ],
+    "verification_tests": [
+      "test_retry_count_not_reset_when_interface_warnings_exist",
+      "test_retry_count_incremented_on_retry",
+      "test_no_infinite_loop_possible"
+    ]
+  },
+  "pending_tasks": [
+    "Phase B: TaskBreakdownWorkflow実装（WorkflowProtocol実装）",
+    "Phase C: InterfaceDesignWorkflow実装",
+    "Phase D: Registration/WorkflowGenWorkflow実装",
+    "Phase E: API統合（Feature Flag, job_generator_endpoints.py更新）"
+  ]
+}

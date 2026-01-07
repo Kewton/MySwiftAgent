@@ -165,15 +165,14 @@ class JobGenerationOrchestrator:
                     raise WorkflowError(
                         f"No workflow registered for phase {phase.value}",
                         error_type=__import__(
-                            "aiagent.langgraph.jobGeneratorV2.protocols", fromlist=["ErrorType"]
+                            "aiagent.langgraph.jobGeneratorV2.protocols",
+                            fromlist=["ErrorType"],
                         ).ErrorType.FATAL,
                         phase=phase,
                     )
 
                 # Transform input from previous phase
-                phase_input = self._create_phase_input(
-                    phase, request, phase_outputs
-                )
+                phase_input = self._create_phase_input(phase, request, phase_outputs)
 
                 # Execute phase
                 output = await self.execute_phase(

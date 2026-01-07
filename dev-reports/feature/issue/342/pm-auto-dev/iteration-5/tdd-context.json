@@ -1,0 +1,118 @@
+{
+  "issue_number": 342,
+  "issue_title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新",
+  "phase": "Phase E: 統合・移行",
+  "iteration": 5,
+  "tasks": [
+    {
+      "id": "E.1",
+      "name": "結合テスト作成",
+      "description": "Orchestrator + 全ワークフローの結合テスト",
+      "files_to_create": [
+        "expertAgent/tests/integration/test_job_generator_v2_integration.py"
+      ],
+      "key_functionality": [
+        "フェーズ間連携テスト",
+        "エラー回復シナリオテスト",
+        "全体フローテスト (mock external services)"
+      ]
+    },
+    {
+      "id": "E.2",
+      "name": "Feature Flag 実装",
+      "description": "USE_JOB_GENERATOR_V2 フラグによる V1/V2 切り替え",
+      "files_to_create": [
+        "expertAgent/core/feature_flags.py"
+      ],
+      "files_to_modify": [
+        "expertAgent/core/config.py"
+      ],
+      "key_functionality": [
+        "環境変数による feature flag",
+        "default: false (V1 使用)",
+        "true の場合は V2 を使用"
+      ]
+    },
+    {
+      "id": "E.3",
+      "name": "API 統合",
+      "description": "job_generator_endpoints.py を V2 対応に更新",
+      "files_to_modify": [
+        "expertAgent/app/api/v1/job_generator_endpoints.py"
+      ],
+      "files_to_create": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py"
+      ],
+      "key_functionality": [
+        "Feature flag による V1/V2 分岐",
+        "V2 Orchestrator のインスタンス化",
+        "ExecutionContext の作成 (LLM, Storage 接続)",
+        "既存レスポンス形式との互換性維持"
+      ]
+    },
+    {
+      "id": "E.4",
+      "name": "L3 受入テスト",
+      "description": "実サービスでの E2E テスト",
+      "files_to_create": [
+        "expertAgent/tests/acceptance/test_issue_342_acceptance.py"
+      ],
+      "key_functionality": [
+        "実サービス起動テスト",
+        "実際のジョブ生成 E2E テスト",
+        "リトライ上限動作確認"
+      ]
+    },
+    {
+      "id": "E.5",
+      "name": "ドキュメント更新",
+      "description": "V2 アーキテクチャのドキュメント",
+      "files_to_create": [
+        "expertAgent/docs/job_generator_v2.md"
+      ],
+      "files_to_modify": [
+        "expertAgent/docs/API_REFERENCE.md"
+      ]
+    }
+  ],
+  "integration_points": {
+    "llm_service": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+      "function": "invoke_structured_llm",
+      "connect_to": "ChatAnthropic / langchain structured output"
+    },
+    "master_registration": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/",
+      "functions": ["register_interface_master", "register_task_master", "register_job_master"],
+      "connect_to": "expertAgent internal APIs / jobqueue"
+    },
+    "workflow_execution": {
+      "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/test_runner.py",
+      "function": "execute_workflow_test",
+      "connect_to": "graphAiServer API"
+    }
+  },
+  "feature_flag": {
+    "name": "USE_JOB_GENERATOR_V2",
+    "default": false,
+    "description": "Enable new Job Generator V2 architecture"
+  },
+  "existing_dependencies": {
+    "job_generator_endpoints": "expertAgent/app/api/v1/job_generator_endpoints.py",
+    "current_agent": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/agent.py",
+    "current_state": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/state.py"
+  },
+  "test_requirements": {
+    "integration_tests": {
+      "location": "tests/integration/",
+      "mock_external": true,
+      "test_full_flow": true
+    },
+    "acceptance_tests": {
+      "location": "tests/acceptance/",
+      "real_services": true,
+      "manual_execution": true
+    }
+  },
+  "total_tests_before": 303
+}

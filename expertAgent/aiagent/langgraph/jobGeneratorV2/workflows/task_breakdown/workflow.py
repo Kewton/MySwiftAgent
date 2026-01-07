@@ -188,9 +188,7 @@ class TaskBreakdownWorkflow:
             )
 
         # No alternatives and no relaxation suggestions - fallback
-        logger.warning(
-            "No alternatives or relaxation suggestions generated"
-        )
+        logger.warning("No alternatives or relaxation suggestions generated")
         return TaskBreakdownOutput(
             status=PhaseStatus.NEEDS_RELAXATION,
             tasks=feasible_tasks,
