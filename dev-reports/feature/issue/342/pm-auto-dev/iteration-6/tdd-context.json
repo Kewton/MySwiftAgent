@@ -1,0 +1,274 @@
+{
+  "issue_number": 342,
+  "issue_title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新",
+  "phase": "F",
+  "phase_name": "Workflow Generator V2 LLM統合",
+  "iteration": 6,
+  "work_plan_path": "dev-reports/feature/issue/342/phase-f-work-plan.md",
+  "design_doc_path": "dev-reports/feature/issue/342/workflow-gen-v2-design.md",
+  "target_project": "expertAgent",
+  "target_directory": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen",
+  "prerequisites": [
+    "Phase A-E completed (iterations 1-5)",
+    "USE_JOB_GENERATOR_V2=true enables V2",
+    "gemini-3-flash-preview model available"
+  ],
+  "tasks": [
+    {
+      "id": "F.1",
+      "name": "Few-shot例の作成・整理",
+      "description": "LLMが正しいワークフローを生成するための参考例を整備",
+      "deliverables": [
+        "workflows/workflow_gen/prompt_builder/few_shot/__init__.py",
+        "workflows/workflow_gen/prompt_builder/few_shot/loader.py",
+        "workflows/workflow_gen/prompt_builder/few_shot/search_pattern.yaml",
+        "workflows/workflow_gen/prompt_builder/few_shot/api_call_pattern.yaml",
+        "workflows/workflow_gen/prompt_builder/few_shot/llm_chain_pattern.yaml",
+        "workflows/workflow_gen/prompt_builder/few_shot/map_pattern.yaml"
+      ],
+      "acceptance_criteria": [
+        "4種類のFew-shot例が作成されている",
+        "各例がGraphAI仕様に準拠している",
+        "loader.pyがタスク特性に応じて適切な例を選択できる"
+      ],
+      "dead_code_prevention": [
+        "few_shot/__init__.py で loader.py の関数がエクスポートされている",
+        "loader.py の select_few_shot_examples() が F.2 で呼び出される"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "F.2",
+      "name": "PromptBuilderSubWorkflow",
+      "description": "モジュラープロンプトアーキテクチャの実装",
+      "deliverables": [
+        "workflows/workflow_gen/prompt_builder/__init__.py",
+        "workflows/workflow_gen/prompt_builder/assembler.py",
+        "workflows/workflow_gen/prompt_builder/system/workflow_generator.py",
+        "workflows/workflow_gen/prompt_builder/rules/base_rules.py",
+        "workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+        "workflows/workflow_gen/prompt_builder/rules/reference_rules.py",
+        "workflows/workflow_gen/prompt_builder/rules/api_rules.py",
+        "workflows/workflow_gen/prompt_builder/constraints/loader.py",
+        "workflows/workflow_gen/prompt_builder/constraints/formatter.py"
+      ],
+      "acceptance_criteria": [
+        "各ルールファイルが独立して修正可能",
+        "build() メソッドが正しくプロンプトを組み立てる",
+        "build_with_errors() がリトライ時にエラー情報を含める"
+      ],
+      "dead_code_prevention": [
+        "prompt_builder/__init__.py で PromptBuilderSubWorkflow がエクスポートされている",
+        "各 rules/*.py が assembler.py から import されている",
+        "PromptBuilderSubWorkflow.build() が F.6 の WorkflowGenWorkflow で呼び出される",
+        "全ルールファイルの定数/関数が assembler.py 内で使用されている"
+      ],
+      "dependencies": ["F.1"]
+    },
+    {
+      "id": "F.3",
+      "name": "GraphAIWorkflowSchema (Pydantic)",
+      "description": "構造化出力でLLM生成品質を担保",
+      "deliverables": [
+        "workflows/workflow_gen/schemas.py",
+        "workflows/workflow_gen/errors.py"
+      ],
+      "acceptance_criteria": [
+        "Pydanticバリデーションが正しく動作する",
+        "to_yaml() が正しいYAMLを出力する",
+        "ValidationErrorが適切な修正提案を含む"
+      ],
+      "dead_code_prevention": [
+        "schemas.py の GraphAIWorkflowSchema が F.4 llm_generator.py で使用されている",
+        "errors.py の ValidationError が F.5 yaml_validator.py で使用されている",
+        "全エラーコード定数が yaml_validator.py 内で参照されている"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "F.4",
+      "name": "LLMGeneratorSubWorkflow",
+      "description": "単一のLLM呼び出しで高品質なYAMLを生成",
+      "deliverables": [
+        "workflows/workflow_gen/llm_generator.py"
+      ],
+      "acceptance_criteria": [
+        "gemini-3-flash-preview でYAML生成できる",
+        "構造化出力（GraphAIWorkflowSchema）が正しく動作する",
+        "環境変数でモデル切り替え可能"
+      ],
+      "dead_code_prevention": [
+        "LLMGeneratorSubWorkflow が workflow_gen/__init__.py でエクスポートされている",
+        "LLMGeneratorSubWorkflow.generate() が F.6 WorkflowGenWorkflow で呼び出される",
+        "llm_utils.py の invoke_structured_llm が実際に使用されている"
+      ],
+      "dependencies": ["F.2", "F.3"]
+    },
+    {
+      "id": "F.5",
+      "name": "YamlValidatorSubWorkflow",
+      "description": "軽量な検証で致命的エラーのみ検出",
+      "deliverables": [
+        "workflows/workflow_gen/yaml_validator.py",
+        "workflows/workflow_gen/validators/syntax_validator.py",
+        "workflows/workflow_gen/validators/structure_validator.py",
+        "workflows/workflow_gen/validators/agent_validator.py",
+        "workflows/workflow_gen/validators/reference_validator.py"
+      ],
+      "acceptance_criteria": [
+        "各検証が独立して動作する",
+        "ValidationErrorが適切に生成される",
+        "検証エラーが修正提案を含む"
+      ],
+      "dead_code_prevention": [
+        "YamlValidatorSubWorkflow が workflow_gen/__init__.py でエクスポートされている",
+        "各 validators/*.py が yaml_validator.py から import されている",
+        "YamlValidatorSubWorkflow.validate() が F.6 WorkflowGenWorkflow で呼び出される",
+        "全バリデータクラスが yaml_validator.py 内で使用されている"
+      ],
+      "dependencies": ["F.3"]
+    },
+    {
+      "id": "F.6",
+      "name": "WorkflowGenWorkflow統合",
+      "description": "全SubWorkflowを統合しWorkflowProtocol準拠で実装",
+      "deliverables": [
+        "workflows/workflow_gen/__init__.py",
+        "workflows/workflow_gen/workflow.py"
+      ],
+      "acceptance_criteria": [
+        "WorkflowProtocol準拠",
+        "ExecutionContextのリトライ管理と連携",
+        "Feature flagで実行テストON/OFF可能"
+      ],
+      "dead_code_prevention": [
+        "WorkflowGenWorkflow が jobGeneratorV2/__init__.py でエクスポートされている",
+        "WorkflowGenWorkflow.execute() が orchestrator.py で呼び出される",
+        "F.1〜F.5 で作成した全SubWorkflowが workflow.py で使用されている",
+        "環境変数 WORKFLOW_GENERATOR_V2_* が config.py で定義され、コード内で参照されている"
+      ],
+      "dependencies": ["F.4", "F.5"]
+    },
+    {
+      "id": "F.7",
+      "name": "単体テスト",
+      "description": "各コンポーネントの単体テスト作成",
+      "deliverables": [
+        "tests/unit/test_job_generator_v2/test_workflow_gen_schemas.py",
+        "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+        "tests/unit/test_job_generator_v2/test_workflow_gen_llm_generator.py",
+        "tests/unit/test_job_generator_v2/test_workflow_gen_yaml_validator.py",
+        "tests/unit/test_job_generator_v2/test_workflow_gen_few_shot_loader.py",
+        "tests/unit/test_job_generator_v2/test_workflow_gen_workflow.py",
+        "tests/unit/test_job_generator_v2/test_workflow_gen_integration_check.py"
+      ],
+      "acceptance_criteria": [
+        "カバレッジ90%以上",
+        "全テストパス",
+        "モック使用でLLM呼出なしでテスト可能"
+      ],
+      "dead_code_prevention": [
+        "統合確認テスト(test_workflow_gen_integration_check.py)が全SubWorkflow呼出を検証"
+      ],
+      "dependencies": ["F.6"],
+      "test_count_target": {
+        "schemas": 15,
+        "prompt_builder": 20,
+        "llm_generator": 10,
+        "yaml_validator": 15,
+        "few_shot_loader": 10,
+        "workflow": 15,
+        "integration_check": 10,
+        "total": 95
+      }
+    },
+    {
+      "id": "F.8",
+      "name": "結合テスト・受入テスト",
+      "description": "エンドツーエンドの動作確認",
+      "deliverables": [
+        "tests/integration/test_workflow_gen_v2_integration.py",
+        "tests/acceptance/test_issue_342_workflow_gen_acceptance.py"
+      ],
+      "acceptance_criteria": [
+        "結合テスト全パス",
+        "受入テストで実際にYAML生成成功",
+        "生成YAMLがgraphAiServerで実行可能"
+      ],
+      "dead_code_prevention": [
+        "結合テストで全SubWorkflow（PromptBuilder, LLMGenerator, YamlValidator）が実際に実行される",
+        "受入テストで生成されたYAMLが空でない（yaml_content が有効な内容を含む）",
+        "結合テストのカバレッジレポートでWorkflowGenWorkflow関連コードが実行されている"
+      ],
+      "dependencies": ["F.7"]
+    },
+    {
+      "id": "F.9",
+      "name": "統合検証（デッドコード防止）",
+      "description": "全コードが実際に統合され、デッドコードがないことを検証",
+      "deliverables": [
+        "scripts/verify_no_dead_code.sh"
+      ],
+      "acceptance_criteria": [
+        "ruff check --select=F401,F841 でエラーなし",
+        "mypy で型エラー・到達不能コードなし",
+        "全主要クラスが2箇所以上で参照されている（定義+使用）",
+        "統合確認テスト全パス",
+        "検証スクリプトが正常終了"
+      ],
+      "dead_code_prevention": [],
+      "dependencies": ["F.7", "F.8"]
+    }
+  ],
+  "environment_variables": [
+    {
+      "name": "WORKFLOW_GENERATOR_V2_MODEL",
+      "default": "gemini-3-flash-preview",
+      "description": "LLMモデル名"
+    },
+    {
+      "name": "WORKFLOW_GENERATOR_V2_TEMPERATURE",
+      "default": 0.3,
+      "description": "LLM温度パラメータ"
+    },
+    {
+      "name": "WORKFLOW_GENERATOR_V2_MAX_RETRY",
+      "default": 2,
+      "description": "最大リトライ回数"
+    },
+    {
+      "name": "WORKFLOW_GENERATOR_V2_ENABLE_EXECUTION_TEST",
+      "default": false,
+      "description": "実行テストON/OFF（Option B）"
+    }
+  ],
+  "completion_criteria": {
+    "required": [
+      "全単体テストパス（カバレッジ90%以上）",
+      "全結合テストパス",
+      "受入テストで実LLM呼出成功",
+      "静的解析エラーゼロ（Ruff, MyPy）",
+      "生成YAMLがgraphAiServerで実行可能"
+    ],
+    "dead_code_prevention": [
+      "ruff check --select=F401 で未使用インポートなし",
+      "ruff check --select=F841 で未使用変数なし",
+      "mypy で型エラー・到達不能コードなし",
+      "統合確認テスト（test_workflow_gen_integration_check.py）全パス",
+      "全SubWorkflowが workflow.py で実際に呼び出されている",
+      "全主要クラスが2箇所以上で参照されている（定義+使用）",
+      "verify_no_dead_code.sh スクリプトが正常終了"
+    ],
+    "recommended": [
+      "search_pattern, api_call_patternで90%以上の成功率",
+      "平均生成時間15秒以内",
+      "リトライ率20%以下"
+    ]
+  },
+  "reference_docs": [
+    "dev-reports/feature/issue/342/workflow-gen-v2-design.md",
+    "graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/utils/config/expert_agent_capabilities.yaml",
+    "graphAiServer/AVAILABLE_AGENTS.md"
+  ]
+}

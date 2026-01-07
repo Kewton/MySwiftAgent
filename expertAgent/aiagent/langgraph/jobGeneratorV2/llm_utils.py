@@ -165,24 +165,36 @@ Consider the data flow between dependent tasks.
 
 
 async def invoke_structured_llm(
-    system_prompt: str,
-    user_prompt: str,
-    response_model: type[TModel],
+    messages: list[dict[str, str]] | None = None,
+    response_model: type[TModel] | None = None,
+    *,
+    system_prompt: str | None = None,
+    user_prompt: str | None = None,
     model_name: str = "claude-haiku-4-5",
     temperature: float = 0.7,
+    context_label: str = "llm_call",
+    model_env_var: str | None = None,
+    default_model: str | None = None,
+    validator: Any = None,
     **kwargs: Any,
 ) -> StructuredCallResult[TModel]:
     """Invoke LLM with structured output.
 
-    This is a placeholder implementation for Phase C testing.
-    During Phase E, this will be connected to actual LLM services.
+    Supports two calling conventions:
+    1. messages=[{"role": "system", "content": ...}, {"role": "user", "content": ...}]
+    2. system_prompt="...", user_prompt="..."
 
     Args:
-        system_prompt: System prompt for the LLM
-        user_prompt: User prompt with the request
+        messages: List of message dicts with role and content
         response_model: Pydantic model class for the response
+        system_prompt: System prompt for the LLM (alternative to messages)
+        user_prompt: User prompt with the request (alternative to messages)
         model_name: Name of the model to use
         temperature: Sampling temperature
+        context_label: Label for logging/tracing
+        model_env_var: Environment variable for model override
+        default_model: Default model if env var not set
+        validator: Optional validator function for response
         **kwargs: Additional arguments
 
     Returns:
@@ -191,9 +203,69 @@ async def invoke_structured_llm(
     Raises:
         StructuredLLMError: If LLM invocation fails
     """
-    # This is a placeholder - actual implementation will be in Phase E
-    # For now, raise an error if actually called (tests should mock this)
-    raise StructuredLLMError(
-        "LLM invocation not implemented in Phase C. "
-        "Use mocks for testing or wait for Phase E integration."
-    )
+    import os
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    # Handle different calling conventions
+    if messages is not None:
+        # Extract system and user prompts from messages
+        sys_prompt = ""
+        usr_prompt = ""
+        for msg in messages:
+            if msg.get("role") == "system":
+                sys_prompt = msg.get("content", "")
+            elif msg.get("role") == "user":
+                usr_prompt = msg.get("content", "")
+    elif system_prompt is not None and user_prompt is not None:
+        sys_prompt = system_prompt
+        usr_prompt = user_prompt
+    else:
+        raise StructuredLLMError("Either 'messages' or both 'system_prompt' and 'user_prompt' must be provided")
+
+    if response_model is None:
+        raise StructuredLLMError("response_model is required")
+
+    # Determine model to use
+    actual_model = model_name
+    if model_env_var:
+        actual_model = os.environ.get(model_env_var, default_model or model_name)
+    elif default_model:
+        actual_model = default_model
+
+    try:
+        # Select appropriate LLM client based on model name
+        if actual_model.startswith("gemini"):
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            llm = ChatGoogleGenerativeAI(model=actual_model, temperature=temperature)
+        elif actual_model.startswith("claude"):
+            from langchain_anthropic import ChatAnthropic
+            llm = ChatAnthropic(model=actual_model, temperature=temperature)
+        elif actual_model.startswith("gpt"):
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(model=actual_model, temperature=temperature)
+        else:
+            # Default to Anthropic for unknown models
+            from langchain_anthropic import ChatAnthropic
+            llm = ChatAnthropic(model=actual_model, temperature=temperature)
+
+        structured_llm = llm.with_structured_output(response_model)
+
+        # Build messages
+        lc_messages = [
+            SystemMessage(content=sys_prompt),
+            HumanMessage(content=usr_prompt),
+        ]
+
+        # Invoke
+        result = await structured_llm.ainvoke(lc_messages)
+
+        # Validate if validator provided
+        if validator is not None:
+            result = validator(result)
+
+        return StructuredCallResult(
+            result=result,
+            model_name=actual_model,
+        )
+    except Exception as exc:
+        raise StructuredLLMError(f"LLM invocation failed: {exc}") from exc

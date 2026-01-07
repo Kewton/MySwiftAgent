@@ -1,0 +1,83 @@
+# Few-shot example: LLM Chain pattern
+# Multi-step LLM processing workflow
+name: "llm_chain_pattern"
+description: "LLM chain pattern for multi-step processing"
+applicable_apis:
+  - "explorer_agent"
+  - "llm"
+  - "mylllm"
+  - "jsonoutput"
+  - "gemini"
+
+task_example:
+  name: "Content Analysis Task"
+  description: "Analyze content and generate structured summary"
+  input_schema:
+    type: object
+    properties:
+      content:
+        type: string
+        description: "Content to analyze"
+      analysis_type:
+        type: string
+        description: "Type of analysis to perform"
+    required:
+      - content
+  output_schema:
+    type: object
+    properties:
+      summary:
+        type: string
+        description: "Content summary"
+      key_points:
+        type: array
+        items:
+          type: string
+        description: "Key points extracted"
+
+workflow_yaml: |
+  version: "0.5"
+  nodes:
+    source: {}
+
+    build_analysis_prompt:
+      agent: stringTemplateAgent
+      inputs:
+        content: :source.content
+        analysis_type: :source.analysis_type
+      params:
+        template: |
+          Analyze the following content and extract key points.
+
+          Analysis Type: ${analysis_type}
+
+          Content:
+          ${content}
+
+          Provide a structured summary with key points.
+
+    analyze_content:
+      agent: fetchAgent
+      inputs:
+        url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/aiagent/utility/jsonoutput
+        method: POST
+        body:
+          user_input: :build_analysis_prompt
+          system_prompt: |
+            You are a content analyst. Analyze the given content and return JSON:
+            {
+              "summary": "Brief summary",
+              "key_points": ["point1", "point2", ...]
+            }
+          model: gemini-2.5-flash
+      timeout: 90
+      console:
+        after: true
+
+    format_result:
+      agent: copyAgent
+      inputs:
+        result: :analyze_content.result.result
+      params:
+        namedKey: analysis
+      isResult: true

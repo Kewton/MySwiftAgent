@@ -1,0 +1,77 @@
+# Few-shot example: Map pattern
+# Array processing with mapAgent workflow
+name: "map_pattern"
+description: "Array processing pattern using mapAgent"
+applicable_apis:
+  - "any"  # mapAgent pattern is applicable to any API with array data
+
+task_example:
+  name: "Batch Processing Task"
+  description: "Process multiple items in parallel"
+  input_schema:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            content:
+              type: string
+        description: "Items to process"
+    required:
+      - items
+  output_schema:
+    type: object
+    properties:
+      processed_items:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            result:
+              type: string
+
+workflow_yaml: |
+  version: "0.5"
+  nodes:
+    source: {}
+
+    process_items:
+      agent: mapAgent
+      inputs:
+        rows: :source.items
+      params:
+        compositeResult: true
+      graph:
+        nodes:
+          item_source: {}
+
+          process_single:
+            agent: stringTemplateAgent
+            inputs:
+              id: :item_source.id
+              content: :item_source.content
+            params:
+              template: "Processed: ${id} - ${content}"
+
+          format_item:
+            agent: copyAgent
+            inputs:
+              id: :item_source.id
+              result: :process_single
+            params:
+              namedKey: processed
+            isResult: true
+
+    collect_results:
+      agent: copyAgent
+      inputs:
+        processed_items: :process_items.format_item
+      params:
+        namedKey: results
+      isResult: true

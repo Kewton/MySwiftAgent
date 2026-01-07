@@ -1,0 +1,62 @@
+# Few-shot example: Search pattern
+# Google Search -> Format Results workflow
+name: "search_pattern"
+description: "Search API -> Result formatting pattern"
+applicable_apis:
+  - "google_search"
+  - "gmail_search"
+  - "google_search_overview"
+
+task_example:
+  name: "Keyword Search Task"
+  description: "Execute Google search with specified keyword and format results"
+  input_schema:
+    type: object
+    properties:
+      keyword:
+        type: string
+        description: "Search keyword"
+    required:
+      - keyword
+  output_schema:
+    type: object
+    properties:
+      results:
+        type: array
+        items:
+          type: object
+          properties:
+            title:
+              type: string
+            url:
+              type: string
+            knowledge:
+              type: string
+
+workflow_yaml: |
+  version: "0.5"
+  nodes:
+    source: {}
+
+    search_api:
+      agent: fetchAgent
+      inputs:
+        url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search
+        method: POST
+        body:
+          queries:
+            - :source.keyword
+          num: 5
+      timeout: 180
+      console:
+        after: true
+
+    format_results:
+      agent: stringTemplateAgent
+      inputs:
+        results: :search_api.result.search_results
+      params:
+        template: |
+          Search Results:
+          ${results}
+      isResult: true

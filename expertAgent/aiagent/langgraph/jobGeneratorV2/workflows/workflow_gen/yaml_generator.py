@@ -5,7 +5,7 @@ This module provides the YamlGeneratorSubWorkflow that:
 2. Defines task chains based on dependencies
 3. Uses LLM to generate workflow YAML when needed
 
-Issue #342 Phase D.2: Migrated logic from jobTaskGeneratorAgents/nodes/workflow_generation.py
+Issue #342 Phase D.2: Migrated logic from jobTaskGeneratorAgents
 without importing from the old code.
 
 Key design decisions:
@@ -28,6 +28,10 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     Phase,
 )
+
+# Phase F imports for LLM-based generation
+from .llm_generator import LLMGeneratorSubWorkflow
+from .yaml_validator import YamlValidatorSubWorkflow
 
 if TYPE_CHECKING:
     from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
@@ -286,37 +290,189 @@ class YamlGeneratorSubWorkflow:
         job_master_id: str,
         interfaces: dict[str, InterfaceSchema],
         context: "ExecutionContext",
+        *,
+        max_retries: int = 2,
     ) -> YamlGenerationResult:
         """Generate GraphAI YAML workflow using LLM.
 
         This method uses LLM to generate more sophisticated workflows
         based on the task descriptions and interfaces.
 
+        Issue #342 Phase F: Uses PromptBuilderSubWorkflow, LLMGeneratorSubWorkflow,
+        and YamlValidatorSubWorkflow for high-quality YAML generation.
+
         Args:
             task_master_ids: List of TaskMaster IDs
             job_master_id: JobMaster ID
             interfaces: Interface schemas
             context: Execution context
+            max_retries: Maximum retry attempts for validation errors
 
         Returns:
             YamlGenerationResult with LLM-generated YAML
 
         Raises:
-            WorkflowError: If LLM generation fails
+            WorkflowError: If LLM generation fails after retries
         """
-        # Placeholder - will be connected to LLM in Phase E
         logger.info(
-            "LLM-based YAML generation requested for job %s",
+            "LLM-based YAML generation for job %s with %d tasks",
             context.job_id,
+            len(task_master_ids),
         )
 
-        # Fall back to template generation for now
+        if not task_master_ids:
+            raise WorkflowError(
+                "No task masters provided for LLM YAML generation",
+                ErrorType.VALIDATION,
+                Phase.WORKFLOW_GEN,
+            )
+
+        # Build task definition from interfaces for the first task
+        # In a chain, we generate for the last task (result node)
+        result_task_id = task_master_ids[-1]
+        result_interface = interfaces.get(result_task_id)
+
+        if not result_interface:
+            logger.warning(
+                "No interface found for task %s, falling back to template",
+                result_task_id,
+            )
+            return await self.generate(
+                task_master_ids=task_master_ids,
+                job_master_id=job_master_id,
+                interfaces=interfaces,
+                context=context,
+            )
+
+        # Initialize Phase F workflows
+        llm_generator = LLMGeneratorSubWorkflow()
+        yaml_validator = YamlValidatorSubWorkflow()
+
+        # Build task context from all interfaces
+        task_description = self._build_task_description_from_chain(
+            task_master_ids, interfaces
+        )
+        recommended_apis = self._extract_recommended_apis(interfaces)
+        dependencies = task_master_ids[:-1] if len(task_master_ids) > 1 else []
+
+        previous_errors: list = []
+        attempt = 0
+
+        while attempt <= max_retries:
+            try:
+                # Generate using LLMGeneratorSubWorkflow
+                task_name = (
+                    result_interface.interface_name or f"task_{result_task_id}"
+                )
+                llm_result = await llm_generator.generate_from_task(
+                    task_name=task_name,
+                    task_description=task_description,
+                    input_schema=result_interface.input_schema or {},
+                    output_schema=result_interface.output_schema or {},
+                    recommended_apis=recommended_apis,
+                    dependencies=dependencies,
+                    context=context,
+                )
+
+                # Validate using YamlValidatorSubWorkflow
+                yaml_content = llm_result.yaml_content
+                validation_result = await yaml_validator.validate(yaml_content)
+
+                if validation_result.is_valid:
+                    logger.info(
+                        "LLM YAML generation successful: %s (%d nodes, attempt %d)",
+                        llm_result.workflow_name,
+                        llm_result.node_count,
+                        attempt + 1,
+                    )
+                    return YamlGenerationResult(
+                        yaml_content=llm_result.yaml_content,
+                        workflow_name=f"workflow_{job_master_id}",
+                        node_count=llm_result.node_count,
+                        generation_method="llm",
+                    )
+
+                # Validation failed - store errors for retry
+                previous_errors = validation_result.errors
+                logger.warning(
+                    "LLM YAML validation failed (attempt %d/%d): %d errors",
+                    attempt + 1,
+                    max_retries + 1,
+                    len(previous_errors),
+                )
+                attempt += 1
+
+            except Exception as e:
+                logger.error(
+                    "LLM generation error (attempt %d/%d): %s",
+                    attempt + 1,
+                    max_retries + 1,
+                    e,
+                )
+                attempt += 1
+                if attempt > max_retries:
+                    msg = (
+                        f"LLM YAML generation failed after "
+                        f"{max_retries + 1} attempts: {e}"
+                    )
+                    raise WorkflowError(
+                        msg,
+                        ErrorType.LLM,
+                        Phase.WORKFLOW_GEN,
+                    ) from e
+
+        # All retries exhausted - fall back to template
+        logger.warning(
+            "LLM generation exhausted retries, falling back to template generation"
+        )
         return await self.generate(
             task_master_ids=task_master_ids,
             job_master_id=job_master_id,
             interfaces=interfaces,
             context=context,
         )
+
+    def _build_task_description_from_chain(
+        self,
+        task_master_ids: list[str],
+        interfaces: dict[str, InterfaceSchema],
+    ) -> str:
+        """Build combined task description from chain interfaces.
+
+        Args:
+            task_master_ids: Task master IDs in execution order
+            interfaces: Interface schemas
+
+        Returns:
+            Combined task description
+        """
+        descriptions = []
+        for idx, tm_id in enumerate(task_master_ids, 1):
+            interface = interfaces.get(tm_id)
+            if interface:
+                name = interface.interface_name or tm_id
+                desc = interface.description or "No description"
+                descriptions.append(f"{idx}. {name}: {desc}")
+        return "\n".join(descriptions) if descriptions else "Workflow task chain"
+
+    def _extract_recommended_apis(
+        self,
+        interfaces: dict[str, InterfaceSchema],
+    ) -> list[str]:
+        """Extract recommended APIs from all interfaces.
+
+        Args:
+            interfaces: Interface schemas
+
+        Returns:
+            List of unique recommended API names
+        """
+        apis: set[str] = set()
+        for interface in interfaces.values():
+            # Check for recommended_api field in interface
+            if hasattr(interface, 'recommended_api') and interface.recommended_api:
+                apis.add(interface.recommended_api)
+        return list(apis)
 
 
 def create_yaml_generation_prompt(

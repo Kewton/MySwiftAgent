@@ -1,0 +1,64 @@
+# Few-shot example: API Call pattern
+# Generic API call workflow (Gmail send, etc.)
+name: "api_call_pattern"
+description: "Generic API call pattern with input validation"
+applicable_apis:
+  - "gmail_send"
+  - "drive_upload"
+  - "text_to_speech"
+  - "text_to_speech_drive"
+
+task_example:
+  name: "Email Send Task"
+  description: "Send email with specified recipient, subject, and body"
+  input_schema:
+    type: object
+    properties:
+      to:
+        type: string
+        description: "Recipient email address"
+      subject:
+        type: string
+        description: "Email subject"
+      body:
+        type: string
+        description: "Email body content"
+    required:
+      - to
+      - subject
+      - body
+  output_schema:
+    type: object
+    properties:
+      result:
+        type: string
+        description: "Send result message"
+      message_id:
+        type: string
+        description: "Sent email ID"
+
+workflow_yaml: |
+  version: "0.5"
+  nodes:
+    source: {}
+
+    send_email:
+      agent: fetchAgent
+      inputs:
+        url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/gmail/send
+        method: POST
+        body:
+          to: :source.to
+          subject: :source.subject
+          body: :source.body
+      console:
+        after: true
+
+    format_response:
+      agent: copyAgent
+      inputs:
+        result: :send_email.result.result
+        message_id: :send_email.result.message_id
+      params:
+        namedKey: result
+      isResult: true
