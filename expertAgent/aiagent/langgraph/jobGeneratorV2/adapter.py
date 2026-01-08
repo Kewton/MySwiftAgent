@@ -239,12 +239,36 @@ class JobGeneratorV2Adapter:
         Issue #342: This method converts internal V2 task definitions to the
         format expected by JobGeneratorResponse.task_breakdown.
 
+        Bug fix: Sort tasks by task_id to ensure logical execution order.
+        task_001 → task_002 → task_002_alt → task_003
+
         Args:
             tasks: List of V2 TaskDefinition objects
 
         Returns:
-            List of dicts compatible with JobGeneratorResponse.task_breakdown
+            List of dicts compatible with JobGeneratorResponse.task_breakdown,
+            sorted by task_id (numeric order, with _alt variants after base tasks)
         """
+        import re
+
+        def extract_sort_key(task_id: str) -> tuple[int, int]:
+            """Extract sort key from task_id.
+
+            Examples:
+                task_001 → (1, 0)
+                task_002_alt → (2, 1)
+                task_003 → (3, 0)
+            """
+            match = re.match(r"task_(\d+)(?:_alt)?", task_id)
+            if match:
+                num = int(match.group(1))
+                is_alt = 1 if "_alt" in task_id else 0
+                return (num, is_alt)
+            return (999, 0)  # Fallback for non-standard task_ids
+
+        # Sort tasks by task_id
+        sorted_tasks = sorted(tasks, key=lambda t: extract_sort_key(t.id))
+
         return [
             {
                 "task_id": task.id,
@@ -255,7 +279,7 @@ class JobGeneratorV2Adapter:
                 "task_type": task.task_type,
                 "recommended_api": task.recommended_api,
             }
-            for task in tasks
+            for task in sorted_tasks
         ]
 
     def _convert_interfaces(

@@ -35,6 +35,7 @@ from aiagent.langgraph.jobGeneratorV2.types import (
 )
 
 from .test_runner import TestRunnerSubWorkflow
+from .workflow_registrar import register_and_update_task_masters
 from .yaml_generator import YamlGeneratorSubWorkflow
 
 if TYPE_CHECKING:
@@ -131,6 +132,9 @@ class WorkflowGenWorkflow:
                 test_result=None,
             )
 
+        # Issue #342 Bug #1: Extract TaskIdMapping from input for correct interface lookup
+        task_id_mapping = input_data.task_id_mapping
+
         # Step 1: Generate YAML workflow
         # Issue #342 V2: Use LLM-based generation by default with template fallback
         yaml_generator = YamlGeneratorSubWorkflow(
@@ -141,11 +145,13 @@ class WorkflowGenWorkflow:
         try:
             if self._use_llm_generation:
                 # LLM-first approach with automatic template fallback
+                # Bug #1 fix: Pass task_id_mapping for correct interface lookup
                 yaml_result = await yaml_generator.generate_with_llm(
                     task_master_ids=task_master_ids,
                     job_master_id=job_master_id,
                     interfaces=interfaces,
                     context=context,
+                    task_id_mapping=task_id_mapping,
                 )
             else:
                 # Template-only approach (deprecated, for backward compatibility)
@@ -171,7 +177,41 @@ class WorkflowGenWorkflow:
             yaml_result.node_count,
         )
 
-        # Step 2: Run tests (optional)
+        # Step 2: Register workflow to GraphAiServer and update TaskMasters
+        # Issue #342: V2 was missing this step, causing "model_name is required" errors
+        try:
+            registration_result = await register_and_update_task_masters(
+                task_master_ids=task_master_ids,
+                workflow_name=yaml_result.workflow_name,
+                yaml_content=yaml_result.yaml_content,
+                context=context,
+            )
+
+            if registration_result["success"]:
+                logger.info(
+                    "Workflow registered to GraphAiServer: model_name=%s, "
+                    "updated_task_masters=%d/%d",
+                    registration_result.get("model_name"),
+                    len(registration_result.get("updated_task_masters", [])),
+                    len(task_master_ids),
+                )
+            else:
+                logger.warning(
+                    "Workflow registration failed: %s",
+                    registration_result.get("error"),
+                )
+                # Registration failure is not fatal - workflow execution may still work
+                # if workflow was previously registered
+
+        except Exception as e:
+            logger.warning(
+                "Workflow registration error (non-fatal): %s",
+                e,
+            )
+            # Continue with workflow generation even if registration fails
+            # The workflow might already be registered from a previous run
+
+        # Step 3: Run tests (optional)
         test_result: dict[str, Any] | None = None
 
         if self._enable_testing:
