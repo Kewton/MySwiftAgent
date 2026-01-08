@@ -91,16 +91,22 @@ class TestGraphAIWorkflowSchema:
         assert "source" in workflow.nodes
         assert "output" in workflow.nodes
 
-    def test_workflow_requires_source_node(self):
-        """Test that source node is required."""
-        with pytest.raises(ValidationError) as exc_info:
-            GraphAIWorkflowSchema(
-                version="0.5",
-                nodes={
-                    "output": NodeDefinition(agent="copyAgent", isResult=True),
-                },
-            )
-        assert "source node is required" in str(exc_info.value)
+    def test_workflow_auto_adds_source_node(self):
+        """Test that source node is auto-added if missing.
+
+        Issue #342: LLMs sometimes omit source node, so we auto-add it
+        instead of raising a validation error.
+        """
+        # Create workflow without source node
+        workflow = GraphAIWorkflowSchema(
+            version="0.5",
+            nodes={
+                "output": NodeDefinition(agent="copyAgent", isResult=True),
+            },
+        )
+        # Source node should be auto-added
+        assert "source" in workflow.nodes
+        assert "output" in workflow.nodes
 
     def test_workflow_requires_is_result_node(self):
         """Test that at least one isResult node is required."""

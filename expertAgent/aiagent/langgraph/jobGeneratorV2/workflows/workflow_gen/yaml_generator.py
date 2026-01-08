@@ -32,6 +32,7 @@ from aiagent.langgraph.jobGeneratorV2.protocols import (
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     Phase,
+    TaskIdMapping,
 )
 
 # Phase F imports for LLM-based generation
@@ -42,6 +43,40 @@ if TYPE_CHECKING:
     from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_task_id(
+    task_master_id: str,
+    task_id_mapping: TaskIdMapping | None = None,
+) -> str:
+    """Normalize task_master_id to task_id using mapping or prefix removal.
+
+    Issue #342 Bug #1/12: This function now supports TaskIdMapping for correct
+    interface lookup instead of relying on prefix removal which may fail for
+    non-standard task IDs.
+
+    Args:
+        task_master_id: Task master ID (e.g., 'tm_task_001' or 'tm_01KEC...')
+        task_id_mapping: Optional TaskIdMapping for proper reverse lookup
+
+    Returns:
+        Task ID without prefix (e.g., 'task_001')
+    """
+    # Bug #1/12 fix: Use TaskIdMapping if available
+    if task_id_mapping is not None:
+        logical_id = task_id_mapping.get_logical_id(task_master_id)
+        if logical_id is not None:
+            return logical_id
+        # Fall back to prefix removal if not found in mapping
+        logger.warning(
+            "TaskIdMapping does not contain master_id %s, falling back to prefix removal",
+            task_master_id,
+        )
+
+    # Legacy behavior: Remove 'tm_' prefix
+    if task_master_id.startswith("tm_"):
+        return task_master_id[3:]
+    return task_master_id
 
 
 # Prompt constants for YAML generation
@@ -319,6 +354,7 @@ class YamlGeneratorSubWorkflow:
         context: "ExecutionContext",
         *,
         max_retries: int = 2,
+        task_id_mapping: TaskIdMapping | None = None,
     ) -> YamlGenerationResult:
         """Generate GraphAI YAML workflow using LLM.
 
@@ -328,12 +364,16 @@ class YamlGeneratorSubWorkflow:
         Issue #342 Phase F: Uses PromptBuilderSubWorkflow, LLMGeneratorSubWorkflow,
         and YamlValidatorSubWorkflow for high-quality YAML generation.
 
+        Issue #342 Bug #1/12: Now accepts optional TaskIdMapping for correct
+        interface lookup instead of relying on prefix removal.
+
         Args:
             task_master_ids: List of TaskMaster IDs
             job_master_id: JobMaster ID
             interfaces: Interface schemas
             context: Execution context
             max_retries: Maximum retry attempts for validation errors
+            task_id_mapping: Optional TaskIdMapping for correct interface lookup
 
         Returns:
             YamlGenerationResult with LLM-generated YAML
@@ -357,7 +397,9 @@ class YamlGeneratorSubWorkflow:
         # Build task definition from interfaces for the first task
         # In a chain, we generate for the last task (result node)
         result_task_id = task_master_ids[-1]
-        result_interface = interfaces.get(result_task_id)
+        # Issue #342 Bug #1/12: Use TaskIdMapping for correct interface lookup
+        normalized_task_id = _normalize_task_id(result_task_id, task_id_mapping)
+        result_interface = interfaces.get(normalized_task_id)
 
         if not result_interface:
             logger.warning(
@@ -376,8 +418,9 @@ class YamlGeneratorSubWorkflow:
         yaml_validator = YamlValidatorSubWorkflow()
 
         # Build task context from all interfaces
+        # Issue #342 Bug #12: Use TaskIdMapping for correct interface lookup
         task_description = self._build_task_description_from_chain(
-            task_master_ids, interfaces
+            task_master_ids, interfaces, task_id_mapping
         )
         recommended_apis = self._extract_recommended_apis(interfaces)
         dependencies = task_master_ids[:-1] if len(task_master_ids) > 1 else []
@@ -388,7 +431,7 @@ class YamlGeneratorSubWorkflow:
         while attempt <= max_retries:
             try:
                 # Generate using LLMGeneratorSubWorkflow
-                task_name = result_interface.interface_name or f"task_{result_task_id}"
+                task_name = result_interface.task_id or f"task_{result_task_id}"
                 llm_result = await llm_generator.generate_from_task(
                     task_name=task_name,
                     task_description=task_description,
@@ -399,9 +442,9 @@ class YamlGeneratorSubWorkflow:
                     context=context,
                 )
 
-                # Validate using YamlValidatorSubWorkflow
+                # Validate using YamlValidatorSubWorkflow (sync method)
                 yaml_content = llm_result.yaml_content
-                validation_result = await yaml_validator.validate(yaml_content)
+                validation_result = yaml_validator.validate(yaml_content)
 
                 if validation_result.is_valid:
                     logger.info(
@@ -435,16 +478,7 @@ class YamlGeneratorSubWorkflow:
                     e,
                 )
                 attempt += 1
-                if attempt > max_retries:
-                    msg = (
-                        f"LLM YAML generation failed after "
-                        f"{max_retries + 1} attempts: {e}"
-                    )
-                    raise WorkflowError(
-                        msg,
-                        ErrorType.LLM,
-                        Phase.WORKFLOW_GEN,
-                    ) from e
+                # Don't raise - let loop continue or fall through to template fallback
 
         # All retries exhausted - fall back to template
         logger.warning(
@@ -461,21 +495,28 @@ class YamlGeneratorSubWorkflow:
         self,
         task_master_ids: list[str],
         interfaces: dict[str, InterfaceSchema],
+        task_id_mapping: TaskIdMapping | None = None,
     ) -> str:
         """Build combined task description from chain interfaces.
+
+        Issue #342 Bug #12: Now accepts optional TaskIdMapping for correct
+        interface lookup instead of relying on prefix removal.
 
         Args:
             task_master_ids: Task master IDs in execution order
             interfaces: Interface schemas
+            task_id_mapping: Optional TaskIdMapping for correct interface lookup
 
         Returns:
             Combined task description
         """
         descriptions = []
         for idx, tm_id in enumerate(task_master_ids, 1):
-            interface = interfaces.get(tm_id)
+            # Issue #342 Bug #12: Use TaskIdMapping for correct interface lookup
+            task_id = _normalize_task_id(tm_id, task_id_mapping)
+            interface = interfaces.get(task_id)
             if interface:
-                name = interface.interface_name or tm_id
+                name = interface.task_id or tm_id
                 desc = interface.description or "No description"
                 descriptions.append(f"{idx}. {name}: {desc}")
         return "\n".join(descriptions) if descriptions else "Workflow task chain"

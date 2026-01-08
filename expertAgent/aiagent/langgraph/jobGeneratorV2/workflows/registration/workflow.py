@@ -189,10 +189,22 @@ class RegistrationWorkflow:
         task_master_ids = [tm.id for tm in master_result.task_masters]
         interface_master_ids = [im.id for im in master_result.interface_masters]
 
+        # Issue #342 Bug #5: Build task_id_to_master_id mapping for proper interface lookup
+        # This maps logical task_id (e.g., 'task_001') to task_master_id (e.g., 'tm_xxx')
+        task_id_to_master_id = {
+            tm.task_id: tm.id for tm in master_result.task_masters
+        }
+
+        logger.info(
+            "Built task_id_to_master_id mapping: %d entries",
+            len(task_id_to_master_id),
+        )
+
         return RegistrationOutput(
             status=PhaseStatus.SUCCESS,
             job_master_id=master_result.job_master.id,
             task_master_ids=task_master_ids,
             interface_master_ids=interface_master_ids,
             job_id=job_result.job_id,
+            task_id_to_master_id=task_id_to_master_id,
         )

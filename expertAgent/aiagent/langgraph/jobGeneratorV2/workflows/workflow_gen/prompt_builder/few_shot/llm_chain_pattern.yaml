@@ -1,7 +1,8 @@
 # Few-shot example: LLM Chain pattern
 # Multi-step LLM processing workflow
+# NOTE: This URL is ONLY for jsonoutput/LLM APIs. For other APIs, use API Mappings section.
 name: "llm_chain_pattern"
-description: "LLM chain pattern for multi-step processing"
+description: "LLM chain pattern - URL is jsonoutput ONLY. For other APIs, use API Mappings."
 applicable_apis:
   - "explorer_agent"
   - "llm"

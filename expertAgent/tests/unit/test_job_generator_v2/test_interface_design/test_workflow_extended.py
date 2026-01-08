@@ -3,9 +3,11 @@
 Issue #342 Phase C.4: Additional tests for coverage improvement.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     CompatibilityReport,
     EnrichmentReport,
@@ -15,7 +17,6 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     PhaseStatus,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestInterfaceDesignWorkflowRetryPolicy:
@@ -23,10 +24,10 @@ class TestInterfaceDesignWorkflowRetryPolicy:
 
     def test_retry_policy_includes_compatibility_error(self):
         """Retry policy should include COMPATIBILITY error type."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow import (
             InterfaceDesignWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType
 
         workflow = InterfaceDesignWorkflow()
         policy = workflow.get_retry_policy()
@@ -91,10 +92,10 @@ class TestInterfaceDesignWorkflowErrors:
         self, sample_task: TaskDefinition, mock_context: ExecutionContext
     ):
         """Should re-raise WorkflowError from schema generator."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow import (
             InterfaceDesignWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError, ErrorType
 
         mock_generator = MagicMock()
         mock_generator.generate = AsyncMock(
@@ -116,10 +117,10 @@ class TestInterfaceDesignWorkflowErrors:
         self, sample_task: TaskDefinition, mock_context: ExecutionContext
     ):
         """Should wrap unexpected error in WorkflowError."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow import (
             InterfaceDesignWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
 
         mock_generator = MagicMock()
         mock_generator.generate = AsyncMock(
@@ -143,10 +144,10 @@ class TestInterfaceDesignWorkflowErrors:
         self, sample_task: TaskDefinition, mock_context: ExecutionContext
     ):
         """Should raise WorkflowError when schema generator returns empty."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow import (
             InterfaceDesignWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
 
         mock_generator = MagicMock()
         mock_generator.generate = AsyncMock(return_value={})  # Empty result

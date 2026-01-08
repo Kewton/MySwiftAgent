@@ -7,8 +7,6 @@ Test Coverage Target: 95%
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestAgentMapping:
     """Tests for AgentMapping dataclass."""

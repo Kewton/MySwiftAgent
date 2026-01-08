@@ -4,7 +4,6 @@ Tests for ErrorRecoveryManager and related types.
 This is CRITICAL for fixing the retry_count bug (Issue #342).
 """
 
-import pytest
 
 
 class TestErrorRecoveryStrategy:
@@ -67,16 +66,17 @@ class TestErrorRecoveryManager:
 
     def test_decide_recovery_for_transient_error(self):
         """Transient errors should result in RETRY_CURRENT strategy."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Network timeout", ErrorType.TRANSIENT)
@@ -93,16 +93,17 @@ class TestErrorRecoveryManager:
 
     def test_decide_recovery_for_validation_error(self):
         """Validation errors should result in RETRY_CURRENT strategy."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Schema validation failed", ErrorType.VALIDATION)
@@ -119,16 +120,17 @@ class TestErrorRecoveryManager:
 
     def test_decide_recovery_for_compatibility_error(self):
         """Compatibility errors should result in ROLLBACK_ONE strategy."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Interface compatibility error", ErrorType.COMPATIBILITY)
@@ -146,16 +148,17 @@ class TestErrorRecoveryManager:
 
     def test_decide_recovery_for_business_error(self):
         """Business errors should result in RELAXATION strategy."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Infeasible requirement", ErrorType.BUSINESS)
@@ -172,16 +175,17 @@ class TestErrorRecoveryManager:
 
     def test_decide_recovery_for_fatal_error(self):
         """Fatal errors should result in FAIL_FAST strategy."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Database connection failed", ErrorType.FATAL)
@@ -198,16 +202,17 @@ class TestErrorRecoveryManager:
 
     def test_escalate_when_retry_limit_exceeded(self):
         """When retry limit exceeded, should escalate to rollback or fail."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Validation failed", ErrorType.VALIDATION)
@@ -229,16 +234,17 @@ class TestErrorRecoveryManager:
 
     def test_escalate_to_relaxation_for_phase1_retry_exhausted(self):
         """When Phase 1 retry limit exceeded, should escalate to RELAXATION."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Validation failed", ErrorType.VALIDATION)
@@ -292,16 +298,17 @@ class TestMaxRollbacksPerPhase:
 
     def test_fail_when_rollback_limit_exceeded(self):
         """Should fail when rollback limit is exceeded."""
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Compatibility error", ErrorType.COMPATIBILITY)
@@ -339,16 +346,17 @@ class TestRetryCountBugFix:
         was reset to 0 when interface_warnings existed but evaluation_feedback
         and validation_result were empty.
         """
-        from aiagent.langgraph.jobGeneratorV2.recovery import (
-            ErrorRecoveryManager,
-            ErrorRecoveryStrategy,
-        )
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.protocols import (
             ErrorType,
             WorkflowError,
         )
+        from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryManager,
+            ErrorRecoveryStrategy,
+        )
         from aiagent.langgraph.jobGeneratorV2.types import Phase
-        from unittest.mock import MagicMock
 
         manager = ErrorRecoveryManager()
 

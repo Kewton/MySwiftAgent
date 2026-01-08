@@ -8,7 +8,7 @@ Issue #342 Phase F: WorkflowGen V2 LLM Integration
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -30,12 +30,8 @@ class NodeDefinition(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     agent: str = Field(description="Agent type name")
-    inputs: dict[str, Any] | None = Field(
-        default=None, description="Input definitions"
-    )
-    params: dict[str, Any] | None = Field(
-        default=None, description="Agent parameters"
-    )
+    inputs: dict[str, Any] | None = Field(default=None, description="Input definitions")
+    params: dict[str, Any] | None = Field(default=None, description="Agent parameters")
     isResult: bool = Field(default=False, description="Final output node flag")
     console: dict[str, Any] | None = Field(
         default=None, description="Debug logging settings"
@@ -77,19 +73,38 @@ class GraphAIWorkflowSchema(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["0.5"] = Field(
-        default="0.5", description="GraphAI version"
-    )
+    version: str = Field(default="0.5", description="GraphAI version")
     nodes: dict[str, NodeDefinition | SourceNodeDefinition | dict] = Field(
         description="Node definitions"
     )
 
+    @field_validator("version", mode="before")
+    @classmethod
+    def coerce_version_to_string(cls, v: Any) -> str:
+        """Coerce version to string (YAML parses 0.5 as float)."""
+        if isinstance(v, float):
+            return str(v)
+        return str(v) if v is not None else "0.5"
+
+    @field_validator("version")
+    @classmethod
+    def validate_version(cls, v: str) -> str:
+        """Validate version is supported."""
+        supported_versions = {"0.5", "0.6"}
+        if v not in supported_versions:
+            raise ValueError(f"version must be one of {supported_versions}, got '{v}'")
+        return v
+
     @model_validator(mode="after")
     def validate_workflow_structure(self) -> "GraphAIWorkflowSchema":
-        """Validate workflow has source node and at least one isResult node."""
-        # Check for source node
+        """Validate workflow has source node and at least one isResult node.
+
+        Auto-adds source node if missing (LLMs sometimes omit it).
+        """
+        # Auto-add source node if missing (LLMs sometimes forget it)
         if "source" not in self.nodes:
-            raise ValueError("source node is required")
+            # Create a new dict to avoid modifying during iteration
+            self.nodes = {"source": SourceNodeDefinition(), **self.nodes}
 
         # Check for at least one isResult node
         has_result = False

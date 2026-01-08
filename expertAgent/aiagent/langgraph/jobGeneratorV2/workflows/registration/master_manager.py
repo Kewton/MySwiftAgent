@@ -9,10 +9,12 @@ This module provides the MasterManagerSubWorkflow that creates:
 Issue #342 Phase D.1: Migrated logic from jobTaskGeneratorAgents/nodes/master_creation.py
 without importing from the old code.
 
+Issue #342: Now uses actual jobqueue API calls instead of placeholders.
+
 Key design decisions:
 - Uses ExecutionContext for API access (dependency injection)
-- Does NOT import from langgraph or old jobTaskGeneratorAgents
-- All external API calls are abstracted through context.storage
+- Uses JobqueueClient for actual API calls to jobqueue service
+- All external API calls create real resources in jobqueue
 """
 
 from __future__ import annotations
@@ -29,6 +31,9 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     Phase,
     TaskDefinition,
+)
+from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
+    JobqueueClient,
 )
 
 if TYPE_CHECKING:
@@ -129,15 +134,39 @@ class MasterManagerSubWorkflow:
         self,
         graphai_server_url: str = "http://localhost:8005",
         default_timeout_sec: int = 60,
+        jobqueue_client: JobqueueClient | None = None,
     ) -> None:
         """Initialize MasterManagerSubWorkflow.
 
         Args:
             graphai_server_url: Base URL for GraphAI server
             default_timeout_sec: Default timeout for tasks
+            jobqueue_client: Optional pre-configured jobqueue client
         """
         self._graphai_server_url = graphai_server_url
         self._default_timeout_sec = default_timeout_sec
+        self._jobqueue_client = jobqueue_client
+
+    def _get_jobqueue_client(self, context: "ExecutionContext") -> JobqueueClient:
+        """Get or create JobqueueClient.
+
+        Args:
+            context: Execution context (may have client in storage)
+
+        Returns:
+            JobqueueClient instance
+        """
+        # Use pre-configured client if available
+        if self._jobqueue_client is not None:
+            return self._jobqueue_client
+
+        # Check context storage for client
+        if context.storage.jobqueue_client is not None:
+            return context.storage.jobqueue_client
+
+        # Create new client (uses JOBQUEUE_API_URL env var or default)
+        logger.info("Creating new JobqueueClient for master creation")
+        return JobqueueClient()
 
     async def create_masters(
         self,
@@ -337,7 +366,7 @@ class MasterManagerSubWorkflow:
         is_input: bool,
         context: "ExecutionContext",
     ) -> str:
-        """Create an InterfaceMaster.
+        """Create an InterfaceMaster via jobqueue API.
 
         Args:
             task_id: Associated task ID
@@ -349,20 +378,54 @@ class MasterManagerSubWorkflow:
         Returns:
             Created InterfaceMaster ID
         """
-        # Placeholder implementation - will be connected to real API in Phase E
-        # For now, generate a unique ID
+        client = self._get_jobqueue_client(context)
         interface_type = "input" if is_input else "output"
-        placeholder_id = f"im_{task_id}_{interface_type}"
 
-        logger.debug(
-            "Creating InterfaceMaster: %s (placeholder: %s)",
+        logger.info(
+            "Creating InterfaceMaster via API: %s (%s)",
             name,
-            placeholder_id,
+            interface_type,
         )
 
-        # In Phase E, this will call:
-        # context.storage.jobqueue_client.create_interface_master(...)
-        return placeholder_id
+        try:
+            # For input interface: use schema as input_schema, empty for output
+            # For output interface: use schema as output_schema, empty for input
+            if is_input:
+                result = await client.create_interface_master(
+                    name=name,
+                    description=f"Input interface for task {task_id}",
+                    input_schema=schema,
+                    output_schema={},  # Input interface has no output
+                    created_by="job_generator_v2",
+                )
+            else:
+                result = await client.create_interface_master(
+                    name=name,
+                    description=f"Output interface for task {task_id}",
+                    input_schema={},  # Output interface has no input
+                    output_schema=schema,
+                    created_by="job_generator_v2",
+                )
+
+            interface_id = result["id"]
+            logger.info(
+                "Created InterfaceMaster: %s -> %s",
+                name,
+                interface_id,
+            )
+            return interface_id
+
+        except Exception as e:
+            logger.error(
+                "Failed to create InterfaceMaster %s: %s",
+                name,
+                str(e),
+            )
+            raise WorkflowError(
+                f"Failed to create InterfaceMaster {name}: {e}",
+                ErrorType.API,
+                Phase.REGISTRATION,
+            ) from e
 
     async def _create_task_master(
         self,
@@ -372,7 +435,7 @@ class MasterManagerSubWorkflow:
         body_template: dict[str, Any],
         context: "ExecutionContext",
     ) -> str:
-        """Create a TaskMaster.
+        """Create a TaskMaster via jobqueue API.
 
         Args:
             task: Task definition
@@ -384,25 +447,57 @@ class MasterManagerSubWorkflow:
         Returns:
             Created TaskMaster ID
         """
-        placeholder_id = f"tm_{task.id}"
+        client = self._get_jobqueue_client(context)
 
-        logger.debug(
-            "Creating TaskMaster: %s -> %s (placeholder: %s)",
+        logger.info(
+            "Creating TaskMaster via API: %s -> %s",
             task.name,
             task.recommended_api,
-            placeholder_id,
         )
 
-        # In Phase E, this will call:
-        # context.storage.jobqueue_client.create_task_master(...)
-        return placeholder_id
+        try:
+            # Build task URL based on recommended API
+            # GraphAI server endpoint
+            task_url = f"{self._graphai_server_url}/api/v1/myagent"
+
+            result = await client.create_task_master(
+                name=task.name,
+                description=task.description or f"Task: {task.name}",
+                method="POST",
+                url=task_url,
+                input_interface_id=input_interface_id,
+                output_interface_id=output_interface_id,
+                body_template=body_template,
+                timeout_sec=self._default_timeout_sec,
+                created_by="job_generator_v2",
+            )
+
+            task_master_id = result["id"]
+            logger.info(
+                "Created TaskMaster: %s -> %s",
+                task.name,
+                task_master_id,
+            )
+            return task_master_id
+
+        except Exception as e:
+            logger.error(
+                "Failed to create TaskMaster %s: %s",
+                task.name,
+                str(e),
+            )
+            raise WorkflowError(
+                f"Failed to create TaskMaster {task.name}: {e}",
+                ErrorType.API,
+                Phase.REGISTRATION,
+            ) from e
 
     async def _create_job_master(
         self,
         user_requirement: str,
         context: "ExecutionContext",
     ) -> JobMasterInfo:
-        """Create a JobMaster.
+        """Create a JobMaster via jobqueue API.
 
         Args:
             user_requirement: Original user requirement
@@ -411,25 +506,54 @@ class MasterManagerSubWorkflow:
         Returns:
             Created JobMasterInfo
         """
+        client = self._get_jobqueue_client(context)
+
         job_name = f"Job: {user_requirement[:50]}"
+        job_description = f"Auto-generated job from requirement: {user_requirement}"
         job_url = f"{self._graphai_server_url}/api/v1/myagent"
-        placeholder_id = f"jm_{context.job_id}"
+        job_timeout_sec = 300
 
-        logger.debug(
-            "Creating JobMaster: %s (placeholder: %s)",
+        logger.info(
+            "Creating JobMaster via API: %s",
             job_name,
-            placeholder_id,
         )
 
-        # In Phase E, this will call:
-        # context.storage.jobqueue_client.create_job_master(...)
-        return JobMasterInfo(
-            id=placeholder_id,
-            name=job_name,
-            method="POST",
-            url=job_url,
-            timeout_sec=300,
-        )
+        try:
+            result = await client.create_job_master(
+                name=job_name,
+                description=job_description,
+                method="POST",
+                url=job_url,
+                timeout_sec=job_timeout_sec,
+                created_by="job_generator_v2",
+            )
+
+            job_master_id = result["id"]
+            logger.info(
+                "Created JobMaster: %s -> %s",
+                job_name,
+                job_master_id,
+            )
+
+            return JobMasterInfo(
+                id=job_master_id,
+                name=job_name,
+                method="POST",
+                url=job_url,
+                timeout_sec=job_timeout_sec,
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to create JobMaster %s: %s",
+                job_name,
+                str(e),
+            )
+            raise WorkflowError(
+                f"Failed to create JobMaster: {e}",
+                ErrorType.API,
+                Phase.REGISTRATION,
+            ) from e
 
     async def _create_job_master_task(
         self,
@@ -438,7 +562,7 @@ class MasterManagerSubWorkflow:
         order: int,
         context: "ExecutionContext",
     ) -> str:
-        """Create a JobMasterTask association.
+        """Create a JobMasterTask association via jobqueue API.
 
         Args:
             job_master_id: JobMaster ID
@@ -449,16 +573,40 @@ class MasterManagerSubWorkflow:
         Returns:
             Created JobMasterTask ID
         """
-        placeholder_id = f"jmt_{job_master_id}_{task_master_id}"
+        client = self._get_jobqueue_client(context)
 
-        logger.debug(
-            "Creating JobMasterTask: %s <- %s (order=%d, placeholder: %s)",
+        logger.info(
+            "Creating JobMasterTask via API: %s <- %s (order=%d)",
             job_master_id,
             task_master_id,
             order,
-            placeholder_id,
         )
 
-        # In Phase E, this will call:
-        # context.storage.jobqueue_client.add_task_to_workflow(...)
-        return placeholder_id
+        try:
+            result = await client.add_task_to_workflow(
+                job_master_id=job_master_id,
+                task_master_id=task_master_id,
+                order=order,
+                is_required=True,
+                max_retries=3,
+            )
+
+            job_master_task_id = result["id"]
+            logger.info(
+                "Created JobMasterTask: %s (order=%d)",
+                job_master_task_id,
+                order,
+            )
+            return job_master_task_id
+
+        except Exception as e:
+            logger.error(
+                "Failed to create JobMasterTask for %s: %s",
+                task_master_id,
+                str(e),
+            )
+            raise WorkflowError(
+                f"Failed to create JobMasterTask: {e}",
+                ErrorType.API,
+                Phase.REGISTRATION,
+            ) from e

@@ -1,311 +1,98 @@
 {
   "issue_number": 342,
-  "issue_title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新",
-  "issue_size": "XL",
-  "estimated_hours": 75,
+  "issue_title": "V2 Job Generator Langfuse統合",
   "acceptance_criteria": [
-    "ユーザー要件からジョブを生成できる",
-    "処理時間が 1-3分（最大5分）以内",
-    "リトライ上限（各フェーズ3回、全体5回）が確実に機能する",
-    "実現不可能な要求に対して緩和提案ができる",
-    "単体テストカバレッジ 90%以上",
-    "結合テストカバレッジ 50%以上",
-    "各フェーズが独立してテスト可能",
-    "Langfuse トレースでフェーズ遷移が追跡可能",
-    "状態フィールド数が各フェーズ 10以下",
-    "ルーター条件分岐が 5以下",
-    "セキュリティ設計に準拠（入力検証、ログマスキング）"
+    "ExecutionContextがadapter → orchestrator → workflowに正しく伝播する",
+    "V2で生成したジョブのMain Traceリンクが機能する",
+    "Langfuseでプロンプトと応答が確認できる",
+    "各フェーズのLLM呼び出しがトレースに記録される"
   ],
   "implementation_tasks": [
-    "Phase 0.1: 既存コード構造分析",
-    "Phase 0.2: デッドコード検出",
-    "Phase 0.3: 移植対象コードの特定",
-    "Phase A.1: 共通型・プロトコル定義（types.py, protocols.py）",
-    "Phase A.2: ExecutionContext 実装（context.py）",
-    "Phase A.3: ErrorRecoveryManager 実装（recovery.py）",
-    "Phase A.4: Orchestrator 実装（orchestrator.py）",
-    "Phase A.5: 基盤単体テスト",
-    "Phase B.1: TaskDecomposerSubWorkflow 実装",
-    "Phase B.2: FeasibilitySubWorkflow 実装",
-    "Phase B.3: AlternativeSubWorkflow 実装",
-    "Phase B.4: TaskBreakdownWorkflow 統合",
-    "Phase B.5: TaskBreakdown 単体テスト",
-    "Phase C.1: SchemaGenerator 実装",
-    "Phase C.2: CompatibilityChecker 実装",
-    "Phase C.3: SchemaEnricher 実装",
-    "Phase C.4: InterfaceDesignWorkflow 統合",
-    "Phase C.5: InterfaceDesign 単体テスト（retry_countバグ修正確認含む）",
-    "Phase D.1: RegistrationWorkflow 実装",
-    "Phase D.2: WorkflowGenWorkflow 実装",
-    "Phase D.3: Registration/WorkflowGen 単体テスト",
-    "Phase D.4: デッドコード検証・テスト品質確認",
-    "Phase E.1: 結合テスト作成",
-    "Phase E.2: Feature Flag 実装",
-    "Phase E.3: API統合",
-    "Phase E.4: L3受入テスト",
-    "Phase E.5: ドキュメント更新"
-  ],
-  "work_plan_tasks": [
     {
-      "task_id": "0.1",
-      "description": "既存コード構造分析",
-      "estimated_hours": 3,
-      "deliverables": ["dev-reports/feature/issue/342/existing-code-analysis.md"],
-      "dependencies": []
+      "task_id": "1.1",
+      "description": "orchestrator.py - context引数追加",
+      "file": "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "changes": [
+        "run_workflow()にcontext引数追加（デフォルトNone）",
+        "渡されたcontextを使用、なければデフォルト作成"
+      ]
     },
     {
-      "task_id": "0.2",
-      "description": "デッドコード検出",
-      "estimated_hours": 2,
-      "deliverables": ["dev-reports/feature/issue/342/dead-code-report.md"],
-      "dependencies": ["0.1"]
+      "task_id": "1.2",
+      "description": "adapter.py - contextをorchestratorに渡す",
+      "file": "aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "changes": [
+        "_ = self._create_context_builder(...).build() を context = ... に修正",
+        "run_workflow(request, context=context) に渡す"
+      ]
     },
     {
-      "task_id": "0.3",
-      "description": "移植対象コードの特定",
-      "estimated_hours": 2,
-      "deliverables": ["dev-reports/feature/issue/342/migration-mapping.md"],
-      "dependencies": ["0.1", "0.2"]
+      "task_id": "2.1",
+      "description": "llm_utils.py - ヘルパー関数追加",
+      "file": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+      "changes": [
+        "get_callbacks_from_context() 関数追加"
+      ]
     },
     {
-      "task_id": "A.1",
-      "description": "共通型・プロトコル定義",
-      "estimated_hours": 3,
-      "deliverables": [
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py"
-      ],
-      "dependencies": ["0.3"]
+      "task_id": "2.2",
+      "description": "llm_utils.py - callbacks引数追加",
+      "file": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+      "changes": [
+        "invoke_structured_llm() にcallbacks引数追加",
+        "ainvoke時にconfig={'callbacks': ...}を渡す"
+      ]
     },
     {
-      "task_id": "A.2",
-      "description": "ExecutionContext 実装",
-      "estimated_hours": 4,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/context.py"],
-      "dependencies": ["A.1"]
+      "task_id": "3.1",
+      "description": "decomposer.py - callbacks対応",
+      "file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
+      "changes": [
+        "get_callbacks_from_context(context) 呼び出し",
+        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
+      ]
     },
     {
-      "task_id": "A.3",
-      "description": "ErrorRecoveryManager 実装",
-      "estimated_hours": 4,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py"],
-      "dependencies": ["A.1"]
+      "task_id": "3.2",
+      "description": "schema_generator.py - callbacks対応",
+      "file": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+      "changes": [
+        "get_callbacks_from_context(context) 呼び出し",
+        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
+      ]
     },
     {
-      "task_id": "A.4",
-      "description": "Orchestrator 実装",
-      "estimated_hours": 5,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"],
-      "dependencies": ["A.2", "A.3"]
+      "task_id": "3.3",
+      "description": "alternative.py - callbacks対応",
+      "file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
+      "changes": [
+        "get_callbacks_from_context(context) 呼び出し",
+        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
+      ]
     },
     {
-      "task_id": "A.5",
-      "description": "基盤単体テスト",
-      "estimated_hours": 4,
-      "deliverables": [
-        "expertAgent/tests/unit/test_job_generator_v2/test_types.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_context.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_recovery.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator.py"
-      ],
-      "dependencies": ["A.4"]
-    },
-    {
-      "task_id": "B.1",
-      "description": "TaskDecomposerSubWorkflow 実装",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "B.2",
-      "description": "FeasibilitySubWorkflow 実装",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "B.3",
-      "description": "AlternativeSubWorkflow 実装",
-      "estimated_hours": 2,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "B.4",
-      "description": "TaskBreakdownWorkflow 統合",
-      "estimated_hours": 2,
-      "deliverables": [
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/__init__.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py"
-      ],
-      "dependencies": ["B.1", "B.2", "B.3"]
-    },
-    {
-      "task_id": "B.5",
-      "description": "TaskBreakdown 単体テスト",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_task_breakdown/"],
-      "dependencies": ["B.4"]
-    },
-    {
-      "task_id": "C.1",
-      "description": "SchemaGenerator 実装（retry_countバグ修正含む）",
-      "estimated_hours": 4,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "C.2",
-      "description": "CompatibilityChecker 実装",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/compatibility.py"],
-      "dependencies": ["A.1"]
-    },
-    {
-      "task_id": "C.3",
-      "description": "SchemaEnricher 実装",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/enricher.py"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "C.4",
-      "description": "InterfaceDesignWorkflow 統合",
-      "estimated_hours": 2,
-      "deliverables": [
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/__init__.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/workflow.py"
-      ],
-      "dependencies": ["C.1", "C.2", "C.3"]
-    },
-    {
-      "task_id": "C.5",
-      "description": "InterfaceDesign 単体テスト",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_interface_design/"],
-      "dependencies": ["C.4"]
-    },
-    {
-      "task_id": "D.1",
-      "description": "RegistrationWorkflow 実装",
-      "estimated_hours": 4,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "D.2",
-      "description": "WorkflowGenWorkflow 実装",
-      "estimated_hours": 4,
-      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/"],
-      "dependencies": ["A.2"]
-    },
-    {
-      "task_id": "D.3",
-      "description": "Registration/WorkflowGen 単体テスト",
-      "estimated_hours": 3,
-      "deliverables": [
-        "expertAgent/tests/unit/test_job_generator_v2/test_registration/",
-        "expertAgent/tests/unit/test_job_generator_v2/test_workflow_gen/"
-      ],
-      "dependencies": ["D.1", "D.2"]
-    },
-    {
-      "task_id": "D.4",
-      "description": "デッドコード検証・テスト品質確認",
-      "estimated_hours": 2,
-      "deliverables": ["dev-reports/feature/issue/342/pre-integration-verification.md"],
-      "dependencies": ["A.5", "B.5", "C.5", "D.3"]
-    },
-    {
-      "task_id": "E.1",
-      "description": "結合テスト作成",
-      "estimated_hours": 4,
-      "deliverables": ["expertAgent/tests/integration/test_job_generator_v2_integration.py"],
-      "dependencies": ["D.4"]
-    },
-    {
-      "task_id": "E.2",
-      "description": "Feature Flag 実装",
-      "estimated_hours": 2,
-      "deliverables": ["expertAgent/app/core/feature_flags.py"],
-      "dependencies": ["E.1"]
-    },
-    {
-      "task_id": "E.3",
-      "description": "API統合",
-      "estimated_hours": 2,
-      "deliverables": ["expertAgent/app/api/v1/job_generator_endpoints.py"],
-      "dependencies": ["E.2"]
-    },
-    {
-      "task_id": "E.4",
-      "description": "L3受入テスト",
-      "estimated_hours": 3,
-      "deliverables": ["expertAgent/tests/acceptance/test_issue_342_acceptance.py"],
-      "dependencies": ["E.3"]
-    },
-    {
-      "task_id": "E.5",
-      "description": "ドキュメント更新",
-      "estimated_hours": 2,
-      "deliverables": [
-        "expertAgent/docs/job_generator_v2.md",
-        "expertAgent/docs/API_REFERENCE.md"
-      ],
-      "dependencies": ["E.4"]
+      "task_id": "4.1",
+      "description": "llm_generator.py - callbacks対応",
+      "file": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py",
+      "changes": [
+        "get_callbacks_from_context(context) 呼び出し",
+        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
+      ]
     }
   ],
   "deliverables_checklist": [
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/workflow.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/compatibility.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/interface_design/enricher.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/workflow.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
-    "expertAgent/tests/unit/test_job_generator_v2/",
-    "expertAgent/tests/integration/test_job_generator_v2_integration.py",
-    "expertAgent/tests/acceptance/test_issue_342_acceptance.py"
+    "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "aiagent/langgraph/jobGeneratorV2/adapter.py",
+    "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py"
   ],
-  "definition_of_done": [
-    "すべての実装タスクが完了",
-    "単体テストカバレッジ90%以上",
-    "結合テストカバレッジ50%以上",
-    "CI/CDグリーン（Ruff/MyPyエラー0件）",
-    "L3受入テスト全パス",
-    "リトライ上限が確実に機能（無限ループテスト合格）",
-    "処理時間5分以内",
-    "Langfuseトレースでフェーズ遷移追跡可能",
-    "Feature Flagで新旧切り替え可能",
-    "ドキュメント更新完了"
+  "test_files": [
+    "tests/unit/test_job_generator_v2/test_context_propagation.py",
+    "tests/unit/test_job_generator_v2/test_llm_utils_callbacks.py",
+    "tests/integration/test_v2_langfuse_integration.py"
   ],
-  "target_coverage": 90,
-  "root_cause": "interface_definition.py:536-543 で interface_warnings をチェックしていないため、retry_count が常に0にリセットされ、無限ループが発生",
-  "critical_fix": {
-    "file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py",
-    "line": "536-543",
-    "issue": "retry_countが常に0にリセットされる",
-    "fix": "新アーキテクチャでは各フェーズが独立したRetryStateを持ち、リトライ管理を一元化"
-  },
-  "design_documents": [
-    "dev-reports/feature/issue/342/architecture-design.md",
-    "dev-reports/feature/issue/342/architecture-review.md",
-    "dev-reports/feature/issue/342/comparison-summary.md",
-    "dev-reports/feature/issue/342/work-plan.md"
-  ]
+  "target_coverage": 90
 }

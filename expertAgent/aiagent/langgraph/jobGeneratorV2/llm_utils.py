@@ -1,11 +1,13 @@
 """LLM utilities for Job Generator V2.
 
-This module provides LLM invocation utilities that don't depend on langchain.
-During Phase E integration, these will be connected to the actual LLM services.
+This module provides LLM invocation utilities for structured LLM calls.
+Supports multiple LLM providers (Anthropic, OpenAI, Google) with automatic
+API key retrieval from MyVault.
 
-Issue #342: These utilities support the new architecture.
-Issue #342 fix: Added markdown JSON fallback parser for Gemini models.
-Issue #342 V2: Added get_callbacks_from_context for Langfuse integration.
+Features:
+- Structured output with Pydantic model validation
+- Markdown JSON/YAML fallback parser for Gemini models
+- Langfuse callback integration for observability
 """
 
 from __future__ import annotations
@@ -14,12 +16,19 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 if TYPE_CHECKING:
+    from langchain_anthropic import ChatAnthropic
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_openai import ChatOpenAI
+
     from .context import ExecutionContext
+
+    # Type alias for LLM clients
+    LLMClient = Union[ChatAnthropic, ChatGoogleGenerativeAI, ChatOpenAI]
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +58,6 @@ class StructuredCallResult(Generic[TModel]):
     trace_id: str | None = None
 
 
-# ----- Callbacks Helper -----
-# Issue #342 V2: Helper function to extract LangChain callbacks from ExecutionContext
-
-
 def get_callbacks_from_context(context: "ExecutionContext") -> list[Any]:
     """Extract LangChain callbacks from ExecutionContext.
 
@@ -75,48 +80,45 @@ def get_callbacks_from_context(context: "ExecutionContext") -> list[Any]:
     return []
 
 
-# ----- Markdown JSON Fallback Parser -----
-# Issue #342: Gemini models sometimes return JSON wrapped in markdown code blocks
-# instead of using native structured output. This fallback parser handles that case.
-
-
-def _extract_json_from_markdown(text: str) -> str:
-    """Extract JSON content from markdown code blocks.
+def _extract_content_from_markdown(text: str) -> tuple[str, str]:
+    """Extract content from markdown code blocks.
 
     Handles formats like:
     - ```json\n{...}\n```
+    - ```yaml\n...\n```
     - ```\n{...}\n```
-    - Raw JSON without code blocks
+    - Raw JSON/YAML without code blocks
 
     Args:
-        text: Raw text that may contain markdown-wrapped JSON
+        text: Raw text that may contain markdown-wrapped content
 
     Returns:
-        Extracted JSON string
+        Tuple of (extracted content, format hint: 'json', 'yaml', or 'unknown')
     """
     if not text:
-        return ""
+        return "", "unknown"
 
-    # Pattern to match ```json ... ``` or ``` ... ```
-    pattern = r"```(?:json)?\s*([\s\S]*?)```"
+    # Pattern to match ```json ... ```, ```yaml ... ```, or ``` ... ```
+    pattern = r"```(json|yaml)?\s*([\s\S]*?)```"
     match = re.search(pattern, text)
     if match:
-        return match.group(1).strip()
+        format_hint = match.group(1) or "unknown"
+        content = match.group(2).strip()
+        return content, format_hint
 
-    # If no code block found, return as-is (might be raw JSON)
-    return text.strip()
+    # If no code block found, return as-is
+    return text.strip(), "unknown"
 
 
 def _parse_markdown_json_response(
     raw_content: str,
     response_model: type[TModel],
 ) -> TModel | None:
-    """Parse JSON from markdown-wrapped LLM response.
+    """Parse JSON/YAML from markdown-wrapped LLM response.
 
-    Issue #342: Gemini models with complex Pydantic schemas sometimes
-    fall back to returning JSON as text in markdown code blocks instead
-    of using the native structured output API. This function handles
-    that case by extracting and parsing the JSON.
+    Some LLM models (e.g., Gemini) with complex Pydantic schemas may return
+    JSON/YAML as text in markdown code blocks instead of using native
+    structured output. This function extracts and parses that content.
 
     Args:
         raw_content: Raw text content from LLM response
@@ -125,22 +127,40 @@ def _parse_markdown_json_response(
     Returns:
         Parsed model instance, or None if parsing fails
     """
+    import yaml
+
     try:
-        json_str = _extract_json_from_markdown(raw_content)
-        if not json_str:
+        content, format_hint = _extract_content_from_markdown(raw_content)
+        if not content:
             return None
 
-        data = json.loads(json_str)
+        data = None
+
+        # Try JSON first (faster and more precise)
+        if format_hint in ("json", "unknown"):
+            try:
+                data = json.loads(content)
+                logger.debug("Successfully parsed as JSON")
+            except json.JSONDecodeError:
+                pass
+
+        # Try YAML if JSON failed or format is yaml
+        if data is None and format_hint in ("yaml", "unknown"):
+            try:
+                data = yaml.safe_load(content)
+                logger.debug("Successfully parsed as YAML")
+            except yaml.YAMLError as e:
+                logger.debug("YAML parse error in markdown fallback: %s", e)
+
+        if data is None:
+            logger.debug("Failed to parse content as JSON or YAML")
+            return None
+
         return response_model.model_validate(data)
-    except json.JSONDecodeError as e:
-        logger.debug("JSON decode error in markdown fallback: %s", e)
-        return None
     except Exception as e:
         logger.debug("Validation error in markdown fallback: %s", e)
         return None
 
-
-# ----- Prompt Constants -----
 
 INTERFACE_SCHEMA_SYSTEM_PROMPT = """You are an expert API interface designer.
 Your task is to define JSON Schema specifications for task input/output interfaces.
@@ -219,13 +239,79 @@ Define dependencies between tasks where necessary.
 """
 
 
-def _build_task_breakdown_system_prompt() -> str:
-    """Build the system prompt for task breakdown.
+def _build_task_breakdown_system_prompt(
+    capabilities: list[dict[str, Any]] | None = None
+) -> str:
+    """Build the system prompt for task breakdown with API info.
+
+    Args:
+        capabilities: Optional list of capability dicts from YAML.
+                     If provided, API information is injected into prompt.
 
     Returns:
-        System prompt string
+        System prompt string with optional API section
     """
-    return TASK_BREAKDOWN_SYSTEM_PROMPT
+    from aiagent.langgraph.shared.capability_utils import format_capabilities_for_prompt
+
+    # Use shared formatting function
+    capabilities_section = format_capabilities_for_prompt(capabilities or [])
+
+    # Build recommended_apis instruction section
+    api_instruction = ""
+    if capabilities and capabilities_section:
+        api_instruction = """
+## recommended_apis の記述ルール
+
+**重要**: 各タスクには必ず `recommended_apis` を指定してください。
+
+1. タスク実行に必要なAPIを上記リストから選択
+2. 各APIには `api_name`, `endpoint`, `reason` を含める
+3. 1タスク1API を原則とする
+
+### 例
+```json
+{
+  "task_id": "task_001",
+  "name": "Google検索",
+  "recommended_apis": [
+    {
+      "api_name": "Google検索",
+      "endpoint": "/v1/utility/google_search",
+      "reason": "キーワードでWeb検索を実行"
+    }
+  ]
+}
+```
+"""
+
+    # Build base prompt
+    base_prompt = """You are an expert task decomposition assistant.
+Your task is to decompose user requirements into executable workflow tasks.
+
+## Principles
+1. Hierarchical decomposition - Break complex tasks into smaller units
+2. Clear dependencies - Define which tasks depend on others
+3. Specificity and executability - Each task should be specific and actionable
+4. Modularity and reusability - Design tasks that can be reused"""
+
+    # Add API selection principle if capabilities provided
+    if capabilities and capabilities_section:
+        base_prompt += "\n5. **API Selection** - Each task MUST specify recommended_apis from available APIs"
+
+    # Build output format section
+    output_format = """
+## Output Format
+Return a structured response with:
+- tasks: List of TaskBreakdownItem with task_id, name, description, dependencies, recommended_apis
+- overall_summary: Summary of the entire workflow
+- job_body_parameters: Parameters extracted from the requirements
+"""
+
+    # Combine all sections
+    if capabilities_section:
+        return f"{base_prompt}\n\n{capabilities_section}\n{api_instruction}\n{output_format}"
+    else:
+        return f"{base_prompt}\n{output_format}"
 
 
 def create_interface_schema_prompt(
@@ -338,14 +424,13 @@ async def invoke_structured_llm(
         actual_model = default_model
 
     try:
-        # Import secrets manager for myVault API key retrieval
         from core.secrets import secrets_manager
 
-        # Select appropriate LLM client based on model name
+        # Initialize LLM client based on model prefix
+        llm: Any  # Use Any to avoid complex union type issues
         if actual_model.startswith("gemini"):
             from langchain_google_genai import ChatGoogleGenerativeAI
 
-            # Retrieve API key from MyVault (project=None uses default_project)
             try:
                 google_api_key = secrets_manager.get_secret(
                     "GOOGLE_API_KEY", project=None
@@ -364,7 +449,6 @@ async def invoke_structured_llm(
         elif actual_model.startswith("claude"):
             from langchain_anthropic import ChatAnthropic
 
-            # Retrieve API key from MyVault
             try:
                 anthropic_api_key = secrets_manager.get_secret(
                     "ANTHROPIC_API_KEY", project=None
@@ -375,15 +459,14 @@ async def invoke_structured_llm(
                     f"Please ensure ANTHROPIC_API_KEY is set in MyVault default_project."
                 ) from e
 
-            llm = ChatAnthropic(
-                model=actual_model,
+            llm = ChatAnthropic(  # type: ignore[call-arg]
+                model_name=actual_model,
                 temperature=temperature,
-                api_key=anthropic_api_key,
+                api_key=SecretStr(anthropic_api_key),
             )
         elif actual_model.startswith("gpt"):
             from langchain_openai import ChatOpenAI
 
-            # Retrieve API key from MyVault
             try:
                 openai_api_key = secrets_manager.get_secret(
                     "OPENAI_API_KEY", project=None
@@ -397,10 +480,9 @@ async def invoke_structured_llm(
             llm = ChatOpenAI(
                 model=actual_model,
                 temperature=temperature,
-                api_key=openai_api_key,
+                api_key=SecretStr(openai_api_key),
             )
         else:
-            # Default to Anthropic for unknown models
             from langchain_anthropic import ChatAnthropic
 
             try:
@@ -413,10 +495,10 @@ async def invoke_structured_llm(
                     f"Please ensure ANTHROPIC_API_KEY is set in MyVault default_project."
                 ) from e
 
-            llm = ChatAnthropic(
-                model=actual_model,
+            llm = ChatAnthropic(  # type: ignore[call-arg]
+                model_name=actual_model,
                 temperature=temperature,
-                api_key=anthropic_api_key,
+                api_key=SecretStr(anthropic_api_key),
             )
 
         # Use include_raw=True to get both structured output and raw text
@@ -429,7 +511,7 @@ async def invoke_structured_llm(
             HumanMessage(content=usr_prompt),
         ]
 
-        # Issue #342 V2: Build config with callbacks for Langfuse tracing
+        # Build config with callbacks for Langfuse tracing
         invoke_config: dict[str, Any] = {}
         if callbacks:
             invoke_config["callbacks"] = callbacks
@@ -453,8 +535,7 @@ async def invoke_structured_llm(
 
         recovered_via_json = False
 
-        # Issue #342: If structured output failed but we have raw content,
-        # try markdown JSON fallback parser
+        # If structured output failed but we have raw content, try markdown fallback
         if result is None and raw_content:
             logger.info(
                 "Structured output returned None, attempting markdown JSON fallback "

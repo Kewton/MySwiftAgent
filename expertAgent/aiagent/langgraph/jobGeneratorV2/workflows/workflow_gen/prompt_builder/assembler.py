@@ -53,9 +53,16 @@ class WorkflowPrompt:
             self.api_constraints,
         ]
 
-        # Add few-shot examples
+        # Add few-shot examples with URL warning
         if self.examples:
             sections.append("\n## Examples\n")
+            # Issue #342 V2: Add warning to prevent LLM from copying example URLs
+            sections.append(
+                "⚠️ **CRITICAL**: The examples below use PLACEHOLDER URLs.\n"
+                "⚠️ **DO NOT** copy URLs from these examples.\n"
+                "⚠️ **ALWAYS** use the EXACT URLs from the "
+                "'API Endpoint Mappings' section above.\n"
+            )
             for i, example in enumerate(self.examples, 1):
                 sections.append(f"### Example {i}: {example.name}")
                 sections.append(f"Description: {example.description}")

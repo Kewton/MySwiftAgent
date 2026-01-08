@@ -2,14 +2,46 @@
 
 This module provides prompts and schemas for defining input/output interfaces
 for each task in JSON Schema format, compatible with jobqueue InterfaceMaster.
+
+Issue #338 Phase 8: Added derived_fields field_validator for graceful degradation.
 """
 
 import json
+import logging
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.services.prompt_loader import PromptLoader
+
+logger = logging.getLogger(__name__)
+
+# Issue #338 Phase 8: Counter for graceful degradation metrics
+# This is used for Langfuse tracking of derived_fields validation issues
+_derived_fields_degradation_count = 0
+
+
+def get_derived_fields_degradation_count() -> int:
+    """Get the count of derived_fields graceful degradation occurrences.
+
+    Issue #338 Phase 8: This function returns the number of times
+    derived_fields validation failed and graceful degradation was applied.
+    Used for Langfuse metrics tracking.
+
+    Returns:
+        Number of graceful degradation occurrences since module load.
+    """
+    return _derived_fields_degradation_count
+
+
+def reset_derived_fields_degradation_count() -> None:
+    """Reset the derived_fields degradation counter.
+
+    Issue #338 Phase 8: This function resets the counter to zero.
+    Useful for testing purposes.
+    """
+    global _derived_fields_degradation_count
+    _derived_fields_degradation_count = 0
 
 
 class DerivedFieldDefinition(BaseModel):
@@ -95,6 +127,62 @@ class InterfaceSchemaDefinition(BaseModel):
             raise ValueError(
                 f"Expected dict or JSON string, got {type(value).__name__}"
             )
+
+    @field_validator("derived_fields", mode="before")
+    @classmethod
+    def parse_derived_fields(cls, value: Any) -> dict[str, Any]:
+        """Parse derived_fields with graceful degradation.
+
+        Issue #338 Phase 8: If the LLM outputs a string instead of dict
+        (common error when prompt guidance is missing), return empty dict
+        to allow the workflow to continue.
+
+        This implements the graceful degradation pattern - the workflow
+        continues without derived_fields functionality rather than crashing.
+
+        Args:
+            value: Input value (should be dict, but may be str or other)
+
+        Returns:
+            Parsed dictionary (empty dict for invalid inputs)
+
+        Note:
+            - Valid dict: passed through unchanged
+            - None: converted to empty dict
+            - String: logged warning, converted to empty dict
+            - Other types: logged warning, converted to empty dict
+        """
+        global _derived_fields_degradation_count
+
+        if value is None:
+            return {}
+
+        if isinstance(value, dict):
+            return value
+
+        if isinstance(value, str):
+            _derived_fields_degradation_count += 1
+            preview = value[:50] if len(value) > 50 else value
+            logger.warning(
+                "Issue #338: derived_fields received as string (%s...), "
+                "using empty dict for graceful degradation. "
+                "LLM should output dict format: "
+                "{'field_name': {'template': '...', 'type': 'string'}}. "
+                "[degradation_count=%d]",
+                preview,
+                _derived_fields_degradation_count,
+            )
+            return {}
+
+        # Handle other unexpected types (list, int, etc.)
+        _derived_fields_degradation_count += 1
+        logger.warning(
+            "Issue #338: derived_fields has unexpected type %s, "
+            "using empty dict for graceful degradation. [degradation_count=%d]",
+            type(value).__name__,
+            _derived_fields_degradation_count,
+        )
+        return {}
 
 
 class InterfaceSchemaResponse(BaseModel):
@@ -362,6 +450,46 @@ if not INTERFACE_SCHEMA_SYSTEM_PROMPT:
 - タスクの目的を明確に表現: `{service}_{action}_interface`
 - 例: `gmail_search_interface`, `pdf_generate_interface`, `drive_upload_interface`
 
+## derived_fields（派生フィールド）の定義 - Issue #337
+
+downstream タスクが直接使用できる事前フォーマット済みデータを定義します。
+このフィールドは **オプション** です。必要な場合のみ定義してください。
+
+### 形式（重要: 文字列ではなくオブジェクト形式で指定）
+
+✅ **正しい形式**:
+```json
+{
+  "derived_fields": {
+    "email_subject": {
+      "template": "検索結果: {query}",
+      "type": "string",
+      "description": "メール件名"
+    },
+    "summary_text": {
+      "template": "{count}件のメールが見つかりました",
+      "type": "string"
+    }
+  }
+}
+```
+
+❌ **禁止形式（バリデーションエラーになります）**:
+```json
+{
+  "derived_fields": "email_subject -> task_002.input.subject"
+}
+```
+
+### derived_fields が不要な場合
+
+derived_fields を使用しない場合は、空オブジェクトを指定するか、フィールド自体を省略してください：
+```json
+{
+  "derived_fields": {}
+}
+```
+
 ## 出力形式
 
 JSON形式で以下の構造で出力してください：
@@ -374,7 +502,8 @@ JSON形式で以下の構造で出力してください：
       "interface_name": "gmail_search_interface",
       "description": "Gmail検索タスクのインターフェース",
       "input_schema": { ... },
-      "output_schema": { ... }
+      "output_schema": { ... },
+      "derived_fields": {}
     }
   ]
 }

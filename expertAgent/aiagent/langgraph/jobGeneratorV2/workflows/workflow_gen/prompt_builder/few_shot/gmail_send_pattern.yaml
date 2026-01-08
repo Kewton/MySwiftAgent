@@ -1,7 +1,8 @@
 # Few-shot example: Gmail Send pattern
 # Email sending workflow with input mapping
+# NOTE: This URL is ONLY for gmail_send API. For other APIs, use API Mappings section.
 name: "gmail_send_pattern"
-description: "Gmail send pattern with recipient, subject, and body mapping"
+description: "Gmail send pattern - URL is gmail/send ONLY. For other APIs, use API Mappings."
 applicable_apis:
   - "gmail_send"
   - "gmail_send_email"

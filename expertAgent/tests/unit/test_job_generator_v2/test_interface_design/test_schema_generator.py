@@ -3,15 +3,16 @@
 Issue #342 Phase C.1: Tests for JSON Schema generation from task definitions.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     Phase,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestSchemaGeneratorSubWorkflowExists:
@@ -123,10 +124,10 @@ class TestSchemaGeneratorSubWorkflowGenerate:
         self, mock_context: ExecutionContext
     ):
         """generate() should raise error for empty task list."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.schema_generator import (
             SchemaGeneratorSubWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
 
         generator = SchemaGeneratorSubWorkflow()
 

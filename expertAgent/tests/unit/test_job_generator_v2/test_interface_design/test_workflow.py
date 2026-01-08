@@ -3,10 +3,11 @@
 Issue #342 Phase C.4: Tests for main workflow integration.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
 
+import pytest
+
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     CompatibilityReport,
     EnrichmentReport,
@@ -17,7 +18,6 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     PhaseStatus,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestInterfaceDesignWorkflowExists:
@@ -57,10 +57,10 @@ class TestInterfaceDesignWorkflowProtocol:
 
     def test_workflow_protocol_compatibility(self):
         """InterfaceDesignWorkflow should be compatible with WorkflowProtocol."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowProtocol
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow import (
             InterfaceDesignWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowProtocol
 
         workflow = InterfaceDesignWorkflow()
 
@@ -69,10 +69,10 @@ class TestInterfaceDesignWorkflowProtocol:
 
     def test_get_retry_policy_returns_retry_policy(self):
         """get_retry_policy should return RetryPolicy instance."""
+        from aiagent.langgraph.jobGeneratorV2.protocols import RetryPolicy
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow import (
             InterfaceDesignWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import RetryPolicy
 
         workflow = InterfaceDesignWorkflow()
         policy = workflow.get_retry_policy()

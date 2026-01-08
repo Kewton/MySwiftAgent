@@ -3,8 +3,6 @@
 Tests for WorkflowProtocol and related protocols.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 
 class TestWorkflowProtocol:
@@ -18,8 +16,8 @@ class TestWorkflowProtocol:
 
     def test_workflow_protocol_has_execute_method(self):
         """WorkflowProtocol should define execute method."""
+
         from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowProtocol
-        import inspect
 
         # Get all abstract methods or methods defined in the protocol
         assert hasattr(WorkflowProtocol, "execute")
@@ -32,10 +30,8 @@ class TestWorkflowProtocol:
 
     def test_workflow_protocol_can_be_implemented(self):
         """WorkflowProtocol should be implementable by a class."""
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowProtocol
         from aiagent.langgraph.jobGeneratorV2.types import (
             PhaseStatus,
-            TaskBreakdownInput,
             TaskBreakdownOutput,
         )
 
@@ -152,9 +148,10 @@ class TestPhaseExecution:
 
     def test_phase_execution_creation(self):
         """PhaseExecution should track phase execution details."""
+        from datetime import datetime, timedelta
+
         from aiagent.langgraph.jobGeneratorV2.protocols import PhaseExecution
         from aiagent.langgraph.jobGeneratorV2.types import Phase, PhaseStatus
-        from datetime import datetime, timedelta
 
         execution = PhaseExecution(
             phase=Phase.TASK_BREAKDOWN,

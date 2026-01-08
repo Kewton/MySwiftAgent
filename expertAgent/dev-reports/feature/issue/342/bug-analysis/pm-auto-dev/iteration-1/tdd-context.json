@@ -1,0 +1,255 @@
+{
+  "issue_number": 342,
+  "issue_title": "V2 Job Generator アーキテクチャバグ修正（12件）",
+  "acceptance_criteria": [
+    "Bug #1: TaskIdMapping で interface lookup が成功する",
+    "Bug #5: 複数タスク時に正しい task_master_id が使用される",
+    "Bug #3: サイレントスキップではなくエラー集約される",
+    "Bug #6: スキーマ数不一致時に閾値ベース判定される",
+    "Bug #9: 非同期タスクの例外がログに記録される",
+    "Bug #11: テンプレートフォールバック時も interface 情報が使用される",
+    "Bug #2, #7, #10, #12: 個別修正完了",
+    "Bug #4, #8: ドキュメント・ログ改善完了"
+  ],
+  "implementation_tasks": [
+    "Task 0.1: RegistrationOutput マッピング追加（Bug #5）",
+    "Task 0.2: TaskIdMapping クラス導入（Bug #1）",
+    "Task 1.1: テンプレート生成 interface 使用（Bug #11）",
+    "Task 1.2: _build_task_description_from_chain 修正（Bug #12）",
+    "Task 2.1: サイレントスキップのエラー集約（Bug #3）",
+    "Task 2.2: スキーマ数不一致の閾値ベース判定（Bug #6）",
+    "Task 2.3: 非同期タスク管理追加（Bug #9）",
+    "Task 3.1: strict=True に変更（Bug #2）",
+    "Task 3.2: Interface Chaining Null 参照修正（Bug #7）",
+    "Task 3.3: グローバルカウンターのスレッドセーフ化（Bug #10）",
+    "Task 3.4: ドキュメント・ログ改善（Bug #4, #8）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "0.1",
+      "description": "RegistrationOutput マッピング追加（Bug #5）",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+        "aiagent/langgraph/jobGeneratorV2/types.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "0.2",
+      "description": "TaskIdMapping クラス導入（Bug #1）",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/types.py",
+        "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+        "aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+      ],
+      "dependencies": ["0.1"]
+    },
+    {
+      "task_id": "1.1",
+      "description": "テンプレート生成 interface 使用（Bug #11）",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+      ],
+      "dependencies": ["0.2"]
+    },
+    {
+      "task_id": "1.2",
+      "description": "_build_task_description_from_chain 修正（Bug #12）",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+      ],
+      "dependencies": ["0.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "サイレントスキップのエラー集約（Bug #3）",
+      "estimated_hours": 1.0,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+        "aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "スキーマ数不一致の閾値ベース判定（Bug #6）",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.3",
+      "description": "非同期タスク管理追加（Bug #9）",
+      "estimated_hours": 1.0,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/progress.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.1",
+      "description": "strict=True に変更（Bug #2）",
+      "estimated_hours": 0.25,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.2",
+      "description": "Interface Chaining Null 参照修正（Bug #7）",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.3",
+      "description": "グローバルカウンターのスレッドセーフ化（Bug #10）",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/types.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.4",
+      "description": "ドキュメント・ログ改善（Bug #4, #8）",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "aiagent/langgraph/jobGeneratorV2/types.py",
+        "aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "4.1",
+      "description": "TaskIdMapping 単体テスト",
+      "estimated_hours": 1.0,
+      "deliverables": [
+        "tests/unit/test_job_generator_v2/test_task_id_mapping.py"
+      ],
+      "dependencies": ["0.1", "0.2"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "エラー閾値単体テスト",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "tests/unit/test_job_generator_v2/test_error_thresholds.py"
+      ],
+      "dependencies": ["2.1", "2.2"]
+    },
+    {
+      "task_id": "4.3",
+      "description": "非同期タスク管理単体テスト",
+      "estimated_hours": 0.5,
+      "deliverables": [
+        "tests/unit/test_job_generator_v2/test_async_task_management.py"
+      ],
+      "dependencies": ["2.3"]
+    },
+    {
+      "task_id": "4.4",
+      "description": "結合テスト（V2 E2E バグ修正）",
+      "estimated_hours": 1.5,
+      "deliverables": [
+        "tests/integration/test_v2_e2e_bug_fixes.py"
+      ],
+      "dependencies": ["0.1", "0.2", "1.1", "1.2", "2.1", "2.2", "2.3", "3.1", "3.2", "3.3", "3.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "aiagent/langgraph/jobGeneratorV2/types.py",
+    "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "aiagent/langgraph/jobGeneratorV2/progress.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
+    "tests/unit/test_job_generator_v2/test_task_id_mapping.py",
+    "tests/unit/test_job_generator_v2/test_error_thresholds.py",
+    "tests/unit/test_job_generator_v2/test_async_task_management.py",
+    "tests/integration/test_v2_e2e_bug_fixes.py",
+    "tests/acceptance/test_issue_342_bug_fixes_acceptance.py"
+  ],
+  "definition_of_done": [
+    "Bug #1-12 全ての修正が完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全シナリオパス",
+    "L3受入テスト全パス",
+    "静的解析エラー0件（ruff, mypy）",
+    "デッドコード0件（vulture）",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "bug_details": {
+    "bug_1": {
+      "title": "task_id と task_master_id の混同",
+      "priority": "P0-Critical",
+      "root_cause": "interface lookup 時に task_id を使用すべきところで task_master_id を使用"
+    },
+    "bug_3": {
+      "title": "サイレントスキップ",
+      "priority": "P0-Critical",
+      "root_cause": "continue で処理をスキップ、スキップされたことをユーザーに通知しない"
+    },
+    "bug_5": {
+      "title": "RegistrationOutput マッピング不足",
+      "priority": "P0-Critical",
+      "root_cause": "RegistrationOutput に task_id_to_master_id マッピングが存在しない"
+    },
+    "bug_6": {
+      "title": "スキーマ数不一致判定",
+      "priority": "P1-High",
+      "root_cause": "schema_count != task_count で単純比較、diff=1 でもエラー扱い"
+    },
+    "bug_9": {
+      "title": "非同期タスクの例外未処理",
+      "priority": "P1-High",
+      "root_cause": "asyncio.create_task のハンドルを保存せず、例外が消える"
+    },
+    "bug_11": {
+      "title": "テンプレート生成のinterface不使用",
+      "priority": "P1-High",
+      "root_cause": "テンプレートフォールバック時に interface 情報を参照しない"
+    },
+    "bug_2": {
+      "title": "strict=False による暗黙無視",
+      "priority": "P2-Medium",
+      "root_cause": "pydantic モデルで strict=False、予期しないフィールドを黙って無視"
+    },
+    "bug_7": {
+      "title": "Interface Chaining Null参照",
+      "priority": "P2-Medium",
+      "root_cause": "チェーン取得時に None チェックなし"
+    },
+    "bug_10": {
+      "title": "グローバルカウンター非スレッドセーフ",
+      "priority": "P2-Medium",
+      "root_cause": "グローバル変数でカウンター管理、並行実行で競合"
+    },
+    "bug_12": {
+      "title": "_build_task_description同様のID混同",
+      "priority": "P1-High",
+      "root_cause": "Bug #1 と同様のパターン"
+    },
+    "bug_4": {
+      "title": "task_id_to_master_id 未使用の警告",
+      "priority": "P3-Low",
+      "root_cause": "フィールドが定義されているが使用されていない"
+    },
+    "bug_8": {
+      "title": "Fire-and-Forget 進捗報告",
+      "priority": "P3-Low",
+      "root_cause": "進捗報告を非同期で送信、失敗しても気づかない"
+    }
+  }
+}

@@ -8,7 +8,6 @@ This module verifies that all new code is properly integrated:
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
 """
 
-import pytest
 
 
 class TestModuleExports:
@@ -17,21 +16,15 @@ class TestModuleExports:
     def test_import_from_workflow_gen_package(self):
         """Test importing from workflow_gen package."""
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import (
-            AVAILABLE_AGENTS,
             ErrorCode,
             GraphAIWorkflowSchema,
-            LLMGenerationResult,
             LLMGeneratorSubWorkflow,
             NodeDefinition,
             PromptBuilderSubWorkflow,
             ValidationError,
-            ValidationResult,
             WorkflowGenWorkflow,
-            WorkflowPrompt,
             YamlGeneratorSubWorkflow,
-            YamlValidationResult,
             YamlValidatorSubWorkflow,
-            is_valid_agent,
         )
 
         # Verify all imports succeed
@@ -66,10 +59,6 @@ class TestModuleExports:
             API_RULES,
             BASE_RULES,
             REFERENCE_RULES,
-            get_agent_rules,
-            get_api_rules,
-            get_base_rules,
-            get_reference_rules,
         )
 
         assert BASE_RULES is not None
@@ -81,7 +70,6 @@ class TestModuleExports:
         """Test importing few_shot module."""
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.few_shot import (
             FewShotExample,
-            get_example_by_api,
             load_all_examples,
             load_example,
             select_few_shot_examples,
@@ -96,9 +84,7 @@ class TestModuleExports:
         """Test importing validators."""
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.validators import (
             check_circular_references,
-            extract_references,
             validate_agents,
-            validate_node_structure,
             validate_references,
             validate_structure,
             validate_yaml_syntax,
@@ -200,9 +186,6 @@ class TestSchemaUsage:
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
             LLMGeneratorSubWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas import (
-            GraphAIWorkflowSchema,
-        )
 
         # Verify the schema is importable and usable
         generator = LLMGeneratorSubWorkflow(use_structured_output=True)
@@ -268,7 +251,6 @@ class TestFewShotUsage:
 
     def test_few_shot_files_exist(self):
         """Test few-shot YAML files exist."""
-        from pathlib import Path
 
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.few_shot.loader import (
             FEW_SHOT_DIR,

@@ -1,0 +1,62 @@
+{
+  "issue_number": 342,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 75.23,
+      "unit_tests_passed": 565,
+      "static_analysis_errors": 0,
+      "iterations_used": 2
+    },
+    "acceptance": {
+      "status": "passed",
+      "total_tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "duration_seconds": 471.04
+    },
+    "refactor": {
+      "status": "success",
+      "coverage_maintained": true
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "work_plan_file": "dev-reports/feature/issue/342/bug-analysis/work-plan-bug-fixes.md",
+    "planned_bugs": [
+      {"bug_id": "#1", "description": "task_id vs task_master_id confusion", "priority": "P0", "status": "completed"},
+      {"bug_id": "#3", "description": "Silent skip without error aggregation", "priority": "P0", "status": "completed"},
+      {"bug_id": "#5", "description": "RegistrationOutput lacks mapping", "priority": "P0", "status": "completed"},
+      {"bug_id": "#6", "description": "Schema count mismatch threshold", "priority": "P1", "status": "completed"},
+      {"bug_id": "#9", "description": "Async task exceptions not handled", "priority": "P1", "status": "completed"},
+      {"bug_id": "#11", "description": "Template doesn't use interface info", "priority": "P1", "status": "completed"}
+    ],
+    "features_implemented": 12,
+    "dead_code_detected": 0,
+    "definition_of_done_status": [
+      {"criterion": "全バグ修正完了", "verified": true},
+      {"criterion": "単体テストカバレッジ75%以上", "verified": true},
+      {"criterion": "静的解析エラーゼロ", "verified": true},
+      {"criterion": "受入テスト全件合格", "verified": true},
+      {"criterion": "デッドコードゼロ", "verified": true}
+    ]
+  },
+  "files_created": [
+    "tests/unit/test_job_generator_v2/test_task_id_mapping.py",
+    "tests/unit/test_job_generator_v2/test_error_thresholds.py",
+    "tests/unit/test_job_generator_v2/test_async_task_management.py",
+    "tests/acceptance/test_issue_342_bug_fixes_acceptance.py"
+  ],
+  "files_modified": [
+    "aiagent/langgraph/jobGeneratorV2/types.py",
+    "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "aiagent/langgraph/jobGeneratorV2/progress.py",
+    "aiagent/langgraph/jobGeneratorV2/context.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/workflow.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/registration/workflow.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py"
+  ]
+}

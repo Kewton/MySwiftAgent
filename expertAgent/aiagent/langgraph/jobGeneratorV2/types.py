@@ -9,11 +9,11 @@ This module defines all data types used across the job generation workflow:
 Issue #342: These types support the new architecture with proper retry management.
 """
 
+import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import json
-import logging
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -157,6 +157,8 @@ class Capability:
         name: Capability name
         description: What the capability does
         endpoint: API endpoint
+        use_cases: List of use case descriptions (Issue #342)
+        method: HTTP method (default: POST) (Issue #342)
         input_schema: Expected input JSON Schema
         output_schema: Expected output JSON Schema
     """
@@ -164,6 +166,8 @@ class Capability:
     name: str
     description: str
     endpoint: str
+    use_cases: list[str] = field(default_factory=list)
+    method: str = "POST"
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)
 
@@ -260,9 +264,12 @@ class DerivedFieldDefinition(BaseModel):
             description: "Email subject line"
             source_mapping:
                 query: "source.user_input.query"
+
+    Note: extra="ignore" allows LLM to generate additional fields without
+    causing validation errors (Issue #342 fix for Gemini structured output).
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     template: str = Field(
         description="Template string. Use {field_name} to reference source data"
@@ -282,9 +289,12 @@ class InterfaceSchemaDefinition(BaseModel):
 
     This is the Pydantic version of InterfaceSchema, used for parsing LLM
     responses with validation.
+
+    Note: extra="ignore" allows LLM to generate additional fields without
+    causing validation errors (Issue #342 fix for Gemini structured output).
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     task_id: str = Field(description="Task ID to define interface for")
     interface_name: str = Field(
@@ -377,9 +387,12 @@ class JobBodyParameter(BaseModel):
 
     Issue #321: Parameters extracted from user requirements to be included
     in Job body (e.g., email addresses, search queries).
+
+    Note: extra="ignore" allows LLM to generate additional fields without
+    causing validation errors (Issue #342 fix for Gemini structured output).
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     name: str = Field(description="Parameter name (snake_case)")
     value: str = Field(description="Parameter value from requirements")
@@ -387,9 +400,13 @@ class JobBodyParameter(BaseModel):
 
 
 class RecommendedAPI(BaseModel):
-    """Recommended API for a task."""
+    """Recommended API for a task.
 
-    model_config = ConfigDict(extra="forbid")
+    Note: extra="ignore" allows LLM to generate additional fields without
+    causing validation errors (Issue #342 fix for Gemini structured output).
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     api_name: str = Field(description="API name (e.g., 'fetchAgent')")
     endpoint: str | None = Field(
@@ -403,9 +420,12 @@ class TaskBreakdownItem(BaseModel):
     """Single task in the breakdown.
 
     This Pydantic model represents a task as returned by the LLM.
+
+    Note: extra="ignore" allows LLM to generate additional fields without
+    causing validation errors (Issue #342 fix for Gemini structured output).
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     task_id: str = Field(description="Unique task identifier (e.g., 'task_001')")
     name: str = Field(description="Short task name (e.g., 'Search Gmail')")
@@ -480,6 +500,8 @@ class JobGenerationResult:
         workflow_yaml: Generated GraphAI YAML workflow
         error: Error message if failed
         relaxation_suggestions: Suggestions if requirements need relaxation
+        tasks: List of task definitions (Issue #342: V2 adapter task_breakdown support)
+        interfaces: Interface schemas keyed by task_id (Issue #342: V2 adapter support)
     """
 
     success: bool
@@ -489,6 +511,9 @@ class JobGenerationResult:
     workflow_yaml: str | None = None
     error: str | None = None
     relaxation_suggestions: list[RelaxationSuggestion] = field(default_factory=list)
+    # Issue #342: Add task/interface info for adapter conversion
+    tasks: list[TaskDefinition] = field(default_factory=list)
+    interfaces: dict[str, InterfaceSchema] = field(default_factory=dict)
 
 
 # ----- Phase Input Types -----
@@ -545,11 +570,14 @@ class WorkflowGenInput:
         task_master_ids: List of registered TaskMaster IDs
         job_master_id: Registered JobMaster ID
         interfaces: Interface schemas
+        task_id_mapping: Optional TaskIdMapping for correct interface lookup
+            (Issue #342 Bug #1: Required for proper task_id -> task_master_id mapping)
     """
 
     task_master_ids: list[str]
     job_master_id: str
     interfaces: dict[str, InterfaceSchema]
+    task_id_mapping: "TaskIdMapping | None" = None
 
 
 # ----- Phase Output Types -----
@@ -599,6 +627,8 @@ class RegistrationOutput:
         task_master_ids: List of registered TaskMaster IDs
         interface_master_ids: List of registered InterfaceMaster IDs
         job_id: Registered Job ID
+        task_id_to_master_id: Mapping from logical task_id to task_master_id
+            (Issue #342 Bug #5: Required for correct interface lookup)
     """
 
     status: PhaseStatus
@@ -606,18 +636,218 @@ class RegistrationOutput:
     task_master_ids: list[str] = field(default_factory=list)
     interface_master_ids: list[str] = field(default_factory=list)
     job_id: str | None = None
+    task_id_to_master_id: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class TaskIdMapping:
+    """Mapping between logical task_ids and task_master_ids.
+
+    Issue #342 Bug #1: This class solves the task_id vs task_master_id confusion.
+    Interfaces are keyed by logical task_id (e.g., 'task_001'), but workflows
+    use task_master_id (e.g., 'tm_xxx'). This mapping enables correct lookup.
+
+    Attributes:
+        logical_to_master: Maps logical task_id -> task_master_id
+        master_to_logical: Maps task_master_id -> logical task_id
+
+    Example:
+        mapping = TaskIdMapping.from_registration(registration_output)
+        # Given task_master_id = 'tm_001', find the interface
+        logical_id = mapping.get_logical_id('tm_001')  # Returns 'task_001'
+        interface = interfaces.get(logical_id)  # Correct interface lookup
+    """
+
+    logical_to_master: dict[str, str] = field(default_factory=dict)
+    master_to_logical: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_registration(cls, registration_output: "RegistrationOutput") -> "TaskIdMapping":
+        """Create TaskIdMapping from RegistrationOutput.
+
+        Args:
+            registration_output: Output from registration workflow with
+                task_id_to_master_id mapping
+
+        Returns:
+            TaskIdMapping with bidirectional mappings
+        """
+        mapping = registration_output.task_id_to_master_id
+        return cls(
+            logical_to_master=dict(mapping),
+            master_to_logical={v: k for k, v in mapping.items()},
+        )
+
+    def get_master_id(self, logical_id: str) -> str | None:
+        """Get task_master_id for a logical task_id.
+
+        Args:
+            logical_id: Logical task ID (e.g., 'task_001')
+
+        Returns:
+            Task master ID or None if not found
+        """
+        return self.logical_to_master.get(logical_id)
+
+    def get_logical_id(self, master_id: str) -> str | None:
+        """Get logical task_id for a task_master_id.
+
+        Args:
+            master_id: Task master ID (e.g., 'tm_001')
+
+        Returns:
+            Logical task ID or None if not found
+        """
+        return self.master_to_logical.get(master_id)
 
 
 @dataclass
 class WorkflowGenOutput:
-    """Output from WorkflowGenWorkflow.
+    """Output from WorkflowGenWorkflow (single task).
+
+    Issue #342 V2 Fix: Now represents a single task's workflow output.
 
     Attributes:
         status: Phase status
-        workflow_yaml: Generated GraphAI YAML
+        task_id: Task ID this workflow is for
+        workflow_yaml: Generated GraphAI YAML for this task
         test_result: Result of workflow test execution
     """
 
     status: PhaseStatus
+    task_id: str = ""
     workflow_yaml: str | None = None
     test_result: dict[str, Any] | None = None
+
+
+@dataclass
+class WorkflowGenPhaseOutput:
+    """Output from WORKFLOW_GEN phase (all tasks).
+
+    Issue #342 V2 Fix: Contains workflow outputs for ALL tasks.
+
+    Attributes:
+        status: Overall phase status
+        task_workflows: Dict mapping task_id to WorkflowGenOutput
+    """
+
+    status: PhaseStatus
+    task_workflows: dict[str, WorkflowGenOutput] = field(default_factory=dict)
+
+
+# ----- Skip Tracking Types (Issue #342 Bug #3) -----
+
+
+@dataclass
+class SkipInfo:
+    """Information about a skipped task.
+
+    Issue #342 Bug #3: Used to track when tasks are silently skipped instead
+    of just using 'continue' and losing the skip information.
+
+    Attributes:
+        task_id: ID of the skipped task
+        reason: Why the task was skipped
+        phase: Phase where the skip occurred
+    """
+
+    task_id: str
+    reason: str
+    phase: str
+
+
+@dataclass
+class SkipAggregator:
+    """Aggregator for tracking skipped tasks.
+
+    Issue #342 Bug #3: Collects all skipped tasks and provides methods to:
+    - Track total skip count
+    - Check if all tasks were skipped (error condition)
+    - Generate summary for logging/error messages
+
+    Example:
+        aggregator = SkipAggregator()
+        for task in tasks:
+            if not task.interface:
+                aggregator.add_skip(SkipInfo(
+                    task_id=task.id,
+                    reason="No interface found",
+                    phase="registration",
+                ))
+                continue
+            # process task...
+
+        if aggregator.all_skipped(len(tasks)):
+            raise WorkflowError(aggregator.get_summary())
+    """
+
+    skips: list[SkipInfo] = field(default_factory=list)
+
+    @property
+    def skip_count(self) -> int:
+        """Get the number of skipped tasks."""
+        return len(self.skips)
+
+    def add_skip(self, skip_info: SkipInfo) -> None:
+        """Add a skip record.
+
+        Args:
+            skip_info: Information about the skipped task
+        """
+        self.skips.append(skip_info)
+        logger.warning(
+            "Task %s skipped in phase %s: %s",
+            skip_info.task_id,
+            skip_info.phase,
+            skip_info.reason,
+        )
+
+    def all_skipped(self, total_tasks: int) -> bool:
+        """Check if all tasks were skipped.
+
+        Args:
+            total_tasks: Total number of tasks in the workflow
+
+        Returns:
+            True if skip_count >= total_tasks (all skipped)
+        """
+        return self.skip_count >= total_tasks
+
+    def get_summary(self) -> str:
+        """Get a summary of all skipped tasks for error messages.
+
+        Returns:
+            Human-readable summary of all skips
+        """
+        if not self.skips:
+            return "No tasks were skipped."
+
+        lines = [f"Skipped {self.skip_count} task(s):"]
+        for skip in self.skips:
+            lines.append(f"  - {skip.task_id} ({skip.phase}): {skip.reason}")
+
+        return "\n".join(lines)
+
+
+# ----- Schema Count Mismatch Evaluation (Issue #342 Bug #6) -----
+
+
+@dataclass
+class SchemaCountMismatchResult:
+    """Result of schema count mismatch evaluation.
+
+    Issue #342 Bug #6: Provides threshold-based judgment instead of strict equality.
+
+    Attributes:
+        is_acceptable: Whether the mismatch is acceptable (can continue)
+        severity: Severity level ('none', 'warning', 'error')
+        message: Human-readable message about the mismatch
+        expected_count: Expected number of schemas
+        actual_count: Actual number of schemas generated
+    """
+
+    is_acceptable: bool
+    severity: str  # 'none', 'warning', 'error'
+    message: str = ""
+    expected_count: int = 0
+    actual_count: int = 0

@@ -1,0 +1,119 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "issue_number": 342,
+  "service_health": {
+    "expertAgent": {
+      "status": "healthy",
+      "url": "http://localhost:8004",
+      "response": {"status": "healthy", "service": "expertAgent", "valkey": {"enabled": true, "connected": true}}
+    },
+    "myVault": {
+      "status": "healthy",
+      "url": "http://localhost:8003",
+      "response": {"status": "healthy", "service": "myVault"}
+    }
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_342_api_injection_acceptance.py",
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 30.42,
+    "exit_code": 0,
+    "tests": [
+      {
+        "name": "test_scenario_1_v2_task_breakdown_includes_api_info",
+        "status": "passed",
+        "description": "V2 task breakdown includes API info - verifies system prompt contains available API list"
+      },
+      {
+        "name": "test_scenario_2_all_tasks_have_recommended_apis",
+        "status": "passed",
+        "description": "All tasks have recommended_apis set - verifies 100% API info coverage"
+      },
+      {
+        "name": "test_scenario_3_shared_capability_utils_integration",
+        "status": "passed",
+        "description": "shared/capability_utils.py is usable from V1/V2 - verifies common utility module"
+      },
+      {
+        "name": "test_scenario_4_llm_generates_recommended_apis",
+        "status": "passed",
+        "description": "LLM generates recommended_apis correctly - verifies 80%+ generation success rate"
+      }
+    ]
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "l3_test_plan_results": {
+    "source": "work-plan-api-injection.md",
+    "test_commands": [
+      {
+        "name": "Health check: expertAgent",
+        "command": "curl -sf http://localhost:8004/health",
+        "expected_status": 200,
+        "actual_status": 200,
+        "result": "passed"
+      },
+      {
+        "name": "Health check: myVault",
+        "command": "curl -sf http://localhost:8003/health",
+        "expected_status": 200,
+        "actual_status": 200,
+        "result": "passed"
+      },
+      {
+        "name": "V2 Job Generator API call",
+        "endpoint": "/v1/job-generator",
+        "method": "POST",
+        "verified_by": "test_scenario_1_v2_task_breakdown_includes_api_info",
+        "result": "passed"
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "recommended_apis 設定率: 100%（全タスクにAPI情報が設定される）",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_scenario_2_all_tasks_have_recommended_apis"
+    },
+    {
+      "criterion": "LLMベース生成成功率: 80%以上（テンプレートフォールバック20%以下）",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_scenario_4_llm_generates_recommended_apis"
+    },
+    {
+      "criterion": "システムプロンプトに利用可能なAPI一覧が含まれる",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_scenario_1_v2_task_breakdown_includes_api_info"
+    },
+    {
+      "criterion": "shared/capability_utils.py がV1/V2で共通利用可能",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_scenario_3_shared_capability_utils_integration"
+    }
+  ],
+  "e2e_verification": {
+    "performed": true,
+    "method": "api_call",
+    "actual_behavior_confirmed": true,
+    "api_endpoints_tested": [
+      "POST /v1/job-generator"
+    ]
+  },
+  "evidence_files": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/tests/acceptance/test_issue_342_api_injection_acceptance.py",
+    "/tmp/acceptance_pytest_output.log"
+  ],
+  "message": "All acceptance criteria verified successfully. L3 local acceptance test completed with 4/4 tests passed."
+}

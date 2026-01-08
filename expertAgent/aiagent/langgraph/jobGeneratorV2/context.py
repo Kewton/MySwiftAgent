@@ -46,9 +46,12 @@ class StorageContext:
 
     Attributes:
         jobqueue_client: Client for jobqueue API
+        task_id_mapping: TaskIdMapping for task_id <-> task_master_id lookup
+            (Issue #342 Bug #1: Required for correct interface lookup in workflow gen)
     """
 
     jobqueue_client: Any = None
+    task_id_mapping: Any = None  # TaskIdMapping, using Any to avoid circular import
 
 
 @dataclass

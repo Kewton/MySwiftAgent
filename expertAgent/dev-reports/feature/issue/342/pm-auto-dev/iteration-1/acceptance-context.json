@@ -1,0 +1,41 @@
+{
+  "issue_number": 342,
+  "feature_summary": "V2 タスク分割 API情報注入メカニズム実装",
+  "acceptance_criteria": [
+    "recommended_apis 設定率: 100%（全タスクにAPI情報が設定される）",
+    "LLMベース生成成功率: 80%以上（テンプレートフォールバック20%以下）",
+    "システムプロンプトに利用可能なAPI一覧が含まれる",
+    "shared/capability_utils.py がV1/V2で共通利用可能"
+  ],
+  "labels": ["feature", "agent-layer", "project: expertAgent"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan-api-injection.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系: V2 Job Generator API呼び出し",
+        "command": "curl -s -X POST http://localhost:8004/v1/jobs/generate -H 'Content-Type: application/json' -d '{\"project_id\": \"test-project\", \"requirement\": \"ユーザー認証機能を実装してください\", \"use_v2\": true}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_id", "tasks"]
+      },
+      {
+        "name": "V2タスクのrecommended_apis確認",
+        "command": "curl -s http://localhost:8004/v1/jobs/{job_id}/status",
+        "expected_status": 200,
+        "expected_response_contains": ["recommended_apis"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health || echo 'Langfuse not running (optional)'"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_342_api_injection_acceptance.py",
+  "playwright_test_file": null
+}

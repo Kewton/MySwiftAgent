@@ -1,0 +1,42 @@
+{
+  "issue_number": 342,
+  "feature_summary": "V2 Job Generator アーキテクチャバグ修正（12件）",
+  "acceptance_criteria": [
+    "Bug #1: TaskIdMapping で interface lookup が成功する",
+    "Bug #3: サイレントスキップではなくエラー集約される",
+    "Bug #5: 複数タスク時に正しい task_master_id が使用される",
+    "Bug #6: スキーマ数不一致時に閾値ベース判定される",
+    "Bug #9: 非同期タスクの例外がログに記録される",
+    "Bug #11: テンプレートフォールバック時も interface 情報が使用される"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan-bug-fixes.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系テスト - 複数タスクジョブ生成",
+        "command": "curl -s -X POST 'http://localhost:8004/aiagent-api/v1/job-generator' -H 'Content-Type: application/json' -d '{\"user_requirement\": \"Yahoo Financeから株価を取得して分析する\", \"max_retry\": 3}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_id"]
+      },
+      {
+        "name": "異常系テスト - 実現不可能な要件",
+        "command": "curl -s -X POST 'http://localhost:8004/aiagent-api/v1/job-generator' -H 'Content-Type: application/json' -d '{\"user_requirement\": \"明日の天気を100%正確に予測して地球全体の気象を制御する\", \"max_retry\": 1}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_id"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"}
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_342_bug_fixes_acceptance.py"
+}

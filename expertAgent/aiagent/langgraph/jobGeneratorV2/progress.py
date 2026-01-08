@@ -5,18 +5,25 @@ with job_state_manager for real-time progress tracking during polling.
 
 Issue #342-V2-UX: Ensure V2 provides the same UX as V1 for progress tracking.
 
+Issue #342 Bug #9: Added AsyncTaskManager to properly handle async tasks
+and prevent fire-and-forget exceptions from being silently lost.
+
 Key features:
 1. Reports phase transitions to job_state_manager
 2. Sets task_breakdown when TASK_BREAKDOWN phase completes
 3. Initializes and updates workflow_statuses for WORKFLOW_GEN phase
+4. AsyncTaskManager for proper async task lifecycle management
 """
 
+import asyncio
 import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
 
 from .protocols import ProgressReporter
 from .types import Phase, TaskDefinition
+
+T = TypeVar("T")
 
 if TYPE_CHECKING:
     from app.services.job_creation_state import (
@@ -25,6 +32,169 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
+
+# ----- Async Task Manager (Issue #342 Bug #9) -----
+
+
+@dataclass
+class AsyncTaskManager:
+    """Manager for async tasks to prevent fire-and-forget exceptions.
+
+    Issue #342 Bug #9: asyncio.create_task() returns a Task handle that must
+    be stored to prevent exceptions from being silently lost. This manager
+    provides proper lifecycle management for async tasks.
+
+    Example:
+        manager = AsyncTaskManager()
+        manager.set_exception_handler(lambda task, exc: logger.error(f"Task failed: {exc}"))
+        task = manager.create_task(some_coroutine(), name="my_task")
+        await manager.wait_all()  # Wait for all tasks to complete
+    """
+
+    tasks: list[asyncio.Task[Any]] = field(default_factory=list)
+    task_names: set[str] = field(default_factory=set)
+    exceptions: list[Exception] = field(default_factory=list)
+    _exception_handler: Callable[[asyncio.Task[Any], Exception], None] | None = field(
+        default=None, repr=False
+    )
+
+    def set_exception_handler(
+        self, handler: Callable[[asyncio.Task[Any], Exception], None]
+    ) -> None:
+        """Set a callback to handle exceptions from tasks.
+
+        Args:
+            handler: Function that takes (task, exception) and handles the error
+        """
+        self._exception_handler = handler
+
+    def create_task(
+        self,
+        coro: Awaitable[T],
+        *,
+        name: str | None = None,
+    ) -> asyncio.Task[T]:
+        """Create and track an async task.
+
+        Args:
+            coro: Coroutine to run
+            name: Optional name for the task
+
+        Returns:
+            The created Task handle
+        """
+        task: asyncio.Task[T] = asyncio.create_task(coro, name=name)  # type: ignore[arg-type]
+        self.tasks.append(task)
+        if name:
+            self.task_names.add(name)
+
+        # Add done callback to capture exceptions
+        task.add_done_callback(self._task_done_callback)
+
+        logger.debug(
+            "Created async task: %s (total tracked: %d)",
+            name or "unnamed",
+            len(self.tasks),
+        )
+
+        return task
+
+    def _task_done_callback(self, task: asyncio.Task[Any]) -> None:
+        """Callback when a task completes.
+
+        This captures any exceptions and logs them, preventing silent failures.
+
+        Args:
+            task: The completed task
+        """
+        if task.cancelled():
+            logger.debug("Task %s was cancelled", task.get_name())
+            return
+
+        exc = task.exception()
+        if exc is not None:
+            # Store the exception (cast to Exception for type safety)
+            if isinstance(exc, Exception):
+                self.exceptions.append(exc)
+
+                # Log the exception
+                logger.error(
+                    "Async task %s failed with exception: %s",
+                    task.get_name(),
+                    exc,
+                    exc_info=exc,
+                )
+
+                # Call custom exception handler if set
+                if self._exception_handler:
+                    try:
+                        self._exception_handler(task, exc)
+                    except Exception as handler_error:
+                        logger.error(
+                            "Exception handler failed: %s",
+                            handler_error,
+                        )
+            else:
+                # BaseException (e.g., KeyboardInterrupt, SystemExit)
+                logger.error(
+                    "Async task %s failed with BaseException: %s",
+                    task.get_name(),
+                    exc,
+                )
+
+    @property
+    def has_exceptions(self) -> bool:
+        """Check if any tasks have failed with exceptions."""
+        return len(self.exceptions) > 0
+
+    async def wait_all(self, timeout: float | None = None) -> None:
+        """Wait for all tracked tasks to complete.
+
+        Args:
+            timeout: Optional timeout in seconds
+        """
+        if not self.tasks:
+            return
+
+        pending_tasks = [t for t in self.tasks if not t.done()]
+        if pending_tasks:
+            logger.info("Waiting for %d pending tasks", len(pending_tasks))
+            await asyncio.wait(pending_tasks, timeout=timeout)
+
+    async def cancel_all(self) -> int:
+        """Cancel all pending tasks.
+
+        Returns:
+            Number of tasks cancelled
+        """
+        cancelled_count = 0
+        for task in self.tasks:
+            if not task.done():
+                task.cancel()
+                cancelled_count += 1
+
+        # Wait for cancellation to complete
+        if cancelled_count > 0:
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+
+        logger.info("Cancelled %d tasks", cancelled_count)
+        return cancelled_count
+
+    def cleanup_completed(self) -> int:
+        """Remove completed tasks from tracking.
+
+        Returns:
+            Number of tasks removed
+        """
+        initial_count = len(self.tasks)
+        self.tasks = [t for t in self.tasks if not t.done()]
+        removed_count = initial_count - len(self.tasks)
+
+        if removed_count > 0:
+            logger.debug("Cleaned up %d completed tasks", removed_count)
+
+        return removed_count
 
 
 # Phase to progress percentage mapping
@@ -87,6 +257,8 @@ class JobStateProgressReporter(ProgressReporter):
         self._job_state_manager = job_state_manager
         self._task_breakdown_set = False
         self._workflow_statuses_initialized = False
+        # Issue #342 Bug #9: Use AsyncTaskManager for proper task lifecycle
+        self._async_task_manager = AsyncTaskManager()
 
     @property
     def job_id(self) -> str:
@@ -103,12 +275,13 @@ class JobStateProgressReporter(ProgressReporter):
         This is called synchronously by the orchestrator but we need to
         make async calls. We'll use run_coroutine_threadsafe for this.
 
+        Issue #342 Bug #9: Use AsyncTaskManager instead of plain create_task
+        to prevent fire-and-forget exceptions from being silently lost.
+
         Args:
             phase: The phase that completed
             context: Current execution context
         """
-        import asyncio
-
         # Get or create event loop
         try:
             loop = asyncio.get_running_loop()
@@ -119,8 +292,11 @@ class JobStateProgressReporter(ProgressReporter):
             loop.run_until_complete(self._report_async(phase, context))
             return
 
-        # Schedule the coroutine
-        asyncio.create_task(self._report_async(phase, context))
+        # Issue #342 Bug #9: Use AsyncTaskManager for proper exception handling
+        self._async_task_manager.create_task(
+            self._report_async(phase, context),
+            name=f"progress_report_{phase.value}",
+        )
 
     async def _report_async(
         self,

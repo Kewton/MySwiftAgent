@@ -32,10 +32,14 @@ from .types import (
     PhaseStatus,
     RegistrationInput,
     RegistrationOutput,
+    SkipAggregator,
+    SkipInfo,
     TaskBreakdownInput,
     TaskBreakdownOutput,
+    TaskIdMapping,
     WorkflowGenInput,
     WorkflowGenOutput,
+    WorkflowGenPhaseOutput,
 )
 
 logger = logging.getLogger(__name__)
@@ -181,19 +185,23 @@ class JobGenerationOrchestrator:
                         phase=phase,
                     )
 
-                # Transform input from previous phase
-                phase_input = self._create_phase_input(phase, request, phase_outputs)
-
-                # Issue #342-V2-UX: Initialize workflow statuses before WORKFLOW_GEN
+                # Issue #342 V2 Fix: Handle WORKFLOW_GEN specially - per-task generation
                 if phase == Phase.WORKFLOW_GEN:
                     await self._init_workflow_statuses(phase_outputs)
+                    output = await self._execute_workflow_gen_per_task(
+                        phase_outputs=phase_outputs,
+                        context=context,
+                    )
+                else:
+                    # Transform input from previous phase
+                    phase_input = self._create_phase_input(phase, request, phase_outputs)
 
-                # Execute phase
-                output = await self.execute_phase(
-                    phase=phase,
-                    input=phase_input,
-                    context=context,
-                )
+                    # Execute phase
+                    output = await self.execute_phase(
+                        phase=phase,
+                        input=phase_input,
+                        context=context,
+                    )
 
                 # Check output status
                 if output.status == PhaseStatus.NEEDS_RELAXATION:
@@ -217,7 +225,7 @@ class JobGenerationOrchestrator:
                 if phase == Phase.TASK_BREAKDOWN:
                     await self._set_task_breakdown(output)
 
-            # Issue #342-V2-UX: Mark all workflow statuses as success
+            # Issue #342 V2 Fix: Mark workflow statuses with individual YAMLs
             await self._mark_workflow_statuses_complete(phase_outputs, context)
 
             # Issue #342-V2-UX: Mark complete
@@ -381,6 +389,170 @@ class JobGenerationOrchestrator:
 
         raise ValueError(f"Unknown phase: {phase}")
 
+    async def _execute_workflow_gen_per_task(
+        self,
+        phase_outputs: dict[Phase, Any],
+        context: "ExecutionContext",
+    ) -> WorkflowGenPhaseOutput:
+        """Execute WorkflowGenWorkflow for each task individually.
+
+        Issue #342 V2 Fix: Generate separate workflows for each task instead of
+        one integrated workflow for all tasks.
+
+        Issue #342 Bug #1: Now creates TaskIdMapping for correct interface lookup.
+        Issue #342 Bug #3: Now uses SkipAggregator to track skipped tasks.
+
+        Args:
+            phase_outputs: Outputs from previous phases
+            context: Execution context
+
+        Returns:
+            WorkflowGenPhaseOutput with workflow for each task
+
+        Raises:
+            WorkflowError: If all tasks are skipped (Bug #3 fix)
+        """
+        from .protocols import ErrorType
+
+        breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
+        interface_output: InterfaceDesignOutput = phase_outputs[Phase.INTERFACE_DESIGN]
+        registration_output: RegistrationOutput = phase_outputs[Phase.REGISTRATION]
+
+        workflow = self.get_workflow(Phase.WORKFLOW_GEN)
+        if workflow is None:
+            raise WorkflowError(
+                "No workflow registered for WORKFLOW_GEN phase",
+                ErrorType.FATAL,
+                phase=Phase.WORKFLOW_GEN,
+            )
+
+        # Issue #342 Bug #1: Create TaskIdMapping for correct interface lookup
+        task_id_mapping = TaskIdMapping.from_registration(registration_output)
+        logger.info(
+            "Created TaskIdMapping with %d entries for interface lookup",
+            len(task_id_mapping.logical_to_master),
+        )
+
+        # Store TaskIdMapping in context for downstream use
+        context.storage.task_id_mapping = task_id_mapping
+
+        task_workflows: dict[str, WorkflowGenOutput] = {}
+        overall_status = PhaseStatus.SUCCESS
+
+        # Issue #342 Bug #3: Use SkipAggregator to track skipped tasks
+        skip_aggregator = SkipAggregator()
+        total_tasks = len(breakdown_output.tasks)
+
+        # Execute workflow generation for each task
+        for idx, task in enumerate(breakdown_output.tasks):
+            task_id = task.id
+            logger.info(
+                "Generating workflow for task %d/%d: %s",
+                idx + 1,
+                total_tasks,
+                task_id,
+            )
+
+            # Get the task_master_id for this task (same order as tasks list)
+            if idx >= len(registration_output.task_master_ids):
+                # Issue #342 Bug #3: Track skip instead of silent continue
+                skip_aggregator.add_skip(
+                    SkipInfo(
+                        task_id=task_id,
+                        reason=f"No task_master_id found for task index {idx}",
+                        phase=Phase.WORKFLOW_GEN.value,
+                    )
+                )
+                continue
+
+            task_master_id = registration_output.task_master_ids[idx]
+
+            # Get interface for this task
+            interface = interface_output.interfaces.get(task_id)
+            if interface is None:
+                logger.warning(
+                    "No interface found for task %s, using empty interface",
+                    task_id,
+                )
+                interface_for_task = {}
+            else:
+                interface_for_task = {task_id: interface}
+
+            # Create single-task input with TaskIdMapping
+            single_task_input = WorkflowGenInput(
+                task_master_ids=[task_master_id],
+                job_master_id=registration_output.job_master_id or "",
+                interfaces=interface_for_task,
+                task_id_mapping=task_id_mapping,  # Bug #1 fix: Pass mapping
+            )
+
+            try:
+                # Execute workflow generation for this task
+                output = await self.execute_phase(
+                    phase=Phase.WORKFLOW_GEN,
+                    input=single_task_input,
+                    context=context,
+                )
+
+                # Store result with task_id
+                output.task_id = task_id
+                task_workflows[task_id] = output
+
+                # Track overall status
+                if output.status == PhaseStatus.FAILED:
+                    overall_status = PhaseStatus.FAILED
+                elif output.status == PhaseStatus.NEEDS_RELAXATION:
+                    overall_status = PhaseStatus.NEEDS_RELAXATION
+
+                logger.info(
+                    "Workflow generated for task %s: status=%s",
+                    task_id,
+                    output.status.value,
+                )
+
+            except WorkflowError as e:
+                logger.error(
+                    "Workflow generation failed for task %s: %s",
+                    task_id,
+                    e,
+                )
+                # Store failed result
+                task_workflows[task_id] = WorkflowGenOutput(
+                    status=PhaseStatus.FAILED,
+                    task_id=task_id,
+                    workflow_yaml=None,
+                    test_result={"error": str(e)},
+                )
+                overall_status = PhaseStatus.FAILED
+
+        # Issue #342 Bug #3: Check if all tasks were skipped
+        # Only check if there were tasks to process (avoid false positive)
+        if total_tasks > 0 and skip_aggregator.all_skipped(total_tasks):
+            error_msg = (
+                f"All {total_tasks} tasks were skipped during workflow generation.\n"
+                f"{skip_aggregator.get_summary()}"
+            )
+            logger.error(error_msg)
+            raise WorkflowError(
+                error_msg,
+                ErrorType.FATAL,
+                phase=Phase.WORKFLOW_GEN,
+            )
+
+        # Log skip summary if any tasks were skipped
+        if skip_aggregator.skip_count > 0:
+            logger.warning(
+                "Workflow generation completed with %d/%d tasks skipped:\n%s",
+                skip_aggregator.skip_count,
+                total_tasks,
+                skip_aggregator.get_summary(),
+            )
+
+        return WorkflowGenPhaseOutput(
+            status=overall_status,
+            task_workflows=task_workflows,
+        )
+
     def _create_result(
         self,
         phase_outputs: dict[Phase, Any],
@@ -394,19 +566,32 @@ class JobGenerationOrchestrator:
             JobGenerationResult
 
         Issue #342: Extended to include tasks and interfaces for adapter conversion.
+        Issue #342 V2 Fix: Handle WorkflowGenPhaseOutput with per-task workflows.
         """
         # Extract outputs from all phases
         breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
         interface_output: InterfaceDesignOutput = phase_outputs[Phase.INTERFACE_DESIGN]
         registration_output: RegistrationOutput = phase_outputs[Phase.REGISTRATION]
-        workflow_output: WorkflowGenOutput = phase_outputs[Phase.WORKFLOW_GEN]
+        workflow_phase_output: WorkflowGenPhaseOutput = phase_outputs[Phase.WORKFLOW_GEN]
+
+        # Issue #342 V2 Fix: Combine all task workflows into one summary YAML
+        # Individual task YAMLs are stored separately in job_state_manager
+        combined_yaml = None
+        task_yamls = []
+        for task in breakdown_output.tasks:
+            task_workflow = workflow_phase_output.task_workflows.get(task.id)
+            if task_workflow and task_workflow.workflow_yaml:
+                task_yamls.append(f"# --- Task: {task.id} ({task.name}) ---\n{task_workflow.workflow_yaml}")
+
+        if task_yamls:
+            combined_yaml = "\n\n".join(task_yamls)
 
         return JobGenerationResult(
             success=True,
             job_id=registration_output.job_id,
             job_master_id=registration_output.job_master_id,
             task_master_ids=registration_output.task_master_ids,
-            workflow_yaml=workflow_output.workflow_yaml,
+            workflow_yaml=combined_yaml,
             # Issue #342: Include task/interface info for adapter conversion
             tasks=breakdown_output.tasks,
             interfaces=interface_output.interfaces,
@@ -469,6 +654,8 @@ class JobGenerationOrchestrator:
         Issue #342: Extended to include langfuse_trace_id and summary (YAML)
         for each task's workflow status.
 
+        Issue #342 V2 Fix: Use individual task YAML instead of copying same YAML.
+
         Args:
             phase_outputs: Outputs from all phases
             context: Execution context with observability info
@@ -485,12 +672,9 @@ class JobGenerationOrchestrator:
 
             breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
 
-            # Issue #342: Get workflow YAML from WORKFLOW_GEN output
-            workflow_gen_output: WorkflowGenOutput = phase_outputs.get(
+            # Issue #342 V2 Fix: Get WorkflowGenPhaseOutput with per-task workflows
+            workflow_phase_output: WorkflowGenPhaseOutput | None = phase_outputs.get(
                 Phase.WORKFLOW_GEN
-            )
-            workflow_yaml = (
-                workflow_gen_output.workflow_yaml if workflow_gen_output else None
             )
 
             # Issue #342: Extract langfuse_trace_id from context
@@ -500,29 +684,50 @@ class JobGenerationOrchestrator:
                     context.observability.tracer
                 )
 
-            # Mark each task's workflow status as success with summary
+            # Mark each task's workflow status with its individual YAML
             for task in breakdown_output.tasks:
+                # Issue #342 V2 Fix: Get individual workflow for this task
+                task_workflow = None
+                task_yaml = None
+                task_status = "success"
+
+                if workflow_phase_output:
+                    task_workflow = workflow_phase_output.task_workflows.get(task.id)
+                    if task_workflow:
+                        task_yaml = task_workflow.workflow_yaml
+                        if task_workflow.status == PhaseStatus.FAILED:
+                            task_status = "failed"
+                        elif task_workflow.status == PhaseStatus.NEEDS_RETRY:
+                            task_status = "pending"
+
                 # Create summary with YAML content for UI display
                 summary = None
-                if workflow_yaml:
+                if task_yaml:
                     yaml_preview = (
-                        workflow_yaml[:500] if len(workflow_yaml) > 500 else workflow_yaml
+                        task_yaml[:500] if len(task_yaml) > 500 else task_yaml
                     )
                     summary = WorkflowGenerationSummary(
                         yaml_preview=yaml_preview,
-                        yaml_content=workflow_yaml,
+                        yaml_content=task_yaml,
                     )
 
                 await self.progress_reporter.update_workflow_status(
                     task_id=task.id,
-                    status="success",
+                    status=task_status,
                     workflow_name=f"workflow_{task.id}",
                     langfuse_trace_id=langfuse_trace_id,
                     summary=summary,
                 )
 
+                logger.debug(
+                    "Task %s workflow status updated: status=%s, has_yaml=%s",
+                    task.id,
+                    task_status,
+                    task_yaml is not None,
+                )
+
             logger.info(
-                "Workflow statuses marked as success: %d tasks (trace_id: %s)",
+                "Workflow statuses marked: %d tasks (trace_id: %s)",
                 len(breakdown_output.tasks),
                 langfuse_trace_id,
             )

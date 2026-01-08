@@ -595,6 +595,264 @@ class TestIssue338Routing:
 
 ---
 
+## Phase 8: derived_fields バリデーション強化
+
+### 背景
+
+2026-01-06 の Langfuse トレース分析により、`interface_definition` ノードで `derived_fields` の Pydantic バリデーションエラーが発生し、ワークフローが18回リトライして最終的に失敗する事象を確認。
+
+**エラー詳細:**
+```
+PydanticToolsParser ERROR:
+3 validation errors for InterfaceSchemaResponse
+interfaces.0.derived_fields Input should be a valid dictionary
+  [type=dict_type, input_value='results -> task_002.input.search_results', input_type=str]
+```
+
+### 真因分析
+
+#### 作り込んだ真因
+
+| ID | 真因 | 影響 |
+|----|------|------|
+| 1-A | `INTERFACE_SCHEMA_SYSTEM_PROMPT` に `derived_fields` の説明・例がない | LLMが正しい形式を理解できず推測で出力 |
+| 1-B | `InterfaceSchemaDefinition.derived_fields` に field_validator がない | 文字列入力が即エラーになる |
+| 1-C | Issue #337 でスキーマは追加したがプロンプト更新が漏れた | 機能追加とLLMガイダンスが分離 |
+
+#### チェック機構で是正できなかった真因
+
+| ID | 真因 | 影響 |
+|----|------|------|
+| 2-A | Pydantic解析が evaluator より先に失敗 | evaluator の検証ロジックに到達しない |
+| 2-B | リトライ時にエラーフィードバックがない | LLMが同じ間違いを繰り返す |
+| 2-C | `check_derived_fields_for_downstream_tasks` が未使用 | 定義済み関数がワークフローに統合されていない |
+
+### 設計方針
+
+#### Phase 8-1: プロンプト改善（優先度: 高）
+
+**対象ファイル:** `expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py`
+
+**変更内容:**
+`INTERFACE_SCHEMA_SYSTEM_PROMPT` に以下のガイダンスを追加：
+
+```markdown
+## derived_fields（派生フィールド）の定義
+
+downstream タスクが直接使用できる事前フォーマット済みデータを定義します。
+このフィールドは **オプション** です。必要な場合のみ定義してください。
+
+### 形式（重要: 文字列ではなくオブジェクト形式で指定）
+
+✅ **正しい形式**:
+```json
+{
+  "derived_fields": {
+    "email_subject": {
+      "template": "検索結果: {query}",
+      "type": "string",
+      "description": "メール件名"
+    },
+    "summary_text": {
+      "template": "{count}件のメールが見つかりました",
+      "type": "string"
+    }
+  }
+}
+```
+
+❌ **禁止形式（バリデーションエラーになります）**:
+```json
+{
+  "derived_fields": "email_subject -> task_002.input.subject"
+}
+```
+
+### derived_fields が不要な場合
+
+derived_fields を使用しない場合は、空オブジェクトを指定するか、フィールド自体を省略してください：
+```json
+{
+  "derived_fields": {}
+}
+```
+```
+
+**期待効果:** LLMが正しい形式を理解し、文字列形式での出力を防止
+
+#### Phase 8-2: field_validator 追加（優先度: 高）
+
+**対象ファイル:** `expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/prompts/interface_schema.py`
+
+**変更内容:**
+`InterfaceSchemaDefinition` クラスに `derived_fields` 用の field_validator を追加：
+
+```python
+@field_validator("derived_fields", mode="before")
+@classmethod
+def parse_derived_fields(cls, value: Any) -> dict[str, Any]:
+    """Parse derived_fields with graceful degradation.
+
+    If the LLM outputs a string instead of dict (common error),
+    return empty dict to allow the workflow to continue.
+    """
+    if value is None:
+        return {}
+    if isinstance(value, str):
+        logger.warning(
+            "derived_fields received as string (%s...), using empty dict. "
+            "LLM should output dict format: {'field_name': {'template': '...', 'type': '...'}}",
+            value[:50] if len(value) > 50 else value,
+        )
+        return {}
+    if isinstance(value, dict):
+        return value
+    logger.warning(
+        "derived_fields has unexpected type %s, using empty dict",
+        type(value).__name__,
+    )
+    return {}
+```
+
+**期待効果:** 不正な入力を graceful degradation で処理し、ワークフローが継続可能に
+
+#### Phase 8-3: リトライ時エラーフィードバック（優先度: 中）
+
+**対象ファイル:** `expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/interface_definition.py`
+
+**変更内容:**
+リトライ時にエラー内容をプロンプトに追加：
+
+```python
+for attempt in range(max_internal_retries):
+    try:
+        call_result = await invoke_structured_llm(
+            messages=messages,
+            response_model=InterfaceSchemaResponse,
+            ...
+        )
+        break
+    except StructuredLLMError as exc:
+        last_error = exc
+        logger.warning(
+            "Interface schema generation attempt %d/%d failed: %s",
+            attempt + 1,
+            max_internal_retries,
+            exc,
+        )
+        if attempt < max_internal_retries - 1:
+            # 新規: エラーフィードバックをプロンプトに追加
+            error_feedback = (
+                f"\n\n## 前回の出力でエラーが発生しました\n"
+                f"エラー内容: {exc}\n\n"
+                f"**重要**: derived_fields は文字列ではなく、"
+                f"オブジェクト形式で指定してください。\n"
+                f"正しい形式: {{'field_name': {{'template': '...', 'type': 'string'}}}}"
+            )
+            messages = [
+                messages[0],  # system prompt
+                {"role": "user", "content": messages[1]["content"] + error_feedback},
+            ]
+            logger.info("Retrying with error feedback...")
+            continue
+```
+
+**期待効果:** LLMが前回のエラーを理解し、自己修正できる
+
+### 実装タスク
+
+| タスク | 対象ファイル | 内容 | 優先度 |
+|--------|------------|------|--------|
+| 8-1 | `prompts/interface_schema.py` | `derived_fields` ガイダンスをプロンプトに追加 | 🔴 高 |
+| 8-2 | `prompts/interface_schema.py` | `parse_derived_fields` field_validator 追加 | 🔴 高 |
+| 8-3 | `nodes/interface_definition.py` | リトライ時エラーフィードバック追加 | 🟡 中 |
+| 8-4 | `tests/unit/test_interface_schema.py` | derived_fields バリデーションテスト追加 | 🔴 高 |
+| 8-5 | `tests/integration/` | E2E統合テスト追加 | 🟡 中 |
+
+### テスト計画
+
+#### 単体テスト
+
+```python
+# tests/unit/test_interface_schema.py
+
+class TestDerivedFieldsValidator:
+    """Issue #338 Phase 8: derived_fields validation tests."""
+
+    def test_derived_fields_dict_passthrough(self):
+        """Valid dict format should pass through unchanged."""
+        data = {
+            "task_id": "task_001",
+            "interface_name": "test_interface",
+            "description": "Test",
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "derived_fields": {
+                "email_subject": {"template": "{query}", "type": "string"}
+            },
+        }
+        result = InterfaceSchemaDefinition.model_validate(data)
+        assert result.derived_fields == data["derived_fields"]
+
+    def test_derived_fields_string_graceful_degradation(self):
+        """String format should degrade to empty dict with warning."""
+        data = {
+            "task_id": "task_001",
+            "interface_name": "test_interface",
+            "description": "Test",
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "derived_fields": "results -> task_002.input.search_results",
+        }
+        result = InterfaceSchemaDefinition.model_validate(data)
+        assert result.derived_fields == {}
+
+    def test_derived_fields_none_to_empty_dict(self):
+        """None should become empty dict."""
+        data = {
+            "task_id": "task_001",
+            "interface_name": "test_interface",
+            "description": "Test",
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "derived_fields": None,
+        }
+        result = InterfaceSchemaDefinition.model_validate(data)
+        assert result.derived_fields == {}
+```
+
+#### 結合テスト
+
+```python
+# tests/integration/test_issue_338_derived_fields.py
+
+class TestIssue338DerivedFieldsIntegration:
+    """Integration tests for derived_fields validation."""
+
+    async def test_interface_definition_with_invalid_derived_fields(self):
+        """Workflow should continue even if LLM outputs invalid derived_fields."""
+        # Test that the workflow doesn't crash with string derived_fields
+        ...
+
+    async def test_retry_with_error_feedback(self):
+        """Error feedback should help LLM correct its output."""
+        ...
+```
+
+### 設計判断
+
+#### 判断4: derived_fields の graceful degradation 戦略
+
+| 選択肢 | メリット | デメリット | 採用 |
+|--------|---------|-----------|------|
+| **A. バリデーションエラーでワークフロー停止** | 厳密 | ユーザー体験悪化 | - |
+| **B. 空dictで続行 + 警告ログ** | 継続可能 | derived_fields 機能が使えない | 採用 |
+| **C. 文字列をパースして変換** | 機能維持 | 複雑、エラーリスク | - |
+
+**採用理由:** 選択肢Bは最も安全で、`derived_fields` はオプション機能のため空でも問題ない
+
+---
+
 ## 変更履歴
 
 | 日付 | バージョン | 変更内容 |
@@ -604,3 +862,4 @@ class TestIssue338Routing:
 | 2026-01-06 | 1.2 | Phase 5 実装完了 |
 | 2026-01-06 | 1.3 | Phase 6 実装完了 (動的配列処理パターン) |
 | 2026-01-06 | 1.4 | Phase 7 実装完了 (インターフェース検証) |
+| 2026-01-06 | 1.5 | Phase 8 設計追加 (derived_fields バリデーション強化)

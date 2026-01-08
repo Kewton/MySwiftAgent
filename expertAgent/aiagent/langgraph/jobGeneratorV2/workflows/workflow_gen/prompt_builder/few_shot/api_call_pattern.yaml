@@ -1,7 +1,8 @@
 # Few-shot example: API Call pattern
-# Generic API call workflow (Gmail send, etc.)
+# Generic API call workflow - URL must be taken from API Mappings section
+# Issue #342 V2: URLs are now placeholders to prevent LLM from copying
 name: "api_call_pattern"
-description: "Generic API call pattern with input validation"
+description: "Generic API call pattern - IMPORTANT: Use URL from API Mappings section"
 applicable_apis:
   - "gmail_send"
   - "drive_upload"
@@ -9,56 +10,52 @@ applicable_apis:
   - "text_to_speech_drive"
 
 task_example:
-  name: "Email Send Task"
-  description: "Send email with specified recipient, subject, and body"
+  name: "Generic API Call Task"
+  description: "Call an API endpoint with specified parameters"
   input_schema:
     type: object
     properties:
-      to:
+      param1:
         type: string
-        description: "Recipient email address"
-      subject:
+        description: "First parameter"
+      param2:
         type: string
-        description: "Email subject"
-      body:
-        type: string
-        description: "Email body content"
+        description: "Second parameter"
     required:
-      - to
-      - subject
-      - body
+      - param1
   output_schema:
     type: object
     properties:
       result:
         type: string
-        description: "Send result message"
-      message_id:
+        description: "API call result"
+      status:
         type: string
-        description: "Sent email ID"
+        description: "Operation status"
 
 workflow_yaml: |
   version: "0.5"
   nodes:
     source: {}
 
-    send_email:
+    # NOTE: Replace <API_URL_FROM_MAPPINGS> with the actual URL
+    # from the 'API Endpoint Mappings' section above
+    call_api:
       agent: fetchAgent
       inputs:
-        url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/gmail/send
+        url: <API_URL_FROM_MAPPINGS>
         method: POST
         body:
-          to: :source.to
-          subject: :source.subject
-          body: :source.body
+          param1: :source.param1
+          param2: :source.param2
       console:
         after: true
 
     format_response:
       agent: copyAgent
       inputs:
-        result: :send_email.result.result
-        message_id: :send_email.result.message_id
+        result: :call_api.result.result
+        status: :call_api.result.status
       params:
         namedKey: result
       isResult: true

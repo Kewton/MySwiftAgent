@@ -31,6 +31,9 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     TaskBreakdownOutput,
     TaskDefinition,
 )
+from aiagent.langgraph.shared.capability_utils import (
+    load_capabilities_from_yaml as load_shared_capabilities,
+)
 
 from .alternative import AlternativeSubWorkflow
 from .decomposer import TaskDecomposerSubWorkflow
@@ -96,8 +99,12 @@ class TaskBreakdownWorkflow:
             context.job_id,
         )
 
-        # Step 1: Decompose requirements into tasks
-        decomposer = TaskDecomposerSubWorkflow()
+        # Issue #342: Load capabilities FIRST using shared utility
+        shared_capabilities = load_shared_capabilities()
+        logger.info("Loaded %d capabilities for task breakdown", len(shared_capabilities))
+
+        # Step 1: Decompose requirements into tasks WITH capabilities
+        decomposer = TaskDecomposerSubWorkflow(capabilities=shared_capabilities)
         try:
             tasks = await decomposer.decompose(input_data, context)
         except WorkflowError:

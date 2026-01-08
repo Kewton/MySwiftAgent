@@ -1,0 +1,21 @@
+{
+  "issue_number": 342,
+  "refactor_targets": [
+    "aiagent/langgraph/shared/capability_utils.py",
+    "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100.0,
+    "complexity_score": "N/A"
+  },
+  "design_patterns_to_apply": [
+    "DRY - shared capability_utils already applied",
+    "SOLID - Single Responsibility maintained"
+  ],
+  "improvement_goals": [
+    "コードの整理（不要なコメント削除）",
+    "型アノテーションの確認",
+    "docstringの整備"
+  ]
+}

@@ -373,7 +373,9 @@ class TestDeadCodeRemoval:
 
     def test_create_yaml_generation_prompt_removed(self):
         """create_yaml_generation_prompt should no longer exist."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import yaml_generator
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import (
+            yaml_generator,
+        )
 
         # Function was removed in Issue #342 V2
         assert not hasattr(yaml_generator, "create_yaml_generation_prompt")

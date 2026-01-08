@@ -11,8 +11,7 @@ Test Coverage Target: Integration level validation
 
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -300,14 +299,15 @@ class TestDeadCodeRemoval:
 
     def test_create_yaml_generation_prompt_removed(self) -> None:
         """Test create_yaml_generation_prompt function is removed."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import yaml_generator
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import (
+            yaml_generator,
+        )
 
         # Function should not exist
         assert not hasattr(yaml_generator, "create_yaml_generation_prompt")
 
     def test_deprecated_methods_still_work(self) -> None:
         """Test deprecated methods still work for backward compatibility."""
-        import warnings
 
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_generator import (
             YamlGeneratorSubWorkflow,

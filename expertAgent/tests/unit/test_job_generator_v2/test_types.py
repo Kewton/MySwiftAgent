@@ -3,7 +3,6 @@
 Tests for Phase, PhaseStatus, RetryState, and related types.
 """
 
-import pytest
 from datetime import datetime
 
 
@@ -313,8 +312,8 @@ class TestTaskBreakdownOutput:
         """TaskBreakdownOutput should support NEEDS_RELAXATION status."""
         from aiagent.langgraph.jobGeneratorV2.types import (
             PhaseStatus,
-            TaskBreakdownOutput,
             RelaxationSuggestion,
+            TaskBreakdownOutput,
         )
 
         suggestion = RelaxationSuggestion(

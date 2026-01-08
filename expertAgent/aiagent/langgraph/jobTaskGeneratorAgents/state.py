@@ -112,6 +112,8 @@ class JobTaskGeneratorState(TypedDict, total=False):
     # ===== Issue #338: Interface Compatibility =====
     # Warnings from interface compatibility check between task chain nodes
     interface_warnings: list[str]
+    # Phase 8: Graceful degradation count for derived_fields validation
+    derived_fields_degradation_count: int
 
 
 def create_initial_state(
@@ -171,4 +173,6 @@ def create_initial_state(
         "job_body_parameters": [],
         # Issue #338: Interface Compatibility
         "interface_warnings": [],
+        # Issue #338 Phase 8: Graceful degradation metrics
+        "derived_fields_degradation_count": 0,
     }

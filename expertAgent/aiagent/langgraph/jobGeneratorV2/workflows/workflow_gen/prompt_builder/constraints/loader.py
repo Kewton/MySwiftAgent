@@ -32,9 +32,7 @@ def load_capabilities() -> dict[str, Any]:
         Dictionary of capabilities
     """
     if not CAPABILITIES_FILE.exists():
-        logger.warning(
-            "Capabilities file not found: %s", CAPABILITIES_FILE
-        )
+        logger.warning("Capabilities file not found: %s", CAPABILITIES_FILE)
         return {}
 
     try:

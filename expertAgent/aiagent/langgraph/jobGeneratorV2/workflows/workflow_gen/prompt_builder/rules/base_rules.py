@@ -40,6 +40,6 @@ def get_base_rules() -> str:
     return BASE_RULES
 
 
-VERSION_RULE = "version: \"0.5\""
+VERSION_RULE = 'version: "0.5"'
 SOURCE_RULE = "source: {}"
 RESULT_RULE = "isResult: true"

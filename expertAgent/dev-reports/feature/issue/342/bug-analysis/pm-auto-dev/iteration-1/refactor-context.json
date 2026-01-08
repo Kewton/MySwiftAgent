@@ -1,0 +1,36 @@
+{
+  "issue_number": 342,
+  "refactor_targets": [
+    "aiagent/langgraph/jobGeneratorV2/types.py",
+    "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "aiagent/langgraph/jobGeneratorV2/progress.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+    "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 75.23,
+    "complexity_score": "N/A",
+    "unit_tests_passed": 565,
+    "static_analysis_errors": 0
+  },
+  "design_patterns_applied": [
+    "DataClass for structured data (TaskIdMapping, SkipInfo, SkipAggregator)",
+    "Factory Method (TaskIdMapping.from_registration)",
+    "Aggregator Pattern (SkipAggregator)",
+    "Strategy Pattern (evaluate_schema_count_mismatch threshold evaluation)"
+  ],
+  "improvement_goals": [
+    "Maintain existing test coverage",
+    "Keep all 565 unit tests passing",
+    "No new static analysis errors",
+    "Code follows SOLID principles"
+  ],
+  "bugs_fixed": [
+    "Bug #1: task_id vs task_master_id confusion",
+    "Bug #3: Silent skip without error aggregation",
+    "Bug #5: RegistrationOutput lacks mapping",
+    "Bug #6: Schema count mismatch threshold",
+    "Bug #9: Async task exceptions not handled",
+    "Bug #11: Template doesn't use interface info"
+  ]
+}

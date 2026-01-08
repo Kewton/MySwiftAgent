@@ -3,8 +3,9 @@
 Tests for JobGenerationOrchestrator.
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestJobGenerationOrchestrator:
@@ -68,12 +69,12 @@ class TestOrchestratorExecutePhase:
     @pytest.mark.asyncio
     async def test_execute_phase_success(self):
         """execute_phase should return output on success."""
+        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
         from aiagent.langgraph.jobGeneratorV2.orchestrator import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
         from aiagent.langgraph.jobGeneratorV2.types import Phase, PhaseStatus
-        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
         orchestrator = JobGenerationOrchestrator(
             recovery_manager=ErrorRecoveryManager()
@@ -104,13 +105,13 @@ class TestOrchestratorExecutePhase:
     @pytest.mark.asyncio
     async def test_execute_phase_with_retry(self):
         """execute_phase should retry on recoverable error."""
+        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
         from aiagent.langgraph.jobGeneratorV2.orchestrator import (
             JobGenerationOrchestrator,
         )
-        from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
         from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
+        from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
         from aiagent.langgraph.jobGeneratorV2.types import Phase, PhaseStatus
-        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
         orchestrator = JobGenerationOrchestrator(
             recovery_manager=ErrorRecoveryManager()
@@ -158,23 +159,78 @@ class TestOrchestratorRunWorkflow:
         )
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
         from aiagent.langgraph.jobGeneratorV2.types import (
-            Phase,
-            PhaseStatus,
+            InterfaceDesignOutput,
+            InterfaceSchema,
             JobGenerationRequest,
             JobGenerationResult,
+            Phase,
+            PhaseStatus,
+            RegistrationOutput,
+            TaskBreakdownOutput,
+            TaskDefinition,
+            WorkflowGenOutput,
+            WorkflowGenPhaseOutput,
         )
-        from aiagent.langgraph.jobGeneratorV2.context import ContextBuilder
 
         orchestrator = JobGenerationOrchestrator(
             recovery_manager=ErrorRecoveryManager()
         )
 
-        # Create mock workflows for each phase
+        # Create proper mock outputs for each phase
+        # Issue #342 Bug #1: Tests must provide proper data for TaskIdMapping
+        task = TaskDefinition(
+            id="task_001",
+            name="Test Task",
+            description="Test description",
+            task_type="fetch",
+            recommended_api="fetchAgent",
+        )
+
+        interface = InterfaceSchema(
+            task_id="task_001",
+            input_schema={"type": "object"},
+            output_schema={"type": "object"},
+        )
+
+        # TaskBreakdown output with actual tasks
+        breakdown_output = TaskBreakdownOutput(
+            status=PhaseStatus.SUCCESS,
+            tasks=[task],
+        )
+
+        # InterfaceDesign output with interfaces
+        interface_output = InterfaceDesignOutput(
+            status=PhaseStatus.SUCCESS,
+            interfaces={"task_001": interface},
+        )
+
+        # Registration output with task_id_to_master_id mapping
+        registration_output = RegistrationOutput(
+            status=PhaseStatus.SUCCESS,
+            job_master_id="jm_001",
+            task_master_ids=["tm_task_001"],
+            job_id="job_001",
+            task_id_to_master_id={"task_001": "tm_task_001"},  # Bug #1 fix
+        )
+
+        # WorkflowGen output (single task)
+        workflow_output = WorkflowGenOutput(
+            status=PhaseStatus.SUCCESS,
+            task_id="task_001",
+            workflow_yaml="version: '0.6'\nnodes: {}",
+        )
+
+        # Create mock workflows for each phase with proper outputs
+        phase_outputs = {
+            Phase.TASK_BREAKDOWN: breakdown_output,
+            Phase.INTERFACE_DESIGN: interface_output,
+            Phase.REGISTRATION: registration_output,
+            Phase.WORKFLOW_GEN: workflow_output,
+        }
+
         for phase in Phase:
-            mock_output = MagicMock()
-            mock_output.status = PhaseStatus.SUCCESS
             mock_workflow = AsyncMock()
-            mock_workflow.execute = AsyncMock(return_value=mock_output)
+            mock_workflow.execute = AsyncMock(return_value=phase_outputs[phase])
             mock_workflow.get_retry_policy = MagicMock(
                 return_value=MagicMock(max_retries=3)
             )
@@ -188,10 +244,14 @@ class TestOrchestratorRunWorkflow:
         result = await orchestrator.run_workflow(request)
 
         assert isinstance(result, JobGenerationResult)
-        # All phases should have been called
-        for phase in Phase:
+        # First 3 phases should have been called directly
+        for phase in [Phase.TASK_BREAKDOWN, Phase.INTERFACE_DESIGN, Phase.REGISTRATION]:
             workflow = orchestrator.get_workflow(phase)
-            assert workflow.execute.called
+            assert workflow.execute.called, f"Phase {phase.value} execute should be called"
+
+        # WORKFLOW_GEN is called per-task via _execute_workflow_gen_per_task
+        workflow_gen = orchestrator.get_workflow(Phase.WORKFLOW_GEN)
+        assert workflow_gen.execute.called, "WORKFLOW_GEN execute should be called"
 
 
 class TestOrchestratorPhaseOrder:
@@ -242,17 +302,17 @@ class TestOrchestratorRecovery:
     @pytest.mark.asyncio
     async def test_orchestrator_uses_recovery_manager(self):
         """Orchestrator should use recovery manager for error handling."""
+        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
         from aiagent.langgraph.jobGeneratorV2.orchestrator import (
             JobGenerationOrchestrator,
         )
+        from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
         from aiagent.langgraph.jobGeneratorV2.recovery import (
+            ErrorRecoveryDecision,
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
-            ErrorRecoveryDecision,
         )
-        from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
-        from aiagent.langgraph.jobGeneratorV2.types import Phase, PhaseStatus
-        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
+        from aiagent.langgraph.jobGeneratorV2.types import Phase
 
         # Mock recovery manager
         mock_recovery = MagicMock(spec=ErrorRecoveryManager)

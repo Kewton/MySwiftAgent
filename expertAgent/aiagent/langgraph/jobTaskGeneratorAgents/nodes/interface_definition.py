@@ -12,6 +12,8 @@ from ..prompts.interface_schema import (
     INTERFACE_SCHEMA_SYSTEM_PROMPT,
     InterfaceSchemaResponse,
     create_interface_schema_prompt,
+    get_derived_fields_degradation_count,
+    reset_derived_fields_degradation_count,
 )
 from ..state import JobTaskGeneratorState
 from ..utils.jobqueue_client import JobqueueAPIError, JobqueueClient
@@ -391,6 +393,9 @@ async def interface_definition_node(
     max_internal_retries = 3
     last_error: StructuredLLMError | None = None
 
+    # Issue #338 Phase 8: Reset derived_fields degradation counter for this request
+    reset_derived_fields_degradation_count()
+
     for attempt in range(max_internal_retries):
         try:
             call_result = await invoke_structured_llm(
@@ -444,6 +449,15 @@ async def interface_definition_node(
     )
     if call_result.recovered_via_json:
         logger.info("Interface schema generation succeeded via JSON fallback")
+
+    # Issue #338 Phase 8: Log derived_fields graceful degradation metrics
+    degradation_count = get_derived_fields_degradation_count()
+    if degradation_count > 0:
+        logger.warning(
+            "Issue #338: derived_fields graceful degradation occurred %d time(s) "
+            "for this request. LLM returned invalid derived_fields format.",
+            degradation_count,
+        )
 
     for iface in response.interfaces:
         # First normalize shorthand types like ["string"] → {"type": "string"}
@@ -545,4 +559,6 @@ async def interface_definition_node(
         "retry_count": updated_retry,
         # Issue #293: Include schema validation errors for evaluator feedback
         "schema_validation_errors": schema_validation_errors,
+        # Issue #338 Phase 8: Track derived_fields graceful degradation for observability
+        "derived_fields_degradation_count": degradation_count,
     }

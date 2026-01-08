@@ -33,7 +33,7 @@ from aiagent.langgraph.jobGeneratorV2.types import (
 
 from .compatibility import CompatibilityCheckerSubWorkflow
 from .enricher import SchemaEnricherSubWorkflow
-from .schema_generator import SchemaGeneratorSubWorkflow
+from .schema_generator import SchemaGeneratorSubWorkflow, evaluate_schema_count_mismatch
 
 if TYPE_CHECKING:
     from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
@@ -134,6 +134,31 @@ class InterfaceDesignWorkflow:
             )
 
         logger.info("Generated %d interface schemas", len(interfaces))
+
+        # Issue #342 Bug #6: Evaluate schema count mismatch with threshold-based judgment
+        mismatch_result = evaluate_schema_count_mismatch(
+            expected_count=len(tasks),
+            actual_count=len(interfaces),
+        )
+
+        if not mismatch_result.is_acceptable:
+            # Mismatch exceeds threshold - fail the workflow
+            logger.error(
+                "Schema count mismatch unacceptable: %s",
+                mismatch_result.message,
+            )
+            raise WorkflowError(
+                mismatch_result.message,
+                ErrorType.VALIDATION,
+                Phase.INTERFACE_DESIGN,
+            )
+
+        if mismatch_result.severity == "warning":
+            # Mismatch within threshold - log warning but continue
+            logger.warning(
+                "Schema count mismatch within threshold: %s",
+                mismatch_result.message,
+            )
 
         # Step 2: Check compatibility
         compatibility_checker = CompatibilityCheckerSubWorkflow()

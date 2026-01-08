@@ -1,0 +1,131 @@
+{
+  "issue_number": 342,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "load_capabilities_from_yaml",
+      "type": "function",
+      "file_path": "aiagent/langgraph/shared/capability_utils.py",
+      "line_number": 20,
+      "description": "YAMLファイルからcapabilitiesをロードする関数",
+      "expected_callers": ["TaskBreakdownWorkflow", "TaskDecomposerSubWorkflow", "FeasibilitySubWorkflow"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "format_capabilities_for_prompt",
+      "type": "function",
+      "file_path": "aiagent/langgraph/shared/capability_utils.py",
+      "line_number": 60,
+      "description": "capabilitiesをLLMプロンプト用にフォーマットする関数",
+      "expected_callers": ["_build_task_breakdown_system_prompt"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/llm_utils.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_build_task_breakdown_system_prompt",
+      "type": "function",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+      "line_number": 245,
+      "description": "capabilities情報を含むシステムプロンプトを構築する関数（拡張）",
+      "expected_callers": ["TaskDecomposerSubWorkflow.decompose"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "TaskDecomposerSubWorkflow.__init__",
+      "type": "method",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
+      "line_number": 160,
+      "description": "capabilities注入用コンストラクタ",
+      "expected_callers": ["TaskBreakdownWorkflow.execute"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "Capability.use_cases",
+      "type": "field",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 50,
+      "description": "Capability型に追加したuse_casesフィールド",
+      "expected_callers": ["format_capabilities_for_prompt"],
+      "expected_call_location": "aiagent/langgraph/shared/capability_utils.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "Capability.method",
+      "type": "field",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 51,
+      "description": "Capability型に追加したmethodフィールド",
+      "expected_callers": ["format_capabilities_for_prompt"],
+      "expected_call_location": "aiagent/langgraph/shared/capability_utils.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_load_capabilities_from_yaml", "test_load_capabilities_includes_use_cases", "test_load_capabilities_includes_method"],
+      "integration_tests": ["test_shared_and_feasibility_load_same_yaml", "test_workflow_loads_capabilities"],
+      "acceptance_tests": ["test_issue_342_api_injection_acceptance"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_format_capabilities_empty", "test_format_capabilities_includes_api_info", "test_format_capabilities_groups_by_type"],
+      "integration_tests": ["test_system_prompt_contains_api_list"],
+      "acceptance_tests": ["test_issue_342_api_injection_acceptance"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_system_prompt_includes_apis", "test_system_prompt_without_apis", "test_system_prompt_uses_shared_format"],
+      "integration_tests": ["test_system_prompt_contains_api_list"],
+      "acceptance_tests": ["test_issue_342_api_injection_acceptance"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_decomposer_constructor_signature", "test_decomposer_stores_capabilities"],
+      "integration_tests": ["test_capabilities_propagate_to_decomposer", "test_decomposer_auto_loads_when_none"],
+      "acceptance_tests": ["test_issue_342_api_injection_acceptance"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_capability_type_has_use_cases_field", "test_capability_type_defaults"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_capability_type_has_method_field", "test_capability_type_defaults"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
+      "integration_type": "import_and_call",
+      "integration_method": "from ...shared.capability_utils import load_capabilities_from_yaml; capabilities = load_capabilities_from_yaml()"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
+      "integration_type": "import_and_call",
+      "integration_method": "from aiagent.langgraph.shared.capability_utils import format_capabilities_for_prompt; capabilities_section = format_capabilities_for_prompt(capabilities)"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
+      "integration_type": "function_call",
+      "integration_method": "system_prompt = _build_task_breakdown_system_prompt(capabilities=capabilities)"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
+      "integration_type": "constructor_call",
+      "integration_method": "decomposer = TaskDecomposerSubWorkflow(capabilities=capabilities)"
+    }
+  ],
+  "timestamp": "2026-01-08T00:15:00+09:00"
+}

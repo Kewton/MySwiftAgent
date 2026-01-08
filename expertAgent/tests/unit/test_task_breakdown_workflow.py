@@ -11,7 +11,6 @@ TDD approach: Tests are written first, then implementation follows.
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -37,7 +36,6 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     TaskBreakdownOutput,
     TaskDefinition,
 )
-
 
 # =============================================================================
 # Fixtures

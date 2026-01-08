@@ -1,7 +1,8 @@
 # Few-shot example: Search pattern
 # Google Search -> Format Results workflow
+# NOTE: This URL is ONLY for google_search API. For other APIs, use API Mappings section.
 name: "search_pattern"
-description: "Search API -> Result formatting pattern"
+description: "Search API pattern - URL is google_search ONLY. For other APIs, use API Mappings."
 applicable_apis:
   - "google_search"
   - "gmail_search"

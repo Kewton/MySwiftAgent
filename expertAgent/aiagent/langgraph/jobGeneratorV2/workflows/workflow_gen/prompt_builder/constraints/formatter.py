@@ -110,7 +110,7 @@ def format_schema_to_yaml_example(schema: dict[str, Any], indent: int = 2) -> st
     for name, spec in properties.items():
         prop_type = spec.get("type", "string")
         if prop_type == "string":
-            lines.append(f"{indent_str}{name}: \"example\"")
+            lines.append(f'{indent_str}{name}: "example"')
         elif prop_type == "integer":
             lines.append(f"{indent_str}{name}: 10")
         elif prop_type == "number":

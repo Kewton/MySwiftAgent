@@ -319,6 +319,7 @@ async def _create_job_in_background_v2(
     """Background task for job creation using V2 architecture.
 
     Issue #342: V2 implementation with improved retry management.
+    Issue #342-V2-UX: Added JobStateProgressReporter for real-time tracking.
 
     Args:
         job_id: Unique job ID
@@ -326,7 +327,10 @@ async def _create_job_in_background_v2(
         max_retry: Maximum retry count
         langfuse_handler: Optional Langfuse CallbackHandler for tracing
     """
-    from aiagent.langgraph.jobGeneratorV2 import JobGeneratorV2Adapter
+    from aiagent.langgraph.jobGeneratorV2 import (
+        JobGeneratorV2Adapter,
+        JobStateProgressReporter,
+    )
 
     logger.info(f"[BG:{job_id}] Starting background job creation (V2)")
 
@@ -335,10 +339,17 @@ async def _create_job_in_background_v2(
         await job_state_manager.update_phase_async(job_id, "task_analysis")
         await job_state_manager.update_progress_async(job_id, 10)
 
-        # Create V2 adapter
+        # Issue #342-V2-UX: Create progress reporter for real-time tracking
+        progress_reporter = JobStateProgressReporter(
+            job_id=job_id,
+            job_state_manager=job_state_manager,
+        )
+
+        # Create V2 adapter with progress reporter
         adapter = JobGeneratorV2Adapter(
             max_retry=max_retry,
             langfuse_handler=langfuse_handler,
+            progress_reporter=progress_reporter,
         )
 
         await job_state_manager.update_progress_async(job_id, 20)

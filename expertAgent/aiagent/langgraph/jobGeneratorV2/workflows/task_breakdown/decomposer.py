@@ -17,7 +17,7 @@ Key design decisions:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     StructuredLLMError,
@@ -162,10 +162,25 @@ class TaskDecomposerSubWorkflow:
     This class handles the LLM-based decomposition of natural language
     requirements into structured task definitions.
 
+    Issue #342: Added capabilities injection for API information in prompts.
+
     Example:
-        decomposer = TaskDecomposerSubWorkflow()
+        capabilities = load_capabilities_from_yaml()
+        decomposer = TaskDecomposerSubWorkflow(capabilities=capabilities)
         tasks = await decomposer.decompose(input_data, context)
     """
+
+    def __init__(
+        self,
+        capabilities: list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Initialize with available capabilities.
+
+        Args:
+            capabilities: List of capability dicts from YAML.
+                         If None, will load from YAML automatically during decompose().
+        """
+        self._capabilities = capabilities
 
     async def decompose(
         self,
@@ -197,8 +212,17 @@ class TaskDecomposerSubWorkflow:
                 Phase.TASK_BREAKDOWN,
             )
 
-        # Build prompts
-        system_prompt = _build_task_breakdown_system_prompt()
+        # Issue #342: Auto-load capabilities if not provided
+        capabilities = self._capabilities
+        if capabilities is None:
+            from aiagent.langgraph.shared.capability_utils import (
+                load_capabilities_from_yaml,
+            )
+            capabilities = load_capabilities_from_yaml()
+            logger.info("Auto-loaded %d capabilities", len(capabilities))
+
+        # Build prompts WITH capabilities
+        system_prompt = _build_task_breakdown_system_prompt(capabilities=capabilities)
         user_prompt = create_task_breakdown_prompt(input_data.user_requirement)
 
         messages = [

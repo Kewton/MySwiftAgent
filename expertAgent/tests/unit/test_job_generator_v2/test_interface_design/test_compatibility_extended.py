@@ -5,11 +5,11 @@ Issue #342 Phase C.2: Additional tests for coverage improvement.
 
 import pytest
 
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestGetOutputProperties:

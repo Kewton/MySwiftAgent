@@ -3,15 +3,16 @@
 Issue #342 Phase C.3: Tests for derived_fields enrichment.
 """
 
-import pytest
 from typing import Any
 
+import pytest
+
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     EnrichmentReport,
     InterfaceSchema,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestSchemaEnricherExists:
@@ -268,8 +269,8 @@ class TestGracefulDegradation:
         """DerivedFieldDefinition validator should handle string input gracefully."""
         from aiagent.langgraph.jobGeneratorV2.types import (
             InterfaceSchemaDefinition,
-            reset_derived_fields_degradation_count,
             get_derived_fields_degradation_count,
+            reset_derived_fields_degradation_count,
         )
 
         reset_derived_fields_degradation_count()

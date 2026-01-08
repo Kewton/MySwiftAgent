@@ -323,7 +323,10 @@ class TestRunnerSubWorkflow:
             errors.append("Missing nodes field")
 
         # Check for at least one node with isResult
-        if "isResult: true" not in workflow_yaml and "isResult:true" not in workflow_yaml:
+        if (
+            "isResult: true" not in workflow_yaml
+            and "isResult:true" not in workflow_yaml
+        ):
             errors.append("No result node defined")
 
         return len(errors) == 0, errors

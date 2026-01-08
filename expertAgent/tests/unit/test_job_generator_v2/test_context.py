@@ -3,8 +3,7 @@
 Tests for ExecutionContext and related context classes.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
 
 class TestExecutionContext:

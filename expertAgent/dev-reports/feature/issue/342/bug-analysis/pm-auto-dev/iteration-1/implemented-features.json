@@ -1,0 +1,184 @@
+{
+  "issue_number": 342,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "TaskIdMapping",
+      "type": "class",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 640,
+      "description": "Bidirectional mapping between logical task_id and ULID-based task_master_id",
+      "expected_callers": ["orchestrator._execute_workflow_gen_per_task"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "TaskIdMapping.from_registration",
+      "type": "class_method",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 662,
+      "description": "Factory method to create TaskIdMapping from RegistrationOutput",
+      "expected_callers": ["orchestrator._execute_workflow_gen_per_task"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py:430"
+    },
+    {
+      "feature_id": "F3",
+      "name": "TaskIdMapping.get_logical_id",
+      "type": "method",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 683,
+      "description": "Get logical task_id from task_master_id",
+      "expected_callers": ["yaml_generator._normalize_task_id"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py:66"
+    },
+    {
+      "feature_id": "F4",
+      "name": "SkipInfo",
+      "type": "class",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 739,
+      "description": "Dataclass to hold information about a skipped task",
+      "expected_callers": ["SkipAggregator.add_skip"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "SkipAggregator",
+      "type": "class",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 757,
+      "description": "Aggregator for tracking skipped tasks and checking if all tasks were skipped",
+      "expected_callers": ["orchestrator._execute_workflow_gen_per_task"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py:443"
+    },
+    {
+      "feature_id": "F6",
+      "name": "SkipAggregator.all_skipped",
+      "type": "method",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 805,
+      "description": "Check if all tasks in the original set were skipped",
+      "expected_callers": ["orchestrator._execute_workflow_gen_per_task"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "SchemaCountMismatchResult",
+      "type": "class",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 726,
+      "description": "Result of schema count mismatch evaluation with severity level",
+      "expected_callers": ["evaluate_schema_count_mismatch"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py:44"
+    },
+    {
+      "feature_id": "F8",
+      "name": "evaluate_schema_count_mismatch",
+      "type": "function",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
+      "line_number": 44,
+      "description": "Threshold-based evaluation of schema count mismatch (diff=1 warning, diff>=2 error)",
+      "expected_callers": ["InterfaceDesignWorkflow.execute"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/workflow.py:139"
+    },
+    {
+      "feature_id": "F9",
+      "name": "AsyncTaskManager",
+      "type": "class",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/progress.py",
+      "line_number": 41,
+      "description": "Manager for async tasks with proper exception handling and cleanup",
+      "expected_callers": ["JobStateProgressReporter.__init__"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/progress.py:261"
+    },
+    {
+      "feature_id": "F10",
+      "name": "RegistrationOutput.task_id_to_master_id",
+      "type": "field",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 628,
+      "description": "Mapping from logical task_id to ULID-based task_master_id",
+      "expected_callers": ["TaskIdMapping.from_registration", "RegistrationWorkflow.execute"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/workflows/registration/workflow.py"
+    },
+    {
+      "feature_id": "F11",
+      "name": "WorkflowGenInput.task_id_mapping",
+      "type": "field",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 548,
+      "description": "Optional TaskIdMapping passed to workflow generation",
+      "expected_callers": ["orchestrator._execute_workflow_gen_per_task"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py:481"
+    },
+    {
+      "feature_id": "F12",
+      "name": "StorageContext.task_id_mapping",
+      "type": "field",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/context.py",
+      "line_number": 65,
+      "description": "TaskIdMapping stored in context for downstream use",
+      "expected_callers": ["orchestrator._execute_workflow_gen_per_task"],
+      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/orchestrator.py:437"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_task_id_mapping.py::TestTaskIdMapping::*"],
+      "integration_tests": ["test_v2_e2e_bug_fixes.py::*"],
+      "acceptance_tests": ["test_issue_342_bug_fixes_acceptance.py::test_bug1_*"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_task_id_mapping.py::TestTaskIdMapping::test_from_registration_*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_task_id_mapping.py::TestSkipAggregator::*"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_342_bug_fixes_acceptance.py::test_bug3_*"]
+    },
+    {
+      "feature_id": "F8",
+      "unit_tests": ["test_error_thresholds.py::TestEvaluateSchemaCountMismatch::*"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_342_bug_fixes_acceptance.py::test_bug6_*"]
+    },
+    {
+      "feature_id": "F9",
+      "unit_tests": ["test_async_task_management.py::TestAsyncTaskManager::*"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_342_bug_fixes_acceptance.py::test_bug9_*"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "import_and_use",
+      "integration_method": "from .types import TaskIdMapping; TaskIdMapping.from_registration()"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "import_and_use",
+      "integration_method": "from .types import SkipAggregator; skip_aggregator = SkipAggregator()"
+    },
+    {
+      "feature_id": "F8",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/workflow.py",
+      "integration_type": "import_and_call",
+      "integration_method": "from .schema_generator import evaluate_schema_count_mismatch; evaluate_schema_count_mismatch(schema_count, task_count)"
+    },
+    {
+      "feature_id": "F9",
+      "integration_file": "aiagent/langgraph/jobGeneratorV2/progress.py",
+      "integration_type": "internal_use",
+      "integration_method": "self._async_task_manager = AsyncTaskManager()"
+    }
+  ]
+}

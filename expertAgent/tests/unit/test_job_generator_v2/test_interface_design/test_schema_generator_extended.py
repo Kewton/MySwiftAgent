@@ -3,14 +3,14 @@
 Issue #342 Phase C.1: Additional tests for coverage improvement.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
-    Phase,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestNormalizeJsonSchemaPropertiesExtended:
@@ -263,12 +263,12 @@ class TestSchemaGeneratorLLMError:
         self, sample_task: TaskDefinition, mock_context: ExecutionContext
     ):
         """generate() should raise WorkflowError on LLM failure."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.schema_generator import (
-            SchemaGeneratorSubWorkflow,
-        )
-        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
         from aiagent.langgraph.jobGeneratorV2.llm_utils import (
             StructuredLLMError,
+        )
+        from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
+        from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.schema_generator import (
+            SchemaGeneratorSubWorkflow,
         )
 
         with patch(

@@ -20,7 +20,9 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.errors import (
 logger = logging.getLogger(__name__)
 
 
-def validate_yaml_syntax(yaml_content: str) -> tuple[dict[str, Any] | None, list[ValidationError]]:
+def validate_yaml_syntax(
+    yaml_content: str,
+) -> tuple[dict[str, Any] | None, list[ValidationError]]:
     """Validate YAML syntax and parse content.
 
     Args:

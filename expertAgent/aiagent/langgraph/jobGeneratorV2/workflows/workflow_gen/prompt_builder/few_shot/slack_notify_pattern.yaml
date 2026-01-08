@@ -1,7 +1,8 @@
 # Few-shot example: Slack Notify pattern
 # Slack notification workflow with channel and message mapping
+# NOTE: This URL is ONLY for slack_notify API. For other APIs, use API Mappings section.
 name: "slack_notify_pattern"
-description: "Slack notification pattern with channel and message mapping"
+description: "Slack notification pattern - URL is slack/notify ONLY. For other APIs, use API Mappings."
 applicable_apis:
   - "slack_notify"
   - "slack_send"

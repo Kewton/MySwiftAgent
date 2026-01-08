@@ -3,16 +3,17 @@
 Issue #342 Phase C.2: Tests for GraphAI compatibility checking.
 """
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
+from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     CompatibilityReport,
     InterfaceSchema,
     Phase,
     TaskDefinition,
 )
-from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 
 class TestCompatibilityCheckerExists:

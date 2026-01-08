@@ -3,8 +3,9 @@
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
     DEFAULT_MODEL,

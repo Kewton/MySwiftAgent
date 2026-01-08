@@ -865,9 +865,6 @@ class TestIssue342WorkflowGenIntegration:
 
     def test_integration_validators_with_prompt_builder(self) -> None:
         """Integration: Validators work with PromptBuilder error feedback."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.errors import (
-            ValidationError,
-        )
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder import (
             PromptBuilderSubWorkflow,
         )
