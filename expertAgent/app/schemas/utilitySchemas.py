@@ -51,3 +51,73 @@ class GoogleSearchResponse(BaseModel):
     search_results: List[dict]  # List of search result items
     search_results_count: int  # Number of results
     status: str = "ok"  # Status indicator
+
+
+class FetchWebContentRequest(BaseModel):
+    """Request schema for web content fetch API.
+
+    Used in GraphAI workflows to fetch actual article content from URLs.
+    """
+
+    url: str = Field(..., description="The URL to fetch content from")
+    upload_to_drive: bool = Field(
+        default=False,
+        description="Whether to upload the markdown to Google Drive",
+    )
+
+
+class FetchWebContentResponse(BaseModel):
+    """Response schema for web content fetch API.
+
+    Returns the web page content converted to Markdown format.
+    Workflows can reference:
+    - :fetch_content.markdown_content
+    - :fetch_content.status
+    """
+
+    markdown_content: str = Field(
+        ..., description="The web page content in Markdown format"
+    )
+    status: str = Field(default="success", description="Status indicator")
+    error: str | None = Field(
+        default=None, description="Error message if status is 'failed'"
+    )
+
+
+class ExtractArticleUrlsRequest(BaseModel):
+    """Request schema for extracting article URLs from search results.
+
+    Used in GraphAI workflows to extract top N article URLs from
+    nested search results structure.
+    """
+
+    search_results: List[dict] = Field(
+        ..., description="Search results from Google search API"
+    )
+    max_urls: int = Field(
+        default=2, description="Maximum number of URLs to extract", le=5
+    )
+
+
+class ExtractArticleUrlsResponse(BaseModel):
+    """Response schema for extract article URLs API.
+
+    Returns flattened list of article URLs.
+    Workflows can reference:
+    - :extract_urls.article_url_1
+    - :extract_urls.article_url_2
+    """
+
+    article_url_1: str | None = Field(
+        default=None, description="First article URL"
+    )
+    article_url_2: str | None = Field(
+        default=None, description="Second article URL"
+    )
+    article_url_3: str | None = Field(
+        default=None, description="Third article URL"
+    )
+    urls: List[str] = Field(
+        default_factory=list, description="List of all extracted URLs"
+    )
+    count: int = Field(default=0, description="Number of URLs extracted")

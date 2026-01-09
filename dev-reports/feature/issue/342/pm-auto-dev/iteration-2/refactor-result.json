@@ -1,0 +1,18 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 85.12,
+    "after_coverage": 85.12,
+    "ruff_errors_before": 1,
+    "ruff_errors_after": 0,
+    "mypy_errors": 0
+  },
+  "refactorings_applied": [
+    "Ruff自動修正: import block sorting (workflow_registrar.py)"
+  ],
+  "notes": [
+    "静的解析エラーは1件のみ、自動修正で解決",
+    "MyPy型チェック: エラーなし",
+    "カバレッジは変更なし（コードロジックの変更なし）"
+  ]
+}

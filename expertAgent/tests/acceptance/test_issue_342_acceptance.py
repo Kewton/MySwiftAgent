@@ -340,7 +340,7 @@ class TestIssue342Acceptance:
         # Assert: 必要なエラータイプが存在
         assert hasattr(ErrorType, "TRANSIENT")
         assert hasattr(ErrorType, "VALIDATION")
-        assert hasattr(ErrorType, "BUSINESS_CONSTRAINT")
+        assert hasattr(ErrorType, "BUSINESS")
         assert hasattr(ErrorType, "FATAL")
 
     # ==========================================================================

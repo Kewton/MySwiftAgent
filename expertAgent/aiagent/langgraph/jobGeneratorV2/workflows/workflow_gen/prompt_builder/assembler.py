@@ -3,6 +3,9 @@
 This module assembles the final prompt from components.
 
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
+Issue #342 Iteration 2: Dead code integration
+- INT-3: APISchemaInjector integration for API spec injection
+- INT-4: WorkflowPatternLibrary integration for pattern suggestions
 """
 
 from __future__ import annotations
@@ -10,6 +13,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Any
+
+from aiagent.langgraph.jobGeneratorV2.injectors import APISchemaInjector
+from aiagent.langgraph.jobGeneratorV2.patterns import WorkflowPatternLibrary
 
 from .constraints import format_multiple_api_constraints
 from .few_shot import FewShotExample, select_few_shot_examples
@@ -179,6 +185,8 @@ def assemble_prompt(
     error_feedback: str = "",
     verbose: bool = True,
     api_mappings: list[dict[str, Any]] | None = None,
+    api_injector: APISchemaInjector | None = None,
+    pattern_library: WorkflowPatternLibrary | None = None,
 ) -> WorkflowPrompt:
     """Assemble the complete workflow generation prompt.
 
@@ -192,6 +200,8 @@ def assemble_prompt(
         error_feedback: Previous error feedback (for retries)
         verbose: Use verbose prompts
         api_mappings: Issue #342 V2 - API mapping info from AgentSelector
+        api_injector: Issue #342 INT-3 - APISchemaInjector for API spec injection
+        pattern_library: Issue #342 INT-4 - WorkflowPatternLibrary for pattern suggestions
 
     Returns:
         WorkflowPrompt with all components assembled
@@ -217,6 +227,27 @@ def assemble_prompt(
     api_mappings_section = _format_api_mappings(api_mappings)
     if api_mappings_section:
         api_constraints = api_constraints + "\n" + api_mappings_section
+
+    # Issue #342 INT-3: Inject API schema specs using APISchemaInjector
+    if api_injector is None:
+        api_injector = APISchemaInjector()
+
+    if recommended_apis:
+        api_constraints = api_injector.inject(api_constraints, recommended_apis)
+
+    # Issue #342 INT-4: Add pattern suggestion using WorkflowPatternLibrary
+    if pattern_library is None:
+        pattern_library = WorkflowPatternLibrary()
+
+    suggested_pattern_name = pattern_library.suggest_pattern(task_description)
+    pattern = pattern_library.get_pattern(suggested_pattern_name)
+    if pattern:
+        pattern_section = "\n## Recommended Workflow Pattern\n"
+        pattern_section += "Based on the task description, consider using the "
+        pattern_section += f"'{suggested_pattern_name}' pattern:\n"
+        pattern_section += f"- Description: {pattern.get('description', 'N/A')}\n"
+        pattern_section += f"- Common nodes: {', '.join(pattern.get('nodes', []))}\n"
+        api_constraints = api_constraints + "\n" + pattern_section
 
     # Select few-shot examples
     examples = select_few_shot_examples(

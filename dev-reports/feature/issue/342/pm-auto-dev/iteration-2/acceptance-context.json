@@ -1,0 +1,72 @@
+{
+  "issue_number": 342,
+  "iteration": 2,
+  "feature_summary": "V2 Job Generator アーキテクチャ刷新 - ワークフロー生成品質改善",
+  "acceptance_criteria": [
+    "ワークフロー生成成功率 90%以上",
+    "初回実行成功率 70%以上",
+    "検証エラー検出率 95%以上",
+    "ソースパス参照が :source.user_input.* / :source.job_params.* 形式",
+    "タイムアウトがミリ秒単位（30000等）",
+    "stringTemplateAgentでJavaScript式を使用しない"
+  ],
+  "labels": ["feature", "agent-layer", "project: expertAgent"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "graphAiServer"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "implementation-verification-result.json",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "ValidationPipeline統合テスト",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/integration/test_issue_342_validation_integration.py -v",
+        "expected_status": 0,
+        "expected_response_contains": ["12 passed"]
+      },
+      {
+        "name": "受入テスト - 基本",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_acceptance.py -v --tb=short",
+        "expected_status": 0
+      },
+      {
+        "name": "受入テスト - APIインジェクション",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_api_injection_acceptance.py -v --tb=short",
+        "expected_status": 0
+      },
+      {
+        "name": "受入テスト - バグ修正",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_bug_fixes_acceptance.py -v --tb=short",
+        "expected_status": 0
+      },
+      {
+        "name": "受入テスト - V2タスク分割",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_v2_task_breakdown_acceptance.py -v --tb=short",
+        "expected_status": 0
+      },
+      {
+        "name": "受入テスト - ワークフロー生成",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_workflow_gen_acceptance.py -v --tb=short",
+        "expected_status": 0
+      },
+      {
+        "name": "受入テスト - ワークフロー品質",
+        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_workflow_quality_acceptance.py -v --tb=short",
+        "expected_status": 0
+      }
+    ]
+  },
+  "pytest_test_files": [
+    "tests/acceptance/test_issue_342_acceptance.py",
+    "tests/acceptance/test_issue_342_api_injection_acceptance.py",
+    "tests/acceptance/test_issue_342_bug_fixes_acceptance.py",
+    "tests/acceptance/test_issue_342_v2_task_breakdown_acceptance.py",
+    "tests/acceptance/test_issue_342_workflow_gen_acceptance.py",
+    "tests/acceptance/test_issue_342_workflow_quality_acceptance.py"
+  ]
+}

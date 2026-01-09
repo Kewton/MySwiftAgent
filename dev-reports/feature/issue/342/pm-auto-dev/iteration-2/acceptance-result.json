@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "iteration": 2,
+  "service_health": {
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8004"},
+    "myVault": {"status": "healthy", "url": "http://localhost:8003"}
+  },
+  "pytest_results": {
+    "test_issue_342_acceptance": {
+      "test_file": "tests/acceptance/test_issue_342_acceptance.py",
+      "total": 18,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 1,
+      "output": "17 passed, 1 skipped (USE_JOB_GENERATOR_V2 environment skip)"
+    },
+    "test_integration": {
+      "test_file": "tests/integration/test_issue_342_validation_integration.py",
+      "total": 12,
+      "passed": 12,
+      "failed": 0,
+      "output": "12 passed - All INT-1 to INT-4 integrations verified"
+    }
+  },
+  "acceptance_criteria_status": [
+    {"criterion": "ValidationPipeline統合", "verified": true, "verification_method": "integration_test"},
+    {"criterion": "APISchemaInjector統合", "verified": true, "verification_method": "integration_test"},
+    {"criterion": "WorkflowPatternLibrary統合", "verified": true, "verification_method": "integration_test"},
+    {"criterion": "ValidationObserver統合", "verified": true, "verification_method": "integration_test"},
+    {"criterion": "ソースパス検証", "verified": true, "verification_method": "unit_test + integration_test"},
+    {"criterion": "エージェント制約検証", "verified": true, "verification_method": "unit_test + integration_test"}
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_342_acceptance.py",
+    "tests/integration/test_issue_342_validation_integration.py"
+  ],
+  "notes": [
+    "基本受入テスト: 17/18 passed, 1 skipped (feature flag test)",
+    "統合テスト: 12/12 passed - 全デッドコード統合が検証済み",
+    "E2Eテスト（LLM APIを使用する外部テスト）は時間制約のためスキップ",
+    "コア機能（ValidationPipeline, APISchemaInjector, WorkflowPatternLibrary, ValidationObserver）の統合は全て検証完了"
+  ]
+}

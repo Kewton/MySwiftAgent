@@ -1,51 +1,50 @@
 {
   "issue_number": 342,
   "iteration": 2,
-  "focus_phase": "Phase B: TaskBreakdownWorkflow",
-  "previous_iteration": {
-    "completed": ["Phase A: Foundation (types.py, protocols.py, context.py, recovery.py, orchestrator.py)"],
-    "coverage": 89.85,
-    "tests_passed": 95
-  },
-  "implementation_tasks": [
-    "B.1: TaskDecomposerSubWorkflow実装 - 現行requirement_analysis.pyのロジック移植",
-    "B.2: FeasibilitySubWorkflow実装 - capabilities.yamlとの照合",
-    "B.3: AlternativeSubWorkflow実装 - 代替案生成ロジック",
-    "B.4: TaskBreakdownWorkflow統合 - 3つのサブワークフロー統合",
-    "B.5: TaskBreakdown単体テスト"
-  ],
-  "deliverables": [
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
-    "expertAgent/tests/unit/test_job_generator_v2/test_task_breakdown/"
-  ],
-  "source_files_to_migrate": [
+  "retry_reason": "Phase 2.7 でデッドコードを検出",
+  "dead_code_fixes": [
     {
-      "old": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/requirement_analysis.py",
-      "new": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-      "logic": "タスク分解ロジック"
+      "task_id": "INT-1",
+      "feature": "ValidationPipeline",
+      "action": "yaml_generator.py の YamlGeneratorSubWorkflow 内でValidationPipelineを呼び出し",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+      "code_change": "LLM生成後にValidationPipeline.validate()を呼び出し、エラーがあればto_prompt_feedback()でリトライ"
     },
     {
-      "old": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/evaluator.py",
-      "new": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py",
-      "logic": "実現可能性評価ロジック（capabilities.yaml照合）"
+      "task_id": "INT-2",
+      "feature": "ValidationObserver",
+      "action": "ValidationPipeline に ValidationObserver を統合",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
+      "code_change": "observer パラメータを __init__ に追加、validate() 完了後に observe_validation() を呼び出し"
+    },
+    {
+      "task_id": "INT-3",
+      "feature": "APISchemaInjector",
+      "action": "prompt builder assembler に APISchemaInjector を統合",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
+      "code_change": "inject_into_prompt() を使用してAPIスキーマをシステムプロンプトに追加"
+    },
+    {
+      "task_id": "INT-4",
+      "feature": "WorkflowPatternLibrary",
+      "action": "prompt builder assembler に WorkflowPatternLibrary を統合",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
+      "code_change": "suggest_pattern() を使用してパターン提案をプロンプトに追加"
     }
   ],
-  "protocol_to_implement": "WorkflowProtocol",
-  "integration_with_foundation": {
-    "use_types": ["Phase", "PhaseStatus", "RetryState", "TaskBreakdownInput", "TaskBreakdownOutput", "TaskDefinition"],
-    "use_context": ["ExecutionContext", "LLMContext"],
-    "use_protocols": ["WorkflowProtocol"]
-  },
-  "acceptance_criteria_for_phase_b": [
-    "自然言語要件をタスクリストに分解できる",
-    "capabilities.yamlとの照合で実現可能性を評価できる",
-    "実現不可能なタスクに対して代替案を提案できる",
-    "WorkflowProtocolを正しく実装している",
-    "単体テストカバレッジ90%以上"
+  "already_completed": [
+    "SourcePathRuleEngine 実装・単体テスト",
+    "AgentConstraintValidator 実装・単体テスト",
+    "WorkflowSchemaValidator 実装・単体テスト",
+    "APISchemaInjector 実装・単体テスト",
+    "WorkflowPatternLibrary 実装・単体テスト",
+    "ValidationPipeline 実装・結合テスト",
+    "ValidationObserver 実装・単体テスト"
   ],
-  "target_coverage": 90
+  "target_coverage": 90,
+  "required_integration_tests": [
+    "test_yaml_generator_calls_validation_pipeline.py",
+    "test_prompt_builder_includes_api_schemas.py",
+    "test_prompt_builder_includes_pattern_suggestions.py"
+  ]
 }

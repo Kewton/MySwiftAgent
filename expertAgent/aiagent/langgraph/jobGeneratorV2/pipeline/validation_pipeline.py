@@ -1,12 +1,14 @@
 """ValidationPipeline for orchestrating workflow validation.
 
 Issue #342 Task 4.1: ValidationPipeline implementation.
+Issue #342 Iteration 2: ValidationObserver integration (INT-2).
 
 This module orchestrates multiple validators in sequence:
 1. SourcePathRuleEngine - Path validation
 2. AgentConstraintValidator - Agent constraints
 
 Results are aggregated, prioritized, and formatted for LLM feedback.
+Observer pattern is used for validation monitoring and Langfuse integration.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiagent.langgraph.jobGeneratorV2.validators import (
     ValidationError,
@@ -27,6 +29,9 @@ from aiagent.langgraph.jobGeneratorV2.validators.agent_constraint_validator impo
 from aiagent.langgraph.jobGeneratorV2.validators.source_path_rule_engine import (
     SourcePathRuleEngine,
 )
+
+if TYPE_CHECKING:
+    from aiagent.langgraph.jobGeneratorV2.observability import ValidationObserver
 
 logger = logging.getLogger(__name__)
 
@@ -58,16 +63,20 @@ class ValidationPipeline:
     2. Aggregates errors from all validators
     3. Prioritizes errors by severity
     4. Generates feedback for LLM retry
+    5. Notifies observer for monitoring (Issue #342 INT-2)
     """
 
     def __init__(
         self,
         validators: list[WorkflowValidator] | None = None,
+        observer: "ValidationObserver | None" = None,
     ):
-        """Initialize pipeline with validators.
+        """Initialize pipeline with validators and optional observer.
 
         Args:
             validators: List of validators to run. If None, uses default validators.
+            observer: Optional ValidationObserver for monitoring and Langfuse integration.
+                     Issue #342 Iteration 2: INT-2 integration.
         """
         if validators is None:
             self.validators = [
@@ -77,11 +86,20 @@ class ValidationPipeline:
         else:
             self.validators = validators
 
-    def validate(self, workflow: dict[str, Any]) -> ValidationResult:
+        # Issue #342 INT-2: Add observer for validation monitoring
+        self.observer = observer
+
+    def validate(
+        self,
+        workflow: dict[str, Any],
+        workflow_id: str = "",
+    ) -> ValidationResult:
         """Validate workflow using all validators.
 
         Args:
             workflow: Workflow dictionary to validate
+            workflow_id: Optional workflow identifier for logging and observability.
+                        Issue #342 INT-2: Used for observer notification.
 
         Returns:
             ValidationResult with aggregated errors
@@ -107,6 +125,17 @@ class ValidationPipeline:
         execution_time = (time.time() - start_time) * 1000
         stats = self._compute_stats(all_errors, execution_time)
         self._log_stats(stats)
+
+        # Issue #342 INT-2: Notify observer if configured
+        if self.observer is not None:
+            try:
+                self.observer.observe_validation(
+                    workflow_id=workflow_id or "unknown",
+                    errors=all_errors,
+                    duration_ms=execution_time,
+                )
+            except Exception as e:
+                logger.debug(f"Observer notification failed: {e}")
 
         if not all_errors:
             return ValidationResult.success()

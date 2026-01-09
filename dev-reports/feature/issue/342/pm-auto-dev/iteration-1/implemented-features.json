@@ -4,112 +4,180 @@
   "implemented_features": [
     {
       "feature_id": "F1",
-      "name": "get_callbacks_from_context",
-      "type": "function",
-      "file_path": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
-      "line_number": 56,
-      "description": "ExecutionContextからLangChain callbacksを抽出するヘルパー関数",
-      "expected_callers": [
-        "decomposer.decompose",
-        "schema_generator.generate_interfaces",
-        "alternative.generate_alternatives",
-        "llm_generator._generate_structured",
-        "llm_generator._generate_raw"
-      ],
-      "expected_call_location": "各workflowファイル内のinvoke_structured_llm呼び出し前"
+      "name": "WorkflowValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 38,
+      "description": "ワークフロー検証の抽象基底クラス（ABC）",
+      "expected_callers": ["SourcePathRuleEngine", "AgentConstraintValidator", "WorkflowSchemaValidator"],
+      "expected_call_location": "各バリデータークラスの継承元"
     },
     {
       "feature_id": "F2",
-      "name": "invoke_structured_llm callbacks parameter",
-      "type": "parameter",
-      "file_path": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
-      "line_number": 235,
-      "description": "invoke_structured_llm関数にcallbacks引数を追加",
-      "expected_callers": [
-        "decomposer.py",
-        "schema_generator.py",
-        "alternative.py",
-        "llm_generator.py"
-      ],
-      "expected_call_location": "invoke_structured_llm(..., callbacks=callbacks)"
+      "name": "SourcePathRuleEngine",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/source_path_rule_engine.py",
+      "line_number": 49,
+      "description": ":source.user_input.*, :source.job_params.* パス検証エンジン",
+      "expected_callers": ["WorkflowSchemaValidator", "ValidationPipeline"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py:74"
     },
     {
       "feature_id": "F3",
-      "name": "run_workflow context parameter",
-      "type": "parameter",
-      "file_path": "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
-      "line_number": 138,
-      "description": "orchestrator.run_workflowにcontext引数を追加",
-      "expected_callers": ["adapter.generate"],
-      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/adapter.py:223"
+      "name": "AgentConstraintValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/agent_constraint_validator.py",
+      "line_number": 68,
+      "description": "エージェント固有制約検証（stringTemplateAgent JS検出、fetchAgent timeout検証）",
+      "expected_callers": ["WorkflowSchemaValidator", "ValidationPipeline"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py:75"
     },
     {
       "feature_id": "F4",
-      "name": "adapter context propagation",
-      "type": "code_change",
-      "file_path": "aiagent/langgraph/jobGeneratorV2/adapter.py",
-      "line_number": 221,
-      "description": "adapterがcontextをビルドしてorchestratorに渡す",
-      "expected_callers": ["API endpoint via generate()"],
-      "expected_call_location": "aiagent/langgraph/jobGeneratorV2/adapter.py:generate()"
+      "name": "WorkflowSchemaValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/workflow_schema_validator.py",
+      "line_number": 29,
+      "description": "SourcePathRuleEngine + AgentConstraintValidator の統合バリデーター",
+      "expected_callers": ["ValidationPipeline", "ワークフロー生成ノード"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "APISchemaInjector",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/injectors/api_schema_injector.py",
+      "line_number": 30,
+      "description": "APIスキーマYAMLローダー・プロンプト注入",
+      "expected_callers": ["ワークフロー生成プロンプトビルダー"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/"
+    },
+    {
+      "feature_id": "F6",
+      "name": "WorkflowPatternLibrary",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/workflow_pattern_library.py",
+      "line_number": 35,
+      "description": "標準ワークフローパターンライブラリ・サジェスト機能",
+      "expected_callers": ["ワークフロー生成LLM", "プロンプトビルダー"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/"
+    },
+    {
+      "feature_id": "F7",
+      "name": "ValidationPipeline",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
+      "line_number": 53,
+      "description": "バリデーターオーケストレーション・エラー集約",
+      "expected_callers": ["ワークフロー生成ノード", "V2アダプター"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py"
+    },
+    {
+      "feature_id": "F8",
+      "name": "StructuredLogFormatter",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py",
+      "line_number": 25,
+      "description": "JSON形式の構造化ログフォーマッター",
+      "expected_callers": ["ValidationObserver"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py"
+    },
+    {
+      "feature_id": "F9",
+      "name": "ValidationObserver",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py",
+      "line_number": 69,
+      "description": "Langfuse統合・検証結果メトリクス収集",
+      "expected_callers": ["ValidationPipeline"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py"
     }
   ],
   "test_mappings": [
     {
-      "feature_id": "F1",
-      "unit_tests": ["test_get_callbacks_from_context_with_tracer", "test_get_callbacks_from_context_without_tracer", "test_get_callbacks_from_context_with_none_observability"],
-      "integration_tests": ["test_end_to_end_context_flow"],
-      "acceptance_tests": ["test_issue_342_langfuse_acceptance"]
-    },
-    {
       "feature_id": "F2",
-      "unit_tests": ["test_invoke_structured_llm_with_callbacks", "test_invoke_structured_llm_without_callbacks"],
-      "integration_tests": ["test_v2_job_generation_creates_langfuse_trace"],
-      "acceptance_tests": ["test_issue_342_langfuse_acceptance"]
+      "unit_tests": ["test_source_path_rule_engine.py"],
+      "integration_tests": ["test_validation_pipeline.py"],
+      "acceptance_tests": ["test_issue_342_acceptance.py"]
     },
     {
       "feature_id": "F3",
-      "unit_tests": ["test_orchestrator_uses_provided_context", "test_orchestrator_creates_default_context_when_none_provided"],
-      "integration_tests": ["test_end_to_end_context_flow"],
-      "acceptance_tests": ["test_issue_342_langfuse_acceptance"]
+      "unit_tests": ["test_agent_constraint_validator.py"],
+      "integration_tests": ["test_validation_pipeline.py"],
+      "acceptance_tests": ["test_issue_342_acceptance.py"]
     },
     {
       "feature_id": "F4",
-      "unit_tests": ["test_adapter_passes_context_to_orchestrator", "test_adapter_builds_context_with_observability"],
-      "integration_tests": ["test_end_to_end_context_flow"],
-      "acceptance_tests": ["test_issue_342_langfuse_acceptance"]
+      "unit_tests": ["test_workflow_schema_validator.py"],
+      "integration_tests": ["test_validation_pipeline.py"],
+      "acceptance_tests": ["test_issue_342_acceptance.py"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_api_schema_injector.py"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_342_acceptance.py"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_workflow_pattern_library.py"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_342_acceptance.py"]
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": [],
+      "integration_tests": ["test_validation_pipeline.py"],
+      "acceptance_tests": ["test_issue_342_acceptance.py"]
+    },
+    {
+      "feature_id": "F9",
+      "unit_tests": ["test_validation_observer.py"],
+      "integration_tests": [],
+      "acceptance_tests": []
     }
   ],
   "integration_points": [
     {
-      "feature_id": "F1",
-      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-      "integration_type": "import_and_call",
-      "integration_method": "from llm_utils import get_callbacks_from_context"
-    },
-    {
-      "feature_id": "F1",
-      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
-      "integration_type": "import_and_call",
-      "integration_method": "from llm_utils import get_callbacks_from_context"
-    },
-    {
-      "feature_id": "F1",
-      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
-      "integration_type": "import_and_call",
-      "integration_method": "from llm_utils import get_callbacks_from_context"
-    },
-    {
-      "feature_id": "F1",
-      "integration_file": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py",
-      "integration_type": "import_and_call",
-      "integration_method": "from llm_utils import get_callbacks_from_context"
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
+      "integration_type": "instantiation",
+      "integration_method": "SourcePathRuleEngine() at line 74"
     },
     {
       "feature_id": "F3",
-      "integration_file": "aiagent/langgraph/jobGeneratorV2/adapter.py",
-      "integration_type": "function_call",
-      "integration_method": "run_workflow(request, context=context)"
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
+      "integration_type": "instantiation",
+      "integration_method": "AgentConstraintValidator() at line 75"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/workflow_schema_validator.py",
+      "integration_type": "aggregation",
+      "integration_method": "Uses SourcePathRuleEngine + AgentConstraintValidator internally"
+    },
+    {
+      "feature_id": "F7",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "integration_type": "pipeline_call",
+      "integration_method": "ValidationPipeline.validate() を呼び出し（Phase 6で統合予定）"
+    }
+  ],
+  "pending_integrations": [
+    {
+      "feature_id": "F5",
+      "description": "APISchemaInjector はワークフロー生成プロンプトビルダーへの統合が未完了",
+      "status": "Phase 6で統合予定"
+    },
+    {
+      "feature_id": "F6",
+      "description": "WorkflowPatternLibrary はワークフロー生成LLMへの統合が未完了",
+      "status": "Phase 6で統合予定"
+    },
+    {
+      "feature_id": "F7",
+      "description": "ValidationPipeline はV2アダプターへの統合が未完了",
+      "status": "Phase 6で統合予定"
     }
   ]
 }

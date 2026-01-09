@@ -4,6 +4,7 @@ This module provides the YamlGeneratorSubWorkflow that:
 1. Generates GraphAI YAML workflow definitions
 2. Defines task chains based on dependencies
 3. Uses LLM to generate workflow YAML when needed
+4. Validates generated YAML using ValidationPipeline (Issue #342 INT-1)
 
 Issue #342 Phase D.2: Migrated logic from jobTaskGeneratorAgents
 without importing from the old code.
@@ -13,10 +14,14 @@ Issue #342 V2 Workflow Quality Improvement:
 - Deprecated template-only methods (generate, _build_workflow_nodes, _generate_yaml)
 - Removed dead code (create_yaml_generation_prompt)
 
+Issue #342 Iteration 2: Dead code integration
+- INT-1: ValidationPipeline integration for LLM output validation
+
 Key design decisions:
 - Uses ExecutionContext for LLM access (dependency injection)
 - Does NOT import from langgraph or old jobTaskGeneratorAgents
 - Default: LLM-based generation with automatic template fallback
+- Validates LLM output with ValidationPipeline before returning
 """
 
 from __future__ import annotations
@@ -25,6 +30,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from aiagent.langgraph.jobGeneratorV2.pipeline import ValidationPipeline
 from aiagent.langgraph.jobGeneratorV2.protocols import (
     ErrorType,
     WorkflowError,
@@ -153,6 +159,7 @@ class YamlGeneratorSubWorkflow:
     1. Analyzing task chains and dependencies
     2. Generating workflow node definitions
     3. Producing valid GraphAI YAML
+    4. Validating output using ValidationPipeline (Issue #342 INT-1)
 
     Example:
         generator = YamlGeneratorSubWorkflow()
@@ -163,15 +170,21 @@ class YamlGeneratorSubWorkflow:
         self,
         graphai_version: str = "0.6",
         use_llm_generation: bool = False,
+        validation_pipeline: ValidationPipeline | None = None,
     ) -> None:
         """Initialize YamlGeneratorSubWorkflow.
 
         Args:
             graphai_version: GraphAI version for YAML
             use_llm_generation: Whether to use LLM for generation
+            validation_pipeline: Optional ValidationPipeline for output validation.
+                               Issue #342 INT-1: If None, a default pipeline is created.
         """
         self._graphai_version = graphai_version
         self._use_llm_generation = use_llm_generation
+
+        # Issue #342 INT-1: Initialize validation pipeline
+        self.validation_pipeline = validation_pipeline or ValidationPipeline()
 
     async def generate(
         self,
@@ -447,6 +460,34 @@ class YamlGeneratorSubWorkflow:
                 validation_result = yaml_validator.validate(yaml_content)
 
                 if validation_result.is_valid:
+                    # Issue #342 INT-1: Additional validation with ValidationPipeline
+                    # Parse YAML to dict for pipeline validation
+                    import yaml as yaml_lib
+
+                    try:
+                        workflow_dict = yaml_lib.safe_load(yaml_content)
+                        if workflow_dict:
+                            pipeline_result = self.validation_pipeline.validate(
+                                workflow_dict,
+                                workflow_id=f"{context.job_id}_{job_master_id}",
+                            )
+                            if not pipeline_result.is_valid:
+                                # Use pipeline feedback for retry
+                                logger.warning(
+                                    "Pipeline validation failed (attempt %d/%d): %d errors",
+                                    attempt + 1,
+                                    max_retries + 1,
+                                    len(pipeline_result.errors),
+                                )
+                                previous_errors = pipeline_result.errors
+                                attempt += 1
+                                continue
+                    except Exception as parse_err:
+                        logger.debug(
+                            "Could not parse YAML for pipeline validation: %s",
+                            parse_err,
+                        )
+
                     logger.info(
                         "LLM YAML generation successful: %s (%d nodes, attempt %d)",
                         llm_result.workflow_name,

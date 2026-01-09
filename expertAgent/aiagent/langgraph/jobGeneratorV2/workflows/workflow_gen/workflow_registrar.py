@@ -132,7 +132,9 @@ async def update_task_master_body_template(
     """
     try:
         # Import here to avoid circular dependency
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import JobqueueClient
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
+            JobqueueClient,
+        )
 
         client = JobqueueClient(base_url=JOBQUEUE_API_URL)
 

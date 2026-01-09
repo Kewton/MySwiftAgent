@@ -4,6 +4,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.utilitySchemas import (
+    ExtractArticleUrlsRequest,
+    ExtractArticleUrlsResponse,
+    FetchWebContentRequest,
+    FetchWebContentResponse,
     GoogleSearchResponse,
     JsonStringifyRequest,
     JsonStringifyResponse,
@@ -21,6 +25,7 @@ from mymcp.tool.google_search_by_serper import (
 )
 from mymcp.tool.tts_and_upload_drive import tts_and_upload_drive
 from mymcp.utils.generate_subject_from_text import generate_subject_from_text
+from mymcp.utils.html2markdown import getMarkdown
 
 router = APIRouter()
 
@@ -179,4 +184,114 @@ async def json_stringify_api(request: JsonStringifyRequest) -> JsonStringifyResp
     except (TypeError, ValueError) as e:
         raise HTTPException(
             status_code=400, detail=f"Data is not JSON-serializable: {e}"
+        ) from e
+
+
+@router.post(
+    "/utility/fetch_web_content",
+    response_model=FetchWebContentResponse,
+    summary="Fetch web page content as Markdown",
+    description="Fetches a web page and converts its HTML content to Markdown format. "
+    "Useful for GraphAI workflows that need to analyze or summarize web article content.",
+)
+async def fetch_web_content_api(
+    request: FetchWebContentRequest,
+) -> FetchWebContentResponse:
+    """
+    Fetch web page content and convert it to Markdown.
+
+    This utility is designed for GraphAI workflows that need to:
+    1. Fetch actual article content from URLs (not just search snippets)
+    2. Summarize or analyze the full content of web pages
+    3. Process web content in subsequent LLM calls
+
+    Args:
+        request: Contains the URL to fetch and options
+
+    Returns:
+        FetchWebContentResponse with the Markdown content
+
+    Example workflow usage:
+        - :fetch_content.markdown_content - The article content in Markdown
+        - :fetch_content.status - "success" or "failed"
+    """
+    try:
+        result = getMarkdown(request.url, isUpload=request.upload_to_drive)
+
+        if isinstance(result, dict):
+            if result.get("state") == "success":
+                return FetchWebContentResponse(
+                    markdown_content=result.get("result", ""),
+                    status="success",
+                )
+            else:
+                return FetchWebContentResponse(
+                    markdown_content="",
+                    status="failed",
+                    error=result.get("result", "Unknown error"),
+                )
+        else:
+            # If result is a string, it's likely an error message
+            return FetchWebContentResponse(
+                markdown_content="",
+                status="failed",
+                error=str(result),
+            )
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch web content: {e}"
+        ) from e
+
+
+@router.post(
+    "/utility/extract_article_urls",
+    response_model=ExtractArticleUrlsResponse,
+    summary="Extract article URLs from search results",
+    description="Extracts article URLs from nested Google search results structure. "
+    "Useful for GraphAI workflows that need to access individual article URLs.",
+)
+async def extract_article_urls_api(
+    request: ExtractArticleUrlsRequest,
+) -> ExtractArticleUrlsResponse:
+    """
+    Extract article URLs from nested search results.
+
+    This utility handles the nested structure of Google search results:
+    search_results[0].organic[n].link
+
+    It flattens this structure and returns individual URL fields that can
+    be easily accessed in GraphAI workflows.
+
+    Args:
+        request: Contains search results and max URLs to extract
+
+    Returns:
+        ExtractArticleUrlsResponse with individual URL fields
+    """
+    try:
+        urls: list[str] = []
+
+        # Extract URLs from nested structure
+        for result in request.search_results:
+            organic = result.get("organic", [])
+            for item in organic:
+                link = item.get("link")
+                if link and len(urls) < request.max_urls:
+                    urls.append(link)
+
+        # Build response with individual URL fields
+        response = ExtractArticleUrlsResponse(
+            urls=urls,
+            count=len(urls),
+            article_url_1=urls[0] if len(urls) > 0 else None,
+            article_url_2=urls[1] if len(urls) > 1 else None,
+            article_url_3=urls[2] if len(urls) > 2 else None,
+        )
+
+        return response
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to extract article URLs: {e}"
         ) from e
