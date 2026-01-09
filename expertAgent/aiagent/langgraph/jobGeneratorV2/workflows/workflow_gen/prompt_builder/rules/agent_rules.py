@@ -14,18 +14,31 @@ FETCH_AGENT_RULES = """### fetchAgent Rules
 - Use method: POST for API calls
 - Reference body values with `:node.property`
 - Access response data with `:node_name.result.field`
-- Set timeout for long-running APIs (default: 30s)
+- Set timeout for long-running APIs in **milliseconds** (default: 30000ms = 30 seconds)
+- IMPORTANT: Use correct API parameter names (e.g., 'queries' not 'query' for google_search)
 
 Correct:
 ```yaml
+# Google Search example - note 'queries' is an array
+google_search:
+  agent: fetchAgent
+  inputs:
+    url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search
+    method: POST
+    body:
+      queries: [':source.user_input.search_term']  # Array format required
+      num: 3
+  timeout: 180000  # 3 minutes for search
+
+# Generic API call
 api_call:
   agent: fetchAgent
   inputs:
     url: http://api.example.com/endpoint
     method: POST
     body:
-      query: :source.query
-  timeout: 30
+      data: :source.user_input.data
+  timeout: 30000
 ```
 
 Incorrect:
@@ -35,6 +48,14 @@ api_call:
   agent: fetchAgent
   params:  # WRONG!
     url: http://api.example.com
+
+# DON'T use 'query' for google_search (use 'queries')
+search:
+  agent: fetchAgent
+  inputs:
+    url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search
+    body:
+      query: :source.query  # WRONG! Should be 'queries: [...]'
 ```
 """
 

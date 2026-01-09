@@ -26,6 +26,9 @@ from aiagent.langgraph.jobGeneratorV2.validators import (
 from aiagent.langgraph.jobGeneratorV2.validators.agent_constraint_validator import (
     AgentConstraintValidator,
 )
+from aiagent.langgraph.jobGeneratorV2.validators.api_schema_validator import (
+    APISchemaValidator,
+)
 from aiagent.langgraph.jobGeneratorV2.validators.source_path_rule_engine import (
     SourcePathRuleEngine,
 )
@@ -82,6 +85,7 @@ class ValidationPipeline:
             self.validators = [
                 SourcePathRuleEngine(),
                 AgentConstraintValidator(),
+                APISchemaValidator(),  # Issue #344: API schema validation
             ]
         else:
             self.validators = validators

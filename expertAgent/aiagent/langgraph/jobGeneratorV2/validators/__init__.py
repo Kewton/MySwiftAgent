@@ -1,22 +1,75 @@
 """Validators for Job Generator V2 workflow validation.
 
 Issue #342 Task 1.1: Abstract interface definitions.
+Issue #343: Added sanitize_error_message and improved to_prompt_feedback.
 
 This module provides:
 - WorkflowValidator: Base class for all validators
 - PromptInjector: Protocol for prompt injection
 - PatternProvider: Protocol for pattern provision
+- sanitize_error_message: Security function for error message sanitization
 
 All validators implement the WorkflowValidator interface.
 """
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
+
+
+# Issue #343: Sensitive information patterns for sanitization
+SENSITIVE_PATTERNS: list[tuple[str, str]] = [
+    (r"/Users/[^/\s]+", "[USER_PATH]"),  # macOS user paths
+    (r"/home/[^/\s]+", "[USER_PATH]"),  # Linux user paths
+    (r"C:\\Users\\[^\\\s]+", "[USER_PATH]"),  # Windows user paths
+    (r"[a-zA-Z0-9_-]{32,}", "[TOKEN]"),  # Long token-like strings
+    (r"password\s*[:=]\s*\S+", "password=[MASKED]"),  # Password values
+    (r"api[_-]?key\s*[:=]\s*\S+", "api_key=[MASKED]"),  # API keys
+    (r"secret\s*[:=]\s*\S+", "secret=[MASKED]"),  # Secret values
+]
+
+
+def sanitize_error_message(message: str, max_length: int = 500) -> str:
+    """Sanitize error message for safe LLM inclusion.
+
+    Issue #343: Security feature to prevent prompt injection and info leakage.
+
+    This function:
+    1. Masks sensitive information (paths, tokens, passwords)
+    2. Removes control characters
+    3. Escapes template braces to prevent LLM confusion
+    4. Truncates long messages
+
+    Args:
+        message: Original error message
+        max_length: Maximum message length (default: 500)
+
+    Returns:
+        Sanitized error message safe for LLM prompts
+    """
+    if not message:
+        return ""
+
+    # 1. Mask sensitive information
+    for pattern, replacement in SENSITIVE_PATTERNS:
+        message = re.sub(pattern, replacement, message, flags=re.IGNORECASE)
+
+    # 2. Remove control characters (0x00-0x1f and 0x7f-0x9f)
+    message = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", message)
+
+    # 3. Escape template braces to prevent LLM interpretation issues
+    message = message.replace("{{", "{ {").replace("}}", "} }")
+
+    # 4. Truncate if too long
+    if len(message) > max_length:
+        message = message[: max_length - 3] + "..."
+
+    return message
 
 
 class ValidationErrorCode(str, Enum):
@@ -34,6 +87,12 @@ class ValidationErrorCode(str, Enum):
     JS_IN_TEMPLATE = "JS_IN_TEMPLATE"
     INVALID_TIMEOUT = "INVALID_TIMEOUT"
     ENV_VAR_IN_URL = "ENV_VAR_IN_URL"
+
+    # API schema errors (Issue #344)
+    UNKNOWN_API_PARAMETER = "UNKNOWN_API_PARAMETER"
+    MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER"
+    PARAMETER_TYPE_MISMATCH = "PARAMETER_TYPE_MISMATCH"
+    PARAMETER_NAME_MISMATCH = "PARAMETER_NAME_MISMATCH"
 
     # General errors
     VALIDATION_FAILED = "VALIDATION_FAILED"
@@ -105,27 +164,64 @@ class ValidationResult:
         """Create a failed validation result."""
         return cls(is_valid=False, errors=errors)
 
-    def to_prompt_feedback(self) -> str:
+    def to_prompt_feedback(
+        self,
+        max_errors: int = 5,
+        max_total_length: int = 2000,
+    ) -> str:
         """Generate prompt feedback section from errors.
 
+        Issue #343: Enhanced with max_errors, max_total_length, sanitization,
+        and severity-based sorting.
+
+        Args:
+            max_errors: Maximum number of errors to include (default: 5)
+            max_total_length: Maximum total feedback length (default: 2000)
+
         Returns:
-            Formatted string for retry prompts.
+            Formatted string for retry prompts, sanitized for security.
         """
-        if self.is_valid:
+        if self.is_valid or not self.errors:
             return ""
+
+        # Sort errors by severity (critical > major > minor)
+        severity_order = {"critical": 0, "major": 1, "minor": 2}
+        sorted_errors = sorted(
+            self.errors,
+            key=lambda e: severity_order.get(e.severity, 3),
+        )
+
+        # Limit to max_errors
+        limited_errors = sorted_errors[:max_errors]
 
         lines = [
             "",
             "## Previous Generation Errors (MUST FIX)",
             "",
         ]
-        for error in self.errors:
-            lines.append(error.to_prompt_section())
 
-        lines.append("")
+        for error in limited_errors:
+            # Sanitize error message and suggestion for security
+            safe_message = sanitize_error_message(error.message)
+            safe_suggestion = sanitize_error_message(error.suggestion or "")
+
+            lines.append(f"- **{error.code.value}** at `{error.location}`")
+            lines.append(f"  - Error: {safe_message}")
+            if safe_suggestion:
+                lines.append(f"  - Fix: {safe_suggestion}")
+            lines.append("")
+
         lines.append("Please generate corrected YAML fixing the above errors.")
 
-        return "\n".join(lines)
+        feedback = "\n".join(lines)
+
+        # Truncate if too long
+        if len(feedback) > max_total_length:
+            truncate_at = max_total_length - 50
+            feedback = feedback[:truncate_at]
+            feedback += "\n\n... (additional errors truncated)"
+
+        return feedback
 
 
 class WorkflowValidator(ABC):
@@ -217,6 +313,10 @@ class PatternProvider(Protocol):
 
 
 __all__ = [
+    # Constants (Issue #343)
+    "SENSITIVE_PATTERNS",
+    # Functions (Issue #343)
+    "sanitize_error_message",
     # Enums
     "ValidationErrorCode",
     # Data classes
@@ -227,4 +327,6 @@ __all__ = [
     # Protocols
     "PromptInjector",
     "PatternProvider",
+    # Issue #344: APISchemaValidator - imported from submodule
+    # Use: from aiagent.langgraph.jobGeneratorV2.validators.api_schema_validator import APISchemaValidator
 ]

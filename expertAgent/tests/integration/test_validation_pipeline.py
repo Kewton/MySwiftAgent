@@ -95,7 +95,7 @@ class TestValidationPipelineErrorAggregation:
                     "agent": "fetchAgent",
                     "inputs": {
                         "url": "${ENV_VAR}/api",  # Env var error
-                        "query": ":source.query",  # Path error
+                        "query": "{{job.body}}",  # Legacy path error
                     },
                     "timeout": 30,  # Timeout error
                 },
@@ -249,17 +249,17 @@ class TestValidationPipelineScenarios:
                 "search": {
                     "agent": "fetchAgent",
                     "inputs": {
-                        "url": "${EXPERT_AGENT_URL}/search",  # Mistake 1
+                        "url": "${EXPERT_AGENT_URL}/aiagent-api/v1/utility/google_search",  # Mistake 1: wrong env var
                         "body": {
-                            "query": ":source.query",  # Mistake 2
+                            "query": ":source.user_input.query",  # Mistake 2: should be 'queries' (Issue #344)
                         },
                     },
-                    "timeout": 30,  # Mistake 3
+                    "timeout": 30,  # Mistake 3: seconds not milliseconds
                 },
                 "format": {
                     "agent": "stringTemplateAgent",
                     "params": {
-                        "template": "${JSON.stringify(results)}",  # Mistake 4
+                        "template": "${JSON.stringify(results)}",  # Mistake 4: JS expression
                     },
                     "isResult": True,
                 },
@@ -267,7 +267,12 @@ class TestValidationPipelineScenarios:
         }
         result = pipeline.validate(workflow)
         assert result.is_valid is False
-        # Should catch at least 4 types of errors
+        # Should catch at least 4 types of errors:
+        # 1. ENV_VAR_IN_URL (wrong env var)
+        # 2. UNKNOWN_API_PARAMETER (query instead of queries) - Issue #344
+        # 3. MISSING_REQUIRED_PARAMETER (queries missing) - Issue #344
+        # 4. INVALID_TIMEOUT (30 is likely seconds)
+        # 5. JS_IN_TEMPLATE (JSON.stringify)
         assert len(result.errors) >= 4
 
     def test_scenario_search_fetch_summarize_valid(self, pipeline):

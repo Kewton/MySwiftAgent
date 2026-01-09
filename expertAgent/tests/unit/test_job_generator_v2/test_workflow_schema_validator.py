@@ -94,7 +94,7 @@ class TestWorkflowSchemaValidator:
                 "process": {
                     "agent": "copyAgent",
                     "inputs": {
-                        "data": ":source.query",  # Invalid: missing user_input
+                        "data": "{{job.body}}",  # Invalid: legacy pattern
                     },
                     "isResult": True,
                 },
@@ -102,7 +102,7 @@ class TestWorkflowSchemaValidator:
         }
         errors = validator.validate(workflow)
         assert len(errors) > 0
-        assert any("source" in e.message.lower() or "user_input" in e.message.lower() for e in errors)
+        assert any("legacy" in e.message.lower() or "job.body" in e.message.lower() for e in errors)
 
     def test_invalid_js_in_template(self, validator):
         """JavaScript in stringTemplateAgent is detected."""
@@ -131,7 +131,7 @@ class TestWorkflowSchemaValidator:
                     "agent": "fetchAgent",
                     "inputs": {
                         "url": "${API_URL}/search",  # Error 1: env var
-                        "query": ":source.query",  # Error 2: invalid path
+                        "query": "{{job.body}}",  # Error 2: legacy path pattern
                     },
                     "timeout": 30,  # Error 3: timeout too small
                 },
@@ -318,7 +318,7 @@ class TestWorkflowSchemaValidatorIntegration:
                         "url": "${EXPERT_AGENT_URL}/utility/google_search",  # Error: env var
                         "method": "POST",
                         "body": {
-                            "query": ":source.query",  # Error: missing user_input
+                            "query": "{{job.body}}",  # Error: legacy pattern
                         },
                     },
                     "timeout": 30,  # Error: likely seconds not ms

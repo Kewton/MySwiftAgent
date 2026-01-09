@@ -31,14 +31,27 @@ Use the environment variable placeholder for API URLs:
 api_call:
   agent: fetchAgent
   inputs:
+    url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search
+    method: POST
+    body:
+      queries: [':source.user_input.query']  # Note: 'queries' is array, not 'query'
+      num: 3
+  timeout: 180000  # Google search needs longer timeout (180s)
+  console:
+    after: true  # For debugging
+```
+
+### Gmail Search Pattern
+```yaml
+gmail_search:
+  agent: fetchAgent
+  inputs:
     url: ${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/gmail/search
     method: POST
     body:
-      query: :source.query
+      query: :source.user_input.search_query
       max_results: 10
-  timeout: 30  # Adjust based on API
-  console:
-    after: true  # For debugging
+  timeout: 30000  # 30 seconds
 ```
 
 ### Timeout Guidelines
