@@ -1,98 +1,31 @@
 {
   "issue_number": 342,
-  "issue_title": "V2 Job Generator Langfuse統合",
+  "title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新 - ワークフロー生成品質改善",
+  "scope": "AI生成ワークフローの品質向上に焦点を当てた実装",
   "acceptance_criteria": [
-    "ExecutionContextがadapter → orchestrator → workflowに正しく伝播する",
-    "V2で生成したジョブのMain Traceリンクが機能する",
-    "Langfuseでプロンプトと応答が確認できる",
-    "各フェーズのLLM呼び出しがトレースに記録される"
+    "ワークフロー生成成功率 90%以上",
+    "初回実行成功率 70%以上",
+    "検証エラー検出率 95%以上",
+    "ソースパス参照が :source.user_input.* / :source.job_params.* 形式",
+    "タイムアウトがミリ秒単位（30000等）",
+    "stringTemplateAgentでJavaScript式を使用しない"
   ],
   "implementation_tasks": [
-    {
-      "task_id": "1.1",
-      "description": "orchestrator.py - context引数追加",
-      "file": "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
-      "changes": [
-        "run_workflow()にcontext引数追加（デフォルトNone）",
-        "渡されたcontextを使用、なければデフォルト作成"
-      ]
-    },
-    {
-      "task_id": "1.2",
-      "description": "adapter.py - contextをorchestratorに渡す",
-      "file": "aiagent/langgraph/jobGeneratorV2/adapter.py",
-      "changes": [
-        "_ = self._create_context_builder(...).build() を context = ... に修正",
-        "run_workflow(request, context=context) に渡す"
-      ]
-    },
-    {
-      "task_id": "2.1",
-      "description": "llm_utils.py - ヘルパー関数追加",
-      "file": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
-      "changes": [
-        "get_callbacks_from_context() 関数追加"
-      ]
-    },
-    {
-      "task_id": "2.2",
-      "description": "llm_utils.py - callbacks引数追加",
-      "file": "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
-      "changes": [
-        "invoke_structured_llm() にcallbacks引数追加",
-        "ainvoke時にconfig={'callbacks': ...}を渡す"
-      ]
-    },
-    {
-      "task_id": "3.1",
-      "description": "decomposer.py - callbacks対応",
-      "file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-      "changes": [
-        "get_callbacks_from_context(context) 呼び出し",
-        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
-      ]
-    },
-    {
-      "task_id": "3.2",
-      "description": "schema_generator.py - callbacks対応",
-      "file": "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
-      "changes": [
-        "get_callbacks_from_context(context) 呼び出し",
-        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
-      ]
-    },
-    {
-      "task_id": "3.3",
-      "description": "alternative.py - callbacks対応",
-      "file": "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
-      "changes": [
-        "get_callbacks_from_context(context) 呼び出し",
-        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
-      ]
-    },
-    {
-      "task_id": "4.1",
-      "description": "llm_generator.py - callbacks対応",
-      "file": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py",
-      "changes": [
-        "get_callbacks_from_context(context) 呼び出し",
-        "invoke_structured_llm(..., callbacks=callbacks) に渡す"
-      ]
-    }
+    "Task 1.1: 抽象インターフェース定義（WorkflowValidator, PromptInjector, PatternProvider）",
+    "Task 1.2: SourcePathRuleEngine 実装",
+    "Task 1.3: AgentConstraintValidator 実装（stringTemplateAgent制約、fetchAgentタイムアウト）",
+    "Task 1.4: WorkflowSchemaValidator 実装",
+    "Task 2.1: APISchemaInjector 実装",
+    "Task 2.2: API仕様YAML作成",
+    "Task 3.1: WorkflowPatternLibrary 実装",
+    "Task 3.2: 標準パターンYAML作成",
+    "Task 4.1: ValidationPipeline 実装",
+    "Task 4.2: ログ・監視統合",
+    "Task 5.1-5.5: 単体・結合テスト",
+    "Task 6.1: GRAPHAI_WORKFLOW_GENERATION_RULES.md 更新",
+    "Task 6.2: V2統合（Feature Flag）"
   ],
-  "deliverables_checklist": [
-    "aiagent/langgraph/jobGeneratorV2/orchestrator.py",
-    "aiagent/langgraph/jobGeneratorV2/adapter.py",
-    "aiagent/langgraph/jobGeneratorV2/llm_utils.py",
-    "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-    "aiagent/langgraph/jobGeneratorV2/workflows/interface_design/schema_generator.py",
-    "aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
-    "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py"
-  ],
-  "test_files": [
-    "tests/unit/test_job_generator_v2/test_context_propagation.py",
-    "tests/unit/test_job_generator_v2/test_llm_utils_callbacks.py",
-    "tests/integration/test_v2_langfuse_integration.py"
-  ],
-  "target_coverage": 90
+  "target_coverage": 90,
+  "design_policy_file": "dev-reports/feature/issue/342/workflow-bug-analysis/ai-agent-improvement-design-policy.md",
+  "work_plan_file": "dev-reports/feature/issue/342/workflow-bug-analysis/work-plan.md"
 }

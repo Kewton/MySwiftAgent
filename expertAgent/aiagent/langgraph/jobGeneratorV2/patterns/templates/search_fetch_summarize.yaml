@@ -1,0 +1,78 @@
+# Search, Fetch, and Summarize Workflow Pattern
+# Issue #342 Task 3.2: Standard pattern template
+#
+# This pattern searches Google, fetches article content, and summarizes using LLM.
+# Steps: search -> extract_urls -> fetch_content -> stringify -> build_prompt -> llm
+
+version: "0.5"
+
+nodes:
+  source: {}
+
+  # Step 1: Search Google
+  fetch_search_results:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/aiagent-api/v1/utility/google_search
+      method: POST
+      body:
+        queries: ":source.user_input.queries"
+        num: 2
+    timeout: 30000
+
+  # Step 2: Extract article URLs from search results
+  extract_urls:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/aiagent-api/v1/utility/extract_article_urls
+      method: POST
+      body:
+        search_results: ":fetch_search_results.search_results"
+        max_urls: 2
+    timeout: 30000
+
+  # Step 3: Fetch article content from first URL
+  fetch_content:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/aiagent-api/v1/utility/fetch_web_content
+      method: POST
+      body:
+        url: ":extract_urls.article_url_1"
+    timeout: 60000
+
+  # Step 4: Convert content to JSON string (for stringTemplateAgent)
+  stringify_content:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/aiagent-api/v1/utility/json_stringify
+      method: POST
+      body:
+        data: ":fetch_content.markdown_content"
+    timeout: 30000
+
+  # Step 5: Build prompt with article content
+  build_prompt:
+    agent: stringTemplateAgent
+    inputs:
+      content: ":stringify_content.json_string"
+    params:
+      template: |
+        以下の記事を日本語で要約してください。
+        重要なポイントを箇条書きでまとめ、結論を述べてください。
+
+        記事内容:
+        ${content}
+
+  # Step 6: Call LLM to generate summary
+  call_llm:
+    agent: fetchAgent
+    inputs:
+      url: http://localhost:8004/aiagent-api/v1/aiagent/utility/jsonoutput
+      method: POST
+      body:
+        user_input: ":build_prompt"
+        model_name: gemini-2.0-flash
+        force_json: true
+    timeout: 120000
+    isResult: true

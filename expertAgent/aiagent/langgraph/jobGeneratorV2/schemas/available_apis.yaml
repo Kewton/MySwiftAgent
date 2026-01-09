@@ -1,0 +1,182 @@
+# Available APIs for Workflow Generation
+# Issue #342 Task 2.2: API specifications for AI workflow generation
+#
+# These specifications help LLMs generate correct API calls in GraphAI workflows.
+# Each API includes request/response schemas with correct parameter names and types.
+
+apis:
+  /utility/google_search:
+    path: /utility/google_search
+    method: POST
+    description: Google検索を実行し、検索結果を返す
+    base_url: http://localhost:8004/aiagent-api/v1
+    request_schema:
+      queries:
+        type: array
+        items: string
+        description: 検索クエリの配列（複数可）
+        required: true
+        example: ["検索キーワード"]
+      num:
+        type: integer
+        max: 3
+        default: 3
+        description: 各クエリごとの結果件数（タイムアウト防止のため最大3）
+    response_schema:
+      search_results:
+        type: array
+        description: 検索結果の配列。各要素にorganic（検索結果リスト）を含む
+      search_results_count:
+        type: integer
+        description: 結果の総件数
+      status:
+        type: string
+        description: ステータス（ok/error）
+    workflow_reference: ":fetch_search_results.search_results"
+    notes:
+      - "queries は配列型。単一クエリでも ['keyword'] の形式で指定"
+      - "num は最大3（タイムアウト防止）"
+      - "結果は search_results[N].organic[M].link でURLにアクセス可能"
+
+  /utility/json_stringify:
+    path: /utility/json_stringify
+    method: POST
+    description: 任意のデータをJSON文字列に変換。stringTemplateAgentでオブジェクトを埋め込む前に使用
+    base_url: http://localhost:8004/aiagent-api/v1
+    request_schema:
+      data:
+        type: any
+        description: JSONシリアライズ可能な任意のデータ（配列、オブジェクト等）
+        required: true
+    response_schema:
+      json_string:
+        type: string
+        description: JSON文字列化されたデータ
+    workflow_reference: ":stringify.json_string"
+    notes:
+      - "stringTemplateAgentはオブジェクトを[object Object]と表示する"
+      - "オブジェクトをテンプレートに埋め込む前に必ずこのAPIを使用"
+      - "結果は json_string フィールドで参照"
+
+  /utility/fetch_web_content:
+    path: /utility/fetch_web_content
+    method: POST
+    description: URLからWebページのコンテンツをMarkdown形式で取得
+    base_url: http://localhost:8004/aiagent-api/v1
+    request_schema:
+      url:
+        type: string
+        description: コンテンツを取得するURL
+        required: true
+      upload_to_drive:
+        type: boolean
+        default: false
+        description: 取得したMarkdownをGoogle Driveにアップロードするか
+    response_schema:
+      markdown_content:
+        type: string
+        description: Markdown形式に変換されたWebページコンテンツ
+      status:
+        type: string
+        description: success または failed
+      error:
+        type: string
+        description: エラーメッセージ（status=failedの場合）
+    workflow_reference: ":fetch_content.markdown_content"
+    notes:
+      - "検索結果のスニペットではなく、記事の本文を取得したい場合に使用"
+      - "timeout は 60000ms 以上を推奨"
+
+  /utility/extract_article_urls:
+    path: /utility/extract_article_urls
+    method: POST
+    description: ネストされた検索結果構造から記事URLを抽出し、フラットなフィールドで返す
+    base_url: http://localhost:8004/aiagent-api/v1
+    request_schema:
+      search_results:
+        type: array
+        description: Google検索APIの結果配列
+        required: true
+      max_urls:
+        type: integer
+        default: 2
+        max: 5
+        description: 抽出する最大URL数
+    response_schema:
+      article_url_1:
+        type: string
+        description: 1番目の記事URL（存在しない場合はnull）
+      article_url_2:
+        type: string
+        description: 2番目の記事URL（存在しない場合はnull）
+      article_url_3:
+        type: string
+        description: 3番目の記事URL（存在しない場合はnull）
+      urls:
+        type: array
+        description: 抽出された全URLの配列
+      count:
+        type: integer
+        description: 抽出されたURL数
+    workflow_reference: ":extract_urls.article_url_1"
+    notes:
+      - "Google検索結果のネスト構造（search_results[N].organic[M].link）を平坦化"
+      - "個別URLは article_url_1, article_url_2 等で直接参照可能"
+
+  /aiagent/utility/jsonoutput:
+    path: /aiagent/utility/jsonoutput
+    method: POST
+    description: LLMを呼び出してJSON形式の出力を生成
+    base_url: http://localhost:8004/aiagent-api/v1
+    request_schema:
+      user_input:
+        type: string
+        description: プロンプト文字列。必ず文字列型で指定（オブジェクト不可）
+        required: true
+      model_name:
+        type: string
+        default: gemini-2.0-flash
+        description: 使用するLLMモデル名
+      force_json:
+        type: boolean
+        default: true
+        description: 出力をJSON形式に強制するか
+    response_schema:
+      result:
+        type: object
+        description: LLMが生成したJSON出力
+    workflow_reference: ":call_llm.result"
+    notes:
+      - "user_input は必ず string 型。オブジェクトを渡すとHTTP 422エラー"
+      - "オブジェクトをプロンプトに含めたい場合は事前にjson_stringifyで文字列化"
+      - "timeout は 120000ms（2分）を推奨"
+
+# 使用パターン例
+patterns:
+  search_and_summarize:
+    description: 検索→文字列化→プロンプト構築→LLM要約
+    steps:
+      - api: /utility/google_search
+        purpose: キーワードでGoogle検索
+      - api: /utility/json_stringify
+        purpose: 検索結果をJSON文字列に変換
+      - agent: stringTemplateAgent
+        purpose: プロンプトを構築
+      - api: /aiagent/utility/jsonoutput
+        purpose: LLMで要約を生成
+
+  search_fetch_summarize:
+    description: 検索→URL抽出→記事取得→文字列化→プロンプト構築→LLM要約
+    steps:
+      - api: /utility/google_search
+        purpose: キーワードでGoogle検索
+      - api: /utility/extract_article_urls
+        purpose: 検索結果からURLを抽出
+      - api: /utility/fetch_web_content
+        purpose: 記事本文をMarkdownで取得
+      - api: /utility/json_stringify
+        purpose: コンテンツをJSON文字列に変換
+      - agent: stringTemplateAgent
+        purpose: プロンプトを構築
+      - api: /aiagent/utility/jsonoutput
+        purpose: LLMで要約を生成
