@@ -1,0 +1,143 @@
+{
+  "issue_number": 349,
+  "issue_title": "TaskFlow V2: チュートリアル検証で発見された課題（Transform/Conditional）",
+  "target_project": "graphAiServer",
+  "iteration": 1,
+  "work_plan_path": "dev-reports/feature/issue/349/work-plan.md",
+  "design_policy_path": "dev-reports/feature/issue/349/design-policy.md",
+
+  "acceptance_criteria": [
+    "Map モードで @index, @first, @last ヘルパーが正しく展開される",
+    "Merge モードでJSON文字列が自動的にパースされる",
+    "条件分岐の結果を出力に反映する方法（Coalesceチェーン）が提供される",
+    "Tutorial 9, 11, 12, 13, 17 が期待通りに動作する"
+  ],
+
+  "tasks": [
+    {
+      "id": "task-1.1",
+      "name": "Map モード @index ヘルパー実装",
+      "type": "implementation",
+      "target_file": "graphAiServer/src/nodes/transform-node.ts",
+      "description": "Handlebarsの @index, @first, @last ヘルパーを登録",
+      "test_file": "graphAiServer/tests/unit/nodes/transform-node.test.ts",
+      "priority": "medium",
+      "implementation_hints": [
+        "handlebars.registerHelper('@index', ...) でヘルパー登録",
+        "this['@index'] から値を取得",
+        "@first, @last も同様に登録"
+      ]
+    },
+    {
+      "id": "task-1.2",
+      "name": "Merge モード JSON自動パース実装",
+      "type": "implementation",
+      "target_file": "graphAiServer/src/nodes/transform-node.ts",
+      "description": "executeMerge() でJSON文字列を自動パース",
+      "test_file": "graphAiServer/tests/unit/nodes/transform-node.test.ts",
+      "priority": "high",
+      "implementation_hints": [
+        "isJsonString() メソッドを追加",
+        "JSON文字列判定: {で始まり}で終わる、または[で始まり]で終わる",
+        "executeMerge() 内でパラメータをパース"
+      ]
+    },
+    {
+      "id": "task-1.3",
+      "name": "Coalesceチェーン構文パーサー実装",
+      "type": "implementation",
+      "target_file": "graphAiServer/src/engine/context/context-manager.ts",
+      "description": "Coalesceチェーン（${a ?? b ?? c}）のパーサー実装",
+      "test_file": "graphAiServer/tests/unit/engine/context/context-manager.test.ts",
+      "priority": "high",
+      "implementation_hints": [
+        "MAX_COALESCE_REFERENCES = 10 定数追加",
+        "parseCoalesceChain() 関数: ?? で分割",
+        "チェーン長が10を超える場合はエラー"
+      ]
+    },
+    {
+      "id": "task-1.4",
+      "name": "Coalesceチェーン解決ロジック実装",
+      "type": "implementation",
+      "target_file": "graphAiServer/src/engine/context/context-manager.ts",
+      "description": "Coalesceチェーンの解決ロジックと循環参照検出",
+      "test_file": "graphAiServer/tests/unit/engine/context/context-manager.test.ts",
+      "priority": "high",
+      "depends_on": ["task-1.3"],
+      "implementation_hints": [
+        "resolvingReferences: Set<string> を追加（循環参照検出用）",
+        "resolveCoalesceChain() メソッド: 順次解決して最初の非null値を返す",
+        "resolveReference() を拡張してCoalesceチェーンをサポート",
+        "循環参照検出: Set で追跡、検出時にエラー"
+      ]
+    },
+    {
+      "id": "task-2.1",
+      "name": "TransformNode 単体テスト",
+      "type": "test",
+      "target_file": "graphAiServer/tests/unit/nodes/transform-node.test.ts",
+      "description": "Map @index / Merge JSONパースの単体テスト",
+      "depends_on": ["task-1.1", "task-1.2"],
+      "test_cases": [
+        "Map mode @index in template",
+        "Map mode @first and @last",
+        "Merge mode auto-parse JSON string params",
+        "Merge mode handle invalid JSON gracefully"
+      ]
+    },
+    {
+      "id": "task-2.2",
+      "name": "ContextManager 単体テスト",
+      "type": "test",
+      "target_file": "graphAiServer/tests/unit/engine/context/context-manager.test.ts",
+      "description": "Coalesceチェーン / 循環参照検出の単体テスト",
+      "depends_on": ["task-1.3", "task-1.4"],
+      "test_cases": [
+        "Coalesce: resolve first non-null value",
+        "Coalesce: return last literal default",
+        "Coalesce: limit chain length (>10 -> error)",
+        "Circular: detect direct circular reference",
+        "Circular: allow same reference after resolution"
+      ]
+    },
+    {
+      "id": "task-2.3",
+      "name": "結合テスト",
+      "type": "integration_test",
+      "target_file": "graphAiServer/tests/integration/workflow-execution.test.ts",
+      "description": "Tutorial 9, 11, 12, 13 の結合テスト",
+      "depends_on": ["task-2.1", "task-2.2"],
+      "test_scenarios": [
+        "Tutorial 9: Map モード番号付きリスト",
+        "Tutorial 11: Merge モード設定マージ",
+        "Tutorial 12: 条件分岐 Coalesce出力",
+        "Tutorial 13: ネスト条件分岐"
+      ]
+    }
+  ],
+
+  "existing_files_to_read": [
+    "graphAiServer/src/nodes/transform-node.ts",
+    "graphAiServer/src/engine/context/context-manager.ts",
+    "graphAiServer/tests/unit/nodes/transform-node.test.ts",
+    "graphAiServer/tests/integration/workflow-execution.test.ts"
+  ],
+
+  "reference_tutorials": [
+    "graphAiServer/config/taskflow/tutorial/9_transform_map.json",
+    "graphAiServer/config/taskflow/tutorial/11_transform_merge.json",
+    "graphAiServer/config/taskflow/tutorial/12_conditional_basic.json"
+  ],
+
+  "security_requirements": [
+    "MAX_COALESCE_REFERENCES = 10: チェーン長制限",
+    "循環参照検出: Set で追跡、検出時にエラー",
+    "JSON パース: try-catch で安全に処理"
+  ],
+
+  "output_files": {
+    "tdd_result": "dev-reports/feature/issue/349/pm-auto-dev/iteration-1/tdd-result.json",
+    "implemented_features": "dev-reports/feature/issue/349/pm-auto-dev/iteration-1/implemented-features.json"
+  }
+}

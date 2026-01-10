@@ -1,0 +1,124 @@
+{
+  "issue_number": 349,
+  "title": "TaskFlow V2: Transform/Conditional Improvements",
+  "iteration": 1,
+
+  "features": [
+    {
+      "id": "map-mode-index-helpers",
+      "name": "Map Mode @index/@first/@last Helpers",
+      "description": "Enable Handlebars templates in map mode to access @index, @first, @last variables",
+      "implementation": {
+        "file": "graphAiServer/src/nodes/transform-node.ts",
+        "method": "executeMap()",
+        "changes": [
+          "Pass data options with index/first/last to compiled template",
+          "Templates can now use {{@index}}, {{#if @first}}, {{#if @last}}"
+        ]
+      },
+      "test_coverage": {
+        "unit_tests": [
+          "should support @index helper in map mode",
+          "should support @first helper in map mode",
+          "should support @last helper in map mode",
+          "should support combined @index, @first, @last in map mode"
+        ],
+        "integration_tests": [
+          "should support @index in map mode",
+          "should support @last in map mode"
+        ]
+      }
+    },
+    {
+      "id": "merge-mode-json-parse",
+      "name": "Merge Mode JSON Auto-Parse",
+      "description": "Automatically parse JSON string parameters in merge mode",
+      "implementation": {
+        "file": "graphAiServer/src/nodes/transform-node.ts",
+        "methods": ["executeMerge()", "isJsonString()", "parseJsonIfNeeded()"],
+        "changes": [
+          "Added isJsonString() to detect JSON-like strings",
+          "Added parseJsonIfNeeded() to safely parse JSON",
+          "Modified executeMerge() to pre-process parameters"
+        ]
+      },
+      "test_coverage": {
+        "unit_tests": [
+          "should auto-parse JSON string parameters in merge mode",
+          "should handle deep merge with JSON string",
+          "should handle invalid JSON gracefully as string",
+          "should handle JSON array string",
+          "should handle whitespace around JSON"
+        ],
+        "integration_tests": [
+          "should auto-parse JSON strings in merge mode"
+        ]
+      }
+    },
+    {
+      "id": "coalesce-chain-syntax",
+      "name": "Coalesce Chain Syntax",
+      "description": "Support ${a ?? b ?? c} syntax for fallback values",
+      "implementation": {
+        "file": "graphAiServer/src/engine/context/context-manager.ts",
+        "constants": ["MAX_COALESCE_REFERENCES = 10"],
+        "methods": [
+          "resolveReference() - extended to handle ?? syntax",
+          "resolveCoalesceChain() - new method for chain resolution",
+          "parseLiteralValue() - new method for parsing literal defaults"
+        ],
+        "security": [
+          "Chain length limit (MAX_COALESCE_REFERENCES = 10)",
+          "Tracking set for reference resolution (resolvingReferences)"
+        ]
+      },
+      "test_coverage": {
+        "unit_tests": [
+          "should resolve first non-null value in chain",
+          "should return literal default as last fallback",
+          "should return first value if not null",
+          "should handle numeric default value",
+          "should handle boolean default value",
+          "should handle null default value",
+          "should limit coalesce chain length",
+          "should allow chain of exactly MAX_COALESCE_REFERENCES",
+          "should export MAX_COALESCE_REFERENCES constant"
+        ],
+        "integration_tests": [
+          "should resolve coalesce chain with first valid value",
+          "should use fallback when input is undefined"
+        ]
+      }
+    }
+  ],
+
+  "acceptance_criteria_status": [
+    {
+      "criterion": "Map mode supports @index, @first, @last helpers",
+      "status": "met",
+      "evidence": "Unit and integration tests verify template expansion with these helpers"
+    },
+    {
+      "criterion": "Merge mode auto-parses JSON strings",
+      "status": "met",
+      "evidence": "Unit tests verify JSON string parsing, integration test confirms workflow behavior"
+    },
+    {
+      "criterion": "Coalesce chain syntax works",
+      "status": "met",
+      "evidence": "Unit tests cover various chain scenarios, integration tests verify workflow usage"
+    },
+    {
+      "criterion": "Tutorial 9, 11, 12, 13, 17 work correctly",
+      "status": "pending_verification",
+      "notes": "Acceptance testing needed with actual tutorial workflows"
+    }
+  ],
+
+  "breaking_changes": [],
+
+  "backwards_compatibility": {
+    "status": "maintained",
+    "notes": "All existing tests continue to pass. New features are additive."
+  }
+}
