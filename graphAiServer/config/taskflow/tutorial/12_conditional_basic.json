@@ -6,7 +6,9 @@
     "Supported operators: ==, !=, >, <, >=, <=",
     "then: steps executed when condition is true",
     "else: steps executed when condition is false (optional)",
-    "Security: whitelist approach, no eval()"
+    "Security: whitelist approach, no eval()",
+    "Coalesce chain: ${a ?? b ?? c} returns first non-null value",
+    "Use coalesce for conditional output mapping"
   ],
 
   "workflow_name": "tutorial_12_conditional_basic",
@@ -95,9 +97,9 @@
     }
   ],
   "output": {
-    "grade": "${grade_excellent.output.result}",
-    "passed": "${pass_status.output.result}",
-    "message": "${pass_status.output.result}"
+    "grade": "${grade_excellent.output.result ?? grade_good.output.result ?? grade_fail.output.result}",
+    "passed": "${pass_status.output.result ?? false}",
+    "message": "${pass_status.output.result ?? fail_status.output.result}"
   },
 
   "_example_requests": [
