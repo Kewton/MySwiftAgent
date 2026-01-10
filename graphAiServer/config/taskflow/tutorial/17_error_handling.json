@@ -1,0 +1,118 @@
+{
+  "_comment": "Tutorial 17: Error Handling - Graceful degradation patterns",
+  "_learning": [
+    "Use conditional to check API response status",
+    "Provide fallback values when API fails",
+    "Graceful degradation for better UX",
+    "Combine error checking with business logic"
+  ],
+
+  "workflow_name": "tutorial_17_error_handling",
+  "description": "Learn error handling with conditional fallbacks",
+  "input_schema": {
+    "post_id": "string"
+  },
+  "output_schema": {
+    "title": "string",
+    "body": "string",
+    "source": "string",
+    "success": "boolean"
+  },
+  "steps": [
+    {
+      "_comment": "Step 1: Try to fetch post data",
+      "id": "fetch_post",
+      "type": "api_rest",
+      "description": "Attempt to fetch post from API",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts/${inputs.post_id}",
+        "timeout_ms": 5000
+      },
+      "params": {}
+    },
+    {
+      "_comment": "Step 2: Check if we got valid data",
+      "type": "conditional",
+      "condition": "${fetch_post.output.id} != null",
+      "then": [
+        {
+          "id": "success_response",
+          "type": "transform",
+          "description": "API succeeded - use real data",
+          "config": {
+            "mode": "template",
+            "template": "{\"title\": \"{{title}}\", \"body\": \"{{body}}\", \"source\": \"api\", \"success\": true}"
+          },
+          "params": {
+            "title": "${fetch_post.output.title}",
+            "body": "${fetch_post.output.body}"
+          }
+        }
+      ],
+      "else": [
+        {
+          "id": "fallback_response",
+          "type": "transform",
+          "description": "API failed - use fallback data",
+          "config": {
+            "mode": "template",
+            "template": "{\"title\": \"データを取得できませんでした\", \"body\": \"指定されたID ({{post_id}}) の投稿が見つかりませんでした。\", \"source\": \"fallback\", \"success\": false}"
+          },
+          "params": {
+            "post_id": "${inputs.post_id}"
+          }
+        }
+      ]
+    },
+    {
+      "_comment": "Step 3: Format final output with status message",
+      "id": "format_output",
+      "type": "transform",
+      "description": "Add status message to output",
+      "config": {
+        "mode": "template",
+        "template": "【取得結果】\nタイトル: {{title}}\n本文: {{body}}\nソース: {{source}}"
+      },
+      "params": {
+        "title": "${success_response.output.result}",
+        "body": "${success_response.output.result}",
+        "source": "${success_response.output.result}"
+      }
+    }
+  ],
+  "output": {
+    "title": "${success_response.output.result}",
+    "body": "${success_response.output.result}",
+    "source": "${success_response.output.result}",
+    "success": "${success_response.output.result}"
+  },
+
+  "_example_requests": [
+    {
+      "description": "Valid post ID - API success",
+      "inputs": {"post_id": "1"},
+      "expected": {
+        "title": "sunt aut facere repellat...",
+        "source": "api",
+        "success": true
+      }
+    },
+    {
+      "description": "Invalid post ID - Fallback",
+      "inputs": {"post_id": "9999"},
+      "expected": {
+        "title": "データを取得できませんでした",
+        "source": "fallback",
+        "success": false
+      }
+    }
+  ],
+
+  "_error_handling_patterns": [
+    "Pattern 1: Check response status code",
+    "Pattern 2: Check for null/undefined values",
+    "Pattern 3: Provide default fallback values",
+    "Pattern 4: Log errors while returning graceful response"
+  ]
+}

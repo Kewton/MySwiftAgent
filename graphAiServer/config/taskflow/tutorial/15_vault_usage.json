@@ -1,0 +1,96 @@
+{
+  "_comment": "Tutorial 15: Secrets Usage - Secure credential management",
+  "_learning": [
+    "${secrets.KEY} syntax for accessing secrets",
+    "Secrets are loaded from MyVault service",
+    "project parameter determines which secrets are available",
+    "Secrets are resolved at runtime, not stored in workflow",
+    "Never hardcode credentials in workflow definitions"
+  ],
+  "_requires": "MyVault service running with configured secrets",
+
+  "workflow_name": "tutorial_15_secrets_usage",
+  "description": "Learn to use secrets for API authentication",
+  "input_schema": {
+    "query": "string"
+  },
+  "output_schema": {
+    "result": "object",
+    "authenticated": "boolean"
+  },
+  "steps": [
+    {
+      "id": "authenticated_api_call",
+      "type": "api_rest",
+      "description": "Call API with secret-based authentication",
+      "config": {
+        "method": "GET",
+        "url": "https://api.example.com/data",
+        "headers": {
+          "Authorization": "Bearer ${secrets.API_TOKEN}",
+          "X-API-Key": "${secrets.API_KEY}"
+        },
+        "timeout_ms": 10000
+      },
+      "params": {
+        "query": "${inputs.query}"
+      }
+    },
+    {
+      "id": "format_response",
+      "type": "transform",
+      "description": "Format the authenticated response",
+      "config": {
+        "mode": "template",
+        "template": "{\"data\": {{json response}}, \"authenticated\": true}"
+      },
+      "params": {
+        "response": "${authenticated_api_call.output}"
+      }
+    }
+  ],
+  "output": {
+    "result": "${authenticated_api_call.output}",
+    "authenticated": true
+  },
+
+  "_setup_instructions": {
+    "step1": "Ensure MyVault is running on localhost:8003",
+    "step2": "Register secrets via MyVault API",
+    "step3": "Execute workflow with project parameter",
+    "myvault_register_example": {
+      "endpoint": "POST http://localhost:8003/secrets/set",
+      "body": {
+        "project": "my_project",
+        "key": "API_TOKEN",
+        "value": "your-secret-token-here"
+      }
+    }
+  },
+
+  "_execution_example": {
+    "endpoint": "POST /api/v2/workflows",
+    "body": {
+      "workflow_name": "tutorial_15_secrets_usage",
+      "inputs": {"query": "test"},
+      "project": "my_project"
+    },
+    "note": "project parameter determines which secrets namespace to use"
+  },
+
+  "_security_best_practices": [
+    "Never commit actual secret values to version control",
+    "Use different projects for different environments (dev/staging/prod)",
+    "Rotate secrets regularly",
+    "Audit secret access through MyVault logs",
+    "Use HTTPS for all API calls with secrets"
+  ],
+
+  "_available_secret_patterns": [
+    "${secrets.API_TOKEN} - API authentication token",
+    "${secrets.API_KEY} - API key",
+    "${secrets.DATABASE_URL} - Database connection string",
+    "${secrets.WEBHOOK_SECRET} - Webhook signature secret",
+    "${secrets.OAUTH_CLIENT_SECRET} - OAuth client secret"
+  ]
+}

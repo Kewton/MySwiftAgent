@@ -1,0 +1,135 @@
+{
+  "_comment": "Tutorial 13: Conditional Nested - Complex branching logic (V2 Feature)",
+  "_learning": [
+    "Nested conditionals for complex decision trees",
+    "MAX_NESTING_DEPTH = 10 for security",
+    "Combine with transform for dynamic responses",
+    "Multiple conditions can create complex workflows"
+  ],
+
+  "workflow_name": "tutorial_13_conditional_nested",
+  "description": "Learn nested conditional branching for complex logic",
+  "input_schema": {
+    "user_type": "string",
+    "age": "number",
+    "is_member": "boolean"
+  },
+  "output_schema": {
+    "discount_rate": "number",
+    "discount_reason": "string",
+    "final_message": "string"
+  },
+  "steps": [
+    {
+      "_comment": "First check: User type (student/senior/regular)",
+      "type": "conditional",
+      "condition": "${inputs.user_type} == 'student'",
+      "then": [
+        {
+          "id": "student_discount",
+          "type": "transform",
+          "config": {
+            "mode": "template",
+            "template": "{\"rate\": 20, \"reason\": \"学生割引\"}"
+          },
+          "params": {}
+        }
+      ],
+      "else": [
+        {
+          "type": "conditional",
+          "condition": "${inputs.age} >= 65",
+          "then": [
+            {
+              "id": "senior_discount",
+              "type": "transform",
+              "config": {
+                "mode": "template",
+                "template": "{\"rate\": 15, \"reason\": \"シニア割引\"}"
+              },
+              "params": {}
+            }
+          ],
+          "else": [
+            {
+              "type": "conditional",
+              "condition": "${inputs.is_member} == true",
+              "then": [
+                {
+                  "id": "member_discount",
+                  "type": "transform",
+                  "config": {
+                    "mode": "template",
+                    "template": "{\"rate\": 10, \"reason\": \"会員割引\"}"
+                  },
+                  "params": {}
+                }
+              ],
+              "else": [
+                {
+                  "id": "no_discount",
+                  "type": "transform",
+                  "config": {
+                    "mode": "template",
+                    "template": "{\"rate\": 0, \"reason\": \"割引なし\"}"
+                  },
+                  "params": {}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "format_message",
+      "type": "transform",
+      "description": "Format final message based on discount",
+      "config": {
+        "mode": "template",
+        "template": "{{user_type}}様（{{age}}歳）: {{reason}}で{{rate}}%オフが適用されます。"
+      },
+      "params": {
+        "user_type": "${inputs.user_type}",
+        "age": "${inputs.age}",
+        "rate": "${student_discount.output.result}",
+        "reason": "${student_discount.output.result}"
+      }
+    }
+  ],
+  "output": {
+    "discount_rate": "${student_discount.output.result}",
+    "discount_reason": "${student_discount.output.result}",
+    "final_message": "${format_message.output.result}"
+  },
+
+  "_example_requests": [
+    {
+      "description": "Student - highest priority discount",
+      "inputs": {"user_type": "student", "age": 20, "is_member": true},
+      "expected": {"discount_rate": 20, "discount_reason": "学生割引"}
+    },
+    {
+      "description": "Senior non-member",
+      "inputs": {"user_type": "regular", "age": 70, "is_member": false},
+      "expected": {"discount_rate": 15, "discount_reason": "シニア割引"}
+    },
+    {
+      "description": "Regular member",
+      "inputs": {"user_type": "regular", "age": 35, "is_member": true},
+      "expected": {"discount_rate": 10, "discount_reason": "会員割引"}
+    },
+    {
+      "description": "Regular non-member",
+      "inputs": {"user_type": "regular", "age": 35, "is_member": false},
+      "expected": {"discount_rate": 0, "discount_reason": "割引なし"}
+    }
+  ],
+
+  "_decision_tree": [
+    "1. Is user_type == 'student'? → 20% (学生割引)",
+    "2. Else: Is age >= 65? → 15% (シニア割引)",
+    "3. Else: Is is_member == true? → 10% (会員割引)",
+    "4. Else: → 0% (割引なし)"
+  ]
+}

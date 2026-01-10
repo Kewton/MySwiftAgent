@@ -1,0 +1,81 @@
+{
+  "_comment": "Tutorial 9: Transform Map - Array transformation mode",
+  "_learning": [
+    "Map mode transforms each element in an array",
+    "source_field specifies which field contains the array",
+    "Special variables: @index, @first, @last",
+    "Useful for batch formatting or list generation"
+  ],
+
+  "workflow_name": "tutorial_9_transform_map",
+  "description": "Learn map transformation for array processing",
+  "input_schema": {
+    "products": "array"
+  },
+  "output_schema": {
+    "price_list": "string",
+    "numbered_list": "string",
+    "total_info": "string"
+  },
+  "steps": [
+    {
+      "id": "create_price_list",
+      "type": "transform",
+      "description": "Map each product to a formatted line",
+      "config": {
+        "mode": "map",
+        "source_field": "products",
+        "template": "・{{name}}: ¥{{price}}"
+      },
+      "params": {
+        "products": "${inputs.products}"
+      }
+    },
+    {
+      "id": "create_numbered_list",
+      "type": "transform",
+      "description": "Map with @index for numbering",
+      "config": {
+        "mode": "map",
+        "source_field": "products",
+        "template": "{{@index}}. {{name}}{{#if @last}} (最後){{/if}}"
+      },
+      "params": {
+        "products": "${inputs.products}"
+      }
+    },
+    {
+      "id": "format_output",
+      "type": "transform",
+      "description": "Combine results into final output",
+      "config": {
+        "mode": "template",
+        "template": "【価格表】\n{{price_list}}\n\n【番号付きリスト】\n{{numbered_list}}"
+      },
+      "params": {
+        "price_list": "${create_price_list.output.result}",
+        "numbered_list": "${create_numbered_list.output.result}"
+      }
+    }
+  ],
+  "output": {
+    "price_list": "${create_price_list.output.result}",
+    "numbered_list": "${create_numbered_list.output.result}",
+    "total_info": "${format_output.output.result}"
+  },
+
+  "_example_request": {
+    "inputs": {
+      "products": [
+        {"name": "りんご", "price": 150},
+        {"name": "みかん", "price": 100},
+        {"name": "バナナ", "price": 200}
+      ]
+    }
+  },
+  "_example_response": {
+    "price_list": "・りんご: ¥150\n・みかん: ¥100\n・バナナ: ¥200",
+    "numbered_list": "0. りんご\n1. みかん\n2. バナナ (最後)",
+    "total_info": "【価格表】\n・りんご: ¥150\n・みかん: ¥100\n・バナナ: ¥200\n\n【番号付きリスト】\n0. りんご\n1. みかん\n2. バナナ (最後)"
+  }
+}

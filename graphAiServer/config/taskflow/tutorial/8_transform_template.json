@@ -1,0 +1,81 @@
+{
+  "_comment": "Tutorial 8: Transform Template - Handlebars template mode",
+  "_learning": [
+    "Handlebars template syntax: {{variable}}",
+    "Built-in helpers: eq, ne, lt, gt, json, length",
+    "Conditional rendering with #if/#else",
+    "Variable interpolation from params"
+  ],
+
+  "workflow_name": "tutorial_8_transform_template",
+  "description": "Learn Handlebars template transformation with helpers",
+  "input_schema": {
+    "name": "string",
+    "items": "array",
+    "show_count": "boolean"
+  },
+  "output_schema": {
+    "greeting": "string",
+    "item_list": "string",
+    "summary": "string"
+  },
+  "steps": [
+    {
+      "id": "greet",
+      "type": "transform",
+      "description": "Simple template with variable",
+      "config": {
+        "mode": "template",
+        "template": "こんにちは、{{name}}さん！"
+      },
+      "params": {
+        "name": "${inputs.name}"
+      }
+    },
+    {
+      "id": "format_items",
+      "type": "transform",
+      "description": "Template with #each loop",
+      "config": {
+        "mode": "template",
+        "template": "{{#each items}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}"
+      },
+      "params": {
+        "items": "${inputs.items}"
+      }
+    },
+    {
+      "id": "summary",
+      "type": "transform",
+      "description": "Template with conditional and helpers",
+      "config": {
+        "mode": "template",
+        "template": "{{name}}さんの買い物リスト: {{item_list}}{{#if show_count}} ({{length items}}件){{/if}}"
+      },
+      "params": {
+        "name": "${inputs.name}",
+        "item_list": "${format_items.output.result}",
+        "items": "${inputs.items}",
+        "show_count": "${inputs.show_count}"
+      }
+    }
+  ],
+  "output": {
+    "greeting": "${greet.output.result}",
+    "item_list": "${format_items.output.result}",
+    "summary": "${summary.output.result}"
+  },
+
+  "_example_request": {
+    "inputs": {
+      "name": "田中",
+      "items": ["りんご", "みかん", "バナナ"],
+      "show_count": true
+    }
+  },
+  "_example_response": {
+    "greeting": "こんにちは、田中さん！",
+    "item_list": "りんご, みかん, バナナ",
+    "summary": "田中さんの買い物リスト: りんご, みかん, バナナ (3件)"
+  }
+}

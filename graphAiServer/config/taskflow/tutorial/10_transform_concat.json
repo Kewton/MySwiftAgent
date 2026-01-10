@@ -1,0 +1,84 @@
+{
+  "_comment": "Tutorial 10: Transform Concat - String/Array concatenation mode",
+  "_learning": [
+    "Concat mode joins multiple fields into one",
+    "separator specifies the delimiter between values",
+    "fields array specifies which fields to concatenate (optional)",
+    "If fields is omitted, all params are concatenated"
+  ],
+
+  "workflow_name": "tutorial_10_transform_concat",
+  "description": "Learn concat transformation for joining values",
+  "input_schema": {
+    "first_name": "string",
+    "last_name": "string",
+    "department": "string",
+    "tags": "array"
+  },
+  "output_schema": {
+    "full_name": "string",
+    "display_name": "string",
+    "tag_string": "string"
+  },
+  "steps": [
+    {
+      "id": "concat_name",
+      "type": "transform",
+      "description": "Concatenate first and last name with space",
+      "config": {
+        "mode": "concat",
+        "separator": " ",
+        "fields": ["last_name", "first_name"]
+      },
+      "params": {
+        "first_name": "${inputs.first_name}",
+        "last_name": "${inputs.last_name}"
+      }
+    },
+    {
+      "id": "concat_display",
+      "type": "transform",
+      "description": "Concatenate name with department using custom separator",
+      "config": {
+        "mode": "concat",
+        "separator": " / ",
+        "fields": ["full_name", "department"]
+      },
+      "params": {
+        "full_name": "${concat_name.output.result}",
+        "department": "${inputs.department}"
+      }
+    },
+    {
+      "id": "concat_tags",
+      "type": "transform",
+      "description": "Join array elements with comma",
+      "config": {
+        "mode": "concat",
+        "separator": ", "
+      },
+      "params": {
+        "tags": "${inputs.tags}"
+      }
+    }
+  ],
+  "output": {
+    "full_name": "${concat_name.output.result}",
+    "display_name": "${concat_display.output.result}",
+    "tag_string": "${concat_tags.output.result}"
+  },
+
+  "_example_request": {
+    "inputs": {
+      "first_name": "太郎",
+      "last_name": "田中",
+      "department": "開発部",
+      "tags": ["Python", "TypeScript", "GraphAI"]
+    }
+  },
+  "_example_response": {
+    "full_name": "田中 太郎",
+    "display_name": "田中 太郎 / 開発部",
+    "tag_string": "Python, TypeScript, GraphAI"
+  }
+}

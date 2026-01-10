@@ -1,0 +1,56 @@
+{
+  "_comment": "Tutorial 3: Sequential Chain - Demonstrates data flow between steps",
+  "_original": "Similar pattern to GraphAI 3_ollama.yml with chained processing",
+
+  "workflow_name": "tutorial_3_sequential_chain",
+  "description": "Fetch user, then fetch their posts, then format summary",
+  "input_schema": {
+    "user_id": "string"
+  },
+  "output_schema": {
+    "user_name": "string",
+    "post_count": "number",
+    "summary": "string"
+  },
+  "steps": [
+    {
+      "id": "fetch_user",
+      "type": "api_rest",
+      "description": "Get user details",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}",
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "id": "fetch_posts",
+      "type": "api_rest",
+      "description": "Get posts for this user",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts?userId=${inputs.user_id}",
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "id": "format_summary",
+      "type": "transform",
+      "description": "Create summary message",
+      "config": {
+        "mode": "template",
+        "template": "User {{user_name}} ({{user_email}}) has written {{post_count}} posts."
+      },
+      "params": {
+        "user_name": "${fetch_user.output.name}",
+        "user_email": "${fetch_user.output.email}",
+        "post_count": "${fetch_posts.output.length}"
+      }
+    }
+  ],
+  "output": {
+    "user_name": "${fetch_user.output.name}",
+    "post_count": "${fetch_posts.output.length}",
+    "summary": "${format_summary.output.result}"
+  }
+}

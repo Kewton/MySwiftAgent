@@ -1,0 +1,38 @@
+{
+  "_comment": "Tutorial 1: Simple Hello - Equivalent to GraphAI 1_hello.yml",
+  "_original": "Simple GET request, returns static message",
+
+  "workflow_name": "tutorial_1_hello",
+  "description": "Simple hello world workflow - fetch data and transform",
+  "input_schema": {},
+  "output_schema": {
+    "message": "string"
+  },
+  "steps": [
+    {
+      "id": "fetch_hello",
+      "type": "api_rest",
+      "description": "Fetch sample data from JSONPlaceholder",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts/1",
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "id": "format_output",
+      "type": "transform",
+      "description": "Format the response message",
+      "config": {
+        "mode": "template",
+        "template": "Hello! Fetched post titled: {{title}}"
+      },
+      "params": {
+        "title": "${fetch_hello.output.title}"
+      }
+    }
+  ],
+  "output": {
+    "message": "${format_output.output.result}"
+  }
+}

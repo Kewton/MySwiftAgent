@@ -1,0 +1,197 @@
+{
+  "_comment": "Tutorial 18: Report Generator - Complete business workflow",
+  "_learning": [
+    "Combine all learned techniques into one workflow",
+    "Parallel data fetching for performance",
+    "Multiple transform modes in one workflow",
+    "Conditional logic for business rules",
+    "Template-based report generation"
+  ],
+
+  "workflow_name": "tutorial_18_report_generator",
+  "description": "Generate a comprehensive report from multiple data sources",
+  "input_schema": {
+    "user_ids": "array",
+    "include_posts": "boolean",
+    "report_format": "string"
+  },
+  "output_schema": {
+    "report": "string",
+    "summary": "object",
+    "generated_at": "string"
+  },
+  "steps": [
+    {
+      "_comment": "Step 1: Fetch multiple users in parallel",
+      "type": "parallel",
+      "steps": [
+        {
+          "id": "fetch_user_1",
+          "type": "api_rest",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users/1",
+            "timeout_ms": 10000
+          },
+          "params": {}
+        },
+        {
+          "id": "fetch_user_2",
+          "type": "api_rest",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users/2",
+            "timeout_ms": 10000
+          },
+          "params": {}
+        },
+        {
+          "id": "fetch_user_3",
+          "type": "api_rest",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users/3",
+            "timeout_ms": 10000
+          },
+          "params": {}
+        }
+      ]
+    },
+    {
+      "_comment": "Step 2: Merge user data",
+      "id": "merge_users",
+      "type": "transform",
+      "description": "Combine all user data into array",
+      "config": {
+        "mode": "template",
+        "template": "[{{json user1}}, {{json user2}}, {{json user3}}]"
+      },
+      "params": {
+        "user1": "${fetch_user_1.output}",
+        "user2": "${fetch_user_2.output}",
+        "user3": "${fetch_user_3.output}"
+      }
+    },
+    {
+      "_comment": "Step 3: Format user list",
+      "id": "format_user_list",
+      "type": "transform",
+      "description": "Create formatted user list",
+      "config": {
+        "mode": "template",
+        "template": "{{#each users}}{{@index}}. {{name}} ({{email}}) - {{company.name}}\n{{/each}}"
+      },
+      "params": {
+        "users": "${merge_users.output.result}"
+      }
+    },
+    {
+      "_comment": "Step 4: Conditional - fetch posts if requested",
+      "type": "conditional",
+      "condition": "${inputs.include_posts} == true",
+      "then": [
+        {
+          "id": "fetch_posts",
+          "type": "api_rest",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/posts?_limit=5",
+            "timeout_ms": 10000
+          },
+          "params": {}
+        },
+        {
+          "id": "format_posts",
+          "type": "transform",
+          "config": {
+            "mode": "map",
+            "source_field": "posts",
+            "template": "- {{title}}"
+          },
+          "params": {
+            "posts": "${fetch_posts.output}"
+          }
+        }
+      ],
+      "else": [
+        {
+          "id": "no_posts",
+          "type": "transform",
+          "config": {
+            "mode": "template",
+            "template": "(投稿データは含まれていません)"
+          },
+          "params": {}
+        }
+      ]
+    },
+    {
+      "_comment": "Step 5: Generate timestamp",
+      "id": "timestamp",
+      "type": "transform",
+      "description": "Create report timestamp",
+      "config": {
+        "mode": "template",
+        "template": "2026-01-10T12:00:00Z"
+      },
+      "params": {}
+    },
+    {
+      "_comment": "Step 6: Calculate summary stats",
+      "id": "summary_stats",
+      "type": "transform",
+      "description": "Generate summary statistics",
+      "config": {
+        "mode": "template",
+        "template": "{\"total_users\": 3, \"report_format\": \"{{format}}\", \"posts_included\": {{include_posts}}}"
+      },
+      "params": {
+        "format": "${inputs.report_format}",
+        "include_posts": "${inputs.include_posts}"
+      }
+    },
+    {
+      "_comment": "Step 7: Generate final report",
+      "id": "final_report",
+      "type": "transform",
+      "description": "Compile complete report",
+      "config": {
+        "mode": "template",
+        "template": "╔════════════════════════════════════╗\n║     ユーザーレポート                ║\n╚════════════════════════════════════╝\n\n生成日時: {{timestamp}}\nフォーマット: {{format}}\n\n【ユーザー一覧】\n{{user_list}}\n【最新投稿】\n{{posts}}\n\n--- レポート終了 ---"
+      },
+      "params": {
+        "timestamp": "${timestamp.output.result}",
+        "format": "${inputs.report_format}",
+        "user_list": "${format_user_list.output.result}",
+        "posts": "${format_posts.output.result}"
+      }
+    }
+  ],
+  "output": {
+    "report": "${final_report.output.result}",
+    "summary": "${summary_stats.output.result}",
+    "generated_at": "${timestamp.output.result}"
+  },
+
+  "_example_request": {
+    "inputs": {
+      "user_ids": ["1", "2", "3"],
+      "include_posts": true,
+      "report_format": "detailed"
+    }
+  },
+  "_example_response": {
+    "report": "╔════════════════════════════════════╗\n║     ユーザーレポート                ║\n╚════════════════════════════════════╝\n\n生成日時: 2026-01-10T12:00:00Z\nフォーマット: detailed\n\n【ユーザー一覧】\n0. Leanne Graham (Sincere@april.biz) - Romaguera-Crona\n1. Ervin Howell (Shanna@melissa.tv) - Deckow-Crist\n2. Clementine Bauch (Nathan@yesenia.net) - Romaguera-Jacobson\n\n【最新投稿】\n- sunt aut facere repellat...\n- qui est esse...\n...\n\n--- レポート終了 ---",
+    "summary": {"total_users": 3, "report_format": "detailed", "posts_included": true},
+    "generated_at": "2026-01-10T12:00:00Z"
+  },
+
+  "_techniques_used": [
+    "Parallel execution for performance",
+    "Transform template mode for formatting",
+    "Transform map mode for array processing",
+    "Conditional branching for optional features",
+    "Variable references across steps",
+    "JSON helpers for data serialization"
+  ]
+}

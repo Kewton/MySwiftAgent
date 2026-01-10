@@ -1,0 +1,114 @@
+{
+  "_comment": "Tutorial 16: Data Pipeline - Real-world ETL pattern",
+  "_learning": [
+    "Extract: Fetch data from multiple sources",
+    "Transform: Process and format data",
+    "Load: Aggregate results into final output",
+    "Parallel fetching for performance",
+    "Chaining steps for complex workflows"
+  ],
+
+  "workflow_name": "tutorial_16_data_pipeline",
+  "description": "Build a data pipeline: fetch user, posts, and generate report",
+  "input_schema": {
+    "user_id": "string"
+  },
+  "output_schema": {
+    "user_name": "string",
+    "post_count": "number",
+    "post_titles": "array",
+    "report": "string"
+  },
+  "steps": [
+    {
+      "_comment": "Step 1: Fetch user info",
+      "id": "fetch_user",
+      "type": "api_rest",
+      "description": "Extract: Get user information",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}",
+        "timeout_ms": 10000
+      },
+      "params": {}
+    },
+    {
+      "_comment": "Step 2: Fetch user's posts",
+      "id": "fetch_posts",
+      "type": "api_rest",
+      "description": "Extract: Get user's posts",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}/posts",
+        "timeout_ms": 10000
+      },
+      "params": {}
+    },
+    {
+      "_comment": "Step 3: Extract post titles using map",
+      "id": "extract_titles",
+      "type": "transform",
+      "description": "Transform: Extract titles from posts array",
+      "config": {
+        "mode": "map",
+        "source_field": "posts",
+        "template": "{{title}}"
+      },
+      "params": {
+        "posts": "${fetch_posts.output}"
+      }
+    },
+    {
+      "_comment": "Step 4: Count posts",
+      "id": "count_posts",
+      "type": "transform",
+      "description": "Transform: Count number of posts",
+      "config": {
+        "mode": "template",
+        "template": "{{length posts}}"
+      },
+      "params": {
+        "posts": "${fetch_posts.output}"
+      }
+    },
+    {
+      "_comment": "Step 5: Generate formatted report",
+      "id": "generate_report",
+      "type": "transform",
+      "description": "Load: Create final report",
+      "config": {
+        "mode": "template",
+        "template": "=== ユーザーレポート ===\n名前: {{name}}\n会社: {{company}}\nメール: {{email}}\n\n投稿数: {{post_count}}件\n\n【最近の投稿】\n{{#each titles}}{{@index}}. {{this}}\n{{/each}}"
+      },
+      "params": {
+        "name": "${fetch_user.output.name}",
+        "company": "${fetch_user.output.company.name}",
+        "email": "${fetch_user.output.email}",
+        "post_count": "${count_posts.output.result}",
+        "titles": "${extract_titles.output.result}"
+      }
+    }
+  ],
+  "output": {
+    "user_name": "${fetch_user.output.name}",
+    "post_count": "${count_posts.output.result}",
+    "post_titles": "${extract_titles.output.result}",
+    "report": "${generate_report.output.result}"
+  },
+
+  "_example_request": {
+    "inputs": {"user_id": "1"}
+  },
+  "_example_response": {
+    "user_name": "Leanne Graham",
+    "post_count": 10,
+    "post_titles": ["sunt aut facere...", "qui est esse...", "..."],
+    "report": "=== ユーザーレポート ===\n名前: Leanne Graham\n会社: Romaguera-Crona\n..."
+  },
+
+  "_pipeline_stages": {
+    "extract": ["fetch_user", "fetch_posts"],
+    "transform": ["extract_titles", "count_posts"],
+    "load": ["generate_report"]
+  }
+}

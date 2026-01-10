@@ -1,0 +1,120 @@
+{
+  "_comment": "Tutorial 12: Conditional Basic - If/else branching (V2 Feature)",
+  "_learning": [
+    "type: 'conditional' enables if/else branching",
+    "condition: expression like 'inputs.value > 10'",
+    "Supported operators: ==, !=, >, <, >=, <=",
+    "then: steps executed when condition is true",
+    "else: steps executed when condition is false (optional)",
+    "Security: whitelist approach, no eval()"
+  ],
+
+  "workflow_name": "tutorial_12_conditional_basic",
+  "description": "Learn basic conditional branching with if/else",
+  "input_schema": {
+    "score": "number"
+  },
+  "output_schema": {
+    "grade": "string",
+    "passed": "boolean",
+    "message": "string"
+  },
+  "steps": [
+    {
+      "type": "conditional",
+      "condition": "${inputs.score} >= 80",
+      "then": [
+        {
+          "id": "grade_excellent",
+          "type": "transform",
+          "config": {
+            "mode": "template",
+            "template": "A (優秀)"
+          },
+          "params": {}
+        }
+      ],
+      "else": [
+        {
+          "type": "conditional",
+          "condition": "${inputs.score} >= 60",
+          "then": [
+            {
+              "id": "grade_good",
+              "type": "transform",
+              "config": {
+                "mode": "template",
+                "template": "B (合格)"
+              },
+              "params": {}
+            }
+          ],
+          "else": [
+            {
+              "id": "grade_fail",
+              "type": "transform",
+              "config": {
+                "mode": "template",
+                "template": "C (不合格)"
+              },
+              "params": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "conditional",
+      "condition": "${inputs.score} >= 60",
+      "then": [
+        {
+          "id": "pass_status",
+          "type": "transform",
+          "config": {
+            "mode": "template",
+            "template": "おめでとうございます！{{score}}点で合格です。"
+          },
+          "params": {
+            "score": "${inputs.score}"
+          }
+        }
+      ],
+      "else": [
+        {
+          "id": "fail_status",
+          "type": "transform",
+          "config": {
+            "mode": "template",
+            "template": "残念ながら{{score}}点で不合格です。60点以上が必要です。"
+          },
+          "params": {
+            "score": "${inputs.score}"
+          }
+        }
+      ]
+    }
+  ],
+  "output": {
+    "grade": "${grade_excellent.output.result}",
+    "passed": "${pass_status.output.result}",
+    "message": "${pass_status.output.result}"
+  },
+
+  "_example_requests": [
+    {
+      "description": "Score 85 - Excellent",
+      "inputs": {"score": 85},
+      "expected": {"grade": "A (優秀)", "passed": true, "message": "おめでとうございます！85点で合格です。"}
+    },
+    {
+      "description": "Score 70 - Pass",
+      "inputs": {"score": 70},
+      "expected": {"grade": "B (合格)", "passed": true, "message": "おめでとうございます！70点で合格です。"}
+    },
+    {
+      "description": "Score 45 - Fail",
+      "inputs": {"score": 45},
+      "expected": {"grade": "C (不合格)", "passed": false, "message": "残念ながら45点で不合格です。60点以上が必要です。"}
+    }
+  ]
+}

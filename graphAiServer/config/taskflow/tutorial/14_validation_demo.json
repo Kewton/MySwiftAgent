@@ -1,0 +1,116 @@
+{
+  "_comment": "Tutorial 14: Validation Demo - 3-level validation system (V2 Feature)",
+  "_learning": [
+    "POST /api/v2/workflows/validate for validation",
+    "Level 1: Schema validation (Zod) - required fields, types",
+    "Level 2: Semantic validation - variable references, duplicate IDs",
+    "Level 3: Runtime validation - URL reachability (with checkUrls: true)",
+    "agentSummary provides LLM-friendly fix hints"
+  ],
+
+  "workflow_name": "tutorial_14_validation_demo",
+  "description": "Demonstrates validation features - use /validate endpoint",
+  "input_schema": {
+    "url": "string",
+    "data": "object"
+  },
+  "output_schema": {
+    "result": "string",
+    "status": "string"
+  },
+  "steps": [
+    {
+      "id": "fetch_data",
+      "type": "api_rest",
+      "description": "Fetch from provided URL (HTTPS required)",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts/1",
+        "timeout_ms": 10000
+      },
+      "params": {}
+    },
+    {
+      "id": "format_result",
+      "type": "transform",
+      "description": "Format the fetched data",
+      "config": {
+        "mode": "template",
+        "template": "Fetched: {{title}}"
+      },
+      "params": {
+        "title": "${fetch_data.output.title}"
+      }
+    }
+  ],
+  "output": {
+    "result": "${format_result.output.result}",
+    "status": "success"
+  },
+
+  "_validation_examples": {
+    "valid_request": {
+      "endpoint": "POST /api/v2/workflows/validate",
+      "body": {
+        "definition": "<<this workflow>>",
+        "options": {
+          "level": 2,
+          "includeAgentFeedback": true
+        }
+      },
+      "expected_response": {
+        "valid": true,
+        "errors": [],
+        "issues": [],
+        "summary": {"errors": 0, "warnings": 0, "infos": 0}
+      }
+    },
+    "invalid_request_missing_field": {
+      "description": "Missing required field triggers Level 1 error",
+      "definition": {
+        "workflow_name": "invalid",
+        "steps": []
+      },
+      "expected_response": {
+        "valid": false,
+        "errors": [{"code": "MISSING_FIELD", "message": "input_schema is required"}],
+        "agentSummary": {
+          "fixRequired": ["Add input_schema field"],
+          "regenerationHints": ["input_schema: Expected format is object"]
+        }
+      }
+    },
+    "invalid_request_undefined_reference": {
+      "description": "Undefined variable reference triggers Level 2 error",
+      "definition": {
+        "workflow_name": "invalid_ref",
+        "input_schema": {},
+        "output_schema": {"result": "string"},
+        "steps": [
+          {
+            "id": "step1",
+            "type": "transform",
+            "config": {"mode": "template", "template": "{{data}}"},
+            "params": {"data": "${undefined_node.output.result}"}
+          }
+        ],
+        "output": {"result": "${step1.output.result}"}
+      },
+      "expected_response": {
+        "valid": false,
+        "errors": [{"code": "UNDEFINED_REFERENCE", "message": "undefined_node is not defined"}]
+      }
+    }
+  },
+
+  "_curl_examples": [
+    {
+      "description": "Validate this workflow",
+      "command": "curl -X POST http://localhost:8005/api/v2/workflows/validate -H 'Content-Type: application/json' -d '{\"definition\": <<workflow>>, \"options\": {\"level\": 2, \"includeAgentFeedback\": true}}'"
+    },
+    {
+      "description": "Validate with runtime checks",
+      "command": "curl -X POST http://localhost:8005/api/v2/workflows/validate -H 'Content-Type: application/json' -d '{\"definition\": <<workflow>>, \"options\": {\"level\": 3, \"checkUrls\": true}}'"
+    }
+  ]
+}

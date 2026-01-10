@@ -1,0 +1,87 @@
+{
+  "_comment": "Tutorial 11: Transform Merge - Object merging mode",
+  "_learning": [
+    "Merge mode combines multiple objects into one",
+    "strategy: 'shallow' merges top-level keys only",
+    "strategy: 'deep' merges recursively (nested objects)",
+    "Later params override earlier ones (right-to-left precedence)"
+  ],
+
+  "workflow_name": "tutorial_11_transform_merge",
+  "description": "Learn merge transformation for combining objects",
+  "input_schema": {
+    "user_settings": "object"
+  },
+  "output_schema": {
+    "shallow_config": "object",
+    "deep_config": "object"
+  },
+  "steps": [
+    {
+      "id": "fetch_defaults",
+      "type": "transform",
+      "description": "Create default configuration object",
+      "config": {
+        "mode": "template",
+        "template": "{\"theme\": \"light\", \"language\": \"ja\", \"notifications\": {\"email\": true, \"push\": false}, \"limits\": {\"max_items\": 100}}"
+      },
+      "params": {}
+    },
+    {
+      "id": "shallow_merge",
+      "type": "transform",
+      "description": "Shallow merge - only top-level keys merged",
+      "config": {
+        "mode": "merge",
+        "strategy": "shallow"
+      },
+      "params": {
+        "defaults": "${fetch_defaults.output.result}",
+        "user_prefs": "${inputs.user_settings}"
+      }
+    },
+    {
+      "id": "deep_merge",
+      "type": "transform",
+      "description": "Deep merge - nested objects also merged",
+      "config": {
+        "mode": "merge",
+        "strategy": "deep"
+      },
+      "params": {
+        "defaults": "${fetch_defaults.output.result}",
+        "user_prefs": "${inputs.user_settings}"
+      }
+    }
+  ],
+  "output": {
+    "shallow_config": "${shallow_merge.output.result}",
+    "deep_config": "${deep_merge.output.result}"
+  },
+
+  "_example_request": {
+    "inputs": {
+      "user_settings": {
+        "theme": "dark",
+        "notifications": {
+          "push": true
+        }
+      }
+    }
+  },
+  "_example_response": {
+    "_note": "Shallow merge replaces entire 'notifications' object, Deep merge preserves nested values",
+    "shallow_config": {
+      "theme": "dark",
+      "language": "ja",
+      "notifications": {"push": true},
+      "limits": {"max_items": 100}
+    },
+    "deep_config": {
+      "theme": "dark",
+      "language": "ja",
+      "notifications": {"email": true, "push": true},
+      "limits": {"max_items": 100}
+    }
+  }
+}
