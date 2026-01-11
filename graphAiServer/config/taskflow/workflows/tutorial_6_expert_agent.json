@@ -1,0 +1,26 @@
+{
+  "_comment": "Tutorial 6: Expert Agent Call - Equivalent to GraphAI 1_hello.yml",
+  "_requires": "TASKFLOW_ALLOW_HTTP=true TASKFLOW_ALLOW_LOCAL=true",
+  "_original": "Calls expertAgent API like the original GraphAI tutorial",
+  "workflow_name": "tutorial_6_expert_agent",
+  "description": "Call local expertAgent API (requires expertAgent on port 8104)",
+  "input_schema": {},
+  "output_schema": {
+    "message": "string"
+  },
+  "steps": [
+    {
+      "id": "expert_hello",
+      "type": "api_rest",
+      "description": "Call expertAgent hello endpoint",
+      "config": {
+        "method": "GET",
+        "url": "http://localhost:8104/aiagent-api/v1/",
+        "timeout_ms": 30000
+      }
+    }
+  ],
+  "output": {
+    "message": "${expert_hello.output.message}"
+  }
+}

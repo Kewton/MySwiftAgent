@@ -1,6 +1,7 @@
 """Tests for PromptBuilderSubWorkflow.
 
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
+Issue #345: LLM prompt agent output format fixes
 """
 
 
@@ -13,7 +14,9 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder impo
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.rules import (
     ALL_AGENT_RULES,
     API_RULES,
+    ARRAY_JOIN_AGENT_RULES,
     BASE_RULES,
+    MAP_AGENT_OUTPUT_RULES,
     REFERENCE_RULES,
     get_agent_rules,
     get_api_rules,
@@ -78,6 +81,48 @@ class TestAgentRules:
         """Test ALL_AGENT_RULES contains mapAgent rules."""
         assert "mapAgent" in ALL_AGENT_RULES
 
+    def test_all_agent_rules_contains_map_output_format(self):
+        """Test ALL_AGENT_RULES contains mapAgent output format rules (Issue #345)."""
+        assert "compositeResult" in ALL_AGENT_RULES
+        assert "compositeResultKey" in ALL_AGENT_RULES
+        assert MAP_AGENT_OUTPUT_RULES in ALL_AGENT_RULES
+
+    def test_all_agent_rules_contains_array_join(self):
+        """Test ALL_AGENT_RULES contains arrayJoinAgent rules (Issue #345)."""
+        assert "arrayJoinAgent" in ALL_AGENT_RULES
+        assert ".text" in ALL_AGENT_RULES
+        assert ARRAY_JOIN_AGENT_RULES in ALL_AGENT_RULES
+
+    def test_get_agent_rules_with_map_includes_output_rules(self):
+        """Test get_agent_rules with mapAgent includes output format rules."""
+        rules = get_agent_rules(["mapAgent"])
+        assert "compositeResult" in rules
+        assert "compositeResultKey" in rules
+
+    def test_get_agent_rules_with_arrayjoin(self):
+        """Test get_agent_rules with arrayJoinAgent returns join rules."""
+        rules = get_agent_rules(["arrayJoinAgent"])
+        assert ".text" in rules
+        assert "arrayJoinAgent" in rules
+
+    def test_map_agent_uses_row_not_item_source(self):
+        """Test mapAgent rules use 'row: {}' not 'item_source: {}' (Issue #345)."""
+        # Should have correct 'row' pattern
+        assert "row: {}" in ALL_AGENT_RULES
+        assert ":row" in ALL_AGENT_RULES
+        # Should NOT have incorrect 'item_source' pattern
+        assert "item_source: {}" not in ALL_AGENT_RULES
+        assert ":item_source" not in ALL_AGENT_RULES
+
+    def test_fetch_agent_no_result_wrapper(self):
+        """Test fetchAgent rules do not contain .result wrapper (Issue #345)."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.rules import (
+            FETCH_AGENT_RULES,
+        )
+
+        assert ":node_name.result.field" not in FETCH_AGENT_RULES
+        assert "returns HTTP response body directly" in FETCH_AGENT_RULES
+
 
 class TestReferenceRules:
     """Tests for reference rules."""
@@ -96,6 +141,18 @@ class TestReferenceRules:
         """Test reference rules mention :source."""
         assert ":source" in REFERENCE_RULES
 
+    def test_reference_rules_no_incorrect_result_wrapper(self):
+        """Test reference rules do not contain incorrect .result wrapper (Issue #345)."""
+        # fetchAgent returns HTTP response body directly, no .result wrapper
+        assert ":node_name.result.field" not in REFERENCE_RULES
+        assert "DON'T forget `.result`" not in REFERENCE_RULES
+        assert "wrapped in `.result`" not in REFERENCE_RULES
+
+    def test_reference_rules_correct_direct_access(self):
+        """Test reference rules show correct direct access pattern (Issue #345)."""
+        assert ":api_node.data" in REFERENCE_RULES
+        assert "returns HTTP response body directly" in REFERENCE_RULES
+
 
 class TestApiRules:
     """Tests for API rules."""
@@ -113,6 +170,16 @@ class TestApiRules:
     def test_api_rules_contains_timeout(self):
         """Test API rules mention timeout."""
         assert "timeout" in API_RULES.lower()
+
+    def test_api_rules_no_result_wrapper(self):
+        """Test API rules do not contain incorrect .result wrapper (Issue #345)."""
+        assert "wrapped in `.result`" not in API_RULES
+        assert ":api_node.result.messages" not in API_RULES
+
+    def test_api_rules_correct_direct_access(self):
+        """Test API rules show correct direct access pattern (Issue #345)."""
+        assert ":api_node.messages" in API_RULES
+        assert "returns HTTP response body directly" in API_RULES
 
 
 class TestSystemPrompt:

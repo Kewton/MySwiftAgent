@@ -1,0 +1,38 @@
+{
+  "workflow_name": "send_summary_email_workflow",
+  "description": "要約された情報を指定されたメールアドレスに送信するワークフローです。",
+  "input_schema": {
+    "to": "string",
+    "subject": "string",
+    "body": "string"
+  },
+  "output_schema": {
+    "success": "boolean",
+    "message_id": "string"
+  },
+  "steps": [
+    {
+      "id": "send_email_task",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "to": "${inputs.to}",
+          "subject": "${inputs.subject}",
+          "body": "${inputs.body}"
+        },
+        "headers": {
+          "Authorization": "Bearer ${secrets.EMAIL_API_KEY}",
+          "Content-Type": "application/json"
+        },
+        "url": "https://api.example.com/v1/email/send"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "success": "${send_email_task.data.success}",
+    "message_id": "${send_email_task.data.message_id}"
+  }
+}

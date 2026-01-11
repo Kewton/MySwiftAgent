@@ -1,0 +1,45 @@
+{
+  "workflow_name": "graphai_workflow_generator",
+  "description": "策定された要件に基づき、GraphAIで実行可能なJSON形式のワークフロー定義ファイルを生成します。",
+  "input_schema": {
+    "workflow_name": "string",
+    "nodes_specification": "array",
+    "data_flow_description": "string"
+  },
+  "output_schema": {
+    "graphai_json": "object"
+  },
+  "steps": [
+    {
+      "id": "generate_graphai_definition",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.example.com/v1/ai/generate-graphai",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.AI_SERVICE_TOKEN}"
+        },
+        "body": {
+          "workflow_name": "${inputs.workflow_name}",
+          "nodes": "${inputs.nodes_specification}",
+          "description": "${inputs.data_flow_description}"
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    },
+    {
+      "id": "transform_to_output",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${generate_graphai_definition.data}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "graphai_json": "${transform_to_output}"
+  }
+}

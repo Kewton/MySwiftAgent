@@ -1,0 +1,46 @@
+{
+  "workflow_name": "llm_text_structuring_workflow",
+  "description": "Transforms raw LLM text into a structured JSON format with metadata and cleaned content.",
+  "input_schema": {
+    "raw_answer": "string",
+    "original_question": "string"
+  },
+  "output_schema": {
+    "status": "string",
+    "data": "object",
+    "metadata": "object"
+  },
+  "steps": [
+    {
+      "id": "generate_timestamp",
+      "type": "code_js",
+      "config": {
+        "path": "/scripts/utils.js",
+        "function_name": "formatDate"
+      },
+      "params": {}
+    },
+    {
+      "id": "structure_response",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "Original Question: ${inputs.original_question}\nRaw LLM Answer: ${inputs.raw_answer}\nGeneration Time: ${generate_timestamp}",
+          "system_prompt": "You are a data formatting assistant. Your task is to transform the provided input into a structured JSON object. The output must strictly follow this schema: { \"status\": \"success\", \"data\": { \"question\": \"the original question\", \"answer\": \"the cleaned and formatted answer text\" }, \"metadata\": { \"timestamp\": \"the provided generation time in ISO 8601 format\" } }. Ensure the answer is cleaned of any markdown artifacts or unnecessary text."
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "status": "${structure_response.result.status}",
+    "data": "${structure_response.result.data}",
+    "metadata": "${structure_response.result.metadata}"
+  }
+}

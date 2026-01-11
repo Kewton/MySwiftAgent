@@ -1,0 +1,36 @@
+{
+  "workflow_name": "llm_question_answering",
+  "description": "Interface for generating a natural language answer from an LLM based on a user's question.",
+  "input_schema": {
+    "user_question": "string",
+    "system_context": "string"
+  },
+  "output_schema": {
+    "answer_text": "string",
+    "finish_reason": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_answer",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://localhost:8004/v1/mylllm",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${inputs.user_question}",
+          "system_prompt": "${inputs.system_context}",
+          "model": "gpt-4o-mini"
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "answer_text": "${generate_answer.data.result}",
+    "finish_reason": "stop"
+  }
+}

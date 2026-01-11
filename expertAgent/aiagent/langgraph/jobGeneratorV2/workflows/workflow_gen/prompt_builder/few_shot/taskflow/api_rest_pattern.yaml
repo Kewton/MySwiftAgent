@@ -19,23 +19,25 @@ example:
     - id: fetch_user
       type: api_rest
       config:
+        step_type: api_rest
         method: POST
         url: "https://api.example.com/users"
         headers:
           Content-Type: application/json
-        body:
-          user_id: "${inputs.user_id}"
+        body: '{"user_id": "${inputs.user_id}"}'
         timeout_ms: 30000
     - id: format_output
       type: transform
       config:
+        step_type: transform
         mode: template
-        template: "${fetch_user.data}"
+        template: "${fetch_user.output}"
   output:
-    user_name: "${fetch_user.data.name}"
-    user_email: "${fetch_user.data.email}"
+    user_name: "${fetch_user.output.name}"
+    user_email: "${fetch_user.output.email}"
 
 notes:
   - Always use HTTPS for API endpoints
   - Use ${inputs.field} for input references
-  - Use ${step_id.field} for step output references
+  - Use ${step_id.output.field} for step output references
+  - body must be a JSON string, not a dict object

@@ -1,0 +1,50 @@
+{
+  "workflow_name": "python_tutorial_categorizer",
+  "description": "Interface for summarizing and categorizing search results of Python tutorials.",
+  "input_schema": {
+    "search_results": "array"
+  },
+  "output_schema": {
+    "categorized_tutorials": "array"
+  },
+  "steps": [
+    {
+      "id": "process_search_results",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.example-ai-service.com/v1/analyze/tutorials",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.AI_SERVICE_TOKEN}"
+        },
+        "body": {
+          "results": "${inputs.search_results}",
+          "task": "categorize_and_summarize",
+          "categories": [
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+            "Video-based",
+            "Official Documentation",
+            "Other"
+          ]
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "format_categorized_data",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${process_search_results.data.categorized_tutorials}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "categorized_tutorials": "${format_categorized_data}"
+  }
+}

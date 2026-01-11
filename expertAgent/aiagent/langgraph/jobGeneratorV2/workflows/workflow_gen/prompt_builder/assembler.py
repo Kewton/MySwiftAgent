@@ -6,11 +6,14 @@ Issue #342 Phase F: WorkflowGen V2 LLM Integration
 Issue #342 Iteration 2: Dead code integration
 - INT-3: APISchemaInjector integration for API spec injection
 - INT-4: WorkflowPatternLibrary integration for pattern suggestions
+
+Issue #343: API info deduplication warning
 """
 
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -206,6 +209,16 @@ def assemble_prompt(
     Returns:
         WorkflowPrompt with all components assembled
     """
+    # Issue #343: Warn about potential API info duplication
+    if recommended_apis and api_mappings:
+        warnings.warn(
+            "Both recommended_apis and api_mappings provided. "
+            "API information may be duplicated in prompt. "
+            "Consider using APISchemaInjector only.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     # Get system prompt
     system = get_system_prompt(verbose=verbose)
 

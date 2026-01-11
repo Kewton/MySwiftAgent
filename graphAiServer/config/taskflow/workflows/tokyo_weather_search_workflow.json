@@ -1,0 +1,34 @@
+{
+  "workflow_name": "tokyo_weather_search_workflow",
+  "description": "Google検索を使用して東京の天気情報を検索し、結果のタイトル、リンク、および詳細（スニペット）のリストを取得します。",
+  "input_schema": {
+    "queries": "array"
+  },
+  "output_schema": {
+    "search_results": "array"
+  },
+  "steps": [
+    {
+      "id": "google_search_api",
+      "type": "api_rest",
+      "config": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/customsearch/v1?q=${inputs.queries[0]}&key=${secrets.GOOGLE_API_KEY}&cx=${secrets.GOOGLE_SEARCH_ENGINE_ID}",
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_search_items",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${google_search_api.data.items}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "search_results": "${extract_search_items}"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "workflow_name": "graphai_workflow_spec_generator",
+  "description": "ユーザーの要件に基づいて、Google検索・要約・送信を行うGraphAIワークフローのノード構成とデータフローを具体化します。",
+  "input_schema": {
+    "user_requirement": "string"
+  },
+  "output_schema": {
+    "workflow_name": "string",
+    "nodes_specification": "array",
+    "data_flow_description": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_specification",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "headers": {
+          "Authorization": "Bearer ${secrets.OPENAI_API_KEY}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "gpt-4o",
+          "messages": [
+            {
+              "role": "system",
+              "content": "あなたはGraphAIの専門家です。ユーザーの要件に基づいて、GraphAIワークフローのノード構成（node_id, agent, inputs, role）とデータフローの説明をJSON形式で生成してください。出力は必ず以下のキーを持つJSONオブジェクトにしてください：workflow_name, nodes_specification, data_flow_description。"
+            },
+            {
+              "role": "user",
+              "content": "要件: ${inputs.user_requirement}"
+            }
+          ],
+          "response_format": {
+            "type": "json_object"
+          }
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_content",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${generate_specification.data.choices[0].message.content}"
+      },
+      "params": {}
+    },
+    {
+      "id": "parse_json_result",
+      "type": "code_js",
+      "config": {
+        "path": "/scripts/utils.js",
+        "function_name": "parseJson"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "workflow_name": "${parse_json_result.workflow_name}",
+    "nodes_specification": "${parse_json_result.nodes_specification}",
+    "data_flow_description": "${parse_json_result.data_flow_description}"
+  }
+}

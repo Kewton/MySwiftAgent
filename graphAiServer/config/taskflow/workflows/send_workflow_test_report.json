@@ -1,0 +1,58 @@
+{
+  "workflow_name": "send_workflow_test_report",
+  "description": "Sends an email notification with workflow generation test results, including success status, a summary of the JSON, and a Google Drive link.",
+  "input_schema": {
+    "recipient_email": "string",
+    "is_success": "boolean",
+    "drive_link": "string",
+    "workflow_summary": "string",
+    "validation_errors": "array"
+  },
+  "output_schema": {
+    "message_id": "string",
+    "status": "string"
+  },
+  "steps": [
+    {
+      "id": "format_errors",
+      "type": "transform",
+      "config": {
+        "separator": "\\n- 极",
+        "mode": "concat"
+      },
+      "params": {}
+    },
+    {
+      "id": "format_email_body",
+      "type": "transform",
+      "config": {
+        "template": "Workflow Generation Test Results\n\nStatus: ${inputs.is_success}\nGoogle Drive Link: ${inputs.drive_link}\n\nWorkflow Summary:\n${inputs.workflow_summary}\n\nValidation Errors:\n${format_errors}",
+        "mode": "template"
+      },
+      "params": {}
+    },
+    {
+      "id": "send_email",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "recipient": "${inputs.recipient_email}",
+          "subject": "Workflow Generation Test Notification",
+          "content": "${format_email_body}"
+        },
+        "url": "https://api.example.com/v1/send-email",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.EMAIL_API_KEY}"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "message_id": "${send_email.data.message_id}",
+    "status": "${send_email.data.status}"
+  }
+}

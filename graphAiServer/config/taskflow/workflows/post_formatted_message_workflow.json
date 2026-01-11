@@ -1,0 +1,47 @@
+{
+  "workflow_name": "post_formatted_message_workflow",
+  "description": "指定されたチャンネルに対して、整形済みのメッセージを投稿するワークフローです。Slack APIなどのチャットサービスへの投稿を想定しています。",
+  "input_schema": {
+    "channel": "string",
+    "text": "string"
+  },
+  "output_schema": {
+    "success": "boolean",
+    "ts": "string",
+    "error_message": "string"
+  },
+  "steps": [
+    {
+      "id": "post_to_channel",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "text": "${inputs.text}",
+          "channel": "${inputs.channel}"
+        },
+        "url": "https://slack.com/api/chat.postMessage",
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Authorization": "Bearer ${secrets.SLACK_BOT_TOKEN}"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": "format_result",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${post_to_channel.data}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "success": "${post_to_channel.data.ok}",
+    "ts": "${post_to_channel.data.ts}",
+    "error_message": "${post_to_channel.data.error}"
+  }
+}

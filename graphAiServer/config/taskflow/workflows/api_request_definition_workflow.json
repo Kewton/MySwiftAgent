@@ -1,0 +1,43 @@
+{
+  "workflow_name": "api_request_definition_workflow",
+  "description": "Defines specific HTTPS request components based on identified API documentation and user intent.",
+  "input_schema": {
+    "selected_api": "object",
+    "user_intent": "string"
+  },
+  "output_schema": {
+    "request_config": "object"
+  },
+  "steps": [
+    {
+      "id": "generate_request_definition",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.service-provider.com/v1/analyze-api-request",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.API_GENERATOR_TOKEN}"
+        },
+        "body": {
+          "api_context": "${inputs.selected_api}",
+          "intent": "${inputs.user_intent}"
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_config",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${generate_request_definition.data.request_config}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "request_config": "${extract_config}"
+  }
+}

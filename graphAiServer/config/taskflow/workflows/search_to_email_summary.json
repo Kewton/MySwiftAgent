@@ -1,0 +1,44 @@
+{
+  "workflow_name": "search_to_email_summary",
+  "description": "Google検索結果を元に、特定のキーワードに関するメール要約文と件名を生成するワークフロー",
+  "input_schema": {
+    "search_results": "array",
+    "keyword": "string"
+  },
+  "output_schema": {
+    "summary_text": "string",
+    "subject_line": "string"
+  },
+  "steps": [
+    {
+      "id": "prepare_prompt_context",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "キーワード: ${inputs.keyword}\n\n検索結果データ:\n${inputs.search_results}"
+      },
+      "params": {}
+    },
+    {
+      "id": "generate_structured_summary",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${prepare_prompt_context}",
+          "system_prompt": "あなたは優秀なビジネスアシスタントです。提供された検索結果を分析し、キーワード「${inputs.keyword}」に関する情報を整理して、メール送信に適した要約文を作成してください。出力は必ずJSON形式とし、以下の2つのフィールドを含めてください：1. 'summary_text': メールの本文としてそのまま利用可能な、丁寧な日本語の要約文。 2. 'subject_line': メールの内容を簡潔に表す件名案。"
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "summary_text": "${generate_structured_summary.data.result.summary_text}",
+    "subject_line": "${generate_structured_summary.data.result.subject_line}"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "workflow_name": "weather_report_formatter",
+  "description": "検索結果から得られた生の天気情報を、自然な日本語のレポート形式に整形するワークフロー",
+  "input_schema": {
+    "raw_weather_data": "string",
+    "location": "string",
+    "tone": "string"
+  },
+  "output_schema": {
+    "formatted_report": "string",
+    "weather_summary": "object"
+  },
+  "steps": [
+    {
+      "id": "process_weather_report",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.example.com/v1/weather/format",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.AI_SERVICE_TOKEN}"
+        },
+        "body": {
+          "raw_data": "${inputs.raw_weather_data}",
+          "location": "${inputs.location}",
+          "tone": "${inputs.tone}"
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "format_final_output",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${process_weather_report.data}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "formatted_report": "${format_final_output.formatted_report}",
+    "weather_summary": "${format_final_output.weather_summary}"
+  }
+}

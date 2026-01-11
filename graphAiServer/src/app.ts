@@ -15,6 +15,10 @@ import type {
   WorkflowValidationError,
 } from './types/workflow.js';
 
+// TaskFlow v2 API
+import workflowsRouter from './api/v2/workflows.js';
+import { errorHandler } from './api/v2/error-handler.js';
+
 const app = express();
 
 /**
@@ -307,5 +311,29 @@ app.post('/api/v1/admin/reload-secrets', requireAdminToken, (req: Request, res: 
     res.status(500).json({ error: String(error) });
   }
 });
+
+// ============================================================
+// TaskFlow v2 API
+// ============================================================
+
+// API v2 root
+app.get('/api/v2/', (_req: Request, res: Response) => {
+  res.json({
+    version: '2.0',
+    service: 'graphAiServer',
+    engine: 'TaskFlow',
+    endpoints: {
+      workflows: '/api/v2/workflows',
+      validate: '/api/v2/workflows/validate',
+      register: '/api/v2/workflows/register (admin)',
+    },
+  });
+});
+
+// Mount v2 workflows router
+app.use('/api/v2/workflows', workflowsRouter);
+
+// Error handler (must be last)
+app.use(errorHandler);
 
 export default app;

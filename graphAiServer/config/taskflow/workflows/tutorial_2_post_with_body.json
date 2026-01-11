@@ -1,0 +1,38 @@
+{
+  "_comment": "Tutorial 2: POST with Body - Equivalent to GraphAI 2_httpAgentFilter.yml",
+  "_original": "POST request with dynamic body from inputs",
+  "workflow_name": "tutorial_2_post_with_body",
+  "description": "Create a post with user-provided content",
+  "input_schema": {
+    "title": "string",
+    "body": "string"
+  },
+  "output_schema": {
+    "post_id": "number",
+    "created_title": "string"
+  },
+  "steps": [
+    {
+      "id": "create_post",
+      "type": "api_rest",
+      "description": "Create a new post via JSONPlaceholder API",
+      "config": {
+        "method": "POST",
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "${inputs.title}",
+          "body": "${inputs.body}",
+          "userId": 1
+        },
+        "timeout_ms": 10000
+      }
+    }
+  ],
+  "output": {
+    "post_id": "${create_post.output.id}",
+    "created_title": "${create_post.output.title}"
+  }
+}

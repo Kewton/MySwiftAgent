@@ -121,7 +121,11 @@ class TestWorkflowGenWorkflowExecute:
         sample_input: WorkflowGenInput,
         mock_context: ExecutionContext,
     ):
-        """execute() should return WorkflowGenOutput."""
+        """execute() should return WorkflowGenOutput.
+
+        Issue #350: Uses engine='graphai' for backward compatibility with
+        existing mocking approach for YamlGeneratorSubWorkflow.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow import (
             WorkflowGenWorkflow,
         )
@@ -144,7 +148,8 @@ class TestWorkflowGenWorkflowExecute:
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
             return_value=mock_yaml_generator,
         ):
-            workflow = WorkflowGenWorkflow(enable_testing=False)
+            # Issue #350: Use graphai engine to test GraphAI code path
+            workflow = WorkflowGenWorkflow(enable_testing=False, engine="graphai")
             result = await workflow.execute(sample_input, mock_context)
 
             assert isinstance(result, WorkflowGenOutput)
@@ -158,7 +163,11 @@ class TestWorkflowGenWorkflowExecute:
         sample_input: WorkflowGenInput,
         mock_context: ExecutionContext,
     ):
-        """execute() should return SUCCESS status on successful generation."""
+        """execute() should return SUCCESS status on successful generation.
+
+        Issue #350: Uses engine='graphai' for backward compatibility with
+        existing mocking approach for YamlGeneratorSubWorkflow.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow import (
             WorkflowGenWorkflow,
         )
@@ -181,7 +190,8 @@ class TestWorkflowGenWorkflowExecute:
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
             return_value=mock_yaml_generator,
         ):
-            workflow = WorkflowGenWorkflow(enable_testing=False)
+            # Issue #350: Use graphai engine to test GraphAI code path
+            workflow = WorkflowGenWorkflow(enable_testing=False, engine="graphai")
             result = await workflow.execute(sample_input, mock_context)
 
             assert result.status == PhaseStatus.SUCCESS
@@ -266,7 +276,11 @@ class TestWorkflowGenWorkflowWithTesting:
         sample_input: WorkflowGenInput,
         mock_context: ExecutionContext,
     ):
-        """execute() should run tests when testing is enabled."""
+        """execute() should run tests when testing is enabled.
+
+        Issue #350: Uses engine='graphai' for backward compatibility with
+        existing mocking approach for YamlGeneratorSubWorkflow.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.test_runner import (
             TestRunResult,
         )
@@ -303,7 +317,8 @@ class TestWorkflowGenWorkflowWithTesting:
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.TestRunnerSubWorkflow",
             return_value=mock_test_runner,
         ):
-            workflow = WorkflowGenWorkflow(enable_testing=True)
+            # Issue #350: Use graphai engine to test GraphAI code path
+            workflow = WorkflowGenWorkflow(enable_testing=True, engine="graphai")
             result = await workflow.execute(sample_input, mock_context)
 
             assert result.status == PhaseStatus.SUCCESS
@@ -316,7 +331,11 @@ class TestWorkflowGenWorkflowWithTesting:
         sample_input: WorkflowGenInput,
         mock_context: ExecutionContext,
     ):
-        """execute() should return NEEDS_RETRY when tests fail."""
+        """execute() should return NEEDS_RETRY when tests fail.
+
+        Issue #350: Uses engine='graphai' for backward compatibility with
+        existing mocking approach for YamlGeneratorSubWorkflow.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.test_runner import (
             TestRunResult,
         )
@@ -353,7 +372,8 @@ class TestWorkflowGenWorkflowWithTesting:
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.TestRunnerSubWorkflow",
             return_value=mock_test_runner,
         ):
-            workflow = WorkflowGenWorkflow(enable_testing=True)
+            # Issue #350: Use graphai engine to test GraphAI code path
+            workflow = WorkflowGenWorkflow(enable_testing=True, engine="graphai")
             result = await workflow.execute(sample_input, mock_context)
 
             assert result.status == PhaseStatus.NEEDS_RETRY
@@ -454,7 +474,11 @@ class TestWorkflowGenWorkflowSubWorkflowOrchestration:
         sample_input: WorkflowGenInput,
         mock_context: ExecutionContext,
     ):
-        """Workflow should call YAML generator."""
+        """Workflow should call YAML generator.
+
+        Issue #350: Uses engine='graphai' for backward compatibility with
+        existing mocking approach for YamlGeneratorSubWorkflow.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow import (
             WorkflowGenWorkflow,
         )
@@ -477,7 +501,8 @@ class TestWorkflowGenWorkflowSubWorkflowOrchestration:
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
             return_value=mock_yaml_generator,
         ):
-            workflow = WorkflowGenWorkflow(enable_testing=False)
+            # Issue #350: Use graphai engine to test GraphAI code path
+            workflow = WorkflowGenWorkflow(enable_testing=False, engine="graphai")
             await workflow.execute(sample_input, mock_context)
 
             # Issue #342 V2: Now calls generate_with_llm() by default
@@ -495,7 +520,8 @@ class TestWorkflowGenWorkflowInitialization:
 
         workflow = WorkflowGenWorkflow()
         assert workflow._enable_testing is False
-        assert workflow._graphai_version == "0.6"
+        # Issue #342 Phase 1: Default version is 0.5 per BASE_RULES
+        assert workflow._graphai_version == "0.5"
         # Issue #342 V2: LLM generation is enabled by default
         assert workflow._use_llm_generation is True
 

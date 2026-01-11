@@ -1,0 +1,53 @@
+{
+  "workflow_name": "text_to_speech_base64_converter",
+  "description": "Converts input text into Base64 encoded MP3 audio using a text-to-speech API service.",
+  "input_schema": {
+    "text": "string",
+    "voice_settings": "object"
+  },
+  "output_schema": {
+    "audio_content": "string",
+    "content_type": "string"
+  },
+  "steps": [
+    {
+      "id": "synthesize_speech",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.example.com/v1/text:synthesize",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.TTS_API_KEY}"
+        },
+        "body": {
+          "input": {
+            "text": "${inputs.text}"
+          },
+          "voice": {
+            "languageCode": "${inputs.voice_settings.language_code}",
+            "name": "${inputs.voice_settings.voice_id}"
+          },
+          "audioConfig": {
+            "audioEncoding": "MP3"
+          }
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_audio_data",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${synthesize_speech.data.audioContent}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "audio_content": "${extract_audio_data}",
+    "content_type": "audio/mpeg"
+  }
+}

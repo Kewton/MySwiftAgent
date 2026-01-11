@@ -85,8 +85,14 @@ class TestWorkflowGenWorkflow:
 
     @pytest.mark.asyncio
     async def test_execute_success(self):
-        """Test execute generates workflow successfully."""
-        workflow = WorkflowGenWorkflow()
+        """Test execute generates workflow successfully.
+
+        Note: Uses engine='graphai' for backward compatibility testing.
+        Issue #350: Default changed to 'taskflow', but GraphAI tests should
+        continue to work with engine='graphai'.
+        """
+        # Issue #350: Explicitly use graphai engine for backward compatibility
+        workflow = WorkflowGenWorkflow(engine="graphai")
 
         input_data = WorkflowGenInput(
             task_master_ids=["tm_task_1", "tm_task_2"],
@@ -221,8 +227,14 @@ class TestWorkflowGenIntegration:
 
     @pytest.mark.asyncio
     async def test_workflow_complete_flow(self):
-        """Test complete workflow generation flow."""
-        workflow = WorkflowGenWorkflow(enable_testing=False)
+        """Test complete workflow generation flow.
+
+        Note: Uses engine='graphai' for backward compatibility testing.
+        Issue #350: Default changed to 'taskflow', but GraphAI tests should
+        continue to work with engine='graphai'.
+        """
+        # Issue #350: Explicitly use graphai engine for backward compatibility
+        workflow = WorkflowGenWorkflow(enable_testing=False, engine="graphai")
 
         input_data = WorkflowGenInput(
             task_master_ids=["tm_search", "tm_format", "tm_send"],

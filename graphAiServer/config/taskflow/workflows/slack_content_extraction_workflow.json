@@ -1,0 +1,34 @@
+{
+  "workflow_name": "slack_content_extraction_workflow",
+  "description": "ユーザーの入力からSlackの投稿先（チャンネル）とメッセージの核となる内容を抽出するワークフロー",
+  "input_schema": {
+    "user_input": "string"
+  },
+  "output_schema": {
+    "channel_identifier": "string",
+    "core_content": "string"
+  },
+  "steps": [
+    {
+      "id": "extract_slack_info",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "text": "${inputs.user_input}"
+        },
+        "url": "https://api.example.com/v1/slack/extract-info",
+        "headers": {
+          "Authorization": "Bearer ${secrets.API_TOKEN}",
+          "Content-Type": "application/json"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "channel_identifier": "${extract_slack_info.data.channel_identifier}",
+    "core_content": "${extract_slack_info.data.core_content}"
+  }
+}

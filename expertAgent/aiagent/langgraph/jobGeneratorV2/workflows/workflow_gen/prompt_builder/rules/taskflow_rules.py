@@ -67,7 +67,7 @@ def get_taskflow_step_types() -> str:
     "method": "GET|POST|PUT|DELETE|PATCH",
     "url": "https://api.example.com/endpoint",
     "headers": {"Authorization": "Bearer ${secrets.TOKEN}"},
-    "body": {"key": "${inputs.value}"},
+    "body": "{\"key\": \"${inputs.value}\"}",
     "timeout_ms": 30000
   }
 }
@@ -75,6 +75,7 @@ def get_taskflow_step_types() -> str:
 **IMPORTANT**:
 - URL must use HTTPS. HTTP is not allowed.
 - config must include "step_type" matching the step type.
+- **body must be a JSON string**, not a dict object. Use escaped quotes.
 
 ### 2. transform - Data Transformation
 
@@ -284,14 +285,11 @@ You can use the full URL or `${{secrets.EXPERTAGENT_BASE_URL}}` for dynamic reso
   "id": "llm_process",
   "type": "api_rest",
   "config": {{
+    "step_type": "api_rest",
     "method": "POST",
     "url": "{expertagent_base}/v1/mylllm",
     "headers": {{"Content-Type": "application/json"}},
-    "body": {{
-      "user_input": "${{inputs.query}}",
-      "system_prompt": "You are a helpful assistant.",
-      "model": "gpt-4o-mini"
-    }}
+    "body": "{{\"user_input\": \"${{inputs.query}}\", \"system_prompt\": \"You are a helpful assistant.\", \"model\": \"gpt-4o-mini\"}}"
   }}
 }}
 ```
@@ -311,13 +309,11 @@ You can use the full URL or `${{secrets.EXPERTAGENT_BASE_URL}}` for dynamic reso
   "id": "json_extract",
   "type": "api_rest",
   "config": {{
+    "step_type": "api_rest",
     "method": "POST",
     "url": "{expertagent_base}/v1/aiagent/utility/jsonoutput",
     "headers": {{"Content-Type": "application/json"}},
-    "body": {{
-      "user_input": "${{inputs.text}}",
-      "system_prompt": "Extract key information and return as JSON."
-    }}
+    "body": "{{\"user_input\": \"${{inputs.text}}\", \"system_prompt\": \"Extract key information and return as JSON.\"}}"
   }}
 }}
 ```

@@ -1,0 +1,35 @@
+{
+  "workflow_name": "graphai_validator_workflow",
+  "description": "Validates a GraphAI JSON workflow for specification compliance, circular references, and required parameters using an external validation service.",
+  "input_schema": {
+    "graphai_json": "object"
+  },
+  "output_schema": {
+    "errors": "array",
+    "is_valid": "boolean",
+    "validated_json": "object"
+  },
+  "steps": [
+    {
+      "id": "validate_graphai",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "graphai_json": "${inputs.graphai_json}"
+        },
+        "url": "https://api.validator.service/v1/graphai/validate",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "errors": "${validate_graphai.data.errors}",
+    "is_valid": "${validate_graphai.data.is_valid}",
+    "validated_json": "${validate_graphai.data.validated_json}"
+  }
+}

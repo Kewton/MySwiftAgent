@@ -1,0 +1,23 @@
+{
+  "workflow_name": "test_auto_workflow",
+  "description": "Test workflow",
+  "input_schema": {
+    "query": "string"
+  },
+  "output_schema": {
+    "result": "string"
+  },
+  "steps": [
+    {
+      "id": "echo_step",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${inputs.query}"
+      }
+    }
+  ],
+  "output": {
+    "result": "${echo_step}"
+  }
+}

@@ -91,7 +91,7 @@ Your task is to generate GraphAI YAML workflow definitions.
 
 ## GraphAI YAML Structure
 A GraphAI workflow YAML has:
-- version: "0.6" (current version)
+- version: "0.5" (current version)
 - nodes: Dict of node definitions
 - Each node has:
   - agent: Agent type (e.g., "fetchAgent", "sleeperAgent")
@@ -168,7 +168,7 @@ class YamlGeneratorSubWorkflow:
 
     def __init__(
         self,
-        graphai_version: str = "0.6",
+        graphai_version: str = "0.5",
         use_llm_generation: bool = False,
         validation_pipeline: ValidationPipeline | None = None,
     ) -> None:
@@ -336,6 +336,7 @@ class YamlGeneratorSubWorkflow:
             f'version: "{self._graphai_version}"',
             "",
             "nodes:",
+            "  source: {}",  # Issue #342: Add source node as entry point
         ]
 
         for node in nodes:
@@ -438,11 +439,19 @@ class YamlGeneratorSubWorkflow:
         recommended_apis = self._extract_recommended_apis(interfaces)
         dependencies = task_master_ids[:-1] if len(task_master_ids) > 1 else []
 
+        from aiagent.langgraph.jobGeneratorV2.validators import ValidationResult
+
         previous_errors: list = []
         attempt = 0
 
         while attempt <= max_retries:
             try:
+                # Issue #343: Generate error feedback from previous validation errors
+                error_feedback = ""
+                if previous_errors:
+                    error_result = ValidationResult.failure(previous_errors)
+                    error_feedback = error_result.to_prompt_feedback()
+
                 # Generate using LLMGeneratorSubWorkflow
                 task_name = result_interface.task_id or f"task_{result_task_id}"
                 llm_result = await llm_generator.generate_from_task(
@@ -453,6 +462,7 @@ class YamlGeneratorSubWorkflow:
                     recommended_apis=recommended_apis,
                     dependencies=dependencies,
                     context=context,
+                    error_feedback=error_feedback,
                 )
 
                 # Validate using YamlValidatorSubWorkflow (sync method)

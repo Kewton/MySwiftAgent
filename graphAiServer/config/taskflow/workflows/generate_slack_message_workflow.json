@@ -1,0 +1,25 @@
+{
+  "workflow_name": "generate_slack_message_workflow",
+  "description": "抽出された内容を元に、Slackに適した絵文字や改行を含む読みやすいメッセージを生成します。",
+  "input_schema": {
+    "core_content": "string",
+    "tone": "string"
+  },
+  "output_schema": {
+    "formatted_text": "string"
+  },
+  "steps": [
+    {
+      "id": "slack_message_formatter",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": ":loudspeaker: *メッセージの要約*\n\n${inputs.core_content}\n\n---\n:bulb: *トーン*: ${inputs.tone}\n:white_check_mark: ご確認のほど、よろしくお願いいたします。"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "formatted_text": "${slack_message_formatter}"
+  }
+}

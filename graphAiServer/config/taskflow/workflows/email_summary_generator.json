@@ -1,0 +1,34 @@
+{
+  "workflow_name": "email_summary_generator",
+  "description": "検索結果を元に、メール送信用の要約文と件名を生成します。",
+  "input_schema": {
+    "search_results": "array",
+    "tone": "string"
+  },
+  "output_schema": {
+    "email_subject": "string",
+    "email_body": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_email_content",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "system_prompt": "あなたはプロフェッショナルなアシスタントです。提供された検索結果のリストを要約し、指定されたトーン（丁寧、簡潔など）に合わせてメールの件名と本文を作成してください。出力は必ず 'email_subject' と 'email_body' というキーを持つJSON形式で返してください。",
+          "user_input": "トーン: ${inputs.tone}\n検索結果: ${inputs.search_results}"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "email_subject": "${generate_email_content.data.result.email_subject}",
+    "email_body": "${generate_email_content.data.result.email_body}"
+  }
+}

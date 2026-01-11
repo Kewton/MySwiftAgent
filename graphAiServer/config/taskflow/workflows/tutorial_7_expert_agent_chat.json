@@ -1,0 +1,36 @@
+{
+  "_comment": "Tutorial 7: Expert Agent Chat - Equivalent to GraphAI 2_httpAgentFilter.yml",
+  "_requires": "TASKFLOW_ALLOW_HTTP=true TASKFLOW_ALLOW_LOCAL=true",
+  "_original": "POST request to expertAgent like the original GraphAI tutorial",
+  "workflow_name": "tutorial_7_expert_agent_chat",
+  "description": "Chat with expertAgent (requires expertAgent on port 8104)",
+  "input_schema": {
+    "user_input": "string"
+  },
+  "output_schema": {
+    "text": "string"
+  },
+  "steps": [
+    {
+      "id": "expert_chat",
+      "type": "api_rest",
+      "description": "Send chat message to expertAgent",
+      "config": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8104/aiagent-api/v1/aiagent/sample",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${inputs.user_input}",
+          "test_mode": true,
+          "test_response": "Test response from V2 TaskFlow API"
+        },
+        "timeout_ms": 60000
+      }
+    }
+  ],
+  "output": {
+    "text": "${expert_chat.output.text}"
+  }
+}

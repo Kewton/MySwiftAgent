@@ -1,0 +1,66 @@
+{
+  "_comment": "Tutorial 4: Parallel Fetch - Demonstrates parallel execution",
+  "_original": "Similar to GraphAI map patterns with parallel API calls",
+  "workflow_name": "tutorial_4_parallel_fetch",
+  "description": "Fetch multiple users in parallel and merge results",
+  "input_schema": {},
+  "output_schema": {
+    "users": "array",
+    "user_count": "string"
+  },
+  "steps": [
+    {
+      "type": "parallel",
+      "steps": [
+        {
+          "id": "fetch_user_1",
+          "type": "api_rest",
+          "description": "Fetch user 1",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users/1",
+            "timeout_ms": 10000
+          }
+        },
+        {
+          "id": "fetch_user_2",
+          "type": "api_rest",
+          "description": "Fetch user 2",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users/2",
+            "timeout_ms": 10000
+          }
+        },
+        {
+          "id": "fetch_user_3",
+          "type": "api_rest",
+          "description": "Fetch user 3",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users/3",
+            "timeout_ms": 10000
+          }
+        }
+      ]
+    },
+    {
+      "id": "merge_users",
+      "type": "transform",
+      "description": "Merge all user names",
+      "config": {
+        "mode": "template",
+        "template": "Users: {{user1}}, {{user2}}, {{user3}}"
+      },
+      "params": {
+        "user1": "${fetch_user_1.output.name}",
+        "user2": "${fetch_user_2.output.name}",
+        "user3": "${fetch_user_3.output.name}"
+      }
+    }
+  ],
+  "output": {
+    "users": "${merge_users.output.result}",
+    "user_count": "3"
+  }
+}

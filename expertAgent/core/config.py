@@ -119,6 +119,8 @@ class Settings(BaseSettings):
     # Default: 8005 for local development
     # Override via environment variable for Docker (graphaiserver:8000)
     GRAPHAISERVER_BASE_URL: str = Field(default="http://localhost:8005")
+    # Admin token for GraphAI Server workflow registration (Issue #350)
+    GRAPHAISERVER_ADMIN_TOKEN: str = Field(default="")
 
     # Server Configuration
     HOST: str = Field(default="0.0.0.0")  # noqa: S104  # Development default, override via .env for production

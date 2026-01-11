@@ -1,0 +1,39 @@
+{
+  "workflow_name": "google_search_workflow",
+  "description": "Google検索APIを使用して、特定のキーワードで検索を実行し、タイトル、リンク、スニペットを取得します。",
+  "input_schema": {
+    "query": "string",
+    "num_results": "number"
+  },
+  "output_schema": {
+    "search_results": "array",
+    "total_results": "string"
+  },
+  "steps": [
+    {
+      "id": "google_search_step",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "http://localhost:8004/v1/utility/google_search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "queries": [
+            "${inputs.query}"
+          ],
+          "num": "${inputs.num_results}"
+        },
+        "timeout_ms": 30000,
+        "verify_ssl": true
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "search_results": "${google_search_step.output.search_results}",
+    "total_results": "${google_search_step.output.total_results}"
+  }
+}

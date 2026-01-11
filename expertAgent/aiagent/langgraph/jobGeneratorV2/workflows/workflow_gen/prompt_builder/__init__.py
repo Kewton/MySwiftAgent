@@ -55,8 +55,11 @@ class PromptBuilderSubWorkflow:
         dependencies: list[str] | None = None,
         context: "ExecutionContext | None" = None,
         api_mappings: list[dict[str, Any]] | None = None,
+        error_feedback: str = "",
     ) -> WorkflowPrompt:
         """Build workflow generation prompt.
+
+        Issue #343: Added error_feedback parameter for retry support.
 
         Args:
             task_name: Name of the task
@@ -67,6 +70,7 @@ class PromptBuilderSubWorkflow:
             dependencies: List of dependent task IDs
             context: Execution context (for logging)
             api_mappings: Issue #342 V2 - API mapping info from AgentSelector
+            error_feedback: Previous validation error feedback for retries
 
         Returns:
             WorkflowPrompt with all components assembled
@@ -80,7 +84,7 @@ class PromptBuilderSubWorkflow:
             output_schema=output_schema,
             recommended_apis=recommended_apis,
             dependencies=dependencies,
-            error_feedback="",
+            error_feedback=error_feedback,
             verbose=self._verbose,
             api_mappings=api_mappings,
         )

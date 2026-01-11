@@ -13,7 +13,7 @@ FETCH_AGENT_RULES = """### fetchAgent Rules
 - Place url, method, body ALL in `inputs` block (NOT params)
 - Use method: POST for API calls
 - Reference body values with `:node.property`
-- Access response data with `:node_name.result.field`
+- Access response data with `:node_name.field` (fetchAgent returns HTTP response body directly)
 - Set timeout for long-running APIs in **milliseconds** (default: 30000ms = 30 seconds)
 - IMPORTANT: Use correct API parameter names (e.g., 'queries' not 'query' for google_search)
 
@@ -83,7 +83,7 @@ MAP_AGENT_RULES = """### mapAgent Rules
 - Input array goes in `inputs.rows`
 - Use `compositeResult: true` to collect results
 - Define nested `graph.nodes` for processing
-- Access current item with `:row` or named key
+- Access current item with `:row` (row is the source node in nested graph)
 
 Example:
 ```yaml
@@ -95,11 +95,11 @@ process_items:
     compositeResult: true
   graph:
     nodes:
-      item_source: {}
+      row: {}
       process:
         agent: stringTemplateAgent
         inputs:
-          item: :item_source
+          item: :row
         params:
           template: "Processed: ${item}"
         isResult: true
@@ -124,6 +124,72 @@ output:
 ```
 """
 
+MAP_AGENT_OUTPUT_RULES = """### mapAgent Output Format
+- By default, mapAgent returns an array of nested graph results
+- Use `compositeResult: true` in params to merge results
+- Use `compositeResultKey: "key_name"` to specify which field to use as key when merging
+
+When accessing mapAgent output:
+```yaml
+# If mapAgent node is named 'process_items' and nested graph has 'format_item' as isResult node
+# Access with: :process_items.format_item (returns array of results)
+
+# With compositeResult: true
+# mapAgent combines nested results into single object/array
+```
+
+Example with compositeResultKey:
+```yaml
+batch_process:
+  agent: mapAgent
+  inputs:
+    rows: :source.items
+  params:
+    compositeResult: true
+    compositeResultKey: "id"  # Use 'id' field as key for result object
+  graph:
+    nodes:
+      row: {}
+      process:
+        agent: copyAgent
+        inputs:
+          id: :row.id
+          result: :row.data
+        isResult: true
+```
+"""
+
+ARRAY_JOIN_AGENT_RULES = """### arrayJoinAgent Rules
+- Joins array elements into a single string
+- Input array goes in `inputs.array`
+- Separator goes in `params.separator` (default: "")
+- IMPORTANT: Output is an object with `.text` property, NOT a plain string
+
+Output Format:
+```yaml
+# arrayJoinAgent returns: { "text": "joined string" }
+# Access the result with: :join_node.text
+```
+
+Example:
+```yaml
+join_results:
+  agent: arrayJoinAgent
+  inputs:
+    array: :map_node.results
+  params:
+    separator: "\\n"
+
+# Access joined text
+use_joined:
+  agent: stringTemplateAgent
+  inputs:
+    content: :join_results.text  # Must use .text to get the string
+  params:
+    template: "Results:\\n${content}"
+```
+"""
+
 ALL_AGENT_RULES = f"""## Agent-Specific Rules
 
 {FETCH_AGENT_RULES}
@@ -132,7 +198,11 @@ ALL_AGENT_RULES = f"""## Agent-Specific Rules
 
 {MAP_AGENT_RULES}
 
+{MAP_AGENT_OUTPUT_RULES}
+
 {COPY_AGENT_RULES}
+
+{ARRAY_JOIN_AGENT_RULES}
 """
 
 
@@ -159,7 +229,10 @@ def get_agent_rules(agents: list[str] | None = None) -> str:
         rules.append(STRING_TEMPLATE_AGENT_RULES)
     if any("map" in a for a in agent_lower):
         rules.append(MAP_AGENT_RULES)
+        rules.append(MAP_AGENT_OUTPUT_RULES)
     if any("copy" in a for a in agent_lower):
         rules.append(COPY_AGENT_RULES)
+    if any("arrayjoin" in a or "join" in a for a in agent_lower):
+        rules.append(ARRAY_JOIN_AGENT_RULES)
 
     return "\n".join(rules)

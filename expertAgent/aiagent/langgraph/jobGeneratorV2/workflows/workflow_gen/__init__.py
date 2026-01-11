@@ -10,6 +10,7 @@ This package contains the WorkflowGenWorkflow and its sub-workflows:
 
 Issue #342 Phase D.2: WorkflowGen workflow implementation.
 Issue #342 Phase F: WorkflowGen V2 LLM Integration.
+Issue #350: Added Strategy Pattern for engine switching (GraphAI/TaskFlow V2).
 """
 
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.errors import (
@@ -45,6 +46,20 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_validator impo
     YamlValidatorSubWorkflow,
 )
 
+# Issue #350: Strategy Pattern exports
+from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.engine_strategy import (
+    EngineType,
+    GraphAIGeneratorStrategy,
+    TaskFlowGeneratorStrategy,
+    WorkflowGeneratorStrategy,
+    WorkflowOutput,
+    create_strategy,
+)
+from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.taskflow_generator import (
+    TaskFlowGenerationResult,
+    TaskFlowLLMGenerator,
+)
+
 __all__ = [
     # Main workflow
     "WorkflowGenWorkflow",
@@ -67,4 +82,14 @@ __all__ = [
     "LLMGenerationResult",
     "YamlValidationResult",
     "WorkflowPrompt",
+    # Issue #350: Strategy Pattern
+    "EngineType",
+    "WorkflowOutput",
+    "WorkflowGeneratorStrategy",
+    "GraphAIGeneratorStrategy",
+    "TaskFlowGeneratorStrategy",
+    "create_strategy",
+    # Issue #350: TaskFlow generator
+    "TaskFlowLLMGenerator",
+    "TaskFlowGenerationResult",
 ]

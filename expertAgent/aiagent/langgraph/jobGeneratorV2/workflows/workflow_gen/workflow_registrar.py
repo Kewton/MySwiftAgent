@@ -1,12 +1,18 @@
 """Workflow registration utilities for Job Generator V2.
 
 This module provides functions to:
-1. Register workflow YAML to GraphAiServer
-2. Update TaskMaster body_template with model_name
+1. Register workflow YAML to GraphAiServer (GraphAI engine)
+2. Register workflow JSON to GraphAiServer (TaskFlow V2 engine)
+3. Update TaskMaster body_template with appropriate parameters
 
 Issue #342: Fix for model_name is required error when executing workflows.
 The V2 workflow generation was missing the step to register workflows
 to GraphAiServer and update TaskMaster body_templates with model_name.
+
+Issue #350: Added TaskFlow V2 registration support using /api/v2/workflows endpoint.
+TaskFlow V2 workflows use a different body_template structure:
+- workflow_name: Name of registered workflow
+- inputs: Mapped from user_input for compatibility
 """
 
 from __future__ import annotations
@@ -106,6 +112,142 @@ async def register_workflow_to_graphai(
         error_msg = f"GraphAiServer registration error: {e}"
         logger.error(error_msg, exc_info=True)
         return WorkflowRegistrationResult(success=False, error=error_msg)
+
+
+async def register_taskflow_workflow(
+    workflow_name: str,
+    workflow_json: dict,
+    admin_token: str | None = None,
+) -> WorkflowRegistrationResult:
+    """Register TaskFlow V2 workflow JSON to GraphAiServer.
+
+    Issue #350: TaskFlow V2 workflows use /api/v2/workflows/register endpoint.
+
+    Args:
+        workflow_name: Name of the workflow (e.g., google_search_workflow)
+        workflow_json: TaskFlow V2 workflow definition as dict
+        admin_token: Admin token for registration (optional, uses settings if not provided)
+
+    Returns:
+        WorkflowRegistrationResult with registration status
+    """
+    register_url = f"{GRAPHAISERVER_BASE_URL}/api/v2/workflows/register"
+
+    # Use provided token or fall back to settings.GRAPHAISERVER_ADMIN_TOKEN
+    # Issue #350: Use GRAPHAISERVER_ADMIN_TOKEN for TaskFlow V2 workflow registration
+    token = admin_token or settings.GRAPHAISERVER_ADMIN_TOKEN
+
+    payload = {
+        "workflow_name": workflow_name,
+        "definition": workflow_json,
+        "overwrite": True,
+    }
+
+    headers = {
+        "x-admin-token": token,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(register_url, json=payload, headers=headers)
+
+            if response.status_code == 200:
+                result = response.json()
+                workflow_path = result.get("file_path", f"config/taskflow/workflows/{workflow_name}.json")
+
+                logger.info(
+                    "Registered TaskFlow V2 workflow to GraphAiServer: %s -> %s",
+                    workflow_name,
+                    workflow_path,
+                )
+
+                return WorkflowRegistrationResult(
+                    success=True,
+                    workflow_path=workflow_path,
+                    model_name=workflow_name,  # For TaskFlow, model_name is the workflow_name
+                )
+            else:
+                error_msg = f"TaskFlow V2 registration failed: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                return WorkflowRegistrationResult(
+                    success=False,
+                    error=error_msg,
+                )
+
+    except httpx.TimeoutException as e:
+        error_msg = f"TaskFlow V2 registration timeout: {e}"
+        logger.error(error_msg)
+        return WorkflowRegistrationResult(success=False, error=error_msg)
+    except Exception as e:
+        error_msg = f"TaskFlow V2 registration error: {e}"
+        logger.error(error_msg, exc_info=True)
+        return WorkflowRegistrationResult(success=False, error=error_msg)
+
+
+async def update_task_master_body_template_taskflow(
+    task_master_id: str,
+    workflow_name: str,
+) -> bool:
+    """Update TaskMaster body_template for TaskFlow V2 workflow execution.
+
+    Issue #350: TaskFlow V2 uses different body_template structure:
+    - workflow_name: Name of registered workflow
+    - inputs: Maps user_input to TaskFlow inputs format
+    - project: Project for secrets resolution
+
+    Args:
+        task_master_id: TaskMaster ID to update
+        workflow_name: Name of the registered TaskFlow workflow
+
+    Returns:
+        True if update succeeded, False otherwise
+    """
+    try:
+        # Import here to avoid circular dependency
+        from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
+            JobqueueClient,
+        )
+
+        client = JobqueueClient(base_url=JOBQUEUE_API_URL)
+
+        # Fetch existing TaskMaster to preserve job_params
+        existing_task_master = await client.get_task_master(task_master_id)
+        existing_body_template = existing_task_master.get("body_template", {}) or {}
+        existing_job_params = existing_body_template.get("job_params", "{{job.body}}")
+
+        # Build TaskFlow V2 body_template
+        # TaskFlow API expects: workflow_name, inputs (object), project
+        # Issue #350: inputs must be an object, not a string.
+        # Pass entire job.body as inputs object - workflow will read user_input from it
+        body_template = {
+            "workflow_name": workflow_name,
+            "inputs": "{{job.body}}",  # Pass entire body as inputs object
+            "project": "{{job.project}}",  # Pass project for secrets
+            "job_params": existing_job_params,  # Preserve for compatibility
+        }
+
+        await client.update_task_master(
+            master_id=task_master_id,
+            body_template=body_template,
+            updated_by="job_generator_v2",
+            change_reason="Set workflow_name for TaskFlow V2 execution",
+        )
+
+        logger.info(
+            "Updated TaskMaster %s body_template for TaskFlow V2: workflow_name=%s",
+            task_master_id,
+            workflow_name,
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Failed to update TaskMaster %s body_template for TaskFlow V2: %s",
+            task_master_id,
+            e,
+            exc_info=True,
+        )
+        return False
 
 
 async def update_task_master_body_template(

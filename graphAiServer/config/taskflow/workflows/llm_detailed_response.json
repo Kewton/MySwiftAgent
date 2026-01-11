@@ -1,0 +1,46 @@
+{
+  "workflow_name": "llm_detailed_response",
+  "description": "Interface for sending a user question and a system prompt to an LLM to generate a detailed response.",
+  "input_schema": {
+    "user_question": "string",
+    "system_prompt": "string",
+    "parameters": "object"
+  },
+  "output_schema": {
+    "answer": "string",
+    "model_info": "object",
+    "usage": "object"
+  },
+  "steps": [
+    {
+      "id": "llm_call",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://localhost:8004/v1/mylllm",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${inputs.user_question}",
+          "system_prompt": "${inputs.system_prompt}",
+          "model": "gpt-4o-mini"
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_answer",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${llm_call.data.result}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "answer": "${extract_answer}"
+  }
+}

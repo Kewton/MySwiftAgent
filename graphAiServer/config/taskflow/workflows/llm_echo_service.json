@@ -1,0 +1,64 @@
+{
+  "workflow_name": "llm_echo_service",
+  "description": "A workflow that uses an LLM to echo back a message based on provided instructions.",
+  "input_schema": {
+    "message": "string",
+    "instruction": "string"
+  },
+  "output_schema": {
+    "echoed_text": "string",
+    "raw_response": "string"
+  },
+  "steps": [
+    {
+      "id": "llm_echo_request",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.LLM_API_KEY}"
+        },
+        "body": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "system",
+              "content": "${inputs.instruction}"
+            },
+            {
+              "role": "user",
+              "content": "${inputs.message}"
+            }
+          ],
+          "temperature": 0
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_echo",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${llm_echo_request.data.choices.0.message.content}"
+      },
+      "params": {}
+    },
+    {
+      "id": "format_raw_response",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${llm_echo_request.data}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "echoed_text": "${extract_echo}",
+    "raw_response": "${format_raw_response}"
+  }
+}

@@ -347,7 +347,8 @@ class TestYamlGeneratorInitialization:
         )
 
         generator = YamlGeneratorSubWorkflow()
-        assert generator._graphai_version == "0.6"
+        # Issue #342 Phase 1: Default version is 0.5 per BASE_RULES
+        assert generator._graphai_version == "0.5"
         assert generator._use_llm_generation is False
 
     def test_custom_initialization(self):

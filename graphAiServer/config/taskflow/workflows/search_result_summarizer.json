@@ -1,0 +1,37 @@
+{
+  "workflow_name": "search_result_summarizer",
+  "description": "検索結果を解析し、メール送信用に要約されたコンテンツ（件名と本文）を生成します。",
+  "input_schema": {
+    "keyword": "string",
+    "search_results": "array"
+  },
+  "output_schema": {
+    "email_subject": "string",
+    "email_body": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_email_content",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "http://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "キーワード: ${inputs.keyword}\n検索結果リスト: ${inputs.search_results}",
+          "system_prompt": "あなたは優秀なリサーチアシスタントです。提供された検索結果を解析し、ユーザーに送るためのメールコンテンツを作成してください。出力は必ず以下のキーを持つJSON形式にしてください：\n1. 'email_subject': 検索キーワードに基づいた簡潔で魅力的な件名（例：【最新情報】〇〇に関する検索結果サマリ）\n2. 'email_body': 検索結果の要点をまとめたメール本文（マークダウン形式）。各情報の出典元がわかるように構成してください。"
+        },
+        "timeout_ms": 30000,
+        "verify_ssl": true
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "email_subject": "${generate_email_content.output.result.email_subject}",
+    "email_body": "${generate_email_content.output.result.email_body}"
+  }
+}

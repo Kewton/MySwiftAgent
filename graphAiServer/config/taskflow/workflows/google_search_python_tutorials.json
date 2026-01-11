@@ -1,0 +1,35 @@
+{
+  "workflow_name": "google_search_python_tutorials",
+  "description": "Performs a Google search to find Python tutorials based on a query and returns a list of titles, links, and snippets.",
+  "input_schema": {
+    "query": "string",
+    "num_results": "number"
+  },
+  "output_schema": {
+    "results": "array"
+  },
+  "steps": [
+    {
+      "id": "google_search_api",
+      "type": "api_rest",
+      "config": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/customsearch/v1?q=${inputs.query}&num=${inputs.num_results}&key=${secrets.GOOGLE_API_KEY}&cx=${secrets.GOOGLE_SEARCH_ENGINE_ID}",
+        "timeout_ms": 20000
+      },
+      "params": {}
+    },
+    {
+      "id": "format_results",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${google_search_api.data.items}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "results": "${format_results}"
+  }
+}

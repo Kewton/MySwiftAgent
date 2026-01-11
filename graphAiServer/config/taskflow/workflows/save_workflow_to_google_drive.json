@@ -1,0 +1,40 @@
+{
+  "workflow_name": "save_workflow_to_google_drive",
+  "description": "Saves a generated JSON workflow definition to a specified Google Drive folder.",
+  "input_schema": {
+    "file_content": "object",
+    "filename": "string",
+    "folder_id": "string"
+  },
+  "output_schema": {
+    "file_id": "string",
+    "web_view_link": "string",
+    "status": "string"
+  },
+  "steps": [
+    {
+      "id": "save_to_drive",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "folder_id": "${inputs.folder_id}",
+          "filename": "${inputs.filename}",
+          "file_content": "${inputs.file_content}"
+        },
+        "url": "https://api.example.com/google-drive/upload",
+        "headers": {
+          "Authorization": "Bearer ${secrets.GOOGLE_DRIVE_TOKEN}",
+          "Content-Type": "application/json"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "file_id": "${save_to_drive.data.file_id}",
+    "web_view_link": "${save_to_drive.data.web_view_link}",
+    "status": "${save_to_drive.data.status}"
+  }
+}

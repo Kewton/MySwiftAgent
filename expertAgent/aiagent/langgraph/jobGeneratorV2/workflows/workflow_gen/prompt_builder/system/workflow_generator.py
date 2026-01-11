@@ -35,8 +35,7 @@ node_name:
 - `:source` - Reference source input
 - `:source.property` - Reference source property
 - `:node_name` - Reference another node's output
-- `:node_name.property` - Reference specific property
-- `:node_name.result.field` - For fetchAgent responses
+- `:node_name.property` - Reference specific property (fetchAgent returns HTTP response body directly)
 
 ## Output Requirements
 1. Generate valid YAML that can be parsed

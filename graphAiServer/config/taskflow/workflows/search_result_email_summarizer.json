@@ -1,0 +1,35 @@
+{
+  "workflow_name": "search_result_email_summarizer",
+  "description": "検索結果のリストから、LLMを使用してメール用の要約文と件名を生成するワークフロー",
+  "input_schema": {
+    "search_results": "array",
+    "target_keyword": "string"
+  },
+  "output_schema": {
+    "summary_text": "string",
+    "email_subject": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_content",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "Target Keyword: ${inputs.target_keyword}\nSearch Results: ${inputs.search_results}",
+          "system_prompt": "You are a professional assistant. Based on the provided search results and target keyword, generate a concise summary for an email body and an appropriate email subject line. You must return a JSON object with exactly two keys: 'summary_text' (the formatted summary) and 'email_subject' (the subject line)."
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "summary_text": "${generate_content.output.result.summary_text}",
+    "email_subject": "${generate_content.output.result.email_subject}"
+  }
+}

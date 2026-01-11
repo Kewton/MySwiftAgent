@@ -63,10 +63,10 @@ gmail_search:
 | TTS APIs | 60s |
 
 ### Response Access
-API responses are wrapped in `.result`:
+fetchAgent returns HTTP response body directly:
 ```yaml
 # Response: { "messages": [...] }
-# Access: :api_node.result.messages
+# Access: :api_node.messages
 ```
 """
 

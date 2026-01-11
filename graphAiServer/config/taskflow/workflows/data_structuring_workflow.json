@@ -1,0 +1,54 @@
+{
+  "workflow_name": "data_structuring_workflow",
+  "description": "取得した生データを解析し、指示に基づいたクリーンな構造化JSONに変換します。",
+  "input_schema": {
+    "raw_data": "string",
+    "target_schema_description": "string"
+  },
+  "output_schema": {
+    "structured_json": "object",
+    "data_summary": "string"
+  },
+  "steps": [
+    {
+      "id": "parse_raw_data",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "https://api.example.com/v1/data-processor/parse",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.PROCESSOR_API_KEY}"
+        },
+        "body": {
+          "input_text": "${inputs.raw_data}",
+          "schema_definition": "${inputs.target_schema_description}"
+        },
+        "timeout_ms": 60000
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_structured_data",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${parse_raw_data.data.result}"
+      },
+      "params": {}
+    },
+    {
+      "id": "generate_summary",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "${parse_raw_data.data.summary}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "structured_json": "${extract_structured_data}",
+    "data_summary": "${generate_summary}"
+  }
+}

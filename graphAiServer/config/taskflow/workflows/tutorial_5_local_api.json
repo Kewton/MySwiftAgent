@@ -1,0 +1,40 @@
+{
+  "_comment": "Tutorial 5: Local API Call - Uses localhost (dev mode only)",
+  "_requires": "TASKFLOW_ALLOW_HTTP=true TASKFLOW_ALLOW_LOCAL=true",
+  "workflow_name": "tutorial_5_local_api",
+  "description": "Call local graphAiServer health endpoint (requires dev mode)",
+  "input_schema": {},
+  "output_schema": {
+    "status": "string",
+    "message": "string"
+  },
+  "steps": [
+    {
+      "id": "call_local",
+      "type": "api_rest",
+      "description": "Call local graphAiServer health endpoint",
+      "config": {
+        "method": "GET",
+        "url": "http://localhost:8000/health",
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "id": "format_result",
+      "type": "transform",
+      "description": "Format the response",
+      "config": {
+        "mode": "template",
+        "template": "Local API ({{service}}) is {{status}}"
+      },
+      "params": {
+        "status": "${call_local.output.status}",
+        "service": "${call_local.output.service}"
+      }
+    }
+  ],
+  "output": {
+    "status": "${call_local.output.status}",
+    "message": "${format_result.output.result}"
+  }
+}

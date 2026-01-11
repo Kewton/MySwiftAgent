@@ -1,0 +1,23 @@
+{
+  "workflow_name": "test_manual_workflow",
+  "description": "Test workflow",
+  "input_schema": {
+    "query": "string"
+  },
+  "output_schema": {
+    "result": "string"
+  },
+  "steps": [
+    {
+      "id": "transform_step",
+      "type": "transform",
+      "config": {
+        "mode": "template",
+        "template": "Result: ${inputs.query}"
+      }
+    }
+  ],
+  "output": {
+    "result": "${transform_step}"
+  }
+}

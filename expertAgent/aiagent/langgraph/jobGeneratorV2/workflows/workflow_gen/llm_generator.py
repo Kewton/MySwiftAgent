@@ -246,6 +246,7 @@ class LLMGeneratorSubWorkflow:
         recommended_apis: list[str] | None = None,
         dependencies: list[str] | None = None,
         context: "ExecutionContext | None" = None,
+        error_feedback: str = "",
     ) -> LLMGenerationResult:
         """Generate workflow from task definition.
 
@@ -253,6 +254,9 @@ class LLMGeneratorSubWorkflow:
 
         Issue #342 V2: Enhanced with AgentSelector and ParameterMapper
         to provide better API mapping information to LLM.
+
+        Issue #343: Added error_feedback parameter for retry with
+        previous validation errors.
 
         Args:
             task_name: Name of the task
@@ -262,6 +266,7 @@ class LLMGeneratorSubWorkflow:
             recommended_apis: List of recommended API names
             dependencies: List of dependent task IDs
             context: Execution context
+            error_feedback: Previous validation error feedback for retries
 
         Returns:
             LLMGenerationResult with generated YAML
@@ -279,6 +284,7 @@ class LLMGeneratorSubWorkflow:
             dependencies=dependencies,
             context=context,
             api_mappings=api_mappings,
+            error_feedback=error_feedback,
         )
 
         return await self.generate(prompt, context)

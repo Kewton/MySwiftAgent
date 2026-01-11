@@ -1,0 +1,44 @@
+{
+  "workflow_name": "api_identification_workflow",
+  "description": "Searches for and identifies HTTPS-compliant public APIs based on user requirements and keywords.",
+  "input_schema": {
+    "user_requirement": "string",
+    "search_keywords": "array"
+  },
+  "output_schema": {
+    "found_apis": "array"
+  },
+  "steps": [
+    {
+      "id": "search_apis",
+      "type": "api_rest",
+      "config": {
+        "timeout_ms": 30000,
+        "method": "POST",
+        "body": {
+          "require_https": true,
+          "query": "${inputs.user_requirement}",
+          "keywords": "${inputs.search_keywords}"
+        },
+        "url": "https://api.api-discovery-service.com/v1/search",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${secrets.API_SEARCH_KEY}"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": "format_api_results",
+      "type": "transform",
+      "config": {
+        "template": "${search_apis.data.results}",
+        "mode": "template"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "found_apis": "${format_api_results}"
+  }
+}
