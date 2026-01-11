@@ -1,10 +1,12 @@
 """Schemas for Workflow Generation.
 
 Issue #350: Added TaskFlow V2 schemas.
+Issue #351: Added variable pattern utilities.
 
 This module provides Pydantic schemas for:
 - GraphAI YAML workflows (existing)
 - TaskFlow V2 JSON workflows (new)
+- Variable pattern utilities for validation (Issue #351)
 """
 
 # GraphAI schemas (existing) - import from the schemas.py file at parent level
@@ -29,6 +31,15 @@ from .taskflow_schema import (
     UnifiedStepConfig,
 )
 
+# Variable pattern utilities (Issue #351)
+from .variable_patterns import (
+    TASKFLOW_VARIABLE_PATTERN,
+    contains_variable_reference,
+    mask_secret_references,
+    replace_variables_with_placeholder,
+    validate_variable_syntax,
+)
+
 __all__ = [
     # GraphAI schemas
     "GraphAIWorkflowSchema",
@@ -44,4 +55,10 @@ __all__ = [
     "CodeJsConfig",  # Legacy alias for UnifiedStepConfig
     "TaskFlowStep",
     "TaskFlowWorkflow",
+    # Variable pattern utilities (Issue #351)
+    "TASKFLOW_VARIABLE_PATTERN",
+    "contains_variable_reference",
+    "replace_variables_with_placeholder",
+    "mask_secret_references",
+    "validate_variable_syntax",
 ]

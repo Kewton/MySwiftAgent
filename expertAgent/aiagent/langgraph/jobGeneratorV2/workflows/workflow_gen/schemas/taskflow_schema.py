@@ -24,6 +24,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.variable_patterns import (
+    mask_secret_references,
+    replace_variables_with_placeholder,
+)
+
 
 class IOSchemaType(str, Enum):
     """Input/output schema type definitions.
@@ -80,15 +85,13 @@ class UnifiedStepConfig(BaseModel):
     method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"] | None = Field(
         default=None, description="HTTP method for api_rest"
     )
-    url: str | None = Field(
-        default=None, description="HTTPS URL for the API endpoint"
-    )
+    url: str | None = Field(default=None, description="HTTPS URL for the API endpoint")
     headers: dict[str, str] | None = Field(
         default=None, description="HTTP headers as key-value pairs"
     )
     body: str | None = Field(
         default=None,
-        description="Request body as JSON string. Example: '{\"key\": \"value\"}'",
+        description='Request body as JSON string. Example: \'{"key": "value"}\'',
     )
     timeout_ms: int | None = Field(
         default=None, ge=1000, le=300000, description="Request timeout in ms"
@@ -104,17 +107,13 @@ class UnifiedStepConfig(BaseModel):
     template: str | None = Field(
         default=None, description="Template string for template mode"
     )
-    separator: str | None = Field(
-        default=None, description="Separator for concat mode"
-    )
+    separator: str | None = Field(default=None, description="Separator for concat mode")
     fields: list[str] | None = Field(
         default=None, description="Field list for map/merge mode"
     )
 
     # code_js fields
-    path: str | None = Field(
-        default=None, description="Path to JavaScript file"
-    )
+    path: str | None = Field(default=None, description="Path to JavaScript file")
     function_name: str | None = Field(
         default=None, description="Function name to execute"
     )
@@ -208,13 +207,11 @@ class UnifiedStepConfig(BaseModel):
         elif self.step_type == "code_js":
             if not self.path:
                 raise ValueError(
-                    "path is required for code_js step. "
-                    "Example: /scripts/utils.js"
+                    "path is required for code_js step. Example: /scripts/utils.js"
                 )
             if not self.function_name:
                 raise ValueError(
-                    "function_name is required for code_js step. "
-                    "Example: parseJson"
+                    "function_name is required for code_js step. Example: parseJson"
                 )
 
         return self
@@ -313,9 +310,7 @@ def _parse_json_string_to_dict(value: Any, field_name: str) -> dict[str, Any]:
                 f"after parsing JSON string"
             )
         except json_module.JSONDecodeError as e:
-            raise ValueError(
-                f"{field_name} is a string but not valid JSON: {e}"
-            ) from e
+            raise ValueError(f"{field_name} is a string but not valid JSON: {e}") from e
 
     raise ValueError(
         f"{field_name} must be a dict or JSON string, got {type(value).__name__}"
@@ -348,9 +343,7 @@ class TaskFlowWorkflow(BaseModel):
         ...,
         description='Output field definitions as JSON string. Example: \'{"result": "string"}\'',
     )
-    steps: list[TaskFlowStep] = Field(
-        ..., description="Workflow steps", min_length=1
-    )
+    steps: list[TaskFlowStep] = Field(..., description="Workflow steps", min_length=1)
     output: str = Field(
         ...,
         description='Output field mappings as JSON string. Example: \'{"result": "${step_001.output}"}\'',
@@ -359,20 +352,40 @@ class TaskFlowWorkflow(BaseModel):
     @field_validator("input_schema", "output_schema", "output")
     @classmethod
     def validate_json_string(cls, value: str) -> str:
-        """Validate that the string is valid JSON.
+        """Validate JSON string allowing TaskFlow variable references.
 
-        OpenAI Structured Output requires fixed schemas, so we use JSON strings
-        for dynamic dict fields. This validator ensures the JSON is valid.
+        Variable references like ${step.output} are replaced with placeholder
+        strings during validation, then the original value is returned.
+
+        This allows LLM-generated workflows to include dynamic references
+        while still validating the JSON structure.
+
+        Args:
+            value: JSON string, potentially containing ${...} variable references
+
+        Returns:
+            Original value (unmodified) if valid
+
+        Raises:
+            ValueError: If JSON structure is invalid
         """
         import json as json_module
 
+        # Replace variable references with valid JSON placeholders
+        placeholder_value = replace_variables_with_placeholder(value)
+
         try:
-            parsed = json_module.loads(value)
+            parsed = json_module.loads(placeholder_value)
             if not isinstance(parsed, dict):
                 raise ValueError(f"Must be a JSON object, got {type(parsed).__name__}")
-            return value
+            return value  # Return original with variables intact
         except json_module.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON: {e}") from e
+            # SF-2: Improved error message with original value (masked for security)
+            masked_value = mask_secret_references(value)
+            raise ValueError(
+                f"Invalid JSON structure (variable references like ${{step.output}} are allowed): {e}. "
+                f"Input: {masked_value[:200]}{'...' if len(masked_value) > 200 else ''}"
+            ) from e
 
     @field_validator("workflow_name")
     @classmethod
