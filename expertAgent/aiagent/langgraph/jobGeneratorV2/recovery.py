@@ -147,8 +147,8 @@ class ErrorRecoveryManager:
         if error.error_type == ErrorType.COMPATIBILITY:
             return self._handle_compatibility_error(phase, error, context)
 
-        # Transient and validation errors can be retried
-        if error.error_type in (ErrorType.TRANSIENT, ErrorType.VALIDATION):
+        # Transient, validation, and API errors can be retried
+        if error.error_type in (ErrorType.TRANSIENT, ErrorType.VALIDATION, ErrorType.API):
             return self._handle_retriable_error(phase, error, context)
 
         # Default: fail fast for unknown error types

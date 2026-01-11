@@ -1,125 +1,86 @@
 {
   "issue_number": 342,
-  "issue_title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新",
-  "issue_size": "XL",
-  "estimated_hours": 75,
   "iteration": 2,
-  "completed_phases": [
-    {
-      "phase": "A",
-      "name": "Foundation",
-      "status": "completed",
-      "tests_passed": 95,
-      "coverage": 89.85,
-      "files_created": [
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/__init__.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
-        "expertAgent/tests/unit/test_job_generator_v2/__init__.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_types.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_protocols.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_context.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_recovery.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator.py"
-      ],
-      "key_deliverables": [
-        "Phase enum (TASK_BREAKDOWN, INTERFACE_DESIGN, REGISTRATION, WORKFLOW_GEN)",
-        "PhaseStatus enum (SUCCESS, FAILED, NEEDS_RETRY, NEEDS_RELAXATION)",
-        "RetryState class with can_retry() and record() methods",
-        "WorkflowProtocol for all workflows",
-        "ExecutionContext with per-phase RetryState management",
-        "ErrorRecoveryManager with decide_recovery()",
-        "JobGenerationOrchestrator for phase coordination"
-      ]
+  "sub_task": "V2タスクチェーン修正 - body_template, 出力ノード命名",
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 76.85,
+      "unit_tests": {
+        "total": 798,
+        "passed": 798,
+        "failed": 0
+      },
+      "new_tests": 11
     },
-    {
-      "phase": "B",
-      "name": "TaskBreakdownWorkflow",
-      "status": "completed",
-      "tests_passed": 43,
-      "coverage": "estimated 90+",
-      "files_created": [
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/__init__.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/__init__.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/workflow.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/decomposer.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/feasibility.py",
-        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/task_breakdown/alternative.py",
-        "expertAgent/tests/unit/test_job_generator_v2/test_task_breakdown_workflow.py"
-      ],
-      "key_deliverables": [
-        "TaskDecomposerSubWorkflow - LLM-based requirement parsing",
-        "FeasibilitySubWorkflow - capabilities.yaml integration",
-        "AlternativeSubWorkflow - alternative task generation",
-        "TaskBreakdownWorkflow - WorkflowProtocol implementation"
-      ]
+    "acceptance": {
+      "status": "passed",
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    "refactor": {
+      "status": "success",
+      "ruff_errors": 0,
+      "mypy_errors": 0
     }
-  ],
-  "pending_phases": [
-    {
-      "phase": "C",
-      "name": "InterfaceDesignWorkflow",
-      "tasks": [
-        "C.1: SchemaGenerator実装（retry_countバグ修正含む）",
-        "C.2: CompatibilityChecker実装",
-        "C.3: SchemaEnricher実装",
-        "C.4: InterfaceDesignWorkflow統合",
-        "C.5: InterfaceDesign単体テスト"
-      ]
-    },
-    {
-      "phase": "D",
-      "name": "Registration/WorkflowGen",
-      "tasks": [
-        "D.1: RegistrationWorkflow実装",
-        "D.2: WorkflowGenWorkflow実装",
-        "D.3: Registration/WorkflowGen単体テスト",
-        "D.4: デッドコード検証・テスト品質確認"
-      ]
-    },
-    {
-      "phase": "E",
-      "name": "統合・移行",
-      "tasks": [
-        "E.1: 結合テスト作成",
-        "E.2: Feature Flag実装",
-        "E.3: API統合",
-        "E.4: L3受入テスト",
-        "E.5: ドキュメント更新"
-      ]
-    }
-  ],
-  "critical_bug_fix_status": {
-    "bug_description": "retry_count was reset to 0 when interface_warnings existed but evaluation_feedback was empty (interface_definition.py:536-543)",
-    "fix_implemented": true,
-    "fix_integrated": false,
-    "verification_tests": [
-      "test_retry_count_not_reset_when_interface_warnings_exist - PASSED",
-      "test_retry_count_incremented_on_retry - PASSED",
-      "test_no_infinite_loop_possible - PASSED"
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "source": "dev-reports/feature/issue/342/v2-taskchain-work-plan.md",
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "body_template修正",
+        "estimated_hours": 2,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "出力ノード命名規則の追加",
+        "estimated_hours": 2,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.1",
+        "description": "単体テスト（master_manager）",
+        "estimated_hours": 1.5,
+        "status": "completed"
+      },
+      {
+        "task_id": "2.2",
+        "description": "単体テスト（yaml_generator）",
+        "estimated_hours": 1,
+        "status": "completed"
+      }
+    ],
+    "deliverables_status": [
+      {"file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py", "modified": true},
+      {"file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/base_rules.py", "created": true},
+      {"file": "expertAgent/tests/unit/test_job_generator_v2/test_master_manager.py", "created": true},
+      {"file": "expertAgent/tests/unit/test_job_generator_v2/test_yaml_generator_output_node.py", "created": true},
+      {"file": "expertAgent/tests/acceptance/test_issue_342_taskchain_acceptance.py", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "body_templateがTask 0で{{job.body.user_input}}を使用", "verified": true},
+      {"criterion": "yaml_generatorプロンプトに出力ノード名output統一ルールが含まれる", "verified": true},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": false, "note": "Overall 76.85%, new code 100%"},
+      {"criterion": "静的解析エラー0件（Ruff）", "verified": true},
+      {"criterion": "CI/CDパス", "verified": true}
     ]
   },
-  "test_summary": {
-    "total_tests": 138,
-    "passed": 138,
-    "failed": 0,
-    "skipped": 0,
-    "coverage_target": 90,
-    "current_coverage": 89.85
-  },
-  "blockers": [],
-  "risks": [
-    {
-      "risk": "XL-size issue may require multiple iterations",
-      "mitigation": "Phased approach with incremental delivery"
+  "root_causes_addressed": {
+    "RC-1": {
+      "description": "body_template二重ネスト問題",
+      "status": "fixed",
+      "file": "master_manager.py",
+      "line": "353-360"
     },
-    {
-      "risk": "Integration with existing agent.py may have unexpected dependencies",
-      "mitigation": "Feature flag for gradual rollout"
+    "RC-2": {
+      "description": "出力ノード命名不整合",
+      "status": "fixed",
+      "file": "base_rules.py",
+      "line": "13-62"
     }
-  ],
-  "next_iteration_focus": "Phase C: InterfaceDesignWorkflow implementation"
+  }
 }

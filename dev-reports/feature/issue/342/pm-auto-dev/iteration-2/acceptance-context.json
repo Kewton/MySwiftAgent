@@ -1,72 +1,40 @@
 {
   "issue_number": 342,
   "iteration": 2,
-  "feature_summary": "V2 Job Generator アーキテクチャ刷新 - ワークフロー生成品質改善",
+  "feature_summary": "V2タスクチェーン修正 - body_template, 出力ノード命名",
   "acceptance_criteria": [
-    "ワークフロー生成成功率 90%以上",
-    "初回実行成功率 70%以上",
-    "検証エラー検出率 95%以上",
-    "ソースパス参照が :source.user_input.* / :source.job_params.* 形式",
-    "タイムアウトがミリ秒単位（30000等）",
-    "stringTemplateAgentでJavaScript式を使用しない"
+    "Task 0のbody_templateが{{job.body.user_input}}を使用する",
+    "生成されるワークフローの出力ノード名がoutputに統一される",
+    "3タスクチェーン（Google検索→要約→メール送信）が成功する",
+    "単一タスクジョブの回帰テストがパスする"
   ],
-  "labels": ["feature", "agent-layer", "project: expertAgent"],
+  "labels": ["enhancement"],
   "target_project": "expertAgent",
   "playwright_required": false,
-  "required_services": ["expertAgent", "myVault", "graphAiServer"],
-  "external_dependencies": ["LLM API", "Langfuse"],
+  "required_services": ["expertAgent", "jobqueue", "myVault", "graphAiServer"],
+  "external_dependencies": ["LLM API (Anthropic/Gemini)", "Langfuse"],
   "l3_test_plan": {
-    "source": "implementation-verification-result.json",
+    "source": "v2-taskchain-work-plan.md",
     "health_checks": [
-      {"service": "expertAgent", "url": "http://localhost:8004/health"},
-      {"service": "myVault", "url": "http://localhost:8003/health"},
-      {"service": "graphAiServer", "url": "http://localhost:8005/health"}
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "jobqueue", "url": "http://localhost:8101/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8105/health"}
     ],
     "test_commands": [
       {
-        "name": "ValidationPipeline統合テスト",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/integration/test_issue_342_validation_integration.py -v",
-        "expected_status": 0,
-        "expected_response_contains": ["12 passed"]
+        "name": "body_template修正検証（単体テスト実行）",
+        "command": "cd expertAgent && uv run pytest tests/unit/test_job_generator_v2/test_master_manager.py -v",
+        "expected_status": "passed",
+        "expected_response_contains": ["PASSED"]
       },
       {
-        "name": "受入テスト - 基本",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_acceptance.py -v --tb=short",
-        "expected_status": 0
-      },
-      {
-        "name": "受入テスト - APIインジェクション",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_api_injection_acceptance.py -v --tb=short",
-        "expected_status": 0
-      },
-      {
-        "name": "受入テスト - バグ修正",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_bug_fixes_acceptance.py -v --tb=short",
-        "expected_status": 0
-      },
-      {
-        "name": "受入テスト - V2タスク分割",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_v2_task_breakdown_acceptance.py -v --tb=short",
-        "expected_status": 0
-      },
-      {
-        "name": "受入テスト - ワークフロー生成",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_workflow_gen_acceptance.py -v --tb=short",
-        "expected_status": 0
-      },
-      {
-        "name": "受入テスト - ワークフロー品質",
-        "command": "PYTHONPATH=. uv run python -m pytest tests/acceptance/test_issue_342_workflow_quality_acceptance.py -v --tb=short",
-        "expected_status": 0
+        "name": "出力ノード命名規則検証（単体テスト実行）",
+        "command": "cd expertAgent && uv run pytest tests/unit/test_job_generator_v2/test_yaml_generator_output_node.py -v",
+        "expected_status": "passed",
+        "expected_response_contains": ["PASSED"]
       }
     ]
   },
-  "pytest_test_files": [
-    "tests/acceptance/test_issue_342_acceptance.py",
-    "tests/acceptance/test_issue_342_api_injection_acceptance.py",
-    "tests/acceptance/test_issue_342_bug_fixes_acceptance.py",
-    "tests/acceptance/test_issue_342_v2_task_breakdown_acceptance.py",
-    "tests/acceptance/test_issue_342_workflow_gen_acceptance.py",
-    "tests/acceptance/test_issue_342_workflow_quality_acceptance.py"
-  ]
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_342_taskchain_acceptance.py"
 }

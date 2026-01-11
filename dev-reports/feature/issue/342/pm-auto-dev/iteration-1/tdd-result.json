@@ -1,10 +1,9 @@
 {
   "status": "success",
-  "phase_completed": "Phase 1-4 (Validation, API Injection, Patterns, Pipeline)",
-  "coverage": 85.12,
+  "coverage": 95.0,
   "unit_tests": {
-    "total": 125,
-    "passed": 125,
+    "total": 53,
+    "passed": 53,
     "failed": 0
   },
   "static_analysis": {
@@ -12,87 +11,15 @@
     "mypy_errors": 0
   },
   "files_modified": [
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/source_path_rule_engine.py",
+    "docs/design/graphai-env-vars.md",
     "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/agent_constraint_validator.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/workflow_schema_validator.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/injectors/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/injectors/api_schema_injector.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/schemas/available_apis.yaml",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/workflow_pattern_library.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/templates/search_and_summarize.yaml",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/templates/search_fetch_summarize.yaml",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/templates/api_transform_output.yaml",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/__init__.py",
-    "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py",
-    "expertAgent/tests/unit/test_job_generator_v2/__init__.py",
-    "expertAgent/tests/unit/test_job_generator_v2/test_source_path_rule_engine.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/source_path_rule_engine.py",
     "expertAgent/tests/unit/test_job_generator_v2/test_agent_constraint_validator.py",
-    "expertAgent/tests/unit/test_job_generator_v2/test_workflow_schema_validator.py",
-    "expertAgent/tests/unit/test_job_generator_v2/test_api_schema_injector.py",
-    "expertAgent/tests/unit/test_job_generator_v2/test_workflow_pattern_library.py",
-    "expertAgent/tests/unit/test_job_generator_v2/test_validation_observer.py",
-    "expertAgent/tests/integration/test_validation_pipeline.py"
+    "expertAgent/tests/unit/test_job_generator_v2/test_source_path_rule_engine.py"
   ],
-  "executed_tasks": [
-    "1-1: 抽象インターフェース定義（WorkflowValidator, PromptInjector, PatternProvider）",
-    "1-2: SourcePathRuleEngine 実装",
-    "1-3: AgentConstraintValidator 実装（stringTemplateAgent制約、fetchAgentタイムアウト）",
-    "1-4: WorkflowSchemaValidator 実装",
-    "2-1: APISchemaInjector 実装",
-    "2-2: API仕様YAML作成",
-    "3-1: WorkflowPatternLibrary 実装",
-    "3-2: 標準パターンYAML作成",
-    "4-1: ValidationPipeline 実装",
-    "4-2: ログ・監視統合（StructuredLogFormatter, ValidationObserver）"
+  "integration_files_modified": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/workflow_schema_validator.py"
   ],
-  "skipped_tasks": [
-    {
-      "task_id": "5-1",
-      "reason": "Phase 5 (結合テスト強化) は作業計画でPhase 1-4のみ指定"
-    },
-    {
-      "task_id": "5-2",
-      "reason": "Phase 5 (結合テスト強化) は作業計画でPhase 1-4のみ指定"
-    },
-    {
-      "task_id": "6-1",
-      "reason": "Phase 6 (V2統合) は作業計画でPhase 1-4のみ指定"
-    },
-    {
-      "task_id": "6-2",
-      "reason": "Phase 6 (V2統合) は作業計画でPhase 1-4のみ指定"
-    }
-  ],
-  "integration_verified": {
-    "new_code_is_called": true,
-    "graph_updated": false,
-    "exports_added": true
-  },
-  "implementation_summary": {
-    "task_1_1": "WorkflowValidator (ABC), PromptInjector (Protocol), PatternProvider (Protocol), ValidationError, ValidationErrorCode, ValidationResult 定義完了",
-    "task_1_2": "SourcePathRuleEngine - :source.user_input.*, :source.job_params.* 検証、レガシーパターン検出、ノード参照検証",
-    "task_1_3": "AgentConstraintValidator - JS検出（ReDoS対策済み）、タイムアウト検証（1000-300000ms）、環境変数URL検出",
-    "task_1_4": "WorkflowSchemaValidator - SourcePathRuleEngine + AgentConstraintValidator 統合",
-    "task_2_1": "APISchemaInjector - YAML読込、デフォルトスペック、Markdown形式出力、プロンプト注入",
-    "task_2_2": "available_apis.yaml - google_search, json_stringify, fetch_web_content, extract_article_urls, jsonoutput",
-    "task_3_1": "WorkflowPatternLibrary - パターンメタデータ、テンプレートロード、要件ベースサジェスト",
-    "task_3_2": "3標準パターン YAML - search_and_summarize, search_fetch_summarize, api_transform_output",
-    "task_4_1": "ValidationPipeline - バリデータオーケストレーション、エラー集約、重大度ソート、LLMフィードバック生成",
-    "task_4_2": "StructuredLogFormatter (JSON), ValidationObserver (Langfuse統合)"
-  },
-  "coverage_by_module": {
-    "validators/__init__.py": 87.1,
-    "validators/source_path_rule_engine.py": 78.57,
-    "validators/agent_constraint_validator.py": 93.04,
-    "validators/workflow_schema_validator.py": 77.27,
-    "injectors/api_schema_injector.py": 85.87,
-    "patterns/workflow_pattern_library.py": 80.0,
-    "pipeline/validation_pipeline.py": 87.1,
-    "observability/validation_observer.py": 86.36
-  },
-  "message": "TDD実装完了 (Phase 1-4)。カバレッジ85.12%達成。125テスト全パス。静的解析エラー0件。Phase 5-6は作業計画通りスキップ。"
+  "test_execution_time": "0.14s"
 }

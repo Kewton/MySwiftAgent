@@ -1,0 +1,23 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 95.0,
+    "after_coverage": 95.0,
+    "before_complexity": 8,
+    "after_complexity": 8
+  },
+  "static_analysis": {
+    "ruff": {
+      "status": "passed",
+      "errors": 0,
+      "message": "All checks passed!"
+    },
+    "mypy": {
+      "status": "passed",
+      "errors": 0,
+      "message": "Success: no issues found in 2 source files"
+    }
+  },
+  "refactorings_applied": [],
+  "note": "コードは既にクリーンな状態であり、リファクタリング不要"
+}

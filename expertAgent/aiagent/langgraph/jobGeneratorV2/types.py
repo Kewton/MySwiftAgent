@@ -481,11 +481,16 @@ class JobGenerationRequest:
         user_requirement: Natural language description of the workflow
         project_id: Project ID for the job
         max_tasks: Maximum number of tasks to generate
+        engine: Workflow generation engine ('taskflow' or 'graphai')
+            - 'taskflow' (default): Generate TaskFlow V2 JSON workflows
+            - 'graphai': Generate GraphAI YAML workflows (legacy)
+            Issue #350: Added for engine switching support
     """
 
     user_requirement: str
     project_id: str
     max_tasks: int = 10
+    engine: str = "taskflow"  # Issue #350: Default to TaskFlow V2
 
 
 @dataclass

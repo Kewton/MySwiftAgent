@@ -125,8 +125,12 @@ class MasterManagerSubWorkflow:
     3. JobMaster for the overall workflow
     4. JobMasterTask associations
 
+    Issue #350: Added engine parameter for GraphAI/TaskFlow URL switching.
+    - graphai: Uses /api/v1/myagent endpoint
+    - taskflow: Uses /api/v2/workflows endpoint
+
     Example:
-        manager = MasterManagerSubWorkflow()
+        manager = MasterManagerSubWorkflow(engine="taskflow")
         result = await manager.create_masters(tasks, interfaces, project_id, context)
     """
 
@@ -135,6 +139,7 @@ class MasterManagerSubWorkflow:
         graphai_server_url: str = "http://localhost:8005",
         default_timeout_sec: int = 60,
         jobqueue_client: JobqueueClient | None = None,
+        engine: str = "taskflow",
     ) -> None:
         """Initialize MasterManagerSubWorkflow.
 
@@ -142,10 +147,38 @@ class MasterManagerSubWorkflow:
             graphai_server_url: Base URL for GraphAI server
             default_timeout_sec: Default timeout for tasks
             jobqueue_client: Optional pre-configured jobqueue client
+            engine: Workflow engine type ('graphai' or 'taskflow')
         """
         self._graphai_server_url = graphai_server_url
         self._default_timeout_sec = default_timeout_sec
         self._jobqueue_client = jobqueue_client
+        self._engine = engine
+
+    def _get_task_url(self) -> str:
+        """Get the task URL based on engine type.
+
+        Issue #350: Different engines use different endpoints.
+
+        Returns:
+            Task execution URL
+        """
+        if self._engine == "taskflow":
+            return f"{self._graphai_server_url}/api/v2/workflows"
+        else:
+            return f"{self._graphai_server_url}/api/v1/myagent"
+
+    def _get_job_url(self) -> str:
+        """Get the job URL based on engine type.
+
+        Issue #350: Different engines use different endpoints.
+
+        Returns:
+            Job execution URL
+        """
+        if self._engine == "taskflow":
+            return f"{self._graphai_server_url}/api/v2/workflows"
+        else:
+            return f"{self._graphai_server_url}/api/v1/myagent"
 
     def _get_jobqueue_client(self, context: "ExecutionContext") -> JobqueueClient:
         """Get or create JobqueueClient.
@@ -339,24 +372,56 @@ class MasterManagerSubWorkflow:
     def _build_body_template(self, order: int) -> dict[str, Any]:
         """Build body template for task chaining.
 
+        Issue #342 Phase 1: Fix body_template double nesting.
+        Issue #350: Engine-aware body_template for TaskFlow V2.
+
+        For GraphAI engine:
+        - user_input references {{job.body.user_input}} directly
+        - job_params references {{job.body}} for static parameters
+
+        For TaskFlow engine:
+        - workflow_name: placeholder (updated after workflow generation)
+        - inputs: {{job.body}} for workflow inputs
+        - project: {{job.project}} for secrets resolution
+
         Args:
             order: Task execution order (0-indexed)
 
         Returns:
             Body template dict
         """
-        if order == 0:
-            # First task uses job.body
-            return {
-                "user_input": "{{job.body}}",
-                "job_params": "{{job.body}}",
-            }
+        if self._engine == "taskflow":
+            # Issue #350: TaskFlow V2 body_template format
+            # workflow_name will be set to placeholder - updated after workflow generation
+            if order == 0:
+                return {
+                    "workflow_name": "__PENDING__",  # Updated by workflow_gen phase
+                    "inputs": "{{job.body}}",  # Pass entire body as inputs object
+                    "project": "{{job.project}}",  # For secrets resolution
+                }
+            else:
+                # Subsequent tasks receive previous task's output as inputs
+                return {
+                    "workflow_name": "__PENDING__",
+                    "inputs": f"{{{{tasks[{order - 1}].output_data}}}}",
+                    "project": "{{job.project}}",
+                }
         else:
-            # Subsequent tasks use previous task's output
-            return {
-                "user_input": f"{{{{tasks[{order - 1}].output_data}}}}",
-                "job_params": "{{job.body}}",
-            }
+            # GraphAI (legacy) body_template format
+            if order == 0:
+                # Issue #342: First task extracts user_input from job.body to avoid
+                # double nesting. job.body = {"user_input": {...}}, so we access
+                # job.body.user_input directly for the user_input field.
+                return {
+                    "user_input": "{{job.body.user_input}}",
+                    "job_params": "{{job.body}}",
+                }
+            else:
+                # Subsequent tasks use previous task's output
+                return {
+                    "user_input": f"{{{{tasks[{order - 1}].output_data}}}}",
+                    "job_params": "{{job.body}}",
+                }
 
     async def _create_interface_master(
         self,
@@ -456,9 +521,9 @@ class MasterManagerSubWorkflow:
         )
 
         try:
-            # Build task URL based on recommended API
-            # GraphAI server endpoint
-            task_url = f"{self._graphai_server_url}/api/v1/myagent"
+            # Build task URL based on engine type
+            # Issue #350: Use _get_task_url() for engine-specific endpoint
+            task_url = self._get_task_url()
 
             result = await client.create_task_master(
                 name=task.name,
@@ -510,7 +575,8 @@ class MasterManagerSubWorkflow:
 
         job_name = f"Job: {user_requirement[:50]}"
         job_description = f"Auto-generated job from requirement: {user_requirement}"
-        job_url = f"{self._graphai_server_url}/api/v1/myagent"
+        # Issue #350: Use _get_job_url() for engine-specific endpoint
+        job_url = self._get_job_url()
         job_timeout_sec = 300
 
         logger.info(

@@ -1,0 +1,40 @@
+{
+  "issue_number": 342,
+  "feature_summary": "V2バリデーター修正のE2E検証",
+  "acceptance_criteria": [
+    "単体テスト全パス（53件）",
+    "デッドコード検証完了（統合確認済み）",
+    "UI経由でジョブ生成成功（Generate画面）",
+    "UI経由でワークフロー実行成功（Runs画面）",
+    "「Invalid URL」エラーが発生しない",
+    "受入テストファイル作成済み"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "graphAiServer", "myVault", "jobqueue", "myAgentDesk"],
+  "external_dependencies": ["LLM API"],
+  "l3_test_plan": {
+    "source": "v2-validator-e2e-work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"},
+      {"service": "myAgentDesk", "url": "http://localhost:8000"}
+    ],
+    "test_commands": [
+      {
+        "name": "pytest受入テスト実行",
+        "command": "uv run pytest tests/acceptance/test_issue_342_v2_validator_acceptance.py -v",
+        "expected_status": 0
+      }
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_342_v2_validator_acceptance.py",
+  "playwright_test_file": null,
+  "ui_test_urls": {
+    "generate_page": "http://localhost:8000/projects/proj_mjbjua2z7y65wy/workbenches/wb_1766969315404_udrhx79/generate",
+    "runs_page": "http://localhost:8000/projects/proj_mjbjua2z7y65wy/workbenches/wb_1766969315404_udrhx79/runs"
+  }
+}

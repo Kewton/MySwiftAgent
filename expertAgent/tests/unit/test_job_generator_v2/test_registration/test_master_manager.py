@@ -294,41 +294,89 @@ class TestMasterManagerCreateMasters:
 class TestMasterManagerBodyTemplate:
     """Test body template generation for task chaining."""
 
-    def test_first_task_body_template(self):
-        """First task should use job.body."""
+    def test_first_task_body_template_graphai(self):
+        """First task (GraphAI) should use job.body.user_input to avoid double nesting.
+
+        Issue #342 Phase 1: Fixed body_template double nesting.
+        user_input should reference {{job.body.user_input}} directly, not {{job.body}}.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
         )
 
-        manager = MasterManagerSubWorkflow()
+        manager = MasterManagerSubWorkflow(engine="graphai")
         template = manager._build_body_template(order=0)
 
-        assert template["user_input"] == "{{job.body}}"
+        # Issue #342: user_input should extract job.body.user_input to avoid double nesting
+        assert template["user_input"] == "{{job.body.user_input}}"
         assert template["job_params"] == "{{job.body}}"
 
-    def test_subsequent_task_body_template(self):
-        """Subsequent tasks should use previous task output."""
+    def test_subsequent_task_body_template_graphai(self):
+        """Subsequent tasks (GraphAI) should use previous task output."""
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
         )
 
-        manager = MasterManagerSubWorkflow()
+        manager = MasterManagerSubWorkflow(engine="graphai")
         template = manager._build_body_template(order=1)
 
         assert template["user_input"] == "{{tasks[0].output_data}}"
         assert template["job_params"] == "{{job.body}}"
 
-    def test_third_task_body_template(self):
-        """Third task should reference second task's output."""
+    def test_third_task_body_template_graphai(self):
+        """Third task (GraphAI) should reference second task's output."""
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
         )
 
-        manager = MasterManagerSubWorkflow()
+        manager = MasterManagerSubWorkflow(engine="graphai")
         template = manager._build_body_template(order=2)
 
         assert template["user_input"] == "{{tasks[1].output_data}}"
         assert template["job_params"] == "{{job.body}}"
+
+    def test_first_task_body_template_taskflow(self):
+        """First task (TaskFlow) should use inputs for workflow execution.
+
+        Issue #350: TaskFlow V2 body_template format.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        template = manager._build_body_template(order=0)
+
+        # Issue #350: TaskFlow uses inputs, workflow_name, project
+        assert template["workflow_name"] == "__PENDING__"
+        assert template["inputs"] == "{{job.body}}"
+        assert template["project"] == "{{job.project}}"
+
+    def test_subsequent_task_body_template_taskflow(self):
+        """Subsequent tasks (TaskFlow) should use previous task output as inputs."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        template = manager._build_body_template(order=1)
+
+        assert template["workflow_name"] == "__PENDING__"
+        assert template["inputs"] == "{{tasks[0].output_data}}"
+        assert template["project"] == "{{job.project}}"
+
+    # Legacy test name aliases for backward compatibility
+    def test_first_task_body_template(self):
+        """Alias for test_first_task_body_template_graphai for backward compatibility."""
+        self.test_first_task_body_template_graphai()
+
+    def test_subsequent_task_body_template(self):
+        """Alias for test_subsequent_task_body_template_graphai for backward compatibility."""
+        self.test_subsequent_task_body_template_graphai()
+
+    def test_third_task_body_template(self):
+        """Alias for test_third_task_body_template_graphai for backward compatibility."""
+        self.test_third_task_body_template_graphai()
 
 
 class TestMasterManagerInitialization:

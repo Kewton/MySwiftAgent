@@ -1,31 +1,140 @@
 {
   "issue_number": 342,
-  "title": "refactor(expertAgent): Job/Task Generator Agent アーキテクチャ刷新 - ワークフロー生成品質改善",
-  "scope": "AI生成ワークフローの品質向上に焦点を当てた実装",
+  "issue_title": "V2バリデーター修正のE2E検証",
+  "sub_task": "V2バリデーター修正後のE2E検証（サブタスク）",
   "acceptance_criteria": [
-    "ワークフロー生成成功率 90%以上",
-    "初回実行成功率 70%以上",
-    "検証エラー検出率 95%以上",
-    "ソースパス参照が :source.user_input.* / :source.job_params.* 形式",
-    "タイムアウトがミリ秒単位（30000等）",
-    "stringTemplateAgentでJavaScript式を使用しない"
+    "単体テスト全パス（53件）",
+    "デッドコード検証完了（統合確認済み）",
+    "UI経由でジョブ生成成功（Generate画面）",
+    "UI経由でワークフロー実行成功（Runs画面）",
+    "「Invalid URL」エラーが発生しない",
+    "受入テストファイル作成済み"
   ],
   "implementation_tasks": [
-    "Task 1.1: 抽象インターフェース定義（WorkflowValidator, PromptInjector, PatternProvider）",
-    "Task 1.2: SourcePathRuleEngine 実装",
-    "Task 1.3: AgentConstraintValidator 実装（stringTemplateAgent制約、fetchAgentタイムアウト）",
-    "Task 1.4: WorkflowSchemaValidator 実装",
-    "Task 2.1: APISchemaInjector 実装",
-    "Task 2.2: API仕様YAML作成",
-    "Task 3.1: WorkflowPatternLibrary 実装",
-    "Task 3.2: 標準パターンYAML作成",
-    "Task 4.1: ValidationPipeline 実装",
-    "Task 4.2: ログ・監視統合",
-    "Task 5.1-5.5: 単体・結合テスト",
-    "Task 6.1: GRAPHAI_WORKFLOW_GENERATION_RULES.md 更新",
-    "Task 6.2: V2統合（Feature Flag）"
+    "サービス起動（V2有効）：USE_JOB_GENERATOR_V2=true ./scripts/dev-hybrid.sh",
+    "API経由V2ジョブ生成テスト",
+    "Generate画面からのジョブ生成確認",
+    "Runs画面でのワークフロー実行確認",
+    "pytest受入テスト作成"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "単体テスト実行",
+      "estimated_hours": 0.5,
+      "deliverables": ["53 tests passed"],
+      "dependencies": [],
+      "status": "completed"
+    },
+    {
+      "task_id": "1.2",
+      "description": "デッドコード検証",
+      "estimated_hours": 0.5,
+      "deliverables": ["統合確認済み"],
+      "dependencies": ["1.1"],
+      "status": "completed"
+    },
+    {
+      "task_id": "2.1",
+      "description": "サービス起動（V2有効）",
+      "estimated_hours": 0.2,
+      "deliverables": ["全サービスヘルスチェックOK"],
+      "dependencies": ["1.2"],
+      "status": "pending"
+    },
+    {
+      "task_id": "2.2",
+      "description": "API経由V2ジョブ生成テスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["ジョブ生成成功確認"],
+      "dependencies": ["2.1"],
+      "status": "pending"
+    },
+    {
+      "task_id": "3.1",
+      "description": "Generate画面からのジョブ生成",
+      "estimated_hours": 0.5,
+      "deliverables": ["UI操作によるジョブ生成成功"],
+      "dependencies": ["2.1"],
+      "status": "pending"
+    },
+    {
+      "task_id": "3.2",
+      "description": "Runs画面でのワークフロー実行確認",
+      "estimated_hours": 0.5,
+      "deliverables": ["ワークフロー実行成功（Invalid URLエラーなし）"],
+      "dependencies": ["3.1"],
+      "status": "pending"
+    },
+    {
+      "task_id": "4.1",
+      "description": "pytest受入テスト作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["tests/acceptance/test_issue_342_v2_validator_acceptance.py"],
+      "dependencies": ["3.2"],
+      "status": "pending"
+    }
+  ],
+  "deliverables_checklist": [
+    "docs/design/graphai-env-vars.md",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/agent_constraint_validator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/source_path_rule_engine.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_agent_constraint_validator.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_source_path_rule_engine.py",
+    "expertAgent/tests/acceptance/test_issue_342_v2_validator_acceptance.py"
+  ],
+  "definition_of_done": [
+    "単体テスト全パス（53件）",
+    "デッドコード検証完了（統合確認済み）",
+    "UI経由でジョブ生成成功（Generate画面）",
+    "UI経由でワークフロー実行成功（Runs画面）",
+    "「Invalid URL」エラーが発生しない",
+    "受入テストファイル作成済み",
+    "変更がコミット済み"
   ],
   "target_coverage": 90,
-  "design_policy_file": "dev-reports/feature/issue/342/workflow-bug-analysis/ai-agent-improvement-design-policy.md",
-  "work_plan_file": "dev-reports/feature/issue/342/workflow-bug-analysis/work-plan.md"
+  "completed_fixes": {
+    "MF-1": {
+      "description": "graphAiServerとの仕様同期ドキュメント",
+      "file": "docs/design/graphai-env-vars.md",
+      "status": "completed"
+    },
+    "DC-1": {
+      "description": "環境変数許可リスト追加",
+      "file": "agent_constraint_validator.py",
+      "status": "completed"
+    },
+    "DC-2": {
+      "description": "V1互換パスパターン許可",
+      "file": "source_path_rule_engine.py",
+      "status": "completed"
+    }
+  },
+  "dead_code_verification": {
+    "status": "passed",
+    "results": [
+      {
+        "code": "ALLOWED_ENV_VARS",
+        "usage_locations": ["agent_constraint_validator.py:177", "agent_constraint_validator.py:180", "agent_constraint_validator.py:401", "agent_constraint_validator.py:408"],
+        "classification": "USED"
+      },
+      {
+        "code": "AgentConstraintValidator",
+        "usage_locations": ["validation_pipeline.py:84", "workflow_schema_validator.py:42"],
+        "classification": "INTEGRATED"
+      },
+      {
+        "code": "SourcePathRuleEngine",
+        "usage_locations": ["validation_pipeline.py:83", "workflow_schema_validator.py:41"],
+        "classification": "INTEGRATED"
+      }
+    ]
+  },
+  "ui_test_urls": {
+    "generate_page": "http://localhost:8000/projects/proj_mjbjua2z7y65wy/workbenches/wb_1766969315404_udrhx79/generate",
+    "runs_page": "http://localhost:8000/projects/proj_mjbjua2z7y65wy/workbenches/wb_1766969315404_udrhx79/runs"
+  },
+  "target_project": "expertAgent",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "graphAiServer", "myVault", "jobqueue", "myAgentDesk"]
 }

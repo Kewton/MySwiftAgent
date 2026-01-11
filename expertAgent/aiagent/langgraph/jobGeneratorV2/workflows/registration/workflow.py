@@ -50,23 +50,28 @@ class RegistrationWorkflow:
     3. Register Job in jobqueue
     4. Return registration results
 
+    Issue #350: Added engine parameter for GraphAI/TaskFlow URL switching.
+
     Implements WorkflowProtocol for use with JobGenerationOrchestrator.
 
     Example:
-        workflow = RegistrationWorkflow()
+        workflow = RegistrationWorkflow(engine="taskflow")
         output = await workflow.execute(input_data, context)
     """
 
     def __init__(
         self,
         graphai_server_url: str = "http://localhost:8005",
+        engine: str = "taskflow",
     ) -> None:
         """Initialize RegistrationWorkflow.
 
         Args:
             graphai_server_url: Base URL for GraphAI server
+            engine: Workflow engine type ('graphai' or 'taskflow')
         """
         self._graphai_server_url = graphai_server_url
+        self._engine = engine
         self._retry_policy: RetryPolicy = RetryPolicy(
             max_retries=3,
             backoff_factor=1.5,
@@ -128,8 +133,10 @@ class RegistrationWorkflow:
             )
 
         # Step 1: Create masters
+        # Issue #350: Pass engine parameter for correct URL selection
         master_manager = MasterManagerSubWorkflow(
             graphai_server_url=self._graphai_server_url,
+            engine=self._engine,
         )
 
         try:

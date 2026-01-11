@@ -1,50 +1,117 @@
 {
   "issue_number": 342,
+  "issue_title": "V2 Job Generator タスクチェーン実行エラー修正（Phase 1）",
   "iteration": 2,
-  "retry_reason": "Phase 2.7 でデッドコードを検出",
-  "dead_code_fixes": [
+  "sub_task": "V2タスクチェーン修正 - body_template, 出力ノード命名",
+  "acceptance_criteria": [
+    "Task 0のbody_templateが{{job.body.user_input}}を使用する",
+    "生成されるワークフローの出力ノード名がoutputに統一される",
+    "3タスクチェーン（Google検索→要約→メール送信）が成功する",
+    "単一タスクジョブの回帰テストがパスする",
+    "単体テストカバレッジ90%以上"
+  ],
+  "implementation_tasks": [
     {
-      "task_id": "INT-1",
-      "feature": "ValidationPipeline",
-      "action": "yaml_generator.py の YamlGeneratorSubWorkflow 内でValidationPipelineを呼び出し",
+      "task_id": "1.1",
+      "description": "body_template修正: {{job.body}} → {{job.body.user_input}}",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "method": "_build_body_template",
+      "change_type": "modify",
+      "details": "Task 0の場合、user_inputフィールドには{{job.body}}ではなく{{job.body.user_input}}を設定する"
+    },
+    {
+      "task_id": "1.2",
+      "description": "出力ノード命名規則の追加: LLMプロンプトにoutput統一ルール追加",
       "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
-      "code_change": "LLM生成後にValidationPipeline.validate()を呼び出し、エラーがあればto_prompt_feedback()でリトライ"
+      "change_type": "modify",
+      "details": "YAMLワークフロー生成時、最終出力ノード名をoutputに統一するルールをプロンプトに追加"
     },
     {
-      "task_id": "INT-2",
-      "feature": "ValidationObserver",
-      "action": "ValidationPipeline に ValidationObserver を統合",
-      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "code_change": "observer パラメータを __init__ に追加、validate() 完了後に observe_validation() を呼び出し"
+      "task_id": "2.1",
+      "description": "単体テスト作成: master_manager body_template検証",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_master_manager.py",
+      "test_cases": [
+        "test_build_body_template_task_0_uses_user_input",
+        "test_build_body_template_task_1_uses_previous_output",
+        "test_build_body_template_task_2_uses_previous_output"
+      ],
+      "change_type": "create_or_modify"
     },
     {
-      "task_id": "INT-3",
-      "feature": "APISchemaInjector",
-      "action": "prompt builder assembler に APISchemaInjector を統合",
-      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
-      "code_change": "inject_into_prompt() を使用してAPIスキーマをシステムプロンプトに追加"
-    },
-    {
-      "task_id": "INT-4",
-      "feature": "WorkflowPatternLibrary",
-      "action": "prompt builder assembler に WorkflowPatternLibrary を統合",
-      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
-      "code_change": "suggest_pattern() を使用してパターン提案をプロンプトに追加"
+      "task_id": "2.2",
+      "description": "単体テスト作成: yaml_generator output node検証",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_yaml_generator.py",
+      "test_cases": [
+        "test_generated_workflow_has_output_node_naming_rule",
+        "test_prompt_contains_output_node_instruction"
+      ],
+      "change_type": "create_or_modify"
     }
   ],
-  "already_completed": [
-    "SourcePathRuleEngine 実装・単体テスト",
-    "AgentConstraintValidator 実装・単体テスト",
-    "WorkflowSchemaValidator 実装・単体テスト",
-    "APISchemaInjector 実装・単体テスト",
-    "WorkflowPatternLibrary 実装・単体テスト",
-    "ValidationPipeline 実装・結合テスト",
-    "ValidationObserver 実装・単体テスト"
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "body_template修正",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "出力ノード命名規則の追加",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト（master_manager）",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_master_manager.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "単体テスト（yaml_generator）",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_yaml_generator.py"],
+      "dependencies": ["1.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_master_manager.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_yaml_generator.py"
+  ],
+  "definition_of_done": [
+    "body_templateがTask 0で{{job.body.user_input}}を使用",
+    "yaml_generatorプロンプトに出力ノード名output統一ルールが含まれる",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー0件（Ruff, MyPy）",
+    "CI/CDパス"
   ],
   "target_coverage": 90,
-  "required_integration_tests": [
-    "test_yaml_generator_calls_validation_pipeline.py",
-    "test_prompt_builder_includes_api_schemas.py",
-    "test_prompt_builder_includes_pattern_suggestions.py"
-  ]
+  "related_documents": [
+    "dev-reports/feature/issue/342/v2-taskchain-root-cause-analysis.md",
+    "dev-reports/feature/issue/342/v2-taskchain-remediation-plan.md",
+    "docs/spec/taskchain-data-contract.md",
+    "dev-reports/feature/issue/342/v2-taskchain-work-plan.md"
+  ],
+  "code_context": {
+    "root_cause_1": {
+      "description": "body_template二重ネスト問題",
+      "current_code": "\"user_input\": \"{{job.body}}\"",
+      "expected_code": "\"user_input\": \"{{job.body.user_input}}\"",
+      "file": "master_manager.py",
+      "line_range": "338-358",
+      "method": "_build_body_template"
+    },
+    "root_cause_2": {
+      "description": "出力ノード命名不整合",
+      "problem": "LLM生成ワークフローでformat_output等の任意名を使用",
+      "solution": "プロンプトに出力ノード名をoutputに統一するルール追加",
+      "file": "yaml_generator.py"
+    }
+  }
 }

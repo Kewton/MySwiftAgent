@@ -1,191 +1,91 @@
 {
   "issue_number": 342,
   "iteration": 2,
+  "sub_task": "V2タスクチェーン修正 - body_template, 出力ノード命名",
   "implemented_features": [
     {
       "feature_id": "F1",
-      "name": "WorkflowValidator",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
-      "line_number": 38,
-      "description": "ワークフロー検証の抽象基底クラス（ABC）",
-      "expected_callers": ["SourcePathRuleEngine", "AgentConstraintValidator", "WorkflowSchemaValidator"],
-      "expected_call_location": "各バリデータークラスの継承元",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "継承されており、各バリデータークラスで利用中"
+      "name": "_build_body_template",
+      "type": "method_fix",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 338,
+      "description": "Task 0のbody_templateを{{job.body}}から{{job.body.user_input}}に修正",
+      "expected_callers": ["_build_task_master_data", "MasterManagerSubWorkflow.generate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
     },
     {
       "feature_id": "F2",
-      "name": "SourcePathRuleEngine",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/source_path_rule_engine.py",
-      "line_number": 49,
-      "description": ":source.user_input.*, :source.job_params.* パス検証エンジン",
-      "expected_callers": ["WorkflowSchemaValidator", "ValidationPipeline"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "ValidationPipeline.validators リストに追加、validate() で呼び出される"
+      "name": "OUTPUT_NODE_RULE",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/base_rules.py",
+      "line_number": 13,
+      "description": "出力ノード名をoutputに統一するLLMプロンプトルール",
+      "expected_callers": ["BASE_RULES", "get_base_rules"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/base_rules.py"
     },
     {
       "feature_id": "F3",
-      "name": "AgentConstraintValidator",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/agent_constraint_validator.py",
-      "line_number": 68,
-      "description": "エージェント固有制約検証（stringTemplateAgent JS検出、fetchAgent timeout検証）",
-      "expected_callers": ["WorkflowSchemaValidator", "ValidationPipeline"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "ValidationPipeline.validators リストに追加、validate() で呼び出される"
-    },
-    {
-      "feature_id": "F4",
-      "name": "WorkflowSchemaValidator",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/workflow_schema_validator.py",
-      "line_number": 29,
-      "description": "SourcePathRuleEngine + AgentConstraintValidator の統合バリデーター",
-      "expected_callers": ["ValidationPipeline", "ワークフロー生成ノード"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "ValidationPipeline で内部的に利用"
-    },
-    {
-      "feature_id": "F5",
-      "name": "APISchemaInjector",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/injectors/api_schema_injector.py",
-      "line_number": 30,
-      "description": "APIスキーマYAMLローダー・プロンプト注入",
-      "expected_callers": ["assemble_prompt (prompt_builder/assembler.py)"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "INT-3: assembler.py で import し、assemble_prompt() 内で inject_into_prompt() を呼び出し"
-    },
-    {
-      "feature_id": "F6",
-      "name": "WorkflowPatternLibrary",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/patterns/workflow_pattern_library.py",
-      "line_number": 35,
-      "description": "標準ワークフローパターンライブラリ・サジェスト機能",
-      "expected_callers": ["assemble_prompt (prompt_builder/assembler.py)"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "INT-4: assembler.py で import し、assemble_prompt() 内で suggest_pattern() を呼び出し"
-    },
-    {
-      "feature_id": "F7",
-      "name": "ValidationPipeline",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "line_number": 53,
-      "description": "バリデーターオーケストレーション・エラー集約",
-      "expected_callers": ["YamlGeneratorSubWorkflow (yaml_generator.py)"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "INT-1: yaml_generator.py で import し、generate_with_llm() 内で validate() を呼び出し"
-    },
-    {
-      "feature_id": "F8",
-      "name": "StructuredLogFormatter",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py",
-      "line_number": 25,
-      "description": "JSON形式の構造化ログフォーマッター",
-      "expected_callers": ["ValidationObserver"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "ValidationObserver 内で使用"
-    },
-    {
-      "feature_id": "F9",
-      "name": "ValidationObserver",
-      "type": "class",
-      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/observability/validation_observer.py",
-      "line_number": 69,
-      "description": "Langfuse統合・検証結果メトリクス収集",
-      "expected_callers": ["ValidationPipeline"],
-      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "integration_status": "INTEGRATED",
-      "integration_evidence": "INT-2: validation_pipeline.py で observer パラメータを追加、observe_validation() を呼び出し"
+      "name": "BASE_RULES (updated)",
+      "type": "constant_update",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/base_rules.py",
+      "line_number": 40,
+      "description": "BASE_RULESにOUTPUT_NODE_RULEを統合",
+      "expected_callers": ["get_base_rules", "assemble_prompt"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py"
     }
   ],
   "test_mappings": [
     {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_build_body_template_task_0_uses_user_input",
+        "test_build_body_template_task_1_uses_previous_output",
+        "test_build_body_template_task_2_uses_previous_output",
+        "test_build_body_template_structure",
+        "test_build_body_template_task_0_does_not_double_nest"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_342_taskchain_acceptance"]
+    },
+    {
       "feature_id": "F2",
-      "unit_tests": ["test_source_path_rule_engine.py"],
-      "integration_tests": ["test_validation_pipeline.py", "test_issue_342_validation_integration.py"],
-      "acceptance_tests": ["test_issue_342_acceptance.py"]
+      "unit_tests": [
+        "test_output_node_rule_constant_exists",
+        "test_output_node_rule_mentions_output_name",
+        "test_output_node_rule_content_clarity"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
     },
     {
       "feature_id": "F3",
-      "unit_tests": ["test_agent_constraint_validator.py"],
-      "integration_tests": ["test_validation_pipeline.py", "test_issue_342_validation_integration.py"],
-      "acceptance_tests": ["test_issue_342_acceptance.py"]
-    },
-    {
-      "feature_id": "F4",
-      "unit_tests": ["test_workflow_schema_validator.py"],
-      "integration_tests": ["test_validation_pipeline.py", "test_issue_342_validation_integration.py"],
-      "acceptance_tests": ["test_issue_342_acceptance.py"]
-    },
-    {
-      "feature_id": "F5",
-      "unit_tests": ["test_api_schema_injector.py"],
-      "integration_tests": ["test_issue_342_validation_integration.py"],
-      "acceptance_tests": ["test_issue_342_acceptance.py"]
-    },
-    {
-      "feature_id": "F6",
-      "unit_tests": ["test_workflow_pattern_library.py"],
-      "integration_tests": ["test_issue_342_validation_integration.py"],
-      "acceptance_tests": ["test_issue_342_acceptance.py"]
-    },
-    {
-      "feature_id": "F7",
-      "unit_tests": [],
-      "integration_tests": ["test_validation_pipeline.py", "test_issue_342_validation_integration.py"],
-      "acceptance_tests": ["test_issue_342_acceptance.py"]
-    },
-    {
-      "feature_id": "F9",
-      "unit_tests": ["test_validation_observer.py"],
-      "integration_tests": ["test_issue_342_validation_integration.py"],
+      "unit_tests": [
+        "test_base_rules_includes_output_node_rule",
+        "test_get_base_rules_returns_output_node_rule",
+        "test_output_node_rule_in_assembled_prompt"
+      ],
+      "integration_tests": [],
       "acceptance_tests": []
     }
   ],
   "integration_points": [
     {
-      "feature_id": "F5",
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "_build_body_template called by _build_task_master_data"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .base_rules import OUTPUT_NODE_RULE"
+    },
+    {
+      "feature_id": "F3",
       "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
       "integration_type": "function_call",
-      "integration_method": "APISchemaInjector().inject_into_prompt() at assemble_prompt()"
-    },
-    {
-      "feature_id": "F6",
-      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
-      "integration_type": "function_call",
-      "integration_method": "WorkflowPatternLibrary().suggest_pattern() at assemble_prompt()"
-    },
-    {
-      "feature_id": "F7",
-      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
-      "integration_type": "class_instantiation",
-      "integration_method": "ValidationPipeline() in YamlGeneratorSubWorkflow.__init__(), validate() in generate_with_llm()"
-    },
-    {
-      "feature_id": "F9",
-      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
-      "integration_type": "parameter_injection",
-      "integration_method": "observer parameter in __init__(), observe_validation() after validate()"
+      "integration_method": "get_base_rules() called in assemble_prompt()"
     }
-  ],
-  "pending_integrations": [],
-  "iteration_2_summary": {
-    "tasks_completed": ["INT-1", "INT-2", "INT-3", "INT-4"],
-    "dead_code_resolved": 4,
-    "integration_tests_added": "test_issue_342_validation_integration.py (12 tests)",
-    "all_features_integrated": true
-  }
+  ]
 }

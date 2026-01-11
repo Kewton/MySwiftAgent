@@ -27,6 +27,7 @@ class ErrorType(Enum):
     - COMPATIBILITY: Inter-phase compatibility errors (e.g., interface mismatch)
     - BUSINESS: Business rule violations (e.g., infeasible requirement)
     - FATAL: Unrecoverable errors (e.g., database connection failure)
+    - API: External API call errors (e.g., JobQueue API errors, typically retryable)
     """
 
     TRANSIENT = "transient"
@@ -34,6 +35,7 @@ class ErrorType(Enum):
     COMPATIBILITY = "compatibility"
     BUSINESS = "business"
     FATAL = "fatal"
+    API = "api"
 
 
 class WorkflowError(Exception):

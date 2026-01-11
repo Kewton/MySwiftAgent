@@ -46,6 +46,9 @@ from .workflows.workflow_gen import WorkflowGenWorkflow
 if TYPE_CHECKING:
     from app.schemas.job_generator import JobGeneratorResponse
 
+# Default engine for workflow generation
+DEFAULT_ENGINE = "taskflow"
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +74,7 @@ class JobGeneratorV2Adapter:
         langfuse_handler: Any = None,
         model_name: str | None = None,
         progress_reporter: ProgressReporter | None = None,
+        engine: str = DEFAULT_ENGINE,
     ) -> None:
         """Initialize the V2 adapter.
 
@@ -79,6 +83,10 @@ class JobGeneratorV2Adapter:
             langfuse_handler: Optional Langfuse callback handler
             model_name: Optional LLM model name override
             progress_reporter: Optional progress reporter for real-time tracking
+            engine: Workflow generation engine ('taskflow' or 'graphai')
+                - 'taskflow' (default): Generate TaskFlow V2 JSON workflows
+                - 'graphai': Generate GraphAI YAML workflows (legacy)
+                Issue #350: Added for engine switching support
         """
         self._max_retry = max_retry
         self._langfuse_handler = langfuse_handler
@@ -86,6 +94,7 @@ class JobGeneratorV2Adapter:
             model_name or settings.JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL
         )
         self._progress_reporter = progress_reporter
+        self._engine = engine
 
         # Create recovery manager
         self._recovery_manager = ErrorRecoveryManager()
@@ -114,17 +123,21 @@ class JobGeneratorV2Adapter:
             Phase.INTERFACE_DESIGN,
             InterfaceDesignWorkflow(),
         )
+        # Issue #350: Pass engine parameter to RegistrationWorkflow
         orchestrator.register_workflow(
             Phase.REGISTRATION,
             RegistrationWorkflow(
                 graphai_server_url=settings.GRAPHAISERVER_BASE_URL,
+                engine=self._engine,
             ),
         )
+        # Issue #350: Pass engine parameter to WorkflowGenWorkflow
         orchestrator.register_workflow(
             Phase.WORKFLOW_GEN,
             WorkflowGenWorkflow(
                 enable_testing=False,  # Disable testing in API context
-                graphai_version="0.6",
+                graphai_version="0.5",
+                engine=self._engine,
             ),
         )
 
@@ -188,6 +201,7 @@ class JobGeneratorV2Adapter:
         project_id: str = "default",
         max_tasks: int = 10,
         job_id: str | None = None,
+        engine: str | None = None,
     ) -> "JobGeneratorResponse":
         """Generate job and tasks using V2 architecture.
 
@@ -196,22 +210,46 @@ class JobGeneratorV2Adapter:
             project_id: Project ID for the job
             max_tasks: Maximum number of tasks to generate
             job_id: Optional pre-generated job ID
+            engine: Optional workflow engine override ('taskflow' or 'graphai')
+                - If None, uses the adapter's configured engine
+                - 'taskflow': Generate TaskFlow V2 JSON workflows
+                - 'graphai': Generate GraphAI YAML workflows (legacy)
+                Issue #350: Added for engine switching support
 
         Returns:
             JobGeneratorResponse compatible with existing API
+
+        Note:
+            The engine parameter here overrides the adapter's configured engine.
+            If different from the configured engine, the orchestrator is recreated.
         """
         from app.services.langfuse_service import LangfuseService
 
+        # Issue #350: Use configured engine if not overridden
+        effective_engine = engine if engine is not None else self._engine
+
         logger.info(
-            "JobGeneratorV2Adapter.generate called: %s...",
+            "JobGeneratorV2Adapter.generate called (engine=%s): %s...",
+            effective_engine,
             user_requirement[:100],
         )
 
-        # Create request
+        # Issue #350: Recreate orchestrator if engine changed
+        if effective_engine != self._engine:
+            logger.info(
+                "Engine changed from %s to %s, recreating orchestrator",
+                self._engine,
+                effective_engine,
+            )
+            self._engine = effective_engine
+            self._orchestrator = self._create_orchestrator()
+
+        # Create request with engine parameter (Issue #350)
         request = JobGenerationRequest(
             user_requirement=user_requirement,
             project_id=project_id,
             max_tasks=max_tasks,
+            engine=effective_engine,
         )
 
         # Create and build context
