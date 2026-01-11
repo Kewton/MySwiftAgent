@@ -1,0 +1,61 @@
+{
+  "_comment": "Error Handling Pattern - Demonstrates default values and graceful degradation",
+  "_pattern": "Use default values and optional fields to handle potential failures",
+  "_when_to_use": [
+    "API might return incomplete data",
+    "Optional fields may not always exist",
+    "Need graceful fallback behavior"
+  ],
+
+  "workflow_name": "error_handling",
+  "description": "Fetch data with fallbacks for missing or failed values",
+  "input_schema": {
+    "user_id": "string"
+  },
+  "output_schema": {
+    "user_info": "string",
+    "has_data": "boolean"
+  },
+  "steps": [
+    {
+      "id": "fetch_user",
+      "type": "api_rest",
+      "description": "Try to fetch user - might return incomplete data",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}",
+        "timeout_ms": 5000
+      }
+    },
+    {
+      "id": "format_with_fallbacks",
+      "type": "transform",
+      "description": "Format with default values for potentially missing fields",
+      "config": {
+        "mode": "template",
+        "template": "Name: {{name}}, Email: {{email}}, Phone: {{phone}}"
+      },
+      "params": {
+        "name": "${fetch_user.output.name ?? 'Unknown User'}",
+        "email": "${fetch_user.output.email ?? 'no-email@example.com'}",
+        "phone": "${fetch_user.output.phone ?? 'N/A'}"
+      }
+    },
+    {
+      "id": "check_data",
+      "type": "transform",
+      "description": "Check if we got valid data",
+      "config": {
+        "mode": "template",
+        "template": "{{#if has_name}}true{{else}}false{{/if}}"
+      },
+      "params": {
+        "has_name": "${fetch_user.output.name ?? false}"
+      }
+    }
+  ],
+  "output": {
+    "user_info": "${format_with_fallbacks.output.result}",
+    "has_data": "${fetch_user.output.name ?? false}"
+  }
+}

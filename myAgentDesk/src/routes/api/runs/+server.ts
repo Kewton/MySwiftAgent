@@ -83,10 +83,14 @@ export const POST: RequestHandler = async ({ request }) => {
 					}
 				}
 
+				// Wrap executionParams in user_input for graphAiServer compatibility
+				// graphAiServer expects: { user_input: {...}, model_name: "..." }
+				const wrappedBody = { user_input: bodyParams };
+
 				// Create job from master template
 				const jobResult = await jobQueueClient.createJobFromMaster(jobVersion.externalJobMasterId, {
 					name: `Run ${run.id}`,
-					body: bodyParams,
+					body: wrappedBody,
 					tags: [`run:${run.id}`, `workbench:${body.workbenchId}`]
 				});
 

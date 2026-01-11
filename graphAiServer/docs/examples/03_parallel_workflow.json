@@ -1,0 +1,61 @@
+{
+  "_comment": "Parallel Workflow - Multiple independent API calls at once",
+  "_pattern": "Use when you need data from multiple sources that don't depend on each other",
+  "_when_to_use": [
+    "Fetching data from multiple independent APIs",
+    "Loading multiple resources simultaneously",
+    "Reducing total execution time by parallelizing"
+  ],
+
+  "workflow_name": "parallel_workflow",
+  "description": "Fetch users and posts in parallel, then combine the results",
+  "input_schema": {},
+  "output_schema": {
+    "user_count": "number",
+    "post_count": "number",
+    "summary": "string"
+  },
+  "steps": [
+    {
+      "type": "parallel",
+      "steps": [
+        {
+          "id": "fetch_users",
+          "type": "api_rest",
+          "description": "Get all users (runs in parallel)",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/users"
+          }
+        },
+        {
+          "id": "fetch_posts",
+          "type": "api_rest",
+          "description": "Get all posts (runs in parallel)",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/posts"
+          }
+        }
+      ]
+    },
+    {
+      "id": "create_summary",
+      "type": "transform",
+      "description": "Combine parallel results into summary",
+      "config": {
+        "mode": "template",
+        "template": "Found {{user_count}} users and {{post_count}} posts"
+      },
+      "params": {
+        "user_count": "${fetch_users.output.length}",
+        "post_count": "${fetch_posts.output.length}"
+      }
+    }
+  ],
+  "output": {
+    "user_count": "${fetch_users.output.length}",
+    "post_count": "${fetch_posts.output.length}",
+    "summary": "${create_summary.output.result}"
+  }
+}

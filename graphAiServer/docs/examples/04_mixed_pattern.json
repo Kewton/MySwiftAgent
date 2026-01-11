@@ -1,0 +1,75 @@
+{
+  "_comment": "Mixed Pattern - Combines sequential and parallel execution",
+  "_pattern": "Use for complex workflows with both dependent and independent steps",
+  "_when_to_use": [
+    "Initial data fetch needed before parallel processing",
+    "Parallel results need to be combined at the end",
+    "Complex data aggregation from multiple sources"
+  ],
+
+  "workflow_name": "mixed_pattern",
+  "description": "Get user first, then fetch their posts and todos in parallel, then summarize",
+  "input_schema": {
+    "user_id": "string"
+  },
+  "output_schema": {
+    "user_name": "string",
+    "post_count": "number",
+    "todo_count": "number",
+    "summary": "string"
+  },
+  "steps": [
+    {
+      "id": "fetch_user",
+      "type": "api_rest",
+      "description": "Sequential Step 1: Get user info first (needed for context)",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}"
+      }
+    },
+    {
+      "type": "parallel",
+      "steps": [
+        {
+          "id": "fetch_posts",
+          "type": "api_rest",
+          "description": "Parallel Step: Get user's posts",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/posts?userId=${inputs.user_id}"
+          }
+        },
+        {
+          "id": "fetch_todos",
+          "type": "api_rest",
+          "description": "Parallel Step: Get user's todos",
+          "config": {
+            "method": "GET",
+            "url": "https://jsonplaceholder.typicode.com/todos?userId=${inputs.user_id}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "create_summary",
+      "type": "transform",
+      "description": "Sequential Step 2: Combine all results",
+      "config": {
+        "mode": "template",
+        "template": "{{name}} has {{posts}} posts and {{todos}} todos"
+      },
+      "params": {
+        "name": "${fetch_user.output.name}",
+        "posts": "${fetch_posts.output.length}",
+        "todos": "${fetch_todos.output.length}"
+      }
+    }
+  ],
+  "output": {
+    "user_name": "${fetch_user.output.name}",
+    "post_count": "${fetch_posts.output.length}",
+    "todo_count": "${fetch_todos.output.length}",
+    "summary": "${create_summary.output.result}"
+  }
+}

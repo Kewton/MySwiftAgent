@@ -1,0 +1,56 @@
+{
+  "_comment": "Sequential Workflow - Steps execute one after another",
+  "_pattern": "Use when each step depends on the previous step's output",
+  "_when_to_use": [
+    "Data needs to be fetched, then transformed",
+    "Results from one API are used to call another API",
+    "Multi-step processing pipeline"
+  ],
+
+  "workflow_name": "sequential_workflow",
+  "description": "Fetch user, then fetch their posts, then format a summary",
+  "input_schema": {
+    "user_id": "string"
+  },
+  "output_schema": {
+    "summary": "string",
+    "post_count": "number"
+  },
+  "steps": [
+    {
+      "id": "fetch_user",
+      "type": "api_rest",
+      "description": "Step 1: Get user information",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}"
+      }
+    },
+    {
+      "id": "fetch_posts",
+      "type": "api_rest",
+      "description": "Step 2: Get posts by user (uses user_id from previous step)",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts?userId=${inputs.user_id}"
+      }
+    },
+    {
+      "id": "format_summary",
+      "type": "transform",
+      "description": "Step 3: Create summary using data from both API calls",
+      "config": {
+        "mode": "template",
+        "template": "{{name}} has written {{post_count}} posts"
+      },
+      "params": {
+        "name": "${fetch_user.output.name}",
+        "post_count": "${fetch_posts.output.length}"
+      }
+    }
+  ],
+  "output": {
+    "summary": "${format_summary.output.result}",
+    "post_count": "${fetch_posts.output.length}"
+  }
+}

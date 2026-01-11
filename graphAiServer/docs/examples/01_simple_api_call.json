@@ -1,0 +1,35 @@
+{
+  "_comment": "Simple API Call - Fetches data from a single API endpoint",
+  "_pattern": "Use this pattern when you need to retrieve data from one API",
+  "_when_to_use": [
+    "Fetching user data by ID",
+    "Getting configuration from an external service",
+    "Simple CRUD read operations"
+  ],
+
+  "workflow_name": "simple_api_call",
+  "description": "Fetch a user by ID from JSONPlaceholder API",
+  "input_schema": {
+    "user_id": "string"
+  },
+  "output_schema": {
+    "user_name": "string",
+    "user_email": "string"
+  },
+  "steps": [
+    {
+      "id": "fetch_user",
+      "type": "api_rest",
+      "description": "Get user details from JSONPlaceholder",
+      "config": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/${inputs.user_id}",
+        "timeout_ms": 10000
+      }
+    }
+  ],
+  "output": {
+    "user_name": "${fetch_user.output.name}",
+    "user_email": "${fetch_user.output.email}"
+  }
+}

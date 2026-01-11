@@ -1,0 +1,10 @@
+version: '0.5'
+nodes:
+  source: {}
+  debug_body:
+    agent: copyAgent
+    inputs:
+      queries_array:
+        - :source.user_input.query
+      num: 5
+    isResult: true

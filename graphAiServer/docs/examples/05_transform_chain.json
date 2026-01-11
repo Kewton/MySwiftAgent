@@ -1,0 +1,80 @@
+{
+  "_comment": "Transform Chain - Multiple data transformation steps without API calls",
+  "_pattern": "Use when you need to process/transform data through multiple stages",
+  "_when_to_use": [
+    "Formatting data for output",
+    "Converting between data formats",
+    "Aggregating or reshaping data structures"
+  ],
+
+  "workflow_name": "transform_chain",
+  "description": "Take raw data and transform it through multiple stages",
+  "input_schema": {
+    "items": "array",
+    "title": "string"
+  },
+  "output_schema": {
+    "formatted_list": "string",
+    "item_count": "number",
+    "header": "string"
+  },
+  "steps": [
+    {
+      "id": "create_header",
+      "type": "transform",
+      "description": "Step 1: Format the title as a header",
+      "config": {
+        "mode": "template",
+        "template": "=== {{title}} ==="
+      },
+      "params": {
+        "title": "${inputs.title}"
+      }
+    },
+    {
+      "id": "format_items",
+      "type": "transform",
+      "description": "Step 2: Format each item as a list entry",
+      "config": {
+        "mode": "map",
+        "source_field": "items",
+        "template": "* {{name}} ({{category}})"
+      },
+      "params": {
+        "items": "${inputs.items}"
+      }
+    },
+    {
+      "id": "join_items",
+      "type": "transform",
+      "description": "Step 3: Join formatted items with newlines",
+      "config": {
+        "mode": "concat",
+        "separator": "\n",
+        "fields": ["items"]
+      },
+      "params": {
+        "items": "${format_items.output.result}"
+      }
+    },
+    {
+      "id": "create_final",
+      "type": "transform",
+      "description": "Step 4: Combine header and list",
+      "config": {
+        "mode": "template",
+        "template": "{{header}}\n\n{{list}}\n\nTotal: {{count}} items"
+      },
+      "params": {
+        "header": "${create_header.output.result}",
+        "list": "${join_items.output.result}",
+        "count": "${inputs.items.length}"
+      }
+    }
+  ],
+  "output": {
+    "formatted_list": "${create_final.output.result}",
+    "item_count": "${inputs.items.length}",
+    "header": "${create_header.output.result}"
+  }
+}

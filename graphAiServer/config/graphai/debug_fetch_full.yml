@@ -1,0 +1,16 @@
+version: '0.5'
+nodes:
+  source: {}
+  build_body:
+    agent: copyAgent
+    inputs:
+      body:
+        queries:
+        - :source.user_input.query
+        num: 5
+  debug_output:
+    agent: copyAgent
+    inputs:
+      built_body: :build_body.body
+      url_to_use: http://localhost:8004/aiagent-api/v1/utility/google_search
+    isResult: true
