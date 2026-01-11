@@ -1,0 +1,36 @@
+# TaskFlow V2 Transform Pattern Example
+# Issue #350: Example for transform step type
+
+name: "Data Transform Pattern"
+description: "Demonstrates data transformation between steps"
+patterns:
+  - transform
+  - format
+  - convert
+
+example:
+  workflow_name: "transform_data_workflow"
+  description: "Transforms and formats API response data"
+  input_schema:
+    raw_data: "object"
+  output_schema:
+    formatted_message: "string"
+  steps:
+    - id: fetch_data
+      type: api_rest
+      config:
+        method: GET
+        url: "https://api.example.com/data"
+        timeout_ms: 30000
+    - id: format_message
+      type: transform
+      config:
+        mode: template
+        template: "Name: ${fetch_data.data.name}, Status: ${fetch_data.data.status}"
+  output:
+    formatted_message: "${format_message}"
+
+notes:
+  - Template mode: use ${step_id.field} for value substitution
+  - Concat mode: use separator to join multiple values
+  - Map mode: use fields to extract specific properties

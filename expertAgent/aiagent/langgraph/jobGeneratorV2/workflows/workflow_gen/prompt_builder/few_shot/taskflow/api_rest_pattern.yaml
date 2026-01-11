@@ -1,0 +1,41 @@
+# TaskFlow V2 API REST Pattern Example
+# Issue #350: Example for api_rest step type
+
+name: "API REST Call Pattern"
+description: "Demonstrates basic REST API call and response handling"
+patterns:
+  - api_call
+  - http
+
+example:
+  workflow_name: "fetch_user_workflow"
+  description: "Fetches user data from external API"
+  input_schema:
+    user_id: "string"
+  output_schema:
+    user_name: "string"
+    user_email: "string"
+  steps:
+    - id: fetch_user
+      type: api_rest
+      config:
+        method: POST
+        url: "https://api.example.com/users"
+        headers:
+          Content-Type: application/json
+        body:
+          user_id: "${inputs.user_id}"
+        timeout_ms: 30000
+    - id: format_output
+      type: transform
+      config:
+        mode: template
+        template: "${fetch_user.data}"
+  output:
+    user_name: "${fetch_user.data.name}"
+    user_email: "${fetch_user.data.email}"
+
+notes:
+  - Always use HTTPS for API endpoints
+  - Use ${inputs.field} for input references
+  - Use ${step_id.field} for step output references

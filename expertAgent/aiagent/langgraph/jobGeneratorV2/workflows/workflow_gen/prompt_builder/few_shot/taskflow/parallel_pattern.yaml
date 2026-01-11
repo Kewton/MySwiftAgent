@@ -1,0 +1,48 @@
+# TaskFlow V2 Parallel Pattern Example
+# Issue #350: Example for parallel execution
+
+name: "Parallel Execution Pattern"
+description: "Demonstrates parallel API calls and result aggregation"
+patterns:
+  - parallel
+  - concurrent
+
+example:
+  workflow_name: "parallel_fetch_workflow"
+  description: "Fetches data from multiple APIs in parallel"
+  input_schema:
+    query: "string"
+  output_schema:
+    combined_results: "object"
+  steps:
+    - parallel:
+        - id: api_a_fetch
+          type: api_rest
+          config:
+            method: GET
+            url: "https://api-a.example.com/search"
+            body:
+              q: "${inputs.query}"
+            timeout_ms: 30000
+        - id: api_b_fetch
+          type: api_rest
+          config:
+            method: GET
+            url: "https://api-b.example.com/search"
+            body:
+              q: "${inputs.query}"
+            timeout_ms: 30000
+    - id: combine_results
+      type: transform
+      config:
+        mode: merge
+        fields:
+          - api_a_fetch.data
+          - api_b_fetch.data
+  output:
+    combined_results: "${combine_results}"
+
+notes:
+  - Steps in parallel block execute concurrently
+  - All parallel steps must complete before continuing
+  - Use transform with merge mode to combine parallel results

@@ -1,0 +1,52 @@
+# TaskFlow V2 Conditional Pattern Example
+# Issue #350: Example for conditional execution
+
+name: "Conditional Execution Pattern"
+description: "Demonstrates conditional branching based on step results"
+patterns:
+  - conditional
+  - branch
+  - if
+
+example:
+  workflow_name: "conditional_workflow"
+  description: "Executes different paths based on API response status"
+  input_schema:
+    user_id: "string"
+  output_schema:
+    result: "string"
+  steps:
+    - id: check_user
+      type: api_rest
+      config:
+        method: GET
+        url: "https://api.example.com/users/${inputs.user_id}"
+        timeout_ms: 30000
+    - condition: "${check_user.status} == 'active'"
+      if_true:
+        - id: send_welcome
+          type: api_rest
+          config:
+            method: POST
+            url: "https://api.example.com/notifications"
+            body:
+              user_id: "${inputs.user_id}"
+              type: "welcome"
+            timeout_ms: 30000
+      if_false:
+        - id: send_reactivate
+          type: api_rest
+          config:
+            method: POST
+            url: "https://api.example.com/notifications"
+            body:
+              user_id: "${inputs.user_id}"
+              type: "reactivate"
+            timeout_ms: 30000
+  output:
+    result: "${check_user.status}"
+
+notes:
+  - Condition uses ${step_id.field} for value reference
+  - Supports comparison operators: ==, !=, <, >, <=, >=
+  - if_false is optional (defaults to empty)
