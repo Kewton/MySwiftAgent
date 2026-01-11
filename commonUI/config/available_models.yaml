@@ -165,3 +165,7 @@ settings_categories:
         name: "Workflow Generator Model"
         description: "Model for generating GraphAI workflows"
         default: "claude-haiku-4-5"
+      - key: "WORKFLOW_GENERATOR_V2_MODEL"
+        name: "TaskFlow V2 Generator Model"
+        description: "Model for generating TaskFlow V2 workflows (Issue #350)"
+        default: "gpt-5-mini"

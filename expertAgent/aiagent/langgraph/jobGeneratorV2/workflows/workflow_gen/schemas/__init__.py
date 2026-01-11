@@ -18,15 +18,15 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.graphai_sch
 )
 
 # TaskFlow V2 schemas (new)
+# Note: ParallelBlock and ConditionalBlock removed for OpenAI Structured Output compatibility
 from .taskflow_schema import (
     ApiRestConfig,
     CodeJsConfig,
-    ConditionalBlock,
     IOSchemaType,
-    ParallelBlock,
     TaskFlowStep,
     TaskFlowWorkflow,
     TransformConfig,
+    UnifiedStepConfig,
 )
 
 __all__ = [
@@ -38,11 +38,10 @@ __all__ = [
     "is_valid_agent",
     # TaskFlow V2 schemas
     "IOSchemaType",
-    "ApiRestConfig",
-    "TransformConfig",
-    "CodeJsConfig",
+    "UnifiedStepConfig",
+    "ApiRestConfig",  # Legacy alias for UnifiedStepConfig
+    "TransformConfig",  # Legacy alias for UnifiedStepConfig
+    "CodeJsConfig",  # Legacy alias for UnifiedStepConfig
     "TaskFlowStep",
-    "ParallelBlock",
-    "ConditionalBlock",
     "TaskFlowWorkflow",
 ]

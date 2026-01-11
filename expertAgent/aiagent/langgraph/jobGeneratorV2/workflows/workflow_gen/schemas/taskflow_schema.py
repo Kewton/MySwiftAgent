@@ -1,19 +1,16 @@
 """TaskFlow V2 Pydantic Schema Definitions.
 
 Issue #350 Task 2.1: Pydantic schema definitions for TaskFlow V2.
+Issue #350 Fix: OpenAI Structured Output compatible (no Union/oneOf).
 
 This module provides:
 - IOSchemaType: Input/output schema type enum
-- ApiRestConfig: Configuration for api_rest nodes
-- TransformConfig: Configuration for transform nodes
-- CodeJsConfig: Configuration for code_js nodes
-- TaskFlowStep: Step with discriminated union validation
-- ParallelBlock: Parallel execution block
-- ConditionalBlock: Conditional execution block
+- UnifiedStepConfig: Single config model for all step types (OpenAI compatible)
+- TaskFlowStep: Step definition
 - TaskFlowWorkflow: Complete workflow definition
 
 Key features:
-- Discriminated Union pattern with model_validator
+- OpenAI Structured Output compatible (no oneOf/Union)
 - HTTPS enforcement for URLs
 - mode-specific field validation for transform
 - Strict ID pattern matching
@@ -23,7 +20,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Annotated, Any, Literal, Union
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -42,40 +39,98 @@ class IOSchemaType(str, Enum):
     NULL = "null"
 
 
-class ApiRestConfig(BaseModel):
-    """Configuration for api_rest step type.
+class UnifiedStepConfig(BaseModel):
+    """Unified configuration for all step types.
+
+    OpenAI Structured Output does not support Union/oneOf, so all step
+    configurations are merged into a single model with optional fields.
+
+    The step_type field determines which fields are required:
+    - api_rest: method, url required; headers, body, timeout_ms, verify_ssl optional
+    - transform: mode required; template/separator/fields based on mode
+    - code_js: path, function_name required
 
     Attributes:
-        step_type: Discriminator field for Union type (always "api_rest")
+        step_type: Step type discriminator (api_rest, transform, code_js)
+
+        # api_rest fields
         method: HTTP method (GET, POST, PUT, DELETE, PATCH)
         url: HTTPS URL for the API endpoint
         headers: HTTP headers to send
-        body: Request body (for POST, PUT, PATCH)
+        body: Request body as JSON string
         timeout_ms: Request timeout in milliseconds (1000-300000)
         verify_ssl: Whether to verify SSL certificates
+
+        # transform fields
+        mode: Transform mode (template, concat, map, merge)
+        template: Template string for 'template' mode
+        separator: Separator for 'concat' mode
+        fields: Field list for 'map' or 'merge' mode
+
+        # code_js fields
+        path: Path to the JavaScript file
+        function_name: Name of the function to execute
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    step_type: Literal["api_rest"] = Field(
-        default="api_rest", description="Step type discriminator"
+    step_type: Literal["api_rest", "transform", "code_js"]
+
+    # api_rest fields
+    method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"] | None = Field(
+        default=None, description="HTTP method for api_rest"
     )
-    method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
-    url: str = Field(..., description="HTTPS URL for the API endpoint")
-    headers: dict[str, str] = Field(default_factory=dict)
-    body: dict[str, Any] | None = None
-    timeout_ms: int = Field(default=30000, ge=1000, le=300000)
-    verify_ssl: bool = True
+    url: str | None = Field(
+        default=None, description="HTTPS URL for the API endpoint"
+    )
+    headers: dict[str, str] | None = Field(
+        default=None, description="HTTP headers as key-value pairs"
+    )
+    body: str | None = Field(
+        default=None,
+        description="Request body as JSON string. Example: '{\"key\": \"value\"}'",
+    )
+    timeout_ms: int | None = Field(
+        default=None, ge=1000, le=300000, description="Request timeout in ms"
+    )
+    verify_ssl: bool | None = Field(
+        default=None, description="Whether to verify SSL certificates"
+    )
+
+    # transform fields
+    mode: Literal["template", "concat", "map", "merge"] | None = Field(
+        default=None, description="Transform mode"
+    )
+    template: str | None = Field(
+        default=None, description="Template string for template mode"
+    )
+    separator: str | None = Field(
+        default=None, description="Separator for concat mode"
+    )
+    fields: list[str] | None = Field(
+        default=None, description="Field list for map/merge mode"
+    )
+
+    # code_js fields
+    path: str | None = Field(
+        default=None, description="Path to JavaScript file"
+    )
+    function_name: str | None = Field(
+        default=None, description="Function name to execute"
+    )
 
     @field_validator("url")
     @classmethod
-    def validate_https_url(cls, value: str) -> str:
+    def validate_https_url(cls, value: str | None) -> str | None:
         """Ensure URL uses HTTPS protocol for external URLs.
 
         Security requirement: All external URLs must use HTTPS.
         HTTP is allowed for localhost/internal development URLs.
         Variable references like ${inputs.url} are allowed.
         """
+        if value is None:
+            return value
+
         # Allow variable references
         if value.startswith("${"):
             return value
@@ -83,6 +138,7 @@ class ApiRestConfig(BaseModel):
         # Allow HTTP for localhost/internal development URLs
         if value.startswith("http://"):
             from urllib.parse import urlparse
+
             parsed = urlparse(value)
             hostname = parsed.hostname or ""
             # Allow HTTP for localhost and internal addresses
@@ -106,75 +162,62 @@ class ApiRestConfig(BaseModel):
             )
         return value
 
-
-class TransformConfig(BaseModel):
-    """Configuration for transform step type.
-
-    Attributes:
-        step_type: Discriminator field for Union type (always "transform")
-        mode: Transform mode (template, concat, map, merge)
-        template: Template string for 'template' mode
-        separator: Separator for 'concat' mode
-        fields: Field list for 'map' or 'merge' mode
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    step_type: Literal["transform"] = Field(
-        default="transform", description="Step type discriminator"
-    )
-    mode: Literal["template", "concat", "map", "merge"]
-    template: str | None = None
-    separator: str | None = None
-    fields: list[str] | None = None
-
     @model_validator(mode="after")
-    def validate_mode_specific_fields(self) -> "TransformConfig":
-        """Validate required fields based on mode.
+    def validate_step_type_fields(self) -> "UnifiedStepConfig":
+        """Validate required fields based on step_type.
 
-        Each mode requires specific fields:
-        - template: requires 'template' field
-        - concat: requires 'separator' field
-        - map, merge: requires 'fields' field
+        Each step_type requires specific fields:
+        - api_rest: method, url required
+        - transform: mode required; template/separator/fields based on mode
+        - code_js: path, function_name required
         """
-        if self.mode == "template" and not self.template:
-            raise ValueError(
-                "template is required when mode is 'template'. "
-                "Example: template: '${step_001.data}'"
-            )
-        if self.mode == "concat" and self.separator is None:
-            raise ValueError(
-                "separator is required when mode is 'concat'. "
-                "Example: separator: ', '"
-            )
-        if self.mode in ("map", "merge") and not self.fields:
-            raise ValueError(
-                f"fields is required when mode is '{self.mode}'. "
-                "Example: fields: ['name', 'email']"
-            )
+        if self.step_type == "api_rest":
+            if not self.method:
+                raise ValueError(
+                    "method is required for api_rest step. "
+                    "Valid values: GET, POST, PUT, DELETE, PATCH"
+                )
+            if not self.url:
+                raise ValueError(
+                    "url is required for api_rest step. "
+                    "Example: https://api.example.com/endpoint"
+                )
+
+        elif self.step_type == "transform":
+            if not self.mode:
+                raise ValueError(
+                    "mode is required for transform step. "
+                    "Valid values: template, concat, map, merge"
+                )
+            if self.mode == "template" and not self.template:
+                raise ValueError(
+                    "template is required when mode is 'template'. "
+                    "Example: template: '${step_001.output.data}'"
+                )
+            if self.mode == "concat" and self.separator is None:
+                raise ValueError(
+                    "separator is required when mode is 'concat'. "
+                    "Example: separator: ', '"
+                )
+            if self.mode in ("map", "merge") and not self.fields:
+                raise ValueError(
+                    f"fields is required when mode is '{self.mode}'. "
+                    "Example: fields: ['name', 'email']"
+                )
+
+        elif self.step_type == "code_js":
+            if not self.path:
+                raise ValueError(
+                    "path is required for code_js step. "
+                    "Example: /scripts/utils.js"
+                )
+            if not self.function_name:
+                raise ValueError(
+                    "function_name is required for code_js step. "
+                    "Example: parseJson"
+                )
+
         return self
-
-
-class CodeJsConfig(BaseModel):
-    """Configuration for code_js step type.
-
-    Attributes:
-        step_type: Discriminator field for Union type (always "code_js")
-        path: Path to the JavaScript file
-        function_name: Name of the function to execute
-
-    Note:
-        Only whitelisted functions are allowed for security.
-        See TaskFlowSecurityValidator.ALLOWED_CODE_JS_FUNCTIONS.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    step_type: Literal["code_js"] = Field(
-        default="code_js", description="Step type discriminator"
-    )
-    path: str = Field(..., description="Path to JavaScript file")
-    function_name: str = Field(..., description="Function name to execute")
 
 
 # Step ID pattern: must start with letter or underscore,
@@ -182,34 +225,25 @@ class CodeJsConfig(BaseModel):
 STEP_ID_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_-]*$")
 
 
-# Config Union type for discriminated union pattern
-StepConfigUnion = Annotated[
-    Union[ApiRestConfig, TransformConfig, CodeJsConfig],
-    Field(discriminator="step_type"),
-]
-
-
 class TaskFlowStep(BaseModel):
-    """TaskFlow step with discriminated union validation.
-
-    The config field uses Pydantic's discriminated union pattern:
-    - api_rest: validated as ApiRestConfig (step_type="api_rest")
-    - transform: validated as TransformConfig (step_type="transform")
-    - code_js: validated as CodeJsConfig (step_type="code_js")
+    """TaskFlow step definition.
 
     Attributes:
         id: Unique step identifier (pattern: ^[a-zA-Z_][a-zA-Z0-9_-]*$)
         type: Step type (api_rest, transform, code_js)
-        config: Step configuration (discriminated union)
-        params: Additional parameters
+        config: Step configuration (unified model)
+        params: Additional parameters for variable substitution
     """
 
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(..., description="Unique step identifier")
     type: Literal["api_rest", "transform", "code_js"]
-    config: StepConfigUnion = Field(..., description="Step configuration")
-    params: dict[str, str] = Field(default_factory=dict)
+    config: UnifiedStepConfig = Field(..., description="Step configuration")
+    params: dict[str, str] | None = Field(
+        default=None,
+        description="Additional parameters for variable substitution",
+    )
 
     @field_validator("id")
     @classmethod
@@ -235,60 +269,16 @@ class TaskFlowStep(BaseModel):
         Ensures consistency between the step's type field and the
         config's step_type discriminator.
         """
-        config_step_type = getattr(self.config, "step_type", None)
-        if config_step_type and config_step_type != self.type:
+        if self.config.step_type != self.type:
             raise ValueError(
                 f"Step type mismatch: step.type='{self.type}' but "
-                f"config.step_type='{config_step_type}'"
+                f"config.step_type='{self.config.step_type}'"
             )
         return self
 
 
-class ParallelBlock(BaseModel):
-    """Parallel execution block.
-
-    Steps within a parallel block are executed concurrently.
-    All steps must complete before the workflow continues.
-
-    Attributes:
-        parallel: List of steps to execute in parallel
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    parallel: list[TaskFlowStep] = Field(
-        ..., min_length=1, description="Steps to execute in parallel"
-    )
-
-
-class ConditionalBlock(BaseModel):
-    """Conditional execution block.
-
-    Executes if_true steps when condition is truthy,
-    otherwise executes if_false steps.
-
-    Attributes:
-        condition: Condition expression (e.g., "${step_id.status} == 'success'")
-        if_true: Steps to execute when condition is true
-        if_false: Steps to execute when condition is false
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    condition: str = Field(..., description="Condition expression")
-    if_true: list[TaskFlowStep] = Field(
-        ..., min_length=1, description="Steps when condition is true"
-    )
-    if_false: list[TaskFlowStep] = Field(
-        default_factory=list, description="Steps when condition is false"
-    )
-
-
 # Workflow name pattern: same as step ID
 WORKFLOW_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_-]*$")
-
-# Step type union for workflow steps
-StepType = Union[TaskFlowStep, ParallelBlock, ConditionalBlock]
 
 
 def _parse_json_string_to_dict(value: Any, field_name: str) -> dict[str, Any]:
@@ -335,52 +325,54 @@ def _parse_json_string_to_dict(value: Any, field_name: str) -> dict[str, Any]:
 class TaskFlowWorkflow(BaseModel):
     """Complete TaskFlow V2 workflow definition.
 
+    OpenAI Structured Output compatible - uses JSON strings for dict fields.
+
     Attributes:
         workflow_name: Unique workflow name
         description: Optional workflow description
-        input_schema: Input field definitions
-        output_schema: Output field definitions
-        steps: List of steps (sequential, parallel, or conditional)
-        output: Output field mappings
+        input_schema: Input field definitions as JSON string
+        output_schema: Output field definitions as JSON string
+        steps: List of sequential steps
+        output: Output field mappings as JSON string
     """
 
     model_config = ConfigDict(extra="forbid")
 
     workflow_name: str = Field(..., description="Unique workflow name")
-    description: str | None = None
-    input_schema: dict[str, IOSchemaType | str] = Field(
-        default_factory=dict, description="Input field definitions"
+    description: str | None = Field(default=None)
+    input_schema: str = Field(
+        ...,
+        description='Input field definitions as JSON string. Example: \'{"query": "string"}\'',
     )
-    output_schema: dict[str, IOSchemaType | str] = Field(
-        default_factory=dict, description="Output field definitions"
+    output_schema: str = Field(
+        ...,
+        description='Output field definitions as JSON string. Example: \'{"result": "string"}\'',
     )
-    steps: list[StepType] = Field(default_factory=list, description="Workflow steps")
-    output: dict[str, str] = Field(
-        default_factory=dict, description="Output field mappings"
+    steps: list[TaskFlowStep] = Field(
+        ..., description="Workflow steps", min_length=1
+    )
+    output: str = Field(
+        ...,
+        description='Output field mappings as JSON string. Example: \'{"result": "${step_001.output}"}\'',
     )
 
-    @field_validator("input_schema", "output_schema", mode="before")
+    @field_validator("input_schema", "output_schema", "output")
     @classmethod
-    def parse_schema_json_strings(
-        cls, value: Any, info: Any
-    ) -> dict[str, IOSchemaType | str]:
-        """Parse JSON string to dict for schema fields.
+    def validate_json_string(cls, value: str) -> str:
+        """Validate that the string is valid JSON.
 
-        LLMs sometimes return dict fields as JSON strings like
-        '{"field": "type"}' instead of {"field": "type"}.
-        This validator handles that case automatically.
+        OpenAI Structured Output requires fixed schemas, so we use JSON strings
+        for dynamic dict fields. This validator ensures the JSON is valid.
         """
-        return _parse_json_string_to_dict(value, info.field_name)
+        import json as json_module
 
-    @field_validator("output", mode="before")
-    @classmethod
-    def parse_output_json_string(cls, value: Any) -> dict[str, str]:
-        """Parse JSON string to dict for output field.
-
-        LLMs sometimes return dict fields as JSON strings.
-        This validator handles that case automatically.
-        """
-        return _parse_json_string_to_dict(value, "output")
+        try:
+            parsed = json_module.loads(value)
+            if not isinstance(parsed, dict):
+                raise ValueError(f"Must be a JSON object, got {type(parsed).__name__}")
+            return value
+        except json_module.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON: {e}") from e
 
     @field_validator("workflow_name")
     @classmethod
@@ -423,15 +415,24 @@ class TaskFlowWorkflow(BaseModel):
         return cls.model_validate(data)
 
 
+# Legacy exports for backward compatibility
+# These are deprecated - use UnifiedStepConfig instead
+ApiRestConfig = UnifiedStepConfig
+TransformConfig = UnifiedStepConfig
+CodeJsConfig = UnifiedStepConfig
+StepConfigUnion = UnifiedStepConfig
+
+# Removed: ParallelBlock, ConditionalBlock (OpenAI Structured Output incompatible)
+# These can be added back when using non-OpenAI models
+
 __all__ = [
     "IOSchemaType",
+    "UnifiedStepConfig",
+    "TaskFlowStep",
+    "TaskFlowWorkflow",
+    # Legacy exports (deprecated)
     "ApiRestConfig",
     "TransformConfig",
     "CodeJsConfig",
     "StepConfigUnion",
-    "TaskFlowStep",
-    "ParallelBlock",
-    "ConditionalBlock",
-    "TaskFlowWorkflow",
-    "StepType",
 ]
