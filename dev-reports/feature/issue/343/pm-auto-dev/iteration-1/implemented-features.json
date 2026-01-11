@@ -1,0 +1,168 @@
+{
+  "issue_number": 343,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "sanitize_error_message",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 37,
+      "description": "エラーメッセージをサニタイズする関数。機密情報のマスク、制御文字除去、長さ制限を実施",
+      "expected_callers": ["ValidationResult.to_prompt_feedback"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "SENSITIVE_PATTERNS",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 23,
+      "description": "サニタイズ対象の機密情報パターン（ユーザーパス、トークン、パスワード）",
+      "expected_callers": ["sanitize_error_message"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "ValidationResult.to_prompt_feedback",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 161,
+      "description": "バリデーションエラーをLLMフィードバック用にフォーマット。max_errors, max_total_length パラメータ追加",
+      "expected_callers": ["YamlGeneratorSubWorkflow.generate_with_llm"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "error_feedback parameter (LLMGenerator)",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py",
+      "line_number": 249,
+      "description": "generate_from_task() メソッドに error_feedback パラメータを追加",
+      "expected_callers": ["YamlGeneratorSubWorkflow.generate_with_llm"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "error_feedback parameter (PromptBuilder)",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/__init__.py",
+      "line_number": 58,
+      "description": "build() メソッドに error_feedback パラメータを追加",
+      "expected_callers": ["LLMGeneratorSubWorkflow.generate_from_task"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "error_feedback parameter (assembler)",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
+      "line_number": 188,
+      "description": "assemble_prompt() 関数に error_feedback パラメータを追加",
+      "expected_callers": ["PromptBuilderSubWorkflow.build"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/__init__.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "timeout milliseconds (agent_rules)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "line_number": 28,
+      "description": "FETCH_AGENT_RULES の timeout を 30 から 30000 (ミリ秒) に変更",
+      "expected_callers": ["プロンプト生成時にLLMへ提供"],
+      "expected_call_location": "ワークフロー生成時"
+    },
+    {
+      "feature_id": "F8",
+      "name": "API duplication warning",
+      "type": "warning",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
+      "line_number": 216,
+      "description": "recommended_apis と api_mappings 両方提供時の DeprecationWarning",
+      "expected_callers": ["assemble_prompt (条件分岐)"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_error_sanitize.py::test_*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_error_sanitize.py::test_sensitive_patterns_*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_prompt_feedback.py::test_*"],
+      "integration_tests": ["test_issue_343_llm_retry_flow.py"],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_error_feedback_propagation.py::test_llm_generator_*"],
+      "integration_tests": ["test_issue_343_llm_retry_flow.py"],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_error_feedback_propagation.py::test_prompt_builder_*"],
+      "integration_tests": ["test_issue_343_llm_retry_flow.py"],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_error_feedback_propagation.py::test_assembler_*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": ["test_timeout_unit.py::test_*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F8",
+      "unit_tests": ["test_api_info_deduplication.py::test_*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "integration_type": "function_call",
+      "integration_method": "Called from ValidationResult.to_prompt_feedback() at line 199-200"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+      "integration_type": "method_call",
+      "integration_method": "Called at line 453: error_feedback = error_result.to_prompt_feedback()"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+      "integration_type": "parameter_pass",
+      "integration_method": "Passed at line 465: generate_from_task(..., error_feedback=error_feedback)"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py",
+      "integration_type": "parameter_pass",
+      "integration_method": "Passed at line 287: prompt_builder.build(..., error_feedback=error_feedback)"
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/__init__.py",
+      "integration_type": "parameter_pass",
+      "integration_method": "Passed at line 87: assemble_prompt(..., error_feedback=error_feedback)"
+    }
+  ]
+}

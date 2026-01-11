@@ -1,0 +1,47 @@
+{
+  "issue_number": 343,
+  "feature_summary": "V2 Workflow Generator 品質改善: タイムアウト単位・エラーフィードバック・プロンプト重複",
+  "acceptance_criteria": [
+    "タイムアウト単位がプロンプトとバリデータで統一されている",
+    "LLMリトライ時にエラーフィードバックが渡される",
+    "API情報ソースが整理・統合されている",
+    "単体テストで上記が検証される",
+    "結合テストでLLM生成→検証→リトライフローが正常動作する"
+  ],
+  "labels": ["bug", "enhancement", "priority:high"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "jobqueue"],
+  "external_dependencies": ["LLM API (Gemini/Anthropic)", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "Job Generator API 正常系",
+        "command": "curl -s -X POST http://localhost:8004/v1/job-generator/generate -H 'Content-Type: application/json' -d '{\"user_requirement\": \"Google Calendarからイベント一覧を取得する\", \"project_id\": \"test-project\", \"max_tasks\": 1}'",
+        "expected_status": 200,
+        "expected_response_contains": ["status", "job_id"]
+      },
+      {
+        "name": "タイムアウト単位確認 (ミリ秒)",
+        "description": "生成されたYAMLのtimeout値が1000以上（ミリ秒単位）であること",
+        "verification": "timeout値が30000程度（ミリ秒）で生成されることを確認"
+      },
+      {
+        "name": "エラーフィードバック確認",
+        "description": "バリデーションエラー発生時にerror_feedbackがログに出現すること",
+        "verification": "ログに 'error_feedback' や 'Previous Generation Errors' が出現"
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse (optional)", "command": "curl -sf http://localhost:3001/api/public/health || echo 'Langfuse not running (optional)'"}
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_343_workflow_quality.py",
+  "playwright_test_file": null
+}

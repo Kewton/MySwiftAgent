@@ -1,0 +1,52 @@
+{
+  "issue_number": 343,
+  "iteration": 1,
+  "target_project": "expertAgent",
+  "refactoring_scope": {
+    "primary_files": [
+      "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/assembler.py",
+      "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/llm_generator.py",
+      "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+    ],
+    "test_files": [
+      "expertAgent/tests/unit/test_job_generator_v2/test_timeout_unit.py",
+      "expertAgent/tests/unit/test_job_generator_v2/test_error_sanitize.py",
+      "expertAgent/tests/unit/test_job_generator_v2/test_prompt_feedback.py",
+      "expertAgent/tests/unit/test_job_generator_v2/test_error_feedback_propagation.py",
+      "expertAgent/tests/unit/test_job_generator_v2/test_api_info_deduplication.py",
+      "expertAgent/tests/integration/test_issue_343_llm_retry_flow.py"
+    ]
+  },
+  "current_coverage": {
+    "validators/__init__.py": "90.80%",
+    "prompt_builder/assembler.py": "96.43%",
+    "prompt_builder/rules/agent_rules.py": "84.21%",
+    "llm_generator.py": "53.41%"
+  },
+  "quality_metrics_from_verification": {
+    "all_features_integrated": true,
+    "no_dead_code": true,
+    "chain_completeness": "100%",
+    "test_coverage": "excellent"
+  },
+  "implemented_features": [
+    "F1: sanitize_error_message function",
+    "F2: SENSITIVE_PATTERNS constant",
+    "F3: ValidationResult.to_prompt_feedback method",
+    "F4-F6: error_feedback parameter chain",
+    "F7: timeout milliseconds (30000)",
+    "F8: API duplication warning"
+  ],
+  "refactoring_priorities": [
+    "code_duplication",
+    "solid_principles",
+    "naming_conventions",
+    "error_handling"
+  ],
+  "constraints": {
+    "preserve_public_api": true,
+    "maintain_test_compatibility": true,
+    "no_new_dependencies": true
+  }
+}
