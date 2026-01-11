@@ -1,0 +1,121 @@
+{
+  "issue_number": 349,
+  "iteration": 1,
+  "phase": "L3_acceptance_test",
+
+  "acceptance_criteria": [
+    {
+      "id": "ac-1",
+      "description": "Map モードで @index, @first, @last ヘルパーが正しく展開される",
+      "test_type": "api_test",
+      "workflow": "tutorial/9_transform_map.json",
+      "expected_behavior": "テンプレート内の @index が数値として展開"
+    },
+    {
+      "id": "ac-2",
+      "description": "Merge モードでJSON文字列が自動的にパースされる",
+      "test_type": "api_test",
+      "workflow": "tutorial/11_transform_merge.json",
+      "expected_behavior": "JSON文字列がオブジェクトとしてマージ"
+    },
+    {
+      "id": "ac-3",
+      "description": "条件分岐の結果を出力に反映する方法（Coalesceチェーン）が提供される",
+      "test_type": "api_test",
+      "workflow": "tutorial/12_conditional_basic.json",
+      "expected_behavior": "Coalesceチェーンで条件分岐結果を取得"
+    },
+    {
+      "id": "ac-4",
+      "description": "Tutorial 9, 11, 12 が期待通りに動作する",
+      "test_type": "regression_test",
+      "workflows": [
+        "tutorial/9_transform_map.json",
+        "tutorial/11_transform_merge.json",
+        "tutorial/12_conditional_basic.json"
+      ],
+      "expected_behavior": "エラーなしで実行完了、期待出力と一致"
+    }
+  ],
+
+  "test_scenarios": [
+    {
+      "id": "test-1",
+      "name": "Tutorial 9: Map @index",
+      "endpoint": "/api/v2/workflows/execute",
+      "method": "POST",
+      "request": {
+        "workflow_path": "tutorial/9_transform_map.json",
+        "inputs": {
+          "products": [
+            {"name": "りんご", "price": 150},
+            {"name": "みかん", "price": 100},
+            {"name": "バナナ", "price": 200}
+          ]
+        }
+      },
+      "assertions": [
+        {"type": "status_code", "expected": 200},
+        {"type": "no_errors", "path": "errors"},
+        {"type": "contains", "path": "results", "expected_substring": "0"}
+      ]
+    },
+    {
+      "id": "test-2",
+      "name": "Tutorial 11: Merge JSON Parse",
+      "endpoint": "/api/v2/workflows/execute",
+      "method": "POST",
+      "request": {
+        "workflow_path": "tutorial/11_transform_merge.json",
+        "inputs": {
+          "user_settings": {
+            "theme": "dark",
+            "notifications": {"push": true}
+          }
+        }
+      },
+      "assertions": [
+        {"type": "status_code", "expected": 200},
+        {"type": "no_errors", "path": "errors"},
+        {"type": "json_match", "path": "results._output.shallow_config.theme", "expected": "dark"}
+      ]
+    },
+    {
+      "id": "test-3a",
+      "name": "Tutorial 12: Conditional (score=85)",
+      "endpoint": "/api/v2/workflows/execute",
+      "method": "POST",
+      "request": {
+        "workflow_path": "tutorial/12_conditional_basic.json",
+        "inputs": {"score": 85}
+      },
+      "assertions": [
+        {"type": "status_code", "expected": 200},
+        {"type": "no_errors", "path": "errors"}
+      ]
+    },
+    {
+      "id": "test-3b",
+      "name": "Tutorial 12: Conditional (score=45)",
+      "endpoint": "/api/v2/workflows/execute",
+      "method": "POST",
+      "request": {
+        "workflow_path": "tutorial/12_conditional_basic.json",
+        "inputs": {"score": 45}
+      },
+      "assertions": [
+        {"type": "status_code", "expected": 200},
+        {"type": "no_errors", "path": "errors"}
+      ]
+    }
+  ],
+
+  "service_requirements": {
+    "graphAiServer": {
+      "port": 8105,
+      "health_endpoint": "/health"
+    }
+  },
+
+  "output_file": "dev-reports/feature/issue/349/pm-auto-dev/iteration-1/acceptance-result.json"
+}

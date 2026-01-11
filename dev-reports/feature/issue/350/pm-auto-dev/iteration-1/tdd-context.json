@@ -1,0 +1,182 @@
+{
+  "issue_number": 350,
+  "issue_title": "ワークフロー生成エージェントV2の対象エンジンの切り替え",
+  "acceptance_criteria": [
+    "AC-1: 自然言語からTaskFlow V2ワークフロー生成（HTTP 200、workflow_format='json'）",
+    "AC-2: 生成されたワークフローのgraphAiServerでの実行確認",
+    "AC-3: engineパラメータの動作確認（デフォルトtaskflow、明示指定graphai）",
+    "AC-4: 後方互換性（GraphAI YAML生成機能維持）",
+    "AC-5: セキュリティ検証（HTTP URLの拒否、HTTPS強制）",
+    "AC-6: セキュリティ検証（プライベートIPの拒否、SSRF対策）"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: Strategy Pattern基盤クラス作成（engine_strategy.py）",
+    "Task 1.2: 既存GraphAI生成ロジックの分離（graphai_generator.py）",
+    "Task 1.3: WorkflowGenWorkflowへのStrategy選択ロジック追加（workflow.py）",
+    "Task 1.4: adapter.pyへのengine設定追加",
+    "Task 1.5: orchestrator.pyのengine受け渡し確認",
+    "Task 2.1: TaskFlow V2 Pydanticスキーマ定義（taskflow_schema.py）",
+    "Task 2.2: TaskFlow用プロンプトルール作成（taskflow_rules.py）",
+    "Task 2.3: Few-shot Selector実装（selector.py）",
+    "Task 2.4: TaskFlow用Few-shot例作成（4ファイル）",
+    "Task 2.5: 既存Few-shot例のディレクトリ移動（graphai/へ）",
+    "Task 2.6: TaskFlowGeneratorStrategy実装（taskflow_generator.py）",
+    "Task 3.1: TaskFlowValidator実装（taskflow_validator.py）",
+    "Task 3.2: エラーコード体系の実装（error_codes.py）",
+    "Task 3.3: メッセージカタログ実装（messages/__init__.py）",
+    "Task 3.4: ValidationPipelineへの統合",
+    "Task 4.1: 結合テスト作成",
+    "Task 4.2: 受入テスト作成（test_issue_350_acceptance.py）",
+    "Task 4.3: デッドコード検出・削除",
+    "Task 4.4: 実装検証エージェントによる統合確認",
+    "Task 4.5: 既存テストの維持確認",
+    "Task 4.6: CI/CDパイプライン確認"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "Strategy Pattern基盤クラス作成",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "既存GraphAI生成ロジックの分離",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/graphai_generator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "WorkflowGenWorkflowへのStrategy選択ロジック追加",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "adapter.pyへのengine設定追加",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py"],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "orchestrator.pyのengine受け渡し確認",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "TaskFlow V2 Pydanticスキーマ定義",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.2",
+      "description": "TaskFlow用プロンプトルール作成",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/taskflow_rules.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.3",
+      "description": "Few-shot Selector実装",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/selector.py"],
+      "dependencies": ["2.4", "2.5"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "TaskFlow用Few-shot例作成",
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/taskflow/api_rest_pattern.yaml",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/taskflow/transform_pattern.yaml",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/taskflow/parallel_pattern.yaml",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/taskflow/conditional_pattern.yaml"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.5",
+      "description": "既存Few-shot例のディレクトリ移動",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/graphai/"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.6",
+      "description": "TaskFlowGeneratorStrategy実装",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py"],
+      "dependencies": ["1.1", "2.1", "2.2", "2.3"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "TaskFlowValidator実装",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/taskflow_validator.py"],
+      "dependencies": ["2.1", "3.2", "3.3"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "エラーコード体系の実装",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/error_codes.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.3",
+      "description": "メッセージカタログ実装",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/messages/__init__.py"],
+      "dependencies": ["3.2"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "ValidationPipelineへの統合",
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"],
+      "dependencies": ["3.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "engine_strategy.py",
+    "graphai_generator.py",
+    "taskflow_generator.py",
+    "schemas/taskflow_schema.py",
+    "prompt_builder/rules/taskflow_rules.py",
+    "prompt_builder/few_shot/selector.py",
+    "prompt_builder/few_shot/taskflow/*.yaml",
+    "validators/taskflow_validator.py",
+    "validators/error_codes.py",
+    "validators/messages/__init__.py",
+    "tests/unit/test_taskflow_schema.py",
+    "tests/unit/test_taskflow_generator.py",
+    "tests/unit/test_taskflow_validator.py",
+    "tests/unit/test_engine_strategy.py",
+    "tests/unit/test_few_shot_selector.py"
+  ],
+  "definition_of_done": [
+    "全21タスク完了",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "受入テスト6ケース全てPASS",
+    "デッドコードチェック完了（Ruff/vultureエラーゼロ）",
+    "実装検証エージェントによる統合確認完了",
+    "CI/CDパイプラインPASS",
+    "既存GraphAIテスト全てPASS（退行なし）"
+  ],
+  "target_coverage": 90,
+  "design_documents": {
+    "design_policy": "dev-reports/feature/issue/350/design-policy.md",
+    "architecture_review": "dev-reports/feature/issue/350/architecture-review.md",
+    "work_plan": "dev-reports/feature/issue/350/work-plan.md"
+  },
+  "key_patterns": {
+    "strategy_pattern": {
+      "interface": "WorkflowGeneratorStrategy",
+      "implementations": ["GraphAIGeneratorStrategy", "TaskFlowGeneratorStrategy"],
+      "location": "workflows/workflow_gen/engine_strategy.py"
+    },
+    "discriminated_union": {
+      "model": "TaskFlowStep",
+      "validator": "model_validator(mode='after')",
+      "config_models": ["ApiRestConfig", "TransformConfig", "CodeJsConfig"]
+    }
+  },
+  "security_requirements": {
+    "https_enforcement": "URLはHTTPS必須",
+    "ssrf_protection": "プライベートIP(127.x, 10.x, 192.168.x, localhost)をブロック",
+    "code_js_whitelist": ["formatDate", "parseJson", "stringConcat", "arrayFilter", "objectMerge"]
+  }
+}

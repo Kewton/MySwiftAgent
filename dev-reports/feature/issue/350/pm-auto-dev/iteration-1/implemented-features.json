@@ -1,0 +1,205 @@
+{
+  "issue_number": 350,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "create_strategy",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+      "line_number": 303,
+      "description": "Factory function to create appropriate strategy based on engine type",
+      "expected_callers": ["WorkflowGenWorkflow.__init__"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "WorkflowGeneratorStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+      "line_number": 42,
+      "description": "Abstract base class for workflow generation strategies",
+      "expected_callers": ["GraphAIGeneratorStrategy", "TaskFlowGeneratorStrategy"],
+      "expected_call_location": "Same file (inheritance)"
+    },
+    {
+      "feature_id": "F3",
+      "name": "TaskFlowGeneratorStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+      "line_number": 219,
+      "description": "Strategy for TaskFlow V2 JSON generation",
+      "expected_callers": ["create_strategy()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "GraphAIGeneratorStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+      "line_number": 153,
+      "description": "Strategy for GraphAI YAML generation (wraps existing)",
+      "expected_callers": ["create_strategy()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "TaskFlowLLMGenerator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "line_number": 79,
+      "description": "LLM-based TaskFlow JSON generator",
+      "expected_callers": ["TaskFlowGeneratorStrategy.generate()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "TaskFlowStep",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py",
+      "line_number": 100,
+      "description": "Pydantic model for TaskFlow step with discriminated union validation",
+      "expected_callers": ["TaskFlowWorkflow", "TaskFlowSchemaValidator"],
+      "expected_call_location": "schemas/taskflow_schema.py, validators/taskflow_validator.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "TaskFlowWorkflow",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py",
+      "line_number": 180,
+      "description": "Pydantic model for complete TaskFlow V2 workflow",
+      "expected_callers": ["TaskFlowSchemaValidator.validate()"],
+      "expected_call_location": "validators/taskflow_validator.py"
+    },
+    {
+      "feature_id": "F8",
+      "name": "FewShotSelector",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/selector.py",
+      "line_number": 42,
+      "description": "Pattern-based example selector for LLM prompts",
+      "expected_callers": ["TaskFlowLLMGenerator._build_prompt()"],
+      "expected_call_location": "taskflow_generator.py"
+    },
+    {
+      "feature_id": "F9",
+      "name": "TaskFlowSchemaValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/taskflow_validator.py",
+      "line_number": 183,
+      "description": "Validator for TaskFlow V2 schema and security",
+      "expected_callers": ["TaskFlowGeneratorStrategy.get_validator()", "ValidationPipeline"],
+      "expected_call_location": "engine_strategy.py, validators/__init__.py"
+    },
+    {
+      "feature_id": "F10",
+      "name": "TaskFlowSecurityValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/taskflow_validator.py",
+      "line_number": 29,
+      "description": "Security validator for HTTPS, SSRF, code_js whitelist",
+      "expected_callers": ["TaskFlowSchemaValidator.__init__()"],
+      "expected_call_location": "validators/taskflow_validator.py"
+    },
+    {
+      "feature_id": "F11",
+      "name": "TaskFlowValidationErrorCode",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/error_codes.py",
+      "line_number": 10,
+      "description": "Error code enum for TaskFlow validation errors",
+      "expected_callers": ["TaskFlowSecurityValidator", "TaskFlowSchemaValidator"],
+      "expected_call_location": "validators/taskflow_validator.py"
+    },
+    {
+      "feature_id": "F12",
+      "name": "TASKFLOW_ERROR_MESSAGES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/messages/__init__.py",
+      "line_number": 5,
+      "description": "i18n error messages for TaskFlow validation",
+      "expected_callers": ["TaskFlowSchemaValidator._format_error()"],
+      "expected_call_location": "validators/taskflow_validator.py"
+    },
+    {
+      "feature_id": "F13",
+      "name": "EngineType",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+      "line_number": 35,
+      "description": "Enum for workflow engine types (GRAPHAI, TASKFLOW)",
+      "expected_callers": ["create_strategy()", "JobGeneratorRequest"],
+      "expected_call_location": "engine_strategy.py, types.py"
+    },
+    {
+      "feature_id": "F14",
+      "name": "TASKFLOW_GENERATION_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/taskflow_rules.py",
+      "line_number": 10,
+      "description": "LLM prompt rules for TaskFlow generation",
+      "expected_callers": ["TaskFlowGeneratorStrategy.get_prompt_rules()"],
+      "expected_call_location": "engine_strategy.py, taskflow_generator.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_create_strategy_taskflow", "test_create_strategy_graphai", "test_create_strategy_invalid"],
+      "integration_tests": ["test_orchestrator_engine_switch"],
+      "acceptance_tests": ["test_issue_350_engine_parameter"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_taskflow_step_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_350_taskflow_generation"]
+    },
+    {
+      "feature_id": "F9",
+      "unit_tests": ["test_taskflow_validator_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_350_security_*"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+      "integration_type": "factory_call",
+      "integration_method": "self._strategy = create_strategy(engine)",
+      "status": "NOT_INTEGRATED"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+      "integration_type": "factory_return",
+      "integration_method": "return TaskFlowGeneratorStrategy()",
+      "status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F9",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .taskflow_validator import TaskFlowSchemaValidator",
+      "status": "NEEDS_VERIFICATION"
+    }
+  ],
+  "critical_gaps": [
+    {
+      "gap_id": "G1",
+      "description": "workflow.py does not call create_strategy() - Strategy Pattern not integrated",
+      "severity": "HIGH",
+      "feature_ids": ["F1", "F3", "F4"],
+      "fix_required": "Add engine parameter to WorkflowGenWorkflow.__init__ and call create_strategy()"
+    },
+    {
+      "gap_id": "G2",
+      "description": "orchestrator.py engine parameter propagation not verified",
+      "severity": "MEDIUM",
+      "feature_ids": ["F1"],
+      "fix_required": "Verify engine is passed from orchestrator to workflow_gen"
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "status": "passed",
+  "issue_number": 349,
+  "iteration": 1,
+  "verification_timestamp": "2026-01-11T00:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "map-mode-index-helpers",
+      "name": "Map Mode @index/@first/@last Helpers",
+      "type": "feature",
+      "file_path": "graphAiServer/src/nodes/transform-node.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "executeMap() method found at line 176, with @index/@first/@last support at lines 198-214"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called from executeInternal() at line 106: 'return this.executeMap(params);'"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "TransformNode is created via createTransformNode() which is imported in workflow-parser.ts:19 and used at line 123"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "graphAiServer/tests/unit/nodes/transform-node.test.ts",
+          "evidence": "4 unit tests covering @index, @first, @last helpers (lines 415-508)"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "graphAiServer/tests/integration/workflow-execution.test.ts",
+          "evidence": "2 integration tests at lines 437, 474 verify @index and @last in actual workflows"
+        }
+      },
+      "classification": "PASSED",
+      "test_results": {
+        "unit_tests": "26 passed",
+        "integration_tests": "Verified in workflow-execution.test.ts"
+      }
+    },
+    {
+      "feature_id": "merge-mode-json-parse",
+      "name": "Merge Mode JSON Auto-Parse",
+      "type": "feature",
+      "file_path": "graphAiServer/src/nodes/transform-node.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "isJsonString() at line 261, parseJsonIfNeeded() at line 274, executeMerge() at line 231"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "executeMerge() called from executeInternal() at line 109. parseJsonIfNeeded() called from executeMerge() at line 237. isJsonString() called from parseJsonIfNeeded() at line 275"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Part of TransformNode class which is imported and used by workflow-parser.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "graphAiServer/tests/unit/nodes/transform-node.test.ts",
+          "evidence": "5 unit tests covering JSON auto-parse scenarios (lines 517-604)"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "graphAiServer/tests/integration/workflow-execution.test.ts",
+          "evidence": "Integration test at line 511 verifies JSON auto-parse in actual workflow"
+        }
+      },
+      "classification": "PASSED",
+      "test_results": {
+        "unit_tests": "26 passed (includes JSON parse tests)",
+        "integration_tests": "Verified in workflow-execution.test.ts"
+      }
+    },
+    {
+      "feature_id": "coalesce-chain-syntax",
+      "name": "Coalesce Chain Syntax (${a ?? b ?? c})",
+      "type": "feature",
+      "file_path": "graphAiServer/src/engine/context/context-manager.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "MAX_COALESCE_REFERENCES constant at line 39, resolveCoalesceChain() at line 342, parseLiteralValue() at line 401"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "resolveCoalesceChain() called from resolveReference() at line 313 when '??' is detected. MAX_COALESCE_REFERENCES used in resolveCoalesceChain() at line 346"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "MAX_COALESCE_REFERENCES exported at line 39 with 'export const'"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "graphAiServer/tests/unit/engine/context/context-manager.test.ts",
+          "evidence": "9 unit tests covering coalesce chains, security limits, and constant export (lines 48-130). MAX_COALESCE_REFERENCES imported at line 13"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "graphAiServer/tests/integration/workflow-execution.test.ts",
+          "evidence": "2 integration tests verify coalesce chain in actual workflows (lines 544-604)"
+        }
+      },
+      "classification": "PASSED",
+      "test_results": {
+        "unit_tests": "19 passed",
+        "integration_tests": "Verified in workflow-execution.test.ts"
+      }
+    }
+  ],
+  "summary": {
+    "total_features": 3,
+    "passed": 3,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [],
+  "integration_verification": {
+    "status": "verified",
+    "details": [
+      "executeMap() is called from executeInternal() switch statement",
+      "executeMerge() is called from executeInternal() switch statement",
+      "parseJsonIfNeeded() is called within executeMerge()",
+      "resolveCoalesceChain() is called from resolveReference() when '??' detected",
+      "TransformNode is instantiated by workflow-parser.ts via createTransformNode()",
+      "ContextManager.resolveReference() is used throughout engine for variable resolution"
+    ]
+  },
+  "test_coverage_summary": {
+    "transform_node_unit_tests": "26 passed",
+    "context_manager_unit_tests": "19 passed",
+    "integration_tests": "verified in workflow-execution.test.ts",
+    "coverage_metrics": {
+      "unit_test_coverage": "All new functions tested",
+      "integration_test_coverage": "All features verified in E2E workflows"
+    }
+  },
+  "backwards_compatibility": {
+    "status": "maintained",
+    "evidence": "All existing tests continue to pass. Features are additive only."
+  },
+  "recommended_actions": [],
+  "conclusion": "All implemented features are properly integrated into the codebase with comprehensive test coverage. No dead code detected."
+}

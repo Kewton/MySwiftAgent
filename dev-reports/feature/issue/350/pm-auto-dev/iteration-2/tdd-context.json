@@ -1,0 +1,83 @@
+{
+  "issue_number": 350,
+  "iteration": 2,
+  "retry_reason": "Phase 2.7 でデッドコードを検出 - Strategy Pattern が workflow.py に統合されていない",
+  "dead_code_fixes": [
+    {
+      "feature": "create_strategy()",
+      "action": "WorkflowGenWorkflow.__init__ で create_strategy() を呼び出す",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+      "line": 62,
+      "details": "engine パラメータを追加し、self._strategy = create_strategy(engine) を実行"
+    },
+    {
+      "feature": "engine parameter propagation",
+      "action": "orchestrator.py から WorkflowGenWorkflow へ engine パラメータを伝播",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "details": "JobGenerationRequest.engine を WorkflowGenWorkflow に渡す"
+    },
+    {
+      "feature": "Strategy.generate() usage",
+      "action": "WorkflowGenWorkflow.execute() で Strategy.generate() を使用",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+      "line": 150,
+      "details": "YamlGeneratorSubWorkflow 直接呼び出しを self._strategy.generate() に置き換え"
+    }
+  ],
+  "already_completed": [
+    "engine_strategy.py - WorkflowGeneratorStrategy Protocol と実装",
+    "taskflow_generator.py - TaskFlowLLMGenerator 実装",
+    "taskflow_schema.py - Pydantic スキーマ（Discriminated Union）",
+    "taskflow_validator.py - セキュリティ検証",
+    "error_codes.py - エラーコード体系",
+    "messages/__init__.py - i18n メッセージ",
+    "selector.py - FewShotSelector",
+    "few_shot/taskflow/*.yaml - Few-shot 例",
+    "types.py - engine パラメータ追加（JobGenerationRequest）",
+    "adapter.py - engine パラメータ追加（generate メソッド）"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "FIX-1",
+      "description": "workflow.py に engine パラメータと create_strategy() 呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+      "changes": [
+        "Add engine parameter to __init__ with default 'taskflow'",
+        "Import create_strategy and EngineType from engine_strategy",
+        "Call self._strategy = create_strategy(engine) in __init__",
+        "Replace direct YamlGeneratorSubWorkflow calls with strategy calls"
+      ]
+    },
+    {
+      "task_id": "FIX-2",
+      "description": "orchestrator.py で engine パラメータを WorkflowGenWorkflow に伝播",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "changes": [
+        "Pass request.engine to WorkflowGenWorkflow constructor"
+      ]
+    },
+    {
+      "task_id": "FIX-3",
+      "description": "統合テストを追加して Strategy が実際に使用されることを確認",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_issue_350/test_strategy_integration.py",
+      "changes": [
+        "Test WorkflowGenWorkflow with engine='taskflow'",
+        "Test WorkflowGenWorkflow with engine='graphai'",
+        "Verify strategy is actually called"
+      ]
+    }
+  ],
+  "target_coverage": 90,
+  "critical_integration_points": [
+    {
+      "point": "WorkflowGenWorkflow.__init__",
+      "verification": "grep -n 'create_strategy' workflow.py should return match",
+      "expected_code": "self._strategy = create_strategy(EngineType.from_string(engine))"
+    },
+    {
+      "point": "WorkflowGenWorkflow.execute",
+      "verification": "Strategy.generate() should be called instead of direct YamlGeneratorSubWorkflow",
+      "expected_code": "await self._strategy.generate(task_definitions, interfaces, context)"
+    }
+  ]
+}

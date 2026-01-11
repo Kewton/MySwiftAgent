@@ -1,0 +1,48 @@
+{
+  "issue_number": 349,
+  "iteration": 1,
+  "phase": "progress_report",
+
+  "phases_completed": [
+    {
+      "phase": "Phase 1",
+      "name": "Issue情報収集",
+      "status": "completed",
+      "output_file": "tdd-context.json"
+    },
+    {
+      "phase": "Phase 2",
+      "name": "TDD実装",
+      "status": "completed",
+      "output_file": "tdd-result.json"
+    },
+    {
+      "phase": "Phase 2.5",
+      "name": "実装検証",
+      "status": "completed",
+      "output_file": "implementation-verification-result.json"
+    },
+    {
+      "phase": "Phase 3",
+      "name": "L3受入テスト",
+      "status": "completed_with_pending_execution",
+      "output_file": "acceptance-result.json",
+      "notes": "テストファイル作成完了、サービス起動後に手動実行が必要"
+    },
+    {
+      "phase": "Phase 4",
+      "name": "リファクタリング",
+      "status": "skipped",
+      "reason": "コード品質は既に十分、追加のリファクタリング不要"
+    }
+  ],
+
+  "result_files": {
+    "tdd_result": "tdd-result.json",
+    "implemented_features": "implemented-features.json",
+    "verification_result": "implementation-verification-result.json",
+    "acceptance_result": "acceptance-result.json"
+  },
+
+  "output_file": "progress-report.md"
+}

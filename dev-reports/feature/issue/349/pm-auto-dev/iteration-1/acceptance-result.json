@@ -1,0 +1,108 @@
+{
+  "status": "pending_manual_execution",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "graphAiServer",
+  "issue_number": 349,
+  "iteration": 1,
+
+  "service_requirements": {
+    "graphAiServer": {
+      "port": 8005,
+      "health_endpoint": "/health",
+      "status": "not_verified",
+      "reason": "Service not running during test creation"
+    }
+  },
+
+  "pytest_results": {
+    "test_file": "graphAiServer/tests/acceptance/test_issue_349_acceptance.py",
+    "status": "pending",
+    "total": 12,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "output": "Awaiting manual execution"
+  },
+
+  "shell_script_results": {
+    "test_file": "graphAiServer/tests/acceptance/test_issue_349_acceptance.sh",
+    "status": "pending",
+    "tests": [
+      {"name": "Health Check", "status": "pending"},
+      {"name": "AC-1: Tutorial 9 Map @index", "status": "pending"},
+      {"name": "AC-2: Tutorial 11 Merge JSON", "status": "pending"},
+      {"name": "AC-3: Tutorial 12 Conditional (score=85)", "status": "pending"},
+      {"name": "AC-3: Tutorial 12 Conditional (score=45)", "status": "pending"},
+      {"name": "AC-4: Tutorial 1 Regression", "status": "pending"},
+      {"name": "AC-4: Tutorial 8 Regression", "status": "pending"}
+    ]
+  },
+
+  "acceptance_criteria_status": [
+    {
+      "id": "ac-1",
+      "criterion": "Map mode with @index, @first, @last helpers work correctly",
+      "verified": false,
+      "verification_method": "e2e_test",
+      "test_file": "test_issue_349_acceptance.py::test_ac1_tutorial9_map_index_helper",
+      "workflow": "tutorial/9_transform_map.json",
+      "status": "pending_manual_execution"
+    },
+    {
+      "id": "ac-2",
+      "criterion": "Merge mode auto-parses JSON strings",
+      "verified": false,
+      "verification_method": "e2e_test",
+      "test_file": "test_issue_349_acceptance.py::test_ac2_tutorial11_merge_json_parse",
+      "workflow": "tutorial/11_transform_merge.json",
+      "status": "pending_manual_execution"
+    },
+    {
+      "id": "ac-3",
+      "criterion": "Coalesce chain provides conditional output method",
+      "verified": false,
+      "verification_method": "e2e_test",
+      "test_file": "test_issue_349_acceptance.py::test_ac3_tutorial12_conditional_high_score",
+      "workflow": "tutorial/12_conditional_basic.json",
+      "status": "pending_manual_execution"
+    },
+    {
+      "id": "ac-4",
+      "criterion": "Tutorial 9, 11, 12 execute successfully",
+      "verified": false,
+      "verification_method": "e2e_test",
+      "test_file": "test_issue_349_acceptance.py::test_ac4_*",
+      "workflows": [
+        "tutorial/9_transform_map.json",
+        "tutorial/11_transform_merge.json",
+        "tutorial/12_conditional_basic.json"
+      ],
+      "status": "pending_manual_execution"
+    }
+  ],
+
+  "e2e_verification": {
+    "performed": false,
+    "method": "api_call",
+    "actual_behavior_confirmed": false,
+    "reason": "graphAiServer not running - manual execution required"
+  },
+
+  "unit_test_only": false,
+
+  "evidence_files": [
+    "graphAiServer/tests/acceptance/test_issue_349_acceptance.py",
+    "graphAiServer/tests/acceptance/test_issue_349_acceptance.sh"
+  ],
+
+  "manual_execution_instructions": {
+    "step1": "Start graphAiServer: ./scripts/dev-hybrid.sh OR make dev-all",
+    "step2_pytest": "cd graphAiServer && uv run pytest tests/acceptance/test_issue_349_acceptance.py -v",
+    "step2_shell": "./graphAiServer/tests/acceptance/test_issue_349_acceptance.sh",
+    "step3": "Update this file with actual results"
+  },
+
+  "message": "L3 acceptance test files created. Manual execution required after graphAiServer startup.",
+  "created_at": "2026-01-11T00:00:00Z"
+}

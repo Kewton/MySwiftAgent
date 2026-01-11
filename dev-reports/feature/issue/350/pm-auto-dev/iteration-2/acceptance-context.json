@@ -1,0 +1,46 @@
+{
+  "issue_number": 350,
+  "feature_summary": "ワークフロー生成エージェントV2の対象エンジンの切り替え",
+  "acceptance_criteria": [
+    "AC-1: 自然言語からTaskFlow V2ワークフロー生成（HTTP 200、workflow_format='json'）",
+    "AC-2: 生成されたワークフローのgraphAiServerでの実行確認",
+    "AC-3: engineパラメータの動作確認（デフォルトtaskflow、明示指定graphai）",
+    "AC-4: 後方互換性（GraphAI YAML生成機能維持）",
+    "AC-5: セキュリティ検証（HTTP URLの拒否、HTTPS強制）",
+    "AC-6: セキュリティ検証（プライベートIPの拒否、SSRF対策）"
+  ],
+  "labels": ["feature", "agent-layer"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "graphAiServer", "myVault"],
+  "external_dependencies": ["LLM API (Gemini/Claude)"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8005/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "AC-1: TaskFlow V2ワークフロー生成",
+        "command": "curl -s -X POST http://localhost:8004/job-generator -H 'Content-Type: application/json' -d '{\"user_requirement\": \"天気APIから東京の天気を取得して、日本語でフォーマットする\", \"project_id\": \"test\", \"engine\": \"taskflow\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["workflow_format", "json"]
+      },
+      {
+        "name": "AC-3: デフォルトエンジン確認（TaskFlow）",
+        "command": "curl -s -X POST http://localhost:8004/job-generator -H 'Content-Type: application/json' -d '{\"user_requirement\": \"APIを呼び出す\", \"project_id\": \"test\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["workflow_format", "json"]
+      },
+      {
+        "name": "AC-4: GraphAI明示指定",
+        "command": "curl -s -X POST http://localhost:8004/job-generator -H 'Content-Type: application/json' -d '{\"user_requirement\": \"APIを呼び出す\", \"project_id\": \"test\", \"engine\": \"graphai\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["workflow_format", "yaml"]
+      }
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_350_acceptance.py"
+}
