@@ -4,7 +4,12 @@ Issue #342 Task 1.3: AgentConstraintValidator implementation.
 
 This module validates agent-specific constraints:
 - stringTemplateAgent: No JavaScript expressions (JSON.stringify, .map(), etc.)
-- fetchAgent: Timeout in milliseconds, no environment variables in URLs
+- fetchAgent: Timeout in milliseconds, allowed environment variables in URLs
+
+Environment variable handling:
+- graphAiServer resolves specific environment variables at runtime
+- See: docs/design/graphai-env-vars.md for the shared specification
+- ALLOWED_ENV_VARS must be kept in sync with graphAiServer's replacements
 
 ReDoS protection is implemented through:
 - Input length limits
@@ -63,6 +68,17 @@ ENV_VAR_PATTERNS = [
     re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}"),  # {{ENV_VAR}}
     re.compile(r"%[A-Z_][A-Z0-9_]*%"),  # %ENV_VAR%
 ]
+
+# Allowed environment variables (resolved by graphAiServer at runtime)
+# IMPORTANT: Keep in sync with graphAiServer/src/services/graphai.ts:86-92
+# See: docs/design/graphai-env-vars.md
+ALLOWED_ENV_VARS = {
+    "${EXPERTAGENT_BASE_URL}",
+    "${GRAPHAISERVER_BASE_URL}",
+    "${MYVAULT_BASE_URL}",
+    "${JOBQUEUE_BASE_URL}",
+    "${MYSCHEDULER_BASE_URL}",
+}
 
 
 class AgentConstraintValidator(WorkflowValidator):
@@ -154,13 +170,17 @@ class AgentConstraintValidator(WorkflowValidator):
 
         if isinstance(url, str) and url:
             for pattern in ENV_VAR_PATTERNS:
-                if pattern.search(url):
-                    errors.append(
-                        f"URL contains environment variable: '{url}'. "
-                        "GraphAI does not resolve environment variables at runtime. "
-                        "Use a literal URL like 'http://localhost:8004/api'."
-                    )
-                    break
+                match = pattern.search(url)
+                if match:
+                    env_var = match.group(0)
+                    # Check if it's an allowed environment variable
+                    if env_var not in ALLOWED_ENV_VARS:
+                        errors.append(
+                            f"URL contains unknown environment variable: '{env_var}'. "
+                            f"Allowed: {', '.join(sorted(ALLOWED_ENV_VARS))}. "
+                            "See: docs/design/graphai-env-vars.md"
+                        )
+                    break  # Only check first match
 
         return errors
 
@@ -368,26 +388,30 @@ class AgentConstraintValidator(WorkflowValidator):
                         )
                     )
 
-        # Validate URL
+        # Validate URL for unknown environment variables
         inputs = node_def.get("inputs", {})
         url = inputs.get("url", "")
 
         if isinstance(url, str) and url:
             for pattern in ENV_VAR_PATTERNS:
-                if pattern.search(url):
-                    errors.append(
-                        ValidationError(
-                            code=ValidationErrorCode.ENV_VAR_IN_URL,
-                            message=f"URL contains environment variable: '{url}'",
-                            location=f"nodes.{node_name}.inputs.url",
-                            suggestion=(
-                                "Use literal URL like 'http://localhost:8004/api'. "
-                                "GraphAI does not resolve environment variables."
-                            ),
-                            severity="critical",
+                match = pattern.search(url)
+                if match:
+                    env_var = match.group(0)
+                    # Only error on unknown environment variables
+                    if env_var not in ALLOWED_ENV_VARS:
+                        errors.append(
+                            ValidationError(
+                                code=ValidationErrorCode.ENV_VAR_IN_URL,
+                                message=f"URL contains unknown environment variable: '{env_var}'",
+                                location=f"nodes.{node_name}.inputs.url",
+                                suggestion=(
+                                    f"Allowed environment variables: {', '.join(sorted(ALLOWED_ENV_VARS))}. "
+                                    "See: docs/design/graphai-env-vars.md"
+                                ),
+                                severity="critical",
+                            )
                         )
-                    )
-                    break
+                    break  # Only check first match
 
         return errors
 

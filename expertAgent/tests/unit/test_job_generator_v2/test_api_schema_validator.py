@@ -13,9 +13,7 @@ This module tests:
 import pytest
 
 from aiagent.langgraph.jobGeneratorV2.validators import (
-    ValidationError,
     ValidationErrorCode,
-    ValidationResult,
 )
 
 
@@ -101,7 +99,11 @@ class TestAPISchemaValidatorBasic:
     # ========== Unknown Parameter Tests ==========
 
     def test_validate_unknown_parameter_google_search(self, validator):
-        """Detect unknown parameter 'query' in google_search (should be 'queries')."""
+        """Detect parameter name mismatch 'query' in google_search (should be 'queries').
+
+        Issue #344: When a parameter is a known alias (typo), use PARAMETER_NAME_MISMATCH
+        instead of UNKNOWN_API_PARAMETER.
+        """
         workflow = {
             "nodes": {
                 "source": {},
@@ -122,13 +124,18 @@ class TestAPISchemaValidatorBasic:
         errors = validator.validate(workflow)
         assert len(errors) >= 1
         error = errors[0]
-        assert error.code == ValidationErrorCode.UNKNOWN_API_PARAMETER
+        # Issue #344: Use PARAMETER_NAME_MISMATCH for known typos (alias exists)
+        assert error.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH
         assert "query" in error.message.lower()
         # Should suggest 'queries' as the correct parameter
         assert "queries" in error.suggestion.lower()
 
     def test_validate_unknown_parameter_num_results(self, validator):
-        """Detect unknown parameter 'num_results' (should be 'num')."""
+        """Detect parameter name mismatch 'num_results' (should be 'num').
+
+        Issue #344: When a parameter is a known alias (typo), use PARAMETER_NAME_MISMATCH
+        instead of UNKNOWN_API_PARAMETER.
+        """
         workflow = {
             "nodes": {
                 "source": {},
@@ -149,7 +156,8 @@ class TestAPISchemaValidatorBasic:
         errors = validator.validate(workflow)
         assert len(errors) >= 1
         error = errors[0]
-        assert error.code == ValidationErrorCode.UNKNOWN_API_PARAMETER
+        # Issue #344: Use PARAMETER_NAME_MISMATCH for known typos (alias exists)
+        assert error.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH
         assert "num_results" in error.message.lower()
         # Should suggest 'num' as the correct parameter
         assert "num" in error.suggestion.lower()
@@ -435,6 +443,117 @@ class TestAPISchemaValidatorEdgeCases:
         }
         errors = validator.validate(workflow)
         assert len(errors) >= 1
+
+
+class TestAPISchemaValidatorTypeMismatch:
+    """Test type mismatch detection (Issue #344)."""
+
+    @pytest.fixture
+    def validator(self):
+        """Create APISchemaValidator instance."""
+        from aiagent.langgraph.jobGeneratorV2.validators.api_schema_validator import (
+            APISchemaValidator,
+        )
+
+        return APISchemaValidator()
+
+    def test_type_mismatch_queries_should_be_array(self, validator):
+        """Detect type mismatch when 'queries' is string instead of array."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "search": {
+                    "agent": "fetchAgent",
+                    "inputs": {
+                        "url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search",
+                        "method": "POST",
+                        "body": {
+                            "queries": "single string query",  # Wrong! Should be array
+                            "num": 3,
+                        },
+                    },
+                    "timeout": 60000,
+                },
+            }
+        }
+        errors = validator.validate(workflow)
+        assert len(errors) >= 1
+        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        assert len(type_errors) >= 1
+        assert "queries" in type_errors[0].message.lower()
+        assert "array" in type_errors[0].message.lower()
+
+    def test_type_mismatch_skip_reference(self, validator):
+        """References (starting with ':') should be skipped for type validation."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "search": {
+                    "agent": "fetchAgent",
+                    "inputs": {
+                        "url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search",
+                        "method": "POST",
+                        "body": {
+                            "queries": ":source.user_input.queries",  # Reference - should be valid
+                            "num": 3,
+                        },
+                    },
+                    "timeout": 60000,
+                },
+            }
+        }
+        errors = validator.validate(workflow)
+        # No type mismatch errors for references
+        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        assert len(type_errors) == 0
+
+    def test_type_mismatch_integer_as_string(self, validator):
+        """Detect type mismatch when integer param gets wrong type."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "search": {
+                    "agent": "fetchAgent",
+                    "inputs": {
+                        "url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search",
+                        "method": "POST",
+                        "body": {
+                            "queries": [":source.query"],
+                            "num": "not_a_number",  # Wrong! Should be integer
+                        },
+                    },
+                    "timeout": 60000,
+                },
+            }
+        }
+        errors = validator.validate(workflow)
+        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        assert len(type_errors) >= 1
+        assert "num" in type_errors[0].message.lower()
+        assert "integer" in type_errors[0].message.lower()
+
+    def test_type_mismatch_integer_as_digit_string_allowed(self, validator):
+        """Digit strings like '5' should be allowed for integer params."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "search": {
+                    "agent": "fetchAgent",
+                    "inputs": {
+                        "url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search",
+                        "method": "POST",
+                        "body": {
+                            "queries": [":source.query"],
+                            "num": "5",  # Digit string - should be allowed
+                        },
+                    },
+                    "timeout": 60000,
+                },
+            }
+        }
+        errors = validator.validate(workflow)
+        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        assert len(type_errors) == 0
 
 
 class TestValidationErrorCodeExtension:

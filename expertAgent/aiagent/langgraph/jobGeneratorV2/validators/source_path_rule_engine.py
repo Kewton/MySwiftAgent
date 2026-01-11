@@ -3,15 +3,24 @@
 Issue #342 Task 1.2: SourcePathRuleEngine implementation.
 
 This module validates and generates source path references for GraphAI workflows.
-Valid patterns:
-- :source.user_input.* - Previous task output
-- :source.job_params.* - Job parameters
+
+Valid patterns (V1 compatible):
+- :source.query - Direct field reference (V1 style)
+- :source.results - Direct field reference (V1 style)
+- :source.user_input.* - Explicit user input reference (V2 style)
+- :source.job_params.* - Job parameters reference (V2 style)
 - :node_name.* - Same workflow node reference
 
 Invalid patterns:
-- :source.* (missing user_input/job_params)
+- :source (no field specified)
+- :source. (trailing dot, no field)
 - {{job.body}} (legacy pattern)
 - {{tasks[N].output_data}} (legacy pattern)
+
+V1 Compatibility Note:
+- V1 workflows use :source.fieldName directly (e.g., :source.query)
+- V2 prefers :source.user_input.fieldName but accepts V1 patterns
+- This is controlled by the v1_compatible parameter (default: True)
 """
 
 from __future__ import annotations
@@ -25,8 +34,8 @@ from aiagent.langgraph.jobGeneratorV2.validators import (
     WorkflowValidator,
 )
 
-# Patterns for validation
-VALID_SOURCE_PREFIXES = [
+# V2 explicit prefixes (preferred but not required)
+V2_EXPLICIT_PREFIXES = [
     ":source.user_input.",
     ":source.job_params.",
 ]
@@ -84,15 +93,36 @@ class SourcePathRuleEngine(WorkflowValidator):
                     f"Legacy pattern detected: '{path}'. Use :source.user_input.* or :source.job_params.* instead",
                 )
 
-        # Check source references
-        if path.startswith(":source."):
-            # Must have user_input or job_params after :source.
-            if not any(path.startswith(prefix) for prefix in VALID_SOURCE_PREFIXES):
+        # Check source references (V1 compatible)
+        # Valid: :source.query, :source.user_input.data, :source.job_params.model
+        # Invalid: :source, :source.
+        if path.startswith(":source"):
+            # Check for just ":source" without any field
+            if path == ":source":
                 return False, (
                     f"Invalid source path '{path}'. "
-                    "Use :source.user_input.* for previous task output "
-                    "or :source.job_params.* for job parameters"
+                    ":source must be followed by a field name "
+                    "(e.g., :source.query, :source.user_input.data)"
                 )
+            # Check for ":source." with nothing after
+            if path == ":source." or not path.startswith(":source."):
+                return False, (
+                    f"Invalid source path '{path}'. "
+                    ":source must be followed by a field name "
+                    "(e.g., :source.query, :source.user_input.data)"
+                )
+            # Get the remainder after ":source."
+            remainder = path[8:]  # len(":source.") == 8
+            # Check if there's at least one valid field name
+            if not remainder or remainder.startswith("."):
+                return False, (
+                    f"Invalid source path '{path}'. "
+                    ":source must be followed by a field name "
+                    "(e.g., :source.query, :source.user_input.data)"
+                )
+            # V1 compatible: :source.fieldName is valid
+            # V2 style: :source.user_input.*, :source.job_params.* also valid
+            # All pass at this point
 
         # Check for numeric-starting references (like :8004 from URLs)
         if path.startswith(":"):
@@ -286,8 +316,8 @@ class SourcePathRuleEngine(WorkflowValidator):
                             message=error_msg,
                             location=location,
                             suggestion=(
-                                "Use :source.user_input.{field} for previous task output "
-                                "or :source.job_params.{field} for job parameters"
+                                "Use :source.{field} (V1 style) or "
+                                ":source.user_input.{field} / :source.job_params.{field} (V2 style)"
                             ),
                             severity="critical",
                         )
@@ -307,8 +337,8 @@ class SourcePathRuleEngine(WorkflowValidator):
                                     message=error_msg,
                                     location=f"{location}[{i}]",
                                     suggestion=(
-                                        "Use :source.user_input.{field} for previous task output "
-                                        "or :source.job_params.{field} for job parameters"
+                                        "Use :source.{field} (V1 style) or "
+                                        ":source.user_input.{field} / :source.job_params.{field} (V2 style)"
                                     ),
                                     severity="critical",
                                 )

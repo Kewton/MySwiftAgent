@@ -168,6 +168,33 @@ class TestAgentConstraintValidatorFetchAgent:
         errors = validator.validate_fetch_agent(config)
         assert len(errors) == 0
 
+    def test_valid_url_expertagent_base_url(self, validator):
+        """URL with ${EXPERTAGENT_BASE_URL} is valid (allowed env var)."""
+        config = {
+            "agent": "fetchAgent",
+            "inputs": {"url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search"},
+        }
+        errors = validator.validate_fetch_agent(config)
+        assert len(errors) == 0, f"Unexpected errors: {errors}"
+
+    def test_valid_url_graphaiserver_base_url(self, validator):
+        """URL with ${GRAPHAISERVER_BASE_URL} is valid (allowed env var)."""
+        config = {
+            "agent": "fetchAgent",
+            "inputs": {"url": "${GRAPHAISERVER_BASE_URL}/api/workflows"},
+        }
+        errors = validator.validate_fetch_agent(config)
+        assert len(errors) == 0, f"Unexpected errors: {errors}"
+
+    def test_valid_url_myvault_base_url(self, validator):
+        """URL with ${MYVAULT_BASE_URL} is valid (allowed env var)."""
+        config = {
+            "agent": "fetchAgent",
+            "inputs": {"url": "${MYVAULT_BASE_URL}/api/secrets"},
+        }
+        errors = validator.validate_fetch_agent(config)
+        assert len(errors) == 0, f"Unexpected errors: {errors}"
+
     def test_invalid_url_env_var_dollar(self, validator):
         """URL with ${ENV_VAR} is invalid."""
         config = {

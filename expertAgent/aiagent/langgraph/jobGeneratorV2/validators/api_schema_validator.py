@@ -365,28 +365,34 @@ class APISchemaValidator(WorkflowValidator):
         schema_params = schema.get("parameters", {})
         aliases = PARAMETER_ALIASES.get(api_path, {})
 
-        # Check for unknown parameters
+        # Check for unknown parameters and typos
         for param_name in body.keys():
             if param_name not in schema_params:
                 # Check if it's a known alias (typo)
-                suggestion = ""
                 if param_name in aliases:
                     correct_name = aliases[param_name]
-                    suggestion = f"Did you mean '{correct_name}'? Use '{correct_name}' instead of '{param_name}'."
+                    # Issue #344: Use PARAMETER_NAME_MISMATCH for typo detection
+                    errors.append(
+                        ValidationError(
+                            code=ValidationErrorCode.PARAMETER_NAME_MISMATCH,
+                            message=f"Parameter name mismatch: '{param_name}' should be '{correct_name}' for API {api_path}",
+                            location=f"{location}.{param_name}",
+                            suggestion=f"Did you mean '{correct_name}'? Use '{correct_name}' instead of '{param_name}'.",
+                            severity="major",
+                        )
+                    )
                 else:
                     # List valid parameters
                     valid_params = list(schema_params.keys())
-                    suggestion = f"Valid parameters: {', '.join(valid_params)}"
-
-                errors.append(
-                    ValidationError(
-                        code=ValidationErrorCode.UNKNOWN_API_PARAMETER,
-                        message=f"Unknown parameter '{param_name}' for API {api_path}",
-                        location=f"{location}.{param_name}",
-                        suggestion=suggestion,
-                        severity="major",
+                    errors.append(
+                        ValidationError(
+                            code=ValidationErrorCode.UNKNOWN_API_PARAMETER,
+                            message=f"Unknown parameter '{param_name}' for API {api_path}",
+                            location=f"{location}.{param_name}",
+                            suggestion=f"Valid parameters: {', '.join(valid_params)}",
+                            severity="major",
+                        )
                     )
-                )
 
         # Check for missing required parameters
         for param_name, param_spec in schema_params.items():
@@ -401,6 +407,63 @@ class APISchemaValidator(WorkflowValidator):
                             severity="critical",
                         )
                     )
+
+        # Issue #344: Check for type mismatches
+        for param_name, param_value in body.items():
+            if param_name in schema_params:
+                param_spec = schema_params[param_name]
+                if isinstance(param_spec, dict):
+                    expected_type = param_spec.get("type", "")
+
+                    # Check array type
+                    if expected_type == "array" and not isinstance(param_value, list):
+                        # Skip if it's a reference (e.g., ":source.items")
+                        if isinstance(param_value, str) and param_value.startswith(":"):
+                            continue
+                        errors.append(
+                            ValidationError(
+                                code=ValidationErrorCode.PARAMETER_TYPE_MISMATCH,
+                                message=f"Type mismatch: '{param_name}' should be array, got {type(param_value).__name__}",
+                                location=f"{location}.{param_name}",
+                                suggestion=f"Wrap '{param_name}' value in brackets: [{param_value}]",
+                                severity="major",
+                            )
+                        )
+
+                    # Check integer type
+                    elif expected_type == "integer":
+                        if not isinstance(param_value, int):
+                            # Skip if it's a reference
+                            if isinstance(param_value, str) and param_value.startswith(":"):
+                                continue
+                            # Allow string representation of int
+                            if isinstance(param_value, str) and param_value.isdigit():
+                                continue
+                            errors.append(
+                                ValidationError(
+                                    code=ValidationErrorCode.PARAMETER_TYPE_MISMATCH,
+                                    message=f"Type mismatch: '{param_name}' should be integer, got {type(param_value).__name__}",
+                                    location=f"{location}.{param_name}",
+                                    suggestion=f"Use an integer value for '{param_name}'",
+                                    severity="major",
+                                )
+                            )
+
+                    # Check string type
+                    elif expected_type == "string":
+                        if not isinstance(param_value, str):
+                            # Skip if it's a reference in a list
+                            if isinstance(param_value, list):
+                                continue
+                            errors.append(
+                                ValidationError(
+                                    code=ValidationErrorCode.PARAMETER_TYPE_MISMATCH,
+                                    message=f"Type mismatch: '{param_name}' should be string, got {type(param_value).__name__}",
+                                    location=f"{location}.{param_name}",
+                                    suggestion=f"Use a string value for '{param_name}'",
+                                    severity="major",
+                                )
+                            )
 
         return errors
 

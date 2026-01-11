@@ -1,0 +1,90 @@
+{
+  "issue_number": 344,
+  "iteration": 2,
+  "status": "success",
+  "test_file": "expertAgent/tests/acceptance/test_issue_344_acceptance.py",
+  "execution_timestamp": "2026-01-09T12:15:00Z",
+  "test_results": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 1,
+    "deselected_external": 1
+  },
+  "acceptance_criteria_verification": [
+    {
+      "ac_id": "AC-1",
+      "description": "APISchemaValidatorがValidationPipelineに統合されている",
+      "tests": [
+        "test_ac1_api_schema_validator_integrated_in_pipeline",
+        "test_ac1_validation_error_codes_exist"
+      ],
+      "result": "PASSED",
+      "evidence": "ValidationPipeline.validatorsにAPISchemaValidatorが含まれることを確認"
+    },
+    {
+      "ac_id": "AC-2",
+      "description": "正しいパラメータが検証に通過する",
+      "tests": [
+        "test_ac2_valid_google_search_workflow",
+        "test_ac2_valid_fetch_web_content_workflow"
+      ],
+      "result": "PASSED",
+      "evidence": "queries配列、url必須パラメータが正しく検証通過"
+    },
+    {
+      "ac_id": "AC-3",
+      "description": "typo検出（query → queries）が動作する",
+      "tests": [
+        "test_ac3_typo_detection_query_to_queries",
+        "test_ac3_typo_detection_num_results_to_num"
+      ],
+      "result": "PASSED",
+      "evidence": "PARAMETER_NAME_MISMATCHエラーコードが返され、'queries'への修正が提案される"
+    },
+    {
+      "ac_id": "AC-4",
+      "description": "必須パラメータ欠落の検出が動作する",
+      "tests": [
+        "test_ac4_missing_required_queries",
+        "test_ac4_missing_required_url"
+      ],
+      "result": "PASSED",
+      "evidence": "MISSING_REQUIRED_PARAMETERエラーコードが返される"
+    },
+    {
+      "ac_id": "AC-5",
+      "description": "型不一致の検出が動作する",
+      "tests": [
+        "test_ac5_type_mismatch_queries_should_be_array",
+        "test_ac5_type_mismatch_skip_reference"
+      ],
+      "result": "PASSED",
+      "evidence": "PARAMETER_TYPE_MISMATCHエラーコードが返される。参照（:で始まる）はスキップ"
+    }
+  ],
+  "integration_verification": [
+    {
+      "test": "test_api_schema_validator_in_validation_pipeline",
+      "result": "PASSED",
+      "evidence": "ValidationPipeline内でAPISchemaValidatorが3番目のバリデーターとして存在"
+    },
+    {
+      "test": "test_parameter_aliases_coverage",
+      "result": "PASSED",
+      "evidence": "PARAMETER_ALIASESが/utility/google_search, /utility/fetch_web_contentをカバー"
+    }
+  ],
+  "e2e_verification": {
+    "status": "skipped",
+    "reason": "externalマーク付きテストは手動実行が必要（APIキー要）",
+    "test": "test_e2e_validation_pipeline_via_api"
+  },
+  "notes": [
+    "全12件の受入テストがパス",
+    "externalマーク付きE2Eテストは手動実行が必要",
+    "APISchemaValidatorがValidationPipelineに正しく統合されていることを確認",
+    "typo検出、必須パラメータ検証、型検証がすべて動作",
+    "参照（:source.field形式）は型検証をスキップする仕様を確認"
+  ]
+}

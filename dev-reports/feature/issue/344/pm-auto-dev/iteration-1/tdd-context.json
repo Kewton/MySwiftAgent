@@ -1,0 +1,129 @@
+{
+  "issue_number": 344,
+  "title": "V2 Workflow Generator: APIスキーマ検証機構の実装とプロンプト整合性改善",
+  "acceptance_criteria": [
+    "APIスキーマ検証: 生成されたワークフローのbodyパラメータがAPIスキーマと照合され、不一致時にエラーが報告される",
+    "プロンプト整合性: Few-shot examples、Agent Rules、API RulesがAPIスキーマと一貫した情報を提供する",
+    "検証カバレッジ: 主要API（google_search, gmail_search, fetch_web_content）のスキーマ検証が実装される",
+    "リグレッション防止: 単体テスト・結合テストで検証漏れのケースがカバーされる",
+    "エラーメッセージ品質: 検証エラー時に具体的な修正提案がLLMにフィードバックされる"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ValidationErrorCode拡張（新規エラーコード追加）",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"],
+      "dependencies": [],
+      "details": "UNKNOWN_API_PARAMETER, MISSING_REQUIRED_PARAMETER, PARAMETER_TYPE_MISMATCH, PARAMETER_NAME_MISMATCH を追加"
+    },
+    {
+      "task_id": "1.2",
+      "description": "APISchemaValidatorクラス実装",
+      "estimated_hours": 2.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py"],
+      "dependencies": ["1.1"],
+      "details": "WorkflowValidator基底クラスを継承、fetchAgentノード抽出、URLからAPIエンドポイント特定、bodyパラメータとスキーマ照合"
+    },
+    {
+      "task_id": "1.3",
+      "description": "PARAMETER_ALIASES定義（typo検出用静的マッピング）",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py"],
+      "dependencies": ["1.2"],
+      "details": "google_search: query→queries, num_results→num; gmail_search: max→max_results"
+    },
+    {
+      "task_id": "1.4",
+      "description": "validators/__init__.py エクスポート追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "api_rules.py修正（古い形式query→queriesに統一）",
+      "estimated_hours": 1.0,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py"],
+      "dependencies": [],
+      "details": "37行目: query: :source.query → queries: [':source.user_input.query']"
+    },
+    {
+      "task_id": "2.2",
+      "description": "agent_rules.py修正（古い形式query→queriesに統一）",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py"],
+      "dependencies": [],
+      "details": "27行目: query: :source.query → queries: [':source.user_input.query']"
+    },
+    {
+      "task_id": "3.1",
+      "description": "ValidationPipelineへのAPISchemaValidator追加",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py"],
+      "dependencies": ["1.2", "1.4"],
+      "details": "validators配列にAPISchemaValidator()を追加"
+    },
+    {
+      "task_id": "4.1",
+      "description": "単体テスト作成（APISchemaValidator）",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_api_schema_validator.py"],
+      "dependencies": ["1.2"],
+      "details": "正常系、パラメータ名不一致、型不一致、必須パラメータ欠落、類似パラメータ名提案のテストケース"
+    },
+    {
+      "task_id": "4.2",
+      "description": "スキーマ定義テスト作成",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_api_schema_definitions.py"],
+      "dependencies": ["1.2"],
+      "details": "スキーマ存在確認、必須フィールド確認、PARAMETER_ALIASESカバレッジ確認"
+    },
+    {
+      "task_id": "4.3",
+      "description": "結合テスト作成（ValidationPipeline統合）",
+      "estimated_hours": 1.0,
+      "deliverables": ["expertAgent/tests/integration/test_api_schema_validation_flow.py"],
+      "dependencies": ["3.1"],
+      "details": "パイプライン統合、APIスキーマエラー検出、エラーフィードバック確認"
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py（修正）",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py（修正）",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py（修正）",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py（修正）",
+    "expertAgent/tests/unit/test_job_generator_v2/test_api_schema_validator.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_api_schema_definitions.py",
+    "expertAgent/tests/integration/test_api_schema_validation_flow.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全シナリオパス",
+    "静的解析エラーゼロ（Ruff, MyPy）",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "security_requirements": [
+    "yaml.safe_load()を使用（yaml.load()禁止）",
+    "パストラバーサル防止（スキーマファイルパス検証）"
+  ],
+  "existing_patterns": {
+    "base_class": "WorkflowValidator",
+    "error_dataclass": "ValidationError",
+    "result_dataclass": "ValidationResult",
+    "pipeline": "ValidationPipeline"
+  },
+  "related_files": {
+    "base_validator": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+    "existing_validators": [
+      "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/source_path_rule_engine.py",
+      "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/agent_constraint_validator.py"
+    ],
+    "api_schema_source": "expertAgent/aiagent/langgraph/jobGeneratorV2/schemas/available_apis.yaml",
+    "api_schema_injector": "expertAgent/aiagent/langgraph/jobGeneratorV2/injectors/api_schema_injector.py"
+  }
+}

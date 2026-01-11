@@ -57,23 +57,39 @@ class TestSourcePathRuleEngine:
         assert is_valid is True
         assert error == ""
 
-    def test_validate_path_with_invalid_source_direct(self, engine):
-        """Invalid path: :source.query (missing user_input/job_params)"""
+    # ========== V1 Compatible Path Tests ==========
+
+    def test_validate_path_with_v1_compatible_query(self, engine):
+        """V1 compatible path: :source.query (allowed for backward compatibility)"""
         is_valid, error = engine.validate_path(":source.query")
-        assert is_valid is False
-        assert "user_input" in error or "job_params" in error
+        assert is_valid is True
+        assert error == ""
 
-    def test_validate_path_with_invalid_source_body(self, engine):
-        """Invalid path: :source.body.field (body is not valid)"""
+    def test_validate_path_with_v1_compatible_body_field(self, engine):
+        """V1 compatible path: :source.body.field (allowed for backward compatibility)"""
         is_valid, error = engine.validate_path(":source.body.field")
-        assert is_valid is False
-        assert "user_input" in error or "job_params" in error
+        assert is_valid is True
+        assert error == ""
 
-    def test_validate_path_with_invalid_source_results(self, engine):
-        """Invalid path: :source.search_results (should be user_input.search_results)"""
+    def test_validate_path_with_v1_compatible_results(self, engine):
+        """V1 compatible path: :source.search_results (allowed for backward compatibility)"""
         is_valid, error = engine.validate_path(":source.search_results")
+        assert is_valid is True
+        assert error == ""
+
+    # ========== Truly Invalid Path Tests ==========
+
+    def test_validate_path_with_invalid_source_alone(self, engine):
+        """Invalid path: :source (no field specified)"""
+        is_valid, error = engine.validate_path(":source")
         assert is_valid is False
-        assert "user_input" in error or "job_params" in error
+        assert "field name" in error.lower() or "must be followed" in error.lower()
+
+    def test_validate_path_with_invalid_source_trailing_dot(self, engine):
+        """Invalid path: :source. (trailing dot, no field)"""
+        is_valid, error = engine.validate_path(":source.")
+        assert is_valid is False
+        assert "field name" in error.lower() or "must be followed" in error.lower()
 
     def test_validate_path_with_legacy_job_body(self, engine):
         """Invalid path: {{job.body}} (legacy pattern)"""
@@ -136,16 +152,33 @@ class TestSourcePathRuleEngine:
         errors = engine.validate_workflow(workflow)
         assert len(errors) == 0
 
-    def test_validate_workflow_with_invalid_paths(self, engine):
-        """Validate workflow detects invalid paths."""
+    def test_validate_workflow_with_v1_compatible_paths(self, engine):
+        """Validate workflow accepts V1 compatible paths."""
         workflow = {
             "nodes": {
                 "source": {},
                 "search": {
                     "agent": "fetchAgent",
                     "inputs": {
-                        "query": ":source.query",  # Invalid: missing user_input
-                        "results": ":source.body.field",  # Invalid: body
+                        "query": ":source.query",  # V1 compatible
+                        "results": ":source.body.field",  # V1 compatible
+                    },
+                },
+            }
+        }
+        errors = engine.validate_workflow(workflow)
+        assert len(errors) == 0  # V1 patterns are now valid
+
+    def test_validate_workflow_with_invalid_paths(self, engine):
+        """Validate workflow detects truly invalid paths."""
+        workflow = {
+            "nodes": {
+                "source": {},
+                "search": {
+                    "agent": "fetchAgent",
+                    "inputs": {
+                        "bad_ref": ":source",  # Invalid: no field
+                        "bad_dot": ":source.",  # Invalid: trailing dot
                     },
                 },
             }

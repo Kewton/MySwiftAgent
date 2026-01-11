@@ -1,0 +1,197 @@
+{
+  "issue_number": 344,
+  "iteration": 2,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "APISchemaValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "line_number": 70,
+      "description": "WorkflowValidator継承クラス。ワークフローのbodyパラメータをAPIスキーマと照合して検証する",
+      "expected_callers": ["ValidationPipeline"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "PARAMETER_ALIASES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "line_number": 31,
+      "description": "よくある間違い（typo）を検出するための静的マッピング。query→queries, num_results→num等",
+      "expected_callers": ["APISchemaValidator._validate_parameters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "UNKNOWN_API_PARAMETER",
+      "type": "enum_value",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 92,
+      "description": "未定義のAPIパラメータを検出した際のエラーコード（aliasにない未知のパラメータ用）",
+      "expected_callers": ["APISchemaValidator._validate_parameters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py:389"
+    },
+    {
+      "feature_id": "F4",
+      "name": "MISSING_REQUIRED_PARAMETER",
+      "type": "enum_value",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 93,
+      "description": "必須パラメータが欠落している際のエラーコード",
+      "expected_callers": ["APISchemaValidator._validate_parameters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py:403"
+    },
+    {
+      "feature_id": "F5",
+      "name": "PARAMETER_TYPE_MISMATCH",
+      "type": "enum_value",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 94,
+      "description": "パラメータの型が不一致の際のエラーコード（例: string vs array）。Iteration 2で型検証ロジックを追加。",
+      "expected_callers": ["APISchemaValidator._validate_parameters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py:425,444,460",
+      "iteration_2_fix": "型検証ロジックを追加し、array/integer/string型のミスマッチを検出"
+    },
+    {
+      "feature_id": "F6",
+      "name": "PARAMETER_NAME_MISMATCH",
+      "type": "enum_value",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "line_number": 95,
+      "description": "パラメータ名が不一致の際のエラーコード（typo検出時に使用）。Iteration 2でtypo検出に使用するよう修正。",
+      "expected_callers": ["APISchemaValidator._validate_parameters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py:377",
+      "iteration_2_fix": "UNKNOWN_API_PARAMETERの代わりにtypo検出（alias存在時）で使用するよう修正"
+    },
+    {
+      "feature_id": "F7",
+      "name": "api_rules.py queries array example",
+      "type": "prompt_rule",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py",
+      "line_number": 37,
+      "description": "Google Search APIのqueriesパラメータを配列形式で指定する正しい例",
+      "expected_callers": ["LLM via prompt"],
+      "expected_call_location": "ワークフロー生成時のプロンプトに注入"
+    },
+    {
+      "feature_id": "F8",
+      "name": "agent_rules.py fetchAgent example",
+      "type": "prompt_rule",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "line_number": 27,
+      "description": "fetchAgentでGoogle Search APIを呼び出す正しい例（queries配列形式）",
+      "expected_callers": ["LLM via prompt"],
+      "expected_call_location": "ワークフロー生成時のプロンプトに注入"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_api_schema_validator.py::TestAPISchemaValidatorBasic::*",
+        "test_api_schema_validator.py::TestAPISchemaValidatorEdgeCases::*"
+      ],
+      "integration_tests": [
+        "test_api_schema_validation_flow.py::TestAPISchemaValidationFlow::*"
+      ],
+      "acceptance_tests": [
+        "test_issue_344_acceptance.py::TestIssue344Acceptance::*"
+      ]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_api_schema_validator.py::TestAPISchemaValidatorParameterAliases::*"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "test_api_schema_validator.py::TestAPISchemaValidatorBasic::test_validate_unknown_parameter_no_suggestion"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [
+        "test_api_schema_validator.py::TestAPISchemaValidatorBasic::test_validate_missing_required*"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": [
+        "test_api_schema_validator.py::TestAPISchemaValidatorTypeMismatch::*"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": [
+        "test_api_schema_validator.py::TestAPISchemaValidatorBasic::test_validate_unknown_parameter_google_search",
+        "test_api_schema_validator.py::TestAPISchemaValidatorBasic::test_validate_unknown_parameter_num_results"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/pipeline/validation_pipeline.py",
+      "integration_type": "pipeline_validator",
+      "integration_method": "APISchemaValidator() added to validators list",
+      "verified": true
+    },
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py",
+      "integration_type": "module_export",
+      "integration_method": "APISchemaValidator available via submodule import",
+      "verified": true
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "integration_type": "internal_use",
+      "integration_method": "Used in _validate_parameters method at line 366",
+      "verified": true
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "integration_type": "error_code_use",
+      "integration_method": "Used for truly unknown params (not in aliases) at line 389",
+      "verified": true
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "integration_type": "error_code_use",
+      "integration_method": "Used for missing required params at line 403",
+      "verified": true
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "integration_type": "error_code_use",
+      "integration_method": "Used for type mismatches (array, integer, string) at lines 425, 444, 460",
+      "verified": true,
+      "iteration_2_verified": true
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/api_schema_validator.py",
+      "integration_type": "error_code_use",
+      "integration_method": "Used for typo detection when parameter is in aliases at line 377",
+      "verified": true,
+      "iteration_2_verified": true
+    }
+  ]
+}
