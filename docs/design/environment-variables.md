@@ -184,6 +184,14 @@ MYVAULT_SERVICE_NAME=expertagent
 MYVAULT_SERVICE_TOKEN=wBZrUftRV6_MsCj8iVXb-uc60-A95HqyuESL2tVFGQ4
 MYVAULT_DEFAULT_PROJECT=expertagent
 
+# ===== Job Generator V2設定（Issue #342, #350） =====
+USE_JOB_GENERATOR_V2=true                           # V2アーキテクチャ有効化
+
+# ===== Workflow Generator V2設定（Issue #350） =====
+WORKFLOW_GENERATOR_ENGINE=taskflow                  # エンジン選択: taskflow (default) | graphai
+WORKFLOW_GENERATOR_V2_MODEL=gemini-3-flash-preview  # TaskFlow生成モデル
+WORKFLOW_GENERATOR_V2_TEMPERATURE=0.3               # 生成温度
+
 # ===== Ollama設定（ローカルLLM） =====
 OLLAMA_URL=http://host.docker.internal:11434
 OLLAMA_DEF_SMALL_MODEL=gemma3:27b-it-q8_0
@@ -464,6 +472,19 @@ echo "MYVAULT_SERVICE_TOKEN=$EXPERTAGENT_TOKEN" >> expertAgent/.env
 | **MSA_MASTER_KEY** | myVault/.env | **必須** | マスター暗号化キー |
 | **TOKEN_{service}** | myVault/.env | **必須** | サービス認証トークン |
 | **MYVAULT_SERVICE_TOKEN** | expertAgent/.env | **必須** | ExpertAgent→MyVault認証 |
+
+### Workflow Generator V2 設定（Issue #350）
+
+| 項目 | 設定場所 | デフォルト | 説明 |
+|------|---------|----------|------|
+| **USE_JOB_GENERATOR_V2** | expertAgent/.env | `false` | V2アーキテクチャ有効化フラグ |
+| **WORKFLOW_GENERATOR_ENGINE** | expertAgent/.env | `taskflow` | エンジン選択（`taskflow` または `graphai`） |
+| **WORKFLOW_GENERATOR_V2_MODEL** | expertAgent/.env | `gemini-3-flash-preview` | TaskFlow生成LLMモデル |
+| **WORKFLOW_GENERATOR_V2_TEMPERATURE** | expertAgent/.env | `0.3` | 生成温度 |
+
+**注意**:
+- `gpt-5-mini` は OpenAI Structured Output に最適ですが、複雑なスキーマでは 1-5分 かかる場合があります
+- `gemini-3-flash-preview` は高速（5-20秒）ですが、精度が若干低下する可能性があります
 
 ### 削除された設定項目
 

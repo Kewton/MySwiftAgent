@@ -4,9 +4,65 @@
 
 Job Generator V2 is a refactored architecture for the Job/Task Auto-Generation system in ExpertAgent. It addresses the infinite loop bug (retry_count issue) and provides improved maintainability through clear phase separation and proper error recovery.
 
-**Issue**: #342
+**Issues**: #342 (V2 Architecture), #350 (TaskFlow Engine)
 
 **Status**: Available via feature flag (default: disabled)
+
+---
+
+## Workflow Engine Selection (Issue #350)
+
+V2 supports two workflow generation engines:
+
+| Engine | Format | Default | Model | Use Case |
+|--------|--------|---------|-------|----------|
+| `taskflow` | JSON | ✅ | gpt-5-mini | OpenAI Structured Output |
+| `graphai` | YAML | - | claude-haiku-4-5 | Legacy GraphAI workflows |
+
+### TaskFlow V2 Engine (Default)
+
+TaskFlow V2 generates JSON workflows compatible with OpenAI Structured Output.
+
+**Key Features:**
+- OpenAI Structured Output compatibility (no Union types)
+- UnifiedStepConfig model (single config for all step types)
+- JSON string fields for dynamic schemas
+
+**Environment Variables:**
+```bash
+WORKFLOW_GENERATOR_ENGINE=taskflow           # Engine selection (default)
+WORKFLOW_GENERATOR_V2_MODEL=gpt-5-mini       # LLM model for generation
+WORKFLOW_GENERATOR_V2_TEMPERATURE=0.3        # Generation temperature
+```
+
+**Performance Note:**
+- gpt-5-mini with complex schemas: 1-5 minutes (OpenAI processing)
+- gemini-3-flash-preview: 5-20 seconds (faster, but less accurate)
+
+### GraphAI Engine (Legacy)
+
+GraphAI generates YAML workflows for the original GraphAI execution engine.
+
+```bash
+WORKFLOW_GENERATOR_ENGINE=graphai            # Use GraphAI engine
+WORKFLOW_GENERATOR_MODEL=claude-haiku-4-5    # LLM model
+```
+
+See: [GRAPHAI_WORKFLOW_GENERATION_RULES.md](../../graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md)
+
+### Programmatic Engine Selection
+
+```python
+from aiagent.langgraph.jobGeneratorV2 import JobGeneratorV2Adapter
+
+# Use TaskFlow (default)
+adapter = JobGeneratorV2Adapter(engine="taskflow")
+
+# Use GraphAI
+adapter = JobGeneratorV2Adapter(engine="graphai")
+```
+
+---
 
 ## Key Improvements
 
@@ -19,7 +75,7 @@ V2 separates job generation into 4 distinct phases:
 | **TASK_BREAKDOWN** | Decompose requirements into tasks | TaskBreakdownWorkflow |
 | **INTERFACE_DESIGN** | Define I/O schemas for tasks | InterfaceDesignWorkflow |
 | **REGISTRATION** | Register masters in jobqueue | RegistrationWorkflow |
-| **WORKFLOW_GEN** | Generate GraphAI YAML workflow | WorkflowGenWorkflow |
+| **WORKFLOW_GEN** | Generate workflow (TaskFlow JSON or GraphAI YAML) | WorkflowGenWorkflow |
 
 ### 2. Per-Phase Retry Management
 
@@ -94,7 +150,9 @@ JobGenerationOrchestrator
     |       +-- JobRegistrarSubWorkflow
     |
     +-- Phase: WORKFLOW_GEN
-            |-- YamlGeneratorSubWorkflow
+            |-- EngineStrategy (TaskFlow or GraphAI)
+            |   |-- TaskFlowGeneratorStrategy (JSON)
+            |   +-- GraphAIGeneratorStrategy (YAML)
             +-- TestRunnerSubWorkflow
 ```
 
@@ -192,6 +250,8 @@ curl -X POST http://localhost:8004/aiagent-api/v1/job-generator \
 | Phase separation | Implicit in node flow | Explicit `Phase` enum |
 | Testability | Requires full graph | Each workflow testable |
 | Infinite loop risk | Possible (bug) | Prevented by design |
+| Workflow engine | GraphAI only | TaskFlow (default) + GraphAI |
+| Output format | YAML only | JSON (TaskFlow) + YAML (GraphAI) |
 
 ## Configuration
 
@@ -202,6 +262,11 @@ curl -X POST http://localhost:8004/aiagent-api/v1/job-generator \
 USE_JOB_GENERATOR_V2: bool = False  # Enable V2 architecture
 JOB_GENERATOR_MAX_TOKENS: int = 32768
 JOB_GENERATOR_REQUIREMENT_ANALYSIS_MODEL: str = "claude-haiku-4-5"
+
+# TaskFlow V2 settings (Issue #350)
+WORKFLOW_GENERATOR_ENGINE: str = "taskflow"  # "taskflow" or "graphai"
+WORKFLOW_GENERATOR_V2_MODEL: str = "gemini-3-flash-preview"  # LLM model
+WORKFLOW_GENERATOR_V2_TEMPERATURE: float = 0.3  # Generation temperature
 ```
 
 ### Retry Limits
