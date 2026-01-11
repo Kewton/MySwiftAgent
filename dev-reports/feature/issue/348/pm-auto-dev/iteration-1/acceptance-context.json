@@ -1,0 +1,62 @@
+{
+  "issue_number": 348,
+  "iteration": 1,
+  "target_project": "graphAiServer",
+  "test_file": "graphAiServer/tests/acceptance/test_issue_348_acceptance.py",
+  "base_url": "http://localhost:8005",
+  "acceptance_criteria": [
+    {
+      "id": "AC-COND-1",
+      "description": "Conditional Stepでif/else分岐が実行できること",
+      "test_type": "conditional_execution"
+    },
+    {
+      "id": "AC-COND-2",
+      "description": "条件式がセキュアにパースされること（ホワイトリスト方式）",
+      "test_type": "condition_security"
+    },
+    {
+      "id": "AC-VAL-1",
+      "description": "Workflow Validatorが3層バリデーション（Schema/Semantic/Runtime）を提供すること",
+      "test_type": "multi_level_validation"
+    },
+    {
+      "id": "AC-VAL-2",
+      "description": "エージェントフィードバック（agentSummary）でLLM向け修正ヒントが提供されること",
+      "test_type": "agent_feedback"
+    }
+  ],
+  "implemented_features": [
+    "evaluateCondition - Whitelist-based condition parser",
+    "executeConditional - Conditional block executor with nesting limit",
+    "WorkflowValidator - 3-level validation (schema/semantic/runtime)",
+    "SemanticValidator - Variable reference validation",
+    "AgentFeedback - LLM-oriented fix hints"
+  ],
+  "api_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v2/workflows/validate",
+      "params": {
+        "definition": "workflow definition object",
+        "options": {
+          "level": "1|2|3 (default 2)",
+          "strict": "boolean",
+          "checkUrls": "boolean",
+          "includeAgentFeedback": "boolean (default true)"
+        }
+      },
+      "response": {
+        "valid": "boolean",
+        "errors": "array (backward compatible)",
+        "issues": "array with severity",
+        "summary": "{ errors, warnings, infos }",
+        "agentSummary": "LLM feedback object"
+      }
+    }
+  ],
+  "test_commands": {
+    "run_tests": "cd graphAiServer && uv run pytest tests/acceptance/test_issue_348_acceptance.py -v",
+    "run_specific": "cd graphAiServer && uv run pytest tests/acceptance/test_issue_348_acceptance.py::TestClass::test_method -v"
+  }
+}

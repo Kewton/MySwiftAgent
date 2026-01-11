@@ -1,0 +1,60 @@
+{
+  "issue_number": 345,
+  "title": "fix: LLMプロンプトのAgent出力形式に関する誤記載を修正",
+  "iteration": 1,
+  "acceptance_criteria": [
+    "reference_rules.pyから.resultに関する誤った記述を削除",
+    "agent_rules.pyのfetchAgentルールを修正（.result削除）",
+    "agent_rules.pyのmapAgentルールを修正（row: {}に変更）",
+    "api_rules.pyのResponse Access説明を修正（.result削除）",
+    "workflow_generator.pyのシステムプロンプトを修正",
+    "api_call_pattern.yamlの.result.参照を修正",
+    "search_pattern.yamlの.result.参照を修正",
+    "gmail_send_pattern.yamlの.result.参照を修正",
+    "slack_notify_pattern.yamlの.result.参照を修正",
+    "llm_chain_pattern.yamlの.result.参照を修正",
+    "map_pattern.yamlのitem_sourceをrowに修正",
+    "mapAgentの出力形式に関する説明を追加（compositeResult, compositeResultKey）",
+    "arrayJoinAgentの出力形式に関する説明を追加（.textプロパティ）",
+    "修正後、既存の単体テストが全てパスすること",
+    "プロンプト生成結果に誤った.result.パターンが含まれないこと"
+  ],
+  "test_type": "prompt_content_validation",
+  "test_requirements": {
+    "verify_removed_patterns": [
+      ".result.field",
+      "wrapped in .result",
+      ":node_name.result.field",
+      "item_source: {}",
+      ":item_source."
+    ],
+    "verify_correct_patterns": [
+      ":node_name.field",
+      "returns HTTP response body directly",
+      "row: {}",
+      ":row.",
+      "MAP_AGENT_OUTPUT_RULES",
+      "ARRAY_JOIN_AGENT_RULES",
+      "compositeResult",
+      ".text property"
+    ],
+    "unit_test_command": "cd expertAgent && uv run pytest tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py -v"
+  },
+  "implemented_features_file": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/implemented-features.json",
+  "tdd_result_file": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/tdd-result.json",
+  "files_to_verify": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/reference_rules.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/system/workflow_generator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/__init__.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/api_call_pattern.yaml",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/search_pattern.yaml",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/gmail_send_pattern.yaml",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/slack_notify_pattern.yaml",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/llm_chain_pattern.yaml",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/map_pattern.yaml"
+  ],
+  "output_file": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/acceptance-result.json",
+  "labels": ["bug", "fix"]
+}

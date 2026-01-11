@@ -1,0 +1,16 @@
+{
+  "issue_number": 345,
+  "iteration": 1,
+  "phase_results": {
+    "tdd_result": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/tdd-result.json",
+    "implemented_features": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/implemented-features.json",
+    "implementation_verification": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/implementation-verification-result.json",
+    "acceptance_result": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/acceptance-result.json",
+    "refactor_result": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/refactor-result.json"
+  },
+  "design_documents": {
+    "design_policy": "dev-reports/feature/issue/345/design-policy.md",
+    "architecture_review": "dev-reports/feature/issue/345/architecture-review.md"
+  },
+  "output_file": "dev-reports/feature/issue/345/pm-auto-dev/iteration-1/progress-report.md"
+}

@@ -1,0 +1,33 @@
+{
+  "issue_number": 348,
+  "iteration": 1,
+  "target_project": "graphAiServer",
+  "technology_stack": ["TypeScript", "Node.js", "Express", "Zod"],
+  "files_to_review": [
+    "graphAiServer/src/engine/executor/workflow-executor.ts",
+    "graphAiServer/src/nodes/base-node.ts",
+    "graphAiServer/src/nodes/api-rest-node.ts",
+    "graphAiServer/src/nodes/transform-node.ts",
+    "graphAiServer/src/nodes/code-js-node.ts",
+    "graphAiServer/src/api/v2/workflows.ts"
+  ],
+  "quality_principles": [
+    "SOLID - Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion",
+    "KISS - Keep It Simple, Stupid",
+    "YAGNI - You Aren't Gonna Need It",
+    "DRY - Don't Repeat Yourself"
+  ],
+  "refactoring_scope": "light",
+  "focus_areas": [
+    "Code duplication detection",
+    "Unused imports/variables",
+    "Error handling consistency",
+    "Type safety improvements"
+  ],
+  "constraints": [
+    "Do not change external API contracts",
+    "Maintain backward compatibility",
+    "All tests must pass after refactoring"
+  ],
+  "test_command": "cd graphAiServer && npm test"
+}

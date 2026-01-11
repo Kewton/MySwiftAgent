@@ -1,0 +1,57 @@
+{
+  "issue_number": 348,
+  "issue_title": "V2 TaskFlow Engine Extensions - Conditional Step + Workflow Validator",
+  "target_project": "graphAiServer",
+  "acceptance_criteria": [
+    "Conditional Stepでif/else分岐が実行できること",
+    "条件式がセキュアにパースされること（ホワイトリスト方式）",
+    "ネストされた条件分岐が最大10段まで対応すること",
+    "Workflow Validatorが3層バリデーション（Schema/Semantic/Runtime）を提供すること",
+    "エージェントフィードバック（agentSummary）でLLM向け修正ヒントが提供されること",
+    "CLIでワークフローJSONファイルの検証ができること",
+    "APIエンドポイント（POST /api/v2/workflows/validate）が動作すること"
+  ],
+  "implementation_tasks": [
+    {
+      "feature": "A: Conditional Step",
+      "tasks": [
+        {"task_id": "A1.1", "description": "スキーマ定義（workflow-schema.ts拡張）", "estimated_hours": 2, "deliverables": ["graphAiServer/src/types/workflow-schema.ts"]},
+        {"task_id": "A1.2", "description": "条件式評価器実装（security-hardened）", "estimated_hours": 6, "deliverables": ["graphAiServer/src/engine/executor/condition-evaluator.ts"]},
+        {"task_id": "A1.3", "description": "条件実行器実装（関数ベース）", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/executor/conditional-executor.ts"]},
+        {"task_id": "A1.4", "description": "ワークフロー実行器統合", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/executor/workflow-executor.ts"]},
+        {"task_id": "A2.1", "description": "条件式評価器 単体テスト", "estimated_hours": 4, "deliverables": ["graphAiServer/src/engine/executor/__tests__/condition-evaluator.test.ts"]},
+        {"task_id": "A2.2", "description": "条件実行器 単体テスト", "estimated_hours": 3, "deliverables": ["graphAiServer/src/engine/executor/__tests__/conditional-executor.test.ts"]},
+        {"task_id": "A2.3", "description": "結合テスト", "estimated_hours": 3, "deliverables": ["graphAiServer/src/engine/__tests__/conditional-workflow-integration.test.ts"]},
+        {"task_id": "A3.1", "description": "チュートリアル例作成", "estimated_hours": 1, "deliverables": ["graphAiServer/config/taskflow/tutorial/8_conditional.json"]}
+      ]
+    },
+    {
+      "feature": "B: Workflow Validator",
+      "tasks": [
+        {"task_id": "B1.1", "description": "バリデーション型定義", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/types.ts"]},
+        {"task_id": "B1.2", "description": "スキーマバリデーター実装", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/schema-validator.ts"]},
+        {"task_id": "B1.3", "description": "セマンティックバリデーター実装", "estimated_hours": 6, "deliverables": ["graphAiServer/src/engine/validator/semantic-validator.ts"]},
+        {"task_id": "B1.4", "description": "ランタイムバリデーター実装", "estimated_hours": 4, "deliverables": ["graphAiServer/src/engine/validator/runtime-validator.ts"]},
+        {"task_id": "B1.5", "description": "メインバリデーター統合", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/workflow-validator.ts"]},
+        {"task_id": "B1.6", "description": "レポーター実装", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/validation-reporter.ts"]},
+        {"task_id": "B1.7", "description": "CLIコマンド実装", "estimated_hours": 2, "deliverables": ["graphAiServer/src/cli/validate.ts"]},
+        {"task_id": "B1.8", "description": "APIエンドポイント実装", "estimated_hours": 2, "deliverables": ["graphAiServer/src/routes/validate.ts"]},
+        {"task_id": "B2.1", "description": "スキーマバリデーター 単体テスト", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/__tests__/schema-validator.test.ts"]},
+        {"task_id": "B2.2", "description": "セマンティックバリデーター 単体テスト", "estimated_hours": 3, "deliverables": ["graphAiServer/src/engine/validator/__tests__/semantic-validator.test.ts"]},
+        {"task_id": "B2.3", "description": "メインバリデーター 単体テスト", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/__tests__/workflow-validator.test.ts"]},
+        {"task_id": "B2.4", "description": "結合テスト", "estimated_hours": 2, "deliverables": ["graphAiServer/src/engine/validator/__tests__/validator-integration.test.ts"]}
+      ]
+    }
+  ],
+  "target_coverage": 90,
+  "design_documents": [
+    "dev-reports/feature/issue/348/design-conditional-step.md",
+    "dev-reports/feature/issue/348/design-workflow-validator.md"
+  ],
+  "security_requirements": [
+    "条件式はホワイトリスト方式でプリミティブ値のみ許可",
+    "eval()/new Function() 使用禁止",
+    "再帰深度制限（MAX_NESTING_DEPTH = 10）",
+    "パストラバーサル攻撃対策"
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "status": "pending_local_execution",
+  "issue_number": 348,
+  "iteration": 1,
+  "timestamp": "2026-01-10T21:45:00Z",
+  "reason": "L3 acceptance tests require graphAiServer running on localhost:8005",
+  "test_file": "graphAiServer/tests/acceptance/test_issue_348_acceptance.py",
+  "test_classes": [
+    {
+      "name": "TestIssue348TaskFlowEngine",
+      "tests": 24,
+      "description": "Base Issue #348 acceptance tests (already existed)"
+    },
+    {
+      "name": "TestIssue348V2Extensions",
+      "tests": 10,
+      "description": "V2 Extensions: Conditional Step + Workflow Validator (newly added)",
+      "new_tests": [
+        "test_conditional_step_validation - AC-COND-1",
+        "test_conditional_step_if_only - AC-COND-1",
+        "test_condition_whitelist_operators - AC-COND-2",
+        "test_condition_no_eval_injection - AC-COND-2",
+        "test_level_1_schema_validation - AC-VAL-1",
+        "test_level_2_semantic_validation - AC-VAL-1",
+        "test_validation_summary - AC-VAL-1",
+        "test_agent_feedback_included - AC-VAL-2",
+        "test_agent_feedback_fix_hints - AC-VAL-2",
+        "test_validation_backward_compatibility - AC-VAL-2"
+      ]
+    },
+    {
+      "name": "TestHealthAndEndpoints",
+      "tests": 3,
+      "description": "Health and endpoint availability tests"
+    }
+  ],
+  "total_tests": 37,
+  "acceptance_criteria_coverage": {
+    "AC-COND-1": {
+      "description": "Conditional Stepでif/else分岐が実行できること",
+      "covered": true,
+      "tests": ["test_conditional_step_validation", "test_conditional_step_if_only"]
+    },
+    "AC-COND-2": {
+      "description": "条件式がセキュアにパースされること（ホワイトリスト方式）",
+      "covered": true,
+      "tests": ["test_condition_whitelist_operators", "test_condition_no_eval_injection"]
+    },
+    "AC-VAL-1": {
+      "description": "Workflow Validatorが3層バリデーション（Schema/Semantic/Runtime）を提供すること",
+      "covered": true,
+      "tests": ["test_level_1_schema_validation", "test_level_2_semantic_validation", "test_validation_summary"]
+    },
+    "AC-VAL-2": {
+      "description": "エージェントフィードバック（agentSummary）でLLM向け修正ヒントが提供されること",
+      "covered": true,
+      "tests": ["test_agent_feedback_included", "test_agent_feedback_fix_hints", "test_validation_backward_compatibility"]
+    }
+  },
+  "execution_instructions": {
+    "start_server": "cd graphAiServer && npm run dev",
+    "run_tests": "cd graphAiServer && uv run pytest tests/acceptance/test_issue_348_acceptance.py -v",
+    "run_v2_only": "cd graphAiServer && uv run pytest tests/acceptance/test_issue_348_acceptance.py::TestIssue348V2Extensions -v"
+  },
+  "unit_test_verification": {
+    "all_passed": true,
+    "total_tests": 94,
+    "coverage": {
+      "condition-evaluator.ts": 86.11,
+      "conditional-executor.ts": 95.83,
+      "semantic-validator.ts": 97.89,
+      "workflow-validator.ts": 92.4
+    }
+  }
+}

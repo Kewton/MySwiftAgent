@@ -1,0 +1,455 @@
+{
+  "status": "passed",
+  "verification_timestamp": "2026-01-10T09:30:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "REFERENCE_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/reference_rules.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 8"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "get_reference_rules() returns REFERENCE_RULES and is called in assembler.py:229"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in __init__.py and imported in assembler.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_reference_rules_no_incorrect_result_wrapper", "test_reference_rules_correct_direct_access"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used in actual prompt assembly via assemble_prompt() function"
+        },
+        "no_incorrect_patterns": {
+          "passed": true,
+          "evidence": "No .result.field patterns found. Contains correct ':api_node.data' pattern"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "FETCH_AGENT_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 12"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Included in ALL_AGENT_RULES at line 195 and returned by get_agent_rules()"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in __init__.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_fetch_agent_no_result_wrapper"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used via ALL_AGENT_RULES in assembler.py:228"
+        },
+        "no_incorrect_patterns": {
+          "passed": true,
+          "evidence": "No :node_name.result.field patterns. Contains 'returns HTTP response body directly'"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F3",
+      "name": "MAP_AGENT_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 82"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Included in ALL_AGENT_RULES at line 199 and returned by get_agent_rules()"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in __init__.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_map_agent_uses_row_not_item_source"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used via ALL_AGENT_RULES in assembler.py:228"
+        },
+        "no_incorrect_patterns": {
+          "passed": true,
+          "evidence": "Uses 'row: {}' and ':row' instead of 'item_source'"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F4",
+      "name": "MAP_AGENT_OUTPUT_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 127"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Included in ALL_AGENT_RULES at line 201 and returned by get_agent_rules(['mapAgent'])"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in __init__.py at line 13 and 51"
+        },
+        "is_in_all_agent_rules": {
+          "passed": true,
+          "evidence": "Verified at runtime: compositeResult found in ALL_AGENT_RULES"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_all_agent_rules_contains_map_output_format", "test_get_agent_rules_with_map_includes_output_rules"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used via ALL_AGENT_RULES in assembler.py:228 and get_agent_rules() at line 232"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F5",
+      "name": "ARRAY_JOIN_AGENT_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 162"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Included in ALL_AGENT_RULES at line 205 and returned by get_agent_rules(['arrayJoinAgent'])"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in __init__.py at line 10 and 53"
+        },
+        "is_in_all_agent_rules": {
+          "passed": true,
+          "evidence": "Verified at runtime: arrayJoinAgent found in ALL_AGENT_RULES"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_all_agent_rules_contains_array_join", "test_get_agent_rules_with_arrayjoin"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used via ALL_AGENT_RULES in assembler.py:228 and get_agent_rules() at line 236"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F6",
+      "name": "API_RULES",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 8"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "get_api_rules() returns API_RULES and is called in assembler.py:230"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in __init__.py and imported in assembler.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_api_rules_no_result_wrapper", "test_api_rules_correct_direct_access"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used in actual prompt assembly via assemble_prompt() function"
+        },
+        "no_incorrect_patterns": {
+          "passed": true,
+          "evidence": "Contains ':api_node.messages' instead of ':api_node.result.messages'"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F7",
+      "name": "WORKFLOW_GENERATOR_SYSTEM_PROMPT",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/system/workflow_generator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 9"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "get_system_prompt() returns WORKFLOW_GENERATOR_SYSTEM_PROMPT and is called in assembler.py:223"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "get_system_prompt imported in assembler.py:31"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py",
+          "test_names": ["test_get_system_prompt_verbose", "test_system_prompt_mentions_graphai"]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Used in actual prompt assembly via assemble_prompt() function"
+        },
+        "no_incorrect_patterns": {
+          "passed": true,
+          "evidence": "Contains correct ':node_name.property' pattern with note about direct HTTP response body"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F8",
+      "name": "api_call_pattern.yaml",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/api_call_pattern.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists"
+        },
+        "no_double_result_pattern": {
+          "passed": true,
+          "evidence": "No .result.result or .result.status patterns found"
+        },
+        "correct_patterns": {
+          "passed": true,
+          "evidence": "Uses :call_api.result and :call_api.status (single level access)"
+        },
+        "loaded_by_few_shot_loader": {
+          "passed": true,
+          "evidence": "FewShotLoader loads YAML files from few_shot directory"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F9",
+      "name": "search_pattern.yaml",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/search_pattern.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists"
+        },
+        "no_double_result_pattern": {
+          "passed": true,
+          "evidence": "No .result.search_results patterns found"
+        },
+        "correct_patterns": {
+          "passed": true,
+          "evidence": "Uses :search_api.search_results (direct field access)"
+        },
+        "loaded_by_few_shot_loader": {
+          "passed": true,
+          "evidence": "FewShotLoader loads YAML files from few_shot directory"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F10",
+      "name": "gmail_send_pattern.yaml",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/gmail_send_pattern.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists"
+        },
+        "no_double_result_pattern": {
+          "passed": true,
+          "evidence": "No .result.result or .result.message_id patterns found"
+        },
+        "correct_patterns": {
+          "passed": true,
+          "evidence": "Uses :send_email.result and :send_email.message_id (single level access)"
+        },
+        "loaded_by_few_shot_loader": {
+          "passed": true,
+          "evidence": "FewShotLoader loads YAML files from few_shot directory"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F11",
+      "name": "slack_notify_pattern.yaml",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/slack_notify_pattern.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists"
+        },
+        "no_double_result_pattern": {
+          "passed": true,
+          "evidence": "No .result.ok or .result.ts patterns found"
+        },
+        "correct_patterns": {
+          "passed": true,
+          "evidence": "Grep found no incorrect patterns in any YAML files"
+        },
+        "loaded_by_few_shot_loader": {
+          "passed": true,
+          "evidence": "FewShotLoader loads YAML files from few_shot directory"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F12",
+      "name": "llm_chain_pattern.yaml",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/llm_chain_pattern.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists"
+        },
+        "no_double_result_pattern": {
+          "passed": true,
+          "evidence": "No .result.result patterns found"
+        },
+        "correct_patterns": {
+          "passed": true,
+          "evidence": "Uses :analyze_content.result (single level access)"
+        },
+        "loaded_by_few_shot_loader": {
+          "passed": true,
+          "evidence": "FewShotLoader loads YAML files from few_shot directory"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F13",
+      "name": "map_pattern.yaml",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/map_pattern.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists"
+        },
+        "no_item_source_pattern": {
+          "passed": true,
+          "evidence": "No item_source patterns found in YAML files"
+        },
+        "correct_patterns": {
+          "passed": true,
+          "evidence": "Uses 'row: {}' and ':row.id', ':row.content' patterns"
+        },
+        "loaded_by_few_shot_loader": {
+          "passed": true,
+          "evidence": "FewShotLoader loads YAML files from few_shot directory"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    }
+  ],
+  "summary": {
+    "total_features": 13,
+    "passed": 13,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [],
+  "recommended_actions": [],
+  "test_results": {
+    "unit_tests": {
+      "command": "python -m pytest tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py -v",
+      "status": "PASSED",
+      "total": 40,
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "integration_verification": {
+    "MAP_AGENT_OUTPUT_RULES_in_ALL_AGENT_RULES": "VERIFIED (runtime check passed)",
+    "ARRAY_JOIN_AGENT_RULES_in_ALL_AGENT_RULES": "VERIFIED (runtime check passed)",
+    "MAP_AGENT_OUTPUT_RULES_exported": "VERIFIED (__init__.py lines 10, 13, 51)",
+    "ARRAY_JOIN_AGENT_RULES_exported": "VERIFIED (__init__.py lines 10, 53)",
+    "get_agent_rules_returns_MAP_AGENT_OUTPUT_RULES": "VERIFIED (line 232)",
+    "get_agent_rules_returns_ARRAY_JOIN_AGENT_RULES": "VERIFIED (line 236)",
+    "assemble_prompt_uses_get_agent_rules": "VERIFIED (assembler.py:228)",
+    "assemble_prompt_uses_get_reference_rules": "VERIFIED (assembler.py:229)",
+    "assemble_prompt_uses_get_api_rules": "VERIFIED (assembler.py:230)",
+    "assemble_prompt_uses_get_system_prompt": "VERIFIED (assembler.py:223)"
+  },
+  "validation": {
+    "no_incorrect_patterns_found": true,
+    "incorrect_patterns_checked": [
+      ".result.result",
+      ".result.field",
+      ".result.status",
+      ".result.messages",
+      ".result.search_results",
+      ".result.message_id",
+      ".result.ok",
+      ".result.ts",
+      "item_source: {}",
+      ":item_source."
+    ],
+    "grep_results": "No matches found for any incorrect patterns"
+  },
+  "conclusion": "All features have been successfully implemented and integrated. No dead code detected. All constants are properly exported, included in ALL_AGENT_RULES, and used in the actual prompt generation pipeline. All YAML pattern files have been corrected to remove incorrect .result. wrapper patterns and item_source references. All 40 unit tests pass successfully."
+}

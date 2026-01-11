@@ -1,0 +1,154 @@
+{
+  "issue_number": 345,
+  "title": "fix: LLMプロンプトのAgent出力形式に関する誤記載を修正",
+  "acceptance_criteria": [
+    "reference_rules.pyから.resultに関する誤った記述を削除",
+    "agent_rules.pyのfetchAgentルールを修正（.result削除）",
+    "agent_rules.pyのmapAgentルールを修正（row: {}に変更）",
+    "api_rules.pyのResponse Access説明を修正（.result削除）",
+    "workflow_generator.pyのシステムプロンプトを修正",
+    "api_call_pattern.yamlの.result.参照を修正",
+    "search_pattern.yamlの.result.参照を修正",
+    "gmail_send_pattern.yamlの.result.参照を修正",
+    "slack_notify_pattern.yamlの.result.参照を修正",
+    "llm_chain_pattern.yamlの.result.参照を修正",
+    "map_pattern.yamlのitem_sourceをrowに修正",
+    "mapAgentの出力形式に関する説明を追加（compositeResult, compositeResultKey）",
+    "arrayJoinAgentの出力形式に関する説明を追加（.textプロパティ）",
+    "修正後、既存の単体テストが全てパスすること",
+    "プロンプト生成結果に誤った.result.パターンが含まれないこと"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "T1",
+      "description": "reference_rules.pyから.resultに関する誤った記述を削除",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/reference_rules.py",
+      "changes": [
+        "L17: ':node_name.result.field' を ':node_name.field' に修正",
+        "L19-24: 'When using fetchAgent, the API response is wrapped in .result' を削除",
+        "L41: 'DON'T forget .result for fetchAgent responses' を削除"
+      ]
+    },
+    {
+      "task_id": "T2",
+      "description": "agent_rules.pyのfetchAgentルールを修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "changes": [
+        "L16: ':node_name.result.field' を ':node_name.field' に修正"
+      ]
+    },
+    {
+      "task_id": "T3",
+      "description": "agent_rules.pyのmapAgentルールを修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "changes": [
+        "L98: 'item_source: {}' を 'row: {}' に修正",
+        "L102: ':item_source' を ':row' に修正"
+      ]
+    },
+    {
+      "task_id": "T4",
+      "description": "api_rules.pyのResponse Access説明を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py",
+      "changes": [
+        "L66-69: 'API responses are wrapped in .result' を 'fetchAgent returns HTTP response body directly' に修正",
+        "':api_node.result.messages' を ':api_node.messages' に修正"
+      ]
+    },
+    {
+      "task_id": "T5",
+      "description": "workflow_generator.pyのシステムプロンプトを修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/system/workflow_generator.py",
+      "changes": [
+        "L39: ':node_name.result.field' を ':node_name.field' に修正"
+      ]
+    },
+    {
+      "task_id": "T6",
+      "description": "Few-Shot api_call_pattern.yamlの.result.参照を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/api_call_pattern.yaml",
+      "changes": [
+        "L57-58: ':call_api.result.result' を ':call_api.result' に修正",
+        "':call_api.result.status' を ':call_api.status' に修正"
+      ]
+    },
+    {
+      "task_id": "T7",
+      "description": "Few-Shot search_pattern.yamlの.result.参照を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/search_pattern.yaml",
+      "changes": [
+        "L58: ':search_api.result.search_results' を ':search_api.search_results' に修正"
+      ]
+    },
+    {
+      "task_id": "T8",
+      "description": "Few-Shot gmail_send_pattern.yamlの.result.参照を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/gmail_send_pattern.yaml",
+      "changes": [
+        "L60-61: ':send_email.result.result' を ':send_email.result' に修正",
+        "':send_email.result.message_id' を ':send_email.message_id' に修正"
+      ]
+    },
+    {
+      "task_id": "T9",
+      "description": "Few-Shot slack_notify_pattern.yamlの.result.参照を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/slack_notify_pattern.yaml",
+      "changes": [
+        "L58-59: ':notify_slack.result.ok' を ':notify_slack.ok' に修正",
+        "':notify_slack.result.ts' を ':notify_slack.ts' に修正"
+      ]
+    },
+    {
+      "task_id": "T10",
+      "description": "Few-Shot llm_chain_pattern.yamlの.result.参照を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/llm_chain_pattern.yaml",
+      "changes": [
+        "L81: ':analyze_content.result.result' を ':analyze_content.result' に修正"
+      ]
+    },
+    {
+      "task_id": "T11",
+      "description": "Few-Shot map_pattern.yamlのitem_sourceをrowに修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/map_pattern.yaml",
+      "changes": [
+        "L52: 'item_source: {}' を 'row: {}' に修正",
+        "L57, L58, L65: ':item_source.*' を ':row.*' に修正"
+      ]
+    },
+    {
+      "task_id": "T12",
+      "description": "mapAgent出力形式の説明を追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "changes": [
+        "MAP_AGENT_OUTPUT_RULESを新規追加（compositeResult, compositeResultKeyの説明）",
+        "ALL_AGENT_RULESにMAP_AGENT_OUTPUT_RULESを含める"
+      ]
+    },
+    {
+      "task_id": "T13",
+      "description": "arrayJoinAgent出力形式の説明を追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "changes": [
+        "ARRAY_JOIN_AGENT_RULESを新規追加（.textプロパティの説明）",
+        "ALL_AGENT_RULESにARRAY_JOIN_AGENT_RULESを含める"
+      ]
+    }
+  ],
+  "test_requirements": {
+    "unit_test_command": "cd expertAgent && uv run pytest tests/unit/test_job_generator_v2/test_workflow_gen_prompt_builder.py -v",
+    "validation_patterns": [
+      ".result.result",
+      ".result.field",
+      "item_source: {}",
+      ":item_source."
+    ],
+    "expected_patterns_after_fix": [
+      ":node.field",
+      "row: {}",
+      ":row."
+    ]
+  },
+  "target_coverage": 90,
+  "labels": ["bug", "fix"],
+  "design_policy_file": "dev-reports/feature/issue/345/design-policy.md"
+}

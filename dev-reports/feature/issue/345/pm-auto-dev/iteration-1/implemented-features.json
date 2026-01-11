@@ -1,0 +1,200 @@
+{
+  "issue_number": 345,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "REFERENCE_RULES (fixed)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/reference_rules.py",
+      "line_number": 8,
+      "description": "参照構文ルール - fetchAgentの.resultラッパー記述を削除",
+      "expected_callers": ["get_reference_rules", "assemble_prompt"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F2",
+      "name": "FETCH_AGENT_RULES (fixed)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "line_number": 12,
+      "description": "fetchAgentルール - .resultラッパー記述を削除、直接アクセスに修正",
+      "expected_callers": ["get_agent_rules", "ALL_AGENT_RULES"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F3",
+      "name": "MAP_AGENT_RULES (fixed)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "line_number": 82,
+      "description": "mapAgentルール - item_sourceをrowに修正",
+      "expected_callers": ["get_agent_rules", "ALL_AGENT_RULES"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F4",
+      "name": "MAP_AGENT_OUTPUT_RULES (new)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "line_number": 127,
+      "description": "mapAgent出力形式ルール - compositeResult, compositeResultKeyの説明を追加",
+      "expected_callers": ["get_agent_rules", "ALL_AGENT_RULES"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F5",
+      "name": "ARRAY_JOIN_AGENT_RULES (new)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "line_number": 162,
+      "description": "arrayJoinAgentルール - .textプロパティでのアクセス方法を追加",
+      "expected_callers": ["get_agent_rules", "ALL_AGENT_RULES"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F6",
+      "name": "API_RULES (fixed)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/api_rules.py",
+      "line_number": 8,
+      "description": "APIルール - Response Accessの.resultラッパー記述を削除",
+      "expected_callers": ["get_api_rules", "assemble_prompt"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F7",
+      "name": "WORKFLOW_GENERATOR_SYSTEM_PROMPT (fixed)",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/system/workflow_generator.py",
+      "line_number": 9,
+      "description": "システムプロンプト - .resultラッパー記述を削除",
+      "expected_callers": ["get_system_prompt", "PromptBuilderSubWorkflow"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F8",
+      "name": "api_call_pattern.yaml (fixed)",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/api_call_pattern.yaml",
+      "line_number": 57,
+      "description": "Few-Shot APIコールパターン - .result.参照を削除",
+      "expected_callers": ["FewShotLoader"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F9",
+      "name": "search_pattern.yaml (fixed)",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/search_pattern.yaml",
+      "line_number": 58,
+      "description": "Few-Shot検索パターン - .result.参照を削除",
+      "expected_callers": ["FewShotLoader"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F10",
+      "name": "gmail_send_pattern.yaml (fixed)",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/gmail_send_pattern.yaml",
+      "line_number": 60,
+      "description": "Few-Shot Gmail送信パターン - .result.参照を削除",
+      "expected_callers": ["FewShotLoader"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F11",
+      "name": "slack_notify_pattern.yaml (fixed)",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/slack_notify_pattern.yaml",
+      "line_number": 58,
+      "description": "Few-Shot Slack通知パターン - .result.参照を削除",
+      "expected_callers": ["FewShotLoader"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F12",
+      "name": "llm_chain_pattern.yaml (fixed)",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/llm_chain_pattern.yaml",
+      "line_number": 81,
+      "description": "Few-Shot LLMチェーンパターン - .result.参照を削除",
+      "expected_callers": ["FewShotLoader"],
+      "expected_call_location": "プロンプト生成時"
+    },
+    {
+      "feature_id": "F13",
+      "name": "map_pattern.yaml (fixed)",
+      "type": "yaml_pattern",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/few_shot/map_pattern.yaml",
+      "line_number": 52,
+      "description": "Few-Shot mapAgentパターン - item_sourceをrowに修正",
+      "expected_callers": ["FewShotLoader"],
+      "expected_call_location": "プロンプト生成時"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_reference_rules_no_incorrect_result_wrapper", "test_reference_rules_correct_direct_access"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_fetch_agent_no_result_wrapper"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_map_agent_uses_row_not_item_source"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_all_agent_rules_contains_map_output_format", "test_get_agent_rules_with_map_includes_output_rules"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_all_agent_rules_contains_array_join", "test_get_agent_rules_with_arrayjoin"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_api_rules_no_result_wrapper", "test_api_rules_correct_direct_access"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .agent_rules import MAP_AGENT_OUTPUT_RULES"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .agent_rules import ARRAY_JOIN_AGENT_RULES"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "integration_type": "constant_usage",
+      "integration_method": "ALL_AGENT_RULES includes MAP_AGENT_OUTPUT_RULES"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/prompt_builder/rules/agent_rules.py",
+      "integration_type": "constant_usage",
+      "integration_method": "ALL_AGENT_RULES includes ARRAY_JOIN_AGENT_RULES"
+    }
+  ]
+}
