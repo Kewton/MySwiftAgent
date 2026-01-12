@@ -89,9 +89,9 @@ class TestUtilitySchemas:
 
     def test_search_utility_request_full(self):
         """Test SearchUtilityRequest with all fields."""
-        req = SearchUtilityRequest(queries=["query1"], num=10)
+        req = SearchUtilityRequest(queries=["query1"], num=3)  # max is 3
         assert req.queries == ["query1"]
-        assert req.num == 10
+        assert req.num == 3
 
     def test_search_utility_response(self):
         """Test SearchUtilityResponse model."""

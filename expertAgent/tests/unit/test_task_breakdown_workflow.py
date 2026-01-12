@@ -1304,11 +1304,12 @@ class TestAlternativeSubWorkflowLLMError:
         execution_context: ExecutionContext,
     ):
         """Test that LLM errors are handled gracefully."""
+        # Use the same import as alternative.py to ensure exception type matches
+        from aiagent.langgraph.jobGeneratorV2.llm_utils import (
+            StructuredLLMError,
+        )
         from aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.alternative import (
             AlternativeSubWorkflow,
-        )
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.llm_invocation import (
-            StructuredLLMError,
         )
 
         infeasible_tasks = [

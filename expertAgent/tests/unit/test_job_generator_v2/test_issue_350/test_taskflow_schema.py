@@ -2,23 +2,17 @@
 
 Issue #350 Task 2.1: Pydantic schema definitions.
 
-Test cases:
-- test_valid_api_rest_step
-- test_valid_transform_step
-- test_valid_code_js_step
-- test_invalid_url_http
-- test_invalid_step_id_format
-- test_discriminated_union_api_rest
-- test_discriminated_union_transform
-- test_discriminated_union_invalid_config
-- test_transform_mode_template_requires_template
-- test_transform_mode_concat_requires_separator
-- test_workflow_complete_validation
+Tests verify:
+- UnifiedStepConfig validation for api_rest, transform, code_js
+- TaskFlowStep validation
+- TaskFlowWorkflow validation (JSON string fields)
 
-Note: test_parallel_block_validation, test_conditional_block_validation,
-test_workflow_with_parallel_block, test_workflow_with_conditional_block
-were removed because ParallelBlock and ConditionalBlock are incompatible
-with OpenAI Structured Output (see taskflow_schema.py:438).
+Note: The schema was restructured to use UnifiedStepConfig instead of
+separate ApiRestConfig/TransformConfig/CodeJsConfig classes to ensure
+OpenAI Structured Output compatibility (no Union/oneOf).
+
+TaskFlowWorkflow uses JSON strings for input_schema, output_schema, and output
+fields to support OpenAI Structured Output format.
 """
 
 from __future__ import annotations
@@ -27,16 +21,11 @@ import pytest
 from pydantic import ValidationError
 
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.taskflow_schema import (
-    ApiRestConfig,
-    CodeJsConfig,
     IOSchemaType,
     TaskFlowStep,
     TaskFlowWorkflow,
-    TransformConfig,
+    UnifiedStepConfig,
 )
-
-# Note: ParallelBlock and ConditionalBlock were removed as they are
-# incompatible with OpenAI Structured Output (comment in taskflow_schema.py:438)
 
 
 class TestIOSchemaType:
@@ -55,26 +44,27 @@ class TestIOSchemaType:
         assert IOSchemaType.OBJECT.value == "object"
 
 
-class TestApiRestConfig:
-    """Tests for ApiRestConfig model."""
+class TestUnifiedStepConfigApiRest:
+    """Tests for UnifiedStepConfig with step_type='api_rest'."""
 
     def test_valid_api_rest_config(self) -> None:
         """Test valid api_rest configuration."""
-        config = ApiRestConfig(
+        config = UnifiedStepConfig(
+            step_type="api_rest",
             method="POST",
             url="https://api.example.com/endpoint",
             headers={"Content-Type": "application/json"},
-            body={"key": "value"},
+            body='{"key": "value"}',
         )
+        assert config.step_type == "api_rest"
         assert config.method == "POST"
         assert config.url == "https://api.example.com/endpoint"
-        assert config.timeout_ms == 30000  # default
-        assert config.verify_ssl is True  # default
 
     def test_invalid_url_http(self) -> None:
         """HTTP URLs should be rejected (HTTPS required)."""
         with pytest.raises(ValidationError) as exc_info:
-            ApiRestConfig(
+            UnifiedStepConfig(
+                step_type="api_rest",
                 method="GET",
                 url="http://api.example.com/endpoint",
             )
@@ -84,7 +74,8 @@ class TestApiRestConfig:
     def test_invalid_method(self) -> None:
         """Invalid HTTP method should be rejected."""
         with pytest.raises(ValidationError):
-            ApiRestConfig(
+            UnifiedStepConfig(
+                step_type="api_rest",
                 method="INVALID",  # type: ignore[arg-type]
                 url="https://api.example.com/endpoint",
             )
@@ -92,7 +83,8 @@ class TestApiRestConfig:
     def test_timeout_range(self) -> None:
         """Timeout should be within valid range."""
         # Valid timeout
-        config = ApiRestConfig(
+        config = UnifiedStepConfig(
+            step_type="api_rest",
             method="GET",
             url="https://api.example.com",
             timeout_ms=60000,
@@ -101,7 +93,8 @@ class TestApiRestConfig:
 
         # Too low
         with pytest.raises(ValidationError):
-            ApiRestConfig(
+            UnifiedStepConfig(
+                step_type="api_rest",
                 method="GET",
                 url="https://api.example.com",
                 timeout_ms=500,  # Below 1000
@@ -109,62 +102,69 @@ class TestApiRestConfig:
 
         # Too high
         with pytest.raises(ValidationError):
-            ApiRestConfig(
+            UnifiedStepConfig(
+                step_type="api_rest",
                 method="GET",
                 url="https://api.example.com",
                 timeout_ms=500000,  # Above 300000
             )
 
 
-class TestTransformConfig:
-    """Tests for TransformConfig model."""
+class TestUnifiedStepConfigTransform:
+    """Tests for UnifiedStepConfig with step_type='transform'."""
 
     def test_valid_transform_template(self) -> None:
         """Test valid transform with template mode."""
-        config = TransformConfig(
+        config = UnifiedStepConfig(
+            step_type="transform",
             mode="template",
             template="Result: ${step_001.data}",
         )
+        assert config.step_type == "transform"
         assert config.mode == "template"
         assert config.template == "Result: ${step_001.data}"
 
     def test_valid_transform_concat(self) -> None:
         """Test valid transform with concat mode."""
-        config = TransformConfig(
+        config = UnifiedStepConfig(
+            step_type="transform",
             mode="concat",
             separator=", ",
         )
+        assert config.step_type == "transform"
         assert config.mode == "concat"
         assert config.separator == ", "
 
     def test_transform_mode_template_requires_template(self) -> None:
         """Template mode requires template field."""
         with pytest.raises(ValidationError) as exc_info:
-            TransformConfig(mode="template")
+            UnifiedStepConfig(step_type="transform", mode="template")
         assert "template" in str(exc_info.value).lower()
 
     def test_transform_mode_concat_requires_separator(self) -> None:
         """Concat mode requires separator field."""
         with pytest.raises(ValidationError) as exc_info:
-            TransformConfig(mode="concat")
+            UnifiedStepConfig(step_type="transform", mode="concat")
         assert "separator" in str(exc_info.value).lower()
 
     def test_transform_mode_map_requires_fields(self) -> None:
         """Map mode requires fields list."""
         with pytest.raises(ValidationError) as exc_info:
-            TransformConfig(mode="map")
+            UnifiedStepConfig(step_type="transform", mode="map")
         assert "fields" in str(exc_info.value).lower()
 
 
-class TestCodeJsConfig:
-    """Tests for CodeJsConfig model."""
+class TestUnifiedStepConfigCodeJs:
+    """Tests for UnifiedStepConfig with step_type='code_js'."""
 
     def test_valid_code_js_config(self) -> None:
         """Test valid code_js configuration."""
-        config = CodeJsConfig(
+        config = UnifiedStepConfig(
+            step_type="code_js",
             path="/scripts/format.js",
             function_name="formatDate",
         )
+        assert config.step_type == "code_js"
         assert config.path == "/scripts/format.js"
         assert config.function_name == "formatDate"
 
@@ -178,6 +178,7 @@ class TestTaskFlowStep:
             id="fetch_data",
             type="api_rest",
             config={
+                "step_type": "api_rest",
                 "method": "GET",
                 "url": "https://api.example.com/data",
             },
@@ -191,6 +192,7 @@ class TestTaskFlowStep:
             id="format_output",
             type="transform",
             config={
+                "step_type": "transform",
                 "mode": "template",
                 "template": "${fetch_data.result}",
             },
@@ -204,6 +206,7 @@ class TestTaskFlowStep:
             id="process_data",
             type="code_js",
             config={
+                "step_type": "code_js",
                 "path": "/scripts/process.js",
                 "function_name": "parseJson",
             },
@@ -218,7 +221,11 @@ class TestTaskFlowStep:
             TaskFlowStep(
                 id="123_invalid",
                 type="api_rest",
-                config={"method": "GET", "url": "https://api.example.com"},
+                config={
+                    "step_type": "api_rest",
+                    "method": "GET",
+                    "url": "https://api.example.com",
+                },
             )
         assert "id" in str(exc_info.value).lower()
 
@@ -227,16 +234,20 @@ class TestTaskFlowStep:
             TaskFlowStep(
                 id="invalid@step",
                 type="api_rest",
-                config={"method": "GET", "url": "https://api.example.com"},
+                config={
+                    "step_type": "api_rest",
+                    "method": "GET",
+                    "url": "https://api.example.com",
+                },
             )
 
     def test_discriminated_union_api_rest(self) -> None:
-        """Config should be validated as ApiRestConfig for api_rest type."""
-        # Valid api_rest config
+        """Config should be validated as UnifiedStepConfig for api_rest type."""
         step = TaskFlowStep(
             id="test_step",
             type="api_rest",
             config={
+                "step_type": "api_rest",
                 "method": "POST",
                 "url": "https://api.example.com",
                 "headers": {"Content-Type": "application/json"},
@@ -245,11 +256,12 @@ class TestTaskFlowStep:
         assert step.type == "api_rest"
 
     def test_discriminated_union_transform(self) -> None:
-        """Config should be validated as TransformConfig for transform type."""
+        """Config should be validated as UnifiedStepConfig for transform type."""
         step = TaskFlowStep(
             id="test_step",
             type="transform",
             config={
+                "step_type": "transform",
                 "mode": "template",
                 "template": "Hello ${name}",
             },
@@ -258,49 +270,50 @@ class TestTaskFlowStep:
 
     def test_discriminated_union_invalid_config(self) -> None:
         """Invalid config for type should raise validation error."""
-        # Missing required fields for api_rest
+        # Missing step_type
         with pytest.raises(ValidationError):
             TaskFlowStep(
                 id="test_step",
                 type="api_rest",
-                config={},  # Missing method and url
-            )
-
-        # HTTP URL for api_rest
-        with pytest.raises(ValidationError):
-            TaskFlowStep(
-                id="test_step",
-                type="api_rest",
-                config={
-                    "method": "GET",
-                    "url": "http://insecure.com",  # Should be HTTPS
-                },
+                config={},  # Missing step_type
             )
 
 
 class TestTaskFlowWorkflow:
-    """Tests for TaskFlowWorkflow model."""
+    """Tests for TaskFlowWorkflow model.
+
+    Note: input_schema, output_schema, and output are JSON strings (not dicts)
+    in the current schema for OpenAI Structured Output compatibility.
+    """
 
     def test_workflow_complete_validation(self) -> None:
-        """Test complete workflow validation."""
+        """Test complete workflow validation with JSON string fields."""
         workflow = TaskFlowWorkflow(
             workflow_name="example_workflow",
             description="An example workflow",
-            input_schema={"user_input": IOSchemaType.STRING},
-            output_schema={"result": IOSchemaType.STRING},
+            input_schema='{"user_input": "string"}',
+            output_schema='{"result": "string"}',
             steps=[
                 TaskFlowStep(
                     id="fetch",
                     type="api_rest",
-                    config={"method": "GET", "url": "https://api.example.com"},
+                    config={
+                        "step_type": "api_rest",
+                        "method": "GET",
+                        "url": "https://api.example.com",
+                    },
                 ),
                 TaskFlowStep(
                     id="format",
                     type="transform",
-                    config={"mode": "template", "template": "${fetch.data}"},
+                    config={
+                        "step_type": "transform",
+                        "mode": "template",
+                        "template": "${fetch.data}",
+                    },
                 ),
             ],
-            output={"result": "${format}"},
+            output='{"result": "${format}"}',
         )
         assert workflow.workflow_name == "example_workflow"
         assert len(workflow.steps) == 2
@@ -310,151 +323,188 @@ class TestTaskFlowWorkflow:
         # Valid names
         TaskFlowWorkflow(
             workflow_name="my_workflow",
-            input_schema={},
-            output_schema={},
-            steps=[],
-            output={},
+            input_schema='{}',
+            output_schema='{}',
+            steps=[
+                TaskFlowStep(
+                    id="step1",
+                    type="transform",
+                    config={
+                        "step_type": "transform",
+                        "mode": "template",
+                        "template": "hello",
+                    },
+                )
+            ],
+            output='{}',
         )
         TaskFlowWorkflow(
             workflow_name="workflow123",
-            input_schema={},
-            output_schema={},
-            steps=[],
-            output={},
+            input_schema='{}',
+            output_schema='{}',
+            steps=[
+                TaskFlowStep(
+                    id="step1",
+                    type="transform",
+                    config={
+                        "step_type": "transform",
+                        "mode": "template",
+                        "template": "hello",
+                    },
+                )
+            ],
+            output='{}',
         )
 
         # Invalid name (starts with number)
         with pytest.raises(ValidationError):
             TaskFlowWorkflow(
                 workflow_name="123workflow",
-                input_schema={},
-                output_schema={},
-                steps=[],
-                output={},
+                input_schema='{}',
+                output_schema='{}',
+                steps=[
+                    TaskFlowStep(
+                        id="step1",
+                        type="transform",
+                        config={
+                            "step_type": "transform",
+                            "mode": "template",
+                            "template": "hello",
+                        },
+                    )
+                ],
+                output='{}',
             )
 
-    # Note: test_workflow_with_parallel_block and test_workflow_with_conditional_block
-    # were removed because ParallelBlock and ConditionalBlock are no longer available
-    # (incompatible with OpenAI Structured Output - see taskflow_schema.py:438)
 
+class TestJsonStringValidation:
+    """Tests for JSON string validation in TaskFlowWorkflow.
 
-class TestJsonStringParsing:
-    """Tests for JSON string to dict parsing validators.
-
-    Issue #350 fix: LLMs sometimes return dict fields as JSON strings.
-    These tests verify automatic conversion.
+    The schema uses JSON strings for input_schema, output_schema, and output
+    to support OpenAI Structured Output format.
     """
 
-    def test_output_schema_accepts_dict(self) -> None:
-        """output_schema should accept normal dict input."""
+    def test_valid_json_string_accepted(self) -> None:
+        """Valid JSON strings should be accepted."""
         workflow = TaskFlowWorkflow(
             workflow_name="test_workflow",
-            input_schema={},
-            output_schema={"result": "string"},
-            steps=[],
-            output={},
+            input_schema='{"query": "string"}',
+            output_schema='{"result": "string"}',
+            steps=[
+                TaskFlowStep(
+                    id="step1",
+                    type="transform",
+                    config={
+                        "step_type": "transform",
+                        "mode": "template",
+                        "template": "${inputs.query}",
+                    },
+                )
+            ],
+            output='{"result": "${step1}"}',
         )
-        assert workflow.output_schema == {"result": "string"}
+        assert workflow.input_schema == '{"query": "string"}'
+        assert workflow.output_schema == '{"result": "string"}'
 
-    def test_output_schema_parses_json_string(self) -> None:
-        """output_schema should parse JSON string to dict.
+    def test_json_with_variable_references(self) -> None:
+        """JSON strings with ${...} variable references should be accepted.
 
-        This is the exact scenario from Langfuse trace where LLM returned:
-        output_schema='{"search_results":"array"}' as a string instead of dict.
+        This is the key use case for TaskFlow workflows where output mappings
+        reference step outputs.
         """
         workflow = TaskFlowWorkflow(
             workflow_name="test_workflow",
-            input_schema={},
-            output_schema='{"search_results": "array"}',  # JSON string
-            steps=[],
-            output={},
-        )
-        assert workflow.output_schema == {"search_results": "array"}
-        assert isinstance(workflow.output_schema, dict)
-
-    def test_output_parses_json_string(self) -> None:
-        """output field should parse JSON string to dict.
-
-        This is the exact scenario from Langfuse trace where LLM returned:
-        output='{"search_results":"${google_search.data.items}"}' as string.
-        """
-        workflow = TaskFlowWorkflow(
-            workflow_name="test_workflow",
-            input_schema={},
-            output_schema={},
-            steps=[],
-            output='{"search_results": "${google_search.data.items}"}',  # JSON string
-        )
-        assert workflow.output == {"search_results": "${google_search.data.items}"}
-        assert isinstance(workflow.output, dict)
-
-    def test_input_schema_parses_json_string(self) -> None:
-        """input_schema should parse JSON string to dict."""
-        workflow = TaskFlowWorkflow(
-            workflow_name="test_workflow",
-            input_schema='{"query": "string", "limit": "number"}',  # JSON string
-            output_schema={},
-            steps=[],
-            output={},
-        )
-        assert workflow.input_schema == {"query": "string", "limit": "number"}
-        assert isinstance(workflow.input_schema, dict)
-
-    def test_invalid_json_string_raises_error(self) -> None:
-        """Invalid JSON string should raise validation error."""
-        with pytest.raises(ValidationError) as exc_info:
-            TaskFlowWorkflow(
-                workflow_name="test_workflow",
-                input_schema={},
-                output_schema='{"invalid json',  # Invalid JSON
-                steps=[],
-                output={},
-            )
-        assert "not valid json" in str(exc_info.value).lower()
-
-    def test_non_dict_json_raises_error(self) -> None:
-        """JSON string that parses to non-dict should raise error."""
-        with pytest.raises(ValidationError) as exc_info:
-            TaskFlowWorkflow(
-                workflow_name="test_workflow",
-                input_schema={},
-                output_schema='["array", "not", "dict"]',  # JSON array
-                steps=[],
-                output={},
-            )
-        # Error message should indicate dict type expected
-        error_str = str(exc_info.value).lower()
-        assert "dict" in error_str or "dictionary" in error_str
-
-    def test_llm_realistic_response(self) -> None:
-        """Test with realistic LLM response pattern.
-
-        This simulates the actual error scenario from production where
-        the LLM returned stringified JSON for multiple dict fields.
-        """
-        # Simulated LLM response with stringified dicts
-        workflow = TaskFlowWorkflow(
-            workflow_name="google_search_workflow",
-            description="Search and format results",
-            input_schema='{"query": "string"}',  # LLM returned as string
-            output_schema='{"search_results": "array"}',  # LLM returned as string
+            input_schema='{}',
+            output_schema='{"search_results": "array"}',
             steps=[
                 TaskFlowStep(
                     id="google_search",
                     type="api_rest",
                     config={
+                        "step_type": "api_rest",
+                        "method": "GET",
+                        "url": "https://www.googleapis.com/customsearch/v1",
+                    },
+                )
+            ],
+            output='{"search_results": "${google_search.data.items}"}',
+        )
+        assert "${google_search.data.items}" in workflow.output
+
+    def test_invalid_json_string_raises_error(self) -> None:
+        """Invalid JSON strings should raise validation error."""
+        with pytest.raises(ValidationError) as exc_info:
+            TaskFlowWorkflow(
+                workflow_name="test_workflow",
+                input_schema='{}',
+                output_schema='{"invalid json',  # Invalid JSON
+                steps=[
+                    TaskFlowStep(
+                        id="step1",
+                        type="transform",
+                        config={
+                            "step_type": "transform",
+                            "mode": "template",
+                            "template": "hello",
+                        },
+                    )
+                ],
+                output='{}',
+            )
+        error_str = str(exc_info.value).lower()
+        assert "json" in error_str or "invalid" in error_str
+
+    def test_non_object_json_raises_error(self) -> None:
+        """JSON strings that parse to non-objects should raise error."""
+        with pytest.raises(ValidationError) as exc_info:
+            TaskFlowWorkflow(
+                workflow_name="test_workflow",
+                input_schema='{}',
+                output_schema='["array", "not", "object"]',  # JSON array
+                steps=[
+                    TaskFlowStep(
+                        id="step1",
+                        type="transform",
+                        config={
+                            "step_type": "transform",
+                            "mode": "template",
+                            "template": "hello",
+                        },
+                    )
+                ],
+                output='{}',
+            )
+        # Error should indicate object type expected
+        error_str = str(exc_info.value).lower()
+        assert "object" in error_str or "dict" in error_str
+
+    def test_realistic_llm_response(self) -> None:
+        """Test with realistic LLM response pattern.
+
+        This simulates the actual use case where LLM generates a complete
+        workflow with variable references in the output field.
+        """
+        workflow = TaskFlowWorkflow(
+            workflow_name="google_search_workflow",
+            description="Search and format results",
+            input_schema='{"query": "string"}',
+            output_schema='{"search_results": "array"}',
+            steps=[
+                TaskFlowStep(
+                    id="google_search",
+                    type="api_rest",
+                    config={
+                        "step_type": "api_rest",
                         "method": "GET",
                         "url": "https://www.googleapis.com/customsearch/v1",
                     },
                 ),
             ],
-            output='{"search_results": "${google_search.data.items}"}',  # String
+            output='{"search_results": "${google_search.data.items}"}',
         )
 
-        # Verify all fields were properly parsed to dicts
-        assert isinstance(workflow.input_schema, dict)
-        assert isinstance(workflow.output_schema, dict)
-        assert isinstance(workflow.output, dict)
-        assert workflow.input_schema == {"query": "string"}
-        assert workflow.output_schema == {"search_results": "array"}
-        assert workflow.output == {"search_results": "${google_search.data.items}"}
+        # Verify workflow is created correctly
+        assert workflow.workflow_name == "google_search_workflow"
+        assert workflow.input_schema == '{"query": "string"}'
+        assert workflow.output_schema == '{"search_results": "array"}'
+        assert workflow.output == '{"search_results": "${google_search.data.items}"}'

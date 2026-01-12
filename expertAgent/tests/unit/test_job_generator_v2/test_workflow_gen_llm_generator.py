@@ -10,6 +10,8 @@ import pytest
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
     DEFAULT_MODEL,
     DEFAULT_TEMPERATURE,
+    MODEL_ENV_VAR,
+    TEMPERATURE_ENV_VAR,
     LLMGenerationResult,
     LLMGeneratorSubWorkflow,
     WorkflowYAMLResponse,
@@ -67,10 +69,16 @@ class TestLLMGeneratorSubWorkflow:
     """Tests for LLMGeneratorSubWorkflow class."""
 
     def test_create_generator_default(self):
-        """Test creating generator with defaults."""
-        generator = LLMGeneratorSubWorkflow()
-        assert generator._model == DEFAULT_MODEL
-        assert generator._temperature == DEFAULT_TEMPERATURE
+        """Test creating generator with defaults (env vars cleared)."""
+        # Clear env vars to test true defaults
+        with patch.dict("os.environ", {MODEL_ENV_VAR: "", TEMPERATURE_ENV_VAR: ""}, clear=False):
+            import os
+            # Remove the env vars if they exist
+            os.environ.pop(MODEL_ENV_VAR, None)
+            os.environ.pop(TEMPERATURE_ENV_VAR, None)
+            generator = LLMGeneratorSubWorkflow()
+            assert generator._model == DEFAULT_MODEL
+            assert generator._temperature == DEFAULT_TEMPERATURE
 
     def test_create_generator_custom_model(self):
         """Test creating generator with custom model."""

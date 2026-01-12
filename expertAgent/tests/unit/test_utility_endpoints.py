@@ -92,7 +92,7 @@ class TestGoogleSearchBySerper:
             "text": "ok",
             "result": [{"title": "Result 1", "link": "https://example.com/1"}],
         }
-        request = SearchUtilityRequest(queries=["test query"], num=10)
+        request = SearchUtilityRequest(queries=["test query"], num=3)  # max is 3
 
         result = await google_search_by_serper_api(request)
 
@@ -102,7 +102,7 @@ class TestGoogleSearchBySerper:
         ]
         assert result.search_results_count == 1
         assert result.status == "ok"
-        mock_search.assert_called_once_with(["test query"], 10)
+        mock_search.assert_called_once_with(["test query"], 3)
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.google_search_by_serper_list")
@@ -151,12 +151,12 @@ class TestGetOverviewByGoogleSerper:
     async def test_overview_with_num(self, mock_overview):
         """Test overview with num parameter."""
         mock_overview.return_value = {"data": "Overview results"}
-        request = SearchUtilityRequest(queries=["test query"], num=5)
+        request = SearchUtilityRequest(queries=["test query"], num=3)  # max is 3
 
         result = await get_overview_by_google_serper_api(request)
 
         assert result.result == {"data": "Overview results"}
-        mock_overview.assert_called_once_with(["test query"], 5)
+        mock_overview.assert_called_once_with(["test query"], 3)
 
     @pytest.mark.asyncio
     @patch("app.api.v1.utility_endpoints.get_overview_by_google_serper")
