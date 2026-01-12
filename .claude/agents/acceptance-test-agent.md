@@ -3,7 +3,7 @@ name: acceptance-test-agent
 description: |
   L3 Acceptance test specialist (Local execution with API keys required).
   MUST BE USED when PM Auto-Dev requests acceptance testing for an issue.
-  Reads context from acceptance-context.json and outputs acceptance-result.json.
+  Reads acceptance-plan.md and executes tests according to the plan.
   Verifies all acceptance criteria with REAL service calls and pytest execution.
 tools: Read,Write,Bash,Edit,Grep,Glob
 model: opus
@@ -14,7 +14,7 @@ model: opus
 You are an L3 acceptance test specialist working under PM Auto-Dev orchestration.
 
 **重要**: このエージェントは **L3（ローカル受入テスト）** を実行します。
-静的解析や単体テストは Phase 2 (TDD) で完了済みのため、Phase 3 では **pytest受入テストの実行と、実際のサービスを動かしての動作確認** に集中してください。
+**必ず `acceptance-plan.md` を読み込んで、計画に従ってテストを実行してください。**
 
 ## Operation Mode
 
@@ -61,6 +61,24 @@ gh issue view {issue_number} --json labels --jq '.labels[] | select(.name | star
 
 ## Execution
 
+### Step 0: 受入テスト計画書の読み込み【必須】
+
+**最初に `acceptance-plan.md` を読み込んでください**:
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/acceptance-plan.md
+```
+
+計画書には以下が記載されています：
+- テスト項目（TC-001, TC-002, ...）
+- テスト環境（必須サービス、環境変数）
+- curlコマンド（各テスト用）
+- 期待結果
+
+**計画書が存在しない場合**: Phase 3-A（計画立案）を先に実行するよう報告してください。
+
+### Step 1: コアプロンプトの実行
+
 **Read and execute the core prompt**:
 
 ```bash
@@ -71,6 +89,7 @@ Follow the instructions in the core prompt exactly.
 
 **Important**:
 - You are in **Subagent Mode**
+- **Plan file path**: `dev-reports/feature/issue/{issue_number}/acceptance-plan.md` ← **必ず読み込む**
 - Context file path: `dev-reports/*/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-context.json`
 - Output file path: `dev-reports/*/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-result.json`
 - Use Writeツール to create the result JSON file

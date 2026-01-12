@@ -37,11 +37,13 @@ Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリ�
 
 ```
 - [ ] Phase 1: Issue情報収集
+- [ ] Phase 1.5-A: 受入テスト計画立案【必須・TDD前】
+- [ ] Phase 1.5-B: 受入テスト計画レビュー【必須・TDD前】
 - [ ] Phase 2: TDD実装 (イテレーション 0/3)
 - [ ] Phase 2.5: TDD結果検証【必須】
 - [ ] Phase 2.6: 実装機能一覧の生成【必須】
 - [ ] Phase 2.7: 実装検証【必須】（デッドコード検出）
-- [ ] Phase 3: 受入テスト
+- [ ] Phase 3: 受入テスト実行【必須】
 - [ ] Phase 3.5: 受入テストファイル検証【必須】
 - [ ] Phase 4: リファクタリング
 - [ ] Phase 5: 進捗報告
@@ -111,7 +113,340 @@ fi
 - Issue本文の情報のみで進行（従来通り）
 - ユーザーに作業計画作成を推奨
 
-TodoWriteでPhase 1を`completed`に、Phase 2を`in_progress`に設定してください。
+TodoWriteでPhase 1を`completed`に、Phase 1.5-Aを`in_progress`に設定してください。
+
+---
+
+### Phase 1.5-A: 受入テスト計画立案【TDD前・必須】
+
+**重要**: TDD実装を開始する**前に**受入テスト計画を立案します。これにより、TDD実装時に何を達成すべきかが明確になります。
+
+#### 1.5-A-1. 受入テスト計画コンテキストファイル作成
+
+Writeツールで以下のファイルを作成：
+
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-plan-context.json
+```
+
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "issue_title": "Issue title",
+  "acceptance_criteria": [
+    "受入条件1",
+    "受入条件2"
+  ],
+  "technical_requirements": [
+    "技術要件1",
+    "技術要件2"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/{issue_number}/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/{issue_number}/work-plan.md",
+  "phase": "pre-tdd"
+}
+```
+
+#### 1.5-A-2. 受入テスト計画立案サブエージェント呼び出し
+
+以下のテキストを記述してください：
+
+```
+Use acceptance-plan-agent to create acceptance test plan for Issue #{issue_number}.
+
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-plan-context.json
+Output file: dev-reports/feature/issue/{issue_number}/acceptance-plan.md
+
+Please create a comprehensive acceptance test plan that includes:
+1. Acceptance criteria analysis
+2. Design policy verification items
+3. Dead code detection plan
+4. Test environment and methods
+5. Test items (TC-001, TC-002, ...)
+
+Note: This is PRE-TDD planning. Unit test review will be added after TDD implementation.
+```
+
+#### 1.5-A-3. 結果確認
+
+サブエージェントが完了したら、Readツールで計画書を確認：
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/acceptance-plan.md
+```
+
+**確認項目**:
+- 受入条件がすべて分析されているか
+- 設計方針検証項目が含まれているか
+- デッドコード検証計画が含まれているか
+- テスト項目（TC-XXX）が作成されているか
+- テスト環境・方法が明確か
+
+→ TodoWriteでPhase 1.5-Aを`completed`に、Phase 1.5-Bを`in_progress`に設定
+
+---
+
+### Phase 1.5-B: 受入テスト計画レビュー【TDD前・必須】
+
+立案した計画をレビューし、品質を確保します。
+
+#### 1.5-B-1. レビューコンテキストファイル作成
+
+Writeツールで以下のファイルを作成：
+
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-plan-review-context.json
+```
+
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "acceptance_plan_path": "dev-reports/feature/issue/{issue_number}/acceptance-plan.md",
+  "design_policy_path": "dev-reports/feature/issue/{issue_number}/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/{issue_number}/work-plan.md"
+}
+```
+
+#### 1.5-B-2. 受入テスト計画レビューサブエージェント呼び出し
+
+以下のテキストを記述してください：
+
+```
+Use acceptance-plan-review-agent to review acceptance test plan for Issue #{issue_number}.
+
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-plan-review-context.json
+Output file: dev-reports/feature/issue/{issue_number}/acceptance-plan-review.md
+
+Please review:
+1. Issue coverage - all acceptance criteria are covered
+2. Design policy coverage - design decisions are verified
+3. Test environment validity - executable configuration
+4. Test item validity - E2E perspective, no excessive mocking
+```
+
+#### 1.5-B-3. レビュー結果確認
+
+サブエージェントが完了したら、Readツールでレビュー結果を確認：
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/acceptance-plan-review.md
+```
+
+**結果判定**:
+
+| 判定 | 次のアクション |
+|------|--------------|
+| ✅ 承認 | Phase 2（TDD実装）へ進む |
+| ⚠️ 条件付き承認 | 改善を適用後、Phase 2 へ進む |
+| ❌ 却下 | **Phase 1.5 問題解決プロセス**へ進む |
+
+---
+
+### Phase 1.5 問題解決プロセス（受入テスト計画失敗時）
+
+受入テスト計画が却下された場合、以下の構造化された問題解決プロセスを実行します。
+
+#### Step 1: 現状を整理
+
+```markdown
+## 現状整理
+
+### 受入テスト計画の状態
+- **計画書パス**: dev-reports/feature/issue/{issue_number}/acceptance-plan.md
+- **レビュー結果**: ❌ 却下
+- **却下理由**: {レビューファイルから抽出}
+
+### 関連ドキュメントの状態
+| ドキュメント | 存在 | 内容の充実度 |
+|-------------|------|-------------|
+| design-policy.md | ✅/❌ | 高/中/低 |
+| work-plan.md | ✅/❌ | 高/中/低 |
+| Issue本文 | ✅ | 高/中/低 |
+
+### 現在のカバレッジ
+| 項目 | カバー率 | 詳細 |
+|------|---------|------|
+| 受入条件 | {X}/{Y} ({Z}%) | {未カバー項目リスト} |
+| 設計方針 | {X}/{Y} ({Z}%) | {未カバー項目リスト} |
+```
+
+#### Step 2: 問題点の洗い出し
+
+```markdown
+## 問題点の洗い出し
+
+### レビューで指摘された問題
+1. **[P1] 問題1**: {問題の説明}
+   - 重要度: 高/中/低
+   - 影響範囲: {影響する受入条件/テスト項目}
+
+2. **[P2] 問題2**: {問題の説明}
+   - 重要度: 高/中/低
+   - 影響範囲: {影響する受入条件/テスト項目}
+
+### 問題の分類
+| カテゴリ | 件数 | 問題ID |
+|---------|------|--------|
+| Issue網羅性不足 | X件 | P1, P3 |
+| 設計方針網羅性不足 | X件 | P2 |
+| テスト環境不備 | X件 | P4 |
+| テスト項目の妥当性 | X件 | P5 |
+```
+
+#### Step 3: 原因の深掘り
+
+```markdown
+## 原因の深掘り
+
+### 各問題の原因分析
+
+#### [P1] {問題1}
+- **表面的原因**: {直接的な原因}
+- **背景要因**: {なぜその原因が発生したか}
+  - 情報不足: {欠けている情報}
+  - 認識齟齬: {誤解していた点}
+  - プロセス問題: {プロセス上の問題}
+
+#### [P2] {問題2}
+- **表面的原因**: {直接的な原因}
+- **背景要因**: {なぜその原因が発生したか}
+
+### 原因間の関連性
+```mermaid
+graph TD
+    P1[問題1] --> C1[原因A]
+    P2[問題2] --> C1
+    P2 --> C2[原因B]
+    C1 --> R1[根本原因1]
+    C2 --> R1
+```
+```
+
+#### Step 4: 真因の特定
+
+```markdown
+## 真因の特定
+
+### 根本原因
+1. **[RC1] 根本原因1**: {根本原因の説明}
+   - 関連する問題: P1, P2
+   - なぜこれが真因か: {説明}
+
+2. **[RC2] 根本原因2**: {根本原因の説明}
+   - 関連する問題: P3, P4
+   - なぜこれが真因か: {説明}
+
+### 真因の優先度
+| 真因ID | 影響度 | 解決の難易度 | 優先度 |
+|--------|--------|-------------|--------|
+| RC1 | 高 | 低 | 🔴 最優先 |
+| RC2 | 中 | 中 | 🟡 次点 |
+```
+
+#### Step 5: 解決策案の立案
+
+```markdown
+## 解決策案
+
+### 解決策オプション
+
+#### オプション1: {解決策名}
+- **概要**: {解決策の概要}
+- **対象真因**: RC1, RC2
+- **実施内容**:
+  1. {実施内容1}
+  2. {実施内容2}
+- **メリット**: {メリット}
+- **デメリット**: {デメリット}
+- **工数見積**: {見積もり}
+
+#### オプション2: {解決策名}
+- **概要**: {解決策の概要}
+- **対象真因**: RC1
+- **実施内容**:
+  1. {実施内容1}
+- **メリット**: {メリット}
+- **デメリット**: {デメリット}
+- **工数見積**: {見積もり}
+
+#### オプション3: {解決策名}
+- **概要**: {解決策の概要}
+- **対象真因**: RC2
+- **実施内容**:
+  1. {実施内容1}
+- **メリット**: {メリット}
+- **デメリット**: {デメリット}
+- **工数見積**: {見積もり}
+
+### 解決策比較表
+| オプション | 効果 | 工数 | リスク | 推奨度 |
+|-----------|------|------|--------|--------|
+| オプション1 | 高 | 中 | 低 | ⭐⭐⭐ |
+| オプション2 | 中 | 低 | 低 | ⭐⭐ |
+| オプション3 | 中 | 高 | 中 | ⭐ |
+```
+
+#### Step 6: ユーザに方針確認
+
+問題分析結果をユーザーに提示し、方針を確認します：
+
+```
+❌ 受入テスト計画が却下されました
+
+## 問題サマリ
+- 却下理由: {却下理由の要約}
+- 特定された真因: {真因の要約}
+
+## 解決策オプション
+
+### オプション1（推奨）: {解決策名}
+{概要}
+- 工数: {見積もり}
+- 効果: 高
+
+### オプション2: {解決策名}
+{概要}
+- 工数: {見積もり}
+- 効果: 中
+
+### オプション3: {解決策名}
+{概要}
+- 工数: {見積もり}
+- 効果: 中
+
+## ご確認ください
+どのオプションで進めますか？または、別のアプローチをご提案ください。
+
+1. オプション1で進める
+2. オプション2で進める
+3. オプション3で進める
+4. Issue要件を見直す
+5. 開発を中止する
+```
+
+**ユーザーの選択に基づく次のアクション**:
+
+| 選択 | アクション |
+|------|----------|
+| オプション1-3 | 選択した解決策を実行 → Phase 1.5-A を再実行 |
+| Issue要件を見直す | ユーザーにIssue修正を依頼 → 修正後に Phase 1 から再開 |
+| 開発を中止 | PM Auto-Dev を終了 |
+
+---
+
+### Phase 1.5完了時
+
+受入テスト計画が承認されたら：
+
+1. TodoWriteでPhase 1.5-Bを`completed`に、Phase 2を`in_progress`に設定
+2. Phase 2（TDD実装）へ進む
+
+**重要**: TDD実装は承認済みの受入テスト計画に沿って行います。計画書のテスト項目（TC-XXX）を満たす実装を目指してください。
 
 ---
 
@@ -587,21 +922,15 @@ TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定。
 検証がすべてパスしたら：
 
 1. TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定
-2. Phase 3（受入テスト）へ進む
+2. Phase 3（受入テスト実行）へ進む
 
 ---
 
-### Phase 3: 受入テスト（L3: ローカル受入テスト）【必須】
+### Phase 3: 受入テスト実行【必須】
 
-**重要**: Phase 3はローカル環境でのみ実行可能です。実際のサービスを起動し、APIを叩いて動作確認を行います。
+**重要**: Phase 1.5で承認済みの受入テスト計画に従ってテストを実行します。
 
-#### テストレベルの分類
-
-| テストレベル | 実行環境 | Phase |
-|-------------|----------|-------|
-| L1 単体テスト | CI (GitHub Actions) | Phase 2 で実施済み |
-| L2 結合テスト | CI (GitHub Actions) | Phase 2 で実施済み |
-| **L3 ローカル受入テスト** | **ローカル（APIキー必要）** | **Phase 3【必須】** |
+計画立案とレビューはTDD前のPhase 1.5-A/Bで完了しています。このフェーズでは計画に沿った実行のみを行います。
 
 #### スキップ条件
 
@@ -614,11 +943,33 @@ TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定。
 | `test-only` | テストコードのみの変更 |
 | `ci-only` | CI/CD設定のみの変更 |
 
-**上記以外のIssueでは、L3テストは必須です。**
+**上記以外のIssueでは、Phase 3は必須です。**
 
-#### 3-1. work-plan.md の L3テスト計画読み込み【重要】
+#### テストレベルの分類
 
-**必須**: Phase 1で確認したwork-plan.mdの「L3受入テスト計画」セクションを読み込みます。
+| テストレベル | 実行環境 | Phase |
+|-------------|----------|-------|
+| L1 単体テスト | CI (GitHub Actions) | Phase 2 で実施済み |
+| L2 結合テスト | CI (GitHub Actions) | Phase 2 で実施済み |
+| **L3 ローカル受入テスト** | **ローカル（APIキー必要）** | **Phase 3【必須】** |
+
+#### 3-1. 受入テスト計画の読み込み【必須】
+
+**重要**: 必ず `acceptance-plan.md` を読み込んでからテストを実行してください。
+
+```bash
+cat dev-reports/feature/issue/{issue_number}/acceptance-plan.md
+```
+
+計画書から以下を確認：
+- テスト項目（TC-001, TC-002, ...）
+- テスト環境（必須サービス、環境変数）
+- curlコマンド（各テスト用）
+- 期待結果
+
+#### 3-2. work-plan.md の L3テスト計画読み込み
+
+**推奨**: Phase 1で確認したwork-plan.mdの「L3受入テスト計画」セクションも参照します。
 
 ```bash
 WORK_PLAN_FILE="dev-reports/feature/issue/${ISSUE_NUM}/work-plan.md"
@@ -636,7 +987,7 @@ fi
 - 期待するレスポンスボディ
 - 外部サービス連携確認コマンド
 
-#### 3-2. プロジェクト判定とテスト方法決定【重要】
+#### 3-3. プロジェクト判定とテスト方法決定
 
 **Issueのラベルからプロジェクトを判定し、適切なテスト方法を決定します。**
 
@@ -670,7 +1021,7 @@ else
 fi
 ```
 
-#### 3-3. 受入テストコンテキストファイル作成
+#### 3-4. 受入テストコンテキストファイル作成
 
 Writeツールで以下のファイルを作成：
 
@@ -731,7 +1082,7 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/acceptance-cont
 - `l3_test_plan` はwork-plan.mdの「L3受入テスト計画」セクションから転記
 - work-plan.mdが存在しない場合は、受入条件からテストコマンドを生成
 
-#### 3-4. pytest受入テストファイル生成【必須】
+#### 3-5. pytest受入テストファイル生成【必須】
 
 **必須**: `tests/acceptance/test_issue_{issue_number}_acceptance.py` を生成します。
 
@@ -877,7 +1228,7 @@ class TestIssue{issue_number}Acceptance:
 - work-plan.mdのL3テスト計画に記載されたcurlコマンドをpytestメソッドに変換
 - 外部サービス連携テストは `@pytest.mark.external` マーカーを付与
 
-#### 3-5. 受入テストサブエージェント呼び出し
+#### 3-6. 受入テストサブエージェント呼び出し
 
 以下のテキストを記述してください：
 
@@ -905,7 +1256,7 @@ REQUIRED:
 Focus on ACTUAL service behavior with real HTTP requests and real UI interactions.
 ```
 
-#### 3-6. 結果確認
+#### 3-7. 結果確認
 
 Readツールで結果ファイルを確認：
 
@@ -1374,6 +1725,14 @@ TodoWriteでPhase 5を`completed`に設定。
 ### イテレーション処理フロー
 
 ```
+Phase 1 → Phase 1.5-A → Phase 1.5-B
+                             ↓
+                    計画レビュー却下?
+                         ↓ Yes
+                → 問題解決プロセス → ユーザー確認
+                         ↓
+                Phase 1.5-A 再実行
+                         ↓ No（承認）
 Phase 2 → Phase 2.5 → Phase 2.6 → Phase 2.7
                                       ↓
                               デッドコード検出?
@@ -1384,7 +1743,7 @@ Phase 2 → Phase 2.5 → Phase 2.6 → Phase 2.7
 Phase 3 → Phase 3.5 → 受入テスト失敗?
                            ↓ Yes
           ←───────────────┘
-        (イテレーション+1)
+        (Phase 2からイテレーション+1)
 
 Phase 2 (イテレーション2) → Phase 2.7 → Phase 3 → ...
 ```
@@ -1416,15 +1775,20 @@ Phase 2 (イテレーション2) → Phase 2.7 → Phase 3 → ...
 
 ```
 dev-reports/feature/issue/{issue_number}/
-├── work-plan.md                  ← 作業計画（/work-plan で作成）
+├── work-plan.md                       ← 作業計画（/work-plan で作成）
+├── design-policy.md                   ← 設計方針書（/design-policy で作成）
+├── acceptance-plan.md                 ← 受入テスト計画書（Phase 1.5-A で作成）
+├── acceptance-plan-review.md          ← 受入テスト計画レビュー結果（Phase 1.5-B で作成）
 └── pm-auto-dev/
     ├── iteration-1/
     │   ├── tdd-context.json                        ← TDD実装の入力（作業計画情報含む）
     │   ├── tdd-result.json                         ← TDD実装の出力
-    │   ├── implemented-features.json               ← 【新規】実装機能一覧
-    │   ├── implementation-verification-result.json ← 【新規】実装検証結果
-    │   ├── acceptance-context.json                 ← 受入テストの入力
-    │   ├── acceptance-result.json                  ← 受入テストの出力
+    │   ├── implemented-features.json               ← 実装機能一覧
+    │   ├── implementation-verification-result.json ← 実装検証結果
+    │   ├── acceptance-plan-context.json            ← 【新規】受入テスト計画の入力
+    │   ├── acceptance-plan-review-context.json     ← 【新規】受入テスト計画レビューの入力
+    │   ├── acceptance-context.json                 ← 受入テスト実行の入力
+    │   ├── acceptance-result.json                  ← 受入テスト実行の出力
     │   ├── refactor-context.json                   ← リファクタリングの入力
     │   ├── refactor-result.json                    ← リファクタリングの出力
     │   ├── progress-context.json                   ← 進捗レポートの入力（作業計画比較含む）
@@ -1443,11 +1807,13 @@ dev-reports/feature/issue/{issue_number}/
 以下をすべて満たすこと：
 
 - ✅ Phase 1: Issue情報収集完了
+- ✅ Phase 1.5-A: 受入テスト計画立案完了（acceptance-plan.md 作成済み）【TDD前】
+- ✅ Phase 1.5-B: 受入テスト計画レビュー完了（承認済み）【TDD前】
 - ✅ Phase 2: TDD実装成功（カバレッジ90%以上、静的解析エラー0件）
 - ✅ Phase 2.5: TDD結果検証完了
 - ✅ Phase 2.6: 実装機能一覧の生成完了
 - ✅ Phase 2.7: 実装検証成功（デッドコード0件）【Issue #338教訓】
-- ✅ Phase 3: 受入テスト成功（全シナリオ合格、全受入条件検証済み）
+- ✅ Phase 3: 受入テスト実行成功（全シナリオ合格、全受入条件検証済み）
 - ✅ Phase 3.5: 受入テストファイル検証完了
 - ✅ Phase 4: リファクタリング完了（または失敗時は理由報告）
 - ✅ Phase 5: 進捗レポート作成完了
