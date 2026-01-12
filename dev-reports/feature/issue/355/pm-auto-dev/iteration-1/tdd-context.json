@@ -1,0 +1,52 @@
+{
+  "issue_number": 355,
+  "issue_title": "TaskFlow Adapter Layer 実装",
+  "acceptance_criteria": [
+    "TaskFlowAdapter.convert() が JSON文字列フィールドをオブジェクトに変換",
+    "変換エラー時に詳細なエラーメッセージを返却",
+    "workflow_registrar.py がAdapterを使用して変換を実行",
+    "単体テストカバレッジ 90% 以上",
+    "Ruff/MyPy エラーゼロ",
+    "既存テストが全てパス",
+    "input_schema が JSON文字列の場合、オブジェクトに変換される",
+    "output_schema が JSON文字列の場合、オブジェクトに変換される",
+    "output が JSON文字列の場合、オブジェクトに変換される",
+    "steps[*].config.body が JSON文字列の場合、オブジェクトに変換される",
+    "既にオブジェクトの場合、そのまま保持される",
+    "不正なJSONの場合、エラーを返却"
+  ],
+  "implementation_tasks": [
+    "adapter/ ディレクトリ作成 (expertAgent/.../workflow_gen/adapter/)",
+    "adapter/__init__.py 作成",
+    "adapter/taskflow_adapter.py 作成 - ConversionResult dataclass",
+    "adapter/taskflow_adapter.py 作成 - TaskFlowAdapter クラス",
+    "adapter/taskflow_adapter.py 作成 - WORKFLOW_JSON_STRING_FIELDS 定数",
+    "adapter/taskflow_adapter.py 作成 - STEP_JSON_STRING_FIELDS 定数",
+    "adapter/taskflow_adapter.py 作成 - convert() メソッド",
+    "adapter/taskflow_adapter.py 作成 - _convert_json_string() メソッド",
+    "adapter/taskflow_adapter.py 作成 - _convert_step() メソッド",
+    "adapter/taskflow_adapter.py 作成 - _deep_copy() メソッド",
+    "workflow_registrar.py 修正 - TaskFlowAdapter インポート追加",
+    "workflow_registrar.py 修正 - _adapter インスタンス作成",
+    "workflow_registrar.py 修正 - register_taskflow_workflow() で変換処理追加",
+    "単体テスト作成 - tests/unit/.../adapter/test_taskflow_adapter.py"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/investigation/issue-353-pending-workflow/schema-unification-proposal.md",
+  "test_plan_path": "dev-reports/feature/issue/355/acceptance-plan.md",
+  "test_cases": [
+    "TC-001: JSON文字列 input_schema の変換",
+    "TC-002: JSON文字列 output_schema の変換",
+    "TC-003: JSON文字列 output の変換",
+    "TC-004: steps[*].config.body の変換",
+    "TC-005: 既存オブジェクトの保持",
+    "TC-006: 不正JSON時のエラー返却",
+    "TC-007: ConversionResult 構造確認",
+    "TC-008: workflow_registrar.py 統合確認",
+    "TC-009: Adapter変換失敗時のエラーハンドリング",
+    "TC-010: E2E - ワークフロー登録成功",
+    "TC-011: 複数フィールド同時変換",
+    "TC-012: ディープコピー検証"
+  ]
+}

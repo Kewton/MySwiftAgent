@@ -13,6 +13,10 @@ Issue #350: Added TaskFlow V2 registration support using /api/v2/workflows endpo
 TaskFlow V2 workflows use a different body_template structure:
 - workflow_name: Name of registered workflow
 - inputs: Mapped from user_input for compatibility
+
+Issue #355: Added TaskFlowAdapter for JSON string to object conversion.
+ExpertAgent/LLM may output JSON strings for dict fields (input_schema, output_schema, etc.)
+but GraphAiServer expects objects. TaskFlowAdapter converts these before registration.
 """
 
 from __future__ import annotations
@@ -23,12 +27,19 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.adapter import (
+    TaskFlowAdapter,
+)
 from core.config import settings
 
 if TYPE_CHECKING:
     from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 
 logger = logging.getLogger(__name__)
+
+# Module-level adapter instance for TaskFlow JSON conversion
+# Issue #355: Converts JSON string fields to objects before GraphAiServer registration
+_adapter = TaskFlowAdapter()
 
 # GraphAiServer configuration
 GRAPHAISERVER_BASE_URL = settings.GRAPHAISERVER_BASE_URL or "http://localhost:8005"
@@ -122,6 +133,7 @@ async def register_taskflow_workflow(
     """Register TaskFlow V2 workflow JSON to GraphAiServer.
 
     Issue #350: TaskFlow V2 workflows use /api/v2/workflows/register endpoint.
+    Issue #355: Uses TaskFlowAdapter to convert JSON strings to objects before registration.
 
     Args:
         workflow_name: Name of the workflow (e.g., google_search_workflow)
@@ -131,15 +143,31 @@ async def register_taskflow_workflow(
     Returns:
         WorkflowRegistrationResult with registration status
     """
+    # Issue #355: Convert JSON string fields to objects using TaskFlowAdapter
+    conversion_result = _adapter.convert(workflow_json)
+
+    if not conversion_result.success:
+        error_msg = "; ".join(conversion_result.errors)
+        logger.error("Workflow conversion failed: %s", error_msg)
+        return WorkflowRegistrationResult(
+            success=False,
+            error=f"Schema conversion failed: {error_msg}",
+        )
+
+    # Log any warnings from conversion
+    for warning in conversion_result.warnings:
+        logger.warning("Workflow conversion warning: %s", warning)
+
     register_url = f"{GRAPHAISERVER_BASE_URL}/api/v2/workflows/register"
 
     # Use provided token or fall back to settings.GRAPHAISERVER_ADMIN_TOKEN
     # Issue #350: Use GRAPHAISERVER_ADMIN_TOKEN for TaskFlow V2 workflow registration
     token = admin_token or settings.GRAPHAISERVER_ADMIN_TOKEN
 
+    # Use converted data for registration
     payload = {
         "workflow_name": workflow_name,
-        "definition": workflow_json,
+        "definition": conversion_result.data,  # Use converted data
         "overwrite": True,
     }
 

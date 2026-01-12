@@ -1,0 +1,35 @@
+{
+  "issue_number": 355,
+  "issue_title": "TaskFlow Adapter Layer 実装",
+  "acceptance_criteria": [
+    "TaskFlowAdapter.convert() が JSON文字列フィールドをオブジェクトに変換",
+    "変換エラー時に詳細なエラーメッセージを返却",
+    "workflow_registrar.py がAdapterを使用して変換を実行",
+    "単体テストカバレッジ 90% 以上",
+    "Ruff/MyPy エラーゼロ",
+    "既存テストが全てパス",
+    "input_schema が JSON文字列の場合、オブジェクトに変換される",
+    "output_schema が JSON文字列の場合、オブジェクトに変換される",
+    "output が JSON文字列の場合、オブジェクトに変換される",
+    "steps[*].config.body が JSON文字列の場合、オブジェクトに変換される",
+    "既にオブジェクトの場合、そのまま保持される",
+    "不正なJSONの場合、エラーを返却"
+  ],
+  "technical_requirements": [
+    "Python 3.11+",
+    "Pydantic V2",
+    "pytest",
+    "Adapter Pattern実装"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/investigation/issue-353-pending-workflow/schema-unification-proposal.md",
+  "work_plan_path": null,
+  "phase": "pre-tdd",
+  "scope": [
+    "adapter/ ディレクトリ構造作成",
+    "TaskFlowAdapter クラス実装",
+    "JSON文字列→オブジェクト変換ロジック",
+    "workflow_registrar.py への統合",
+    "単体テスト作成（カバレッジ90%以上）"
+  ]
+}
