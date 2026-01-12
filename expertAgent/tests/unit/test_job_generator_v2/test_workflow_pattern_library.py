@@ -198,7 +198,7 @@ class TestWorkflowPatternLibrarySearchFetchSummarize:
             if isinstance(node_def, dict):
                 # Check inputs reference earlier nodes or source
                 inputs = node_def.get("inputs", {})
-                for key, value in inputs.items():
+                for _key, value in inputs.items():
                     if isinstance(value, str) and value.startswith(":"):
                         ref_node = value.split(".")[0][1:]  # Remove :
                         if ref_node != "source":
@@ -222,7 +222,6 @@ class TestWorkflowPatternLibraryPatternProvider:
 
     def test_implements_protocol(self, library):
         """WorkflowPatternLibrary implements PatternProvider protocol."""
-        from aiagent.langgraph.jobGeneratorV2.validators import PatternProvider
 
         # Should have required methods
         assert hasattr(library, "get_pattern")

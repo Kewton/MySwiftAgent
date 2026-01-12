@@ -169,7 +169,6 @@ class TestOrchestratorRunWorkflow:
             TaskBreakdownOutput,
             TaskDefinition,
             WorkflowGenOutput,
-            WorkflowGenPhaseOutput,
         )
 
         orchestrator = JobGenerationOrchestrator(

@@ -248,9 +248,9 @@ class TaskFlowGeneratorStrategy(WorkflowGeneratorStrategy):
         This uses the TaskFlow-specific prompt rules and generates
         JSON output instead of YAML.
         """
-        from .taskflow_generator import TaskFlowLLMGenerator
-
         import json
+
+        from .taskflow_generator import TaskFlowLLMGenerator
 
         logger.info("Generating TaskFlow V2 JSON workflow via Strategy")
 

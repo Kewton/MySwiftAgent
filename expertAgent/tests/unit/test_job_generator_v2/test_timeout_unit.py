@@ -6,7 +6,6 @@ GraphAI expects timeout values in milliseconds. This test ensures
 that the prompt examples use milliseconds, not seconds.
 """
 
-import pytest
 
 
 class TestTimeoutUnitConsistency:
@@ -60,13 +59,13 @@ class TestTimeoutUnitConsistency:
 
     def test_no_seconds_timeout_in_rules(self) -> None:
         """Test that rules don't contain seconds-based timeout (30)."""
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.rules.agent_rules import (
-            FETCH_AGENT_RULES,
-        )
-
         # Should NOT contain "timeout: 30" followed by non-digit
         # (which would indicate seconds, not milliseconds)
         import re
+
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.rules.agent_rules import (
+            FETCH_AGENT_RULES,
+        )
 
         # Match "timeout: 30" NOT followed by another digit
         seconds_pattern = r"timeout:\s*30(?!\d)"

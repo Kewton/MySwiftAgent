@@ -8,9 +8,10 @@ This test verifies that:
 3. Retry attempts use the error feedback from previous validation
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
+from unittest.mock import patch
+
+import pytest
 
 from aiagent.langgraph.jobGeneratorV2.validators import (
     ValidationError,
@@ -126,14 +127,15 @@ class TestYamlGeneratorRetryFlow:
     @pytest.mark.asyncio
     async def test_retry_uses_error_feedback(self) -> None:
         """Test that error_feedback parameter is passed through generate_from_task."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
-            LLMGeneratorSubWorkflow,
             LLMGenerationResult,
+            LLMGeneratorSubWorkflow,
         )
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder import (
             PromptBuilderSubWorkflow,
         )
-        import inspect
 
         # Verify generate_from_task accepts error_feedback
         sig = inspect.signature(LLMGeneratorSubWorkflow.generate_from_task)
@@ -184,10 +186,10 @@ class TestTimeoutValidationInRetry:
 
     def test_timeout_error_in_feedback(self) -> None:
         """Test that timeout validation error appears in feedback."""
+        from aiagent.langgraph.jobGeneratorV2.validators import ValidationResult
         from aiagent.langgraph.jobGeneratorV2.validators.agent_constraint_validator import (
             AgentConstraintValidator,
         )
-        from aiagent.langgraph.jobGeneratorV2.validators import ValidationResult
 
         validator = AgentConstraintValidator()
 

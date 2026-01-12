@@ -70,7 +70,7 @@ class TestGraphAIStrategyProtocol:
         """GraphAI strategy should have generate method."""
         strategy = create_strategy(EngineType.GRAPHAI)
         assert hasattr(strategy, "generate")
-        assert callable(getattr(strategy, "generate"))
+        assert callable(strategy.generate)
 
     def test_graphai_strategy_has_get_prompt_rules_method(self) -> None:
         """GraphAI strategy should have get_prompt_rules method."""
@@ -99,7 +99,7 @@ class TestTaskFlowStrategyProtocol:
         """TaskFlow strategy should have generate method."""
         strategy = create_strategy(EngineType.TASKFLOW)
         assert hasattr(strategy, "generate")
-        assert callable(getattr(strategy, "generate"))
+        assert callable(strategy.generate)
 
     def test_taskflow_strategy_has_get_prompt_rules_method(self) -> None:
         """TaskFlow strategy should have get_prompt_rules method."""

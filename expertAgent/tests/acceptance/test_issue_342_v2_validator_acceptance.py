@@ -16,10 +16,10 @@ Issue #342 V2バリデーター修正 受入テスト（L3: ローカル受入�
 - E2E: ワークフロー実行時にInvalid URLエラーが発生しないこと
 """
 import os
+from typing import Any
 
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance

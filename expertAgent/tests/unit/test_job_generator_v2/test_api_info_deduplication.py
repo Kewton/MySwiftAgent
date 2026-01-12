@@ -6,8 +6,9 @@ When both recommended_apis and api_mappings are provided, a warning
 should be raised to alert about potential duplication.
 """
 
-import pytest
 import warnings
+
+import pytest
 
 
 class TestAPIInfoDuplicationWarning:
@@ -156,15 +157,16 @@ class TestAPISchemaInjectorPriority:
 
     def test_api_schema_injector_is_used(self) -> None:
         """Test that APISchemaInjector is called for API info."""
+        from unittest.mock import MagicMock
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.assembler import (
             assemble_prompt,
         )
-        from unittest.mock import MagicMock, patch
 
         mock_injector = MagicMock()
         mock_injector.inject.return_value = "## API Schemas\nInjected content"
 
-        prompt = assemble_prompt(
+        _prompt = assemble_prompt(
             task_name="test",
             task_description="Test task",
             input_schema={},

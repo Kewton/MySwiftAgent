@@ -25,9 +25,6 @@ class TestValidationPipelineAPISchemaIntegration:
 
     def test_pipeline_includes_api_schema_validator(self, pipeline):
         """Pipeline should include APISchemaValidator by default."""
-        from aiagent.langgraph.jobGeneratorV2.validators.api_schema_validator import (
-            APISchemaValidator,
-        )
 
         validator_types = [type(v).__name__ for v in pipeline.validators]
         assert "APISchemaValidator" in validator_types

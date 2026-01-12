@@ -9,7 +9,6 @@ The improved method should:
 4. Sanitize error messages for security
 """
 
-import pytest
 
 from aiagent.langgraph.jobGeneratorV2.validators import (
     ValidationError,

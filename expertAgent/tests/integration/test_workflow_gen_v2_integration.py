@@ -272,7 +272,7 @@ class TestWorkflowGenWorkflowIntegration:
         assert result.workflow_yaml is not None
 
         # Verify generated YAML is valid
-        validator = YamlValidatorSubWorkflow()
+        _validator = YamlValidatorSubWorkflow()
         # Note: The template-based generator uses version 0.6, so we skip strict validation
         # validation_result = validator.validate(result.workflow_yaml)
         # In production, we'd ensure the versions match

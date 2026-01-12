@@ -5,6 +5,7 @@ Issue #342 Task 4.2: Observability implementation tests.
 
 import json
 import logging
+
 import pytest
 
 

@@ -13,7 +13,6 @@ Issue #342 タスクチェーン修正 受入テスト（L3: ローカル受入�
 - RC-2: 出力ノード命名規則追加 (OUTPUT_NODE_RULE)
 - E2E: タスクチェーン実行時にデータが正しく受け渡されること
 """
-import os
 
 import pytest
 

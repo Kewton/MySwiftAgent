@@ -180,7 +180,6 @@ class TestAPISchemaInjectorPromptInjector:
 
     def test_implements_protocol(self, injector):
         """APISchemaInjector implements PromptInjector protocol."""
-        from aiagent.langgraph.jobGeneratorV2.validators import PromptInjector
 
         # Should have inject method
         assert hasattr(injector, "inject")

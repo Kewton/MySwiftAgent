@@ -150,7 +150,7 @@ class TestIssue342APIInjectionAcceptance:
         """シナリオ3: shared/capability_utils.pyがV1/V2で共通利用可能
 
         受入条件: shared/capability_utils.py がV1/V2で共通利用可能
-        
+
         このテストは、capability_utilsが両方のバージョンから
         インポート可能であることを確認します。
         """

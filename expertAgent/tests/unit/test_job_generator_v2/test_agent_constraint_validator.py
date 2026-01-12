@@ -299,7 +299,7 @@ class TestAgentConstraintValidatorReDoS:
         import time
 
         start = time.time()
-        errors = validator.validate_string_template_agent(config)
+        _errors = validator.validate_string_template_agent(config)
         elapsed = time.time() - start
         # Should complete in under 1 second
         assert elapsed < 1.0
@@ -314,7 +314,7 @@ class TestAgentConstraintValidatorReDoS:
         import time
 
         start = time.time()
-        errors = validator.validate_string_template_agent(config)
+        _errors = validator.validate_string_template_agent(config)
         elapsed = time.time() - start
         assert elapsed < 1.0
 
@@ -324,6 +324,6 @@ class TestAgentConstraintValidatorReDoS:
             "agent": "stringTemplateAgent",
             "params": {"template": "x" * 20000},  # 20KB template
         }
-        errors = validator.validate_string_template_agent(config)
+        _errors = validator.validate_string_template_agent(config)
         # Should either handle gracefully or report error
         # Not cause ReDoS

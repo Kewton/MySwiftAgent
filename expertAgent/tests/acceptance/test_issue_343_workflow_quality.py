@@ -12,7 +12,7 @@ This module tests these improvements at the acceptance level, verifying:
 """
 
 import warnings
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -287,8 +287,8 @@ class TestErrorFeedbackAcceptance:
         mock_context = MagicMock()
         mock_context.job_id = "test-job"
 
-        # Mock interfaces
-        interfaces = {
+        # Mock interfaces (setup for potential future use)
+        _interfaces = {
             "task_001": InterfaceSchema(
                 task_id="task_001",
                 description="Test task",

@@ -224,7 +224,7 @@ class TestV2TaskBreakdownAcceptance:
 
     def _poll_job_status(self, job_id: str) -> dict | None:
         """Poll job status until completion or timeout."""
-        for attempt in range(MAX_POLL_ATTEMPTS):
+        for _attempt in range(MAX_POLL_ATTEMPTS):
             try:
                 response = requests.get(
                     f"{EXPERTAGENT_URL}/v1/jobs/{job_id}/status",

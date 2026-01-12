@@ -23,7 +23,6 @@ from aiagent.langgraph.jobGeneratorV2.validators.taskflow_validator import (
     TaskFlowSchemaValidator,
     TaskFlowSecurityValidator,
 )
-from aiagent.langgraph.jobGeneratorV2.validators import ValidationResult
 
 
 class TestTaskFlowSecurityValidator:

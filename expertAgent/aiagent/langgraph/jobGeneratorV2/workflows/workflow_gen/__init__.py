@@ -13,6 +13,15 @@ Issue #342 Phase F: WorkflowGen V2 LLM Integration.
 Issue #350: Added Strategy Pattern for engine switching (GraphAI/TaskFlow V2).
 """
 
+# Issue #350: Strategy Pattern exports
+from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.engine_strategy import (
+    EngineType,
+    GraphAIGeneratorStrategy,
+    TaskFlowGeneratorStrategy,
+    WorkflowGeneratorStrategy,
+    WorkflowOutput,
+    create_strategy,
+)
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.errors import (
     ErrorCode,
     ValidationError,
@@ -32,6 +41,10 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas import (
     NodeDefinition,
     is_valid_agent,
 )
+from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.taskflow_generator import (
+    TaskFlowGenerationResult,
+    TaskFlowLLMGenerator,
+)
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.test_runner import (
     TestRunnerSubWorkflow,
 )
@@ -44,20 +57,6 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_generator impo
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_validator import (
     YamlValidationResult,
     YamlValidatorSubWorkflow,
-)
-
-# Issue #350: Strategy Pattern exports
-from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.engine_strategy import (
-    EngineType,
-    GraphAIGeneratorStrategy,
-    TaskFlowGeneratorStrategy,
-    WorkflowGeneratorStrategy,
-    WorkflowOutput,
-    create_strategy,
-)
-from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.taskflow_generator import (
-    TaskFlowGenerationResult,
-    TaskFlowLLMGenerator,
 )
 
 __all__ = [

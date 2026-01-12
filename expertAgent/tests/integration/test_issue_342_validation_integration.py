@@ -7,14 +7,14 @@ code paths.
 Issue #342 Iteration 2: Dead code integration verification.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-from typing import Any
+from unittest.mock import MagicMock
 
-from aiagent.langgraph.jobGeneratorV2.pipeline import ValidationPipeline
-from aiagent.langgraph.jobGeneratorV2.observability import ValidationObserver
+import pytest
+
 from aiagent.langgraph.jobGeneratorV2.injectors import APISchemaInjector
+from aiagent.langgraph.jobGeneratorV2.observability import ValidationObserver
 from aiagent.langgraph.jobGeneratorV2.patterns import WorkflowPatternLibrary
+from aiagent.langgraph.jobGeneratorV2.pipeline import ValidationPipeline
 from aiagent.langgraph.jobGeneratorV2.validators import ValidationResult
 
 
@@ -176,11 +176,11 @@ class TestYamlGeneratorValidationIntegration:
     @pytest.mark.asyncio
     async def test_yaml_generator_validates_after_llm_generation(self) -> None:
         """Verify YamlGeneratorSubWorkflow validates output after LLM generation."""
+        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
+        from aiagent.langgraph.jobGeneratorV2.types import InterfaceSchema
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.yaml_generator import (
             YamlGeneratorSubWorkflow,
         )
-        from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import InterfaceSchema
 
         generator = YamlGeneratorSubWorkflow()
 
@@ -190,12 +190,12 @@ class TestYamlGeneratorValidationIntegration:
         )
 
         # Create minimal context (requires job_id and user_requirement)
-        context = ExecutionContext(
+        _context = ExecutionContext(
             job_id="test-job",
             user_requirement="Test requirement for validation",
         )
 
-        interfaces = {
+        _interfaces = {
             "task_001": InterfaceSchema(
                 task_id="task_001",
                 input_schema={"type": "object"},

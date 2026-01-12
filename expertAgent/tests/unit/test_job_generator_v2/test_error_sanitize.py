@@ -6,7 +6,6 @@ Security feature to prevent prompt injection and information leakage
 when passing error messages to LLM.
 """
 
-import pytest
 
 
 class TestSanitizeErrorMessage:

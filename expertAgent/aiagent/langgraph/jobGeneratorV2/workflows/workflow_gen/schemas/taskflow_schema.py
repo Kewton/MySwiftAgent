@@ -144,7 +144,7 @@ class UnifiedStepConfig(BaseModel):
             allowed_http_hosts = [
                 "localhost",
                 "127.0.0.1",
-                "0.0.0.0",
+                "0.0.0.0",  # noqa: S104 - Intentional for Docker networking
             ]
             # Also allow internal Docker network addresses
             if hostname in allowed_http_hosts or hostname.endswith(".local"):

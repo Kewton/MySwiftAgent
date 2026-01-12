@@ -9,9 +9,10 @@ The error_feedback parameter should flow through:
 4. assembler -> WorkflowPrompt
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Any
+from unittest.mock import patch
+
+import pytest
 
 
 class TestLLMGeneratorErrorFeedback:
@@ -19,10 +20,11 @@ class TestLLMGeneratorErrorFeedback:
 
     def test_generate_from_task_accepts_error_feedback(self) -> None:
         """Test that generate_from_task accepts error_feedback parameter."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
             LLMGeneratorSubWorkflow,
         )
-        import inspect
 
         sig = inspect.signature(LLMGeneratorSubWorkflow.generate_from_task)
         params = list(sig.parameters.keys())
@@ -33,10 +35,11 @@ class TestLLMGeneratorErrorFeedback:
 
     def test_error_feedback_has_default_empty_string(self) -> None:
         """Test that error_feedback defaults to empty string."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
             LLMGeneratorSubWorkflow,
         )
-        import inspect
 
         sig = inspect.signature(LLMGeneratorSubWorkflow.generate_from_task)
         param = sig.parameters.get("error_feedback")
@@ -50,10 +53,11 @@ class TestPromptBuilderErrorFeedback:
 
     def test_build_accepts_error_feedback(self) -> None:
         """Test that PromptBuilder.build() accepts error_feedback parameter."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder import (
             PromptBuilderSubWorkflow,
         )
-        import inspect
 
         sig = inspect.signature(PromptBuilderSubWorkflow.build)
         params = list(sig.parameters.keys())
@@ -64,10 +68,11 @@ class TestPromptBuilderErrorFeedback:
 
     def test_build_error_feedback_has_default(self) -> None:
         """Test that build error_feedback defaults to empty string."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder import (
             PromptBuilderSubWorkflow,
         )
-        import inspect
 
         sig = inspect.signature(PromptBuilderSubWorkflow.build)
         param = sig.parameters.get("error_feedback")
@@ -101,10 +106,11 @@ class TestAssemblerErrorFeedback:
 
     def test_assemble_prompt_accepts_error_feedback(self) -> None:
         """Test that assemble_prompt accepts error_feedback parameter."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.assembler import (
             assemble_prompt,
         )
-        import inspect
 
         sig = inspect.signature(assemble_prompt)
         params = list(sig.parameters.keys())

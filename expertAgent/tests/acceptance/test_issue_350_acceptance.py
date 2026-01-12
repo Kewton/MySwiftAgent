@@ -21,11 +21,11 @@ Note: Job Generator APIは非同期パターンを使用します。
       2. GET /api/v1/jobs/{job_id}/status でステータスをポーリング
       3. 完了後にワークフロー結果を検証
 """
-import json
 import time
+from typing import Any
+
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance

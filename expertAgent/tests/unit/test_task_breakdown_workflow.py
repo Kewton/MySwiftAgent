@@ -155,8 +155,8 @@ class TestTaskDecomposerSubWorkflow:
             TaskDecomposerSubWorkflow,
         )
 
-        # Mock LLM response
-        mock_llm_response = {
+        # Mock LLM response (setup for expected format)
+        _mock_llm_response = {
             "tasks": [
                 {
                     "task_id": "task_001",
