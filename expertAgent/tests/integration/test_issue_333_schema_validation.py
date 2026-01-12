@@ -210,7 +210,8 @@ class TestTypeValidationRulesIntegration:
         # Verify TYPE_VALIDATION_RULES content is in the prompt
         assert "Important Type Validation Rules" in prompt
         assert "fetchAgent Output Type" in prompt
-        assert "stringTemplateAgent Type Conversion Pattern" in prompt
+        # Issue #340: Section renamed to Japanese for consistency
+        assert "stringTemplateAgent 重要な制限事項" in prompt
         assert "Field Name Validation" in prompt
 
     def test_type_validation_rules_contains_key_guidance(self) -> None:

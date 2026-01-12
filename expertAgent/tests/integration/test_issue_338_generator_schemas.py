@@ -61,7 +61,7 @@ class TestGeneratorSchemaInjectionIntegration:
         mock_invoke_llm.return_value = StructuredCallResult(
             result=WorkflowGenerationResponse(
                 workflow_name="test_workflow",
-                yaml_content="version: 0.5\nnodes:\n  source: {}",
+                yaml_content="version: 0.5\nnodes:\n  source: {}\n  output:\n    isResult: true",
                 reasoning="Test reasoning",
             ),
             recovered_via_json=False,
@@ -115,7 +115,7 @@ class TestGeneratorSchemaInjectionIntegration:
         mock_invoke_llm.return_value = StructuredCallResult(
             result=WorkflowGenerationResponse(
                 workflow_name="test_workflow",
-                yaml_content="version: 0.5\nnodes:\n  source: {}",
+                yaml_content="version: 0.5\nnodes:\n  source: {}\n  output:\n    isResult: true",
                 reasoning="Test reasoning",
             ),
             recovered_via_json=False,

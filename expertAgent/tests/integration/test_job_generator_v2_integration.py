@@ -153,13 +153,18 @@ class TestJobGeneratorV2Integration:
             return_value=MagicMock(max_retries=3)
         )
 
-        # WorkflowGen mock
-        workflow_gen_output = MagicMock()
-        workflow_gen_output.status = PhaseStatus.SUCCESS
-        workflow_gen_output.workflow_yaml = "version: 0.6\nnodes: {}"
-        workflow_gen_output.test_result = {"validation": "passed"}
+        # WorkflowGen mock - Issue #342 V2 Fix: Returns WorkflowGenOutput per task
+        # The orchestrator calls workflow.execute() for each task and wraps results
+        from aiagent.langgraph.jobGeneratorV2.types import WorkflowGenOutput
+
+        task_workflow_output = WorkflowGenOutput(
+            status=PhaseStatus.SUCCESS,
+            task_id="task_001",
+            workflow_yaml="version: 0.6\nnodes: {}",
+            test_result={"validation": "passed"},
+        )
         workflow_gen_workflow = AsyncMock()
-        workflow_gen_workflow.execute = AsyncMock(return_value=workflow_gen_output)
+        workflow_gen_workflow.execute = AsyncMock(return_value=task_workflow_output)
         workflow_gen_workflow.get_retry_policy = MagicMock(
             return_value=MagicMock(max_retries=3)
         )
@@ -184,7 +189,10 @@ class TestJobGeneratorV2Integration:
         assert result.success is True
         assert result.job_master_id == "jm_test123"
         assert result.task_master_ids == ["tm_test001"]
-        assert result.workflow_yaml == "version: 0.6\nnodes: {}"
+        # Issue #342 V2 Fix: Combined YAML includes task header comments
+        assert "version: 0.6" in result.workflow_yaml
+        assert "nodes: {}" in result.workflow_yaml
+        assert "# --- Task: task_001" in result.workflow_yaml
 
         # Verify all workflows were called
         breakdown_workflow.execute.assert_called_once()

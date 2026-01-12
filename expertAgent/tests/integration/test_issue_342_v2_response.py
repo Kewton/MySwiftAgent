@@ -18,6 +18,7 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     TaskBreakdownOutput,
     TaskDefinition,
     WorkflowGenOutput,
+    WorkflowGenPhaseOutput,
 )
 
 
@@ -105,6 +106,13 @@ class TestV2ResponseTaskBreakdown:
             )
         }
 
+        # Create task workflow output for each task
+        task_workflow = WorkflowGenOutput(
+            status=PhaseStatus.SUCCESS,
+            task_id="task_001",
+            workflow_yaml="nodes: {}",
+        )
+
         phase_outputs = {
             Phase.TASK_BREAKDOWN: TaskBreakdownOutput(
                 status=PhaseStatus.SUCCESS,
@@ -120,9 +128,9 @@ class TestV2ResponseTaskBreakdown:
                 task_master_ids=["tm-001"],
                 job_id="job-123",
             ),
-            Phase.WORKFLOW_GEN: WorkflowGenOutput(
+            Phase.WORKFLOW_GEN: WorkflowGenPhaseOutput(
                 status=PhaseStatus.SUCCESS,
-                workflow_yaml="nodes: {}",
+                task_workflows={"task_001": task_workflow},
             ),
         }
 
@@ -230,6 +238,13 @@ class TestV2ResponseTaskBreakdown:
             ),
         }
 
+        # Create task workflow output for each task
+        task_workflow = WorkflowGenOutput(
+            status=PhaseStatus.SUCCESS,
+            task_id="task_001",
+            workflow_yaml="nodes: {}",
+        )
+
         phase_outputs = {
             Phase.TASK_BREAKDOWN: TaskBreakdownOutput(
                 status=PhaseStatus.SUCCESS,
@@ -245,9 +260,9 @@ class TestV2ResponseTaskBreakdown:
                 task_master_ids=["tm-001"],
                 job_id="job-123",
             ),
-            Phase.WORKFLOW_GEN: WorkflowGenOutput(
+            Phase.WORKFLOW_GEN: WorkflowGenPhaseOutput(
                 status=PhaseStatus.SUCCESS,
-                workflow_yaml="nodes: {}",
+                task_workflows={"task_001": task_workflow},
             ),
         }
 
