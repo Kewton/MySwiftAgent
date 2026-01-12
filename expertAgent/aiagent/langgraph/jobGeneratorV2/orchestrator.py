@@ -225,6 +225,17 @@ class JobGenerationOrchestrator:
                 if phase == Phase.TASK_BREAKDOWN:
                     await self._set_task_breakdown(output)
 
+            # Issue #353: Validate WORKFLOW_GEN completion before finalization
+            can_proceed, error_msg = await self._can_proceed_to_finalization(
+                phase_outputs, context
+            )
+            if not can_proceed:
+                logger.error("Cannot proceed to finalization: %s", error_msg)
+                return JobGenerationResult(
+                    success=False,
+                    error=error_msg,
+                )
+
             # Issue #342 V2 Fix: Mark workflow statuses with individual YAMLs
             await self._mark_workflow_statuses_complete(phase_outputs, context)
 
