@@ -35,14 +35,16 @@ class TestIssue342TaskChainAcceptance:
     # ==========================================================================
 
     def test_body_template_task_0_uses_user_input(self) -> None:
-        """受入条件: Task 0のbody_templateが{{job.body.user_input}}を使用する
+        """受入条件: Task 0のbody_templateが{{job.body.user_input}}を使用する (GraphAI engine)
 
         根本原因1 (RC-1) の修正検証:
         - Task 0の場合、user_inputに{{job.body}}ではなく{{job.body.user_input}}を使用
         - これにより、:source.user_input.queryが正しく参照可能になる
+
+        Note: This test is for GraphAI engine. TaskFlow engine uses different format.
         """
-        # Arrange
-        workflow = MasterManagerSubWorkflow()
+        # Arrange - explicitly use graphai engine for this Issue #342 fix
+        workflow = MasterManagerSubWorkflow(engine="graphai")
 
         # Act
         body_template = workflow._build_body_template(0)
@@ -56,16 +58,18 @@ class TestIssue342TaskChainAcceptance:
         )
 
     def test_body_template_task_0_does_not_cause_double_nesting(self) -> None:
-        """検証: Task 0のbody_templateが二重ネストを発生させない
+        """検証: Task 0のbody_templateが二重ネストを発生させない (GraphAI engine)
 
         問題: {{job.body}}を使うと、job.body = {"user_input": {...}}なので
         body_template = {"user_input": {"user_input": {...}}} になってしまう
 
         修正後: {{job.body.user_input}}を使うので
         body_template = {"user_input": {...}} になる
+
+        Note: This test is for GraphAI engine. TaskFlow engine uses different format.
         """
-        # Arrange
-        workflow = MasterManagerSubWorkflow()
+        # Arrange - explicitly use graphai engine for this Issue #342 fix
+        workflow = MasterManagerSubWorkflow(engine="graphai")
 
         # Act
         body_template = workflow._build_body_template(0)
@@ -79,9 +83,12 @@ class TestIssue342TaskChainAcceptance:
         )
 
     def test_body_template_task_n_uses_previous_output(self) -> None:
-        """検証: Task 1以降のbody_templateが前タスクの出力を参照する"""
-        # Arrange
-        workflow = MasterManagerSubWorkflow()
+        """検証: Task 1以降のbody_templateが前タスクの出力を参照する (GraphAI engine)
+
+        Note: This test is for GraphAI engine. TaskFlow engine uses different format.
+        """
+        # Arrange - explicitly use graphai engine for this Issue #342 fix
+        workflow = MasterManagerSubWorkflow(engine="graphai")
 
         # Act
         body_template_1 = workflow._build_body_template(1)
@@ -161,11 +168,13 @@ class TestIssue342TaskChainAcceptance:
     def test_both_root_causes_addressed(self) -> None:
         """統合検証: 両方の根本原因が修正されている
 
-        RC-1: body_template二重ネスト問題
+        RC-1: body_template二重ネスト問題 (GraphAI engine)
         RC-2: 出力ノード命名不整合
+
+        Note: RC-1 test is for GraphAI engine. TaskFlow engine uses different format.
         """
-        # RC-1: body_template check
-        workflow = MasterManagerSubWorkflow()
+        # RC-1: body_template check - explicitly use graphai engine
+        workflow = MasterManagerSubWorkflow(engine="graphai")
         body_template = workflow._build_body_template(0)
         rc1_fixed = body_template["user_input"] == "{{job.body.user_input}}"
 

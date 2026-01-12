@@ -122,20 +122,24 @@ class TestUtilityEndpointsTestMode:
                     "queries": ["test query"],
                     "test_mode": True,
                     "test_response": {
-                        "results": [
+                        # GoogleSearchResponse schema requires these fields
+                        "search_results": [
                             {
                                 "title": "Test Result",
                                 "url": "https://example.com",
                                 "snippet": "Test snippet",
                             }
-                        ]
+                        ],
+                        "search_results_count": 1,
+                        "status": "ok",
                     },
                 },
             )
             assert response.status_code == 200
             data = response.json()
-            assert "results" in data
-            assert data["results"][0]["title"] == "Test Result"
+            assert "search_results" in data
+            assert data["search_results"][0]["title"] == "Test Result"
+            assert data["search_results_count"] == 1
 
     async def test_google_search_overview_test_mode(self):
         """Test google_search_overview endpoint with test mode."""
@@ -298,12 +302,15 @@ class TestComplexWorkflowSimulation:
                         "queries": row["query_hint"],
                         "test_mode": True,
                         "test_response": {
-                            "results": [
+                            # GoogleSearchResponse schema requires these fields
+                            "search_results": [
                                 {
                                     "title": f"Result for {row['title']}",
                                     "url": "https://example.com",
                                 }
-                            ]
+                            ],
+                            "search_results_count": 1,
+                            "status": "ok",
                         },
                     },
                 )
