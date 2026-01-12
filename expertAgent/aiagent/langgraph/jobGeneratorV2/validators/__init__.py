@@ -329,4 +329,6 @@ __all__ = [
     "PatternProvider",
     # Issue #344: APISchemaValidator - imported from submodule
     # Use: from aiagent.langgraph.jobGeneratorV2.validators.api_schema_validator import APISchemaValidator
+    # Issue #353: PendingWorkflowValidator - imported from submodule
+    # Use: from aiagent.langgraph.jobGeneratorV2.validators.pending_workflow import PendingWorkflowValidator
 ]

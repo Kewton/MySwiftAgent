@@ -743,3 +743,56 @@ class JobGenerationOrchestrator:
         if isinstance(self.progress_reporter, JobStateProgressReporter):
             await self.progress_reporter.mark_complete()
             logger.info("Job marked as complete via progress reporter")
+
+    async def _can_proceed_to_finalization(
+        self,
+        phase_outputs: dict[Phase, Any],
+        context: "ExecutionContext",
+    ) -> tuple[bool, str | None]:
+        """Check if workflow can proceed to finalization.
+
+        Issue #353: Validates that WORKFLOW_GEN phase completed successfully
+        before allowing transition to finalization. This prevents jobs with
+        __PENDING__ workflow_names from being marked as complete.
+
+        Args:
+            phase_outputs: Outputs from all executed phases
+            context: Execution context
+
+        Returns:
+            Tuple of (can_proceed, error_message)
+            - can_proceed: True if finalization can proceed
+            - error_message: Error message if cannot proceed, None otherwise
+        """
+        # Check if WORKFLOW_GEN output exists
+        workflow_gen_output = phase_outputs.get(Phase.WORKFLOW_GEN)
+        if workflow_gen_output is None:
+            return False, "WORKFLOW_GEN phase output not found"
+
+        # Check for incomplete workflows (tasks without workflow_yaml)
+        # Do this before checking overall status to get more specific error messages
+        incomplete_tasks: list[str] = []
+
+        task_workflows = getattr(workflow_gen_output, "task_workflows", {})
+        for task_id, task_output in task_workflows.items():
+            if task_output.workflow_yaml is None:
+                incomplete_tasks.append(task_id)
+            elif task_output.status == PhaseStatus.FAILED:
+                incomplete_tasks.append(task_id)
+
+        if incomplete_tasks:
+            error_msg = (
+                f"WORKFLOW_GEN phase incomplete: {len(incomplete_tasks)} task(s) "
+                f"have missing or failed workflows. Task IDs: {', '.join(incomplete_tasks[:5])}"
+            )
+            if len(incomplete_tasks) > 5:
+                error_msg += f" (and {len(incomplete_tasks) - 5} more)"
+            logger.error(error_msg)
+            return False, error_msg
+
+        # Check overall status after checking individual tasks
+        if workflow_gen_output.status == PhaseStatus.FAILED:
+            return False, "WORKFLOW_GEN phase failed"
+
+        logger.info("WORKFLOW_GEN phase complete, can proceed to finalization")
+        return True, None

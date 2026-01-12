@@ -147,6 +147,10 @@ class ErrorRecoveryManager:
         if error.error_type == ErrorType.COMPATIBILITY:
             return self._handle_compatibility_error(phase, error, context)
 
+        # Issue #353: INCOMPLETE_WORKFLOW errors are retriable but should notify user
+        if error.error_type == ErrorType.INCOMPLETE_WORKFLOW:
+            return self._handle_incomplete_workflow_error(phase, error, context)
+
         # Transient, validation, and API errors can be retried
         if error.error_type in (ErrorType.TRANSIENT, ErrorType.VALIDATION, ErrorType.API):
             return self._handle_retriable_error(phase, error, context)
@@ -352,5 +356,84 @@ class ErrorRecoveryManager:
                     "- The retry should proceed with the same input",
                 ]
             )
+
+        return "\n".join(feedback_parts)
+
+    def _handle_incomplete_workflow_error(
+        self,
+        phase: Phase,
+        error: WorkflowError,
+        context: Any,
+    ) -> ErrorRecoveryDecision:
+        """Handle INCOMPLETE_WORKFLOW errors.
+
+        Issue #353: INCOMPLETE_WORKFLOW errors occur when WORKFLOW_GEN phase
+        fails to complete, leaving __PENDING__ placeholders. These are retriable
+        but should always notify the user.
+        """
+        can_retry = context.can_retry()
+        rollback_count = context.get_rollback_count()
+
+        if can_retry:
+            return ErrorRecoveryDecision(
+                strategy=ErrorRecoveryStrategy.RETRY_CURRENT,
+                feedback=self._generate_incomplete_workflow_feedback(error),
+                should_notify_user=True,  # Always notify for incomplete workflows
+            )
+
+        # Retry limit exceeded - check rollback option
+        if rollback_count < self.MAX_ROLLBACKS_PER_PHASE:
+            logger.warning(
+                "INCOMPLETE_WORKFLOW: Retry limit exceeded, attempting rollback"
+            )
+            target_phase = self._get_rollback_target(phase)
+            return ErrorRecoveryDecision(
+                strategy=ErrorRecoveryStrategy.ROLLBACK_ONE,
+                target_phase=target_phase,
+                feedback=(
+                    f"WORKFLOW_GEN phase incomplete after maximum retries. "
+                    f"Rolling back to {target_phase.value if target_phase else 'unknown'}."
+                ),
+                should_notify_user=True,
+            )
+
+        # Can't retry, can't rollback - fail fast
+        logger.error(
+            "INCOMPLETE_WORKFLOW: All recovery attempts exhausted, failing"
+        )
+        return ErrorRecoveryDecision(
+            strategy=ErrorRecoveryStrategy.FAIL_FAST,
+            feedback=(
+                f"WORKFLOW_GEN phase incomplete after all recovery attempts: {error}"
+            ),
+            should_notify_user=True,
+        )
+
+    def _generate_incomplete_workflow_feedback(self, error: WorkflowError) -> str:
+        """Generate feedback for INCOMPLETE_WORKFLOW retry.
+
+        Issue #353: Specific feedback for workflow generation failures.
+        """
+        feedback_parts = [
+            "## WORKFLOW_GEN Phase Incomplete",
+            "",
+            "The workflow generation phase did not complete successfully.",
+            "Some tasks still have __PENDING__ workflow_name placeholders.",
+            "",
+            f"**Error:** {error}",
+            "",
+            "### Possible causes:",
+            "- GraphAiServer connectivity issues",
+            "- LLM API rate limiting or timeout",
+            "- Invalid workflow YAML generated",
+            "",
+            "### Retry will:",
+            "- Re-attempt workflow generation for pending tasks",
+            "- Use exponential backoff to avoid rate limiting",
+        ]
+
+        if error.details:
+            pending_count = error.details.get("pending_count", "unknown")
+            feedback_parts.append(f"\n**Pending tasks:** {pending_count}")
 
         return "\n".join(feedback_parts)

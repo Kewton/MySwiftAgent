@@ -28,6 +28,7 @@ class ErrorType(Enum):
     - BUSINESS: Business rule violations (e.g., infeasible requirement)
     - FATAL: Unrecoverable errors (e.g., database connection failure)
     - API: External API call errors (e.g., JobQueue API errors, typically retryable)
+    - INCOMPLETE_WORKFLOW: WORKFLOW_GEN phase incomplete (Issue #353)
     """
 
     TRANSIENT = "transient"
@@ -36,6 +37,7 @@ class ErrorType(Enum):
     BUSINESS = "business"
     FATAL = "fatal"
     API = "api"
+    INCOMPLETE_WORKFLOW = "incomplete_workflow"  # Issue #353
 
 
 class WorkflowError(Exception):
