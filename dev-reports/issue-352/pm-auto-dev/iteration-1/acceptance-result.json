@@ -1,0 +1,90 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "graphAiServer",
+  "service_health": {
+    "graphAiServer": {"status": "healthy", "url": "http://localhost:8005"},
+    "expertAgent": {"status": "healthy", "url": "http://localhost:8004"}
+  },
+  "test_results": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0
+  },
+  "test_scenarios": [
+    {
+      "name": "Test 2.1: ${inputs.} variable reference",
+      "description": "Workflow with ${inputs.base_url}/users/${inputs.user_id}",
+      "method": "POST /api/v2/workflows/register",
+      "expected_status": 200,
+      "actual_status": 200,
+      "result": "PASSED",
+      "evidence": "Workflow test_issue_352_inputs registered successfully"
+    },
+    {
+      "name": "Test 2.2: ${step.output} variable reference",
+      "description": "Workflow with ${step_001.output} as URL",
+      "method": "POST /api/v2/workflows/register",
+      "expected_status": 200,
+      "actual_status": 200,
+      "result": "PASSED",
+      "evidence": "Workflow test_issue_352_step_output registered successfully"
+    },
+    {
+      "name": "Test 2.3: Invalid variable reference rejection",
+      "description": "Workflow with ${123invalid}/path should be rejected",
+      "method": "POST /api/v2/workflows/register",
+      "expected_status": 400,
+      "actual_status": 400,
+      "result": "PASSED",
+      "evidence": "Error message: URL must use HTTPS protocol or be a TaskFlow variable reference (${inputs.*}, ${step_id.output.*}, ${env.*}, ${secrets.*})"
+    },
+    {
+      "name": "Test 3: Trailing path with variable",
+      "description": "Workflow with ${inputs.base_url}/api/v1/users?limit=10",
+      "method": "POST /api/v2/workflows/register",
+      "expected_status": 200,
+      "actual_status": 200,
+      "result": "PASSED",
+      "evidence": "Workflow test_issue_352_trailing_path registered successfully"
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "criterion": "${inputs.} 変数参照を許可",
+      "verified": true,
+      "verification_method": "curl API test"
+    },
+    {
+      "criterion": "${step.output} 変数参照を許可",
+      "verified": true,
+      "verification_method": "curl API test"
+    },
+    {
+      "criterion": "後続パス付き変数参照をサポート",
+      "verified": true,
+      "verification_method": "curl API test"
+    },
+    {
+      "criterion": "不正な変数参照の拒否",
+      "verified": true,
+      "verification_method": "curl API test"
+    },
+    {
+      "criterion": "改善されたエラーメッセージ",
+      "verified": true,
+      "verification_method": "Error response contains ${inputs.*}, ${step_id.output.*} in message"
+    }
+  ],
+  "cleanup_status": {
+    "test_workflows_deleted": true,
+    "workflows_cleaned": [
+      "test_issue_352_inputs",
+      "test_issue_352_step_output",
+      "test_issue_352_trailing_path"
+    ]
+  },
+  "verification_timestamp": "2026-01-12T01:27:00Z"
+}

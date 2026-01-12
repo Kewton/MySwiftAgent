@@ -6,9 +6,15 @@
  *
  * @module engine/schemas/workflow-schema
  * @see Issue #348
+ * @see Issue #352 - URL variable reference validation fix
  */
 
 import { z } from 'zod';
+
+import {
+  startsWithValidVariable,
+  URL_VALIDATION_SHORT_MESSAGE,
+} from '../constants/variable-patterns.js';
 
 // ============================================================
 // Basic Type Schemas
@@ -51,22 +57,24 @@ function isDevModeEnabled(): boolean {
 }
 
 /**
- * URL validation regex for variable references and HTTPS URLs
+ * URL validation for TaskFlow V2
+ *
  * Allows:
  * - https:// URLs
  * - http:// URLs (only in dev mode)
- * - ${env.VAR} references
- * - ${secrets.KEY} references
- * - Combinations like ${env.BASE_URL}/path
+ * - All TaskFlow variable references: ${inputs.*}, ${step_id.output.*}, ${env.*}, ${secrets.*}
+ * - Combinations like ${inputs.base_url}/api/v1/endpoint
+ *
+ * @see Issue #352 - Fixed to allow all TaskFlow variable types
  */
-const URL_PATTERN =
-  /^(https:\/\/|\$\{env\.[a-zA-Z_][a-zA-Z0-9_]*\}|\$\{secrets\.[a-zA-Z_][a-zA-Z0-9_]*\})/;
 
 /** Custom URL validator with HTTPS enforcement (relaxed in dev mode) */
 const httpsUrlSchema = z.string().refine(
   (url) => {
-    // Allow variable references that start with ${env. or ${secrets.
-    if (url.startsWith('${env.') || url.startsWith('${secrets.')) {
+    // Issue #352: Allow all valid TaskFlow variable references
+    // Supports: ${inputs.*}, ${step_id.output.*}, ${env.*}, ${secrets.*}
+    // Also supports trailing paths like ${inputs.url}/api/v1/endpoint
+    if (startsWithValidVariable(url)) {
       return true;
     }
     // In dev mode, allow both HTTP and HTTPS
@@ -77,8 +85,7 @@ const httpsUrlSchema = z.string().refine(
     return url.startsWith('https://');
   },
   {
-    message:
-      'URL must use HTTPS protocol or be a variable reference (${env.VAR} or ${secrets.KEY})',
+    message: URL_VALIDATION_SHORT_MESSAGE,
   }
 );
 

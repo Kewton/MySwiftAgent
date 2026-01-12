@@ -64,6 +64,53 @@ describe('URL Validator - SSRF Protection', () => {
       const result = validateUrl('${secrets.PRIVATE_API_URL}');
       expect(result.valid).toBe(true);
     });
+
+    // Issue #352: Allow all TaskFlow variable references
+    it('should allow ${inputs.*} variable references', () => {
+      const result = validateUrl('${inputs.base_url}');
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow ${step_id.output.*} variable references', () => {
+      const result = validateUrl('${step_001.output.api_url}');
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow variable with trailing path', () => {
+      const result = validateUrl('${inputs.base_url}/api/v1/users');
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow variable with query parameters', () => {
+      const result = validateUrl('${env.BASE_URL}?query=1&format=json');
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow hyphenated step ID', () => {
+      const result = validateUrl('${step-001.output.url}');
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  // ============================================================
+  // Issue #352: Invalid Variable References
+  // ============================================================
+
+  describe('Invalid Variable References (Issue #352)', () => {
+    it('should reject empty variable ${}', () => {
+      const result = validateUrl('${}');
+      expect(result.valid).toBe(false);
+    });
+
+    it('should reject variable starting with number ${123}', () => {
+      const result = validateUrl('${123.output}');
+      expect(result.valid).toBe(false);
+    });
+
+    it('should reject variable starting with dot ${.invalid}', () => {
+      const result = validateUrl('${.invalid.field}');
+      expect(result.valid).toBe(false);
+    });
   });
 
   // ============================================================

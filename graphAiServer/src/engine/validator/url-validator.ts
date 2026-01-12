@@ -13,9 +13,11 @@
  *
  * @module engine/validator/url-validator
  * @see Issue #348 - SSRF Protection (Must Fix)
+ * @see Issue #352 - URL variable reference validation fix
  */
 
 import type { UrlValidationResult } from '../../types/taskflow.js';
+import { startsWithValidVariable } from '../constants/variable-patterns.js';
 
 // ============================================================
 // Configuration
@@ -254,9 +256,11 @@ function looksLikeIP(str: string): boolean {
  * ```
  */
 export function validateUrl(urlString: string): UrlValidationResult {
-  // Handle variable references - these will be resolved later
-  if (urlString.startsWith('${env.') || urlString.startsWith('${secrets.')) {
-    // Variable references are validated at resolution time
+  // Issue #352: Handle all TaskFlow variable references
+  // Supports: ${inputs.*}, ${step_id.output.*}, ${env.*}, ${secrets.*}
+  // Also supports trailing paths like ${inputs.url}/api/v1/endpoint
+  // These will be resolved at execution time and validated then
+  if (startsWithValidVariable(urlString)) {
     return { valid: true };
   }
 

@@ -1,0 +1,122 @@
+{
+  "issue_number": 352,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "TASKFLOW_VARIABLE_PATTERN",
+      "type": "constant",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 48,
+      "description": "TaskFlow V2変数参照の正規表現パターン",
+      "expected_callers": ["isValidTaskflowVariable"],
+      "expected_call_location": "graphAiServer/src/engine/constants/variable-patterns.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "TASKFLOW_VARIABLE_EXTRACT_PATTERN",
+      "type": "constant",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 54,
+      "description": "URL先頭から変数参照を抽出するパターン",
+      "expected_callers": ["extractVariableReference"],
+      "expected_call_location": "graphAiServer/src/engine/constants/variable-patterns.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "isValidTaskflowVariable",
+      "type": "function",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 72,
+      "description": "変数参照の構文が正しいかを検証",
+      "expected_callers": ["startsWithValidVariable"],
+      "expected_call_location": "graphAiServer/src/engine/constants/variable-patterns.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "extractVariableReference",
+      "type": "function",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 88,
+      "description": "URL先頭から変数参照を抽出",
+      "expected_callers": ["startsWithValidVariable"],
+      "expected_call_location": "graphAiServer/src/engine/constants/variable-patterns.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "startsWithValidVariable",
+      "type": "function",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 107,
+      "description": "URLが有効な変数参照で始まるかを検証（後続パスもサポート）",
+      "expected_callers": ["httpsUrlSchema", "validateUrl"],
+      "expected_call_location": "graphAiServer/src/engine/schemas/workflow-schema.ts, graphAiServer/src/engine/validator/url-validator.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "URL_VALIDATION_ERROR_MESSAGE",
+      "type": "constant",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 128,
+      "description": "詳細なエラーメッセージ（例付き）",
+      "expected_callers": ["external documentation"],
+      "expected_call_location": "参照用のみ"
+    },
+    {
+      "feature_id": "F7",
+      "name": "URL_VALIDATION_SHORT_MESSAGE",
+      "type": "constant",
+      "file_path": "graphAiServer/src/engine/constants/variable-patterns.ts",
+      "line_number": 136,
+      "description": "Zodスキーマ用の簡潔なエラーメッセージ",
+      "expected_callers": ["httpsUrlSchema"],
+      "expected_call_location": "graphAiServer/src/engine/schemas/workflow-schema.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["TASKFLOW_VARIABLE_PATTERN - Valid patterns", "TASKFLOW_VARIABLE_PATTERN - Invalid patterns"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["isValidTaskflowVariable - Valid variable references", "isValidTaskflowVariable - Invalid variable references"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["extractVariableReference - *"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["startsWithValidVariable - Valid URLs starting with variable", "startsWithValidVariable - Invalid URLs"],
+      "integration_tests": ["url-validator Issue #352 tests"],
+      "acceptance_tests": ["test_issue_352_acceptance.py"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F5",
+      "integration_file": "graphAiServer/src/engine/schemas/workflow-schema.ts",
+      "integration_type": "import",
+      "integration_method": "import { startsWithValidVariable, URL_VALIDATION_SHORT_MESSAGE } from '../constants/variable-patterns.js'"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "graphAiServer/src/engine/validator/url-validator.ts",
+      "integration_type": "import",
+      "integration_method": "import { startsWithValidVariable } from '../constants/variable-patterns.js'"
+    },
+    {
+      "feature_id": "F7",
+      "integration_file": "graphAiServer/src/engine/schemas/workflow-schema.ts",
+      "integration_type": "import",
+      "integration_method": "Used in httpsUrlSchema refine message"
+    }
+  ]
+}

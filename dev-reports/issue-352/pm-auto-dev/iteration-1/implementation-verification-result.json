@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "summary": {
+    "total_features": 7,
+    "passed": 7,
+    "dead_code": 0,
+    "missing_tests": 0
+  },
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "TASKFLOW_VARIABLE_PATTERN",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:48" },
+        "is_used": { "passed": true, "evidence": "Used by isValidTaskflowVariable at line 73" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F2",
+      "name": "TASKFLOW_VARIABLE_EXTRACT_PATTERN",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:54" },
+        "is_used": { "passed": true, "evidence": "Used by extractVariableReference at line 89" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F3",
+      "name": "isValidTaskflowVariable",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:72" },
+        "is_called": { "passed": true, "evidence": "Called by startsWithValidVariable at line 117" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F4",
+      "name": "extractVariableReference",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:88" },
+        "is_called": { "passed": true, "evidence": "Called by startsWithValidVariable at line 112" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F5",
+      "name": "startsWithValidVariable",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:107" },
+        "is_called": { "passed": true, "evidence": "Called at workflow-schema.ts:77, url-validator.ts:263" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts, url-validator.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F6",
+      "name": "URL_VALIDATION_ERROR_MESSAGE",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:128" },
+        "is_used": { "passed": true, "evidence": "Exported for external documentation/reference" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts (Error Messages)" }
+      }
+    },
+    {
+      "feature_id": "F7",
+      "name": "URL_VALIDATION_SHORT_MESSAGE",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "file": "variable-patterns.ts:136" },
+        "is_used": { "passed": true, "evidence": "Imported at workflow-schema.ts:16, used at line 88" },
+        "has_unit_test": { "passed": true, "test_file": "variable-patterns.test.ts (Error Messages)" }
+      }
+    }
+  ],
+  "verification_timestamp": "2026-01-12T00:00:00Z"
+}
