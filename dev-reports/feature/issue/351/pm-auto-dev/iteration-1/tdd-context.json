@@ -1,0 +1,46 @@
+{
+  "issue_number": 351,
+  "title": "TaskFlow V2: output フィールドの変数参照構文がJSONバリデーションエラーを引き起こす",
+  "acceptance_criteria": [
+    "output フィールドに変数参照構文（${step.field}）を含む値が設定できる",
+    "TaskFlow V2 ワークフロー生成が成功する",
+    "既存のテストが全てパスする",
+    "新規テストケースを追加（変数参照を含むoutputのバリデーション）"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1",
+      "description": "variable_patterns.py 共通モジュールを新規作成",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py",
+      "type": "new_file"
+    },
+    {
+      "task_id": "2",
+      "description": "taskflow_schema.py の validate_json_string を修正",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py",
+      "type": "modify"
+    },
+    {
+      "task_id": "3",
+      "description": "単体テストを追加（変数参照バリデーション）",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_issue_351/test_variable_reference_validation.py",
+      "type": "new_file"
+    }
+  ],
+  "design_policy_reference": "dev-reports/issue-351/design-policy.md",
+  "key_implementation_details": {
+    "variable_pattern": "\\$\\{[a-zA-Z_][a-zA-Z0-9_-]*(?:\\.[a-zA-Z_][a-zA-Z0-9_-]*)*\\}",
+    "validation_approach": "Replace variable references with placeholder before JSON parsing",
+    "placeholder": "__TASKFLOW_VAR_PLACEHOLDER__",
+    "functions_to_create": [
+      "TASKFLOW_VARIABLE_PATTERN (compiled regex)",
+      "contains_variable_reference(value: str) -> bool",
+      "replace_variables_with_placeholder(value: str) -> str",
+      "mask_secret_references(value: str) -> str",
+      "validate_variable_syntax(value: str) -> list[str]"
+    ]
+  },
+  "target_coverage": 90,
+  "labels": ["bug", "fix"],
+  "project": "expertAgent"
+}

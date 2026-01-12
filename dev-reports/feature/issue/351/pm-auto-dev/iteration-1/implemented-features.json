@@ -1,0 +1,124 @@
+{
+  "issue_number": 351,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "TASKFLOW_VARIABLE_PATTERN",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py",
+      "line_number": 16,
+      "description": "Compiled regex for TaskFlow V2 variable references (${step.output})",
+      "expected_callers": ["replace_variables_with_placeholder", "validate_variable_syntax", "contains_variable_reference"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "contains_variable_reference",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py",
+      "line_number": 22,
+      "description": "Check if value contains TaskFlow variable references",
+      "expected_callers": ["External callers (optional utility)"],
+      "expected_call_location": "Any module needing variable detection"
+    },
+    {
+      "feature_id": "F3",
+      "name": "replace_variables_with_placeholder",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py",
+      "line_number": 27,
+      "description": "Replace variable references with valid JSON placeholder for validation",
+      "expected_callers": ["TaskFlowWorkflow.validate_json_string"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "mask_secret_references",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py",
+      "line_number": 32,
+      "description": "Mask secret references for safe logging",
+      "expected_callers": ["TaskFlowWorkflow.validate_json_string (error handling)"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "validate_variable_syntax",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/variable_patterns.py",
+      "line_number": 37,
+      "description": "Validate that all ${...} patterns have valid variable syntax",
+      "expected_callers": ["External callers (optional validation)"],
+      "expected_call_location": "Any module needing syntax validation"
+    },
+    {
+      "feature_id": "F6",
+      "name": "validate_json_string (modified)",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py",
+      "line_number": 370,
+      "description": "Modified validator to allow variable references in JSON fields",
+      "expected_callers": ["Pydantic field validation for input_schema, output_schema, output"],
+      "expected_call_location": "Automatically called by Pydantic during TaskFlowWorkflow instantiation"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_pattern_matches_simple_reference", "test_pattern_matches_nested_reference", "test_pattern_matches_hyphenated_step_id", "test_pattern_matches_secrets_reference", "test_pattern_rejects_invalid_start"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_google_search_workflow_scenario"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_contains_variable_reference_true", "test_contains_variable_reference_false"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_replace_variables_with_placeholder"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_mask_secret_references", "test_mask_secret_preserves_non_secrets"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_validate_variable_syntax_valid", "test_validate_variable_syntax_invalid"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_output_with_simple_variable", "test_output_with_nested_variable", "test_output_with_hyphenated_step_id", "test_output_with_mixed_content", "test_output_with_multiple_variables", "test_invalid_json_structure_with_variable", "test_invalid_json_missing_brace", "test_output_pure_static_json_still_works"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_google_search_workflow_scenario"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py",
+      "integration_type": "import",
+      "integration_method": "from .variable_patterns import replace_variables_with_placeholder"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/taskflow_schema.py",
+      "integration_type": "import",
+      "integration_method": "from .variable_patterns import mask_secret_references"
+    },
+    {
+      "feature_id": "F1-F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .variable_patterns import ..."
+    }
+  ]
+}

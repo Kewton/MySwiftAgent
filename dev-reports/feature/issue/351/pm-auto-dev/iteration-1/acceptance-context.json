@@ -1,0 +1,38 @@
+{
+  "issue_number": 351,
+  "feature_summary": "TaskFlow V2: output フィールドの変数参照構文がJSONバリデーションエラーを引き起こす",
+  "acceptance_criteria": [
+    "output フィールドに変数参照構文（${step.field}）を含む値が設定できる",
+    "TaskFlow V2 ワークフロー生成が成功する",
+    "既存のテストが全てパスする",
+    "新規テストケースを追加（変数参照を含むoutputのバリデーション）"
+  ],
+  "labels": ["bug", "fix"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent"],
+  "external_dependencies": ["LLM API (for workflow generation)"],
+  "l3_test_plan": {
+    "source": "Issue #351 acceptance criteria",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "変数参照を含むTaskFlowWorkflowの生成",
+        "command": "python test to create TaskFlowWorkflow with variable references",
+        "expected_status": "success",
+        "expected_response_contains": ["${step.output}", "workflow_name"]
+      },
+      {
+        "name": "不正なJSON構造の検出",
+        "command": "python test with invalid JSON structure",
+        "expected_status": "validation_error",
+        "expected_response_contains": ["Invalid JSON"]
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_351_acceptance.py",
+  "playwright_test_file": null
+}
