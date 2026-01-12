@@ -2,7 +2,7 @@
 
 Issue #350 Task 2.1: Pydantic schema definitions.
 
-Test cases (13 total):
+Test cases:
 - test_valid_api_rest_step
 - test_valid_transform_step
 - test_valid_code_js_step
@@ -13,9 +13,12 @@ Test cases (13 total):
 - test_discriminated_union_invalid_config
 - test_transform_mode_template_requires_template
 - test_transform_mode_concat_requires_separator
-- test_parallel_block_validation
-- test_conditional_block_validation
 - test_workflow_complete_validation
+
+Note: test_parallel_block_validation, test_conditional_block_validation,
+test_workflow_with_parallel_block, test_workflow_with_conditional_block
+were removed because ParallelBlock and ConditionalBlock are incompatible
+with OpenAI Structured Output (see taskflow_schema.py:438).
 """
 
 from __future__ import annotations
@@ -26,13 +29,14 @@ from pydantic import ValidationError
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.taskflow_schema import (
     ApiRestConfig,
     CodeJsConfig,
-    ConditionalBlock,
     IOSchemaType,
-    ParallelBlock,
     TaskFlowStep,
     TaskFlowWorkflow,
     TransformConfig,
 )
+
+# Note: ParallelBlock and ConditionalBlock were removed as they are
+# incompatible with OpenAI Structured Output (comment in taskflow_schema.py:438)
 
 
 class TestIOSchemaType:
@@ -274,57 +278,6 @@ class TestTaskFlowStep:
             )
 
 
-class TestParallelBlock:
-    """Tests for ParallelBlock model."""
-
-    def test_parallel_block_validation(self) -> None:
-        """Test valid parallel block."""
-        block = ParallelBlock(
-            parallel=[
-                TaskFlowStep(
-                    id="step_a",
-                    type="api_rest",
-                    config={"method": "GET", "url": "https://api.a.com"},
-                ),
-                TaskFlowStep(
-                    id="step_b",
-                    type="api_rest",
-                    config={"method": "GET", "url": "https://api.b.com"},
-                ),
-            ]
-        )
-        assert len(block.parallel) == 2
-        assert block.parallel[0].id == "step_a"
-        assert block.parallel[1].id == "step_b"
-
-
-class TestConditionalBlock:
-    """Tests for ConditionalBlock model."""
-
-    def test_conditional_block_validation(self) -> None:
-        """Test valid conditional block."""
-        block = ConditionalBlock(
-            condition="${step_001.status} == 'success'",
-            if_true=[
-                TaskFlowStep(
-                    id="on_success",
-                    type="transform",
-                    config={"mode": "template", "template": "Success!"},
-                ),
-            ],
-            if_false=[
-                TaskFlowStep(
-                    id="on_failure",
-                    type="transform",
-                    config={"mode": "template", "template": "Failed!"},
-                ),
-            ],
-        )
-        assert block.condition == "${step_001.status} == 'success'"
-        assert len(block.if_true) == 1
-        assert len(block.if_false) == 1
-
-
 class TestTaskFlowWorkflow:
     """Tests for TaskFlowWorkflow model."""
 
@@ -380,60 +333,9 @@ class TestTaskFlowWorkflow:
                 output={},
             )
 
-    def test_workflow_with_parallel_block(self) -> None:
-        """Workflow can contain parallel blocks."""
-        workflow = TaskFlowWorkflow(
-            workflow_name="parallel_workflow",
-            input_schema={"query": IOSchemaType.STRING},
-            output_schema={"combined": IOSchemaType.OBJECT},
-            steps=[
-                ParallelBlock(
-                    parallel=[
-                        TaskFlowStep(
-                            id="api_a",
-                            type="api_rest",
-                            config={"method": "GET", "url": "https://a.com"},
-                        ),
-                        TaskFlowStep(
-                            id="api_b",
-                            type="api_rest",
-                            config={"method": "GET", "url": "https://b.com"},
-                        ),
-                    ]
-                ),
-            ],
-            output={"combined": "${api_a}, ${api_b}"},
-        )
-        assert len(workflow.steps) == 1
-
-    def test_workflow_with_conditional_block(self) -> None:
-        """Workflow can contain conditional blocks."""
-        workflow = TaskFlowWorkflow(
-            workflow_name="conditional_workflow",
-            input_schema={"flag": IOSchemaType.BOOLEAN},
-            output_schema={"result": IOSchemaType.STRING},
-            steps=[
-                ConditionalBlock(
-                    condition="${inputs.flag}",
-                    if_true=[
-                        TaskFlowStep(
-                            id="on_true",
-                            type="transform",
-                            config={"mode": "template", "template": "True path"},
-                        ),
-                    ],
-                    if_false=[
-                        TaskFlowStep(
-                            id="on_false",
-                            type="transform",
-                            config={"mode": "template", "template": "False path"},
-                        ),
-                    ],
-                ),
-            ],
-            output={"result": "${on_true}"},
-        )
-        assert len(workflow.steps) == 1
+    # Note: test_workflow_with_parallel_block and test_workflow_with_conditional_block
+    # were removed because ParallelBlock and ConditionalBlock are no longer available
+    # (incompatible with OpenAI Structured Output - see taskflow_schema.py:438)
 
 
 class TestJsonStringParsing:
