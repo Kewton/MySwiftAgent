@@ -13,12 +13,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Skip tests that require LLM API keys when in CI
-requires_llm_api = pytest.mark.skipif(
-    os.environ.get("CI") == "true",
-    reason="Requires LLM API keys (Gemini) - run locally only",
-)
-
 from aiagent.langgraph.jobGeneratorV2.context import (
     ContextBuilder,
     ExecutionContext,
@@ -36,6 +30,12 @@ from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen import (
     PromptBuilderSubWorkflow,
     WorkflowGenWorkflow,
     YamlValidatorSubWorkflow,
+)
+
+# Skip tests that require LLM API keys when in CI
+requires_llm_api = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Requires LLM API keys (Gemini) - run locally only",
 )
 
 

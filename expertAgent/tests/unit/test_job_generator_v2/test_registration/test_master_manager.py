@@ -10,17 +10,17 @@ import os
 
 import pytest
 
-# Skip tests that require external services when not available
-requires_external_services = pytest.mark.skipif(
-    os.environ.get("CI") == "true",
-    reason="Requires external services (myVault, graphAiServer) - run locally only",
-)
-
 from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     TaskDefinition,
+)
+
+# Skip tests that require external services when not available
+requires_external_services = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Requires external services (myVault, graphAiServer) - run locally only",
 )
 
 
