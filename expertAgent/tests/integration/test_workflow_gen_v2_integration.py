@@ -4,11 +4,20 @@ These tests verify the complete workflow generation pipeline
 with mocked LLM calls.
 
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
+
+Note: TestWorkflowGenWorkflowIntegration requires LLM API keys and is skipped in CI.
 """
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+# Skip tests that require LLM API keys when in CI
+requires_llm_api = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Requires LLM API keys (Gemini) - run locally only",
+)
 
 from aiagent.langgraph.jobGeneratorV2.context import (
     ContextBuilder,
@@ -248,13 +257,20 @@ class TestLLMGeneratorIntegration:
 
 
 class TestWorkflowGenWorkflowIntegration:
-    """Integration tests for complete WorkflowGenWorkflow."""
+    """Integration tests for complete WorkflowGenWorkflow.
 
+    Note: These tests require LLM API keys (Gemini) and are skipped in CI.
+    """
+
+    @requires_llm_api
     @pytest.mark.asyncio
     async def test_complete_workflow_generation(
         self, execution_context, sample_interfaces
     ):
-        """Test complete workflow generation flow."""
+        """Test complete workflow generation flow.
+
+        Note: This test requires Gemini API key.
+        """
         workflow = WorkflowGenWorkflow(
             enable_testing=False,
             graphai_version="0.5",

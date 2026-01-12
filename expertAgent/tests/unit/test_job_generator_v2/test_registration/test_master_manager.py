@@ -1,10 +1,20 @@
 """Unit tests for MasterManagerSubWorkflow.
 
 Issue #342 Phase D.3: Tests for master creation sub-workflow.
+
+Note: Tests in TestMasterManagerCreateMasters require external services (myVault, graphAiServer)
+and are skipped in CI. Run locally with `./scripts/dev-hybrid.sh` for full test coverage.
 """
 
+import os
 
 import pytest
+
+# Skip tests that require external services when not available
+requires_external_services = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Requires external services (myVault, graphAiServer) - run locally only",
+)
 
 from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
@@ -174,6 +184,7 @@ class TestMasterManagerCreateMasters:
             max_total_retries=5,
         )
 
+    @requires_external_services
     @pytest.mark.asyncio
     async def test_create_masters_returns_result(
         self,
@@ -181,7 +192,10 @@ class TestMasterManagerCreateMasters:
         sample_interfaces: dict[str, InterfaceSchema],
         mock_context: ExecutionContext,
     ):
-        """create_masters should return MasterCreationResult."""
+        """create_masters should return MasterCreationResult.
+
+        Note: This test requires external services (myVault, graphAiServer).
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterCreationResult,
             MasterManagerSubWorkflow,
@@ -244,13 +258,17 @@ class TestMasterManagerCreateMasters:
 
         assert "No interfaces provided" in str(exc_info.value)
 
+    @requires_external_services
     @pytest.mark.asyncio
     async def test_create_masters_sorts_by_priority(
         self,
         sample_interfaces: dict[str, InterfaceSchema],
         mock_context: ExecutionContext,
     ):
-        """create_masters should sort tasks by priority."""
+        """create_masters should sort tasks by priority.
+
+        Note: This test requires external services (myVault, graphAiServer).
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
         )
