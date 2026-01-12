@@ -1,0 +1,32 @@
+{
+  "issue_number": 357,
+  "issue_title": "Issue #354-3: JSON Schema Single Source of Truth 導入",
+  "acceptance_criteria": [
+    "shared/schemas/taskflow/v1/workflow.schema.json が存在",
+    "scripts/generate_schemas.py が存在",
+    "TypeScript型ファイルが自動生成される",
+    "Pydanticモデルファイルが自動生成される",
+    "生成されたスキーマが既存テストをパス",
+    "JSON Schema妥当性検証がパス",
+    "python scripts/generate_schemas.py が正常終了",
+    "生成されたTypeScript型がコンパイルエラーなし",
+    "生成されたPydanticモデルがインポート可能"
+  ],
+  "technical_requirements": [
+    "JSON Schema Draft 2020-12 使用",
+    "json-schema-to-typescript でTypeScript生成",
+    "datamodel-code-generator でPydantic生成",
+    "GitHub Actions CI統合"
+  ],
+  "scope": [
+    "shared/schemas/taskflow/ ディレクトリ構造作成",
+    "JSON Schema定義（workflow.schema.json）",
+    "TypeScript型生成スクリプト",
+    "Pydanticモデル生成スクリプト",
+    "生成パイプラインのCI統合"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/investigation/issue-353-pending-workflow/schema-unification-proposal.md",
+  "work_plan_path": null,
+  "phase": "pre-tdd"
+}

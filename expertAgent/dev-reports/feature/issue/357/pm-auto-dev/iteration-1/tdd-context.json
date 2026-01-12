@@ -1,0 +1,36 @@
+{
+  "issue_number": 357,
+  "acceptance_criteria": [
+    "shared/schemas/taskflow/v1/workflow.schema.json が存在",
+    "scripts/generate_schemas.py が存在",
+    "TypeScript型ファイルが自動生成される",
+    "Pydanticモデルファイルが自動生成される",
+    "生成されたスキーマが既存テストをパス",
+    "JSON Schema妥当性検証がパス",
+    "python scripts/generate_schemas.py が正常終了",
+    "生成されたTypeScript型がコンパイルエラーなし",
+    "生成されたPydanticモデルがインポート可能"
+  ],
+  "implementation_tasks": [
+    "JSON Schema定義ファイル作成 (shared/schemas/taskflow/v1/workflow.schema.json)",
+    "スキーマ生成スクリプト作成 (scripts/generate_schemas.py)",
+    "TypeScript型生成設定と実行",
+    "Pydanticモデル生成設定と実行",
+    "生成ファイルの統合テスト作成",
+    "既存テストとの互換性確認"
+  ],
+  "technical_requirements": [
+    "JSON Schema Draft 2020-12 使用",
+    "json-schema-to-typescript でTypeScript生成",
+    "datamodel-code-generator でPydantic生成",
+    "GitHub Actions CI統合"
+  ],
+  "file_structure": {
+    "json_schema": "shared/schemas/taskflow/v1/workflow.schema.json",
+    "generation_script": "scripts/generate_schemas.py",
+    "typescript_output": "graphAiServer/src/engine/schemas/generated/taskflow.d.ts",
+    "pydantic_output": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py"
+  },
+  "design_policy_reference": "dev-reports/investigation/issue-353-pending-workflow/schema-unification-proposal.md",
+  "target_coverage": 90
+}

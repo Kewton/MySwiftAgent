@@ -1,0 +1,38 @@
+{
+  "status": "success",
+  "coverage": 100.0,
+  "unit_tests": {
+    "total": 39,
+    "passed": 39,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "executed_tasks": [
+    "JSON Schema定義ファイル作成 (shared/schemas/taskflow/v1/workflow.schema.json)",
+    "スキーマ生成スクリプト作成 (scripts/generate_schemas.py)",
+    "TypeScript型生成設定と実行",
+    "Pydanticモデル生成設定と実行",
+    "生成ファイルの統合テスト作成",
+    "既存テストとの互換性確認"
+  ],
+  "skipped_tasks": [],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": false,
+    "exports_added": true
+  },
+  "files_modified": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/shared/schemas/taskflow/v1/workflow.schema.json",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/scripts/generate_schemas.py",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/graphAiServer/src/engine/schemas/generated/taskflow.d.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/__init__.py",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/tests/unit/test_issue_357_json_schema.py",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/tests/unit/test_issue_357_generate_schemas.py"
+  ],
+  "commits": [],
+  "message": "TDD implementation complete. JSON Schema Single Source of Truth implemented with TypeScript and Pydantic code generation. All 39 tests pass with 100% coverage. Static analysis (Ruff, MyPy) reports 0 errors."
+}

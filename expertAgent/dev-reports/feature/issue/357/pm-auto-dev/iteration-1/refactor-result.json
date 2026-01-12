@@ -1,0 +1,36 @@
+{
+  "status": "success",
+  "quality_metrics": {
+    "before_coverage": 100.0,
+    "after_coverage": 100.0,
+    "unit_tests_passed_before": 39,
+    "unit_tests_passed_after": 39,
+    "acceptance_tests_passed_before": 19,
+    "acceptance_tests_passed_after": 19
+  },
+  "refactorings_applied": [
+    "DRY: Consolidated 4 duplicate 'schema' fixtures in test_issue_357_json_schema.py into 1 module-level 'loaded_schema' fixture",
+    "DRY: Consolidated 2 duplicate 'script_module' fixtures in test_issue_357_generate_schemas.py into 1 module-level 'loaded_script_module' fixture",
+    "Fixed import sorting issue (I001) in test_issue_357_acceptance.py per isort/Ruff requirements",
+    "Improved type hints: Added ModuleType annotation for script module fixture return type",
+    "Added section headers for module-level fixtures to improve code organization"
+  ],
+  "files_changed": [
+    "expertAgent/tests/unit/test_issue_357_json_schema.py",
+    "expertAgent/tests/unit/test_issue_357_generate_schemas.py",
+    "expertAgent/tests/acceptance/test_issue_357_acceptance.py"
+  ],
+  "static_analysis": {
+    "ruff_errors_before": 1,
+    "ruff_errors_after": 0,
+    "mypy_errors_before": 0,
+    "mypy_errors_after": 0
+  },
+  "code_improvements": {
+    "lines_removed": 36,
+    "duplicate_fixtures_eliminated": 6,
+    "module_level_fixtures_created": 2
+  },
+  "commits": [],
+  "message": "Refactoring completed successfully. Applied DRY principle to eliminate duplicate test fixtures. The code is now more maintainable with shared fixtures at module level. All 39 unit tests and 19 acceptance tests continue to pass. Static analysis errors reduced from 1 to 0."
+}

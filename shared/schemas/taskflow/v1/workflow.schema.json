@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://myswiftagent.local/schemas/taskflow/v1/workflow.json",
+  "title": "TaskFlow Workflow Definition",
+  "description": "TaskFlow V2 workflow definition schema. This is the Single Source of Truth for workflow definitions used by both ExpertAgent (Python/Pydantic) and GraphAiServer (TypeScript/Zod).",
+  "type": "object",
+  "required": ["workflow_name", "input_schema", "output_schema", "steps", "output"],
+  "properties": {
+    "workflow_name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_-]*$",
+      "description": "Unique workflow name. Must start with a letter or underscore, followed by letters, numbers, underscores, or hyphens."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the workflow."
+    },
+    "input_schema": {
+      "$ref": "#/$defs/IOSchema",
+      "description": "Input field definitions. Maps field names to their types."
+    },
+    "output_schema": {
+      "$ref": "#/$defs/IOSchema",
+      "description": "Output field definitions. Maps field names to their types."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Step"
+      },
+      "description": "Workflow steps executed in order."
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Output field mappings. Maps output field names to step output references (e.g., ${step_001.output.data})."
+    }
+  },
+  "$defs": {
+    "SimpleType": {
+      "type": "string",
+      "enum": ["string", "number", "boolean", "array", "object", "null"],
+      "description": "Simple type for I/O schema fields."
+    },
+    "IOSchema": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/SimpleType"
+      },
+      "description": "Input/Output schema definition. Maps field names to simple types."
+    },
+    "Step": {
+      "type": "object",
+      "required": ["id", "type", "config"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9_-]*$",
+          "description": "Unique step identifier. Must start with a letter or underscore."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["api_rest", "code_js", "transform"],
+          "description": "Step type."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the step."
+        },
+        "config": {
+          "oneOf": [
+            { "$ref": "#/$defs/ApiRestConfig" },
+            { "$ref": "#/$defs/CodeJsConfig" },
+            { "$ref": "#/$defs/TransformConfig" }
+          ],
+          "description": "Step-specific configuration."
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Additional parameters for variable substitution."
+        },
+        "input_schema": {
+          "$ref": "#/$defs/IOSchema",
+          "description": "Step-level input schema."
+        },
+        "output_schema": {
+          "$ref": "#/$defs/IOSchema",
+          "description": "Step-level output schema."
+        }
+      }
+    },
+    "ApiRestConfig": {
+      "type": "object",
+      "required": ["method", "url"],
+      "properties": {
+        "step_type": {
+          "const": "api_rest",
+          "description": "Step type discriminator for api_rest."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "description": "HTTP method."
+        },
+        "url": {
+          "type": "string",
+          "description": "API endpoint URL. Must use HTTPS for external URLs. Supports variable references like ${inputs.url}."
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "HTTP headers as key-value pairs."
+        },
+        "body": {
+          "description": "Request body. Can be a JSON object or string."
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30000,
+          "description": "Request timeout in milliseconds."
+        },
+        "verify_ssl": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to verify SSL certificates."
+        }
+      }
+    },
+    "CodeJsConfig": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "step_type": {
+          "const": "code_js",
+          "description": "Step type discriminator for code_js."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path to the JavaScript file."
+        },
+        "function_name": {
+          "type": "string",
+          "default": "main",
+          "description": "Name of the function to execute."
+        }
+      }
+    },
+    "TransformConfig": {
+      "type": "object",
+      "properties": {
+        "step_type": {
+          "const": "transform",
+          "description": "Step type discriminator for transform."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["template", "concat", "map", "merge"],
+          "default": "template",
+          "description": "Transform mode."
+        },
+        "template": {
+          "type": "string",
+          "description": "Template string for 'template' mode."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Separator for 'concat' mode."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Field list for 'map' or 'merge' mode."
+        },
+        "source_field": {
+          "type": "string",
+          "description": "Source field for transformation."
+        },
+        "strategy": {
+          "type": "string",
+          "enum": ["shallow", "deep"],
+          "description": "Merge strategy for 'merge' mode."
+        }
+      }
+    }
+  }
+}

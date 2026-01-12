@@ -1,0 +1,23 @@
+{
+  "issue_number": 357,
+  "refactor_targets": [
+    "scripts/generate_schemas.py",
+    "expertAgent/tests/unit/test_issue_357_json_schema.py",
+    "expertAgent/tests/unit/test_issue_357_generate_schemas.py",
+    "expertAgent/tests/acceptance/test_issue_357_acceptance.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100.0,
+    "unit_tests_passed": 39,
+    "acceptance_tests_passed": 19
+  },
+  "design_patterns_to_apply": [
+    "DRY - Remove duplicate code in test files",
+    "Factory Pattern - Test data creation"
+  ],
+  "improvement_goals": [
+    "Remove duplicate test setup code",
+    "Create shared fixtures for common test data",
+    "Improve code readability"
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "issue_number": 357,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "workflow.schema.json",
+      "type": "schema",
+      "file_path": "shared/schemas/taskflow/v1/workflow.schema.json",
+      "line_number": 1,
+      "description": "JSON Schema Draft 2020-12 定義ファイル - TaskFlowワークフローの単一真実の源",
+      "expected_callers": ["generate_schemas.py", "JSON Schema validators"],
+      "expected_call_location": "scripts/generate_schemas.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "generate_schemas.py",
+      "type": "script",
+      "file_path": "scripts/generate_schemas.py",
+      "line_number": 1,
+      "description": "スキーマ生成スクリプト - JSON SchemaからTypeScript型とPydanticモデルを生成",
+      "expected_callers": ["CI/CD", "開発者手動実行"],
+      "expected_call_location": "CI workflow または手動実行"
+    },
+    {
+      "feature_id": "F3",
+      "name": "taskflow.d.ts",
+      "type": "generated_type",
+      "file_path": "graphAiServer/src/engine/schemas/generated/taskflow.d.ts",
+      "line_number": 1,
+      "description": "生成されたTypeScript型定義 - GraphAiServer用",
+      "expected_callers": ["GraphAiServer TypeScript modules"],
+      "expected_call_location": "graphAiServer/src/engine/"
+    },
+    {
+      "feature_id": "F4",
+      "name": "taskflow_types.py",
+      "type": "generated_model",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+      "line_number": 1,
+      "description": "生成されたPydanticモデル - ExpertAgent用",
+      "expected_callers": ["ExpertAgent workflow validation"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/"
+    },
+    {
+      "feature_id": "F5",
+      "name": "TaskflowWorkflowDefinition",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+      "line_number": 132,
+      "description": "ワークフロー定義Pydanticモデル",
+      "expected_callers": ["workflow validation", "workflow generation"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/"
+    },
+    {
+      "feature_id": "F6",
+      "name": "Step",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+      "line_number": 111,
+      "description": "ステップ定義Pydanticモデル",
+      "expected_callers": ["TaskflowWorkflowDefinition"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "ApiRestConfig",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+      "line_number": 46,
+      "description": "API REST設定Pydanticモデル",
+      "expected_callers": ["Step.config"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py"
+    },
+    {
+      "feature_id": "F8",
+      "name": "CodeJsConfig",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+      "line_number": 69,
+      "description": "Code JS設定Pydanticモデル",
+      "expected_callers": ["Step.config"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py"
+    },
+    {
+      "feature_id": "F9",
+      "name": "TransformConfig",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py",
+      "line_number": 91,
+      "description": "Transform設定Pydanticモデル",
+      "expected_callers": ["Step.config"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/taskflow_types.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_issue_357_json_schema.py::TestJsonSchemaExists",
+        "test_issue_357_json_schema.py::TestJsonSchemaStructure",
+        "test_issue_357_json_schema.py::TestJsonSchemaDefinitions",
+        "test_issue_357_json_schema.py::TestJsonSchemaValidation"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_issue_357_generate_schemas.py::TestGenerateSchemasScript"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-002", "TC-003"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "test_issue_357_generate_schemas.py::TestTypeScriptGeneration"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-004"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [
+        "test_issue_357_generate_schemas.py::TestPydanticGeneration"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-005"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "scripts/generate_schemas.py",
+      "integration_type": "file_read",
+      "integration_method": "json.loads(SCHEMA_FILE.read_text())"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/generated/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .taskflow_types import *"
+    }
+  ]
+}

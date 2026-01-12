@@ -1,0 +1,42 @@
+{
+  "issue_number": 357,
+  "feature_summary": "JSON Schema Single Source of Truth 導入",
+  "acceptance_criteria": [
+    "shared/schemas/taskflow/v1/workflow.schema.json が存在",
+    "scripts/generate_schemas.py が存在",
+    "TypeScript型ファイルが自動生成される",
+    "Pydanticモデルファイルが自動生成される",
+    "生成されたスキーマが既存テストをパス",
+    "JSON Schema妥当性検証がパス",
+    "python scripts/generate_schemas.py が正常終了",
+    "生成されたTypeScript型がコンパイルエラーなし",
+    "生成されたPydanticモデルがインポート可能"
+  ],
+  "labels": ["feature", "schema"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": [],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "acceptance-plan.md",
+    "health_checks": [],
+    "test_commands": [
+      {
+        "name": "TC-001: JSON Schema存在確認",
+        "command": "ls -la shared/schemas/taskflow/v1/workflow.schema.json",
+        "expected_status": 0
+      },
+      {
+        "name": "TC-002: 生成スクリプト存在確認",
+        "command": "python -m py_compile scripts/generate_schemas.py",
+        "expected_status": 0
+      },
+      {
+        "name": "TC-005: Pydanticインポート確認",
+        "command": "cd expertAgent && uv run python -c \"from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.generated.taskflow_types import *; print('Import OK')\"",
+        "expected_status": 0
+      }
+    ]
+  },
+  "pytest_test_file": "tests/acceptance/test_issue_357_acceptance.py"
+}
