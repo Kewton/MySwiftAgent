@@ -1,0 +1,46 @@
+{
+  "workflow_name": "weather_search",
+  "description": "Workflow to search for current weather and forecast summaries using Google Search.",
+  "input_schema": {
+    "query": "string"
+  },
+  "output_schema": {
+    "search_summary": "string",
+    "source_urls": "array"
+  },
+  "steps": [
+    {
+      "id": "google_search_weather",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "http://localhost:8004/v1/utility/google_search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "queries": [
+            "${inputs.query}"
+          ],
+          "num": 3
+        },
+        "timeout_ms": 30000,
+        "verify_ssl": true
+      }
+    },
+    {
+      "id": "extract_weather_summary",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "template",
+        "template": "Weather summary: ${google_search_weather.output.search_results[0].snippet}"
+      }
+    }
+  ],
+  "output": {
+    "search_summary": "${extract_weather_summary.output}",
+    "source_urls": "${google_search_weather.output.search_results.map(result => result.link)}"
+  }
+}

@@ -604,3 +604,173 @@ class TestStepConversion:
 
         assert result.success is True
         assert result.data["steps"][0]["params"] == {"api_key": "${secrets.API_KEY}"}
+
+
+class TestIOSchemaConversion:
+    """Tests for IOSchema conversion (JSON Schema -> simplified format)."""
+
+    @pytest.fixture
+    def adapter(self) -> "TaskFlowAdapter":
+        """Create TaskFlowAdapter instance."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.adapter.taskflow_adapter import (
+            TaskFlowAdapter,
+        )
+
+        return TaskFlowAdapter()
+
+    def test_convert_full_json_schema_to_io_schema(
+        self, adapter: "TaskFlowAdapter"
+    ) -> None:
+        """Full JSON Schema format is converted to simplified IOSchema."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query"},
+                    "limit": {"type": "integer"},
+                },
+                "required": ["query"],
+            },
+            "output_schema": {
+                "properties": {
+                    "results": {"type": "array"},
+                    "count": {"type": "number"},
+                }
+            },
+            "output": {"results": "${step_001.output.data}"},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        # input_schema should be converted to simplified format
+        assert result.data["input_schema"] == {"query": "string", "limit": "number"}
+        # output_schema should be converted to simplified format
+        assert result.data["output_schema"] == {"results": "array", "count": "number"}
+
+    def test_simplified_io_schema_preserved(self, adapter: "TaskFlowAdapter") -> None:
+        """Already simplified IOSchema is preserved as-is."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {"query": "string", "limit": "number"},
+            "output_schema": {"results": "array"},
+            "output": {"results": "${step_001.output.data}"},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        assert result.data["input_schema"] == {"query": "string", "limit": "number"}
+        assert result.data["output_schema"] == {"results": "array"}
+
+    def test_integer_type_normalized_to_number(
+        self, adapter: "TaskFlowAdapter"
+    ) -> None:
+        """Integer type in JSON Schema is normalized to number in IOSchema."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {
+                "properties": {
+                    "count": {"type": "integer"},
+                    "price": {"type": "number"},
+                }
+            },
+            "output_schema": {"result": "string"},
+            "output": {"result": "${step_001.output}"},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        # integer should be normalized to number
+        assert result.data["input_schema"]["count"] == "number"
+        assert result.data["input_schema"]["price"] == "number"
+
+    def test_nullable_type_handled(self, adapter: "TaskFlowAdapter") -> None:
+        """Nullable types (array of types) are handled correctly."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {
+                "properties": {
+                    "optional_field": {"type": ["string", "null"]},
+                }
+            },
+            "output_schema": {"result": "string"},
+            "output": {"result": "${step_001.output}"},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        # Should pick the non-null type
+        assert result.data["input_schema"]["optional_field"] == "string"
+
+
+class TestOutputFieldCleaning:
+    """Tests for output field cleaning (non-string to string conversion)."""
+
+    @pytest.fixture
+    def adapter(self) -> "TaskFlowAdapter":
+        """Create TaskFlowAdapter instance."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.adapter.taskflow_adapter import (
+            TaskFlowAdapter,
+        )
+
+        return TaskFlowAdapter()
+
+    def test_boolean_output_converted_to_string(
+        self, adapter: "TaskFlowAdapter"
+    ) -> None:
+        """Boolean values in output are converted to string."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {"query": "string"},
+            "output_schema": {"success": "boolean"},
+            "output": {"success": True},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        assert result.data["output"]["success"] == "true"
+        assert any("boolean" in w.lower() for w in result.warnings)
+
+    def test_string_output_preserved(self, adapter: "TaskFlowAdapter") -> None:
+        """String values in output are preserved."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {"query": "string"},
+            "output_schema": {"result": "string"},
+            "output": {"result": "${step_001.output.data}"},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        assert result.data["output"]["result"] == "${step_001.output.data}"
+        # No warnings for string values
+        assert not any("output.result" in w for w in result.warnings)
+
+    def test_null_output_skipped(self, adapter: "TaskFlowAdapter") -> None:
+        """Null values in output are skipped."""
+        workflow: dict[str, Any] = {
+            "workflow_name": "test_workflow",
+            "input_schema": {"query": "string"},
+            "output_schema": {"result": "string"},
+            "output": {"result": "${step_001.output}", "optional": None},
+            "steps": [],
+        }
+
+        result = adapter.convert(workflow)
+
+        assert result.success is True
+        assert "optional" not in result.data["output"]
+        assert any("null" in w.lower() for w in result.warnings)
