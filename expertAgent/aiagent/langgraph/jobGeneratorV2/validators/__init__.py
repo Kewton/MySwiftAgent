@@ -331,4 +331,8 @@ __all__ = [
     # Use: from aiagent.langgraph.jobGeneratorV2.validators.api_schema_validator import APISchemaValidator
     # Issue #353: PendingWorkflowValidator - imported from submodule
     # Use: from aiagent.langgraph.jobGeneratorV2.validators.pending_workflow import PendingWorkflowValidator
+    # Issue #358: BodyTemplateValidator - imported from submodule
+    # Use: from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import BodyTemplateValidator
+    # Use: from aiagent.langgraph.jobGeneratorV2.validators.template_variable_extractor import extract_template_variables
+    # Use: from aiagent.langgraph.jobGeneratorV2.validators.schema_comparator import compare_schemas
 ]

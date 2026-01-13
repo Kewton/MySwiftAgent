@@ -1,0 +1,49 @@
+{
+  "issue_number": 358,
+  "issue_title": "feat(jobGeneratorV2): ジョブ生成時のbody_template整合性バリデーション追加",
+  "acceptance_criteria": [
+    "BodyTemplateValidatorクラスの実装",
+    "テンプレート変数の抽出機能（{{...}}パターン）",
+    "job.body参照の検証（input_schemaとの照合）",
+    "tasks[N].output_data参照の検証（タスク順序・output_schemaとの照合）",
+    "検証結果のレポート生成（エラー/警告/必須パラメータ）",
+    "REGISTRATIONフェーズへの統合（TaskMaster作成前にバリデーション実行）",
+    "エラー時は明確なメッセージで生成中止",
+    "警告時はログ出力して続行",
+    "JobMasterへの必須パラメータ情報付与",
+    "JobQueue APIで必須パラメータ情報を返却"
+  ],
+  "technical_requirements": [
+    "単体テストカバレッジ90%以上",
+    "既存のジョブ生成フローへの影響最小化",
+    "Strategy Patternによるエンジン別検証ルール分離",
+    "Result型パターンによる詳細エラー情報伝達",
+    "正規表現によるテンプレート変数抽出"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/358/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/358/work-plan.md",
+  "phase": "pre-tdd",
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "バリデータ基盤の実装（BodyTemplateValidator, ValidationResult等）",
+      "deliverables": ["validators/body_template_validator.py"]
+    },
+    {
+      "task_id": "1.2",
+      "description": "テンプレート変数抽出機能",
+      "deliverables": ["validators/template_variable_extractor.py"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "検証ロジックの実装（job.body検証、tasks[N]検証）",
+      "deliverables": ["validators/schema_comparator.py"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "REGISTRATIONフェーズへの統合",
+      "deliverables": ["workflows/registration/master_manager.py"]
+    }
+  ]
+}

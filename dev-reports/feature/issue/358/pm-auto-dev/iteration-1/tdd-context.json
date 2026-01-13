@@ -1,0 +1,105 @@
+{
+  "issue_number": 358,
+  "issue_title": "feat(jobGeneratorV2): ジョブ生成時のbody_template整合性バリデーション追加",
+  "acceptance_criteria": [
+    "BodyTemplateValidatorクラスの実装",
+    "テンプレート変数の抽出機能（{{...}}パターン）",
+    "job.body参照の検証（input_schemaとの照合）",
+    "tasks[N].output_data参照の検証（タスク順序・output_schemaとの照合）",
+    "検証結果のレポート生成（エラー/警告/必須パラメータ）",
+    "REGISTRATIONフェーズへの統合（TaskMaster作成前にバリデーション実行）",
+    "エラー時は明確なメッセージで生成中止",
+    "警告時はログ出力して続行"
+  ],
+  "implementation_tasks": [
+    "BodyTemplateValidatorクラスの実装",
+    "ValidationResult, ValidationError, ValidationWarning, RequiredFieldデータクラスの定義",
+    "ValidationStrategyプロトコルの定義",
+    "TaskFlowValidationStrategy, GraphAIValidationStrategyクラスの実装",
+    "template_variable_extractor.py - 正規表現による変数抽出",
+    "schema_comparator.py - スキーマ比較ユーティリティ",
+    "validate_job_body_references()メソッドの実装",
+    "validate_task_references()メソッドの実装",
+    "MasterManagerSubWorkflowへのバリデータ統合",
+    "_format_validation_errors()メソッドの実装"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "バリデータ基盤の実装（BodyTemplateValidator, ValidationResult等）",
+      "estimated_hours": 3,
+      "deliverables": ["validators/body_template_validator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "テンプレート変数抽出機能",
+      "estimated_hours": 2,
+      "deliverables": ["validators/template_variable_extractor.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "検証ロジックの実装（job.body検証、tasks[N]検証、スキーマ比較）",
+      "estimated_hours": 2,
+      "deliverables": ["validators/schema_comparator.py"],
+      "dependencies": ["1.1", "1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "REGISTRATIONフェーズへの統合",
+      "estimated_hours": 1,
+      "deliverables": ["workflows/registration/master_manager.py"],
+      "dependencies": ["1.1", "1.2", "1.3"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト - バリデータ",
+      "estimated_hours": 2,
+      "deliverables": ["tests/unit/validators/test_body_template_validator.py"],
+      "dependencies": ["1.1", "1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "単体テスト - 抽出・比較機能",
+      "estimated_hours": 1,
+      "deliverables": [
+        "tests/unit/validators/test_template_variable_extractor.py",
+        "tests/unit/validators/test_schema_comparator.py"
+      ],
+      "dependencies": ["1.2", "1.3"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "結合テスト",
+      "estimated_hours": 1,
+      "deliverables": ["tests/integration/test_registration_validation.py"],
+      "dependencies": ["1.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "expertAgent/tests/unit/validators/test_body_template_validator.py",
+    "expertAgent/tests/unit/validators/test_template_variable_extractor.py",
+    "expertAgent/tests/unit/validators/test_schema_comparator.py",
+    "expertAgent/tests/integration/test_registration_validation.py"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上達成",
+    "結合テストが全てパス",
+    "CI/CDパイプラインがグリーン"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent",
+  "base_path": "expertAgent/aiagent/langgraph/jobGeneratorV2",
+  "design_policy_reference": {
+    "strategy_pattern": "エンジン（GraphAI/TaskFlow）ごとの検証ルール分離",
+    "result_pattern": "BodyTemplateValidationResultによる詳細エラー情報伝達",
+    "template_extraction": "正規表現パターン r'\\{\\{([^}]+)\\}\\}' による変数抽出",
+    "error_types": ["MISSING_REFERENCE", "INVALID_INDEX", "SCHEMA_MISMATCH"]
+  }
+}
