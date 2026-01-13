@@ -32,6 +32,11 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     Phase,
     TaskDefinition,
 )
+from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+    BodyTemplateValidator,
+    GraphAIValidationStrategy,
+    TaskFlowValidationStrategy,
+)
 from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
     JobqueueClient,
 )
@@ -153,6 +158,14 @@ class MasterManagerSubWorkflow:
         self._default_timeout_sec = default_timeout_sec
         self._jobqueue_client = jobqueue_client
         self._engine = engine
+
+        # Issue #358: Initialize BodyTemplateValidator with engine-specific strategy
+        strategy = (
+            TaskFlowValidationStrategy()
+            if engine == "taskflow"
+            else GraphAIValidationStrategy()
+        )
+        self._body_template_validator = BodyTemplateValidator(strategy=strategy)
 
     def _get_task_url(self) -> str:
         """Get the task URL based on engine type.
@@ -318,6 +331,39 @@ class MasterManagerSubWorkflow:
 
             # Build body template for task chaining
             body_template = self._build_body_template(order)
+
+            # Issue #358: Validate body_template before creating TaskMaster
+            if task.id in interfaces:
+                interface = interfaces[task.id]
+                # Collect output schemas from all preceding tasks
+                preceding_output_schemas = [
+                    interfaces[t.id].output_schema
+                    for t in sorted_tasks[:order]
+                    if t.id in interfaces
+                ]
+                validation_result = self._body_template_validator.validate(
+                    body_template=body_template,
+                    input_schema=interface.input_schema,
+                    task_count=order,
+                    task_output_schemas=preceding_output_schemas,
+                )
+                if not validation_result.is_valid:
+                    error_messages = "; ".join(
+                        f"{e.error_type}: {e.message}" for e in validation_result.errors
+                    )
+                    raise WorkflowError(
+                        f"Body template validation failed for task '{task.name}': "
+                        f"{error_messages}",
+                        ErrorType.VALIDATION,
+                        Phase.REGISTRATION,
+                    )
+                if validation_result.warnings:
+                    for warning in validation_result.warnings:
+                        logger.warning(
+                            "Body template warning for task '%s': %s",
+                            task.name,
+                            warning.message,
+                        )
 
             task_master_id = await self._create_task_master(
                 task=task,
