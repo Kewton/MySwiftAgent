@@ -23,7 +23,7 @@ Usage:
 ALLOWED_LOCAL_HOSTS: frozenset[str] = frozenset([
     "localhost",       # Standard localhost
     "127.0.0.1",       # IPv4 loopback
-    "0.0.0.0",         # All interfaces (Docker networking)
+    "0.0.0.0",         # All interfaces (Docker networking)  # noqa: S104
     "[::1]",           # IPv6 loopback
 ])
 

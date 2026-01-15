@@ -1,3 +1,4 @@
+# ruff: noqa: S603
 """Unit tests for Issue #357: Schema Generation Script.
 
 This module tests:
@@ -67,7 +68,7 @@ def loaded_script_module() -> ModuleType | None:
         try:
             spec.loader.exec_module(module)
             return module
-        except Exception:
+        except Exception:  # noqa: S110
             # Allow import errors for now - we just want to check structure
             pass
     return None

@@ -5,9 +5,9 @@ Issue #359 Iteration 2 Task 1.6: Tests for V3 adapter.
 TDD Red Phase: These tests define the expected behavior.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
 from aiagent.langgraph.jobGeneratorV2.types_v3 import UnifiedTaskIdentifier
 
 
@@ -26,6 +26,7 @@ class TestAdapterV3Creation:
     def test_adapter_accepts_progress_reporter(self):
         """Adapter should accept optional progress reporter."""
         from aiagent.langgraph.jobGeneratorV2.adapter_v3 import JobGeneratorV3Adapter
+
         from aiagent.langgraph.jobGeneratorV2.protocols import ProgressReporter
 
         mock_reporter = MagicMock(spec=ProgressReporter)

@@ -5,8 +5,6 @@ Issue #353: Tests for error notification structure for API responses.
 
 from datetime import datetime
 
-import pytest
-
 from aiagent.langgraph.jobGeneratorV2.types import Phase
 from aiagent.langgraph.jobGeneratorV2.validators.pending_workflow import (
     ErrorNotification,

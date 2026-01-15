@@ -5,19 +5,17 @@ Issue #359: Tests for phase-specific error handling and recovery strategies.
 TDD Red Phase: These tests define the expected behavior of error recovery.
 """
 
-import pytest
 
-from aiagent.langgraph.jobGeneratorV2.types_v3 import (
-    ErrorType,
-    PhaseError,
-    RecoveryAction,
-    RecoveryStrategy,
-)
 from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import (
     ErrorRecoveryManager,
     JobAnalysisErrorContract,
     RegistrationErrorContract,
     WorkflowGenErrorContract,
+)
+from aiagent.langgraph.jobGeneratorV2.types_v3 import (
+    ErrorType,
+    PhaseError,
+    RecoveryStrategy,
 )
 
 

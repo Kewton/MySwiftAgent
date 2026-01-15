@@ -24,7 +24,7 @@ from typing import Any
 from . import ValidationError, ValidationErrorCode, ValidationResult, WorkflowValidator
 from .error_codes import TaskFlowValidationErrorCode
 from .messages import get_error_message
-from .security_constants import ALLOWED_LOCAL_HOSTS, is_local_url
+from .security_constants import ALLOWED_LOCAL_HOSTS
 
 logger = logging.getLogger(__name__)
 

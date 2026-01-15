@@ -5,9 +5,8 @@ Issue #359 Iteration 2 Task 1.2: Tests for merged TASK_BREAKDOWN + INTERFACE_DES
 TDD Red Phase: These tests define the expected behavior.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from aiagent.langgraph.jobGeneratorV2.types_v3 import UnifiedTaskIdentifier
 
 
@@ -17,8 +16,8 @@ class TestJobAnalyzerResponse:
     def test_response_has_tasks_list(self):
         """Response should have tasks list with UnifiedTaskIdentifier."""
         from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
-            JobAnalysisResponse,
             AnalyzedTask,
+            JobAnalysisResponse,
         )
 
         task = AnalyzedTask(
@@ -45,9 +44,9 @@ class TestJobAnalyzerResponse:
     def test_response_has_interfaces(self):
         """Response should have interfaces dict keyed by task_id."""
         from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
-            JobAnalysisResponse,
             AnalyzedTask,
             InterfaceDefinition,
+            JobAnalysisResponse,
         )
 
         task = AnalyzedTask(
@@ -159,11 +158,11 @@ class TestJobAnalyzerNode:
     async def test_analyzer_merges_breakdown_and_interface(self):
         """Analyzer should perform task breakdown and interface design in one call."""
         from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
-            analyze_job,
             JobAnalysisInput,
+            analyze_job,
         )
 
-        input_data = JobAnalysisInput(
+        JobAnalysisInput(
             user_requirement="Search Gmail for recent emails and summarize them",
             max_tasks=5,
         )
@@ -177,8 +176,8 @@ class TestJobAnalyzerNode:
     async def test_analyzer_returns_unified_identifiers(self):
         """Analyzer should return tasks with UnifiedTaskIdentifier-compatible IDs."""
         from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
-            JobAnalysisResponse,
             AnalyzedTask,
+            JobAnalysisResponse,
         )
 
         task = AnalyzedTask(
@@ -206,7 +205,7 @@ class TestJobAnalyzerNode:
         """Tasks should use task_id, not index-based references."""
         from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import AnalyzedTask
 
-        task1 = AnalyzedTask(
+        AnalyzedTask(
             task_id="task_001",
             name="First Task",
             description="First task",
@@ -238,7 +237,9 @@ class TestJobAnalysisInput:
 
     def test_input_has_user_requirement(self):
         """Input should have user_requirement field."""
-        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import JobAnalysisInput
+        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
+            JobAnalysisInput,
+        )
 
         input_data = JobAnalysisInput(
             user_requirement="Search Gmail",
@@ -250,7 +251,9 @@ class TestJobAnalysisInput:
 
     def test_input_has_optional_context(self):
         """Input should support optional context for retry."""
-        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import JobAnalysisInput
+        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
+            JobAnalysisInput,
+        )
 
         input_data = JobAnalysisInput(
             user_requirement="Search Gmail",

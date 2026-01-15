@@ -24,8 +24,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from .protocols import ErrorType, WorkflowError
-from .types_old import Phase, RelaxationSuggestion
 from .types import RecoveryStrategy
+from .types_old import Phase, RelaxationSuggestion
 
 logger = logging.getLogger(__name__)
 

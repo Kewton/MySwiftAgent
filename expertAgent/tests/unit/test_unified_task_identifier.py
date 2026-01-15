@@ -5,17 +5,16 @@ Issue #359: Tests for the new unified ID system.
 TDD Red Phase: These tests define the expected behavior of the new types.
 """
 
-import pytest
 
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
-    UnifiedTaskIdentifier,
-    TaskResult,
-    ParallelExecutionResult,
     ErrorType,
-    RecoveryStrategy,
+    ParallelExecutionResult,
     PhaseError,
     RecoveryAction,
+    RecoveryStrategy,
     TaskExecutionError,
+    TaskResult,
+    UnifiedTaskIdentifier,
 )
 
 

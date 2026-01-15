@@ -3,7 +3,6 @@
 Issue #353: Tests for __PENDING__ workflow detection and validation.
 """
 
-import pytest
 
 from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType
 from aiagent.langgraph.jobGeneratorV2.validators.pending_workflow import (

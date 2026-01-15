@@ -5,15 +5,12 @@ Issue #359 Iteration 2 Task 1.5: Tests for 3-phase orchestrator.
 TDD Red Phase: These tests define the expected behavior.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
-    UnifiedTaskIdentifier,
-    TaskResult,
-    ParallelExecutionResult,
     PhaseV3,
     RecoveryStrategy,
+    UnifiedTaskIdentifier,
 )
 
 
@@ -47,12 +44,12 @@ class TestOrchestratorV3NoIndexLookups:
 
     def test_no_index_based_task_lookup(self):
         """Orchestrator should NOT use index-based lookups like task_master_ids[idx]."""
+        # Read the source file and check for banned patterns
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
-
-        # Read the source file and check for banned patterns
-        import inspect
 
         source = inspect.getsource(JobGenerationOrchestratorV3)
 
@@ -100,11 +97,11 @@ class TestOrchestratorV3NoSilentFallbacks:
     @pytest.mark.asyncio
     async def test_no_silent_continue_in_loops(self):
         """Loops should not silently skip tasks."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
-
-        import inspect
 
         source = inspect.getsource(JobGenerationOrchestratorV3)
 
@@ -119,9 +116,9 @@ class TestOrchestratorV3LineCount:
 
     def test_orchestrator_under_300_lines(self):
         """Orchestrator source should be under 300 lines."""
-        from aiagent.langgraph.jobGeneratorV2 import orchestrator_v3
-
         import inspect
+
+        from aiagent.langgraph.jobGeneratorV2 import orchestrator_v3
 
         source = inspect.getsource(orchestrator_v3)
         line_count = len(source.splitlines())
@@ -134,11 +131,11 @@ class TestOrchestratorV3ErrorRecovery:
 
     def test_uses_error_recovery_v3(self):
         """Orchestrator should use ErrorRecoveryManager from error_recovery_v3."""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
-            JobGenerationOrchestratorV3,
-        )
         from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import (
             ErrorRecoveryManager,
+        )
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
+            JobGenerationOrchestratorV3,
         )
 
         recovery_manager = ErrorRecoveryManager()
@@ -151,19 +148,18 @@ class TestOrchestratorV3ErrorRecovery:
     @pytest.mark.asyncio
     async def test_recovery_action_handled(self):
         """Orchestrator should handle recovery actions correctly."""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
-            JobGenerationOrchestratorV3,
-        )
         from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import (
             ErrorRecoveryManager,
         )
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
+            JobGenerationOrchestratorV3,
+        )
         from aiagent.langgraph.jobGeneratorV2.types_v3 import (
             RecoveryAction,
-            RecoveryStrategy,
         )
 
         recovery_manager = ErrorRecoveryManager()
-        orchestrator = JobGenerationOrchestratorV3(
+        JobGenerationOrchestratorV3(
             error_recovery_manager=recovery_manager
         )
 
@@ -177,11 +173,11 @@ class TestOrchestratorV3ParallelExecution:
 
     def test_uses_parallel_executor(self):
         """Orchestrator should use parallel_executor for Phase 3."""
+        import inspect
+
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
-
-        import inspect
 
         source = inspect.getsource(JobGenerationOrchestratorV3)
 

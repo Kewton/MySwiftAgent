@@ -5,10 +5,7 @@ Issue #359 Iteration 2 Task 2.2: Tests for ValidationPipeline enhancement.
 TDD Red Phase: These tests define the expected behavior.
 """
 
-import pytest
-from unittest.mock import MagicMock
 
-from aiagent.langgraph.jobGeneratorV2.validators import ValidationError, ValidationErrorCode
 
 
 class TestStructuralValidator:
@@ -210,9 +207,6 @@ class TestEnhancedValidationPipeline:
         """Pipeline should include Structural, Schema, and Semantic validators."""
         from aiagent.langgraph.jobGeneratorV2.validators.pipeline import (
             ValidationPipelineV3,
-            StructuralValidator,
-            SchemaValidator,
-            SemanticValidator,
         )
 
         pipeline = ValidationPipelineV3()

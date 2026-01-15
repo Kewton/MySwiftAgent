@@ -18,9 +18,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.adapter import (
-        TaskFlowAdapter,
-    )
+    pass
 
 
 @pytest.mark.acceptance

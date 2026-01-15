@@ -4,7 +4,7 @@ Issue #353: Tests for _can_proceed_to_finalization method and
 INCOMPLETE_WORKFLOW error handling.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 

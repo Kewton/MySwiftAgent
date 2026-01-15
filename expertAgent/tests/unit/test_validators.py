@@ -5,11 +5,10 @@ Issue #359: Tests for TaskDependencyValidator and ValidationPipeline.
 TDD Red Phase: These tests define the expected behavior of validators.
 """
 
-import pytest
 
 from aiagent.langgraph.jobGeneratorV2.validators.task_dependency import (
-    TaskDependencyValidator,
     DependencyValidationResult,
+    TaskDependencyValidator,
 )
 
 

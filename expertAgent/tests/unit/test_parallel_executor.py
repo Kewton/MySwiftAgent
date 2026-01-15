@@ -6,8 +6,9 @@ TDD Red Phase: These tests define the expected behavior of parallel execution.
 """
 
 import asyncio
-import pytest
 
+import pytest
+from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import ErrorRecoveryManager
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
     ParallelExecutionResult,
@@ -15,12 +16,12 @@ from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     TaskResult,
     UnifiedTaskIdentifier,
 )
+
 from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
-    parallel_workflow_generation,
-    ParallelExecutionErrorAggregator,
     AggregatedRecoveryDecision,
+    ParallelExecutionErrorAggregator,
+    parallel_workflow_generation,
 )
-from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import ErrorRecoveryManager
 
 
 class TestParallelWorkflowGeneration:
@@ -186,7 +187,7 @@ class TestParallelWorkflowGeneration:
 
     async def _mock_validation_error(self, task: UnifiedTaskIdentifier) -> dict:
         """Mock generator that raises validation error."""
-        from pydantic import ValidationError, BaseModel
+        from pydantic import BaseModel
 
         class TestModel(BaseModel):
             required_field: str

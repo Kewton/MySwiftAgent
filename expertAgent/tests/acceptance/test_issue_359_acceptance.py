@@ -1,3 +1,4 @@
+# ruff: noqa: S603, S607
 """Issue #359 受入テスト（L3: ローカル受入テスト）.
 
 jobGeneratorV2 3フェーズ統一ID方式リファクタリングの受入テスト。
@@ -26,7 +27,6 @@ Note:
 
 from __future__ import annotations
 
-import asyncio
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -39,23 +39,21 @@ from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
     JobGenerationOrchestratorV3,
     OrchestratorError,
 )
-from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
-    parallel_workflow_generation,
-)
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
-    ParallelExecutionResult,
     PhaseError,
     PhaseV3,
     RecoveryStrategy,
-    TaskResult,
     UnifiedTaskIdentifier,
 )
+
+from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
+    parallel_workflow_generation,
+)
+from aiagent.langgraph.jobGeneratorV2.validators.pipeline import ValidationPipelineV3
 from aiagent.langgraph.jobGeneratorV2.validators.task_dependency import (
     TaskDependencyValidator,
 )
-from aiagent.langgraph.jobGeneratorV2.validators.pipeline import ValidationPipelineV3
-
 
 # === Code Inspection Tests ===
 
@@ -93,7 +91,7 @@ class TestTC006NoIndexBasedLookups:
             if "[idx]" in line and "# " not in line.split("[idx]")[0]:
                 violations.append(f"Line {i}: {line.strip()}")
 
-        assert len(violations) == 0, f"Found index-based lookups:\n" + "\n".join(
+        assert len(violations) == 0, "Found index-based lookups:\n" + "\n".join(
             violations
         )
 
@@ -364,7 +362,7 @@ class TestTC007NoSilentFallback:
     def test_orchestrator_raises_on_missing_task(self) -> None:
         """存在しないtask_idでルックアップ時にエラーが発生する."""
         # Arrange
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import MagicMock
 
         orchestrator = JobGenerationOrchestratorV3(
             error_recovery_manager=ErrorRecoveryManager(),

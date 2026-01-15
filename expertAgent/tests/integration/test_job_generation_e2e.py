@@ -9,7 +9,6 @@ Phase 1: JOB_ANALYSIS -> Phase 2: REGISTRATION -> Phase 3: WORKFLOW_GEN
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
     ParallelExecutionResult,
@@ -532,6 +531,7 @@ class TestValidatorIntegration:
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
+
         from aiagent.langgraph.jobGeneratorV2.validators.pipeline import (
             ValidationPipelineV3,
         )
@@ -570,6 +570,7 @@ class TestValidatorIntegration:
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
+
         from aiagent.langgraph.jobGeneratorV2.validators import (
             ValidationError,
             ValidationErrorCode,

@@ -1,3 +1,4 @@
+# ruff: noqa: S603
 """Issue #357 受入テスト（L3: ローカル受入テスト）.
 
 Issue #357: JSON Schema Single Source of Truth 導入
@@ -205,6 +206,8 @@ class TestIssue357Acceptance:
         受入条件: AC-4, AC-9 インポート成功
         """
         # Import the generated module
+        from pydantic import BaseModel
+
         from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.generated.taskflow_types import (
             ApiRestConfig,
             CodeJsConfig,
@@ -212,7 +215,6 @@ class TestIssue357Acceptance:
             TaskflowWorkflowDefinition,
             TransformConfig,
         )
-        from pydantic import BaseModel
 
         # Verify all classes are BaseModel subclasses
         assert issubclass(TaskflowWorkflowDefinition, BaseModel), (

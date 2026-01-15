@@ -346,7 +346,6 @@ class TaskFlowAdapter:
         Returns:
             Tuple of (converted schema, list of warnings)
         """
-        warnings: list[str] = []
 
         # Check if this is a full JSON Schema (has $schema or properties)
         is_full_json_schema = "$schema" in schema or "properties" in schema
@@ -480,7 +479,7 @@ class TaskFlowAdapter:
 
         # Check if any value looks like it needs conversion
         needs_conversion = False
-        for key, value in schema.items():
+        for _key, value in schema.items():
             if isinstance(value, dict) and "type" in value:
                 # This looks like a JSON Schema property definition
                 needs_conversion = True
