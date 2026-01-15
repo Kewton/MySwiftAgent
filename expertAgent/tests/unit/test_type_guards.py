@@ -167,16 +167,14 @@ class TestFormatApisForPrompt:
 
     def test_format_dict_apis_with_different_name_and_endpoint(self):
         """Test formatting dict APIs with different name and endpoint."""
-        result = format_apis_for_prompt([
-            {"api_name": "search", "endpoint": "/v1/search"}
-        ])
+        result = format_apis_for_prompt(
+            [{"api_name": "search", "endpoint": "/v1/search"}]
+        )
         assert "- search (endpoint: /v1/search)" in result
 
     def test_format_dict_apis_same_name_and_endpoint(self):
         """Test formatting dict APIs with same name and endpoint."""
-        result = format_apis_for_prompt([
-            {"api_name": "test", "endpoint": "test"}
-        ])
+        result = format_apis_for_prompt([{"api_name": "test", "endpoint": "test"}])
         assert result == "- test"
 
     def test_format_empty_list(self):
@@ -220,18 +218,22 @@ class TestFormatApisCommaSeparated:
 
     def test_format_dict_apis(self):
         """Test formatting list of dict APIs."""
-        result = format_apis_comma_separated([
-            {"api_name": "search", "endpoint": "/v1/search"},
-            {"api_name": "summarize", "endpoint": "/v1/summarize"},
-        ])
+        result = format_apis_comma_separated(
+            [
+                {"api_name": "search", "endpoint": "/v1/search"},
+                {"api_name": "summarize", "endpoint": "/v1/summarize"},
+            ]
+        )
         assert result == "search, summarize"
 
     def test_format_mixed_apis(self):
         """Test formatting mixed string and dict APIs."""
-        result = format_apis_comma_separated([
-            "string_api",
-            {"api_name": "dict_api"},
-        ])
+        result = format_apis_comma_separated(
+            [
+                "string_api",
+                {"api_name": "dict_api"},
+            ]
+        )
         assert result == "string_api, dict_api"
 
     def test_format_empty_list(self):

@@ -323,8 +323,8 @@ class TestTaskFlowWorkflow:
         # Valid names
         TaskFlowWorkflow(
             workflow_name="my_workflow",
-            input_schema='{}',
-            output_schema='{}',
+            input_schema="{}",
+            output_schema="{}",
             steps=[
                 TaskFlowStep(
                     id="step1",
@@ -336,12 +336,12 @@ class TestTaskFlowWorkflow:
                     },
                 )
             ],
-            output='{}',
+            output="{}",
         )
         TaskFlowWorkflow(
             workflow_name="workflow123",
-            input_schema='{}',
-            output_schema='{}',
+            input_schema="{}",
+            output_schema="{}",
             steps=[
                 TaskFlowStep(
                     id="step1",
@@ -353,15 +353,15 @@ class TestTaskFlowWorkflow:
                     },
                 )
             ],
-            output='{}',
+            output="{}",
         )
 
         # Invalid name (starts with number)
         with pytest.raises(ValidationError):
             TaskFlowWorkflow(
                 workflow_name="123workflow",
-                input_schema='{}',
-                output_schema='{}',
+                input_schema="{}",
+                output_schema="{}",
                 steps=[
                     TaskFlowStep(
                         id="step1",
@@ -373,7 +373,7 @@ class TestTaskFlowWorkflow:
                         },
                     )
                 ],
-                output='{}',
+                output="{}",
             )
 
 
@@ -414,7 +414,7 @@ class TestJsonStringValidation:
         """
         workflow = TaskFlowWorkflow(
             workflow_name="test_workflow",
-            input_schema='{}',
+            input_schema="{}",
             output_schema='{"search_results": "array"}',
             steps=[
                 TaskFlowStep(
@@ -436,7 +436,7 @@ class TestJsonStringValidation:
         with pytest.raises(ValidationError) as exc_info:
             TaskFlowWorkflow(
                 workflow_name="test_workflow",
-                input_schema='{}',
+                input_schema="{}",
                 output_schema='{"invalid json',  # Invalid JSON
                 steps=[
                     TaskFlowStep(
@@ -449,7 +449,7 @@ class TestJsonStringValidation:
                         },
                     )
                 ],
-                output='{}',
+                output="{}",
             )
         error_str = str(exc_info.value).lower()
         assert "json" in error_str or "invalid" in error_str
@@ -459,7 +459,7 @@ class TestJsonStringValidation:
         with pytest.raises(ValidationError) as exc_info:
             TaskFlowWorkflow(
                 workflow_name="test_workflow",
-                input_schema='{}',
+                input_schema="{}",
                 output_schema='["array", "not", "object"]',  # JSON array
                 steps=[
                     TaskFlowStep(
@@ -472,7 +472,7 @@ class TestJsonStringValidation:
                         },
                     )
                 ],
-                output='{}',
+                output="{}",
             )
         # Error should indicate object type expected
         error_str = str(exc_info.value).lower()

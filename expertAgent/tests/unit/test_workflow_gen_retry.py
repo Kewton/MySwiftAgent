@@ -101,7 +101,9 @@ class TestCalculateRetryDelay:
             max_delay_seconds=30.0,
             exponential_base=2.0,
         )
-        delays = [await calculate_retry_delay(attempt=1, config=config) for _ in range(10)]
+        delays = [
+            await calculate_retry_delay(attempt=1, config=config) for _ in range(10)
+        ]
         # With jitter, delays should not all be identical
         unique_delays = set(delays)
         assert len(unique_delays) > 1  # At least some variation

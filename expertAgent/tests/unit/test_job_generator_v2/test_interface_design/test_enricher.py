@@ -223,9 +223,7 @@ class TestDerivedFieldsEnrichment:
         assert derived.type == "string"
 
     @pytest.mark.asyncio
-    async def test_enrich_adds_derived_fields(
-        self, mock_context: ExecutionContext
-    ):
+    async def test_enrich_adds_derived_fields(self, mock_context: ExecutionContext):
         """enrich() should add derived_fields to output_schema when appropriate."""
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.enricher import (
             SchemaEnricherSubWorkflow,
@@ -246,7 +244,10 @@ class TestDerivedFieldsEnrichment:
         interfaces = {
             "task_001": InterfaceSchema(
                 task_id="task_001",
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
                 output_schema={
                     "type": "object",
                     "properties": {"results": {"type": "array"}},
@@ -267,7 +268,8 @@ class TestGracefulDegradation:
 
     def test_derived_fields_graceful_degradation_for_string(self):
         """DerivedFieldDefinition validator should handle string input gracefully."""
-        from aiagent.langgraph.jobGeneratorV2.types import (
+        # Use types_old for InterfaceSchemaDefinition and degradation functions
+        from aiagent.langgraph.jobGeneratorV2.types_old import (
             InterfaceSchemaDefinition,
             get_derived_fields_degradation_count,
             reset_derived_fields_degradation_count,
@@ -293,7 +295,8 @@ class TestGracefulDegradation:
 
     def test_derived_fields_graceful_degradation_for_none(self):
         """DerivedFieldDefinition validator should handle None input gracefully."""
-        from aiagent.langgraph.jobGeneratorV2.types import (
+        # Use types_old for InterfaceSchemaDefinition
+        from aiagent.langgraph.jobGeneratorV2.types_old import (
             InterfaceSchemaDefinition,
         )
 

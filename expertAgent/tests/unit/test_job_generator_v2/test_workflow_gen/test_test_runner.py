@@ -3,7 +3,6 @@
 Issue #342 Phase D.3: Tests for workflow test runner sub-workflow.
 """
 
-
 import pytest
 
 from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
@@ -152,7 +151,10 @@ nodes:
         return {
             "task_001": InterfaceSchema(
                 task_id="task_001",
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
                 output_schema={"type": "object"},
             ),
         }
@@ -473,7 +475,7 @@ nodes:
         is_valid, errors = await runner.validate_workflow_yaml("")
 
         assert is_valid is False
-        assert "Empty workflow YAML" in errors
+        assert "Empty workflow content" in errors
 
 
 class TestTestRunnerInitialization:

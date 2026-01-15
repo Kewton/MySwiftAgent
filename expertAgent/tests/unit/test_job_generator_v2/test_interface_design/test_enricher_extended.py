@@ -270,7 +270,9 @@ class TestSchemaEnricherWithOpenAPI:
             [sample_task], {"task_001": sample_interface}, openapi_specs, mock_context
         )
 
-        assert enriched["task_001"].input_schema["properties"]["query"]["maxLength"] == 500
+        assert (
+            enriched["task_001"].input_schema["properties"]["query"]["maxLength"] == 500
+        )
         assert report.enriched_count == 1
         assert len(report.details) == 1
 

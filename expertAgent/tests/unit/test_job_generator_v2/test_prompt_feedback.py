@@ -9,7 +9,6 @@ The improved method should:
 4. Sanitize error messages for security
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.validators import (
     ValidationError,
     ValidationErrorCode,
@@ -45,7 +44,8 @@ class TestToPromptFeedbackParameters:
         errors = [
             ValidationError(
                 code=ValidationErrorCode.INVALID_TIMEOUT,
-                message="This is a very long error message. " * 20,  # Long message (~700 chars)
+                message="This is a very long error message. "
+                * 20,  # Long message (~700 chars)
                 location="nodes.test",
                 severity="major",
             )
@@ -76,7 +76,9 @@ class TestToPromptFeedbackParameters:
 
         # Count unique error messages in feedback
         # Should have at most 5 "Unique error message" instances
-        unique_count = sum(1 for i in range(10) if f"Unique error message {i}" in feedback)
+        unique_count = sum(
+            1 for i in range(10) if f"Unique error message {i}" in feedback
+        )
         assert unique_count <= 5
 
     def test_default_max_total_length_is_2000(self) -> None:

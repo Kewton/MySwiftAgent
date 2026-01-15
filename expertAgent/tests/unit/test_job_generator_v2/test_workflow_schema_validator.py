@@ -65,7 +65,10 @@ class TestWorkflowSchemaValidator:
         }
         errors = validator.validate(workflow)
         assert len(errors) > 0
-        assert any("environment" in e.message.lower() or "env" in e.message.lower() for e in errors)
+        assert any(
+            "environment" in e.message.lower() or "env" in e.message.lower()
+            for e in errors
+        )
 
     def test_invalid_timeout_seconds(self, validator):
         """Timeout in seconds (not milliseconds) is invalid."""
@@ -83,7 +86,10 @@ class TestWorkflowSchemaValidator:
         }
         errors = validator.validate(workflow)
         assert len(errors) > 0
-        assert any("timeout" in e.message.lower() or "milliseconds" in e.message.lower() for e in errors)
+        assert any(
+            "timeout" in e.message.lower() or "milliseconds" in e.message.lower()
+            for e in errors
+        )
 
     def test_invalid_source_path(self, validator):
         """Invalid source path is detected."""
@@ -102,7 +108,10 @@ class TestWorkflowSchemaValidator:
         }
         errors = validator.validate(workflow)
         assert len(errors) > 0
-        assert any("legacy" in e.message.lower() or "job.body" in e.message.lower() for e in errors)
+        assert any(
+            "legacy" in e.message.lower() or "job.body" in e.message.lower()
+            for e in errors
+        )
 
     def test_invalid_js_in_template(self, validator):
         """JavaScript in stringTemplateAgent is detected."""
@@ -119,7 +128,10 @@ class TestWorkflowSchemaValidator:
         }
         errors = validator.validate(workflow)
         assert len(errors) > 0
-        assert any("javascript" in e.message.lower() or "json" in e.message.lower() for e in errors)
+        assert any(
+            "javascript" in e.message.lower() or "json" in e.message.lower()
+            for e in errors
+        )
 
     def test_multiple_errors_aggregation(self, validator):
         """Multiple errors from different validators are aggregated."""

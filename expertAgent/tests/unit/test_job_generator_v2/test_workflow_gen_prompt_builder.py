@@ -4,7 +4,6 @@ Issue #342 Phase F: WorkflowGen V2 LLM Integration
 Issue #345: LLM prompt agent output format fixes
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder import (
     PromptBuilderSubWorkflow,
     WorkflowPrompt,

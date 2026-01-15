@@ -242,8 +242,14 @@ class TestWorkflowGenIntegration:
             interfaces={
                 "search": InterfaceSchema(
                     task_id="search",
-                    input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                    output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
+                    input_schema={
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                    },
+                    output_schema={
+                        "type": "object",
+                        "properties": {"results": {"type": "array"}},
+                    },
                 ),
             },
         )

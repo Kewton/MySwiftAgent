@@ -29,13 +29,15 @@ from aiagent.langgraph.jobGeneratorV2.protocols import (
 from aiagent.langgraph.jobGeneratorV2.types import (
     Capability,
     FeasibilityReport,
-    Phase,
     PhaseStatus,
     RelaxationSuggestion,
     TaskBreakdownInput,
     TaskBreakdownOutput,
     TaskDefinition,
 )
+
+# Use old Phase enum for 4-phase architecture tests (ExecutionContext uses types_old)
+from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
 # =============================================================================
 # Fixtures
@@ -50,8 +52,14 @@ def sample_capabilities() -> list[Capability]:
             name="Gmail Search",
             description="Search Gmail messages",
             endpoint="/v1/utility/gmail/search",
-            input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"messages": {"type": "array"}},
+            },
         ),
         Capability(
             name="Gmail Send",
@@ -65,7 +73,10 @@ def sample_capabilities() -> list[Capability]:
                     "body": {"type": "string"},
                 },
             },
-            output_schema={"type": "object", "properties": {"message_id": {"type": "string"}}},
+            output_schema={
+                "type": "object",
+                "properties": {"message_id": {"type": "string"}},
+            },
         ),
         Capability(
             name="JSON Output Agent",
@@ -75,7 +86,10 @@ def sample_capabilities() -> list[Capability]:
                 "type": "object",
                 "properties": {"user_input": {"type": "string"}},
             },
-            output_schema={"type": "object", "properties": {"result": {"type": "object"}}},
+            output_schema={
+                "type": "object",
+                "properties": {"result": {"type": "object"}},
+            },
         ),
     ]
 
@@ -594,11 +608,14 @@ class TestTaskBreakdownWorkflow:
             TaskBreakdownWorkflow,
         )
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.TaskDecomposerSubWorkflow"
-        ) as MockDecomposer, patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.FeasibilitySubWorkflow"
-        ) as MockFeasibility:
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.TaskDecomposerSubWorkflow"
+            ) as MockDecomposer,
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.FeasibilitySubWorkflow"
+            ) as MockFeasibility,
+        ):
             # Mock decomposer
             mock_decomposer = AsyncMock()
             mock_decomposer.decompose.return_value = sample_tasks
@@ -653,13 +670,17 @@ class TestTaskBreakdownWorkflow:
             dependencies=[],
         )
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.TaskDecomposerSubWorkflow"
-        ) as MockDecomposer, patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.FeasibilitySubWorkflow"
-        ) as MockFeasibility, patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.AlternativeSubWorkflow"
-        ) as MockAlternative:
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.TaskDecomposerSubWorkflow"
+            ) as MockDecomposer,
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.FeasibilitySubWorkflow"
+            ) as MockFeasibility,
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.AlternativeSubWorkflow"
+            ) as MockAlternative,
+        ):
             # Mock decomposer
             mock_decomposer = AsyncMock()
             mock_decomposer.decompose.return_value = [original_task]
@@ -713,13 +734,17 @@ class TestTaskBreakdownWorkflow:
             reason="No API supports this",
         )
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.TaskDecomposerSubWorkflow"
-        ) as MockDecomposer, patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.FeasibilitySubWorkflow"
-        ) as MockFeasibility, patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.AlternativeSubWorkflow"
-        ) as MockAlternative:
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.TaskDecomposerSubWorkflow"
+            ) as MockDecomposer,
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.FeasibilitySubWorkflow"
+            ) as MockFeasibility,
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.workflow.AlternativeSubWorkflow"
+            ) as MockAlternative,
+        ):
             # Mock decomposer
             mock_decomposer = AsyncMock()
             mock_decomposer.decompose.return_value = [original_task]
@@ -799,11 +824,14 @@ class TestTaskBreakdownWorkflowIntegration:
             max_tasks=5,
         )
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.decomposer.invoke_structured_llm"
-        ) as mock_llm, patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.feasibility.load_capabilities_from_yaml"
-        ) as mock_load_caps:
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.decomposer.invoke_structured_llm"
+            ) as mock_llm,
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.task_breakdown.feasibility.load_capabilities_from_yaml"
+            ) as mock_load_caps,
+        ):
             # Mock capabilities loading
             mock_load_caps.return_value = [
                 Capability(
@@ -876,7 +904,7 @@ class TestTaskBreakdownWorkflowIntegration:
         execution_context: ExecutionContext,
     ):
         """Test that workflow can be registered in orchestrator."""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_old import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
@@ -1291,7 +1319,10 @@ class TestFeasibilityRecommendations:
 
         recommendations = _generate_recommendations(tasks, caps)
         assert len(recommendations) == 1
-        assert "notification" in recommendations[0].lower() or "alert" in recommendations[0].lower()
+        assert (
+            "notification" in recommendations[0].lower()
+            or "alert" in recommendations[0].lower()
+        )
 
 
 class TestAlternativeSubWorkflowLLMError:

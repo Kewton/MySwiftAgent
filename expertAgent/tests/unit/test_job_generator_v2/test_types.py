@@ -11,19 +11,19 @@ class TestPhaseEnum:
 
     def test_phase_enum_exists(self):
         """Phase enum should be importable."""
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         assert Phase is not None
 
     def test_phase_has_four_values(self):
         """Phase enum should have exactly 4 phases."""
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         assert len(list(Phase)) == 4
 
     def test_phase_values(self):
         """Phase enum should have correct values."""
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         assert Phase.TASK_BREAKDOWN.value == "task_breakdown"
         assert Phase.INTERFACE_DESIGN.value == "interface_design"
@@ -36,13 +36,13 @@ class TestPhaseStatusEnum:
 
     def test_phase_status_enum_exists(self):
         """PhaseStatus enum should be importable."""
-        from aiagent.langgraph.jobGeneratorV2.types import PhaseStatus
+        from aiagent.langgraph.jobGeneratorV2.types_old import PhaseStatus
 
         assert PhaseStatus is not None
 
     def test_phase_status_values(self):
         """PhaseStatus enum should have correct values."""
-        from aiagent.langgraph.jobGeneratorV2.types import PhaseStatus
+        from aiagent.langgraph.jobGeneratorV2.types_old import PhaseStatus
 
         assert PhaseStatus.SUCCESS.value == "success"
         assert PhaseStatus.FAILED.value == "failed"

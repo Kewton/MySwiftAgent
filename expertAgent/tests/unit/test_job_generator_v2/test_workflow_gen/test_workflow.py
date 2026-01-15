@@ -11,11 +11,13 @@ from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.protocols import RetryPolicy, WorkflowProtocol
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
-    Phase,
     PhaseStatus,
     WorkflowGenInput,
     WorkflowGenOutput,
 )
+
+# Use old Phase enum for 4-phase architecture tests (ExecutionContext uses types_old)
+from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
 
 class TestWorkflowGenWorkflowExists:
@@ -97,7 +99,9 @@ class TestWorkflowGenWorkflowExecute:
         }
 
     @pytest.fixture
-    def sample_input(self, sample_interfaces: dict[str, InterfaceSchema]) -> WorkflowGenInput:
+    def sample_input(
+        self, sample_interfaces: dict[str, InterfaceSchema]
+    ) -> WorkflowGenInput:
         """Create sample input for testing."""
         return WorkflowGenInput(
             task_master_ids=["tm_task_001", "tm_task_002"],
@@ -134,7 +138,7 @@ class TestWorkflowGenWorkflowExecute:
         )
 
         mock_yaml_result = YamlGenerationResult(
-            yaml_content="version: \"0.6\"\nnodes:\n  task_001:\n    agent: fetchAgent\n    isResult: true\n",
+            yaml_content='version: "0.6"\nnodes:\n  task_001:\n    agent: fetchAgent\n    isResult: true\n',
             workflow_name="test_workflow",
             node_count=2,
         )
@@ -176,7 +180,7 @@ class TestWorkflowGenWorkflowExecute:
         )
 
         mock_yaml_result = YamlGenerationResult(
-            yaml_content="version: \"0.6\"\nnodes:\n  task_001:\n    agent: fetchAgent\n    isResult: true\n",
+            yaml_content='version: "0.6"\nnodes:\n  task_001:\n    agent: fetchAgent\n    isResult: true\n',
             workflow_name="test_workflow",
             node_count=2,
         )
@@ -292,7 +296,7 @@ class TestWorkflowGenWorkflowWithTesting:
         )
 
         mock_yaml_result = YamlGenerationResult(
-            yaml_content="version: \"0.6\"\nnodes:\n  task_001:\n    isResult: true\n",
+            yaml_content='version: "0.6"\nnodes:\n  task_001:\n    isResult: true\n',
             workflow_name="test_workflow",
             node_count=1,
         )
@@ -310,12 +314,15 @@ class TestWorkflowGenWorkflowWithTesting:
         mock_test_runner = MagicMock()
         mock_test_runner.run_tests = AsyncMock(return_value=mock_test_result)
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
-            return_value=mock_yaml_generator,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.TestRunnerSubWorkflow",
-            return_value=mock_test_runner,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
+                return_value=mock_yaml_generator,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.TestRunnerSubWorkflow",
+                return_value=mock_test_runner,
+            ),
         ):
             # Issue #350: Use graphai engine to test GraphAI code path
             workflow = WorkflowGenWorkflow(enable_testing=True, engine="graphai")
@@ -347,7 +354,7 @@ class TestWorkflowGenWorkflowWithTesting:
         )
 
         mock_yaml_result = YamlGenerationResult(
-            yaml_content="version: \"0.6\"\nnodes:\n  task_001:\n    isResult: true\n",
+            yaml_content='version: "0.6"\nnodes:\n  task_001:\n    isResult: true\n',
             workflow_name="test_workflow",
             node_count=1,
         )
@@ -365,12 +372,15 @@ class TestWorkflowGenWorkflowWithTesting:
         mock_test_runner = MagicMock()
         mock_test_runner.run_tests = AsyncMock(return_value=mock_test_result)
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
-            return_value=mock_yaml_generator,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.TestRunnerSubWorkflow",
-            return_value=mock_test_runner,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.YamlGeneratorSubWorkflow",
+                return_value=mock_yaml_generator,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow.TestRunnerSubWorkflow",
+                return_value=mock_test_runner,
+            ),
         ):
             # Issue #350: Use graphai engine to test GraphAI code path
             workflow = WorkflowGenWorkflow(enable_testing=True, engine="graphai")
@@ -414,7 +424,7 @@ class TestWorkflowGenWorkflowRetryBugFix:
         # Record retries up to limit
         for i in range(3):
             mock_context_with_retries.record_retry(
-                Phase.WORKFLOW_GEN, f"WorkflowGen retry {i+1}"
+                Phase.WORKFLOW_GEN, f"WorkflowGen retry {i + 1}"
             )
 
         # Now should not be able to retry
@@ -487,7 +497,7 @@ class TestWorkflowGenWorkflowSubWorkflowOrchestration:
         )
 
         mock_yaml_result = YamlGenerationResult(
-            yaml_content="version: \"0.6\"\nnodes:\n  task:\n    isResult: true\n",
+            yaml_content='version: "0.6"\nnodes:\n  task:\n    isResult: true\n',
             workflow_name="test",
             node_count=1,
         )

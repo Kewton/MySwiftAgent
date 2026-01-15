@@ -8,7 +8,6 @@ Issue #342:
 - Bug #5: RegistrationOutput lacks task_id_to_master_id mapping
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     PhaseStatus,

@@ -20,7 +20,12 @@ import pytest
 # Path to the JSON Schema file
 # expertAgent/tests/unit/test_issue_357_json_schema.py -> MySwiftAgent/shared
 SCHEMA_PATH = (
-    Path(__file__).parents[3] / "shared" / "schemas" / "taskflow" / "v1" / "workflow.schema.json"
+    Path(__file__).parents[3]
+    / "shared"
+    / "schemas"
+    / "taskflow"
+    / "v1"
+    / "workflow.schema.json"
 )
 
 
@@ -118,7 +123,13 @@ class TestJsonSchemaStructure:
         """Verify schema has required fields array."""
         assert "required" in loaded_schema, "Schema must have 'required' property"
         required = loaded_schema["required"]
-        expected_required = ["workflow_name", "input_schema", "output_schema", "steps", "output"]
+        expected_required = [
+            "workflow_name",
+            "input_schema",
+            "output_schema",
+            "steps",
+            "output",
+        ]
         for field in expected_required:
             assert field in required, f"'{field}' should be in required list"
 
@@ -143,7 +154,9 @@ class TestJsonSchemaStructure:
         workflow_name = properties.get("workflow_name", {})
         assert "pattern" in workflow_name, "workflow_name should have pattern"
         # Pattern should match valid identifiers
-        assert "a-zA-Z" in workflow_name["pattern"], "workflow_name pattern should include letters"
+        assert "a-zA-Z" in workflow_name["pattern"], (
+            "workflow_name pattern should include letters"
+        )
 
     def test_steps_is_array(self, loaded_schema: dict[str, Any]) -> None:
         """Verify steps is defined as array."""
@@ -177,7 +190,9 @@ class TestJsonSchemaDefinitions:
         assert "method" in config.get("properties", {}), (
             "ApiRestConfig should have 'method' property"
         )
-        assert "url" in config.get("properties", {}), "ApiRestConfig should have 'url' property"
+        assert "url" in config.get("properties", {}), (
+            "ApiRestConfig should have 'url' property"
+        )
 
     def test_defs_has_code_js_config(self, loaded_schema: dict[str, Any]) -> None:
         """Verify CodeJsConfig definition exists."""
@@ -185,7 +200,9 @@ class TestJsonSchemaDefinitions:
         assert "CodeJsConfig" in defs, "'CodeJsConfig' should be defined in $defs"
         config = defs["CodeJsConfig"]
         assert config.get("type") == "object", "CodeJsConfig should be object type"
-        assert "path" in config.get("properties", {}), "CodeJsConfig should have 'path' property"
+        assert "path" in config.get("properties", {}), (
+            "CodeJsConfig should have 'path' property"
+        )
 
     def test_defs_has_transform_config(self, loaded_schema: dict[str, Any]) -> None:
         """Verify TransformConfig definition exists."""
@@ -193,7 +210,9 @@ class TestJsonSchemaDefinitions:
         assert "TransformConfig" in defs, "'TransformConfig' should be defined in $defs"
         config = defs["TransformConfig"]
         assert config.get("type") == "object", "TransformConfig should be object type"
-        assert "mode" in config.get("properties", {}), "TransformConfig should have 'mode' property"
+        assert "mode" in config.get("properties", {}), (
+            "TransformConfig should have 'mode' property"
+        )
 
     def test_defs_has_io_schema(self, loaded_schema: dict[str, Any]) -> None:
         """Verify IOSchema definition exists."""
@@ -224,7 +243,9 @@ class TestJsonSchemaValidation:
         except ImportError:
             pytest.skip("jsonschema library not installed")
 
-    def test_valid_workflow_passes_validation(self, loaded_schema: dict[str, Any]) -> None:
+    def test_valid_workflow_passes_validation(
+        self, loaded_schema: dict[str, Any]
+    ) -> None:
         """Verify a valid workflow passes schema validation."""
         try:
             from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
@@ -254,7 +275,9 @@ class TestJsonSchemaValidation:
         errors = list(validator.iter_errors(valid_workflow))
         assert not errors, f"Valid workflow should pass validation: {errors}"
 
-    def test_invalid_workflow_fails_validation(self, loaded_schema: dict[str, Any]) -> None:
+    def test_invalid_workflow_fails_validation(
+        self, loaded_schema: dict[str, Any]
+    ) -> None:
         """Verify an invalid workflow fails schema validation."""
         try:
             from jsonschema import Draft202012Validator  # type: ignore[import-untyped]

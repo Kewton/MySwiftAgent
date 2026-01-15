@@ -5,8 +5,8 @@ Issue #359 Iteration 2 Task 1.5: Tests for 3-phase orchestrator.
 TDD Red Phase: These tests define the expected behavior.
 """
 
-
 import pytest
+
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     PhaseV3,
     RecoveryStrategy,
@@ -107,8 +107,9 @@ class TestOrchestratorV3NoSilentFallbacks:
 
         # These patterns indicate silent fallbacks
         # Note: 'continue' is allowed but should be logged
-        assert "except:" not in source or "except Exception" in source, \
+        assert "except:" not in source or "except Exception" in source, (
             "Bare except: is not allowed"
+        )
 
 
 class TestOrchestratorV3LineCount:
@@ -159,9 +160,7 @@ class TestOrchestratorV3ErrorRecovery:
         )
 
         recovery_manager = ErrorRecoveryManager()
-        JobGenerationOrchestratorV3(
-            error_recovery_manager=recovery_manager
-        )
+        JobGenerationOrchestratorV3(error_recovery_manager=recovery_manager)
 
         # Test that orchestrator can handle different recovery strategies
         action = RecoveryAction(strategy=RecoveryStrategy.RETRY_WITH_FEEDBACK)
@@ -182,9 +181,9 @@ class TestOrchestratorV3ParallelExecution:
         source = inspect.getsource(JobGenerationOrchestratorV3)
 
         # Should import and use parallel_workflow_generation
-        assert "parallel_workflow_generation" in source or \
-               "parallel_executor" in source, \
-               "Orchestrator should use parallel_executor module"
+        assert (
+            "parallel_workflow_generation" in source or "parallel_executor" in source
+        ), "Orchestrator should use parallel_executor module"
 
 
 class TestOrchestratorV3Request:

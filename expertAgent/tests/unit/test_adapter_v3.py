@@ -8,6 +8,7 @@ TDD Red Phase: These tests define the expected behavior.
 from unittest.mock import MagicMock
 
 import pytest
+
 from aiagent.langgraph.jobGeneratorV2.types_v3 import UnifiedTaskIdentifier
 
 
@@ -26,7 +27,6 @@ class TestAdapterV3Creation:
     def test_adapter_accepts_progress_reporter(self):
         """Adapter should accept optional progress reporter."""
         from aiagent.langgraph.jobGeneratorV2.adapter_v3 import JobGeneratorV3Adapter
-
         from aiagent.langgraph.jobGeneratorV2.protocols import ProgressReporter
 
         mock_reporter = MagicMock(spec=ProgressReporter)
@@ -59,6 +59,7 @@ class TestAdapterV3APICompatibility:
 
         # Check return type annotation
         import inspect
+
         sig = inspect.signature(adapter.generate)
         # The return type should be JobGeneratorResponse (from TYPE_CHECKING import)
         assert "JobGeneratorResponse" in str(sig.return_annotation)
@@ -169,8 +170,14 @@ class TestAdapterV3InterfaceConversion:
 
         interfaces = {
             "task_001": InterfaceDefinition(
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"results": {"type": "array"}},
+                },
                 description="Gmail search interface",
             )
         }

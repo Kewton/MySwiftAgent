@@ -28,8 +28,12 @@ if TYPE_CHECKING:
 # expertAgent/tests/unit/test_issue_357_generate_schemas.py -> MySwiftAgent
 PROJECT_ROOT = Path(__file__).parents[3]
 SCRIPT_PATH = PROJECT_ROOT / "scripts" / "generate_schemas.py"
-JSON_SCHEMA_PATH = PROJECT_ROOT / "shared" / "schemas" / "taskflow" / "v1" / "workflow.schema.json"
-TYPESCRIPT_OUTPUT_DIR = PROJECT_ROOT / "graphAiServer" / "src" / "engine" / "schemas" / "generated"
+JSON_SCHEMA_PATH = (
+    PROJECT_ROOT / "shared" / "schemas" / "taskflow" / "v1" / "workflow.schema.json"
+)
+TYPESCRIPT_OUTPUT_DIR = (
+    PROJECT_ROOT / "graphAiServer" / "src" / "engine" / "schemas" / "generated"
+)
 PYDANTIC_OUTPUT_DIR = (
     PROJECT_ROOT
     / "expertAgent"
@@ -127,7 +131,9 @@ class TestScriptImportability:
 class TestScriptFunctions:
     """Tests for script function existence."""
 
-    def test_has_validate_schema_function(self, loaded_script_module: ModuleType | None) -> None:
+    def test_has_validate_schema_function(
+        self, loaded_script_module: ModuleType | None
+    ) -> None:
         """Verify script has validate_schema function."""
         if loaded_script_module is None:
             pytest.skip("Could not import script module")
@@ -147,7 +153,9 @@ class TestScriptFunctions:
             "Script should have 'generate_typescript' function"
         )
 
-    def test_has_generate_python_function(self, loaded_script_module: ModuleType | None) -> None:
+    def test_has_generate_python_function(
+        self, loaded_script_module: ModuleType | None
+    ) -> None:
         """Verify script has generate_python function."""
         if loaded_script_module is None:
             pytest.skip("Could not import script module")

@@ -218,4 +218,4 @@ class TestIsValidAgent:
     def test_case_sensitive(self):
         """Test agent check is case sensitive."""
         assert is_valid_agent("FetchAgent") is False  # Wrong case
-        assert is_valid_agent("fetchAgent") is True   # Correct case
+        assert is_valid_agent("fetchAgent") is True  # Correct case

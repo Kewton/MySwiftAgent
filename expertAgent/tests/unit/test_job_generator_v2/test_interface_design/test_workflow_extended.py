@@ -13,10 +13,12 @@ from aiagent.langgraph.jobGeneratorV2.types import (
     EnrichmentReport,
     InterfaceDesignInput,
     InterfaceSchema,
-    Phase,
     PhaseStatus,
     TaskDefinition,
 )
+
+# Use old Phase enum for 4-phase architecture tests (ExecutionContext uses types_old)
+from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
 
 class TestInterfaceDesignWorkflowRetryPolicy:
@@ -99,7 +101,9 @@ class TestInterfaceDesignWorkflowErrors:
 
         mock_generator = MagicMock()
         mock_generator.generate = AsyncMock(
-            side_effect=WorkflowError("Test error", ErrorType.VALIDATION, Phase.INTERFACE_DESIGN)
+            side_effect=WorkflowError(
+                "Test error", ErrorType.VALIDATION, Phase.INTERFACE_DESIGN
+            )
         )
 
         with patch(
@@ -212,11 +216,17 @@ class TestInterfaceDesignWorkflowFullFlow:
             "task_001": InterfaceSchema(
                 task_id="task_001",
                 input_schema={"type": "object"},
-                output_schema={"type": "object", "properties": {"data": {"type": "string"}}},
+                output_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "string"}},
+                },
             ),
             "task_002": InterfaceSchema(
                 task_id="task_002",
-                input_schema={"type": "object", "properties": {"data": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "string"}},
+                },
                 output_schema={"type": "object"},
             ),
         }
@@ -230,19 +240,21 @@ class TestInterfaceDesignWorkflowFullFlow:
         )
 
         mock_enricher = MagicMock()
-        mock_enricher.enrich = AsyncMock(
-            return_value=(interfaces, EnrichmentReport())
-        )
+        mock_enricher.enrich = AsyncMock(return_value=(interfaces, EnrichmentReport()))
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaGeneratorSubWorkflow",
-            return_value=mock_generator,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.CompatibilityCheckerSubWorkflow",
-            return_value=mock_checker,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaEnricherSubWorkflow",
-            return_value=mock_enricher,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaGeneratorSubWorkflow",
+                return_value=mock_generator,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.CompatibilityCheckerSubWorkflow",
+                return_value=mock_checker,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaEnricherSubWorkflow",
+                return_value=mock_enricher,
+            ),
         ):
             workflow = InterfaceDesignWorkflow()
             input_data = InterfaceDesignInput(tasks=sample_tasks)
@@ -262,8 +274,12 @@ class TestInterfaceDesignWorkflowFullFlow:
         )
 
         interfaces = {
-            "task_001": InterfaceSchema(task_id="task_001", input_schema={}, output_schema={}),
-            "task_002": InterfaceSchema(task_id="task_002", input_schema={}, output_schema={}),
+            "task_001": InterfaceSchema(
+                task_id="task_001", input_schema={}, output_schema={}
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002", input_schema={}, output_schema={}
+            ),
         }
 
         mock_generator = MagicMock()
@@ -278,19 +294,21 @@ class TestInterfaceDesignWorkflowFullFlow:
         )
 
         mock_enricher = MagicMock()
-        mock_enricher.enrich = AsyncMock(
-            return_value=(interfaces, EnrichmentReport())
-        )
+        mock_enricher.enrich = AsyncMock(return_value=(interfaces, EnrichmentReport()))
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaGeneratorSubWorkflow",
-            return_value=mock_generator,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.CompatibilityCheckerSubWorkflow",
-            return_value=mock_checker,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaEnricherSubWorkflow",
-            return_value=mock_enricher,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaGeneratorSubWorkflow",
+                return_value=mock_generator,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.CompatibilityCheckerSubWorkflow",
+                return_value=mock_checker,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.workflow.SchemaEnricherSubWorkflow",
+                return_value=mock_enricher,
+            ),
         ):
             workflow = InterfaceDesignWorkflow()
             input_data = InterfaceDesignInput(tasks=sample_tasks)

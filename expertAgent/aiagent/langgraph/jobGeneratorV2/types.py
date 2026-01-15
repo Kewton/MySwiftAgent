@@ -31,6 +31,7 @@ from .types_old import (
     JobBodyParameter,
     JobGenerationRequest,
     JobGenerationResult,
+    PhaseStatus,  # Added to avoid duplicate definition
     RecommendedAPI,
     RegistrationInput,
     RegistrationOutput,
@@ -155,10 +156,7 @@ class UnifiedTaskIdentifier:
         Returns:
             New UnifiedTaskIdentifier with master_id set
         """
-        return UnifiedTaskIdentifier(
-            task_id=self.task_id,
-            task_master_id=master_id
-        )
+        return UnifiedTaskIdentifier(task_id=self.task_id, task_master_id=master_id)
 
 
 @dataclass
@@ -300,19 +298,8 @@ class Phase(Enum):
     WORKFLOW_GEN = "workflow_gen"
 
 
-class PhaseStatus(Enum):
-    """Status of a phase execution.
-
-    - SUCCESS: Phase completed successfully
-    - FAILED: Phase failed (cannot recover)
-    - NEEDS_RETRY: Phase needs to be retried (recoverable error)
-    - NEEDS_RELAXATION: Requirements need to be relaxed (business constraint)
-    """
-
-    SUCCESS = "success"
-    FAILED = "failed"
-    NEEDS_RETRY = "needs_retry"
-    NEEDS_RELAXATION = "needs_relaxation"
+# PhaseStatus is now imported from types_old for consistency
+# (duplicate definition removed to avoid type mismatch issues)
 
 
 # Export all types

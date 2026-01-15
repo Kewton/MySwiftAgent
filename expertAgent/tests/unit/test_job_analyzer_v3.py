@@ -5,8 +5,8 @@ Issue #359 Iteration 2 Task 1.2: Tests for merged TASK_BREAKDOWN + INTERFACE_DES
 TDD Red Phase: These tests define the expected behavior.
 """
 
-
 import pytest
+
 from aiagent.langgraph.jobGeneratorV2.types_v3 import UnifiedTaskIdentifier
 
 
@@ -27,8 +27,14 @@ class TestJobAnalyzerResponse:
             task_type="fetch",
             recommended_api="/v1/utility/gmail/search",
             dependencies=[],
-            input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"messages": {"type": "array"}},
+            },
         )
 
         response = JobAnalysisResponse(
@@ -61,8 +67,14 @@ class TestJobAnalyzerResponse:
         )
 
         interface = InterfaceDefinition(
-            input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"messages": {"type": "array"}},
+            },
             description="Gmail search interface",
         )
 
@@ -261,4 +273,7 @@ class TestJobAnalysisInput:
             retry_feedback="Previous attempt failed due to validation error",
         )
 
-        assert input_data.retry_feedback == "Previous attempt failed due to validation error"
+        assert (
+            input_data.retry_feedback
+            == "Previous attempt failed due to validation error"
+        )

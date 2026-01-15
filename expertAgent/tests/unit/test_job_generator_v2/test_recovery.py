@@ -5,7 +5,6 @@ This is CRITICAL for fixing the retry_count bug (Issue #342).
 """
 
 
-
 class TestErrorRecoveryStrategy:
     """Test cases for ErrorRecoveryStrategy enum."""
 
@@ -16,14 +15,19 @@ class TestErrorRecoveryStrategy:
         assert ErrorRecoveryStrategy is not None
 
     def test_error_recovery_strategy_values(self):
-        """ErrorRecoveryStrategy should have all expected values."""
+        """ErrorRecoveryStrategy should have all expected values.
+
+        Issue #359: Updated to 3-phase architecture values.
+        ROLLBACK_ONE and ROLLBACK_TO_BREAKDOWN are now ROLLBACK_TO_ANALYSIS.
+        RETRY_WITH_FEEDBACK is a new strategy for LLM-assisted recovery.
+        """
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryStrategy
 
         assert ErrorRecoveryStrategy.FAIL_FAST.value == "fail_fast"
         assert ErrorRecoveryStrategy.RETRY_CURRENT.value == "retry_current"
-        assert ErrorRecoveryStrategy.ROLLBACK_ONE.value == "rollback_one"
+        assert ErrorRecoveryStrategy.RETRY_WITH_FEEDBACK.value == "retry_with_feedback"
         assert (
-            ErrorRecoveryStrategy.ROLLBACK_TO_BREAKDOWN.value == "rollback_to_breakdown"
+            ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS.value == "rollback_to_analysis"
         )
         assert ErrorRecoveryStrategy.RELAXATION.value == "relaxation"
 
@@ -76,7 +80,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Network timeout", ErrorType.TRANSIENT)
@@ -103,7 +107,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Schema validation failed", ErrorType.VALIDATION)
@@ -119,7 +123,7 @@ class TestErrorRecoveryManager:
         assert decision.strategy == ErrorRecoveryStrategy.RETRY_CURRENT
 
     def test_decide_recovery_for_compatibility_error(self):
-        """Compatibility errors should result in ROLLBACK_ONE strategy."""
+        """Compatibility errors should result in ROLLBACK_TO_ANALYSIS strategy."""
         from unittest.mock import MagicMock
 
         from aiagent.langgraph.jobGeneratorV2.protocols import (
@@ -130,7 +134,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Interface compatibility error", ErrorType.COMPATIBILITY)
@@ -144,7 +148,7 @@ class TestErrorRecoveryManager:
             context,
         )
 
-        assert decision.strategy == ErrorRecoveryStrategy.ROLLBACK_ONE
+        assert decision.strategy == ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS
 
     def test_decide_recovery_for_business_error(self):
         """Business errors should result in RELAXATION strategy."""
@@ -158,7 +162,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Infeasible requirement", ErrorType.BUSINESS)
@@ -185,7 +189,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Database connection failed", ErrorType.FATAL)
@@ -212,7 +216,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Validation failed", ErrorType.VALIDATION)
@@ -228,7 +232,7 @@ class TestErrorRecoveryManager:
 
         # Should escalate to rollback when retry limit exceeded for non-Phase1
         assert decision.strategy in (
-            ErrorRecoveryStrategy.ROLLBACK_ONE,
+            ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS,
             ErrorRecoveryStrategy.FAIL_FAST,
         )
 
@@ -244,7 +248,7 @@ class TestErrorRecoveryManager:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Validation failed", ErrorType.VALIDATION)
@@ -263,27 +267,22 @@ class TestErrorRecoveryManager:
     def test_rollback_target_calculation(self):
         """Should correctly calculate rollback target phase."""
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
 
         # Interface design should rollback to task breakdown
         assert (
-            manager._get_rollback_target(Phase.INTERFACE_DESIGN)
-            == Phase.TASK_BREAKDOWN
+            manager._get_rollback_target(Phase.INTERFACE_DESIGN) == Phase.TASK_BREAKDOWN
         )
 
         # Registration should rollback to interface design
         assert (
-            manager._get_rollback_target(Phase.REGISTRATION)
-            == Phase.INTERFACE_DESIGN
+            manager._get_rollback_target(Phase.REGISTRATION) == Phase.INTERFACE_DESIGN
         )
 
         # Workflow gen should rollback to registration
-        assert (
-            manager._get_rollback_target(Phase.WORKFLOW_GEN)
-            == Phase.REGISTRATION
-        )
+        assert manager._get_rollback_target(Phase.WORKFLOW_GEN) == Phase.REGISTRATION
 
 
 class TestMaxRollbacksPerPhase:
@@ -308,7 +307,7 @@ class TestMaxRollbacksPerPhase:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
         error = WorkflowError("Compatibility error", ErrorType.COMPATIBILITY)
@@ -356,7 +355,7 @@ class TestRetryCountBugFix:
             ErrorRecoveryManager,
             ErrorRecoveryStrategy,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         manager = ErrorRecoveryManager()
 
@@ -379,8 +378,8 @@ class TestRetryCountBugFix:
         # Key assertion: Should NOT be RETRY_CURRENT with reset
         # Should either rollback or continue with proper count management
         assert decision.strategy in (
-            ErrorRecoveryStrategy.ROLLBACK_ONE,
-            ErrorRecoveryStrategy.ROLLBACK_TO_BREAKDOWN,
+            ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS,
+            ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS,
         )
         # If rollback, there should be feedback for the LLM
         assert decision.feedback is not None or decision.target_phase is not None

@@ -9,7 +9,6 @@ Issue #342:
 - Bug #6: Schema count mismatch uses strict equality instead of threshold
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
     TaskDefinition,

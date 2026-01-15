@@ -20,7 +20,9 @@ class TestAPIInfoDuplicationWarning:
             assemble_prompt,
         )
 
-        with pytest.warns(DeprecationWarning, match="API information may be duplicated"):
+        with pytest.warns(
+            DeprecationWarning, match="API information may be duplicated"
+        ):
             assemble_prompt(
                 task_name="test",
                 task_description="Test task",
@@ -57,7 +59,8 @@ class TestAPIInfoDuplicationWarning:
 
             # Filter for DeprecationWarning about API duplication
             api_warnings = [
-                x for x in w
+                x
+                for x in w
                 if issubclass(x.category, DeprecationWarning)
                 and "API information" in str(x.message)
             ]
@@ -88,7 +91,8 @@ class TestAPIInfoDuplicationWarning:
             )
 
             api_warnings = [
-                x for x in w
+                x
+                for x in w
                 if issubclass(x.category, DeprecationWarning)
                 and "API information" in str(x.message)
             ]
@@ -112,7 +116,8 @@ class TestAPIInfoDuplicationWarning:
             )
 
             api_warnings = [
-                x for x in w
+                x
+                for x in w
                 if issubclass(x.category, DeprecationWarning)
                 and "API information" in str(x.message)
             ]
@@ -147,9 +152,9 @@ class TestWarningMessage:
 
         # Check that warning message suggests using APISchemaInjector
         warning_messages = [str(r.message) for r in record]
-        assert any(
-            "APISchemaInjector" in msg for msg in warning_messages
-        ), "Warning should suggest using APISchemaInjector"
+        assert any("APISchemaInjector" in msg for msg in warning_messages), (
+            "Warning should suggest using APISchemaInjector"
+        )
 
 
 class TestAPISchemaInjectorPriority:

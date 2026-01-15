@@ -71,8 +71,11 @@ class TestLLMGeneratorSubWorkflow:
     def test_create_generator_default(self):
         """Test creating generator with defaults (env vars cleared)."""
         # Clear env vars to test true defaults
-        with patch.dict("os.environ", {MODEL_ENV_VAR: "", TEMPERATURE_ENV_VAR: ""}, clear=False):
+        with patch.dict(
+            "os.environ", {MODEL_ENV_VAR: "", TEMPERATURE_ENV_VAR: ""}, clear=False
+        ):
             import os
+
             # Remove the env vars if they exist
             os.environ.pop(MODEL_ENV_VAR, None)
             os.environ.pop(TEMPERATURE_ENV_VAR, None)

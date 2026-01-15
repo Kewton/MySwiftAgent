@@ -63,7 +63,9 @@ class TestWorkflowRegistrarIntegration:
         with patch(
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.httpx.AsyncClient"
         ) as mock_client_class:
-            mock_client_class.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_class.return_value.__aenter__.return_value = (
+                mock_client_instance
+            )
 
             result = await register_taskflow_workflow(
                 workflow_name="test_workflow",
@@ -126,7 +128,9 @@ class TestWorkflowRegistrarIntegration:
         with patch(
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.httpx.AsyncClient"
         ) as mock_client_class:
-            mock_client_class.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_class.return_value.__aenter__.return_value = (
+                mock_client_instance
+            )
 
             result = await register_taskflow_workflow(
                 workflow_name="test_workflow",
@@ -235,7 +239,9 @@ class TestWorkflowRegistrarErrorHandling:
         with patch(
             "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.httpx.AsyncClient"
         ) as mock_client_class:
-            mock_client_class.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_class.return_value.__aenter__.return_value = (
+                mock_client_instance
+            )
 
             result = await register_taskflow_workflow(
                 workflow_name="test_workflow",

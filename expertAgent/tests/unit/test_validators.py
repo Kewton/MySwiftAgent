@@ -5,7 +5,6 @@ Issue #359: Tests for TaskDependencyValidator and ValidationPipeline.
 TDD Red Phase: These tests define the expected behavior of validators.
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.validators.task_dependency import (
     DependencyValidationResult,
     TaskDependencyValidator,
@@ -67,7 +66,9 @@ class TestTaskDependencyValidator:
         result = validator.validate(tasks)
 
         assert result.is_valid is False
-        assert "self" in result.errors[0].lower() or "circular" in result.errors[0].lower()
+        assert (
+            "self" in result.errors[0].lower() or "circular" in result.errors[0].lower()
+        )
 
     def test_detect_non_existent_dependency(self):
         """Test detection of reference to non-existent task."""
@@ -161,8 +162,7 @@ class TestDependencyValidationResult:
     def test_create_valid_result(self):
         """Test creating a valid result."""
         result = DependencyValidationResult(
-            is_valid=True,
-            execution_order=["task_001", "task_002", "task_003"]
+            is_valid=True, execution_order=["task_001", "task_002", "task_003"]
         )
 
         assert result.is_valid is True

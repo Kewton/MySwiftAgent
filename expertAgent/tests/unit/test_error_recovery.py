@@ -5,7 +5,6 @@ Issue #359: Tests for phase-specific error handling and recovery strategies.
 TDD Red Phase: These tests define the expected behavior of error recovery.
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import (
     ErrorRecoveryManager,
     JobAnalysisErrorContract,
@@ -27,7 +26,7 @@ class TestJobAnalysisErrorContract:
         error = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.VALIDATION,
-            message="Schema validation failed"
+            message="Schema validation failed",
         )
         strategy = JobAnalysisErrorContract.get_recovery_strategy(error)
 
@@ -38,7 +37,7 @@ class TestJobAnalysisErrorContract:
         error = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.API,
-            message="LLM API rate limited"
+            message="LLM API rate limited",
         )
         strategy = JobAnalysisErrorContract.get_recovery_strategy(error)
 
@@ -49,7 +48,7 @@ class TestJobAnalysisErrorContract:
         error = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.BUSINESS,
-            message="Task count exceeds limit"
+            message="Task count exceeds limit",
         )
         strategy = JobAnalysisErrorContract.get_recovery_strategy(error)
 
@@ -60,7 +59,7 @@ class TestJobAnalysisErrorContract:
         error = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.FATAL,
-            message="Authentication failed"
+            message="Authentication failed",
         )
         strategy = JobAnalysisErrorContract.get_recovery_strategy(error)
 
@@ -69,19 +68,13 @@ class TestJobAnalysisErrorContract:
     def test_get_max_retries(self):
         """Test max retry counts for different error types."""
         validation_error = PhaseError(
-            phase="JOB_ANALYSIS",
-            error_type=ErrorType.VALIDATION,
-            message="test"
+            phase="JOB_ANALYSIS", error_type=ErrorType.VALIDATION, message="test"
         )
         api_error = PhaseError(
-            phase="JOB_ANALYSIS",
-            error_type=ErrorType.API,
-            message="test"
+            phase="JOB_ANALYSIS", error_type=ErrorType.API, message="test"
         )
         fatal_error = PhaseError(
-            phase="JOB_ANALYSIS",
-            error_type=ErrorType.FATAL,
-            message="test"
+            phase="JOB_ANALYSIS", error_type=ErrorType.FATAL, message="test"
         )
 
         assert JobAnalysisErrorContract.get_max_retries(validation_error) == 3
@@ -94,7 +87,7 @@ class TestJobAnalysisErrorContract:
             phase="JOB_ANALYSIS",
             error_type=ErrorType.VALIDATION,
             message="Invalid JSON schema",
-            details={"field": "input_schema"}
+            details={"field": "input_schema"},
         )
         feedback = JobAnalysisErrorContract.create_feedback(error)
 
@@ -111,7 +104,7 @@ class TestRegistrationErrorContract:
         error = PhaseError(
             phase="REGISTRATION",
             error_type=ErrorType.VALIDATION,
-            message="BodyTemplate validation failed"
+            message="BodyTemplate validation failed",
         )
         strategy = RegistrationErrorContract.get_recovery_strategy(error)
 
@@ -122,7 +115,7 @@ class TestRegistrationErrorContract:
         error = PhaseError(
             phase="REGISTRATION",
             error_type=ErrorType.API,
-            message="JobQueue API unavailable"
+            message="JobQueue API unavailable",
         )
         strategy = RegistrationErrorContract.get_recovery_strategy(error)
 
@@ -133,7 +126,7 @@ class TestRegistrationErrorContract:
         error = PhaseError(
             phase="REGISTRATION",
             error_type=ErrorType.TRANSIENT,
-            message="DB connection timeout"
+            message="DB connection timeout",
         )
         strategy = RegistrationErrorContract.get_recovery_strategy(error)
 
@@ -142,9 +135,7 @@ class TestRegistrationErrorContract:
     def test_should_rollback_for_validation(self):
         """Validation errors should trigger rollback."""
         error = PhaseError(
-            phase="REGISTRATION",
-            error_type=ErrorType.VALIDATION,
-            message="test"
+            phase="REGISTRATION", error_type=ErrorType.VALIDATION, message="test"
         )
 
         assert RegistrationErrorContract.should_rollback(error) is True
@@ -152,9 +143,7 @@ class TestRegistrationErrorContract:
     def test_should_not_rollback_for_api(self):
         """API errors should not trigger rollback."""
         error = PhaseError(
-            phase="REGISTRATION",
-            error_type=ErrorType.API,
-            message="test"
+            phase="REGISTRATION", error_type=ErrorType.API, message="test"
         )
 
         assert RegistrationErrorContract.should_rollback(error) is False
@@ -168,7 +157,7 @@ class TestWorkflowGenErrorContract:
         error = PhaseError(
             phase="WORKFLOW_GEN",
             error_type=ErrorType.VALIDATION,
-            message="Invalid TaskFlow JSON"
+            message="Invalid TaskFlow JSON",
         )
         strategy = WorkflowGenErrorContract.get_recovery_strategy(error)
 
@@ -177,9 +166,7 @@ class TestWorkflowGenErrorContract:
     def test_api_error_retry_current(self):
         """API errors should trigger RETRY_CURRENT."""
         error = PhaseError(
-            phase="WORKFLOW_GEN",
-            error_type=ErrorType.API,
-            message="LLM API timeout"
+            phase="WORKFLOW_GEN", error_type=ErrorType.API, message="LLM API timeout"
         )
         strategy = WorkflowGenErrorContract.get_recovery_strategy(error)
 
@@ -190,34 +177,32 @@ class TestWorkflowGenErrorContract:
         error = PhaseError(
             phase="WORKFLOW_GEN",
             error_type=ErrorType.TRANSIENT,
-            message="Task execution timeout"
+            message="Task execution timeout",
         )
         strategy = WorkflowGenErrorContract.get_recovery_strategy(error)
 
         assert strategy == RecoveryStrategy.RETRY_CURRENT
 
-    def test_fatal_error_rollback_to_analysis(self):
-        """FATAL errors should trigger ROLLBACK_TO_ANALYSIS."""
+    def test_fatal_error_fail_fast(self):
+        """FATAL errors should trigger FAIL_FAST (Issue #359).
+
+        FATAL errors are unrecoverable by definition, so they should fail fast
+        rather than attempt rollback which could lead to infinite loops.
+        """
         error = PhaseError(
-            phase="WORKFLOW_GEN",
-            error_type=ErrorType.FATAL,
-            message="All tasks failed"
+            phase="WORKFLOW_GEN", error_type=ErrorType.FATAL, message="All tasks failed"
         )
         strategy = WorkflowGenErrorContract.get_recovery_strategy(error)
 
-        assert strategy == RecoveryStrategy.ROLLBACK_TO_ANALYSIS
+        assert strategy == RecoveryStrategy.FAIL_FAST
 
     def test_is_task_isolated_error(self):
         """Test which errors are task-isolated."""
         validation_error = PhaseError(
-            phase="WORKFLOW_GEN",
-            error_type=ErrorType.VALIDATION,
-            message="test"
+            phase="WORKFLOW_GEN", error_type=ErrorType.VALIDATION, message="test"
         )
         fatal_error = PhaseError(
-            phase="WORKFLOW_GEN",
-            error_type=ErrorType.FATAL,
-            message="test"
+            phase="WORKFLOW_GEN", error_type=ErrorType.FATAL, message="test"
         )
 
         assert WorkflowGenErrorContract.is_task_isolated_error(validation_error) is True
@@ -247,14 +232,14 @@ class TestErrorRecoveryManager:
         error = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.VALIDATION,
-            message="Schema validation failed"
+            message="Schema validation failed",
         )
 
         action = manager.handle_error(error)
 
         assert action.strategy in (
             RecoveryStrategy.RETRY_CURRENT,
-            RecoveryStrategy.RETRY_WITH_FEEDBACK
+            RecoveryStrategy.RETRY_WITH_FEEDBACK,
         )
 
     def test_handle_fatal_error_returns_fail_fast(self):
@@ -263,7 +248,7 @@ class TestErrorRecoveryManager:
         error = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.FATAL,
-            message="Authentication failed"
+            message="Authentication failed",
         )
 
         action = manager.handle_error(error)
@@ -274,9 +259,7 @@ class TestErrorRecoveryManager:
         """Test that errors are tracked in history."""
         manager = ErrorRecoveryManager()
         error = PhaseError(
-            phase="JOB_ANALYSIS",
-            error_type=ErrorType.VALIDATION,
-            message="Test error"
+            phase="JOB_ANALYSIS", error_type=ErrorType.VALIDATION, message="Test error"
         )
 
         manager.handle_error(error)
@@ -293,7 +276,7 @@ class TestErrorRecoveryManager:
             error = PhaseError(
                 phase="JOB_ANALYSIS",
                 error_type=ErrorType.VALIDATION,
-                message="Test error"
+                message="Test error",
             )
             action = manager.handle_error(error)
 
@@ -310,7 +293,7 @@ class TestErrorRecoveryManager:
                 phase="JOB_ANALYSIS",
                 error_type=ErrorType.VALIDATION,
                 message=f"Test error {i}",
-                retry_count=i
+                retry_count=i,
             )
             action = manager.handle_error(error)
 
@@ -318,16 +301,14 @@ class TestErrorRecoveryManager:
         assert action.strategy in (
             RecoveryStrategy.ROLLBACK_TO_ANALYSIS,
             RecoveryStrategy.FAIL_FAST,
-            RecoveryStrategy.RELAXATION
+            RecoveryStrategy.RELAXATION,
         )
 
     def test_unknown_phase_returns_fail_fast(self):
         """Test that unknown phase returns fail fast."""
         manager = ErrorRecoveryManager()
         error = PhaseError(
-            phase="UNKNOWN_PHASE",
-            error_type=ErrorType.VALIDATION,
-            message="Test error"
+            phase="UNKNOWN_PHASE", error_type=ErrorType.VALIDATION, message="Test error"
         )
 
         action = manager.handle_error(error)
@@ -337,16 +318,16 @@ class TestErrorRecoveryManager:
     def test_generate_error_summary(self):
         """Test error summary generation."""
         manager = ErrorRecoveryManager()
-        manager.handle_error(PhaseError(
-            phase="JOB_ANALYSIS",
-            error_type=ErrorType.VALIDATION,
-            message="Error 1"
-        ))
-        manager.handle_error(PhaseError(
-            phase="REGISTRATION",
-            error_type=ErrorType.API,
-            message="Error 2"
-        ))
+        manager.handle_error(
+            PhaseError(
+                phase="JOB_ANALYSIS", error_type=ErrorType.VALIDATION, message="Error 1"
+            )
+        )
+        manager.handle_error(
+            PhaseError(
+                phase="REGISTRATION", error_type=ErrorType.API, message="Error 2"
+            )
+        )
 
         summary = manager._generate_error_summary()
 
@@ -359,14 +340,22 @@ class TestErrorRecoveryManager:
         """Test strategy escalation."""
         manager = ErrorRecoveryManager()
 
-        assert manager._escalate_strategy(RecoveryStrategy.RETRY_CURRENT) == \
-            RecoveryStrategy.ROLLBACK_TO_ANALYSIS
-        assert manager._escalate_strategy(RecoveryStrategy.RETRY_WITH_FEEDBACK) == \
-            RecoveryStrategy.ROLLBACK_TO_ANALYSIS
-        assert manager._escalate_strategy(RecoveryStrategy.ROLLBACK_TO_ANALYSIS) == \
-            RecoveryStrategy.FAIL_FAST
-        assert manager._escalate_strategy(RecoveryStrategy.RELAXATION) == \
-            RecoveryStrategy.FAIL_FAST
+        assert (
+            manager._escalate_strategy(RecoveryStrategy.RETRY_CURRENT)
+            == RecoveryStrategy.ROLLBACK_TO_ANALYSIS
+        )
+        assert (
+            manager._escalate_strategy(RecoveryStrategy.RETRY_WITH_FEEDBACK)
+            == RecoveryStrategy.ROLLBACK_TO_ANALYSIS
+        )
+        assert (
+            manager._escalate_strategy(RecoveryStrategy.ROLLBACK_TO_ANALYSIS)
+            == RecoveryStrategy.FAIL_FAST
+        )
+        assert (
+            manager._escalate_strategy(RecoveryStrategy.RELAXATION)
+            == RecoveryStrategy.FAIL_FAST
+        )
 
 
 class TestErrorRecoveryManagerIntegration:
@@ -380,7 +369,7 @@ class TestErrorRecoveryManagerIntegration:
         error1 = PhaseError(
             phase="JOB_ANALYSIS",
             error_type=ErrorType.VALIDATION,
-            message="Invalid schema"
+            message="Invalid schema",
         )
         action1 = manager.handle_error(error1)
         assert action1.strategy == RecoveryStrategy.RETRY_WITH_FEEDBACK
@@ -394,7 +383,7 @@ class TestErrorRecoveryManagerIntegration:
         error = PhaseError(
             phase="REGISTRATION",
             error_type=ErrorType.VALIDATION,
-            message="BodyTemplate mismatch"
+            message="BodyTemplate mismatch",
         )
         action = manager.handle_error(error)
         assert action.strategy == RecoveryStrategy.ROLLBACK_TO_ANALYSIS
@@ -405,9 +394,7 @@ class TestErrorRecoveryManagerIntegration:
 
         # Transient error - should retry current
         error = PhaseError(
-            phase="WORKFLOW_GEN",
-            error_type=ErrorType.TRANSIENT,
-            message="Timeout"
+            phase="WORKFLOW_GEN", error_type=ErrorType.TRANSIENT, message="Timeout"
         )
         action = manager.handle_error(error)
         assert action.strategy == RecoveryStrategy.RETRY_CURRENT

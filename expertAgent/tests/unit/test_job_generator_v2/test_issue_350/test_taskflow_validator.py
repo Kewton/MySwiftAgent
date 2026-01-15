@@ -1,14 +1,15 @@
 """Unit tests for taskflow_validator.py - Security validation.
 
 Issue #350 Task 3.1: TaskFlow validator implementation.
+Issue #359 Fix: localhost/127.0.0.1 are allowed for local development.
 
 Test cases (10 total):
 - test_validate_https_url
 - test_reject_http_url
-- test_reject_private_ip_127
+- test_allow_localhost_127 (Issue #359: localhost allowed)
 - test_reject_private_ip_10
 - test_reject_private_ip_192_168
-- test_reject_localhost
+- test_allow_localhost_hostname (Issue #359: localhost allowed)
 - test_code_js_allowed_function
 - test_code_js_disallowed_function
 - test_path_traversal_rejection
@@ -45,31 +46,44 @@ class TestTaskFlowSecurityValidator:
         assert result.is_valid is False
         assert "https" in result.errors[0].message.lower()
 
-    def test_reject_private_ip_127(self, validator: TaskFlowSecurityValidator) -> None:
-        """127.x.x.x IPs should be rejected (SSRF protection)."""
+    def test_allow_localhost_127(self, validator: TaskFlowSecurityValidator) -> None:
+        """127.0.0.1 should be allowed (Issue #359: local development)."""
         result = validator.validate_url("https://127.0.0.1/api")
-        assert result.is_valid is False
-        assert "private" in result.errors[0].message.lower() or "ssrf" in result.errors[0].message.lower()
+        assert result.is_valid is True
+
+        # HTTP is also allowed for localhost
+        result_http = validator.validate_url("http://127.0.0.1:8000/api")
+        assert result_http.is_valid is True
 
     def test_reject_private_ip_10(self, validator: TaskFlowSecurityValidator) -> None:
         """10.x.x.x IPs should be rejected (SSRF protection)."""
         result = validator.validate_url("https://10.0.0.1/api")
         assert result.is_valid is False
 
-    def test_reject_private_ip_192_168(self, validator: TaskFlowSecurityValidator) -> None:
+    def test_reject_private_ip_192_168(
+        self, validator: TaskFlowSecurityValidator
+    ) -> None:
         """192.168.x.x IPs should be rejected (SSRF protection)."""
         result = validator.validate_url("https://192.168.1.1/api")
         assert result.is_valid is False
 
-    def test_reject_localhost(self, validator: TaskFlowSecurityValidator) -> None:
-        """localhost should be rejected (SSRF protection)."""
+    def test_allow_localhost_hostname(
+        self, validator: TaskFlowSecurityValidator
+    ) -> None:
+        """localhost should be allowed (Issue #359: local development)."""
         result = validator.validate_url("https://localhost/api")
-        assert result.is_valid is False
+        assert result.is_valid is True
         result2 = validator.validate_url("https://localhost:8080/api")
-        assert result2.is_valid is False
+        assert result2.is_valid is True
+
+        # HTTP is also allowed for localhost
+        result3 = validator.validate_url("http://localhost:8000/api")
+        assert result3.is_valid is True
 
     # code_js validation tests
-    def test_code_js_allowed_function(self, validator: TaskFlowSecurityValidator) -> None:
+    def test_code_js_allowed_function(
+        self, validator: TaskFlowSecurityValidator
+    ) -> None:
         """Allowed functions should pass validation."""
         allowed_functions = [
             "formatDate",
@@ -82,7 +96,9 @@ class TestTaskFlowSecurityValidator:
             result = validator.validate_code_js_function(func_name)
             assert result.is_valid is True, f"Function {func_name} should be allowed"
 
-    def test_code_js_disallowed_function(self, validator: TaskFlowSecurityValidator) -> None:
+    def test_code_js_disallowed_function(
+        self, validator: TaskFlowSecurityValidator
+    ) -> None:
         """Disallowed functions should be rejected."""
         disallowed_functions = [
             "eval",
@@ -98,7 +114,9 @@ class TestTaskFlowSecurityValidator:
             assert "allowed" in result.errors[0].message.lower()
 
     # Path traversal tests
-    def test_path_traversal_rejection(self, validator: TaskFlowSecurityValidator) -> None:
+    def test_path_traversal_rejection(
+        self, validator: TaskFlowSecurityValidator
+    ) -> None:
         """Path traversal attempts should be rejected."""
         malicious_paths = [
             "../../../etc/passwd",
@@ -153,7 +171,9 @@ class TestTaskFlowSchemaValidator:
         errors = validator.validate(workflow)
         assert errors == []
 
-    def test_invalid_workflow_missing_steps(self, validator: TaskFlowSchemaValidator) -> None:
+    def test_invalid_workflow_missing_steps(
+        self, validator: TaskFlowSchemaValidator
+    ) -> None:
         """Workflow without steps should fail validation."""
         workflow = {
             "workflow_name": "test_workflow",

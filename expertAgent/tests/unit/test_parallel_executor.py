@@ -8,19 +8,19 @@ TDD Red Phase: These tests define the expected behavior of parallel execution.
 import asyncio
 
 import pytest
+
 from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import ErrorRecoveryManager
+from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
+    AggregatedRecoveryDecision,
+    ParallelExecutionErrorAggregator,
+    parallel_workflow_generation,
+)
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
     ParallelExecutionResult,
     TaskExecutionError,
     TaskResult,
     UnifiedTaskIdentifier,
-)
-
-from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
-    AggregatedRecoveryDecision,
-    ParallelExecutionErrorAggregator,
-    parallel_workflow_generation,
 )
 
 
@@ -113,10 +113,7 @@ class TestParallelWorkflowGeneration:
     @pytest.mark.asyncio
     async def test_semaphore_limits_concurrency(self):
         """Test that semaphore properly limits concurrency."""
-        tasks = [
-            UnifiedTaskIdentifier(task_id=f"task_{i}")
-            for i in range(10)
-        ]
+        tasks = [UnifiedTaskIdentifier(task_id=f"task_{i}") for i in range(10)]
 
         # Track max concurrent executions
         execution_count = {"current": 0, "max": 0}
@@ -124,8 +121,7 @@ class TestParallelWorkflowGeneration:
         async def tracking_generator(task: UnifiedTaskIdentifier) -> dict:
             execution_count["current"] += 1
             execution_count["max"] = max(
-                execution_count["max"],
-                execution_count["current"]
+                execution_count["max"], execution_count["current"]
             )
             await asyncio.sleep(0.05)  # Small delay
             execution_count["current"] -= 1
@@ -234,8 +230,8 @@ class TestParallelExecutionErrorAggregator:
                     error=TaskExecutionError(
                         error_type=ErrorType.TRANSIENT,
                         message="Timeout",
-                        recoverable=True
-                    )
+                        recoverable=True,
+                    ),
                 ),
             ],
         )
@@ -262,8 +258,8 @@ class TestParallelExecutionErrorAggregator:
                     error=TaskExecutionError(
                         error_type=ErrorType.FATAL,
                         message="Fatal error",
-                        recoverable=False
-                    )
+                        recoverable=False,
+                    ),
                 ),
             ],
         )
@@ -288,8 +284,8 @@ class TestParallelExecutionErrorAggregator:
                     error=TaskExecutionError(
                         error_type=ErrorType.FATAL,
                         message="Fatal error",
-                        recoverable=False
-                    )
+                        recoverable=False,
+                    ),
                 ),
             ],
         )
@@ -308,7 +304,7 @@ class TestAggregatedRecoveryDecision:
         decision = AggregatedRecoveryDecision(
             overall_status="success",
             proceed=True,
-            successful_workflows=[{"name": "wf1"}, {"name": "wf2"}]
+            successful_workflows=[{"name": "wf1"}, {"name": "wf2"}],
         )
 
         assert decision.overall_status == "success"
@@ -321,7 +317,7 @@ class TestAggregatedRecoveryDecision:
             overall_status="partial_retry",
             proceed=False,
             tasks_to_retry=["task_001", "task_002"],
-            successful_workflows=[{"name": "wf1"}]
+            successful_workflows=[{"name": "wf1"}],
         )
 
         assert decision.overall_status == "partial_retry"
@@ -330,10 +326,7 @@ class TestAggregatedRecoveryDecision:
 
     def test_default_values(self):
         """Test default values for optional fields."""
-        decision = AggregatedRecoveryDecision(
-            overall_status="success",
-            proceed=True
-        )
+        decision = AggregatedRecoveryDecision(overall_status="success", proceed=True)
 
         assert decision.successful_workflows == []
         assert decision.failed_task_ids == []

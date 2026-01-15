@@ -172,7 +172,9 @@ class TestAgentConstraintValidatorFetchAgent:
         """URL with ${EXPERTAGENT_BASE_URL} is valid (allowed env var)."""
         config = {
             "agent": "fetchAgent",
-            "inputs": {"url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search"},
+            "inputs": {
+                "url": "${EXPERTAGENT_BASE_URL}/aiagent-api/v1/utility/google_search"
+            },
         }
         errors = validator.validate_fetch_agent(config)
         assert len(errors) == 0, f"Unexpected errors: {errors}"

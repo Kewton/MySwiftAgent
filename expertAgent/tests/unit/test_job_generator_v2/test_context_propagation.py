@@ -16,9 +16,12 @@ from aiagent.langgraph.jobGeneratorV2.context import (
     ExecutionContext,
     ObservabilityContext,
 )
-from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
+
+# Use old orchestrator and recovery manager for context propagation tests
+# (new 3-phase orchestrator has different API)
+from aiagent.langgraph.jobGeneratorV2.orchestrator_old import JobGenerationOrchestrator
 from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     JobGenerationRequest,
     JobGenerationResult,
     Phase,
@@ -39,6 +42,7 @@ class TestOrchestratorContextParameter:
 
         # Check that run_workflow accepts context parameter
         import inspect
+
         sig = inspect.signature(orchestrator.run_workflow)
         param_names = list(sig.parameters.keys())
 

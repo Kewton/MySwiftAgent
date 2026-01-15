@@ -3,7 +3,6 @@
 Issue #342 Phase F: WorkflowGen V2 LLM Integration
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.prompt_builder.few_shot import (
     FewShotExample,
     get_example_by_api,
@@ -143,7 +142,10 @@ class TestSelectFewShotExamples:
         examples = select_few_shot_examples(
             recommended_apis=["google_search"],
             input_schema={"type": "object", "properties": {"items": {"type": "array"}}},
-            output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
+            output_schema={
+                "type": "object",
+                "properties": {"results": {"type": "array"}},
+            },
             dependencies=["task_1", "task_2", "task_3"],
         )
         assert len(examples) > 0

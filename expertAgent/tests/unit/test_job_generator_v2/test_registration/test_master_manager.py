@@ -164,13 +164,25 @@ class TestMasterManagerCreateMasters:
         return {
             "task_001": InterfaceSchema(
                 task_id="task_001",
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"emails": {"type": "array"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"emails": {"type": "array"}},
+                },
             ),
             "task_002": InterfaceSchema(
                 task_id="task_002",
-                input_schema={"type": "object", "properties": {"emails": {"type": "array"}}},
-                output_schema={"type": "object", "properties": {"summary": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"emails": {"type": "array"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"summary": {"type": "string"}},
+                },
             ),
         }
 
@@ -302,8 +314,12 @@ class TestMasterManagerCreateMasters:
         )
 
         # First task master should have order 0, second should have order 1
-        task_001_master = next(tm for tm in result.task_masters if tm.task_id == "task_001")
-        task_002_master = next(tm for tm in result.task_masters if tm.task_id == "task_002")
+        task_001_master = next(
+            tm for tm in result.task_masters if tm.task_id == "task_001"
+        )
+        task_002_master = next(
+            tm for tm in result.task_masters if tm.task_id == "task_002"
+        )
 
         assert task_001_master.order == 0
         assert task_002_master.order == 1

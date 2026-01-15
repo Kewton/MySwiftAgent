@@ -97,7 +97,7 @@ class TestAdapterEngineIntegration:
     def test_adapter_with_taskflow_engine(self) -> None:
         """Adapter with engine='taskflow' should create TaskFlow workflow."""
         from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         adapter = JobGeneratorV2Adapter(engine="taskflow")
 
@@ -112,7 +112,7 @@ class TestAdapterEngineIntegration:
     def test_adapter_with_graphai_engine(self) -> None:
         """Adapter with engine='graphai' should create GraphAI workflow."""
         from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         adapter = JobGeneratorV2Adapter(engine="graphai")
 
@@ -126,10 +126,8 @@ class TestAdapterEngineIntegration:
 
     def test_adapter_default_engine_is_taskflow(self) -> None:
         """Adapter default engine should be 'taskflow'."""
-        from aiagent.langgraph.jobGeneratorV2.adapter import (
-            DEFAULT_ENGINE,
-            JobGeneratorV2Adapter,
-        )
+        from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
+        from aiagent.langgraph.jobGeneratorV2.adapter_old import DEFAULT_ENGINE
 
         assert DEFAULT_ENGINE == "taskflow"
 
@@ -186,7 +184,7 @@ class TestDeadCodeFixVerification:
     def test_engine_parameter_flows_through_system(self) -> None:
         """Engine parameter should flow from adapter to workflow to strategy."""
         from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         # Create adapter with specific engine
         adapter = JobGeneratorV2Adapter(engine="graphai")

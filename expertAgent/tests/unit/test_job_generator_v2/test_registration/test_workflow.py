@@ -11,12 +11,14 @@ from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.protocols import RetryPolicy, WorkflowProtocol
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
-    Phase,
     PhaseStatus,
     RegistrationInput,
     RegistrationOutput,
     TaskDefinition,
 )
+
+# Use old Phase enum for 4-phase architecture tests (ExecutionContext uses types_old)
+from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
 
 class TestRegistrationWorkflowExists:
@@ -204,12 +206,15 @@ class TestRegistrationWorkflowExecute:
         mock_job_registrar = AsyncMock()
         mock_job_registrar.register_job = AsyncMock(return_value=mock_job_result)
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.MasterManagerSubWorkflow",
-            return_value=mock_master_manager,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.JobRegistrarSubWorkflow",
-            return_value=mock_job_registrar,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.MasterManagerSubWorkflow",
+                return_value=mock_master_manager,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.JobRegistrarSubWorkflow",
+                return_value=mock_job_registrar,
+            ),
         ):
             workflow = RegistrationWorkflow()
             result = await workflow.execute(sample_input, mock_context)
@@ -259,12 +264,15 @@ class TestRegistrationWorkflowExecute:
         mock_job_registrar = AsyncMock()
         mock_job_registrar.register_job = AsyncMock(return_value=mock_job_result)
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.MasterManagerSubWorkflow",
-            return_value=mock_master_manager,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.JobRegistrarSubWorkflow",
-            return_value=mock_job_registrar,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.MasterManagerSubWorkflow",
+                return_value=mock_master_manager,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.JobRegistrarSubWorkflow",
+                return_value=mock_job_registrar,
+            ),
         ):
             workflow = RegistrationWorkflow()
             result = await workflow.execute(sample_input, mock_context)
@@ -353,7 +361,7 @@ class TestRegistrationWorkflowRetryBugFix:
         # Record retries up to limit
         for i in range(3):
             mock_context_with_retries.record_retry(
-                Phase.REGISTRATION, f"Registration retry {i+1}"
+                Phase.REGISTRATION, f"Registration retry {i + 1}"
             )
 
         # Now should not be able to retry
@@ -453,23 +461,30 @@ class TestRegistrationWorkflowSubWorkflowOrchestration:
         )
 
         mock_master_manager = MagicMock()
+
         async def mock_create_masters(*args, **kwargs):
             call_order.append("create_masters")
             return mock_master_result
+
         mock_master_manager.create_masters = mock_create_masters
 
         mock_job_registrar = MagicMock()
+
         async def mock_register_job(*args, **kwargs):
             call_order.append("register_job")
             return mock_job_result
+
         mock_job_registrar.register_job = mock_register_job
 
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.MasterManagerSubWorkflow",
-            return_value=mock_master_manager,
-        ), patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.JobRegistrarSubWorkflow",
-            return_value=mock_job_registrar,
+        with (
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.MasterManagerSubWorkflow",
+                return_value=mock_master_manager,
+            ),
+            patch(
+                "aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow.JobRegistrarSubWorkflow",
+                return_value=mock_job_registrar,
+            ),
         ):
             workflow = RegistrationWorkflow()
             input_data = RegistrationInput(

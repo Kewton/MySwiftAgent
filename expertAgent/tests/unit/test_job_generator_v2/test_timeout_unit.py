@@ -7,7 +7,6 @@ that the prompt examples use milliseconds, not seconds.
 """
 
 
-
 class TestTimeoutUnitConsistency:
     """Test that timeout values are in milliseconds."""
 
@@ -31,9 +30,9 @@ class TestTimeoutUnitConsistency:
         )
 
         # The rules should explicitly mention the unit
-        assert "millisecond" in FETCH_AGENT_RULES.lower() or "ms" in FETCH_AGENT_RULES, (
-            "FETCH_AGENT_RULES should explicitly mention that timeout is in milliseconds"
-        )
+        assert (
+            "millisecond" in FETCH_AGENT_RULES.lower() or "ms" in FETCH_AGENT_RULES
+        ), "FETCH_AGENT_RULES should explicitly mention that timeout is in milliseconds"
 
     def test_all_agent_rules_uses_milliseconds(self) -> None:
         """Test that ALL_AGENT_RULES includes millisecond timeout."""

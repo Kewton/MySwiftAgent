@@ -120,7 +120,7 @@ class TestNormalizeJsonSchemaPropertiesExtended:
             "properties": {
                 "tags": {
                     "type": "array",
-                    "items": "string"  # Should be normalized
+                    "items": "string",  # Should be normalized
                 }
             }
         }
@@ -136,17 +136,14 @@ class TestNormalizeJsonSchemaPropertiesExtended:
 
         schema = {
             "properties": {
-                "data": {
-                    "type": "object",
-                    "properties": {
-                        "nested": "string"
-                    }
-                }
+                "data": {"type": "object", "properties": {"nested": "string"}}
             }
         }
         result = normalize_json_schema_properties(schema)
 
-        assert result["properties"]["data"]["properties"]["nested"] == {"type": "string"}
+        assert result["properties"]["data"]["properties"]["nested"] == {
+            "type": "string"
+        }
 
     def test_normalize_preserves_string_array_keywords(self):
         """Should preserve string array keywords like required, enum."""
@@ -183,11 +180,7 @@ class TestNormalizeJsonSchemaPropertiesExtended:
         )
 
         # A generic list (not shorthand type)
-        schema = {
-            "properties": {
-                "items": [{"type": "string"}, {"type": "number"}]
-            }
-        }
+        schema = {"properties": {"items": [{"type": "string"}, {"type": "number"}]}}
         result = normalize_json_schema_properties(schema)
 
         # Each item should be normalized

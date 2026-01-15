@@ -6,8 +6,6 @@ TDD Red Phase: These tests define the expected behavior.
 """
 
 
-
-
 class TestStructuralValidator:
     """Test suite for StructuralValidator."""
 
@@ -31,9 +29,7 @@ class TestStructuralValidator:
         # Valid workflow
         valid_workflow = {
             "workflow_name": "test_workflow",
-            "steps": [
-                {"id": "step_001", "type": "api_rest", "config": {}}
-            ],
+            "steps": [{"id": "step_001", "type": "api_rest", "config": {}}],
             "input_schema": "{}",
             "output_schema": "{}",
             "output": "{}",
@@ -104,7 +100,7 @@ class TestSchemaValidator:
             "workflow_name": "test",
             "input_schema": '{"type": "object"}',
             "output_schema": '{"type": "object"}',
-            "output": '{}',
+            "output": "{}",
             "steps": [],
         }
 
@@ -123,8 +119,8 @@ class TestSchemaValidator:
         workflow = {
             "workflow_name": "test",
             "input_schema": "not valid json",
-            "output_schema": '{}',
-            "output": '{}',
+            "output_schema": "{}",
+            "output": "{}",
             "steps": [],
         }
 
@@ -163,11 +159,11 @@ class TestSemanticValidator:
                         "step_type": "transform",
                         "mode": "template",
                         "template": "${step_001.output}",
-                    }
+                    },
                 },
             ],
-            "input_schema": '{}',
-            "output_schema": '{}',
+            "input_schema": "{}",
+            "output_schema": "{}",
             "output": '{"result": "${step_002.output}"}',
         }
 
@@ -189,15 +185,17 @@ class TestSemanticValidator:
             "steps": [
                 {"id": "step_001", "type": "api_rest", "config": {}},
             ],
-            "input_schema": '{}',
-            "output_schema": '{}',
+            "input_schema": "{}",
+            "output_schema": "{}",
             "output": '{"result": "${nonexistent_step.output}"}',
         }
 
         errors = validator.validate(workflow)
         assert len(errors) > 0
-        assert any("nonexistent" in e.message.lower() or "reference" in e.message.lower()
-                   for e in errors)
+        assert any(
+            "nonexistent" in e.message.lower() or "reference" in e.message.lower()
+            for e in errors
+        )
 
 
 class TestEnhancedValidationPipeline:
@@ -247,8 +245,8 @@ class TestEnhancedValidationPipeline:
             # Missing workflow_name - structural error
             "steps": [],  # Empty steps - structural error
             "input_schema": "invalid json",  # Schema error
-            "output_schema": '{}',
-            "output": '{}',
+            "output_schema": "{}",
+            "output": "{}",
         }
 
         result = pipeline.validate(workflow)
@@ -290,8 +288,8 @@ class TestValidationPipelineChaining:
         workflow = {
             "workflow_name": "test",
             "steps": [{"id": "step_001", "type": "api_rest", "config": {}}],
-            "input_schema": '{}',
-            "output_schema": '{}',
+            "input_schema": "{}",
+            "output_schema": "{}",
             "output": '{"result": "${missing_step.output}"}',  # Semantic error
         }
 

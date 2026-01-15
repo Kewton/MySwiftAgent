@@ -4,7 +4,6 @@ Tests for WorkflowProtocol and related protocols.
 """
 
 
-
 class TestWorkflowProtocol:
     """Test cases for WorkflowProtocol."""
 
@@ -127,7 +126,7 @@ class TestWorkflowError:
             ErrorType,
             WorkflowError,
         )
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         error = WorkflowError(
             "Test error",
@@ -151,7 +150,8 @@ class TestPhaseExecution:
         from datetime import datetime, timedelta
 
         from aiagent.langgraph.jobGeneratorV2.protocols import PhaseExecution
-        from aiagent.langgraph.jobGeneratorV2.types import Phase, PhaseStatus
+        from aiagent.langgraph.jobGeneratorV2.types import PhaseStatus
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         execution = PhaseExecution(
             phase=Phase.TASK_BREAKDOWN,

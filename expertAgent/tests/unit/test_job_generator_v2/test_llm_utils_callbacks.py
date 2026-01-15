@@ -28,6 +28,7 @@ class TestGetCallbacksFromContext:
         from aiagent.langgraph.jobGeneratorV2.llm_utils import (
             get_callbacks_from_context,
         )
+
         assert callable(get_callbacks_from_context)
 
     def test_returns_empty_list_when_no_observability(self):
@@ -82,6 +83,7 @@ class TestInvokeStructuredLLMCallbacks:
     def test_invoke_structured_llm_accepts_callbacks_parameter(self):
         """invoke_structured_llm should accept a callbacks parameter."""
         import inspect
+
         sig = inspect.signature(invoke_structured_llm)
         param_names = list(sig.parameters.keys())
 
@@ -100,11 +102,10 @@ class TestInvokeStructuredLLMCallbacks:
         mock_callback = MagicMock()
 
         # Mock the LLM invocation at the correct import location
-        with patch(
-            "langchain_anthropic.ChatAnthropic"
-        ) as mock_anthropic, patch(
-            "core.secrets.secrets_manager"
-        ) as mock_secrets:
+        with (
+            patch("langchain_anthropic.ChatAnthropic") as mock_anthropic,
+            patch("core.secrets.secrets_manager") as mock_secrets,
+        ):
             # Setup mocks
             mock_secrets.get_secret.return_value = "test-api-key"
 
@@ -117,7 +118,7 @@ class TestInvokeStructuredLLMCallbacks:
             # Create async mock for ainvoke
             async_result = {
                 "parsed": TestResponse(message="test"),
-                "raw": MagicMock(content="test")
+                "raw": MagicMock(content="test"),
             }
             mock_structured_llm.ainvoke = AsyncMock(return_value=async_result)
 
@@ -145,6 +146,7 @@ class TestInvokeStructuredLLMCallbacks:
     async def test_callbacks_none_by_default(self):
         """Callbacks should be None by default (optional parameter)."""
         import inspect
+
         sig = inspect.signature(invoke_structured_llm)
         callbacks_param = sig.parameters.get("callbacks")
 
@@ -158,6 +160,7 @@ class TestWorkflowCallbacksIntegration:
     def test_decomposer_can_use_callbacks(self):
         """decomposer.py should be importable with get_callbacks_from_context."""
         import importlib.util
+
         # Verify modules are importable
         llm_utils_spec = importlib.util.find_spec(
             "aiagent.langgraph.jobGeneratorV2.llm_utils"
@@ -171,6 +174,7 @@ class TestWorkflowCallbacksIntegration:
     def test_schema_generator_can_use_callbacks(self):
         """schema_generator.py should be importable with get_callbacks_from_context."""
         import importlib.util
+
         llm_utils_spec = importlib.util.find_spec(
             "aiagent.langgraph.jobGeneratorV2.llm_utils"
         )
@@ -183,6 +187,7 @@ class TestWorkflowCallbacksIntegration:
     def test_alternative_can_use_callbacks(self):
         """alternative.py should be importable with get_callbacks_from_context."""
         import importlib.util
+
         llm_utils_spec = importlib.util.find_spec(
             "aiagent.langgraph.jobGeneratorV2.llm_utils"
         )
@@ -195,6 +200,7 @@ class TestWorkflowCallbacksIntegration:
     def test_llm_generator_can_use_callbacks(self):
         """llm_generator.py should be importable with get_callbacks_from_context."""
         import importlib.util
+
         llm_utils_spec = importlib.util.find_spec(
             "aiagent.langgraph.jobGeneratorV2.llm_utils"
         )

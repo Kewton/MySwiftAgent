@@ -7,7 +7,6 @@ when passing error messages to LLM.
 """
 
 
-
 class TestSanitizeErrorMessage:
     """Test sanitize_error_message() function."""
 

@@ -471,7 +471,10 @@ class TestCreateJobInBackground:
         call_args = mock_state_manager.mark_failed_async.call_args
         assert call_args[1]["job_id"] == "test-job-id"
         # Error message may vary between V1 and V2 orchestrators
-        assert "error" in call_args[1]["error_message"].lower() or len(call_args[1]["error_message"]) > 0
+        assert (
+            "error" in call_args[1]["error_message"].lower()
+            or len(call_args[1]["error_message"]) > 0
+        )
         mock_state_manager.mark_completed_async.assert_not_called()
 
 

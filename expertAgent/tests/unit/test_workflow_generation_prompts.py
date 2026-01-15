@@ -215,20 +215,26 @@ class TestDynamicArrayProcessingPatterns:
     def test_contains_do_not_hardcode_warning(self):
         """Should warn against hardcoding fixed number of nodes."""
         # Should warn about hardcoded extraction patterns
-        assert "extract_result_0" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
-               "Hardcode" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
-               "hardcode" in DYNAMIC_ARRAY_PROCESSING_PATTERNS.lower()
+        assert (
+            "extract_result_0" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+            or "Hardcode" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+            or "hardcode" in DYNAMIC_ARRAY_PROCESSING_PATTERNS.lower()
+        )
 
     def test_contains_index_access_warning(self):
         """Should warn against index access like [0], [1]."""
-        assert "[0]" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
-               "[1]" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+        assert (
+            "[0]" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+            or "[1]" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+        )
 
     def test_contains_yaml_example(self):
         """Should contain YAML example for mapAgent."""
         assert "```yaml" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
-        assert "process_results:" in DYNAMIC_ARRAY_PROCESSING_PATTERNS or \
-               "aggregate_results:" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+        assert (
+            "process_results:" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+            or "aggregate_results:" in DYNAMIC_ARRAY_PROCESSING_PATTERNS
+        )
 
     def test_contains_issue_reference(self):
         """Should reference Issue #338."""
@@ -249,8 +255,8 @@ class TestDynamicArrayPatternsIntegration:
                     "type": "object",
                     "properties": {
                         "results": {"type": "array", "items": {"type": "object"}}
-                    }
-                }
+                    },
+                },
             },
             "output_interface": {"type": "json_schema", "schema": {}},
         }
@@ -298,5 +304,8 @@ class TestDynamicArrayPatternsIntegration:
         )
 
         # Should warn about hardcoding patterns
-        assert "Hardcode" in prompt or "hardcode" in prompt.lower() or \
-               "fixed" in prompt.lower()
+        assert (
+            "Hardcode" in prompt
+            or "hardcode" in prompt.lower()
+            or "fixed" in prompt.lower()
+        )

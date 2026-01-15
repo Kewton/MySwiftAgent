@@ -56,7 +56,9 @@ class TestTaskOrderSorting:
         assert result[1]["task_id"] == "task_002"
         assert result[2]["task_id"] == "task_003"
 
-    def test_alt_tasks_come_after_base_tasks(self, adapter: JobGeneratorV2Adapter) -> None:
+    def test_alt_tasks_come_after_base_tasks(
+        self, adapter: JobGeneratorV2Adapter
+    ) -> None:
         """Alternative tasks (_alt) should come after base tasks with same number."""
         # Arrange: task_002_alt should come after task_002
         tasks = [
@@ -212,7 +214,9 @@ class TestTaskOrderSorting:
         assert len(result) == 1
         assert result[0]["task_id"] == "task_001"
 
-    def test_non_standard_task_id_falls_back(self, adapter: JobGeneratorV2Adapter) -> None:
+    def test_non_standard_task_id_falls_back(
+        self, adapter: JobGeneratorV2Adapter
+    ) -> None:
         """Non-standard task_ids should fall back to end of list."""
         tasks = [
             TaskDefinition(

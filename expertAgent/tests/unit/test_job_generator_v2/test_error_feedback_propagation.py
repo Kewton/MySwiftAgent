@@ -210,6 +210,7 @@ class TestEndToEndPropagation:
             from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.llm_generator import (
                 LLMGenerationResult,
             )
+
             return LLMGenerationResult(
                 yaml_content="version: '0.5'\nnodes: {}",
                 workflow_name="test",
@@ -219,9 +220,7 @@ class TestEndToEndPropagation:
 
         generator = LLMGeneratorSubWorkflow()
 
-        with patch.object(
-            LLMGeneratorSubWorkflow, "generate", mock_generate
-        ):
+        with patch.object(LLMGeneratorSubWorkflow, "generate", mock_generate):
             await generator.generate_from_task(
                 task_name="test_task",
                 task_description="Test",

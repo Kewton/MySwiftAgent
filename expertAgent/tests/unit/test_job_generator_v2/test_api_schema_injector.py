@@ -127,7 +127,9 @@ class TestAPISchemaInjectorSchemas:
         request_schema = spec.get("request_schema", spec.get("request", {}))
         queries_spec = request_schema.get("queries", {})
         # Should indicate array type
-        assert queries_spec.get("type") == "array" or "array" in str(queries_spec).lower()
+        assert (
+            queries_spec.get("type") == "array" or "array" in str(queries_spec).lower()
+        )
 
     def test_google_search_num_has_max(self, injector):
         """Google search 'num' parameter has max value."""
@@ -136,7 +138,11 @@ class TestAPISchemaInjectorSchemas:
         request_schema = spec.get("request_schema", spec.get("request", {}))
         num_spec = request_schema.get("num", {})
         # Should have max constraint (3 to prevent timeout)
-        assert "max" in num_spec or num_spec.get("maximum") is not None or num_spec.get("le") is not None
+        assert (
+            "max" in num_spec
+            or num_spec.get("maximum") is not None
+            or num_spec.get("le") is not None
+        )
 
     def test_json_stringify_data_any_type(self, injector):
         """JSON stringify 'data' parameter accepts any type."""
@@ -145,7 +151,10 @@ class TestAPISchemaInjectorSchemas:
         request_schema = spec.get("request_schema", spec.get("request", {}))
         data_spec = request_schema.get("data", {})
         # Should indicate any/object type
-        assert data_spec.get("type") in ("any", "object", None) or "any" in str(data_spec).lower()
+        assert (
+            data_spec.get("type") in ("any", "object", None)
+            or "any" in str(data_spec).lower()
+        )
 
     def test_fetch_web_content_url_required(self, injector):
         """Fetch web content 'url' parameter is required."""
@@ -154,7 +163,10 @@ class TestAPISchemaInjectorSchemas:
         request_schema = spec.get("request_schema", spec.get("request", {}))
         url_spec = request_schema.get("url", {})
         # URL should be required
-        assert url_spec.get("required", True) is True or "required" in str(url_spec).lower()
+        assert (
+            url_spec.get("required", True) is True
+            or "required" in str(url_spec).lower()
+        )
 
     def test_extract_urls_max_urls_default(self, injector):
         """Extract article URLs 'max_urls' has default value."""

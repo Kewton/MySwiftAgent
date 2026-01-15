@@ -169,7 +169,9 @@ class TestSystemPromptIntegrationWithShared:
         system_prompt = _build_task_breakdown_system_prompt(capabilities=capabilities)
 
         # Check that some known utility APIs are mentioned
-        utility_apis = [c for c in capabilities if "/v1/utility/" in c.get("endpoint", "")]
+        utility_apis = [
+            c for c in capabilities if "/v1/utility/" in c.get("endpoint", "")
+        ]
         if utility_apis:
             # At least one utility API should be in the prompt
             found_any = any(

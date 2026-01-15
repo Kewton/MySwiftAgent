@@ -10,9 +10,11 @@ import pytest
 from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     InterfaceSchema,
-    Phase,
     TaskDefinition,
 )
+
+# Use old Phase enum for 4-phase architecture tests (ExecutionContext uses types_old)
+from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
 
 class TestSchemaGeneratorSubWorkflowExists:
@@ -90,16 +92,28 @@ class TestSchemaGeneratorSubWorkflowGenerate:
                 task_id="task_001",
                 interface_name="gmail_search_interface",
                 description="Gmail search interface",
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"emails": {"type": "array"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"emails": {"type": "array"}},
+                },
                 derived_fields={},
             ),
             MagicMock(
                 task_id="task_002",
                 interface_name="summarize_interface",
                 description="Summarize interface",
-                input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"summary": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"text": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"summary": {"type": "string"}},
+                },
                 derived_fields={},
             ),
         ]
@@ -107,7 +121,9 @@ class TestSchemaGeneratorSubWorkflowGenerate:
         with patch(
             "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.schema_generator.invoke_structured_llm"
         ) as mock_llm:
-            mock_llm.return_value = MagicMock(result=mock_response, model_name="test-model")
+            mock_llm.return_value = MagicMock(
+                result=mock_response, model_name="test-model"
+            )
 
             generator = SchemaGeneratorSubWorkflow()
             result = await generator.generate(sample_tasks, mock_context)
@@ -120,9 +136,7 @@ class TestSchemaGeneratorSubWorkflowGenerate:
             assert isinstance(result["task_002"], InterfaceSchema)
 
     @pytest.mark.asyncio
-    async def test_generate_validates_empty_tasks(
-        self, mock_context: ExecutionContext
-    ):
+    async def test_generate_validates_empty_tasks(self, mock_context: ExecutionContext):
         """generate() should raise error for empty task list."""
         from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.schema_generator import (
@@ -134,7 +148,10 @@ class TestSchemaGeneratorSubWorkflowGenerate:
         with pytest.raises(WorkflowError) as exc_info:
             await generator.generate([], mock_context)
 
-        assert "empty" in str(exc_info.value).lower() or "no tasks" in str(exc_info.value).lower()
+        assert (
+            "empty" in str(exc_info.value).lower()
+            or "no tasks" in str(exc_info.value).lower()
+        )
 
     @pytest.mark.asyncio
     async def test_generate_uses_context_for_llm_config(
@@ -160,7 +177,9 @@ class TestSchemaGeneratorSubWorkflowGenerate:
         with patch(
             "aiagent.langgraph.jobGeneratorV2.workflows.interface_design.schema_generator.invoke_structured_llm"
         ) as mock_llm:
-            mock_llm.return_value = MagicMock(result=mock_response, model_name="test-model")
+            mock_llm.return_value = MagicMock(
+                result=mock_response, model_name="test-model"
+            )
 
             generator = SchemaGeneratorSubWorkflow()
             await generator.generate(sample_tasks[:1], mock_context)
@@ -217,7 +236,7 @@ class TestSchemaGeneratorRetryBugFix:
         # Record max retries for INTERFACE_DESIGN
         for i in range(3):
             mock_context_with_retries.record_retry(
-                Phase.INTERFACE_DESIGN, f"Retry {i+1}"
+                Phase.INTERFACE_DESIGN, f"Retry {i + 1}"
             )
 
         # Now INTERFACE_DESIGN should be exhausted

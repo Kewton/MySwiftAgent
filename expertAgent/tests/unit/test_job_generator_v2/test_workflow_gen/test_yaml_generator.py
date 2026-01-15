@@ -3,7 +3,6 @@
 Issue #342 Phase D.3: Tests for YAML generation sub-workflow.
 """
 
-
 import pytest
 
 from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
@@ -93,12 +92,12 @@ class TestYamlGeneratorDataclasses:
         )
 
         result = YamlGenerationResult(
-            yaml_content="version: \"0.6\"",
+            yaml_content='version: "0.6"',
             workflow_name="test_workflow",
             node_count=3,
             generation_method="template",
         )
-        assert result.yaml_content == "version: \"0.6\""
+        assert result.yaml_content == 'version: "0.6"'
         assert result.workflow_name == "test_workflow"
         assert result.node_count == 3
 
@@ -112,13 +111,25 @@ class TestYamlGeneratorGenerate:
         return {
             "task_001": InterfaceSchema(
                 task_id="task_001",
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"emails": {"type": "array"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"emails": {"type": "array"}},
+                },
             ),
             "task_002": InterfaceSchema(
                 task_id="task_002",
-                input_schema={"type": "object", "properties": {"emails": {"type": "array"}}},
-                output_schema={"type": "object", "properties": {"summary": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"emails": {"type": "array"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"summary": {"type": "string"}},
+                },
             ),
         }
 

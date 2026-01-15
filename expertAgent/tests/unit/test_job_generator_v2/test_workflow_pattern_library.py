@@ -55,16 +55,12 @@ class TestWorkflowPatternLibrary:
 
     def test_suggest_pattern_search_summarize(self, library):
         """Suggest pattern for search and summarize requirement."""
-        suggestion = library.suggest_pattern(
-            "Google検索結果を要約してください"
-        )
+        suggestion = library.suggest_pattern("Google検索結果を要約してください")
         assert suggestion in ["search_and_summarize", "search_fetch_summarize"]
 
     def test_suggest_pattern_article_fetch(self, library):
         """Suggest pattern for article fetch requirement."""
-        suggestion = library.suggest_pattern(
-            "記事の内容を取得して要約してください"
-        )
+        suggestion = library.suggest_pattern("記事の内容を取得して要約してください")
         assert suggestion == "search_fetch_summarize"
 
     def test_suggest_pattern_web_content(self, library):
@@ -76,9 +72,7 @@ class TestWorkflowPatternLibrary:
 
     def test_suggest_pattern_default(self, library):
         """Default pattern suggestion for generic requirement."""
-        suggestion = library.suggest_pattern(
-            "何かをしてください"
-        )
+        suggestion = library.suggest_pattern("何かをしてください")
         assert suggestion is not None  # Should return some pattern
 
 
@@ -125,6 +119,7 @@ class TestWorkflowPatternLibraryTemplate:
         if ":source." in template_str:
             # All :source references should include user_input or job_params
             import re
+
             source_refs = re.findall(r":source\.\w+", template_str)
             for ref in source_refs:
                 # :source.user_input or :source.job_params
@@ -143,7 +138,11 @@ class TestWorkflowPatternLibraryTemplate:
         """Template does not use environment variables."""
         template = library.get_template("search_and_summarize")
         template_str = str(template)
-        assert "${" not in template_str or "${" in template_str and "{{" not in template_str
+        assert (
+            "${" not in template_str
+            or "${" in template_str
+            and "{{" not in template_str
+        )
         # Check for common env var patterns in URLs
         assert "${EXPERT" not in template_str
         assert "${API" not in template_str
@@ -205,7 +204,9 @@ class TestWorkflowPatternLibrarySearchFetchSummarize:
                             # Referenced node should be before current
                             if ref_node in node_names:
                                 ref_idx = node_names.index(ref_node)
-                                assert ref_idx < i, f"{node_name} refs {ref_node} which comes after"
+                                assert ref_idx < i, (
+                                    f"{node_name} refs {ref_node} which comes after"
+                                )
 
 
 class TestWorkflowPatternLibraryPatternProvider:

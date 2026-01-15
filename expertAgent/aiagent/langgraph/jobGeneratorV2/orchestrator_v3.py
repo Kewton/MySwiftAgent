@@ -13,12 +13,14 @@ from .orchestrator import (
 
 # Aliases for V3 naming convention used in tests
 JobGenerationOrchestratorV3 = JobGenerationOrchestrator
+JobGenerationRequestV3 = JobGenerationRequest
 JobGenerationResultV3 = JobGenerationResult
 
 __all__ = [
     "JobGenerationOrchestrator",
     "JobGenerationOrchestratorV3",  # Alias
     "JobGenerationRequest",
+    "JobGenerationRequestV3",  # Alias
     "JobGenerationResult",
     "JobGenerationResultV3",  # Alias
     "OrchestratorError",

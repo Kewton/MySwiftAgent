@@ -28,16 +28,20 @@ class TestExecutionContext:
         assert context.user_requirement == "Fetch emails and summarize"
 
     def test_execution_context_has_phase_retry_states(self):
-        """ExecutionContext should manage per-phase retry states."""
+        """ExecutionContext should manage per-phase retry states.
+
+        Note: ExecutionContext uses old 4-phase architecture (types_old).
+        For 3-phase architecture, see orchestrator_v3.py.
+        """
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job-123",
             user_requirement="Test requirement",
         )
 
-        # Should have retry state for each phase
+        # Should have retry state for each phase (old 4-phase architecture)
         assert context.get_phase_retry_state(Phase.TASK_BREAKDOWN) is not None
         assert context.get_phase_retry_state(Phase.INTERFACE_DESIGN) is not None
         assert context.get_phase_retry_state(Phase.REGISTRATION) is not None
@@ -46,7 +50,7 @@ class TestExecutionContext:
     def test_can_retry_checks_phase_state(self):
         """can_retry should check the specific phase's retry state."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job-123",
@@ -65,7 +69,7 @@ class TestExecutionContext:
     def test_total_retry_limit(self):
         """Should respect total retry limit across all phases."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job-123",
@@ -73,7 +77,7 @@ class TestExecutionContext:
             max_total_retries=5,
         )
 
-        # Record retries across different phases
+        # Record retries across different phases (old 4-phase architecture)
         context.record_retry(Phase.TASK_BREAKDOWN, "Retry 1")
         context.record_retry(Phase.TASK_BREAKDOWN, "Retry 2")
         context.record_retry(Phase.INTERFACE_DESIGN, "Retry 3")
@@ -87,7 +91,7 @@ class TestExecutionContext:
     def test_get_rollback_count(self):
         """Should track rollback count."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job-123",
@@ -96,6 +100,7 @@ class TestExecutionContext:
 
         assert context.get_rollback_count() == 0
 
+        # Old 4-phase architecture rollbacks
         context.record_rollback(Phase.INTERFACE_DESIGN, Phase.TASK_BREAKDOWN)
         assert context.get_rollback_count() == 1
 
@@ -227,7 +232,7 @@ class TestContextCanRetryMethod:
     def test_can_retry_returns_false_after_max_retries(self):
         """can_retry must return False after max retries to prevent infinite loop."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job",
@@ -235,7 +240,7 @@ class TestContextCanRetryMethod:
             max_phase_retries=3,
         )
 
-        phase = Phase.INTERFACE_DESIGN
+        phase = Phase.INTERFACE_DESIGN  # Uses old 4-phase architecture
 
         # Exhaust retries
         for i in range(3):
@@ -248,7 +253,7 @@ class TestContextCanRetryMethod:
     def test_can_retry_interface_method_matches_protocol(self):
         """can_retry should work as expected by ErrorRecoveryManager."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job",
@@ -256,6 +261,6 @@ class TestContextCanRetryMethod:
         )
 
         # This is how ErrorRecoveryManager calls it (via context protocol)
-        # The method should accept a phase parameter
+        # The method should accept a phase parameter (old 4-phase architecture)
         result = context.can_retry(Phase.TASK_BREAKDOWN)
         assert isinstance(result, bool)

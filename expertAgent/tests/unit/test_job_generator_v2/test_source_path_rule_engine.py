@@ -117,7 +117,9 @@ class TestSourcePathRuleEngine:
 
     def test_generate_path_node_reference(self, engine):
         """Generate path for node reference."""
-        path = engine.generate_path("node", "search_node.results", node_name="search_node")
+        path = engine.generate_path(
+            "node", "search_node.results", node_name="search_node"
+        )
         assert path == ":search_node.results"
 
     def test_generate_path_invalid_context(self, engine):

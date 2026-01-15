@@ -164,10 +164,18 @@ class TestCheckInterfaceCompatibility:
             output_schema={},
         )
         source_task = TaskDefinition(
-            id="task_001", name="Source", description="", task_type="", recommended_api=""
+            id="task_001",
+            name="Source",
+            description="",
+            task_type="",
+            recommended_api="",
         )
         target_task = TaskDefinition(
-            id="task_002", name="Target", description="", task_type="", recommended_api=""
+            id="task_002",
+            name="Target",
+            description="",
+            task_type="",
+            recommended_api="",
         )
 
         issues = _check_interface_compatibility(
@@ -257,12 +265,12 @@ class TestCompatibilityCheckerMissingInterfaces:
         result = await checker.check(tasks_with_deps, interfaces, mock_context)
 
         assert result.is_compatible is False
-        assert any("Missing interface for dependency" in issue for issue in result.issues)
+        assert any(
+            "Missing interface for dependency" in issue for issue in result.issues
+        )
 
     @pytest.mark.asyncio
-    async def test_check_unknown_dependency(
-        self, mock_context: ExecutionContext
-    ):
+    async def test_check_unknown_dependency(self, mock_context: ExecutionContext):
         """Should report unknown dependency task."""
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.compatibility import (
             CompatibilityCheckerSubWorkflow,
@@ -293,9 +301,7 @@ class TestCompatibilityCheckerMissingInterfaces:
         assert any("unknown task" in issue for issue in result.issues)
 
     @pytest.mark.asyncio
-    async def test_check_no_dependencies(
-        self, mock_context: ExecutionContext
-    ):
+    async def test_check_no_dependencies(self, mock_context: ExecutionContext):
         """Should pass for task with no dependencies."""
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.compatibility import (
             CompatibilityCheckerSubWorkflow,
@@ -325,15 +331,21 @@ class TestCompatibilityCheckerMissingInterfaces:
         assert result.is_compatible is True
 
     @pytest.mark.asyncio
-    async def test_check_empty_tasks(
-        self, mock_context: ExecutionContext
-    ):
+    async def test_check_empty_tasks(self, mock_context: ExecutionContext):
         """Should pass for empty tasks list."""
         from aiagent.langgraph.jobGeneratorV2.workflows.interface_design.compatibility import (
             CompatibilityCheckerSubWorkflow,
         )
 
         checker = CompatibilityCheckerSubWorkflow()
-        result = await checker.check([], {"task_001": InterfaceSchema(task_id="task_001", input_schema={}, output_schema={})}, mock_context)
+        result = await checker.check(
+            [],
+            {
+                "task_001": InterfaceSchema(
+                    task_id="task_001", input_schema={}, output_schema={}
+                )
+            },
+            mock_context,
+        )
 
         assert result.is_compatible is True

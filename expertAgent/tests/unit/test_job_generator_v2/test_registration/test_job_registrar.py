@@ -3,7 +3,6 @@
 Issue #342 Phase D.3: Tests for job registration sub-workflow.
 """
 
-
 import pytest
 
 from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext

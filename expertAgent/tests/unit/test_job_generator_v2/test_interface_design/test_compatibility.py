@@ -11,9 +11,11 @@ from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
 from aiagent.langgraph.jobGeneratorV2.types import (
     CompatibilityReport,
     InterfaceSchema,
-    Phase,
     TaskDefinition,
 )
+
+# Use old Phase enum for 4-phase architecture tests (ExecutionContext uses types_old)
+from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
 
 class TestCompatibilityCheckerExists:
@@ -222,14 +224,10 @@ class TestCompatibilityRecordsRetryOnFailure:
     ):
         """Compatibility check should use context retry state on failure."""
         # Get initial retry state for INTERFACE_DESIGN phase
-        initial_count = mock_context.get_phase_retry_state(
-            Phase.INTERFACE_DESIGN
-        ).count
+        initial_count = mock_context.get_phase_retry_state(Phase.INTERFACE_DESIGN).count
 
         # Record a retry (simulating what the workflow would do on failure)
-        mock_context.record_retry(
-            Phase.INTERFACE_DESIGN, "Compatibility check failed"
-        )
+        mock_context.record_retry(Phase.INTERFACE_DESIGN, "Compatibility check failed")
 
         # Verify retry was recorded for the correct phase
         new_count = mock_context.get_phase_retry_state(Phase.INTERFACE_DESIGN).count

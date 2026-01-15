@@ -478,7 +478,9 @@ class TestAPISchemaValidatorTypeMismatch:
         }
         errors = validator.validate(workflow)
         assert len(errors) >= 1
-        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        type_errors = [
+            e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH
+        ]
         assert len(type_errors) >= 1
         assert "queries" in type_errors[0].message.lower()
         assert "array" in type_errors[0].message.lower()
@@ -504,7 +506,9 @@ class TestAPISchemaValidatorTypeMismatch:
         }
         errors = validator.validate(workflow)
         # No type mismatch errors for references
-        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        type_errors = [
+            e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH
+        ]
         assert len(type_errors) == 0
 
     def test_type_mismatch_integer_as_string(self, validator):
@@ -527,7 +531,9 @@ class TestAPISchemaValidatorTypeMismatch:
             }
         }
         errors = validator.validate(workflow)
-        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        type_errors = [
+            e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH
+        ]
         assert len(type_errors) >= 1
         assert "num" in type_errors[0].message.lower()
         assert "integer" in type_errors[0].message.lower()
@@ -552,7 +558,9 @@ class TestAPISchemaValidatorTypeMismatch:
             }
         }
         errors = validator.validate(workflow)
-        type_errors = [e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH]
+        type_errors = [
+            e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH
+        ]
         assert len(type_errors) == 0
 
 
@@ -562,7 +570,9 @@ class TestValidationErrorCodeExtension:
     def test_unknown_api_parameter_exists(self):
         """UNKNOWN_API_PARAMETER error code should exist."""
         assert hasattr(ValidationErrorCode, "UNKNOWN_API_PARAMETER")
-        assert ValidationErrorCode.UNKNOWN_API_PARAMETER.value == "UNKNOWN_API_PARAMETER"
+        assert (
+            ValidationErrorCode.UNKNOWN_API_PARAMETER.value == "UNKNOWN_API_PARAMETER"
+        )
 
     def test_missing_required_parameter_exists(self):
         """MISSING_REQUIRED_PARAMETER error code should exist."""
@@ -576,12 +586,14 @@ class TestValidationErrorCodeExtension:
         """PARAMETER_TYPE_MISMATCH error code should exist."""
         assert hasattr(ValidationErrorCode, "PARAMETER_TYPE_MISMATCH")
         assert (
-            ValidationErrorCode.PARAMETER_TYPE_MISMATCH.value == "PARAMETER_TYPE_MISMATCH"
+            ValidationErrorCode.PARAMETER_TYPE_MISMATCH.value
+            == "PARAMETER_TYPE_MISMATCH"
         )
 
     def test_parameter_name_mismatch_exists(self):
         """PARAMETER_NAME_MISMATCH error code should exist."""
         assert hasattr(ValidationErrorCode, "PARAMETER_NAME_MISMATCH")
         assert (
-            ValidationErrorCode.PARAMETER_NAME_MISMATCH.value == "PARAMETER_NAME_MISMATCH"
+            ValidationErrorCode.PARAMETER_NAME_MISMATCH.value
+            == "PARAMETER_NAME_MISMATCH"
         )

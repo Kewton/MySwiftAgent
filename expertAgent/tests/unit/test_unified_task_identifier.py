@@ -5,7 +5,6 @@ Issue #359: Tests for the new unified ID system.
 TDD Red Phase: These tests define the expected behavior of the new types.
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
     ParallelExecutionResult,
@@ -31,8 +30,7 @@ class TestUnifiedTaskIdentifier:
     def test_create_with_both_ids(self):
         """Test creating identifier with both IDs."""
         identifier = UnifiedTaskIdentifier(
-            task_id="task_001",
-            task_master_id="tm_abc123"
+            task_id="task_001", task_master_id="tm_abc123"
         )
 
         assert identifier.task_id == "task_001"
@@ -89,7 +87,7 @@ class TestTaskResult:
             task_id="task_001",
             success=True,
             workflow={"workflow_name": "test_workflow"},
-            execution_time_ms=150.5
+            execution_time_ms=150.5,
         )
 
         assert result.task_id == "task_001"
@@ -104,13 +102,10 @@ class TestTaskResult:
         error = TaskExecutionError(
             error_type=ErrorType.VALIDATION,
             message="Schema validation failed",
-            recoverable=True
+            recoverable=True,
         )
         result = TaskResult(
-            task_id="task_001",
-            success=False,
-            error=error,
-            retry_count=2
+            task_id="task_001", success=False, error=error, retry_count=2
         )
 
         assert result.success is False
@@ -128,9 +123,7 @@ class TestParallelExecutionResult:
             TaskResult(task_id="task_002", success=True),
         ]
         result = ParallelExecutionResult(
-            successful_tasks=successful,
-            failed_tasks=[],
-            total_execution_time_ms=500.0
+            successful_tasks=successful, failed_tasks=[], total_execution_time_ms=500.0
         )
 
         assert result.all_succeeded is True
@@ -147,16 +140,14 @@ class TestParallelExecutionResult:
                 task_id="task_002",
                 success=False,
                 error=TaskExecutionError(
-                    error_type=ErrorType.TRANSIENT,
-                    message="Timeout",
-                    recoverable=True
-                )
+                    error_type=ErrorType.TRANSIENT, message="Timeout", recoverable=True
+                ),
             ),
         ]
         result = ParallelExecutionResult(
             successful_tasks=successful,
             failed_tasks=failed,
-            total_execution_time_ms=500.0
+            total_execution_time_ms=500.0,
         )
 
         assert result.all_succeeded is False
@@ -170,16 +161,12 @@ class TestParallelExecutionResult:
                 task_id="task_001",
                 success=False,
                 error=TaskExecutionError(
-                    error_type=ErrorType.FATAL,
-                    message="Fatal error",
-                    recoverable=False
-                )
+                    error_type=ErrorType.FATAL, message="Fatal error", recoverable=False
+                ),
             ),
         ]
         result = ParallelExecutionResult(
-            successful_tasks=[],
-            failed_tasks=failed,
-            total_execution_time_ms=500.0
+            successful_tasks=[], failed_tasks=failed, total_execution_time_ms=500.0
         )
 
         assert result.all_succeeded is False
@@ -195,8 +182,8 @@ class TestParallelExecutionResult:
                 error=TaskExecutionError(
                     error_type=ErrorType.VALIDATION,
                     message="Validation failed",
-                    recoverable=True
-                )
+                    recoverable=True,
+                ),
             ),
             TaskResult(
                 task_id="task_002",
@@ -204,14 +191,12 @@ class TestParallelExecutionResult:
                 error=TaskExecutionError(
                     error_type=ErrorType.TRANSIENT,
                     message="Timeout occurred",
-                    recoverable=True
-                )
+                    recoverable=True,
+                ),
             ),
         ]
         result = ParallelExecutionResult(
-            successful_tasks=[],
-            failed_tasks=failed,
-            total_execution_time_ms=500.0
+            successful_tasks=[], failed_tasks=failed, total_execution_time_ms=500.0
         )
 
         summary = result.get_error_summary()
@@ -257,7 +242,7 @@ class TestPhaseError:
             error_type=ErrorType.VALIDATION,
             message="Schema validation failed",
             details={"field": "input_schema", "issue": "missing required property"},
-            recoverable=True
+            recoverable=True,
         )
 
         assert error.phase == "JOB_ANALYSIS"
@@ -269,9 +254,7 @@ class TestPhaseError:
     def test_default_values(self):
         """Test default values for optional fields."""
         error = PhaseError(
-            phase="WORKFLOW_GEN",
-            error_type=ErrorType.TRANSIENT,
-            message="Timeout"
+            phase="WORKFLOW_GEN", error_type=ErrorType.TRANSIENT, message="Timeout"
         )
 
         assert error.details is None
@@ -288,7 +271,7 @@ class TestRecoveryAction:
         action = RecoveryAction(
             strategy=RecoveryStrategy.RETRY_WITH_FEEDBACK,
             feedback="Please fix the schema validation errors",
-            retry_count=1
+            retry_count=1,
         )
 
         assert action.strategy == RecoveryStrategy.RETRY_WITH_FEEDBACK
@@ -300,7 +283,7 @@ class TestRecoveryAction:
         action = RecoveryAction(
             strategy=RecoveryStrategy.FAIL_FAST,
             feedback="Fatal error occurred",
-            error_summary="Authentication failed"
+            error_summary="Authentication failed",
         )
 
         assert action.strategy == RecoveryStrategy.FAIL_FAST
@@ -316,7 +299,7 @@ class TestTaskExecutionError:
             error_type=ErrorType.VALIDATION,
             message="Invalid workflow YAML",
             recoverable=True,
-            details={"line": 10, "error": "syntax error"}
+            details={"line": 10, "error": "syntax error"},
         )
 
         assert error.error_type == ErrorType.VALIDATION
@@ -326,9 +309,6 @@ class TestTaskExecutionError:
 
     def test_default_recoverable(self):
         """Test default recoverable is True."""
-        error = TaskExecutionError(
-            error_type=ErrorType.TRANSIENT,
-            message="Timeout"
-        )
+        error = TaskExecutionError(error_type=ErrorType.TRANSIENT, message="Timeout")
 
         assert error.recoverable is True
