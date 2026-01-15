@@ -90,6 +90,8 @@ TodoWriteツールで作業計画を作成してください：
 - [ ] Phase 3.5: 受入テストファイル検証【必須】
 - [ ] Phase 4: リファクタリング
 - [ ] Phase 5: 進捗報告
+- [ ] Phase 5.5: 品質チェック【必須】（pre-push-check-all.sh）
+- [ ] Phase 6: ドキュメンテーション【推奨】
 ```
 
 各フェーズ開始時に`in_progress`に、完了時に`completed`に更新してください。
@@ -1848,7 +1850,283 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/progress-re
 - ブロッカー（あれば）
 - 次のステップ
 
-TodoWriteでPhase 5を`completed`に設定。
+TodoWriteでPhase 5を`completed`に、Phase 5.5を`in_progress`に設定。
+
+---
+
+### Phase 5.5: 品質チェック実行【必須】
+
+**重要**: PRを作成する前に、`pre-push-check-all.sh` を実行してすべての品質チェックが通ることを確認します。
+
+#### 5.5-1. 品質チェックスクリプト実行
+
+以下のBashコマンドを実行してください：
+
+```bash
+./scripts/pre-push-check-all.sh
+```
+
+**チェック内容**:
+| チェック項目 | ツール | 基準 |
+|-------------|--------|------|
+| 静的解析 | Ruff | エラー0件 |
+| 型チェック | MyPy | エラー0件 |
+| 単体テスト | pytest | 全テストパス |
+| カバレッジ | pytest-cov | 90%以上 |
+| フォーマット | Ruff format | 差分なし |
+
+#### 5.5-2. 結果判定
+
+##### ケース1: 全チェック成功
+
+```
+✅ All pre-push checks passed!
+```
+
+→ **Phase 6へ進む**
+
+TodoWriteでPhase 5.5を`completed`に、Phase 6を`in_progress`に設定。
+
+##### ケース2: チェック失敗
+
+```
+❌ Pre-push checks failed
+
+## 失敗項目
+- Ruff: 3 errors found
+- MyPy: 1 error found
+
+## 対応が必要なファイル
+- src/module/file.py:25: E501 Line too long
+- src/module/file.py:42: Missing type annotation
+```
+
+→ **修正が必要**
+
+1. エラー内容を確認
+2. 自動修正可能な場合は実行：
+   ```bash
+   uv run ruff check --fix .
+   uv run ruff format .
+   ```
+3. 手動修正が必要な場合は修正を実施
+4. 再度 `./scripts/pre-push-check-all.sh` を実行
+5. 成功するまで繰り返し（最大3回）
+
+**3回失敗した場合**:
+ユーザーにエスカレーション：
+```
+⚠️ 品質チェックが3回連続で失敗しました
+
+## 最終エラー
+{エラー内容}
+
+## 推奨アクション
+1. 手動でエラーを修正する
+2. 一部のチェックをスキップして進める（非推奨）
+3. Issue要件を見直す
+```
+
+---
+
+### Phase 6: ドキュメンテーション【推奨】
+
+**目的**: 実装した機能のドキュメントを作成・更新します。
+
+#### スキップ条件
+
+以下の場合はPhase 6をスキップできます：
+- `internal` ラベル（内部リファクタリング）
+- `test-only` ラベル（テストコードのみの変更）
+- `ci-only` ラベル（CI/CD設定のみの変更）
+
+**上記以外の機能追加・変更では、ドキュメンテーションを推奨します。**
+
+#### 6-1. ドキュメンテーション対象の判定
+
+Issue情報から必要なドキュメントを判定：
+
+| Issue種別 | 必要なドキュメント |
+|----------|------------------|
+| 新規API追加 | API_REFERENCE.md 更新、使用例追加 |
+| 既存API変更 | API_REFERENCE.md 更新、破壊的変更の記載 |
+| 新規機能追加 | README.md 更新、機能説明追加 |
+| 設定変更 | 設定ドキュメント更新 |
+| ワークフロー追加 | GRAPHAI_WORKFLOW_GENERATION_RULES.md 更新 |
+
+#### 6-2. ドキュメントコンテキストファイル作成
+
+Writeツールで以下のファイルを作成：
+
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/documentation-context.json
+```
+
+**内容**:
+```json
+{
+  "issue_number": {issue_number},
+  "issue_title": "Issue title",
+  "change_type": "new_feature",
+  "target_project": "expertAgent",
+  "documentation_tasks": [
+    {
+      "task_id": "D1",
+      "type": "api_reference",
+      "file": "expertAgent/docs/API_REFERENCE.md",
+      "action": "add_endpoint",
+      "details": {
+        "endpoint": "/v1/new-endpoint",
+        "method": "POST",
+        "description": "新規エンドポイントの説明"
+      }
+    },
+    {
+      "task_id": "D2",
+      "type": "readme",
+      "file": "README.md",
+      "action": "add_feature",
+      "details": {
+        "section": "## 新機能",
+        "description": "機能の概要説明"
+      }
+    }
+  ],
+  "code_examples_needed": true,
+  "breaking_changes": []
+}
+```
+
+#### 6-3. ドキュメント作成
+
+各ドキュメンテーションタスクを実行：
+
+##### API ドキュメント更新（API_REFERENCE.md）
+
+```markdown
+## 新規エンドポイント: POST /v1/new-endpoint
+
+### 概要
+{エンドポイントの説明}
+
+### リクエスト
+```json
+{
+  "param1": "string",
+  "param2": 123
+}
+```
+
+### レスポンス
+```json
+{
+  "result": "success",
+  "data": {}
+}
+```
+
+### 使用例
+```bash
+curl -X POST http://localhost:8104/v1/new-endpoint \
+  -H "Content-Type: application/json" \
+  -d '{"param1": "value", "param2": 123}'
+```
+
+### エラーコード
+| コード | 説明 |
+|--------|------|
+| 400 | 不正なリクエスト |
+| 404 | リソースが見つからない |
+| 500 | サーバーエラー |
+```
+
+##### README 更新
+
+実装した機能をREADMEに追記（該当する場合）：
+- 機能概要
+- 使用方法
+- 設定項目
+
+##### 変更履歴（CHANGELOG）
+
+変更履歴がある場合は更新：
+```markdown
+## [Unreleased]
+
+### Added
+- Issue #{issue_number}: {機能の説明}
+```
+
+#### 6-4. ドキュメント検証
+
+作成・更新したドキュメントを検証：
+
+```bash
+# Markdown構文チェック（任意）
+npx markdownlint-cli docs/**/*.md
+
+# リンク切れチェック（任意）
+npx markdown-link-check docs/**/*.md
+```
+
+#### 6-5. ドキュメント結果ファイル作成
+
+Writeツールで結果ファイルを作成：
+
+**ファイルパス**:
+```
+dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/documentation-result.json
+```
+
+**内容**:
+```json
+{
+  "status": "completed",
+  "documentation_tasks_completed": [
+    {
+      "task_id": "D1",
+      "file": "expertAgent/docs/API_REFERENCE.md",
+      "action": "add_endpoint",
+      "lines_added": 45
+    },
+    {
+      "task_id": "D2",
+      "file": "README.md",
+      "action": "add_feature",
+      "lines_added": 12
+    }
+  ],
+  "files_modified": [
+    "expertAgent/docs/API_REFERENCE.md",
+    "README.md"
+  ],
+  "skipped": false,
+  "skip_reason": null
+}
+```
+
+#### 6-6. 次のフェーズへ
+
+TodoWriteでPhase 6を`completed`に設定。
+
+**全フェーズ完了後**:
+```
+🎉 Issue #{issue_number} の開発が完了しました！
+
+## サマリ
+- TDD実装: ✅ 成功（カバレッジ: 92.5%）
+- 受入テスト: ✅ 成功
+- リファクタリング: ✅ 成功
+- 品質チェック: ✅ 成功（pre-push-check-all.sh パス）
+- ドキュメント: ✅ 完了（2ファイル更新）
+
+## 次のステップ
+1. `git add .` でステージング
+2. `git commit -m "feat(projectName): Issue #{issue_number} - {title}"` でコミット
+3. `git push` でプッシュ
+4. `/pm-create-pr` でPR作成
+```
 
 ---
 
@@ -1933,14 +2211,16 @@ dev-reports/feature/issue/{issue_number}/
     │   ├── tdd-result.json                         ← TDD実装の出力
     │   ├── implemented-features.json               ← 実装機能一覧
     │   ├── implementation-verification-result.json ← 実装検証結果
-    │   ├── acceptance-plan-context.json            ← 【新規】受入テスト計画の入力
-    │   ├── acceptance-plan-review-context.json     ← 【新規】受入テスト計画レビューの入力
+    │   ├── acceptance-plan-context.json            ← 受入テスト計画の入力
+    │   ├── acceptance-plan-review-context.json     ← 受入テスト計画レビューの入力
     │   ├── acceptance-context.json                 ← 受入テスト実行の入力
     │   ├── acceptance-result.json                  ← 受入テスト実行の出力
     │   ├── refactor-context.json                   ← リファクタリングの入力
     │   ├── refactor-result.json                    ← リファクタリングの出力
     │   ├── progress-context.json                   ← 進捗レポートの入力（作業計画比較含む）
-    │   └── progress-report.md                      ← 進捗レポート（Markdown）
+    │   ├── progress-report.md                      ← 進捗レポート（Markdown）
+    │   ├── documentation-context.json              ← 【新規】ドキュメンテーションの入力
+    │   └── documentation-result.json               ← 【新規】ドキュメンテーションの出力
     ├── iteration-2/                                ← イテレーション2（失敗時）
     │   ├── tdd-context.json
     │   └── ...
@@ -1965,6 +2245,8 @@ dev-reports/feature/issue/{issue_number}/
 - ✅ Phase 3.5: 受入テストファイル検証完了
 - ✅ Phase 4: リファクタリング完了（または失敗時は理由報告）
 - ✅ Phase 5: 進捗レポート作成完了
+- ✅ Phase 5.5: 品質チェック成功（pre-push-check-all.sh 全パス）【必須】
+- ✅ Phase 6: ドキュメンテーション完了（または該当なしの場合はスキップ）【推奨】
 
 ---
 
