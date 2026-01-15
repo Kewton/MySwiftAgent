@@ -245,4 +245,7 @@ class JobGeneratorAdapter:
             )
 
 
-__all__ = ["JobGeneratorAdapter"]
+# Re-export from adapter_old for backward compatibility
+from .adapter_old import JobGeneratorV2Adapter
+
+__all__ = ["JobGeneratorAdapter", "JobGeneratorV2Adapter"]

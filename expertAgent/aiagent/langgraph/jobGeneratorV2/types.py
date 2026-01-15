@@ -265,8 +265,59 @@ class Phase(Enum):
     WORKFLOW_GEN = "workflow_gen"
 
 
+class PhaseStatus(Enum):
+    """Status of a phase execution.
+
+    - SUCCESS: Phase completed successfully
+    - FAILED: Phase failed (cannot recover)
+    - NEEDS_RETRY: Phase needs to be retried (recoverable error)
+    - NEEDS_RELAXATION: Requirements need to be relaxed (business constraint)
+    """
+
+    SUCCESS = "success"
+    FAILED = "failed"
+    NEEDS_RETRY = "needs_retry"
+    NEEDS_RELAXATION = "needs_relaxation"
+
+
+# Re-export types from types_old for backward compatibility
+from .types_old import (
+    Capability,
+    CompatibilityReport,
+    DerivedFieldDefinition,
+    EnrichmentReport,
+    FeasibilityReport,
+    InterfaceDesignInput,
+    InterfaceDesignOutput,
+    InterfaceSchema,
+    InterfaceSchemaDefinition,
+    InterfaceSchemaResponse,
+    JobBodyParameter,
+    JobGenerationRequest,
+    JobGenerationResult,
+    RecommendedAPI,
+    RegistrationInput,
+    RegistrationOutput,
+    RelaxationSuggestion,
+    RetryAttempt,
+    RetryState,
+    SchemaCountMismatchResult,
+    SkipAggregator,
+    SkipInfo,
+    TaskBreakdownInput,
+    TaskBreakdownItem,
+    TaskBreakdownOutput,
+    TaskBreakdownResponse,
+    TaskDefinition,
+    TaskIdMapping,
+    WorkflowGenInput,
+    WorkflowGenOutput,
+    WorkflowGenPhaseOutput,
+)
+
 # Export all types
 __all__ = [
+    # New V3 types
     "ErrorType",
     "RecoveryStrategy",
     "TaskExecutionError",
@@ -274,6 +325,39 @@ __all__ = [
     "TaskResult",
     "ParallelExecutionResult",
     "PhaseError",
+    "PhaseStatus",
     "RecoveryAction",
     "Phase",
+    # Re-exported from types_old for backward compatibility
+    "Capability",
+    "CompatibilityReport",
+    "DerivedFieldDefinition",
+    "EnrichmentReport",
+    "FeasibilityReport",
+    "InterfaceDesignInput",
+    "InterfaceDesignOutput",
+    "InterfaceSchema",
+    "InterfaceSchemaDefinition",
+    "InterfaceSchemaResponse",
+    "JobBodyParameter",
+    "JobGenerationRequest",
+    "JobGenerationResult",
+    "RecommendedAPI",
+    "RegistrationInput",
+    "RegistrationOutput",
+    "RelaxationSuggestion",
+    "RetryAttempt",
+    "RetryState",
+    "SchemaCountMismatchResult",
+    "SkipAggregator",
+    "SkipInfo",
+    "TaskBreakdownInput",
+    "TaskBreakdownItem",
+    "TaskBreakdownOutput",
+    "TaskBreakdownResponse",
+    "TaskDefinition",
+    "TaskIdMapping",
+    "WorkflowGenInput",
+    "WorkflowGenOutput",
+    "WorkflowGenPhaseOutput",
 ]

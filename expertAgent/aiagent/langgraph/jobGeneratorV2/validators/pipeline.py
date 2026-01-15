@@ -442,11 +442,16 @@ class ValidationPipeline:
         return stats
 
 
+# Backward compatibility alias for V3 naming
+ValidationPipelineV3 = ValidationPipeline
+
+
 # Export
 __all__ = [
     "StructuralValidator",
     "SchemaValidator",
     "SemanticValidator",
     "ValidationPipeline",
+    "ValidationPipelineV3",  # Alias for backward compatibility
     "PipelineStats",
 ]
