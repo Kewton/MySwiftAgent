@@ -1,0 +1,203 @@
+{
+  "issue_number": 362,
+  "issue_title": "feat(mySwiftAgentCore): 新規TypeScriptプロジェクトの作成",
+  "issue_type": "new_project_creation",
+  "target_project": "mySwiftAgentCore",
+  "acceptance_criteria": [
+    "AC-1: プロジェクト構造が作成されている",
+    "AC-2: package.json, tsconfig.json が設定されている",
+    "AC-3: ESLint, Prettier が設定されている",
+    "AC-4: 基本的なAPIエンドポイントが動作する",
+    "AC-5: ヘルスチェックエンドポイント /health が動作する",
+    "AC-6: Langfuseトレースが記録される",
+    "AC-7: docker-compose.core.yml が作成されている",
+    "AC-8: docker-compose.yml に include されている",
+    "AC-9: make dev-core でサービスが起動する",
+    "AC-10: make dev-all に組み込まれている",
+    "AC-11: dev-hybrid.sh でローカル起動できる",
+    "AC-12: health-check.sh でヘルスチェックできる",
+    "AC-13: .env.example に環境変数が追加されている",
+    "AC-14: GitHub Actionsワークフローが設定されている",
+    "AC-15: Dockerイメージがビルドできる"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "phase": "Phase 1: 基盤構築",
+      "description": "プロジェクト初期化（npm init, TypeScript設定）",
+      "deliverables": [
+        "mySwiftAgentCore/package.json",
+        "mySwiftAgentCore/tsconfig.json"
+      ]
+    },
+    {
+      "task_id": "1.2",
+      "phase": "Phase 1: 基盤構築",
+      "description": "開発環境設定（ESLint, Prettier, .gitignore）",
+      "deliverables": [
+        "mySwiftAgentCore/eslint.config.mjs",
+        "mySwiftAgentCore/.prettierrc",
+        "mySwiftAgentCore/.gitignore"
+      ]
+    },
+    {
+      "task_id": "1.3",
+      "phase": "Phase 1: 基盤構築",
+      "description": "依存関係インストール（Hono, Zod, Vitest等）",
+      "deliverables": [
+        "mySwiftAgentCore/package-lock.json"
+      ]
+    },
+    {
+      "task_id": "1.4",
+      "phase": "Phase 1: 基盤構築",
+      "description": "基本アーキテクチャ実装（Hono APIサーバー、ヘルスチェック）",
+      "deliverables": [
+        "mySwiftAgentCore/src/index.ts",
+        "mySwiftAgentCore/src/api/routes.ts",
+        "mySwiftAgentCore/src/api/health.ts"
+      ]
+    },
+    {
+      "task_id": "1.5",
+      "phase": "Phase 1: 基盤構築",
+      "description": "Shared Components実装（Context Manager インターフェース、型定義）",
+      "deliverables": [
+        "mySwiftAgentCore/src/shared/context/ExecutionContext.ts",
+        "mySwiftAgentCore/src/shared/context/VariableResolver.ts",
+        "mySwiftAgentCore/src/shared/context/SecretManager.ts",
+        "mySwiftAgentCore/src/shared/context/ValidationCoordinator.ts",
+        "mySwiftAgentCore/src/shared/types/workflow.types.ts",
+        "mySwiftAgentCore/src/shared/types/capability.types.ts",
+        "mySwiftAgentCore/src/shared/types/error.types.ts"
+      ]
+    },
+    {
+      "task_id": "1.6",
+      "phase": "Phase 1: 基盤構築",
+      "description": "セキュリティ基盤実装（設定検証、SECURITY_DEFAULTS）",
+      "deliverables": [
+        "mySwiftAgentCore/src/config/security.ts",
+        "mySwiftAgentCore/src/middleware/auth.ts"
+      ]
+    },
+    {
+      "task_id": "1.7",
+      "phase": "Phase 1: 基盤構築",
+      "description": "各サービスのスタブ実装",
+      "deliverables": [
+        "mySwiftAgentCore/src/taskflowEngine/index.ts",
+        "mySwiftAgentCore/src/taskflowGeneratorAgent/index.ts",
+        "mySwiftAgentCore/src/capabilityManagement/index.ts"
+      ]
+    },
+    {
+      "task_id": "2.1",
+      "phase": "Phase 2: インフラ統合",
+      "description": "Docker対応",
+      "deliverables": [
+        "mySwiftAgentCore/Dockerfile",
+        "mySwiftAgentCore/.dockerignore"
+      ]
+    },
+    {
+      "task_id": "2.2",
+      "phase": "Phase 2: インフラ統合",
+      "description": "Docker Compose統合",
+      "deliverables": [
+        "docker-compose.core.yml"
+      ]
+    },
+    {
+      "task_id": "2.3",
+      "phase": "Phase 2: インフラ統合",
+      "description": "スクリプト更新（dev-hybrid.sh, health-check.sh）",
+      "deliverables": [
+        "scripts/dev-hybrid.sh (update)",
+        "scripts/health-check.sh (update)"
+      ]
+    },
+    {
+      "task_id": "2.4",
+      "phase": "Phase 2: インフラ統合",
+      "description": "Makefile更新",
+      "deliverables": [
+        "Makefile (update)"
+      ]
+    },
+    {
+      "task_id": "2.5",
+      "phase": "Phase 2: インフラ統合",
+      "description": "環境変数・設定ファイル更新",
+      "deliverables": [
+        ".env.example (update)"
+      ]
+    },
+    {
+      "task_id": "3.1",
+      "phase": "Phase 3: テスト実装",
+      "description": "Vitest設定、テストディレクトリ作成",
+      "deliverables": [
+        "mySwiftAgentCore/vitest.config.ts",
+        "mySwiftAgentCore/tests/setup.ts"
+      ]
+    },
+    {
+      "task_id": "3.2",
+      "phase": "Phase 3: テスト実装",
+      "description": "単体テスト実装",
+      "deliverables": [
+        "mySwiftAgentCore/tests/unit/shared/context.test.ts",
+        "mySwiftAgentCore/tests/unit/api/health.test.ts",
+        "mySwiftAgentCore/tests/unit/config/security.test.ts"
+      ]
+    },
+    {
+      "task_id": "4.1",
+      "phase": "Phase 4: CI/CDとドキュメント",
+      "description": "GitHub Actions設定",
+      "deliverables": [
+        ".github/workflows/myswiftagentcore.yml"
+      ]
+    },
+    {
+      "task_id": "4.2",
+      "phase": "Phase 4: CI/CDとドキュメント",
+      "description": "ドキュメント作成",
+      "deliverables": [
+        "mySwiftAgentCore/README.md"
+      ]
+    }
+  ],
+  "technical_stack": {
+    "language": "TypeScript 5.x",
+    "runtime": "Bun (preferred) / Node.js",
+    "framework": "Hono",
+    "validation": "Zod",
+    "testing": "Vitest",
+    "tracing": "Langfuse JS SDK"
+  },
+  "design_policy_items": {
+    "context_manager_separation": {
+      "components": ["ExecutionContext", "VariableResolver", "SecretManager", "ValidationCoordinator"],
+      "pattern": "Facade + Dependency Injection"
+    },
+    "partial_success_model": {
+      "status_enum": ["success", "partial_success", "failed"],
+      "types": ["WorkflowExecutionResult", "StepError", "RecoveryAction"]
+    },
+    "security_defaults": {
+      "required_env_vars": ["API_TOKEN", "ADMIN_TOKEN", "MYVAULT_SERVICE_TOKEN"],
+      "startup_validation": "validateSecurityConfig()"
+    }
+  },
+  "target_coverage": 90,
+  "definition_of_done": [
+    "すべてのPhase 1-4タスクが完了",
+    "TypeScriptコンパイルエラー: 0件",
+    "ESLintエラー: 0件",
+    "単体テストカバレッジ: 90%以上",
+    "Dockerイメージビルド成功",
+    "ヘルスチェック応答確認"
+  ]
+}

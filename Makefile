@@ -29,6 +29,7 @@ SHELL := /bin/bash
 COMPOSE_PLATFORM := docker-compose.platform.yml
 COMPOSE_AGENT := docker-compose.agent.yml
 COMPOSE_FRONTEND := docker-compose.frontend.yml
+COMPOSE_CORE := docker-compose.core.yml
 
 # Network configuration
 NETWORK_NAME := myswiftagent-network
@@ -37,6 +38,7 @@ NETWORK_NAME := myswiftagent-network
 MYVAULT_PORT := 8003
 JOBQUEUE_PORT := 8001
 EXPERTAGENT_PORT := 8004
+MYSWIFTAGENTCORE_PORT := 8006
 
 # Health check timeouts (seconds)
 HEALTH_CHECK_TIMEOUT := 60
@@ -50,8 +52,8 @@ DOCKER_COMPOSE := docker compose
 # =============================================================================
 
 .PHONY: help
-.PHONY: dev-platform dev-agent dev-frontend dev-all init-myvault
-.PHONY: down down-platform down-agent down-frontend
+.PHONY: dev-platform dev-agent dev-frontend dev-core dev-all init-myvault
+.PHONY: down down-platform down-agent down-frontend down-core
 .PHONY: stop stop-platform stop-agent stop-frontend
 .PHONY: logs logs-platform logs-agent logs-frontend
 .PHONY: status rebuild clean clean-safe network
@@ -148,6 +150,11 @@ dev-frontend: _check-not-worktree _check-agent ## Start Frontend layer (commonui
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) up -d
 	@echo "Frontend layer started successfully"
 
+dev-core: _check-not-worktree _check-platform ## Start Core layer (myswiftagentcore) - requires Platform
+	@echo "Starting Core layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_CORE) up -d
+	@echo "Core layer started successfully"
+
 dev-all: _check-not-worktree network ## Start all layers in order (Platform -> Agent -> Frontend)
 	@echo "Starting all services..."
 	@echo ""
@@ -200,6 +207,11 @@ down-frontend: ## Stop Frontend layer
 	@echo "Stopping Frontend layer..."
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FRONTEND) down
 	@echo "Frontend layer stopped"
+
+down-core: ## Stop Core layer
+	@echo "Stopping Core layer..."
+	$(DOCKER_COMPOSE) -f $(COMPOSE_CORE) down
+	@echo "Core layer stopped"
 
 # =============================================================================
 # Safe Stop Targets (Containers preserved, data retained)

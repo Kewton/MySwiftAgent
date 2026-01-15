@@ -36,6 +36,7 @@ MYSCHEDULER_PORT="${MYSCHEDULER_PORT:-8002}"
 MYVAULT_PORT="${MYVAULT_PORT:-8003}"
 EXPERTAGENT_PORT="${EXPERTAGENT_PORT:-8004}"
 GRAPHAISERVER_PORT="${GRAPHAISERVER_PORT:-8005}"
+MYSWIFTAGENTCORE_PORT="${MYSWIFTAGENTCORE_PORT:-8006}"
 MYAGENTDESK_PORT="${MYAGENTDESK_PORT:-8000}"
 COMMONUI_PORT="${COMMONUI_PORT:-8501}"
 LANGFUSE_PORT="${LANGFUSE_PORT:-3001}"
@@ -46,12 +47,14 @@ export JOBQUEUE_BASE_URL="http://localhost:${JOBQUEUE_PORT}"
 export MYSCHEDULER_BASE_URL="http://localhost:${MYSCHEDULER_PORT}"
 export EXPERTAGENT_BASE_URL="http://localhost:${EXPERTAGENT_PORT}"
 export GRAPHAISERVER_BASE_URL="http://localhost:${GRAPHAISERVER_PORT}"
+export MYSWIFTAGENTCORE_BASE_URL="http://localhost:${MYSWIFTAGENTCORE_PORT}"
 
 # Directories
 JOBQUEUE_DIR="$PROJECT_ROOT/jobqueue"
 MYSCHEDULER_DIR="$PROJECT_ROOT/myscheduler"
 EXPERTAGENT_DIR="$PROJECT_ROOT/expertAgent"
 GRAPHAISERVER_DIR="$PROJECT_ROOT/graphAiServer"
+MYSWIFTAGENTCORE_DIR="$PROJECT_ROOT/mySwiftAgentCore"
 MYAGENTDESK_DIR="$PROJECT_ROOT/myAgentDesk"
 COMMONUI_DIR="$PROJECT_ROOT/commonUI"
 
@@ -64,6 +67,7 @@ JOBQUEUE_LOG="$LOG_DIR/jobqueue.log"
 MYSCHEDULER_LOG="$LOG_DIR/myscheduler.log"
 EXPERTAGENT_LOG="$LOG_DIR/expertagent.log"
 GRAPHAISERVER_LOG="$LOG_DIR/graphaiserver.log"
+MYSWIFTAGENTCORE_LOG="$LOG_DIR/myswiftagentcore.log"
 MYAGENTDESK_LOG="$LOG_DIR/myagentdesk.log"
 COMMONUI_LOG="$LOG_DIR/commonui.log"
 
@@ -72,6 +76,7 @@ JOBQUEUE_PID="$PID_DIR/jobqueue.pid"
 MYSCHEDULER_PID="$PID_DIR/myscheduler.pid"
 EXPERTAGENT_PID="$PID_DIR/expertagent.pid"
 GRAPHAISERVER_PID="$PID_DIR/graphaiserver.pid"
+MYSWIFTAGENTCORE_PID="$PID_DIR/myswiftagentcore.pid"
 MYAGENTDESK_PID="$PID_DIR/myagentdesk.pid"
 COMMONUI_PID="$PID_DIR/commonui.pid"
 
@@ -133,6 +138,7 @@ init_directories() {
     > "$MYSCHEDULER_LOG" 2>/dev/null || true
     > "$EXPERTAGENT_LOG" 2>/dev/null || true
     > "$GRAPHAISERVER_LOG" 2>/dev/null || true
+    > "$MYSWIFTAGENTCORE_LOG" 2>/dev/null || true
     > "$MYAGENTDESK_LOG" 2>/dev/null || true
     > "$COMMONUI_LOG" 2>/dev/null || true
 }
@@ -295,7 +301,7 @@ start_jobqueue() {
     cd "$JOBQUEUE_DIR"
 
     # Start service
-    nohup bash -c "JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db \
+    nohup bash -c "cd '$JOBQUEUE_DIR' && JOBQUEUE_DB_URL=sqlite+aiosqlite:///./data/jobqueue.db \
         LOG_DIR=$LOG_DIR \
         uv run uvicorn app.main:app --host 0.0.0.0 --port $JOBQUEUE_PORT --reload" > "$JOBQUEUE_LOG" 2>&1 &
 
@@ -335,7 +341,7 @@ start_myscheduler() {
     cd "$MYSCHEDULER_DIR"
 
     # Start service
-    nohup bash -c "JOBQUEUE_API_URL=http://localhost:$JOBQUEUE_PORT \
+    nohup bash -c "cd '$MYSCHEDULER_DIR' && JOBQUEUE_API_URL=http://localhost:$JOBQUEUE_PORT \
         DATABASE_URL=sqlite:///./data/jobs.db \
         LOG_DIR=$LOG_DIR \
         uv run uvicorn app.main:app --host 0.0.0.0 --port $MYSCHEDULER_PORT --reload" > "$MYSCHEDULER_LOG" 2>&1 &
@@ -382,13 +388,18 @@ start_expertagent() {
     fi
 
     # Start service
-    nohup bash -c "MYVAULT_ENABLED=True \
+    nohup bash -c "cd '$EXPERTAGENT_DIR' && MYVAULT_ENABLED=True \
         MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT \
         MYVAULT_SERVICE_NAME=expertagent \
         MYVAULT_SERVICE_TOKEN=$expertagent_token \
         MYVAULT_DEFAULT_PROJECT=default_project \
         EXPERTAGENT_BASE_URL=http://localhost:$EXPERTAGENT_PORT \
         GRAPHAISERVER_BASE_URL=http://localhost:$GRAPHAISERVER_PORT \
+        VALKEY_ENABLED=true \
+        VALKEY_HOST=localhost \
+        VALKEY_PORT=$VALKEY_PORT \
+        VALKEY_DB=0 \
+        VALKEY_TTL=86400 \
         LOG_DIR=$LOG_DIR \
         uv run uvicorn app.main:app --host 0.0.0.0 --port $EXPERTAGENT_PORT --reload" > "$EXPERTAGENT_LOG" 2>&1 &
 
@@ -428,7 +439,7 @@ start_graphaiserver() {
     cd "$GRAPHAISERVER_DIR"
 
     # Start service
-    nohup bash -c "PORT=$GRAPHAISERVER_PORT npm start" > "$GRAPHAISERVER_LOG" 2>&1 &
+    nohup bash -c "cd '$GRAPHAISERVER_DIR' && PORT=$GRAPHAISERVER_PORT npm start" > "$GRAPHAISERVER_LOG" 2>&1 &
 
     echo $! > "$GRAPHAISERVER_PID"
 
@@ -440,6 +451,46 @@ start_graphaiserver() {
         print_success "GraphAiServer: Started (PID: $(cat "$GRAPHAISERVER_PID"), Port: $GRAPHAISERVER_PORT)"
     else
         print_error "GraphAiServer: Failed to start (check $GRAPHAISERVER_LOG)"
+        return 1
+    fi
+}
+
+# Start mySwiftAgentCore
+start_myswiftagentcore() {
+    print_service "🔷" "mySwiftAgentCore" "Starting on port $MYSWIFTAGENTCORE_PORT..."
+
+    # Check if already running
+    if [[ -f "$MYSWIFTAGENTCORE_PID" ]]; then
+        local saved_pid=$(cat "$MYSWIFTAGENTCORE_PID")
+        if kill -0 "$saved_pid" 2>/dev/null && is_service_pid "$saved_pid" "mySwiftAgentCore"; then
+            print_warning "mySwiftAgentCore: Already running (PID: $saved_pid)"
+            return 0
+        else
+            rm -f "$MYSWIFTAGENTCORE_PID"
+        fi
+    fi
+
+    kill_port $MYSWIFTAGENTCORE_PORT "mySwiftAgentCore"
+
+    install_deps "mySwiftAgentCore" "$MYSWIFTAGENTCORE_DIR"
+
+    cd "$MYSWIFTAGENTCORE_DIR"
+
+    # Start service
+    nohup bash -c "cd '$MYSWIFTAGENTCORE_DIR' && PORT=$MYSWIFTAGENTCORE_PORT \
+        MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT \
+        npm run dev" > "$MYSWIFTAGENTCORE_LOG" 2>&1 &
+
+    echo $! > "$MYSWIFTAGENTCORE_PID"
+
+    cd "$PROJECT_ROOT"
+
+    # Wait for service
+    echo -n "    Waiting"
+    if wait_for_service "mySwiftAgentCore" "http://localhost:$MYSWIFTAGENTCORE_PORT/health" 30; then
+        print_success "mySwiftAgentCore: Started (PID: $(cat "$MYSWIFTAGENTCORE_PID"), Port: $MYSWIFTAGENTCORE_PORT)"
+    else
+        print_error "mySwiftAgentCore: Failed to start (check $MYSWIFTAGENTCORE_LOG)"
         return 1
     fi
 }
@@ -467,7 +518,7 @@ start_myagentdesk() {
     cd "$MYAGENTDESK_DIR"
 
     # Start service
-    nohup bash -c "PORT=$MYAGENTDESK_PORT EXPERT_AGENT_URL=http://localhost:$EXPERTAGENT_PORT npm run dev -- --port $MYAGENTDESK_PORT --host 0.0.0.0" > "$MYAGENTDESK_LOG" 2>&1 &
+    nohup bash -c "cd '$MYAGENTDESK_DIR' && PORT=$MYAGENTDESK_PORT EXPERT_AGENT_URL=http://localhost:$EXPERTAGENT_PORT npm run dev -- --port $MYAGENTDESK_PORT --host 0.0.0.0" > "$MYAGENTDESK_LOG" 2>&1 &
 
     echo $! > "$MYAGENTDESK_PID"
 
@@ -515,7 +566,7 @@ start_commonui() {
     cd "$COMMONUI_DIR"
 
     # Start service with local service URLs
-    nohup bash -c "PORT=$COMMONUI_PORT \
+    nohup bash -c "cd '$COMMONUI_DIR' && PORT=$COMMONUI_PORT \
         MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT \
         JOBQUEUE_BASE_URL=http://localhost:$JOBQUEUE_PORT \
         MYSCHEDULER_BASE_URL=http://localhost:$MYSCHEDULER_PORT \
@@ -670,6 +721,17 @@ check_status() {
         print_error "GraphAiServer: Not running"
     fi
 
+    # mySwiftAgentCore
+    if [[ -f "$MYSWIFTAGENTCORE_PID" ]] && kill -0 "$(cat "$MYSWIFTAGENTCORE_PID")" 2>/dev/null; then
+        if curl -sf "http://localhost:$MYSWIFTAGENTCORE_PORT/health" >/dev/null 2>&1; then
+            print_success "mySwiftAgentCore: Running (PID: $(cat "$MYSWIFTAGENTCORE_PID"), Port: $MYSWIFTAGENTCORE_PORT)"
+        else
+            print_warning "mySwiftAgentCore: Running but unhealthy (PID: $(cat "$MYSWIFTAGENTCORE_PID"))"
+        fi
+    else
+        print_error "mySwiftAgentCore: Not running"
+    fi
+
     # MyAgentDesk
     if [[ -f "$MYAGENTDESK_PID" ]] && kill -0 "$(cat "$MYAGENTDESK_PID")" 2>/dev/null; then
         if check_port $MYAGENTDESK_PORT; then
@@ -716,6 +778,10 @@ show_logs() {
             print_info "Following GraphAiServer logs (Ctrl+C to stop):"
             tail -f "$GRAPHAISERVER_LOG"
             ;;
+        myswiftagentcore)
+            print_info "Following mySwiftAgentCore logs (Ctrl+C to stop):"
+            tail -f "$MYSWIFTAGENTCORE_LOG"
+            ;;
         myagentdesk)
             print_info "Following MyAgentDesk logs (Ctrl+C to stop):"
             tail -f "$MYAGENTDESK_LOG"
@@ -743,6 +809,9 @@ show_logs() {
             echo -e "${YELLOW}=== GraphAiServer ===${NC}"
             tail -n 20 "$GRAPHAISERVER_LOG" 2>/dev/null || echo "No logs"
             echo ""
+            echo -e "${YELLOW}=== mySwiftAgentCore ===${NC}"
+            tail -n 20 "$MYSWIFTAGENTCORE_LOG" 2>/dev/null || echo "No logs"
+            echo ""
             echo -e "${YELLOW}=== MyAgentDesk ===${NC}"
             tail -n 20 "$MYAGENTDESK_LOG" 2>/dev/null || echo "No logs"
             echo ""
@@ -750,7 +819,7 @@ show_logs() {
             tail -n 20 "$COMMONUI_LOG" 2>/dev/null || echo "No logs"
             echo ""
             print_info "Use '$0 logs <service>' to follow specific logs"
-            print_info "Services: jobqueue, myscheduler, expertagent, graphaiserver, myagentdesk, commonui, docker"
+            print_info "Services: jobqueue, myscheduler, expertagent, graphaiserver, myswiftagentcore, myagentdesk, commonui, docker"
             ;;
     esac
 }
@@ -771,6 +840,7 @@ show_urls() {
     echo -e "${CYAN}│${NC}    MyScheduler:     ${WHITE}http://localhost:$MYSCHEDULER_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    ExpertAgent:     ${WHITE}http://localhost:$EXPERTAGENT_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    GraphAiServer:   ${WHITE}http://localhost:$GRAPHAISERVER_PORT${NC}                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC}    mySwiftAgentCore:${WHITE}http://localhost:$MYSWIFTAGENTCORE_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    MyAgentDesk:     ${WHITE}http://localhost:$MYAGENTDESK_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}    CommonUI:        ${WHITE}http://localhost:$COMMONUI_PORT${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${NC}"
@@ -867,6 +937,7 @@ main() {
                 start_myscheduler || exit 1
                 start_expertagent || exit 1
                 start_graphaiserver || exit 1
+                start_myswiftagentcore || exit 1
                 start_myagentdesk || exit 1
                 start_commonui || exit 1
             fi
@@ -885,6 +956,7 @@ main() {
                 stop_local_service "CommonUI" "$COMMONUI_PID" $COMMONUI_PORT
                 stop_local_service "MyAgentDesk" "$MYAGENTDESK_PID" $MYAGENTDESK_PORT
                 stop_local_service "GraphAiServer" "$GRAPHAISERVER_PID" $GRAPHAISERVER_PORT
+                stop_local_service "mySwiftAgentCore" "$MYSWIFTAGENTCORE_PID" $MYSWIFTAGENTCORE_PORT
                 stop_local_service "ExpertAgent" "$EXPERTAGENT_PID" $EXPERTAGENT_PORT
                 stop_local_service "MyScheduler" "$MYSCHEDULER_PID" $MYSCHEDULER_PORT
                 stop_local_service "JobQueue" "$JOBQUEUE_PID" $JOBQUEUE_PORT

@@ -1,0 +1,341 @@
+{
+  "status": "warning",
+  "verification_timestamp": "2026-01-15T15:30:00Z",
+  "issue_number": 362,
+  "project_path": "mySwiftAgentCore",
+  "verification_results": [
+    {
+      "feature_id": "F-004",
+      "name": "Context Manager (責務分割)",
+      "type": "component_group",
+      "checks": {
+        "ExecutionContext": {
+          "exists": {
+            "passed": true,
+            "evidence": "mySwiftAgentCore/src/shared/context/ExecutionContext.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/shared/context/index.ts and re-exported in src/index.ts"
+          },
+          "is_called": {
+            "passed": true,
+            "evidence": "Used in TaskFlowEngine.execute() at line 80 of src/taskflowEngine/index.ts"
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/shared/context.test.ts"
+          },
+          "has_integration_test": {
+            "passed": true,
+            "evidence": "Tested via TaskFlowEngine integration in tests/unit/shared/services.test.ts"
+          }
+        },
+        "VariableResolver": {
+          "exists": {
+            "passed": true,
+            "evidence": "mySwiftAgentCore/src/shared/context/VariableResolver.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/shared/context/index.ts and re-exported in src/index.ts"
+          },
+          "is_called": {
+            "passed": false,
+            "evidence": "Not used in production code. Only defined and tested in unit tests."
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/shared/context.test.ts"
+          },
+          "has_integration_test": {
+            "passed": false,
+            "evidence": "No integration test verifies usage in actual workflow execution"
+          }
+        },
+        "SecretManager": {
+          "exists": {
+            "passed": true,
+            "evidence": "mySwiftAgentCore/src/shared/context/SecretManager.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/shared/context/index.ts and re-exported in src/index.ts"
+          },
+          "is_called": {
+            "passed": false,
+            "evidence": "Not used in production code. Only defined and tested in unit tests."
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/shared/context.test.ts"
+          },
+          "has_integration_test": {
+            "passed": false,
+            "evidence": "No integration test verifies usage in actual workflow execution"
+          }
+        },
+        "ValidationCoordinator": {
+          "exists": {
+            "passed": true,
+            "evidence": "mySwiftAgentCore/src/shared/context/ValidationCoordinator.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/shared/context/index.ts and re-exported in src/index.ts"
+          },
+          "is_called": {
+            "passed": true,
+            "evidence": "Used in TaskFlowEngine constructor at line 49 and execute() at line 66"
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/shared/context.test.ts"
+          },
+          "has_integration_test": {
+            "passed": true,
+            "evidence": "Tested via TaskFlowEngine validation in tests/unit/shared/services.test.ts"
+          }
+        }
+      },
+      "classification": "PARTIAL_DEAD_CODE",
+      "warning_reason": "VariableResolver and SecretManager are implemented but not integrated into TaskFlowEngine or other production code"
+    },
+    {
+      "feature_id": "F-005",
+      "name": "部分成功モデル",
+      "type": "type_definitions",
+      "checks": {
+        "types_exist": {
+          "passed": true,
+          "evidence": "All types defined in mySwiftAgentCore/src/shared/types/workflow.types.ts",
+          "types": ["ExecutionStatus", "StepError", "RecoveryAction", "StepResult", "WorkflowExecutionResult"]
+        },
+        "types_exported": {
+          "passed": true,
+          "evidence": "Exported via src/shared/types/index.ts and re-exported in src/index.ts"
+        },
+        "types_used": {
+          "passed": true,
+          "evidence": "Used in TaskFlowEngine for return types and workflow execution results",
+          "usage_files": [
+            "src/taskflowEngine/index.ts (lines 10-16, 62, 122, etc.)"
+          ]
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/shared/types.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Types validated in TaskFlowEngine execution tests"
+        }
+      },
+      "classification": "PASSED",
+      "success_reason": "All types are defined, exported, and actively used in production code"
+    },
+    {
+      "feature_id": "F-006",
+      "name": "セキュリティ基盤",
+      "type": "security_config",
+      "checks": {
+        "SECURITY_DEFAULTS": {
+          "exists": {
+            "passed": true,
+            "evidence": "Defined at line 23 in mySwiftAgentCore/src/config/security.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/config/security.ts"
+          },
+          "is_called": {
+            "passed": true,
+            "evidence": "Used in src/index.ts at lines 22, 58 for CORS configuration"
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/config/security.test.ts"
+          }
+        },
+        "validateSecurityConfig": {
+          "exists": {
+            "passed": true,
+            "evidence": "Defined at line 85 in mySwiftAgentCore/src/config/security.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/config/security.ts"
+          },
+          "is_called": {
+            "passed": true,
+            "evidence": "Called in src/index.ts at line 103 in startServer()"
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/config/security.test.ts"
+          }
+        },
+        "REQUIRED_SECURITY_ENV_VARS": {
+          "exists": {
+            "passed": true,
+            "evidence": "Defined at line 14 in mySwiftAgentCore/src/config/security.ts"
+          },
+          "is_exported": {
+            "passed": true,
+            "evidence": "Exported in src/config/security.ts"
+          },
+          "is_called": {
+            "passed": true,
+            "evidence": "Used internally in validateSecurityConfig() at line 111"
+          },
+          "has_unit_test": {
+            "passed": true,
+            "test_file": "mySwiftAgentCore/tests/unit/config/security.test.ts"
+          }
+        }
+      },
+      "classification": "PASSED",
+      "success_reason": "All security components are defined, exported, and integrated into application startup"
+    },
+    {
+      "feature_id": "F-002",
+      "name": "Hono APIサーバー",
+      "type": "server",
+      "checks": {
+        "server_exists": {
+          "passed": true,
+          "evidence": "mySwiftAgentCore/src/index.ts implements Hono server"
+        },
+        "routes_integrated": {
+          "passed": true,
+          "evidence": "API routes created and mounted at line 87-93 in src/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/api/routes.test.ts"
+        }
+      },
+      "classification": "PASSED",
+      "success_reason": "Server implemented and integrated correctly"
+    },
+    {
+      "feature_id": "F-003",
+      "name": "ヘルスチェックAPI",
+      "type": "api_endpoints",
+      "checks": {
+        "endpoints_exist": {
+          "passed": true,
+          "evidence": "mySwiftAgentCore/src/api/health.ts"
+        },
+        "endpoints_integrated": {
+          "passed": true,
+          "evidence": "Health routes integrated via API routes in src/api/routes.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/api/health.test.ts"
+        }
+      },
+      "classification": "PASSED",
+      "success_reason": "Health check endpoints implemented and integrated"
+    }
+  ],
+  "summary": {
+    "total_features_verified": 5,
+    "passed": 3,
+    "partial_dead_code": 1,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [],
+  "partial_integration_list": [
+    {
+      "feature_id": "F-004",
+      "component": "VariableResolver",
+      "file": "mySwiftAgentCore/src/shared/context/VariableResolver.ts",
+      "status": "defined_but_not_integrated",
+      "issue": "Component is fully implemented with 285 lines of code but not used in any production workflow",
+      "recommended_integration": "Integrate into ExecutionContext for {{variable}} resolution in workflow steps"
+    },
+    {
+      "feature_id": "F-004",
+      "component": "SecretManager",
+      "file": "mySwiftAgentCore/src/shared/context/SecretManager.ts",
+      "status": "defined_but_not_integrated",
+      "issue": "Component is fully implemented with MyVault integration but not used in any production workflow",
+      "recommended_integration": "Integrate into ExecutionContext or TaskFlowEngine for secret retrieval during workflow execution"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P1",
+      "action_type": "integration",
+      "feature_id": "F-004",
+      "component": "VariableResolver",
+      "recommendation": "Integrate VariableResolver into ExecutionContext",
+      "details": [
+        "Add VariableResolver as a private member in ExecutionContext class",
+        "Use VariableResolver.resolve() when setting/getting variables",
+        "Add test case in TaskFlowEngine to verify variable resolution in actual workflow"
+      ],
+      "justification": "DP-1 design policy requires Context Manager responsibility separation. VariableResolver is implemented but not integrated, making it dead code despite being well-tested."
+    },
+    {
+      "priority": "P1",
+      "action_type": "integration",
+      "feature_id": "F-004",
+      "component": "SecretManager",
+      "recommendation": "Integrate SecretManager into TaskFlowEngine or ExecutionContext",
+      "details": [
+        "Add SecretManager initialization in TaskFlowEngine constructor",
+        "Use SecretManager.getSecret() when workflow steps need secrets",
+        "Add integration test that verifies secret retrieval during workflow execution"
+      ],
+      "justification": "DP-2 design policy requires Facade + DI pattern. SecretManager with MyVault integration is ready but not used in production workflows."
+    },
+    {
+      "priority": "P2",
+      "action_type": "test_enhancement",
+      "feature_id": "F-004",
+      "component": "Context Manager",
+      "recommendation": "Add integration tests directory",
+      "details": [
+        "Create mySwiftAgentCore/tests/integration/ directory with actual test files",
+        "Add end-to-end test that verifies ExecutionContext + VariableResolver + SecretManager work together",
+        "Test should call TaskFlowEngine.execute() with a workflow that uses variables and secrets"
+      ],
+      "justification": "Currently integration test directory exists but is empty. True integration tests are needed to verify Context Manager components work together."
+    }
+  ],
+  "integration_verification": {
+    "new_code_is_called": {
+      "status": "partial",
+      "details": "ExecutionContext and ValidationCoordinator are integrated. VariableResolver and SecretManager are not."
+    },
+    "graph_updated": {
+      "status": "passed",
+      "details": "TaskFlowEngine uses ExecutionContext and ValidationCoordinator in workflow execution graph"
+    },
+    "exports_added": {
+      "status": "passed",
+      "details": "All components are properly exported via index.ts files"
+    }
+  },
+  "positive_findings": [
+    "94.73% test coverage exceeds 90% requirement",
+    "All 172 unit tests pass successfully",
+    "TypeScript and ESLint show 0 errors",
+    "Security validation properly integrated into startup sequence",
+    "Partial success model types are actively used in production code",
+    "Facade pattern properly implemented with context/index.ts",
+    "ExecutionContext and ValidationCoordinator successfully integrated into TaskFlowEngine"
+  ],
+  "notes": [
+    "This is a new TypeScript project with stub implementations for future features",
+    "VariableResolver and SecretManager represent 'prepared infrastructure' pattern - implemented ahead of need",
+    "Since TaskFlowEngine is currently a stub, full integration will happen in child issues",
+    "The warning status reflects architectural readiness vs. immediate production use",
+    "All code is tested, documented, and ready for integration when child issues implement full workflows"
+  ]
+}

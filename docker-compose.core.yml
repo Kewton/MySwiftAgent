@@ -1,0 +1,44 @@
+# Docker Compose configuration for mySwiftAgentCore
+# This file can be used standalone or included in the main docker-compose.yml
+
+services:
+  myswiftagentcore:
+    build:
+      context: ./mySwiftAgentCore
+      dockerfile: Dockerfile
+    container_name: myswiftagentcore
+    restart: unless-stopped
+    ports:
+      - "${MYSWIFTAGENTCORE_PORT:-8006}:8006"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=8006
+      - HOST=0.0.0.0
+      - API_TOKEN=${API_TOKEN:-}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - MYVAULT_ENABLED=${MYVAULT_ENABLED:-true}
+      - MYVAULT_BASE_URL=http://myvault:8003
+      - MYVAULT_SERVICE_TOKEN=${MYVAULT_TOKEN_MYSWIFTAGENTCORE:-}
+      - MYVAULT_DEFAULT_PROJECT=${MYVAULT_DEFAULT_PROJECT:-default_project}
+      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-true}
+      - LANGFUSE_HOST=http://langfuse-server:3000
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+    depends_on:
+      myvault:
+        condition: service_healthy
+    networks:
+      - myswiftagent-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.myswiftagent.service=myswiftagentcore"
+      - "com.myswiftagent.layer=core"
+
+networks:
+  myswiftagent-network:
+    external: true

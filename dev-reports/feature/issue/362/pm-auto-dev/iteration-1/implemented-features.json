@@ -1,0 +1,307 @@
+{
+  "issue_number": 362,
+  "issue_title": "feat(mySwiftAgentCore): 新規TypeScriptプロジェクトの作成",
+  "implementation_summary": {
+    "total_files_created": 35,
+    "total_files_modified": 3,
+    "total_tests": 172,
+    "coverage": 94.73
+  },
+  "features": [
+    {
+      "feature_id": "F-001",
+      "name": "プロジェクト基盤",
+      "description": "TypeScript プロジェクト構造、設定ファイル",
+      "files": [
+        "mySwiftAgentCore/package.json",
+        "mySwiftAgentCore/tsconfig.json",
+        "mySwiftAgentCore/eslint.config.mjs",
+        "mySwiftAgentCore/.prettierrc",
+        "mySwiftAgentCore/.gitignore"
+      ],
+      "related_ac": ["AC-1", "AC-2", "AC-3"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-002",
+      "name": "Hono APIサーバー",
+      "description": "基本的なAPIサーバー、エントリーポイント",
+      "files": [
+        "mySwiftAgentCore/src/index.ts",
+        "mySwiftAgentCore/src/api/routes.ts"
+      ],
+      "related_ac": ["AC-4"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-003",
+      "name": "ヘルスチェックAPI",
+      "description": "/health, /health/detailed, /health/ready, /health/live エンドポイント",
+      "files": [
+        "mySwiftAgentCore/src/api/health.ts"
+      ],
+      "endpoints": [
+        { "method": "GET", "path": "/health", "description": "基本ヘルスチェック" },
+        { "method": "GET", "path": "/health/detailed", "description": "詳細ヘルスチェック（依存関係含む）" },
+        { "method": "GET", "path": "/health/ready", "description": "レディネスチェック" },
+        { "method": "GET", "path": "/health/live", "description": "ライブネスチェック" }
+      ],
+      "related_ac": ["AC-5"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-004",
+      "name": "Context Manager (責務分割)",
+      "description": "Facade + DI パターンによる責務分割実装",
+      "files": [
+        "mySwiftAgentCore/src/shared/context/ExecutionContext.ts",
+        "mySwiftAgentCore/src/shared/context/VariableResolver.ts",
+        "mySwiftAgentCore/src/shared/context/SecretManager.ts",
+        "mySwiftAgentCore/src/shared/context/ValidationCoordinator.ts",
+        "mySwiftAgentCore/src/shared/context/index.ts"
+      ],
+      "components": {
+        "ExecutionContext": "実行状態管理（requestId, stepResults, variables）",
+        "VariableResolver": "テンプレート変数解決（{{variable}} 形式）",
+        "SecretManager": "シークレット管理（MyVault連携）",
+        "ValidationCoordinator": "ワークフロー検証（構造・セキュリティ・依存関係）"
+      },
+      "related_dp": ["DP-1", "DP-2"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-005",
+      "name": "部分成功モデル",
+      "description": "WorkflowExecutionResult, StepError, RecoveryAction型定義",
+      "files": [
+        "mySwiftAgentCore/src/shared/types/workflow.types.ts"
+      ],
+      "types": [
+        "ExecutionStatus: 'success' | 'partial_success' | 'failed'",
+        "StepError: ステップエラー情報",
+        "RecoveryAction: リカバリーアクション（retry, skip, fallback, abort）",
+        "StepResult: ステップ実行結果",
+        "WorkflowExecutionResult: ワークフロー実行結果"
+      ],
+      "related_dp": ["DP-3"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-006",
+      "name": "セキュリティ基盤",
+      "description": "SECURITY_DEFAULTS, validateSecurityConfig()",
+      "files": [
+        "mySwiftAgentCore/src/config/security.ts",
+        "mySwiftAgentCore/src/middleware/auth.ts"
+      ],
+      "security_features": {
+        "required_env_vars": ["API_TOKEN", "ADMIN_TOKEN", "MYVAULT_SERVICE_TOKEN"],
+        "startup_validation": "validateSecurityConfig()",
+        "defaults": {
+          "tokenExpirationSeconds": 3600,
+          "maxRequestBodySize": "10MB",
+          "rateLimitPerMinute": 100,
+          "corsEnabled": true,
+          "securityHeadersEnabled": true
+        }
+      },
+      "related_dp": ["DP-4", "DP-5", "DP-6"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-007",
+      "name": "型定義システム",
+      "description": "Capability, Error型定義",
+      "files": [
+        "mySwiftAgentCore/src/shared/types/capability.types.ts",
+        "mySwiftAgentCore/src/shared/types/error.types.ts",
+        "mySwiftAgentCore/src/shared/types/index.ts"
+      ],
+      "related_ac": ["AC-1"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-008",
+      "name": "サービススタブ",
+      "description": "TaskFlow Engine, Generator Agent, Capability Management スタブ",
+      "files": [
+        "mySwiftAgentCore/src/taskflowEngine/index.ts",
+        "mySwiftAgentCore/src/taskflowGeneratorAgent/index.ts",
+        "mySwiftAgentCore/src/capabilityManagement/index.ts"
+      ],
+      "stub_endpoints": [
+        "/api/v2/workflows/* (TaskFlow Engine)",
+        "/api/v1/generator/* (TaskFlow Generator Agent)",
+        "/api/v1/capabilities/* (Capability Management)"
+      ],
+      "related_ac": ["AC-4"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-009",
+      "name": "Docker対応",
+      "description": "Dockerfile, .dockerignore, docker-compose.core.yml",
+      "files": [
+        "mySwiftAgentCore/Dockerfile",
+        "mySwiftAgentCore/.dockerignore",
+        "docker-compose.core.yml"
+      ],
+      "docker_features": {
+        "multi_stage_build": true,
+        "port": 8006,
+        "health_check": "curl -f http://localhost:8006/health"
+      },
+      "related_ac": ["AC-7", "AC-8", "AC-15"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-010",
+      "name": "開発スクリプト統合",
+      "description": "Makefile, dev-hybrid.sh更新",
+      "files_modified": [
+        "Makefile",
+        "scripts/dev-hybrid.sh"
+      ],
+      "makefile_targets": [
+        "dev-core: mySwiftAgentCore起動",
+        "down-core: mySwiftAgentCore停止",
+        "logs-core: mySwiftAgentCoreログ表示"
+      ],
+      "related_ac": ["AC-9", "AC-10", "AC-11"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-011",
+      "name": "環境変数設定",
+      "description": ".env.example更新",
+      "files_modified": [
+        ".env.example"
+      ],
+      "env_vars_added": [
+        "MYSWIFTAGENTCORE_PORT=8006",
+        "MYSWIFTAGENTCORE_HOST=0.0.0.0"
+      ],
+      "related_ac": ["AC-13"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-012",
+      "name": "テスト環境",
+      "description": "Vitest設定、単体テスト実装",
+      "files": [
+        "mySwiftAgentCore/vitest.config.ts",
+        "mySwiftAgentCore/tests/setup.ts",
+        "mySwiftAgentCore/tests/unit/api/health.test.ts",
+        "mySwiftAgentCore/tests/unit/api/routes.test.ts",
+        "mySwiftAgentCore/tests/unit/config/security.test.ts",
+        "mySwiftAgentCore/tests/unit/middleware/auth.test.ts",
+        "mySwiftAgentCore/tests/unit/shared/context.test.ts",
+        "mySwiftAgentCore/tests/unit/shared/types.test.ts",
+        "mySwiftAgentCore/tests/unit/shared/services.test.ts"
+      ],
+      "test_stats": {
+        "total": 172,
+        "passed": 172,
+        "coverage": 94.73
+      },
+      "related_ac": ["AC-1"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-013",
+      "name": "CI/CD",
+      "description": "GitHub Actionsワークフロー",
+      "files": [
+        ".github/workflows/myswiftagentcore.yml"
+      ],
+      "workflow_jobs": [
+        "lint: ESLint実行",
+        "test: Vitest実行",
+        "build: TypeScriptビルド",
+        "docker: Dockerイメージビルド"
+      ],
+      "related_ac": ["AC-14"],
+      "status": "implemented"
+    },
+    {
+      "feature_id": "F-014",
+      "name": "ドキュメント",
+      "description": "プロジェクトREADME",
+      "files": [
+        "mySwiftAgentCore/README.md"
+      ],
+      "related_ac": ["AC-1"],
+      "status": "implemented"
+    }
+  ],
+  "design_policy_coverage": {
+    "DP-1": {
+      "item": "Context Manager責務分割",
+      "status": "implemented",
+      "implementation": "ExecutionContext, VariableResolver, SecretManager, ValidationCoordinator"
+    },
+    "DP-2": {
+      "item": "Facade + DI パターン",
+      "status": "implemented",
+      "implementation": "各コンポーネントが独立、ContextFacadeで統合可能"
+    },
+    "DP-3": {
+      "item": "部分成功モデル",
+      "status": "implemented",
+      "implementation": "WorkflowExecutionResult with status: success | partial_success | failed"
+    },
+    "DP-4": {
+      "item": "SECURITY_DEFAULTS",
+      "status": "implemented",
+      "implementation": "security.ts に定数として定義"
+    },
+    "DP-5": {
+      "item": "validateSecurityConfig()",
+      "status": "implemented",
+      "implementation": "起動時に必須環境変数を検証"
+    },
+    "DP-6": {
+      "item": "必須環境変数定義",
+      "status": "implemented",
+      "implementation": "API_TOKEN, ADMIN_TOKEN, MYVAULT_SERVICE_TOKEN"
+    }
+  },
+  "acceptance_criteria_mapping": {
+    "AC-1": { "status": "implemented", "features": ["F-001", "F-007", "F-012", "F-014"] },
+    "AC-2": { "status": "implemented", "features": ["F-001"] },
+    "AC-3": { "status": "implemented", "features": ["F-001"] },
+    "AC-4": { "status": "implemented", "features": ["F-002", "F-008"] },
+    "AC-5": { "status": "implemented", "features": ["F-003"] },
+    "AC-6": { "status": "not_implemented", "note": "Langfuseトレースは依存関係としてインストール済み、実統合は子Issueで実装" },
+    "AC-7": { "status": "implemented", "features": ["F-009"] },
+    "AC-8": { "status": "implemented", "features": ["F-009"] },
+    "AC-9": { "status": "implemented", "features": ["F-010"] },
+    "AC-10": { "status": "implemented", "features": ["F-010"] },
+    "AC-11": { "status": "implemented", "features": ["F-010"] },
+    "AC-12": { "status": "pending_verification", "note": "health-check.sh更新済み、実行検証は受入テストで実施" },
+    "AC-13": { "status": "implemented", "features": ["F-011"] },
+    "AC-14": { "status": "implemented", "features": ["F-013"] },
+    "AC-15": { "status": "pending_verification", "note": "Dockerfile作成済み、ビルド検証は受入テストで実施" }
+  },
+  "pending_verifications": [
+    {
+      "id": "PV-1",
+      "description": "Docker イメージビルド成功確認",
+      "command": "docker build -t myswiftagentcore:test ./mySwiftAgentCore",
+      "related_ac": ["AC-15"]
+    },
+    {
+      "id": "PV-2",
+      "description": "ヘルスチェック応答確認",
+      "command": "curl -sf http://localhost:8006/health",
+      "related_ac": ["AC-5"]
+    },
+    {
+      "id": "PV-3",
+      "description": "make dev-core 起動確認",
+      "command": "make dev-core",
+      "related_ac": ["AC-9"]
+    }
+  ],
+  "generated_at": "2025-01-15T00:00:00.000Z"
+}

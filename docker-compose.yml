@@ -4,6 +4,7 @@
 # Layer Structure:
 #   - Platform: Core infrastructure (valkey, jobqueue, myscheduler, myvault, langfuse)
 #   - Agent: AI services (expertagent, graphaiserver)
+#   - Core: TypeScript core services (myswiftagentcore)
 #   - Frontend: UI applications (commonui, myagentdesk)
 #
 # Usage:
@@ -14,6 +15,7 @@
 # For layer-specific operations, use the Makefile:
 #   make dev-platform             # Start Platform layer only
 #   make dev-agent                # Start Agent layer only
+#   make dev-core                 # Start Core layer only (mySwiftAgentCore)
 #   make dev-frontend             # Start Frontend layer only
 #   make dev-all                  # Start all layers in order
 #
@@ -27,6 +29,8 @@ include:
   - path: docker-compose.platform.yml
     project_directory: .
   - path: docker-compose.agent.yml
+    project_directory: .
+  - path: docker-compose.core.yml
     project_directory: .
   - path: docker-compose.frontend.yml
     project_directory: .

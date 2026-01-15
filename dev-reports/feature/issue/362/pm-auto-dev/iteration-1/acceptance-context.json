@@ -1,0 +1,37 @@
+{
+  "issue_number": 362,
+  "acceptance_plan_path": "dev-reports/feature/issue/362/acceptance-plan.md",
+  "implemented_features_path": "dev-reports/feature/issue/362/pm-auto-dev/iteration-1/implemented-features.json",
+  "project_path": "mySwiftAgentCore",
+  "test_environment": {
+    "port": 8006,
+    "health_endpoint": "http://localhost:8006/health",
+    "required_env_vars": [
+      "API_TOKEN",
+      "ADMIN_TOKEN",
+      "MYVAULT_SERVICE_TOKEN"
+    ]
+  },
+  "test_categories": [
+    {
+      "category": "project_structure",
+      "tests": ["TC-001", "TC-002", "TC-003", "TC-004"]
+    },
+    {
+      "category": "api_endpoints",
+      "tests": ["TC-005", "TC-006", "TC-007", "TC-008"]
+    },
+    {
+      "category": "docker_infrastructure",
+      "tests": ["TC-009", "TC-010", "TC-011"]
+    },
+    {
+      "category": "development_scripts",
+      "tests": ["TC-012", "TC-013", "TC-014"]
+    },
+    {
+      "category": "cicd",
+      "tests": ["TC-015", "TC-016", "TC-017"]
+    }
+  ]
+}

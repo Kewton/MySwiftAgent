@@ -1,0 +1,55 @@
+{
+  "issue_number": 362,
+  "issue_title": "feat(mySwiftAgentCore): 新規TypeScriptプロジェクトの作成",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 94.73,
+      "tests_passed": 172,
+      "tests_failed": 0,
+      "result_file": "dev-reports/feature/issue/362/pm-auto-dev/iteration-1/tdd-result.json"
+    },
+    "verification": {
+      "status": "warning",
+      "dead_code_found": 0,
+      "integration_issues": 2,
+      "note": "VariableResolver, SecretManagerは準備済みインフラとして子Issueで統合予定",
+      "result_file": "dev-reports/feature/issue/362/pm-auto-dev/iteration-1/verification-result.json"
+    },
+    "acceptance": {
+      "status": "passed",
+      "tests_passed": 16,
+      "tests_failed": 0,
+      "partial": 1,
+      "note": "AC-8はPhase 4で修正済み",
+      "result_file": "dev-reports/feature/issue/362/pm-auto-dev/iteration-1/acceptance-result.json"
+    },
+    "refactoring": {
+      "status": "completed",
+      "changes": [
+        "docker-compose.ymlにdocker-compose.core.ymlをinclude追加（AC-8修正）",
+        "Prettierフォーマット適用（6ファイル修正）"
+      ]
+    }
+  },
+  "files_created": 35,
+  "files_modified": 4,
+  "acceptance_criteria_status": {
+    "AC-1": "passed",
+    "AC-2": "passed",
+    "AC-3": "passed",
+    "AC-4": "passed",
+    "AC-5": "passed",
+    "AC-6": "deferred",
+    "AC-7": "passed",
+    "AC-8": "passed",
+    "AC-9": "passed",
+    "AC-10": "passed",
+    "AC-11": "passed",
+    "AC-12": "passed",
+    "AC-13": "passed",
+    "AC-14": "passed",
+    "AC-15": "passed"
+  }
+}

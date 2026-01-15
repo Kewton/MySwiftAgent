@@ -1,0 +1,176 @@
+name: CI - mySwiftAgentCore
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'mySwiftAgentCore/**'
+      - '.github/workflows/myswiftagentcore.yml'
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'refactor/**'
+      - develop
+      - main
+    paths:
+      - 'mySwiftAgentCore/**'
+      - '.github/workflows/myswiftagentcore.yml'
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      mySwiftAgentCore: ${{ steps.changes.outputs.mySwiftAgentCore }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ -d "mySwiftAgentCore" ]; then
+            echo "mySwiftAgentCore=true" >> $GITHUB_OUTPUT
+            echo "mySwiftAgentCore directory exists"
+          else
+            echo "mySwiftAgentCore=false" >> $GITHUB_OUTPUT
+            echo "mySwiftAgentCore directory does not exist"
+          fi
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.mySwiftAgentCore == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./mySwiftAgentCore
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./mySwiftAgentCore
+        run: npm run lint
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.mySwiftAgentCore == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./mySwiftAgentCore
+        run: npm ci
+
+      - name: Run TypeScript type check
+        working-directory: ./mySwiftAgentCore
+        run: npx tsc --noEmit
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.mySwiftAgentCore == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./mySwiftAgentCore
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: ./mySwiftAgentCore
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./mySwiftAgentCore/coverage
+          fail_ci_if_error: false
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./mySwiftAgentCore
+        run: npm ci
+
+      - name: Build
+        working-directory: ./mySwiftAgentCore
+        run: npm run build
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        working-directory: ./mySwiftAgentCore
+        run: docker build -t myswiftagentcore:test .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm -d \
+            --name myswiftagentcore-test \
+            -p 8006:8006 \
+            -e API_TOKEN=test-token \
+            -e ADMIN_TOKEN=test-admin \
+            -e MYVAULT_SERVICE_TOKEN=test-vault \
+            myswiftagentcore:test
+
+          echo "Waiting for container to start..."
+          for i in {1..6}; do
+            sleep 5
+            if curl -sf http://localhost:8006/health > /dev/null 2>&1; then
+              echo "Container is ready after $((i*5)) seconds"
+              break
+            fi
+            echo "Attempt $i/6: Container not ready yet, waiting..."
+            if [ $i -eq 6 ]; then
+              echo "Container failed to start after 30 seconds"
+              docker logs myswiftagentcore-test || true
+              exit 1
+            fi
+          done
+
+          echo "Testing health endpoint..."
+          curl -f http://localhost:8006/health || exit 1
+
+          docker stop myswiftagentcore-test

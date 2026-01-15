@@ -1,0 +1,40 @@
+{
+  "issue_number": 362,
+  "project_path": "mySwiftAgentCore",
+  "implemented_features_path": "dev-reports/feature/issue/362/pm-auto-dev/iteration-1/implemented-features.json",
+  "tdd_result_path": "dev-reports/feature/issue/362/pm-auto-dev/iteration-1/tdd-result.json",
+  "verification_targets": [
+    {
+      "feature_id": "F-004",
+      "name": "Context Manager",
+      "files_to_check": [
+        "mySwiftAgentCore/src/shared/context/ExecutionContext.ts",
+        "mySwiftAgentCore/src/shared/context/VariableResolver.ts",
+        "mySwiftAgentCore/src/shared/context/SecretManager.ts",
+        "mySwiftAgentCore/src/shared/context/ValidationCoordinator.ts"
+      ],
+      "expected_exports": ["ExecutionContext", "VariableResolver", "SecretManager", "ValidationCoordinator", "createExecutionContext"]
+    },
+    {
+      "feature_id": "F-005",
+      "name": "部分成功モデル",
+      "files_to_check": [
+        "mySwiftAgentCore/src/shared/types/workflow.types.ts"
+      ],
+      "expected_exports": ["ExecutionStatus", "StepError", "RecoveryAction", "StepResult", "WorkflowExecutionResult"]
+    },
+    {
+      "feature_id": "F-006",
+      "name": "セキュリティ基盤",
+      "files_to_check": [
+        "mySwiftAgentCore/src/config/security.ts"
+      ],
+      "expected_exports": ["SECURITY_DEFAULTS", "validateSecurityConfig", "REQUIRED_SECURITY_ENV_VARS"]
+    }
+  ],
+  "dead_code_detection": {
+    "check_unused_exports": true,
+    "check_unused_functions": true,
+    "check_unused_types": true
+  }
+}
