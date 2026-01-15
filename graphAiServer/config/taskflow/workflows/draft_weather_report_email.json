@@ -1,0 +1,66 @@
+{
+  "workflow_name": "draft_weather_report_email",
+  "description": "Workflow to draft a professional weather report email based on search data.",
+  "input_schema": {
+    "weather_info": "string",
+    "tone": "string",
+    "recipient_context": "string"
+  },
+  "output_schema": {
+    "email_subject": "string",
+    "email_body": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_email_content",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "template",
+        "template": "Subject: Weather Update\n\nDear Recipient,\n\nHere is the latest weather report: ${generate_email_content.output.email_body}\n\nBest regards,\nYour Weather Service",
+        "separator": ", ",
+        "fields": [
+          "email_subject",
+          "email_body"
+        ]
+      }
+    },
+    {
+      "id": "format_email_output",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "template",
+        "template": "{\"email_subject\": \"Weather Report\", \"email_body\": \"${generate_email_content.output.email_body}\"}",
+        "separator": ", ",
+        "fields": [
+          "email_subject",
+          "email_body"
+        ]
+      }
+    },
+    {
+      "id": "send_email",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "https://api.example.com/send_email",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "to": "${inputs.recipient_context}",
+          "subject": "${format_email_output.output.email_subject}",
+          "body": "${format_email_output.output.email_body}"
+        },
+        "timeout_ms": 30000,
+        "verify_ssl": true
+      }
+    }
+  ],
+  "output": {
+    "email_subject": "${format_email_output.output.email_subject}",
+    "email_body": "${format_email_output.output.email_body}"
+  }
+}

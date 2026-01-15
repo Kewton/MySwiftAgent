@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     CompatibilityReport,
     InterfaceSchema,
     InterfaceSchemaResponse,

@@ -1,0 +1,89 @@
+{
+  "issue_number": 359,
+  "iteration": 3,
+  "retry_reason": "Phase 2.7で統合率52.6%（80%未満）。デッドコード解消が必要。",
+  "already_completed": [
+    "types_v3.py - UnifiedTaskIdentifier, TaskResult, ParallelExecutionResult, etc.",
+    "error_recovery_v3.py - ErrorRecoveryManager and phase contracts",
+    "parallel_executor.py - parallel_workflow_generation, ParallelExecutionErrorAggregator",
+    "validators/task_dependency.py - TaskDependencyValidator",
+    "validators/pipeline.py - ValidationPipelineV3, StructuralValidator, SchemaValidator, SemanticValidator",
+    "nodes/job_analyzer_v3.py - analyze_job function",
+    "orchestrator_v3.py - JobGenerationOrchestratorV3 (295 lines)",
+    "adapter_v3.py - JobGeneratorV3Adapter",
+    "All unit tests (79 tests from iteration 1 + 69 tests from iteration 2)",
+    "Integration tests (test_job_generation_e2e.py)",
+    "Contract tests (test_taskflow_contract.py)"
+  ],
+  "dead_code_fixes": [
+    {
+      "fix_id": "DC-1",
+      "feature": "TaskDependencyValidator (F12)",
+      "problem": "Not called anywhere in production code",
+      "solution": "Integrate into _execute_job_analysis after analyze_job returns",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "target_method": "_execute_job_analysis",
+      "integration_point": "After line 169 (after analyze_job call)",
+      "expected_behavior": "Validate task dependencies, raise OrchestratorError if circular/missing deps found",
+      "code_snippet": "from .validators.task_dependency import TaskDependencyValidator\n\n# After analyze_job call:\ntasks_for_validation = [\n    {\"task_id\": t.task_id, \"dependencies\": t.dependencies}\n    for t in analysis_result.tasks\n]\nvalidator = TaskDependencyValidator()\ndep_result = validator.validate(tasks_for_validation)\nif not dep_result.is_valid:\n    raise OrchestratorError(\n        f\"Task dependency validation failed: {dep_result.to_error_message()}\",\n        phase=PhaseV3.JOB_ANALYSIS\n    )"
+    },
+    {
+      "fix_id": "DC-2",
+      "feature": "ValidationPipelineV3 (F16, F17, F18, F19)",
+      "problem": "Not called during workflow generation",
+      "solution": "Integrate into _execute_workflow_gen after workflow generation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "target_method": "_execute_workflow_gen",
+      "integration_point": "After parallel_workflow_generation call, before return",
+      "expected_behavior": "Validate each generated workflow, log errors for failed validations",
+      "code_snippet": "from .validators.pipeline import ValidationPipelineV3\n\n# After parallel_workflow_generation:\npipeline = ValidationPipelineV3(fail_fast=False)\nfor task_result in result.results:\n    if task_result.success and task_result.workflow:\n        val_result = pipeline.validate(\n            task_result.workflow,\n            workflow_id=task_result.task_id\n        )\n        if not val_result.is_valid:\n            logger.warning(\n                \"Workflow %s has validation issues: %s\",\n                task_result.task_id,\n                [e.message for e in val_result.errors]\n            )"
+    }
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "DC-1",
+      "description": "Integrate TaskDependencyValidator into _execute_job_analysis",
+      "priority": "P0",
+      "estimated_effort": "small"
+    },
+    {
+      "task_id": "DC-2",
+      "description": "Integrate ValidationPipelineV3 into _execute_workflow_gen",
+      "priority": "P0",
+      "estimated_effort": "small"
+    },
+    {
+      "task_id": "TEST-1",
+      "description": "Add integration tests for TaskDependencyValidator in orchestrator",
+      "priority": "P0",
+      "estimated_effort": "small"
+    },
+    {
+      "task_id": "TEST-2",
+      "description": "Add integration tests for ValidationPipelineV3 in orchestrator",
+      "priority": "P0",
+      "estimated_effort": "small"
+    }
+  ],
+  "existing_files": {
+    "orchestrator_v3": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+    "task_dependency": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/task_dependency.py",
+    "pipeline": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+    "integration_tests": "expertAgent/tests/integration/test_job_generation_e2e.py"
+  },
+  "constraints": {
+    "max_lines_orchestrator": 300,
+    "current_lines_orchestrator": 286,
+    "available_lines": 14,
+    "no_index_lookups": true,
+    "no_silent_fallbacks": true
+  },
+  "definition_of_done": [
+    "TaskDependencyValidator is called in _execute_job_analysis",
+    "ValidationPipelineV3 is called in _execute_workflow_gen",
+    "Integration tests verify both validators are invoked in E2E flow",
+    "All existing tests continue to pass",
+    "orchestrator_v3.py remains under 300 lines",
+    "Static analysis passes (Ruff, MyPy)"
+  ]
+}

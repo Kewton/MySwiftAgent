@@ -1,0 +1,27 @@
+{
+  "workflow_name": "transform_workflow",
+  "description": "A workflow demonstrating transform step types",
+  "input_schema": "{\"items\": \"array\", \"separator\": \"string\"}",
+  "output_schema": "{\"concatenated\": \"string\", \"merged\": \"object\"}",
+  "output": "{\"concatenated\": \"${step_001.output}\", \"merged\": \"${step_002.output}\"}",
+  "steps": [
+    {
+      "id": "step_001",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "concat",
+        "separator": "${inputs.separator}"
+      }
+    },
+    {
+      "id": "step_002",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "merge",
+        "fields": ["name", "value", "timestamp"]
+      }
+    }
+  ]
+}

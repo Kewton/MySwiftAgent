@@ -1,0 +1,41 @@
+{
+  "workflow_name": "multi_step_workflow",
+  "description": "A workflow with multiple sequential steps",
+  "input_schema": "{\"query\": \"string\", \"max_results\": \"number\"}",
+  "output_schema": "{\"processed_results\": \"array\", \"summary\": \"string\"}",
+  "output": "{\"processed_results\": \"${step_002.output.items}\", \"summary\": \"${step_003.output.text}\"}",
+  "steps": [
+    {
+      "id": "step_001",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "https://api.example.com/search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"q\": \"${inputs.query}\", \"limit\": \"${inputs.max_results}\"}",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "id": "step_002",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "map",
+        "fields": ["id", "title", "description"]
+      }
+    },
+    {
+      "id": "step_003",
+      "type": "transform",
+      "config": {
+        "step_type": "transform",
+        "mode": "template",
+        "template": "Found ${step_001.output.count} results for query: ${inputs.query}"
+      }
+    }
+  ]
+}

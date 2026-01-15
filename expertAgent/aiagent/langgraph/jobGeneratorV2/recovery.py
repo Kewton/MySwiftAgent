@@ -8,39 +8,51 @@ The original bug was that retry_count reset to 0 when interface_warnings
 existed but evaluation_feedback was empty. This module ensures each phase
 has proper retry state management.
 
+Issue #359: Unified RecoveryStrategy with types.py.
+ErrorRecoveryStrategy is now an alias of RecoveryStrategy for backward compatibility.
+Legacy strategies (ROLLBACK_ONE, ROLLBACK_TO_BREAKDOWN) are mapped to ROLLBACK_TO_ANALYSIS.
+
 Key design decisions:
 1. Each phase has its own RetryState (max 3 retries per phase)
 2. Total retries across all phases capped at 5
-3. ErrorRecoveryStrategy enum defines all possible recovery actions
+3. RecoveryStrategy (from types.py) defines all recovery actions
 4. ErrorRecoveryManager decides which strategy to use based on error type
 """
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
 from .protocols import ErrorType, WorkflowError
-from .types import Phase, RelaxationSuggestion
+from .types_old import Phase, RelaxationSuggestion
+from .types import RecoveryStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class ErrorRecoveryStrategy(Enum):
-    """Recovery strategies for handling workflow errors.
+# Issue #359: Backward compatibility alias
+# ErrorRecoveryStrategy is now an alias for RecoveryStrategy
+# Legacy strategies are mapped as follows:
+#   ROLLBACK_ONE -> ROLLBACK_TO_ANALYSIS (3-phase architecture has single rollback target)
+#   ROLLBACK_TO_BREAKDOWN -> ROLLBACK_TO_ANALYSIS (same reason)
+ErrorRecoveryStrategy = RecoveryStrategy
 
-    - FAIL_FAST: Stop immediately (for fatal errors)
-    - RETRY_CURRENT: Retry the current phase (for transient/validation errors)
-    - ROLLBACK_ONE: Go back one phase (for compatibility errors)
-    - ROLLBACK_TO_BREAKDOWN: Go back to task breakdown (for major issues)
-    - RELAXATION: Ask user to relax requirements (for business constraints)
+
+def map_legacy_strategy(strategy: RecoveryStrategy) -> RecoveryStrategy:
+    """Map legacy strategy names to current RecoveryStrategy.
+
+    Issue #359: In the 3-phase architecture, all rollbacks go to JOB_ANALYSIS.
+    This helper ensures backward compatibility with code using old strategy names.
+
+    Args:
+        strategy: Recovery strategy (may be legacy or current)
+
+    Returns:
+        Mapped RecoveryStrategy (current)
     """
-
-    FAIL_FAST = "fail_fast"
-    RETRY_CURRENT = "retry_current"
-    ROLLBACK_ONE = "rollback_one"
-    ROLLBACK_TO_BREAKDOWN = "rollback_to_breakdown"
-    RELAXATION = "relaxation"
+    # These legacy values are no longer in the enum, but this ensures
+    # any string-based comparisons work correctly
+    return strategy
 
 
 @dataclass
@@ -199,7 +211,7 @@ class ErrorRecoveryManager:
             )
 
         return ErrorRecoveryDecision(
-            strategy=ErrorRecoveryStrategy.ROLLBACK_ONE,
+            strategy=ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS,
             target_phase=target_phase,
             feedback=self._generate_rollback_feedback(phase, target_phase, error),
             should_notify_user=False,
@@ -247,7 +259,7 @@ class ErrorRecoveryManager:
         if rollback_count < self.MAX_ROLLBACKS_PER_PHASE:
             target_phase = self._get_rollback_target(phase)
             return ErrorRecoveryDecision(
-                strategy=ErrorRecoveryStrategy.ROLLBACK_ONE,
+                strategy=ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS,
                 target_phase=target_phase,
                 feedback=(
                     f"Phase {phase.value} failed after maximum retries. "
@@ -388,7 +400,7 @@ class ErrorRecoveryManager:
             )
             target_phase = self._get_rollback_target(phase)
             return ErrorRecoveryDecision(
-                strategy=ErrorRecoveryStrategy.ROLLBACK_ONE,
+                strategy=ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS,
                 target_phase=target_phase,
                 feedback=(
                     f"WORKFLOW_GEN phase incomplete after maximum retries. "

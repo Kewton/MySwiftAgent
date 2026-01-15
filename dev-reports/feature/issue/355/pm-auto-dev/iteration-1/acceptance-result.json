@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "service_health": {
+    "expertAgent": {"status": "healthy", "note": "Tests run locally without server"}
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_355_acceptance.py",
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "output": "11 passed, 10 warnings"
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "acceptance_criteria_status": [
+    {"criterion": "TaskFlowAdapter.convert() が JSON文字列フィールドをオブジェクトに変換", "verified": true, "verification_method": "pytest TC-001,TC-002,TC-003,TC-004,TC-011"},
+    {"criterion": "変換エラー時に詳細なエラーメッセージを返却", "verified": true, "verification_method": "pytest TC-006,TC-007,TC-009"},
+    {"criterion": "workflow_registrar.py がAdapterを使用して変換を実行", "verified": true, "verification_method": "pytest TC-008"},
+    {"criterion": "既にオブジェクトの場合、そのまま保持される", "verified": true, "verification_method": "pytest TC-005"},
+    {"criterion": "ディープコピーで入力データが保持される", "verified": true, "verification_method": "pytest TC-012"}
+  ],
+  "evidence_files": [
+    "expertAgent/tests/acceptance/test_issue_355_acceptance.py"
+  ],
+  "test_cases_executed": [
+    "TC-001: JSON文字列 input_schema の変換",
+    "TC-002: JSON文字列 output_schema の変換",
+    "TC-003: JSON文字列 output の変換",
+    "TC-004: steps[*].config.body の変換",
+    "TC-005: 既存オブジェクトの保持",
+    "TC-006: 不正JSON時のエラー返却",
+    "TC-007: ConversionResult 構造確認",
+    "TC-008: workflow_registrar.py 統合確認",
+    "TC-009: Adapter変換失敗時のエラーハンドリング",
+    "TC-011: 複数フィールド同時変換",
+    "TC-012: ディープコピー検証"
+  ]
+}

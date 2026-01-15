@@ -1,0 +1,290 @@
+{
+  "issue_number": 359,
+  "iteration": 2,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "UnifiedTaskIdentifier",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "line_number": 15,
+      "description": "統一タスク識別子クラス - task_idを全フェーズで一貫使用",
+      "expected_callers": ["JobGenerationOrchestratorV3", "parallel_workflow_generation"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "TaskResult",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "line_number": 45,
+      "description": "個別タスクの実行結果を保持するデータクラス",
+      "expected_callers": ["parallel_workflow_generation"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "ParallelExecutionResult",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "line_number": 65,
+      "description": "並列実行の集約結果を保持するデータクラス",
+      "expected_callers": ["parallel_workflow_generation", "JobGenerationOrchestratorV3"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "ErrorType",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "line_number": 95,
+      "description": "エラータイプの列挙型 (TRANSIENT, VALIDATION, API, BUSINESS, FATAL)",
+      "expected_callers": ["ErrorRecoveryManager", "PhaseError"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "RecoveryStrategy",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "line_number": 105,
+      "description": "リカバリー戦略の列挙型 (RETRY_CURRENT, RETRY_WITH_FEEDBACK, ROLLBACK_TO_ANALYSIS, RELAXATION, FAIL_FAST)",
+      "expected_callers": ["ErrorRecoveryManager", "RecoveryAction"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "ErrorRecoveryManager",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "line_number": 120,
+      "description": "エラーリカバリーの統合管理 - フェーズ別契約、リトライ制限、エスカレーション",
+      "expected_callers": ["JobGenerationOrchestratorV3"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "JobAnalysisErrorContract",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "line_number": 30,
+      "description": "Phase 1 (JOB_ANALYSIS) のエラー契約",
+      "expected_callers": ["ErrorRecoveryManager"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py"
+    },
+    {
+      "feature_id": "F8",
+      "name": "RegistrationErrorContract",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "line_number": 60,
+      "description": "Phase 2 (REGISTRATION) のエラー契約",
+      "expected_callers": ["ErrorRecoveryManager"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py"
+    },
+    {
+      "feature_id": "F9",
+      "name": "WorkflowGenErrorContract",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "line_number": 90,
+      "description": "Phase 3 (WORKFLOW_GEN) のエラー契約",
+      "expected_callers": ["ErrorRecoveryManager"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py"
+    },
+    {
+      "feature_id": "F10",
+      "name": "parallel_workflow_generation",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py",
+      "line_number": 50,
+      "description": "Phase 3の並列実行関数 - セマフォ制御、タイムアウト、エラー分離",
+      "expected_callers": ["JobGenerationOrchestratorV3._execute_workflow_gen"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py"
+    },
+    {
+      "feature_id": "F11",
+      "name": "ParallelExecutionErrorAggregator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py",
+      "line_number": 150,
+      "description": "並列実行のエラー集約と判断",
+      "expected_callers": ["parallel_workflow_generation"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py"
+    },
+    {
+      "feature_id": "F12",
+      "name": "TaskDependencyValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/task_dependency.py",
+      "line_number": 20,
+      "description": "タスク依存関係バリデーター - 循環参照検出、存在チェック、トポロジカルソート",
+      "expected_callers": ["ValidationPipelineV3", "JobGenerationOrchestratorV3"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py"
+    },
+    {
+      "feature_id": "F13",
+      "name": "JobAnalyzerV3",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/nodes/job_analyzer_v3.py",
+      "line_number": 30,
+      "description": "統合されたジョブ分析ノード - TASK_BREAKDOWN + INTERFACE_DESIGNを1回のLLM呼び出しで実行",
+      "expected_callers": ["JobGenerationOrchestratorV3._execute_job_analysis"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py"
+    },
+    {
+      "feature_id": "F14",
+      "name": "JobGenerationOrchestratorV3",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "line_number": 30,
+      "description": "3フェーズ統一IDオーケストレーター - 295行、インデックスルックアップなし、サイレントフォールバックなし",
+      "expected_callers": ["JobGeneratorV3Adapter.generate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py"
+    },
+    {
+      "feature_id": "F15",
+      "name": "JobGeneratorV3Adapter",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py",
+      "line_number": 20,
+      "description": "V3アダプター - 既存APIとの後方互換性を維持",
+      "expected_callers": ["API endpoint /api/v1/job-generator"],
+      "expected_call_location": "expertAgent/app/routers/job_generator.py"
+    },
+    {
+      "feature_id": "F16",
+      "name": "ValidationPipelineV3",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line_number": 200,
+      "description": "強化されたバリデーションパイプライン - Structural, Schema, Semanticバリデーター",
+      "expected_callers": ["JobGenerationOrchestratorV3._execute_workflow_gen"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py"
+    },
+    {
+      "feature_id": "F17",
+      "name": "StructuralValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line_number": 50,
+      "description": "ワークフロー構造検証 - 必須フィールド、基本構造",
+      "expected_callers": ["ValidationPipelineV3"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py"
+    },
+    {
+      "feature_id": "F18",
+      "name": "SchemaValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line_number": 100,
+      "description": "JSONスキーマ検証 - input_schema, output_schema",
+      "expected_callers": ["ValidationPipelineV3"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py"
+    },
+    {
+      "feature_id": "F19",
+      "name": "SemanticValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line_number": 150,
+      "description": "意味的検証 - ステップ参照、変数参照パターン",
+      "expected_callers": ["ValidationPipelineV3"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_unified_task_identifier.py::*"],
+      "integration_tests": ["test_job_generation_e2e.py::*"],
+      "acceptance_tests": ["test_issue_359_acceptance.py::*"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_error_recovery.py::*"],
+      "integration_tests": ["test_job_generation_e2e.py::TestErrorRecovery*"],
+      "acceptance_tests": ["test_issue_359_acceptance.py::*error*"]
+    },
+    {
+      "feature_id": "F10",
+      "unit_tests": ["test_parallel_executor.py::*"],
+      "integration_tests": ["test_job_generation_e2e.py::TestParallelExecution*"],
+      "acceptance_tests": ["test_issue_359_acceptance.py::*parallel*"]
+    },
+    {
+      "feature_id": "F12",
+      "unit_tests": ["test_validators.py::TestTaskDependencyValidator*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F13",
+      "unit_tests": ["test_job_analyzer_v3.py::*"],
+      "integration_tests": ["test_job_generation_e2e.py::TestJobAnalysis*"],
+      "acceptance_tests": ["test_issue_359_acceptance.py::*job_analysis*"]
+    },
+    {
+      "feature_id": "F14",
+      "unit_tests": ["test_orchestrator_v3.py::*"],
+      "integration_tests": ["test_job_generation_e2e.py::*"],
+      "acceptance_tests": ["test_issue_359_acceptance.py::*"]
+    },
+    {
+      "feature_id": "F15",
+      "unit_tests": ["test_adapter_v3.py::*"],
+      "integration_tests": ["test_job_generation_e2e.py::*"],
+      "acceptance_tests": ["test_issue_359_acceptance.py::*"]
+    },
+    {
+      "feature_id": "F16",
+      "unit_tests": ["test_validation_pipeline_v3.py::*"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F14",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py",
+      "integration_type": "orchestrator_call",
+      "integration_method": "JobGeneratorV3Adapter calls JobGenerationOrchestratorV3.run()"
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "integration_type": "error_handling",
+      "integration_method": "Orchestrator uses ErrorRecoveryManager for error handling"
+    },
+    {
+      "feature_id": "F10",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "integration_type": "parallel_execution",
+      "integration_method": "_execute_workflow_gen calls parallel_workflow_generation()"
+    },
+    {
+      "feature_id": "F13",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "integration_type": "llm_node",
+      "integration_method": "_execute_job_analysis calls JobAnalyzerV3.analyze()"
+    },
+    {
+      "feature_id": "F16",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "integration_type": "validation",
+      "integration_method": "_execute_workflow_gen calls ValidationPipelineV3.validate()"
+    }
+  ],
+  "removed_components": [
+    {
+      "name": "TaskIdMapping",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "reason": "統一IDパターンにより不要 - Phase 0で削除予定"
+    },
+    {
+      "name": "SkipAggregator",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "reason": "サイレントフォールバック排除により不要 - Phase 0で削除予定"
+    }
+  ]
+}

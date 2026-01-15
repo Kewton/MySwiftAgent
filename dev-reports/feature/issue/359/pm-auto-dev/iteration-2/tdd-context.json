@@ -1,0 +1,91 @@
+{
+  "issue_number": 359,
+  "iteration": 2,
+  "retry_reason": "Phase 1のコア実装が完了。オーケストレーターのリファクタリングと統合が必要。",
+  "already_completed": [
+    "0.1 - Dead code analysis (deletion-report.md)",
+    "1.1 - Data models (types_v3.py)",
+    "1.3 - ErrorRecoveryManager (error_recovery_v3.py)",
+    "1.4 - Parallel execution (parallel_executor.py)",
+    "2.1 - TaskDependencyValidator (validators/task_dependency.py)",
+    "3.1 - Unit tests: test_unified_task_identifier.py, test_error_recovery.py, test_parallel_executor.py",
+    "3.2 - Unit tests: test_validators.py"
+  ],
+  "implementation_tasks": [
+    "Task 1.2: job_analyzerノードの実装（TASK_BREAKDOWN + INTERFACE_DESIGN統合）",
+    "Task 1.5: JobGenerationOrchestratorのリファクタリング（3フェーズ構造）",
+    "Task 1.6: アダプター層の更新",
+    "Task 2.2: ValidationPipelineの強化",
+    "Task 2.3: バリデーションの統合",
+    "Task 3.3: 結合テスト",
+    "Task 3.4: Contract Test実装"
+  ],
+  "focus_tasks": [
+    {
+      "task_id": "1.2",
+      "description": "job_analyzerノードの実装",
+      "details": "TASK_BREAKDOWN + INTERFACE_DESIGNを統合し、1回のLLM呼び出しでタスク分解とインターフェース設計を完了する",
+      "output_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/nodes/job_analyzer_v3.py",
+      "dependencies": ["types_v3.py"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "JobGenerationOrchestratorのリファクタリング",
+      "details": "4フェーズから3フェーズ（JOB_ANALYSIS → REGISTRATION → WORKFLOW_GEN）に削減。904行から300行以下に圧縮。統一ID（task_id）を全フェーズで使用。インデックスベースのルックアップを排除。サイレントフォールバックを排除。",
+      "output_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "dependencies": ["types_v3.py", "error_recovery_v3.py", "parallel_executor.py", "job_analyzer_v3.py"],
+      "constraints": {
+        "max_lines": 300,
+        "no_index_lookups": true,
+        "no_silent_fallbacks": true,
+        "phases": ["JOB_ANALYSIS", "REGISTRATION", "WORKFLOW_GEN"]
+      }
+    },
+    {
+      "task_id": "1.6",
+      "description": "アダプター層の更新",
+      "details": "新しいオーケストレーターと既存のAPIエンドポイントを接続。後方互換性を維持。",
+      "output_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py",
+      "dependencies": ["orchestrator_v3.py"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "ValidationPipelineの強化",
+      "details": "StructuralValidator、SchemaValidator、SemanticValidatorをチェーンパターンで実装",
+      "output_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "dependencies": ["task_dependency.py"]
+    },
+    {
+      "task_id": "3.3",
+      "description": "結合テスト",
+      "details": "E2Eシナリオテスト、エラーリカバリーテスト、並列実行の動作確認",
+      "output_file": "expertAgent/tests/integration/test_job_generation_e2e.py",
+      "dependencies": ["orchestrator_v3.py", "adapter_v3.py"]
+    },
+    {
+      "task_id": "3.4",
+      "description": "Contract Test実装",
+      "details": "expertAgent ↔ graphAiServer間のスキーマ互換性を検証",
+      "output_file": "expertAgent/tests/contract/test_taskflow_contract.py",
+      "dependencies": ["adapter_v3.py"]
+    }
+  ],
+  "existing_files": {
+    "types_v3": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+    "error_recovery_v3": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+    "parallel_executor": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py",
+    "task_dependency": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/task_dependency.py"
+  },
+  "target_coverage": 90,
+  "definition_of_done": [
+    "orchestrator_v3.pyが300行以下",
+    "3フェーズ構造（JOB_ANALYSIS → REGISTRATION → WORKFLOW_GEN）",
+    "統一ID（task_id）を全フェーズで使用",
+    "インデックスベースのルックアップなし",
+    "サイレントフォールバックなし",
+    "単体テストカバレッジ90%以上",
+    "結合テストが全パス",
+    "Contract Testが全パス",
+    "CI/CDグリーン（Ruff、MyPyエラーゼロ）"
+  ]
+}

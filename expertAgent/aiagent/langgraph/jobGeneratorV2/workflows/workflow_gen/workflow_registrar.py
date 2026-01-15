@@ -432,8 +432,10 @@ async def register_and_update_task_masters(
             failed_task_masters.append(task_master_id)
 
     # Determine overall success
-    # We consider it successful if at least one TaskMaster was updated
-    overall_success = len(updated_task_masters) > 0
+    # Issue #360: Require all TaskMasters to be updated successfully
+    # Changed from: len(updated_task_masters) > 0 (partial success allowed)
+    # To: len(failed_task_masters) == 0 (all must succeed)
+    overall_success = len(failed_task_masters) == 0 and len(updated_task_masters) > 0
 
     if failed_task_masters:
         logger.warning(

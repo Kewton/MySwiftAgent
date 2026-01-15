@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
 
 from .protocols import ProgressReporter
-from .types import Phase, TaskDefinition
+from .types_old import Phase, TaskDefinition
 
 T = TypeVar("T")
 

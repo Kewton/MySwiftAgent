@@ -1,0 +1,55 @@
+{
+  "issue_number": 355,
+  "title": "TaskFlow Adapter Layer implementation",
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "ConversionResult",
+      "type": "dataclass",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/taskflow_adapter.py",
+      "line": 24,
+      "description": "Result dataclass for workflow conversion"
+    },
+    {
+      "feature_id": "F2",
+      "name": "TaskFlowAdapter",
+      "type": "class",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/taskflow_adapter.py",
+      "line": 40,
+      "description": "Adapter class for converting ExpertAgent output to GraphAiServer format"
+    },
+    {
+      "feature_id": "F3",
+      "name": "WORKFLOW_JSON_STRING_FIELDS",
+      "type": "constant",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/taskflow_adapter.py",
+      "line": 66,
+      "description": "Workflow-level fields that may be JSON strings"
+    },
+    {
+      "feature_id": "F4",
+      "name": "STEP_JSON_STRING_FIELDS",
+      "type": "constant",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/taskflow_adapter.py",
+      "line": 69,
+      "description": "Step-level fields that may be JSON strings"
+    },
+    {
+      "feature_id": "F5",
+      "name": "TaskFlowAdapter.convert",
+      "type": "method",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/taskflow_adapter.py",
+      "line": 71,
+      "description": "Main conversion method"
+    },
+    {
+      "feature_id": "F6",
+      "name": "_adapter",
+      "type": "module_variable",
+      "file_path": "aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow_registrar.py",
+      "line": 42,
+      "description": "Module-level TaskFlowAdapter instance"
+    }
+  ],
+  "timestamp": "2026-01-12T17:19:00Z"
+}

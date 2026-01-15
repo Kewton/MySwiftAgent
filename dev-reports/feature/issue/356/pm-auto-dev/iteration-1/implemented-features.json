@@ -1,0 +1,150 @@
+{
+  "issue_number": 356,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "tests/contract/__init__.py",
+      "type": "module",
+      "file_path": "expertAgent/tests/contract/__init__.py",
+      "line_number": 1,
+      "description": "Contract testsパッケージの初期化",
+      "expected_callers": ["pytest"],
+      "expected_call_location": "pytest実行時"
+    },
+    {
+      "feature_id": "F2",
+      "name": "adapter fixture",
+      "type": "pytest_fixture",
+      "file_path": "expertAgent/tests/contract/conftest.py",
+      "line_number": 35,
+      "description": "TaskFlowAdapterインスタンスを提供するpytestフィクスチャ",
+      "expected_callers": ["TestJsonStringFieldsConversion", "TestPydanticModelOutputConversion", "TestGraphAiServerValidation"],
+      "expected_call_location": "expertAgent/tests/contract/test_taskflow_schema_contract.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "sample_workflow_with_json_strings fixture",
+      "type": "pytest_fixture",
+      "file_path": "expertAgent/tests/contract/conftest.py",
+      "line_number": 42,
+      "description": "JSON文字列フィールドを含むサンプルワークフロー",
+      "expected_callers": ["test_json_string_fields_are_converted"],
+      "expected_call_location": "expertAgent/tests/contract/test_taskflow_schema_contract.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "test_json_string_fields_are_converted",
+      "type": "test_method",
+      "file_path": "expertAgent/tests/contract/test_taskflow_schema_contract.py",
+      "line_number": 44,
+      "description": "JSON文字列フィールドがオブジェクトに変換されることを検証",
+      "expected_callers": ["pytest"],
+      "expected_call_location": "pytest実行時"
+    },
+    {
+      "feature_id": "F5",
+      "name": "test_pydantic_model_output_is_convertible",
+      "type": "test_method",
+      "file_path": "expertAgent/tests/contract/test_taskflow_schema_contract.py",
+      "line_number": 172,
+      "description": "Pydanticモデル出力がアダプターで変換可能であることを検証",
+      "expected_callers": ["pytest"],
+      "expected_call_location": "pytest実行時"
+    },
+    {
+      "feature_id": "F6",
+      "name": "test_converted_workflow_passes_graphai_validation",
+      "type": "test_method",
+      "file_path": "expertAgent/tests/contract/test_taskflow_schema_contract.py",
+      "line_number": 345,
+      "description": "変換後のワークフローがGraphAiServer検証を通過することを検証（integration mark）",
+      "expected_callers": ["pytest"],
+      "expected_call_location": "pytest実行時（GraphAiServer起動後）"
+    },
+    {
+      "feature_id": "F7",
+      "name": "simple_api_rest.json",
+      "type": "fixture_file",
+      "file_path": "expertAgent/tests/contract/fixtures/valid_workflows/simple_api_rest.json",
+      "line_number": 1,
+      "description": "シンプルなAPI呼び出しワークフローのフィクスチャ",
+      "expected_callers": ["test_all_fixture_workflows_are_convertible"],
+      "expected_call_location": "expertAgent/tests/contract/test_taskflow_schema_contract.py"
+    },
+    {
+      "feature_id": "F8",
+      "name": "multi_step.json",
+      "type": "fixture_file",
+      "file_path": "expertAgent/tests/contract/fixtures/valid_workflows/multi_step.json",
+      "line_number": 1,
+      "description": "複数ステップワークフローのフィクスチャ",
+      "expected_callers": ["test_all_fixture_workflows_are_convertible"],
+      "expected_call_location": "expertAgent/tests/contract/test_taskflow_schema_contract.py"
+    },
+    {
+      "feature_id": "F9",
+      "name": "transform_workflow.json",
+      "type": "fixture_file",
+      "file_path": "expertAgent/tests/contract/fixtures/valid_workflows/transform_workflow.json",
+      "line_number": 1,
+      "description": "Transform ステップを含むワークフローのフィクスチャ",
+      "expected_callers": ["test_all_fixture_workflows_are_convertible"],
+      "expected_call_location": "expertAgent/tests/contract/test_taskflow_schema_contract.py"
+    },
+    {
+      "feature_id": "F10",
+      "name": "api_with_body.json",
+      "type": "fixture_file",
+      "file_path": "expertAgent/tests/contract/fixtures/valid_workflows/api_with_body.json",
+      "line_number": 1,
+      "description": "Bodyフィールドを持つAPIワークフローのフィクスチャ",
+      "expected_callers": ["test_all_fixture_workflows_are_convertible"],
+      "expected_call_location": "expertAgent/tests/contract/test_taskflow_schema_contract.py"
+    },
+    {
+      "feature_id": "F11",
+      "name": "contract-tests.yml",
+      "type": "ci_workflow",
+      "file_path": ".github/workflows/contract-tests.yml",
+      "line_number": 1,
+      "description": "Contract TestsのCI/CDワークフロー",
+      "expected_callers": ["GitHub Actions"],
+      "expected_call_location": "PR時（スキーマ関連ファイル変更時）"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_json_string_fields_are_converted", "test_already_object_fields_are_preserved", "test_mixed_string_and_object_fields", "test_invalid_json_string_returns_error"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_356_contract_tests_exist"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_pydantic_model_output_is_convertible", "test_pydantic_model_with_complex_steps", "test_pydantic_model_serialization_roundtrip"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_356_pydantic_tests_exist"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": [],
+      "integration_tests": ["test_converted_workflow_passes_graphai_validation", "test_multiple_fixture_workflows_pass_validation"],
+      "acceptance_tests": ["test_issue_356_integration_tests_exist"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/tests/contract/conftest.py",
+      "integration_type": "import",
+      "integration_method": "from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.adapter import TaskFlowAdapter"
+    },
+    {
+      "feature_id": "F11",
+      "integration_file": ".github/workflows/contract-tests.yml",
+      "integration_type": "ci_trigger",
+      "integration_method": "on: pull_request paths: [...schema files...]"
+    }
+  ]
+}

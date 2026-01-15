@@ -1,0 +1,38 @@
+{
+  "workflow_name": "generate_summary",
+  "description": "検索結果のリストを入力として受け取り、ユーザーが読みやすい要約文を生成します。",
+  "input_schema": {
+    "search_results": "array",
+    "summary_style": "string"
+  },
+  "output_schema": {
+    "summary_text": "string",
+    "generated_at": "string"
+  },
+  "steps": [
+    {
+      "id": "llm_process",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "http://localhost:8004/v1/mylllm",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${inputs.search_results}",
+          "system_prompt": "Generate a readable summary in ${inputs.summary_style}.",
+          "model": "gpt-4o-mini"
+        },
+        "timeout_ms": 30000,
+        "verify_ssl": false
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "summary_text": "${llm_process.output.result}",
+    "generated_at": "${llm_process.output.generated_at}"
+  }
+}

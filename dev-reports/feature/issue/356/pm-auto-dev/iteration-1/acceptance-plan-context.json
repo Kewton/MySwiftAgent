@@ -1,0 +1,27 @@
+{
+  "issue_number": 356,
+  "issue_title": "TaskFlow Contract Tests 実装",
+  "acceptance_criteria": [
+    "JSON文字列フィールド変換の契約テストが存在",
+    "Pydanticモデル出力互換性の契約テストが存在",
+    "GraphAiServer検証の契約テスト（integration mark）が存在",
+    "契約テストが全てパス",
+    "テストフィクスチャが3種類以上",
+    "test_json_string_fields_are_converted が存在しパス",
+    "test_pydantic_model_output_is_convertible が存在しパス",
+    "test_converted_workflow_passes_graphai_validation が存在"
+  ],
+  "technical_requirements": [
+    "Python 3.11+",
+    "pytest, pytest-asyncio",
+    "httpx（GraphAiServer API呼び出し）",
+    "GitHub Actions",
+    "tests/contract/ ディレクトリ構造作成"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/investigation/issue-353-pending-workflow/schema-unification-proposal.md",
+  "work_plan_path": "",
+  "phase": "pre-tdd",
+  "parent_issue": 354,
+  "dependency": "Issue #355 (Adapter Layer) - 完了済み"
+}

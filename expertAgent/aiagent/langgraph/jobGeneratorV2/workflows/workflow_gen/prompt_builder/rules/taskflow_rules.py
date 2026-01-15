@@ -225,18 +225,22 @@ def get_taskflow_security_rules() -> str:
     """Get security rules for TaskFlow V2."""
     return """## Security Requirements
 
-### 1. HTTPS Only
-All URLs MUST use HTTPS protocol. HTTP is not allowed.
-- Valid: `https://api.example.com/endpoint`
-- Invalid: `http://api.example.com/endpoint`
+### 1. HTTPS Required (with localhost exception)
+All URLs MUST use HTTPS protocol for external APIs.
+**Exception**: Local development URLs (localhost, 127.0.0.1) are allowed to use HTTP.
 
-### 2. No Private IP Addresses
-The following are blocked for SSRF protection:
-- 127.x.x.x (localhost)
-- 10.x.x.x (private)
-- 192.168.x.x (private)
+- Valid: `https://api.example.com/endpoint`
+- Valid: `http://localhost:8004/v1/mylllm` (local development)
+- Valid: `${env.EXPERTAGENT_BASE_URL}/v1/mylllm` (environment variable - recommended)
+- Invalid: `http://api.example.com/endpoint` (external HTTP)
+
+### 2. No External Private IP Addresses
+The following external IPs are blocked for SSRF protection:
+- 10.x.x.x (private network)
+- 192.168.x.x (private network)
 - 169.254.x.x (link-local)
-- localhost
+
+**Note**: localhost (127.0.0.1) is allowed for internal API calls.
 
 ### 3. code_js Restrictions
 Only these pre-approved functions are allowed:
@@ -260,6 +264,7 @@ def get_taskflow_api_rules() -> str:
 
     Issue #350 Fix: TaskFlow workflows MUST use internal expertAgent APIs
     instead of external APIs (like api.openai.com directly).
+    Issue #359 Fix: Use environment variable references to avoid HTTP/HTTPS conflicts.
     """
     expertagent_base = settings.EXPERTAGENT_BASE_URL or "http://localhost:8004"
 
@@ -271,7 +276,11 @@ def get_taskflow_api_rules() -> str:
 
 ### Base URL
 All API endpoints use this base URL: `{expertagent_base}`
-You can use the full URL or `${{secrets.EXPERTAGENT_BASE_URL}}` for dynamic resolution.
+
+**RECOMMENDED**: Use `${{env.EXPERTAGENT_BASE_URL}}` for dynamic resolution.
+This allows the workflow to work in both development (HTTP) and production (HTTPS) environments.
+
+**Alternative**: You can use the literal URL `{expertagent_base}` for local development.
 
 ---
 

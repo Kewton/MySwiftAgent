@@ -1,14 +1,16 @@
 """TaskFlow V2 Validator.
 
 Issue #350 Task 3.1: TaskFlow validator implementation.
+Issue #359 Fix: Allow localhost HTTP for local development.
+Issue #359 Unified: Use shared security_constants for localhost hosts.
 
 This module provides:
 - TaskFlowSecurityValidator: URL, path, and code_js security checks
 - TaskFlowSchemaValidator: Pydantic schema validation
 
 Security features:
-- HTTPS enforcement for all URLs
-- SSRF protection (block private IPs and localhost)
+- HTTPS enforcement for external URLs (localhost HTTP allowed)
+- SSRF protection (block private IPs, localhost allowed for internal APIs)
 - Path traversal protection
 - code_js function whitelist
 """
@@ -22,6 +24,7 @@ from typing import Any
 from . import ValidationError, ValidationErrorCode, ValidationResult, WorkflowValidator
 from .error_codes import TaskFlowValidationErrorCode
 from .messages import get_error_message
+from .security_constants import ALLOWED_LOCAL_HOSTS, is_local_url
 
 logger = logging.getLogger(__name__)
 
@@ -30,21 +33,24 @@ class TaskFlowSecurityValidator:
     """Security validator for TaskFlow V2 workflows.
 
     Implements security checks:
-    - HTTPS enforcement
-    - SSRF protection (private IP blocking)
+    - HTTPS enforcement (localhost HTTP allowed for local development)
+    - SSRF protection (private IP blocking, localhost allowed)
     - Path traversal protection
     - code_js function whitelist
+
+    Issue #359 Fix: localhost/127.0.0.1 are allowed for internal API calls.
+    Issue #359 Unified: Use shared ALLOWED_LOCAL_HOSTS from security_constants.
     """
 
-    # Private IP patterns for SSRF protection
+    # Issue #359: Use unified local host definitions from security_constants
+    ALLOWED_LOCALHOST_HOSTS = list(ALLOWED_LOCAL_HOSTS)
+
+    # Private IP patterns for SSRF protection (excludes localhost)
     PRIVATE_IP_PATTERNS = [
-        re.compile(r"^https?://127\."),
         re.compile(r"^https?://10\."),
         re.compile(r"^https?://192\.168\."),
         re.compile(r"^https?://169\.254\."),
         re.compile(r"^https?://172\.(1[6-9]|2[0-9]|3[0-1])\."),
-        re.compile(r"^https?://localhost"),
-        re.compile(r"^https?://\[::1\]"),
     ]
 
     # Allowed code_js functions (whitelist)
@@ -63,9 +69,11 @@ class TaskFlowSecurityValidator:
         """Validate URL for security requirements.
 
         Checks:
-        1. HTTPS protocol required
-        2. No private IP addresses
-        3. No localhost
+        1. HTTPS protocol required for external URLs
+        2. HTTP allowed for localhost/127.0.0.1 (internal APIs)
+        3. No private IP addresses (except localhost)
+
+        Issue #359 Fix: Allow localhost HTTP for local development.
 
         Args:
             url: URL to validate
@@ -75,12 +83,15 @@ class TaskFlowSecurityValidator:
         """
         errors: list[ValidationError] = []
 
-        # Skip variable references
+        # Skip variable references (e.g., ${env.EXPERTAGENT_BASE_URL})
         if url.startswith("${"):
             return ValidationResult.success()
 
-        # Check HTTPS
-        if not url.startswith("https://"):
+        # Check if URL is localhost (allowed for HTTP)
+        is_localhost = self._is_localhost_url(url)
+
+        # Check HTTPS (required for non-localhost URLs)
+        if url.startswith("http://") and not is_localhost:
             errors.append(
                 ValidationError(
                     code=ValidationErrorCode.VALIDATION_FAILED,
@@ -90,26 +101,23 @@ class TaskFlowSecurityValidator:
                         url=url[:100],
                     ),
                     location="url",
-                    suggestion="Change http:// to https://",
+                    suggestion="Change http:// to https:// for external URLs. "
+                    "HTTP is only allowed for localhost.",
                     severity="critical",
                 )
             )
             return ValidationResult.failure(errors)
 
-        # Check for private IPs (SSRF protection)
+        # Check for private IPs (SSRF protection) - localhost is already allowed
         for pattern in self.PRIVATE_IP_PATTERNS:
             if pattern.match(url):
-                if "localhost" in url.lower():
-                    code = TaskFlowValidationErrorCode.LOCALHOST_NOT_ALLOWED
-                else:
-                    code = TaskFlowValidationErrorCode.PRIVATE_IP_NOT_ALLOWED
-
+                code = TaskFlowValidationErrorCode.PRIVATE_IP_NOT_ALLOWED
                 errors.append(
                     ValidationError(
                         code=ValidationErrorCode.VALIDATION_FAILED,
                         message=f"[{code.value}] " + get_error_message(code, url=url[:100]),
                         location="url",
-                        suggestion="Use a public URL instead of private/local addresses",
+                        suggestion="Use a public URL instead of private network addresses",
                         severity="critical",
                     )
                 )
@@ -119,6 +127,21 @@ class TaskFlowSecurityValidator:
             return ValidationResult.failure(errors)
 
         return ValidationResult.success()
+
+    def _is_localhost_url(self, url: str) -> bool:
+        """Check if URL is a localhost URL.
+
+        Args:
+            url: URL to check
+
+        Returns:
+            True if URL points to localhost
+        """
+        url_lower = url.lower()
+        for host in self.ALLOWED_LOCALHOST_HOSTS:
+            if f"://{host}" in url_lower or f"://{host}:" in url_lower:
+                return True
+        return False
 
     def validate_code_js_function(self, function_name: str) -> ValidationResult:
         """Validate code_js function is in whitelist.

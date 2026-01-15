@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     Capability,
     FeasibilityReport,
     TaskDefinition,

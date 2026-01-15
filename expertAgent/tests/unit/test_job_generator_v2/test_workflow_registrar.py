@@ -213,8 +213,10 @@ class TestRegisterAndUpdateTaskMasters:
                 yaml_content="version: 0.6\nnodes: {}",
             )
 
-        # Still considered successful if at least one update succeeded
-        assert result["success"] is True
+        # Issue #360: Partial success is now considered failure (all must succeed)
+        # Changed from: success=True when at least one succeeds
+        # To: success=False when any task fails
+        assert result["success"] is False
         assert len(result["updated_task_masters"]) == 2
         assert len(result["failed_task_masters"]) == 1
         assert "tm_003" in result["failed_task_masters"]

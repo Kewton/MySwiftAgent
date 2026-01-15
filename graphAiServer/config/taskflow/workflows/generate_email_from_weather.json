@@ -1,0 +1,33 @@
+{
+  "workflow_name": "generate_email_from_weather",
+  "description": "Generates a friendly and structured email subject and body based on weather data.",
+  "input_schema": {
+    "weather_data": "string",
+    "recipient_name": "string",
+    "tone": "string"
+  },
+  "output_schema": {
+    "email_subject": "string",
+    "email_body": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_email_content",
+      "type": "code_js",
+      "config": {
+        "step_type": "code_js",
+        "path": "/scripts/generate_email.js",
+        "function_name": "createEmailContent"
+      },
+      "params": {
+        "weather_data": "${inputs.weather_data}",
+        "recipient_name": "${inputs.recipient_name}",
+        "tone": "${inputs.tone}"
+      }
+    }
+  ],
+  "output": {
+    "email_subject": "${generate_email_content.output.email_subject}",
+    "email_body": "${generate_email_content.output.email_body}"
+  }
+}

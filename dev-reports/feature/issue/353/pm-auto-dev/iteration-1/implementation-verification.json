@@ -1,0 +1,274 @@
+{
+  "status": "fail",
+  "verification_timestamp": "2026-01-12T00:00:00Z",
+  "summary": {
+    "total_features": 7,
+    "verified_integrations": 2,
+    "dead_code": 5,
+    "integration_rate": "29%"
+  },
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "PendingWorkflowValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pending_workflow.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 79"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "No imports found in production code (only test files)"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "No calls found outside test code",
+          "grep_result": "Only found in test files: test_pending_workflow_validator.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_pending_workflow_validator.py"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies actual usage in workflow"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Validator is defined and tested but never imported or called in production code"
+    },
+    {
+      "feature_id": "F2",
+      "name": "PENDING_PLACEHOLDER",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pending_workflow.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 26"
+        },
+        "is_used": {
+          "passed": true,
+          "evidence": "Used within PendingWorkflowValidator.validate() at line 128"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Parent class (PendingWorkflowValidator) not called in production"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Constant exists but parent validator is never used in production"
+    },
+    {
+      "feature_id": "F3",
+      "name": "WorkflowGenRetryConfig",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 26"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "No imports found in production code"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only used in test_workflow_gen_retry.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_workflow_gen_retry.py"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Config class never imported or used in workflow_gen/workflow.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "calculate_retry_delay",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 71"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "No imports found in production code"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only used in test_workflow_gen_retry.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_workflow_gen_retry.py"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Retry delay function never called in workflow retry logic"
+    },
+    {
+      "feature_id": "F5",
+      "name": "execute_with_timeout",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 118"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "No imports found in production code"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only used in test_workflow_gen_retry.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_workflow_gen_retry.py"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Timeout wrapper never used in workflow execution"
+    },
+    {
+      "feature_id": "F6",
+      "name": "ErrorType.INCOMPLETE_WORKFLOW",
+      "type": "enum_value",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 40"
+        },
+        "is_used_in_recovery": {
+          "passed": true,
+          "evidence": "Used in recovery.py _handle_incomplete_workflow_error at line 151"
+        },
+        "recovery_is_called": {
+          "passed": true,
+          "evidence": "_handle_incomplete_workflow_error is called from decide_recovery at line 152"
+        }
+      },
+      "classification": "INTEGRATED",
+      "success_reason": "Enum value properly integrated into recovery manager workflow"
+    },
+    {
+      "feature_id": "F7",
+      "name": "_can_proceed_to_finalization",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 758"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called from run_workflow at line 229"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_orchestrator_finalization_guard.py"
+        }
+      },
+      "classification": "INTEGRATED",
+      "success_reason": "Method properly integrated into orchestrator workflow"
+    }
+  ],
+  "dead_code_list": [
+    {
+      "feature_id": "F1",
+      "name": "PendingWorkflowValidator",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pending_workflow.py",
+      "line": 79,
+      "reason": "Validator never imported or called in production code",
+      "expected_caller": "WorkflowGenWorkflow or orchestrator _can_proceed_to_finalization",
+      "expected_location": "Before finalization check"
+    },
+    {
+      "feature_id": "F2",
+      "name": "PENDING_PLACEHOLDER",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pending_workflow.py",
+      "line": 26,
+      "reason": "Constant never used because parent validator not integrated",
+      "expected_usage": "In workflow_gen registration or validation"
+    },
+    {
+      "feature_id": "F3",
+      "name": "WorkflowGenRetryConfig",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py",
+      "line": 26,
+      "reason": "Retry config never imported in workflow_gen/workflow.py",
+      "expected_location": "WorkflowGenWorkflow.__init__ or execute method"
+    },
+    {
+      "feature_id": "F4",
+      "name": "calculate_retry_delay",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py",
+      "line": 71,
+      "reason": "Retry delay never calculated in actual workflow execution",
+      "expected_location": "WorkflowGenWorkflow retry logic or orchestrator"
+    },
+    {
+      "feature_id": "F5",
+      "name": "execute_with_timeout",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py",
+      "line": 118,
+      "reason": "Timeout wrapper never used for LLM or API calls",
+      "expected_location": "Around LLM generation or GraphAiServer calls"
+    }
+  ],
+  "verified_integrations": [
+    {
+      "feature_id": "F6",
+      "name": "ErrorType.INCOMPLETE_WORKFLOW",
+      "integration_point": "recovery.py:151 -> _handle_incomplete_workflow_error",
+      "verified_by": "tests/integration/test_orchestrator_finalization_guard.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "_can_proceed_to_finalization",
+      "integration_point": "orchestrator.py:229 -> run_workflow",
+      "verified_by": "tests/integration/test_orchestrator_finalization_guard.py"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F1",
+      "action": "Import and use PendingWorkflowValidator in _can_proceed_to_finalization",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line": 758,
+      "code_snippet": "from aiagent.langgraph.jobGeneratorV2.validators.pending_workflow import PendingWorkflowValidator\n\n# In _can_proceed_to_finalization:\nvalidator = PendingWorkflowValidator()\nvalidation_result = validator.validate(task_masters)\nif validation_result.has_pending:\n    return False, validation_result.get_error_message()"
+    },
+    {
+      "priority": "P0",
+      "action": "Add actual validation using PendingWorkflowValidator",
+      "description": "The current _can_proceed_to_finalization checks workflow_yaml existence but does not validate __PENDING__ placeholders in TaskMaster body_template.workflow_name",
+      "required_change": "Query TaskMasters from JobQueue API and validate using PendingWorkflowValidator"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "F3-F5",
+      "action": "Integrate retry logic into WorkflowGenWorkflow",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+      "description": "Import and use WorkflowGenRetryConfig, calculate_retry_delay, execute_with_timeout in workflow execution",
+      "code_snippet": "from aiagent.langgraph.jobGeneratorV2.retry import (\n    WorkflowGenRetryConfig,\n    calculate_retry_delay,\n    execute_with_timeout,\n)\n\n# In execute method:\nconfig = WorkflowGenRetryConfig()\nfor attempt in range(config.max_retries):\n    try:\n        result = await execute_with_timeout(\n            coro=self._generate_workflow(...),\n            timeout_seconds=config.llm_timeout_seconds,\n            error_type=ErrorType.INCOMPLETE_WORKFLOW,\n            error_message=\"Workflow generation timeout\"\n        )\n        break\n    except WorkflowError:\n        delay = await calculate_retry_delay(attempt + 1, config)\n        await asyncio.sleep(delay)"
+    }
+  ],
+  "critical_gap": {
+    "title": "Missing TaskMaster __PENDING__ Validation",
+    "description": "The _can_proceed_to_finalization method checks for workflow_yaml in WorkflowGenPhaseOutput, but Issue #353 requires checking TaskMaster.body_template.workflow_name for __PENDING__ placeholders. The PendingWorkflowValidator was implemented but never integrated.",
+    "impact": "Jobs with incomplete workflow generation may proceed to finalization, causing runtime errors",
+    "fix_required": "Add JobQueue API call to fetch TaskMasters and validate using PendingWorkflowValidator"
+  }
+}

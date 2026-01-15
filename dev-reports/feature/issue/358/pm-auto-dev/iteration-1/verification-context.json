@@ -1,0 +1,20 @@
+{
+  "issue_number": 358,
+  "iteration": 1,
+  "implemented_features_path": "dev-reports/feature/issue/358/pm-auto-dev/iteration-1/implemented-features.json",
+  "tdd_result_path": "dev-reports/feature/issue/358/pm-auto-dev/iteration-1/tdd-result.json",
+  "base_path": "expertAgent/aiagent/langgraph/jobGeneratorV2",
+  "files_to_verify": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"
+  ],
+  "integration_points": [
+    {
+      "feature": "BodyTemplateValidator",
+      "expected_caller": "MasterManagerSubWorkflow.create_masters",
+      "expected_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    }
+  ]
+}

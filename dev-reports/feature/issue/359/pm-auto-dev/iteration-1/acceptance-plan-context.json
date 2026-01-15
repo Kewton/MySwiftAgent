@@ -1,0 +1,93 @@
+{
+  "issue_number": 359,
+  "issue_title": "refactor(jobGeneratorV2): 3フェーズ統一ID方式によるアーキテクチャ簡素化",
+  "acceptance_criteria": [
+    "Phase 0: 不要コードの調査と削除が完了している",
+    "JOB_ANALYSISフェーズが1回のLLM呼び出しでタスク分解とインターフェース設計を完了する",
+    "REGISTRATIONフェーズがtask_id → task_master_idの辞書形式マッピングを返す",
+    "WORKFLOW_GENフェーズが各タスクを並列で処理できる",
+    "インデックスベースのルックアップが存在しない",
+    "サイレントフォールバックが存在しない（データ不在時はエラー）",
+    "既存のジョブ生成機能と同等の結果を出力できる",
+    "コードベースが提案するグラフ構造（3フェーズ統一ID方式）に準拠している",
+    "フェーズ間のデータフローがtask_idベースで一貫している",
+    "ErrorRecoveryManagerが期待通りのリトライ・ロールバック動作をする",
+    "Phase 3の並列実行が正しく動作する",
+    "job_analyzerのプロンプトがタスク分解原則・JSON Schema生成ルールを含んでいる",
+    "workflow_generatorのプロンプトがTaskFlow V2仕様を含んでいる",
+    "myVaultからモデル設定が正しく読み込まれる",
+    "デフォルトモデル（gemini-3-flash-preview）が正しく設定されている",
+    "JOB_ANALYSISフェーズでPydantic検証・依存関係検証が実行される",
+    "REGISTRATIONフェーズでBodyTemplateValidatorが実行される",
+    "WORKFLOW_GENフェーズでValidationPipelineが実行される",
+    "バリデーションエラー時に適切なリトライ/ロールバックが発生する",
+    "DEBUGレベルでLLMプロンプト・レスポンス全文が出力される",
+    "INFOレベルでフェーズ遷移・タスク処理状況が出力される",
+    "ジョブ生成リクエストごとにトレースが作成される",
+    "単体テストカバレッジ90%以上",
+    "結合テストカバレッジ50%以上",
+    "Contract Testが導入されている",
+    "受入テストが全パスする"
+  ],
+  "technical_requirements": [
+    "フェーズ数を4から3に削減（TASK_BREAKDOWN + INTERFACE_DESIGN → JOB_ANALYSIS）",
+    "統一ID（task_id）によるデータ管理",
+    "LLM呼び出し回数の大幅削減（17-18回→6回）",
+    "コード量の削減（904行→約300行）",
+    "並列実行メカニズムの実装（asyncio.gather + Semaphore）",
+    "ErrorRecoveryManagerの実装（リトライ戦略、エスカレーション）",
+    "TaskDependencyValidator（循環参照検出、存在チェック）",
+    "ValidationPipeline（構造検証、スキーマ検証、意味的検証）",
+    "Contract Test導入（expertAgent ↔ graphAiServer間）",
+    "Langfuseトレース構造の実装"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/359/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/359/work-plan.md",
+  "phase": "pre-tdd",
+  "implementation_phases": [
+    {
+      "phase_id": "0",
+      "name": "準備・調査",
+      "tasks": ["現状コードベースの調査とデッドコード特定", "Contract Test環境の準備"]
+    },
+    {
+      "phase_id": "1",
+      "name": "コア実装",
+      "tasks": [
+        "データモデル定義（UnifiedTaskIdentifier, TaskResult, ParallelExecutionResult）",
+        "job_analyzerノードの実装（TASK_BREAKDOWN + INTERFACE_DESIGN統合）",
+        "ErrorRecoveryManagerの実装",
+        "並列実行メカニズムの実装",
+        "JobGenerationOrchestratorのリファクタリング",
+        "アダプター層の更新"
+      ]
+    },
+    {
+      "phase_id": "2",
+      "name": "バリデーション実装",
+      "tasks": [
+        "TaskDependencyValidatorの実装",
+        "ValidationPipelineの強化",
+        "バリデーションの統合"
+      ]
+    },
+    {
+      "phase_id": "3",
+      "name": "テスト実装",
+      "tasks": [
+        "単体テスト（コア機能）",
+        "単体テスト（ノード・バリデーター）",
+        "結合テスト",
+        "Contract Test実装"
+      ]
+    }
+  ],
+  "expected_metrics": {
+    "unit_test_coverage": 90,
+    "integration_test_coverage": 50,
+    "llm_calls_reduction": "66%",
+    "code_reduction": "66%",
+    "phase_count": 3
+  }
+}

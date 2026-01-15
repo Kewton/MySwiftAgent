@@ -1,0 +1,18 @@
+{
+  "issue_number": 355,
+  "feature_summary": "TaskFlow Adapter Layer 実装",
+  "acceptance_criteria": [
+    "TaskFlowAdapter.convert() が JSON文字列フィールドをオブジェクトに変換",
+    "変換エラー時に詳細なエラーメッセージを返却",
+    "workflow_registrar.py がAdapterを使用して変換を実行",
+    "単体テストカバレッジ 90% 以上",
+    "Ruff/MyPy エラーゼロ",
+    "既存テストが全てパス"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent"],
+  "external_dependencies": [],
+  "pytest_test_file": "tests/acceptance/test_issue_355_acceptance.py"
+}

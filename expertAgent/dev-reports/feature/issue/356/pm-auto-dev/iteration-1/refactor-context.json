@@ -1,0 +1,21 @@
+{
+  "issue_number": 356,
+  "refactor_targets": [
+    "tests/contract/conftest.py",
+    "tests/contract/test_taskflow_schema_contract.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 100.0,
+    "complexity_score": 5
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "重複コードの削減（該当する場合）",
+    "テストヘルパー関数の共通化（該当する場合）"
+  ],
+  "notes": [
+    "Issue #356はテストのみのIssueのため、リファクタリング対象が限定的",
+    "既にカバレッジ100%のため、主にコード品質改善に注力"
+  ]
+}

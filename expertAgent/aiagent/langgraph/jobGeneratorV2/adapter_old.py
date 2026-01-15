@@ -28,10 +28,10 @@ from .context import (
     ObservabilityContext,
     StorageContext,
 )
-from .orchestrator import JobGenerationOrchestrator
+from .orchestrator_old import JobGenerationOrchestrator
 from .protocols import ProgressReporter
 from .recovery import ErrorRecoveryManager
-from .types import (
+from .types_old import (
     InterfaceSchema,
     JobGenerationRequest,
     JobGenerationResult,
@@ -180,9 +180,11 @@ class JobGeneratorV2Adapter:
         builder.with_storage_context(storage_context)
 
         # Configure integration context
+        # Issue #353: Add jobqueue_base_url for TaskMaster validation
         integration_context = IntegrationContext(
             graphai_client=None,  # Will be created on-demand by workflows
             myvault_client=None,  # Will use secrets_manager
+            jobqueue_base_url=settings.JOBQUEUE_API_URL or "http://localhost:8001",
         )
         builder.with_integration_context(integration_context)
 

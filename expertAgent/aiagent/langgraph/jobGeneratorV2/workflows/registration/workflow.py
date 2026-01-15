@@ -25,7 +25,7 @@ from aiagent.langgraph.jobGeneratorV2.protocols import (
     RetryPolicy,
     WorkflowError,
 )
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     Phase,
     PhaseStatus,
     RegistrationInput,

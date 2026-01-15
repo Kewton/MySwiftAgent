@@ -2,6 +2,7 @@
 
 Issue #350 Task 2.1: Pydantic schema definitions for TaskFlow V2.
 Issue #350 Fix: OpenAI Structured Output compatible (no Union/oneOf).
+Issue #359 Unified: Use shared security_constants for localhost hosts.
 
 This module provides:
 - IOSchemaType: Input/output schema type enum
@@ -24,6 +25,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from aiagent.langgraph.jobGeneratorV2.validators.security_constants import (
+    is_local_host,
+)
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas.variable_patterns import (
     mask_secret_references,
     replace_variables_with_placeholder,
@@ -135,19 +139,17 @@ class UnifiedStepConfig(BaseModel):
             return value
 
         # Allow HTTP for localhost/internal development URLs
+        # Issue #359: Use unified is_local_host from security_constants
         if value.startswith("http://"):
             from urllib.parse import urlparse
 
             parsed = urlparse(value)
             hostname = parsed.hostname or ""
             # Allow HTTP for localhost and internal addresses
-            allowed_http_hosts = [
-                "localhost",
-                "127.0.0.1",
-                "0.0.0.0",  # noqa: S104 - Intentional for Docker networking
-            ]
-            # Also allow internal Docker network addresses
-            if hostname in allowed_http_hosts or hostname.endswith(".local"):
+            # Uses unified is_local_host which includes:
+            # - localhost, 127.0.0.1, 0.0.0.0, [::1]
+            # - *.local, *.localhost, *.internal suffixes
+            if is_local_host(hostname):
                 return value
             # Block HTTP for external URLs
             raise ValueError(

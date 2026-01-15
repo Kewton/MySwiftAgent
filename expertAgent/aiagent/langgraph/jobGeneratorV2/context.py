@@ -18,7 +18,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .types import Phase, RetryState
+from .types_old import Phase, RetryState
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +61,12 @@ class IntegrationContext:
     Attributes:
         graphai_client: Client for GraphAI server
         myvault_client: Client for MyVault secret management
+        jobqueue_base_url: Base URL for JobQueue API (for TaskMaster validation)
     """
 
     graphai_client: Any = None
     myvault_client: Any = None
+    jobqueue_base_url: str = ""
 
 
 @dataclass

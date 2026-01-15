@@ -335,4 +335,6 @@ __all__ = [
     # Use: from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import BodyTemplateValidator
     # Use: from aiagent.langgraph.jobGeneratorV2.validators.template_variable_extractor import extract_template_variables
     # Use: from aiagent.langgraph.jobGeneratorV2.validators.schema_comparator import compare_schemas
+    # Issue #359: Security constants - imported from submodule
+    # Use: from aiagent.langgraph.jobGeneratorV2.validators.security_constants import ALLOWED_LOCAL_HOSTS, is_local_host
 ]

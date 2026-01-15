@@ -6,15 +6,18 @@ This module provides the TestRunnerSubWorkflow that:
 3. Validates workflow outputs
 
 Issue #342 Phase D.2: Workflow test execution support.
+Issue #359 Fix: Support both GraphAI YAML and TaskFlow JSON validation.
 
 Key design decisions:
 - Uses ExecutionContext for API access (dependency injection)
 - Does NOT import from langgraph or old jobTaskGeneratorAgents
 - Test execution is optional and can be disabled
+- Supports both GraphAI (YAML) and TaskFlow (JSON) formats
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -23,7 +26,7 @@ from aiagent.langgraph.jobGeneratorV2.protocols import (
     ErrorType,
     WorkflowError,
 )
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     InterfaceSchema,
     Phase,
 )
@@ -299,9 +302,60 @@ class TestRunnerSubWorkflow:
 
     async def validate_workflow_yaml(
         self,
-        workflow_yaml: str,
+        workflow_content: str,
+        engine: str = "auto",
     ) -> tuple[bool, list[str]]:
-        """Validate workflow YAML syntax and structure.
+        """Validate workflow content (YAML or JSON).
+
+        Issue #359 Fix: Auto-detect format and validate accordingly.
+
+        Args:
+            workflow_content: Workflow content (YAML or JSON)
+            engine: Engine type ('graphai', 'taskflow', or 'auto' for auto-detect)
+
+        Returns:
+            Tuple of (is_valid, list of errors)
+        """
+        errors: list[str] = []
+
+        if not workflow_content:
+            errors.append("Empty workflow content")
+            return False, errors
+
+        # Auto-detect format if not specified
+        if engine == "auto":
+            engine = self._detect_workflow_format(workflow_content)
+
+        if engine == "taskflow":
+            return self._validate_taskflow_json(workflow_content)
+        else:
+            return self._validate_graphai_yaml(workflow_content)
+
+    def _detect_workflow_format(self, content: str) -> str:
+        """Auto-detect workflow format (GraphAI YAML or TaskFlow JSON).
+
+        Args:
+            content: Workflow content
+
+        Returns:
+            'taskflow' or 'graphai'
+        """
+        content_stripped = content.strip()
+
+        # TaskFlow JSON starts with '{' and contains "steps" or "workflow_name"
+        if content_stripped.startswith("{"):
+            try:
+                data = json.loads(content_stripped)
+                if "steps" in data or "workflow_name" in data:
+                    return "taskflow"
+            except json.JSONDecodeError:
+                pass
+
+        # Default to GraphAI YAML
+        return "graphai"
+
+    def _validate_graphai_yaml(self, workflow_yaml: str) -> tuple[bool, list[str]]:
+        """Validate GraphAI YAML workflow.
 
         Args:
             workflow_yaml: YAML content to validate
@@ -311,11 +365,7 @@ class TestRunnerSubWorkflow:
         """
         errors: list[str] = []
 
-        if not workflow_yaml:
-            errors.append("Empty workflow YAML")
-            return False, errors
-
-        # Basic validation checks
+        # Basic validation checks for GraphAI YAML
         if "version:" not in workflow_yaml:
             errors.append("Missing version field")
 
@@ -328,5 +378,52 @@ class TestRunnerSubWorkflow:
             and "isResult:true" not in workflow_yaml
         ):
             errors.append("No result node defined")
+
+        return len(errors) == 0, errors
+
+    def _validate_taskflow_json(self, workflow_json: str) -> tuple[bool, list[str]]:
+        """Validate TaskFlow V2 JSON workflow.
+
+        Issue #359: Added TaskFlow JSON validation.
+
+        Args:
+            workflow_json: JSON content to validate
+
+        Returns:
+            Tuple of (is_valid, list of errors)
+        """
+        errors: list[str] = []
+
+        # Parse JSON
+        try:
+            data = json.loads(workflow_json)
+        except json.JSONDecodeError as e:
+            errors.append(f"Invalid JSON: {e}")
+            return False, errors
+
+        # Required fields for TaskFlow V2
+        if "workflow_name" not in data:
+            errors.append("Missing workflow_name field")
+
+        if "steps" not in data:
+            errors.append("Missing steps field")
+        elif not data.get("steps"):
+            errors.append("Steps array is empty")
+
+        # Check for output mapping
+        if "output" not in data:
+            errors.append("Missing output field")
+
+        # Validate each step has required fields
+        for i, step in enumerate(data.get("steps", [])):
+            # Skip parallel/conditional blocks
+            if "parallel" in step or "condition" in step:
+                continue
+
+            if "id" not in step:
+                errors.append(f"Step {i}: missing id field")
+
+            if "type" not in step:
+                errors.append(f"Step {i}: missing type field")
 
         return len(errors) == 0, errors

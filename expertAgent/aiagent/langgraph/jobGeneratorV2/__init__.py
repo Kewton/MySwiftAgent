@@ -14,7 +14,11 @@ The key improvement is in error recovery:
 - Prevents infinite loops by always decrementing retry budget
 """
 
-from .adapter import JobGeneratorV2Adapter, invoke_structured_llm_real
+# New 3-phase adapter (Issue #359) - not yet production-ready
+from .adapter import JobGeneratorAdapter
+
+# Production adapter with full LLM integration
+from .adapter_old import JobGeneratorV2Adapter
 from .context import (
     ContextBuilder,
     ExecutionContext,
@@ -38,7 +42,7 @@ from .recovery import (
     ErrorRecoveryManager,
     ErrorRecoveryStrategy,
 )
-from .types import (
+from .types_old import (
     Capability,
     FeasibilityReport,
     InterfaceDesignInput,
@@ -116,9 +120,9 @@ __all__ = [
     "TaskDecomposerSubWorkflow",
     "FeasibilitySubWorkflow",
     "AlternativeSubWorkflow",
-    # Adapter (Phase E integration)
-    "JobGeneratorV2Adapter",
-    "invoke_structured_llm_real",
+    # Adapters
+    "JobGeneratorAdapter",  # New 3-phase (Issue #359) - not production-ready
+    "JobGeneratorV2Adapter",  # Production adapter with full LLM integration
     # Progress reporting (Issue #342-V2-UX)
     "JobStateProgressReporter",
 ]

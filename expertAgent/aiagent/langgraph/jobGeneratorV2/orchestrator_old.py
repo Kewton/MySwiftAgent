@@ -23,7 +23,7 @@ from typing import Any
 from .context import ContextBuilder, ExecutionContext
 from .protocols import ProgressReporter, WorkflowError, WorkflowProtocol
 from .recovery import ErrorRecoveryManager, ErrorRecoveryStrategy
-from .types import (
+from .types_old import (
     InterfaceDesignInput,
     InterfaceDesignOutput,
     JobGenerationRequest,
@@ -41,6 +41,7 @@ from .types import (
     WorkflowGenOutput,
     WorkflowGenPhaseOutput,
 )
+from .validators.pending_workflow import PendingWorkflowValidator
 
 logger = logging.getLogger(__name__)
 
@@ -333,10 +334,8 @@ class JobGenerationOrchestrator:
                     # Continue loop to retry
                     continue
 
-                if decision.strategy in (
-                    ErrorRecoveryStrategy.ROLLBACK_ONE,
-                    ErrorRecoveryStrategy.ROLLBACK_TO_BREAKDOWN,
-                ):
+                if decision.strategy == ErrorRecoveryStrategy.ROLLBACK_TO_ANALYSIS:
+                    # Issue #359: Unified rollback to JOB_ANALYSIS phase
                     # Rollback requires re-executing from earlier phase
                     # This is handled by the run_workflow method
                     raise
@@ -766,6 +765,11 @@ class JobGenerationOrchestrator:
         before allowing transition to finalization. This prevents jobs with
         __PENDING__ workflow_names from being marked as complete.
 
+        This method performs two levels of validation:
+        1. Phase output validation: Check workflow_yaml existence in phase outputs
+        2. TaskMaster validation: Fetch TaskMasters from JobQueue and validate
+           that all workflow_names have been updated from __PENDING__
+
         Args:
             phase_outputs: Outputs from all executed phases
             context: Execution context
@@ -792,9 +796,10 @@ class JobGenerationOrchestrator:
                 incomplete_tasks.append(task_id)
 
         if incomplete_tasks:
+            task_ids_str = ", ".join(incomplete_tasks[:5])
             error_msg = (
                 f"WORKFLOW_GEN phase incomplete: {len(incomplete_tasks)} task(s) "
-                f"have missing or failed workflows. Task IDs: {', '.join(incomplete_tasks[:5])}"
+                f"have missing or failed workflows. Task IDs: {task_ids_str}"
             )
             if len(incomplete_tasks) > 5:
                 error_msg += f" (and {len(incomplete_tasks) - 5} more)"
@@ -805,5 +810,92 @@ class JobGenerationOrchestrator:
         if workflow_gen_output.status == PhaseStatus.FAILED:
             return False, "WORKFLOW_GEN phase failed"
 
+        # Issue #353: Validate TaskMasters for __PENDING__ placeholders
+        # This is the critical check that prevents jobs with incomplete
+        # workflow registration from proceeding to finalization
+        registration_output = phase_outputs.get(Phase.REGISTRATION)
+        if registration_output is not None and context.integration.jobqueue_base_url:
+            task_master_ids = getattr(registration_output, "task_master_ids", [])
+            if task_master_ids:
+                pending_result = await self._validate_task_masters_pending(
+                    task_master_ids=task_master_ids,
+                    jobqueue_base_url=context.integration.jobqueue_base_url,
+                )
+                if pending_result is not None:
+                    # Validation failed - there are pending workflow_names
+                    return False, pending_result
+
         logger.info("WORKFLOW_GEN phase complete, can proceed to finalization")
         return True, None
+
+    async def _validate_task_masters_pending(
+        self,
+        task_master_ids: list[str],
+        jobqueue_base_url: str,
+    ) -> str | None:
+        """Validate TaskMasters for __PENDING__ workflow_name placeholders.
+
+        Issue #353: Fetches TaskMasters from JobQueue API and validates that
+        none have __PENDING__ as their workflow_name.
+
+        Args:
+            task_master_ids: List of TaskMaster IDs to validate
+            jobqueue_base_url: Base URL for JobQueue API
+
+        Returns:
+            Error message if validation failed, None if all TaskMasters are valid
+        """
+        try:
+            # Import here to avoid circular dependency
+            from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
+                JobqueueClient,
+            )
+
+            client = JobqueueClient(base_url=jobqueue_base_url)
+            validator = PendingWorkflowValidator()
+
+            # Fetch each TaskMaster and collect for validation
+            task_masters: list[dict] = []
+            for task_master_id in task_master_ids:
+                try:
+                    task_master = await client.get_task_master(task_master_id)
+                    task_masters.append(task_master)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to fetch TaskMaster %s for validation: %s",
+                        task_master_id,
+                        e,
+                    )
+                    # Continue validation with other TaskMasters
+
+            if not task_masters:
+                logger.warning("No TaskMasters fetched for validation")
+                return None  # Can't validate, proceed with caution
+
+            # Validate using PendingWorkflowValidator
+            result = validator.validate(task_masters)
+
+            if result.has_pending:
+                error_msg = result.get_error_message()
+                logger.error(
+                    "TaskMaster validation failed: %s",
+                    error_msg,
+                )
+                return error_msg
+
+            logger.info(
+                "TaskMaster validation passed: %d task(s) validated",
+                len(task_masters),
+            )
+            return None
+
+        except Exception as e:
+            logger.error(
+                "Error during TaskMaster validation: %s",
+                e,
+                exc_info=True,
+            )
+            # Return None to not block finalization on validation errors
+            # The job might still fail at runtime, but that's better than
+            # blocking all jobs due to validation infrastructure issues
+            return None

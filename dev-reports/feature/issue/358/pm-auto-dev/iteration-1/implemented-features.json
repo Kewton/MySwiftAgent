@@ -1,0 +1,180 @@
+{
+  "issue_number": 358,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "BodyTemplateValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 285,
+      "description": "body_templateの整合性を検証するメインバリデータクラス",
+      "expected_callers": ["MasterManagerSubWorkflow.create_masters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F2",
+      "name": "BodyTemplateValidationResult",
+      "type": "dataclass",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 50,
+      "description": "バリデーション結果を格納するデータクラス（is_valid, errors, warnings, required_fields）",
+      "expected_callers": ["BodyTemplateValidator.validate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F3",
+      "name": "ValidationStrategy",
+      "type": "protocol",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 30,
+      "description": "エンジン別検証戦略のプロトコル定義",
+      "expected_callers": ["BodyTemplateValidator"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F4",
+      "name": "TaskFlowValidationStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 130,
+      "description": "TaskFlowエンジン用の検証戦略",
+      "expected_callers": ["MasterManagerSubWorkflow.__init__"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F5",
+      "name": "GraphAIValidationStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 208,
+      "description": "GraphAIエンジン用の検証戦略",
+      "expected_callers": ["MasterManagerSubWorkflow.__init__"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F6",
+      "name": "extract_template_variables",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+      "line_number": 1,
+      "description": "body_templateから{{...}}パターンのテンプレート変数を抽出する関数",
+      "expected_callers": ["BodyTemplateValidator.validate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F7",
+      "name": "compare_schemas",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+      "line_number": 59,
+      "description": "2つのJSON Schemaを比較し、互換性を検証する関数",
+      "expected_callers": ["BodyTemplateValidator._validate_task_references"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_status": "NOT_USED",
+      "note": "field_in_schema is used instead in the current implementation"
+    },
+    {
+      "feature_id": "F8",
+      "name": "TemplateVariableResult",
+      "type": "dataclass",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+      "line_number": 20,
+      "description": "抽出されたテンプレート変数情報を格納するデータクラス",
+      "expected_callers": ["extract_template_variables"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+      "integration_status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F9",
+      "name": "SchemaComparisonResult",
+      "type": "dataclass",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+      "line_number": 15,
+      "description": "スキーマ比較結果を格納するデータクラス",
+      "expected_callers": ["compare_schemas"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+      "integration_status": "NOT_USED",
+      "note": "Depends on compare_schemas which is not currently used"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_body_template_validator.py::test_*"],
+      "integration_tests": ["test_registration_validation.py::test_*"],
+      "acceptance_tests": ["test_issue_358_acceptance.py::test_tc_001_*", "test_issue_358_acceptance.py::test_tc_009_*"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_template_variable_extractor.py::test_*"],
+      "integration_tests": ["test_registration_validation.py::test_extract_*"],
+      "acceptance_tests": ["test_issue_358_acceptance.py::test_tc_002_*"]
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": ["test_schema_comparator.py::test_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_issue_358_acceptance.py::test_tc_003_*", "test_issue_358_acceptance.py::test_tc_004_*"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "self._body_template_validator.validate(body_template, ...)",
+      "status": "INTEGRATED",
+      "line_number": 344
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "instantiation",
+      "integration_method": "TaskFlowValidationStrategy() in __init__",
+      "status": "INTEGRATED",
+      "line_number": 163
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "instantiation",
+      "integration_method": "GraphAIValidationStrategy() in __init__",
+      "status": "INTEGRATED",
+      "line_number": 166
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_type": "import",
+      "integration_method": "from .template_variable_extractor import extract_template_variables",
+      "status": "INTEGRATED"
+    },
+    {
+      "feature_id": "F7",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_type": "import",
+      "integration_method": "from .schema_comparator import compare_schemas",
+      "status": "IMPORTED_BUT_NOT_USED",
+      "note": "field_in_schema is used instead"
+    }
+  ],
+  "missing_integrations": [],
+  "integration_summary": {
+    "total_features": 9,
+    "integrated": 7,
+    "not_used": 2,
+    "integration_rate": 77.78,
+    "note": "F7 (compare_schemas) and F9 (SchemaComparisonResult) are not used because field_in_schema provides sufficient functionality. These are optional utilities that could be used for more comprehensive schema comparison if needed in the future."
+  },
+  "commits": [
+    "06db0aa: feat(jobGeneratorV2): Issue #358 - add BodyTemplateValidator for body_template integrity validation",
+    "001848b: feat(jobGeneratorV2): Issue #358 - integrate BodyTemplateValidator into MasterManagerSubWorkflow"
+  ]
+}

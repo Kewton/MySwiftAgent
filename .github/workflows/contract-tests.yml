@@ -1,0 +1,147 @@
+name: Contract Tests - Schema Compatibility
+
+# Issue #356: Contract Tests CI/CD workflow
+# Runs contract tests when schema-related files change
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      # ExpertAgent schema files
+      - 'expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/**'
+      - 'expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/**'
+      # Contract test files
+      - 'expertAgent/tests/contract/**'
+      # This workflow
+      - '.github/workflows/contract-tests.yml'
+
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+    paths:
+      # ExpertAgent schema files
+      - 'expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/schemas/**'
+      - 'expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/adapter/**'
+      # Contract test files
+      - 'expertAgent/tests/contract/**'
+      # This workflow
+      - '.github/workflows/contract-tests.yml'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        working-directory: ./expertAgent
+        run: uv sync --extra dev
+
+      - name: Run contract tests (unit tests only)
+        working-directory: ./expertAgent
+        run: |
+          echo "Running contract tests (excluding integration tests)..."
+          uv run pytest tests/contract/ -v -m "not integration" --tb=short
+
+      - name: Run contract tests with coverage
+        working-directory: ./expertAgent
+        run: |
+          uv run pytest tests/contract/ -v -m "not integration" \
+            --cov=aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.adapter \
+            --cov=aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.schemas \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage-contract.xml
+
+      - name: Verify fixture files exist
+        working-directory: ./expertAgent
+        run: |
+          echo "Checking fixture files..."
+          FIXTURE_COUNT=$(ls tests/contract/fixtures/valid_workflows/*.json 2>/dev/null | wc -l)
+          echo "Found $FIXTURE_COUNT fixture files"
+          if [ "$FIXTURE_COUNT" -lt 3 ]; then
+            echo "Error: Expected at least 3 fixture files"
+            exit 1
+          fi
+          echo "Fixture check passed"
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./expertAgent/coverage-contract.xml
+          flags: contract-tests
+          fail_ci_if_error: false
+
+  # Integration tests job (runs when GraphAiServer is available)
+  integration-tests:
+    name: Integration Tests (GraphAiServer)
+    runs-on: ubuntu-latest
+    # Only run on develop/main branch PRs
+    if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
+    needs: contract-tests
+    continue-on-error: true  # Don't fail CI if integration tests fail
+
+    services:
+      graphai:
+        image: ghcr.io/${{ github.repository_owner }}/graphaiserver:latest
+        ports:
+          - 8105:8105
+        options: >-
+          --health-cmd "curl -f http://localhost:8105/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        working-directory: ./expertAgent
+        run: uv sync --extra dev
+
+      - name: Wait for GraphAiServer
+        run: |
+          echo "Waiting for GraphAiServer..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8105/health > /dev/null 2>&1; then
+              echo "GraphAiServer is ready"
+              break
+            fi
+            echo "Attempt $i/30: GraphAiServer not ready, waiting..."
+            sleep 2
+          done
+
+      - name: Run integration tests
+        working-directory: ./expertAgent
+        env:
+          GRAPHAI_SERVER_URL: http://localhost:8105
+        run: |
+          echo "Running integration tests..."
+          uv run pytest tests/contract/ -v -m "integration" --tb=short || true

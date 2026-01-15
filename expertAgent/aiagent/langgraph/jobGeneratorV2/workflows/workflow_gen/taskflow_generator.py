@@ -32,7 +32,7 @@ from .schemas.taskflow_schema import TaskFlowWorkflow
 
 if TYPE_CHECKING:
     from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-    from aiagent.langgraph.jobGeneratorV2.types import InterfaceSchema
+    from aiagent.langgraph.jobGeneratorV2.types_old import InterfaceSchema
 
 logger = logging.getLogger(__name__)
 

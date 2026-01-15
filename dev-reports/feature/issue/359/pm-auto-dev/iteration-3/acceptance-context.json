@@ -1,0 +1,47 @@
+{
+  "issue_number": 359,
+  "iteration": 3,
+  "acceptance_plan_path": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/dev-reports/feature/issue/359/acceptance-plan.md",
+  "tdd_result_paths": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/dev-reports/feature/issue/359/pm-auto-dev/iteration-1/tdd-result.json",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/dev-reports/feature/issue/359/pm-auto-dev/iteration-2/tdd-result.json",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/dev-reports/feature/issue/359/pm-auto-dev/iteration-3/tdd-result.json"
+  ],
+  "verification_result_path": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/dev-reports/feature/issue/359/pm-auto-dev/iteration-3/verification-result.json",
+  "implementation_status": {
+    "total_features": 19,
+    "integrated_features": 14,
+    "integration_rate": "73.7%",
+    "dead_code_resolved": true,
+    "api_integration_pending": "F15 - JobGeneratorV3Adapter not integrated to API (acceptable)"
+  },
+  "test_summary": {
+    "unit_tests_passed": 928,
+    "integration_tests_passed": 11,
+    "static_analysis_errors": 0
+  },
+  "acceptance_test_config": {
+    "target_project": "expertAgent",
+    "test_file_location": "expertAgent/tests/acceptance/test_issue_359_acceptance.py",
+    "requires_api_keys": ["GOOGLE_API_KEY", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"],
+    "requires_services": ["expertAgent", "graphAiServer", "myVault", "jobqueue"]
+  },
+  "test_cases_to_verify": [
+    "TC-001: Basic job generation (2 tasks)",
+    "TC-002: Complex workflow (5 tasks, parallel execution)",
+    "TC-003: ErrorRecoveryManager RETRY_CURRENT",
+    "TC-004: ErrorRecoveryManager ROLLBACK_TO_ANALYSIS",
+    "TC-005: Parallel execution partial success",
+    "TC-006: No index-based lookups",
+    "TC-007: No silent fallbacks",
+    "TC-012: Orchestrator code lines < 300",
+    "TC-013: Dead code removed",
+    "TC-014: TaskDependencyValidator circular reference detection"
+  ],
+  "notes": [
+    "V3 architecture is tested internally but not yet exposed via API",
+    "Unit and integration tests verify core functionality",
+    "Code inspection tests (TC-006, TC-012, TC-013) can be run without API",
+    "E2E tests (TC-001, TC-002) require V3 API exposure which is deferred"
+  ]
+}

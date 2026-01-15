@@ -1,0 +1,793 @@
+{
+  "status": "partial_failure",
+  "verification_timestamp": "2026-01-14T12:00:00Z",
+  "summary": {
+    "total_features": 19,
+    "passed": 10,
+    "dead_code": 4,
+    "missing_integration": 4,
+    "missing_tests": 1,
+    "not_found": 0
+  },
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "UnifiedTaskIdentifier",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 74"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in orchestrator_v3.py:213, nodes/job_analyzer_v3.py:104",
+          "grep_result": "UnifiedTaskIdentifier( found in 4 locations"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in orchestrator_v3.py, parallel_executor.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_unified_task_identifier.py (implied)"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py::TestJobGenerationE2ESuccess::test_unified_task_id_consistency",
+          "evidence": "E2E test verifies task_id consistency across phases"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "TaskResult",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 45 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used in parallel_executor.py and integration tests",
+          "grep_result": "TaskResult instantiated in E2E tests"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in tests/integration/test_job_generation_e2e.py:14"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_types_v3.py (implied)"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py",
+          "evidence": "Used in mock return values for E2E flow"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F3",
+      "name": "ParallelExecutionResult",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 65 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used in parallel_executor.py and orchestrator_v3.py:255",
+          "grep_result": "ParallelExecutionResult returned from parallel_workflow_generation"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in orchestrator_v3.py:35, tests/integration/test_job_generation_e2e.py:15"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_types_v3.py (implied)"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py",
+          "evidence": "Used in mock workflow generation return"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F4",
+      "name": "ErrorType",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 95 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used in error_recovery_v3.py for error classification",
+          "grep_result": "ErrorType imported in tests/integration/test_job_generation_e2e.py:17"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in tests/integration/test_job_generation_e2e.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_error_recovery.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies ErrorType usage in recovery flow"
+        }
+      },
+      "classification": "MISSING_TESTS",
+      "failure_reason": "No integration test verifies ErrorType is used in actual error recovery scenarios"
+    },
+    {
+      "feature_id": "F5",
+      "name": "RecoveryStrategy",
+      "type": "enum",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 105 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used in error_recovery_v3.py",
+          "grep_result": "RecoveryStrategy imported in tests/integration/test_job_generation_e2e.py:18"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in tests/integration/test_job_generation_e2e.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_error_recovery.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies RecoveryStrategy selection logic"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F6",
+      "name": "ErrorRecoveryManager",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 221"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in orchestrator_v3.py:92, adapter_v3.py:68",
+          "grep_result": "ErrorRecoveryManager() instantiated in 6 locations"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in orchestrator_v3.py:23, adapter_v3.py:18"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_error_recovery.py::*"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py::TestJobGenerationE2ESuccess",
+          "evidence": "Used in E2E orchestrator initialization"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F7",
+      "name": "JobAnalysisErrorContract",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 30 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used internally by ErrorRecoveryManager",
+          "grep_result": "Phase-specific error contracts used in ErrorRecoveryManager"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported within error_recovery_v3.py module"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_error_recovery.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies Phase 1 error handling"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F8",
+      "name": "RegistrationErrorContract",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 60 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used internally by ErrorRecoveryManager",
+          "grep_result": "Phase-specific error contracts used in ErrorRecoveryManager"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported within error_recovery_v3.py module"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_error_recovery.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies Phase 2 error handling"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F9",
+      "name": "WorkflowGenErrorContract",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 90 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used internally by ErrorRecoveryManager",
+          "grep_result": "Phase-specific error contracts used in ErrorRecoveryManager"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported within error_recovery_v3.py module"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_error_recovery.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies Phase 3 error handling"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F10",
+      "name": "parallel_workflow_generation",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 41"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in orchestrator_v3.py:241",
+          "grep_result": "parallel_workflow_generation( found in 2 locations (orchestrator_v3.py:241, parallel_executor.py:69)"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in orchestrator_v3.py:32"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_parallel_executor.py::*"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py",
+          "evidence": "Used in E2E workflow generation phase"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F11",
+      "name": "ParallelExecutionErrorAggregator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/parallel_executor.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 150 (estimated)"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in orchestrator_v3.py:249",
+          "grep_result": "ParallelExecutionErrorAggregator instantiated in orchestrator_v3.py"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in orchestrator_v3.py:31"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_parallel_executor.py::*"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py",
+          "evidence": "Used in E2E error aggregation flow"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F12",
+      "name": "TaskDependencyValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/task_dependency.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 69"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only called in its own unit test (line 79)",
+          "grep_result": "TaskDependencyValidator( found only in validators/task_dependency.py:79 (test example)"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "Not imported in orchestrator_v3.py or pipeline.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_validators.py::TestTaskDependencyValidator*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies dependency validation in workflow"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "TaskDependencyValidator exists but is never called in production code (orchestrator_v3.py or pipeline.py)"
+    },
+    {
+      "feature_id": "F13",
+      "name": "JobAnalyzerV3",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/nodes/job_analyzer_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "File exists, analyze_job function at line 195"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "analyze_job called in orchestrator_v3.py:170",
+          "grep_result": "analyze_job called in orchestrator_v3.py:163, 170"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in orchestrator_v3.py:163, nodes/__init__.py:12"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_job_analyzer_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py",
+          "evidence": "Used in E2E test with mock_llm_client fixture"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F14",
+      "name": "JobGenerationOrchestratorV3",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 74"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in adapter_v3.py:73, 118",
+          "grep_result": "JobGenerationOrchestratorV3 instantiated in adapter_v3.py"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in adapter_v3.py:21, tests/integration/test_job_generation_e2e.py:98"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_orchestrator_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py::TestJobGenerationE2ESuccess::test_full_e2e_flow",
+          "evidence": "Complete E2E test of orchestrator workflow"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F15",
+      "name": "JobGeneratorV3Adapter",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 33"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "NOT called in API endpoints. API uses JobGeneratorV2Adapter (job_generator_endpoints.py:331)",
+          "grep_result": "JobGeneratorV3Adapter only used in tests/unit/test_adapter_v3.py"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "Not imported in app/api/v1/job_generator_endpoints.py or __init__.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_adapter_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/test_job_generation_e2e.py",
+          "evidence": "E2E tests cover adapter through orchestrator"
+        }
+      },
+      "classification": "NOT_INTEGRATED_TO_API",
+      "failure_reason": "JobGeneratorV3Adapter exists but is not integrated into API endpoints. API still uses V2 adapter. Not exported in __init__.py"
+    },
+    {
+      "feature_id": "F16",
+      "name": "ValidationPipelineV3",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 329"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "NOT called in orchestrator_v3.py",
+          "grep_result": "ValidationPipelineV3( only found in tests/unit/test_validation_pipeline_v3.py"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "Not imported in orchestrator_v3.py"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_validation_pipeline_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies validation pipeline in workflow generation"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "ValidationPipelineV3 exists but is never called in orchestrator_v3._execute_workflow_gen. Workflow generation does not validate outputs"
+    },
+    {
+      "feature_id": "F17",
+      "name": "StructuralValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 39"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in ValidationPipelineV3.__init__:350",
+          "grep_result": "StructuralValidator() instantiated in pipeline.py:350"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Used within ValidationPipelineV3"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_validation_pipeline_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test since ValidationPipelineV3 is not integrated"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "StructuralValidator is only used by ValidationPipelineV3, which itself is dead code"
+    },
+    {
+      "feature_id": "F18",
+      "name": "SchemaValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 138"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in ValidationPipelineV3.__init__:351",
+          "grep_result": "SchemaValidator() instantiated in pipeline.py:351"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Used within ValidationPipelineV3"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_validation_pipeline_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test since ValidationPipelineV3 is not integrated"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "SchemaValidator is only used by ValidationPipelineV3, which itself is dead code"
+    },
+    {
+      "feature_id": "F19",
+      "name": "SemanticValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 218"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in ValidationPipelineV3.__init__:352",
+          "grep_result": "SemanticValidator() instantiated in pipeline.py:352"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Used within ValidationPipelineV3"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/test_validation_pipeline_v3.py::*"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test since ValidationPipelineV3 is not integrated"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "SemanticValidator is only used by ValidationPipelineV3, which itself is dead code"
+    }
+  ],
+  "dead_code_list": [
+    {
+      "feature_id": "F12",
+      "name": "TaskDependencyValidator",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/task_dependency.py",
+      "line": 69,
+      "severity": "high",
+      "impact": "Task dependency validation is not performed during workflow generation",
+      "recommended_caller": "ValidationPipelineV3.validate or JobGenerationOrchestratorV3._execute_job_analysis",
+      "recommended_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py (Phase 1: after task breakdown)"
+    },
+    {
+      "feature_id": "F16",
+      "name": "ValidationPipelineV3",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line": 329,
+      "severity": "critical",
+      "impact": "Generated workflows are not validated (structural, schema, semantic)",
+      "recommended_caller": "JobGenerationOrchestratorV3._execute_workflow_gen",
+      "recommended_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py:226 (after workflow generation, before return)"
+    },
+    {
+      "feature_id": "F17",
+      "name": "StructuralValidator",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line": 39,
+      "severity": "medium",
+      "impact": "Cascading dead code (only used by ValidationPipelineV3)",
+      "recommended_caller": "ValidationPipelineV3",
+      "recommended_location": "Will be fixed when ValidationPipelineV3 is integrated"
+    },
+    {
+      "feature_id": "F18",
+      "name": "SchemaValidator",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line": 138,
+      "severity": "medium",
+      "impact": "Cascading dead code (only used by ValidationPipelineV3)",
+      "recommended_caller": "ValidationPipelineV3",
+      "recommended_location": "Will be fixed when ValidationPipelineV3 is integrated"
+    },
+    {
+      "feature_id": "F19",
+      "name": "SemanticValidator",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pipeline.py",
+      "line": 218,
+      "severity": "medium",
+      "impact": "Cascading dead code (only used by ValidationPipelineV3)",
+      "recommended_caller": "ValidationPipelineV3",
+      "recommended_location": "Will be fixed when ValidationPipelineV3 is integrated"
+    }
+  ],
+  "not_integrated_list": [
+    {
+      "feature_id": "F15",
+      "name": "JobGeneratorV3Adapter",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py",
+      "line": 33,
+      "severity": "critical",
+      "impact": "V3 architecture is not accessible via API endpoints. Users cannot use the improved 3-phase architecture",
+      "integration_status": "not_exported",
+      "recommended_actions": [
+        "Add JobGeneratorV3Adapter to aiagent/langgraph/jobGeneratorV2/__init__.py exports",
+        "Add feature flag USE_JOB_GENERATOR_V3 in core/feature_flags.py",
+        "Update app/api/v1/job_generator_endpoints.py to use V3 adapter when flag is enabled",
+        "Update _create_job_in_background_v2 to call V3 instead of V2 when flag is enabled"
+      ],
+      "code_snippet_example": "# In _create_job_in_background_v2:\nfrom core.feature_flags import use_job_generator_v3\nif use_job_generator_v3():\n    from aiagent.langgraph.jobGeneratorV2.adapter_v3 import JobGeneratorV3Adapter\n    adapter = JobGeneratorV3Adapter(...)\n    response = await adapter.generate(...)"
+    }
+  ],
+  "missing_tests_list": [
+    {
+      "feature_id": "F359",
+      "name": "Acceptance Test for Issue #359",
+      "expected_file": "expertAgent/tests/acceptance/test_issue_359_acceptance.py",
+      "severity": "critical",
+      "impact": "No E2E validation that V3 architecture works with real API calls",
+      "recommended_test_scenarios": [
+        "Test V3 API endpoint with real LLM calls",
+        "Verify UnifiedTaskIdentifier consistency across phases",
+        "Verify ErrorRecoveryManager handles actual LLM failures",
+        "Verify parallel_workflow_generation handles concurrent tasks",
+        "Verify ValidationPipelineV3 catches malformed workflows"
+      ]
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "action": "Integrate ValidationPipelineV3 into orchestrator_v3.py",
+      "feature_ids": ["F16", "F17", "F18", "F19"],
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "line": 226,
+      "code_snippet": "# Add after line 246 (after workflow generation):\nfrom .validators.pipeline import ValidationPipelineV3\n\n# In _execute_workflow_gen method:\npipeline = ValidationPipelineV3()\nfor task_id, workflow in workflows.items():\n    validation_result = pipeline.validate(workflow, workflow_id=task_id)\n    if not validation_result.is_valid:\n        logger.error(f\"Workflow {task_id} validation failed: {validation_result.errors}\")\n        # Handle validation failure (retry or fail task)"
+    },
+    {
+      "priority": "P0",
+      "action": "Integrate TaskDependencyValidator into orchestrator_v3.py",
+      "feature_ids": ["F12"],
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+      "line": 170,
+      "code_snippet": "# Add after line 170 (after job analysis):\nfrom .validators.task_dependency import TaskDependencyValidator\n\n# In _execute_job_analysis method:\nvalidator = TaskDependencyValidator()\nfor task in analysis_result.tasks:\n    validation_result = validator.validate_single_task(task, all_tasks=analysis_result.tasks)\n    if not validation_result.is_valid:\n        raise OrchestratorError(f\"Task dependency validation failed: {validation_result.errors}\", phase=PhaseV3.JOB_ANALYSIS)"
+    },
+    {
+      "priority": "P1",
+      "action": "Integrate JobGeneratorV3Adapter into API endpoints with feature flag",
+      "feature_ids": ["F15"],
+      "files": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/__init__.py",
+        "expertAgent/core/feature_flags.py",
+        "expertAgent/app/api/v1/job_generator_endpoints.py"
+      ],
+      "steps": [
+        "Step 1: Add JobGeneratorV3Adapter to __init__.py exports",
+        "Step 2: Add USE_JOB_GENERATOR_V3 flag to feature_flags.py",
+        "Step 3: Update _create_job_in_background_v2 to check V3 flag",
+        "Step 4: Instantiate JobGeneratorV3Adapter when flag is enabled"
+      ],
+      "code_snippet": "# In aiagent/langgraph/jobGeneratorV2/__init__.py:\nfrom .adapter_v3 import JobGeneratorV3Adapter\n__all__.append('JobGeneratorV3Adapter')\n\n# In core/feature_flags.py:\ndef use_job_generator_v3() -> bool:\n    return os.getenv('USE_JOB_GENERATOR_V3', 'false').lower() == 'true'\n\n# In app/api/v1/job_generator_endpoints.py _create_job_in_background_v2:\nfrom core.feature_flags import use_job_generator_v3\nif use_job_generator_v3():\n    from aiagent.langgraph.jobGeneratorV2 import JobGeneratorV3Adapter\n    adapter = JobGeneratorV3Adapter(...)\n    response = await adapter.generate(...)\n    return"
+    },
+    {
+      "priority": "P1",
+      "action": "Create acceptance test for Issue #359",
+      "feature_ids": ["F359"],
+      "file": "expertAgent/tests/acceptance/test_issue_359_acceptance.py",
+      "test_scenarios": [
+        "test_v3_api_endpoint_with_real_llm",
+        "test_unified_task_id_consistency_e2e",
+        "test_error_recovery_with_real_llm_failure",
+        "test_parallel_workflow_generation_concurrent",
+        "test_validation_pipeline_catches_malformed_workflows"
+      ]
+    }
+  ],
+  "integration_gap_analysis": {
+    "v3_to_api_gap": {
+      "description": "V3 components are fully implemented and tested internally, but not exposed via API",
+      "missing_link": "JobGeneratorV3Adapter not integrated into job_generator_endpoints.py",
+      "blocker": "No feature flag to switch from V2 to V3",
+      "workaround": "V3 can be tested via unit/integration tests, but not via API calls"
+    },
+    "validation_gap": {
+      "description": "ValidationPipelineV3 is implemented but not called during workflow generation",
+      "missing_link": "orchestrator_v3.py does not validate generated workflows",
+      "blocker": "No call to ValidationPipelineV3.validate in _execute_workflow_gen",
+      "impact": "Malformed workflows could be returned to users without validation",
+      "workaround": "Rely on downstream workflow engine to catch errors (late failure)"
+    },
+    "dependency_validation_gap": {
+      "description": "TaskDependencyValidator is implemented but not called during job analysis",
+      "missing_link": "orchestrator_v3.py does not validate task dependencies",
+      "blocker": "No call to TaskDependencyValidator in _execute_job_analysis",
+      "impact": "Circular dependencies or missing tasks could pass through",
+      "workaround": "Rely on manual review or downstream failures"
+    }
+  },
+  "v3_internal_consistency": {
+    "status": "PASSED",
+    "description": "V3 components call each other correctly within the V3 subsystem",
+    "verified_flows": [
+      "JobGeneratorV3Adapter -> JobGenerationOrchestratorV3 -> analyze_job (PASSED)",
+      "JobGenerationOrchestratorV3 -> ErrorRecoveryManager (PASSED)",
+      "JobGenerationOrchestratorV3 -> parallel_workflow_generation (PASSED)",
+      "parallel_workflow_generation -> ParallelExecutionErrorAggregator (PASSED)",
+      "UnifiedTaskIdentifier used consistently across all phases (PASSED)"
+    ],
+    "not_verified_flows": [
+      "JobGenerationOrchestratorV3 -> ValidationPipelineV3 (MISSING)",
+      "JobGenerationOrchestratorV3 -> TaskDependencyValidator (MISSING)"
+    ]
+  },
+  "conclusion": {
+    "overall_status": "PARTIAL_SUCCESS",
+    "summary": "V3 architecture is well-implemented and internally consistent, but has 3 critical integration gaps preventing production use",
+    "critical_gaps": [
+      "ValidationPipelineV3 not integrated into workflow generation",
+      "TaskDependencyValidator not integrated into job analysis",
+      "JobGeneratorV3Adapter not exposed via API endpoints"
+    ],
+    "recommendation": "Fix P0 actions (ValidationPipelineV3 + TaskDependencyValidator integration) before exposing V3 via API (P1 action)"
+  }
+}

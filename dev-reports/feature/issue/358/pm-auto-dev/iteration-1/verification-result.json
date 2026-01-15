@@ -1,0 +1,234 @@
+{
+  "issue_number": 358,
+  "verification_status": "FAIL",
+  "verification_timestamp": "2026-01-13T00:00:00Z",
+  "integration_rate": 33.33,
+  "summary": {
+    "total_features": 9,
+    "integrated": 3,
+    "partially_integrated": 0,
+    "dead_code": 6,
+    "critical_issues": 2
+  },
+  "features_verified": [
+    {
+      "feature_id": "F1",
+      "name": "BodyTemplateValidator",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "is_dead_code": true,
+      "callers": [],
+      "expected_caller": "MasterManagerSubWorkflow.create_masters",
+      "expected_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "status": "NOT_INTEGRATED",
+      "severity": "CRITICAL",
+      "impact": "Main feature is not integrated - validation is never executed in production workflow"
+    },
+    {
+      "feature_id": "F2",
+      "name": "BodyTemplateValidationResult",
+      "type": "dataclass",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "is_dead_code": true,
+      "callers": ["BodyTemplateValidator.validate"],
+      "status": "PARTIALLY_INTEGRATED",
+      "severity": "HIGH",
+      "impact": "Returned by BodyTemplateValidator.validate() but never used since validator is not called"
+    },
+    {
+      "feature_id": "F3",
+      "name": "ValidationStrategy",
+      "type": "protocol",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "is_dead_code": true,
+      "callers": ["TaskFlowValidationStrategy", "GraphAIValidationStrategy"],
+      "status": "PARTIALLY_INTEGRATED",
+      "severity": "HIGH",
+      "impact": "Used internally but never invoked in production"
+    },
+    {
+      "feature_id": "F4",
+      "name": "TaskFlowValidationStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "is_dead_code": true,
+      "callers": ["BodyTemplateValidator._get_strategy"],
+      "status": "PARTIALLY_INTEGRATED",
+      "severity": "HIGH",
+      "impact": "Used internally but never invoked in production"
+    },
+    {
+      "feature_id": "F5",
+      "name": "GraphAIValidationStrategy",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "is_dead_code": true,
+      "callers": ["BodyTemplateValidator._get_strategy"],
+      "status": "PARTIALLY_INTEGRATED",
+      "severity": "HIGH",
+      "impact": "Used internally but never invoked in production"
+    },
+    {
+      "feature_id": "F6",
+      "name": "extract_template_variables",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+      "is_dead_code": true,
+      "callers": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py:341"
+      ],
+      "status": "INTEGRATED",
+      "severity": "MEDIUM",
+      "impact": "Properly called by BodyTemplateValidator but never executed since validator is not used"
+    },
+    {
+      "feature_id": "F7",
+      "name": "compare_schemas",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+      "is_dead_code": true,
+      "callers": [],
+      "expected_caller": "BodyTemplateValidator._validate_task_references",
+      "status": "NOT_INTEGRATED",
+      "severity": "CRITICAL",
+      "impact": "Function exists but is never called anywhere in the codebase. field_in_schema is used instead."
+    },
+    {
+      "feature_id": "F8",
+      "name": "TemplateVariableResult",
+      "type": "dataclass",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/template_variable_extractor.py",
+      "is_dead_code": true,
+      "callers": ["extract_template_variables"],
+      "status": "INTEGRATED",
+      "severity": "MEDIUM",
+      "impact": "Properly returned by extract_template_variables"
+    },
+    {
+      "feature_id": "F9",
+      "name": "SchemaComparisonResult",
+      "type": "dataclass",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+      "is_dead_code": true,
+      "callers": ["compare_schemas"],
+      "status": "INTEGRATED",
+      "severity": "MEDIUM",
+      "impact": "Properly returned by compare_schemas, but compare_schemas itself is never called"
+    }
+  ],
+  "dead_code_detected": [
+    {
+      "feature_id": "F1",
+      "name": "BodyTemplateValidator",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line": 286,
+      "reason": "Validator class exists but is never instantiated or called in production code",
+      "recommended_integration_point": "MasterManagerSubWorkflow.create_masters",
+      "recommended_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py:320"
+    },
+    {
+      "feature_id": "F7",
+      "name": "compare_schemas",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py",
+      "line": 59,
+      "reason": "Function exists but is never called anywhere. Implementation uses field_in_schema instead.",
+      "recommended_action": "Either integrate compare_schemas or remove if field_in_schema is sufficient"
+    }
+  ],
+  "test_coverage": {
+    "unit_tests": {
+      "exists": true,
+      "passed": true,
+      "coverage": "95%",
+      "details": "36 unit tests all passing"
+    },
+    "integration_tests": {
+      "exists": true,
+      "passed": true,
+      "coverage": "Partial",
+      "details": "7 integration tests demonstrate usage but not actual production integration"
+    },
+    "acceptance_tests": {
+      "exists": false,
+      "passed": false,
+      "details": "No acceptance test file found at expertAgent/tests/acceptance/test_issue_358_acceptance.py"
+    }
+  },
+  "integration_analysis": {
+    "expected_integration_point": {
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "method": "MasterManagerSubWorkflow.create_masters",
+      "line": 320,
+      "description": "Should validate body_template after building it and before creating TaskMaster"
+    },
+    "actual_integration": {
+      "integrated": false,
+      "evidence": "No import of BodyTemplateValidator found in master_manager.py",
+      "grep_result": "No matches found for 'BodyTemplateValidator' in registration workflow files"
+    },
+    "export_status": {
+      "validators_init": "COMMENT_ONLY",
+      "details": "validators/__init__.py only has a comment about the import path, no actual export in __all__"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "P0",
+      "action": "Integrate BodyTemplateValidator into MasterManagerSubWorkflow.create_masters",
+      "details": [
+        "1. Import BodyTemplateValidator in master_manager.py",
+        "2. Instantiate validator in MasterManagerSubWorkflow.__init__",
+        "3. Call validator.validate() after _build_body_template() at line 320",
+        "4. Raise WorkflowError if validation fails (is_valid=False)",
+        "5. Log warnings if validation warnings are present"
+      ],
+      "code_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py:320",
+      "estimated_lines": 15
+    },
+    {
+      "priority": "P0",
+      "action": "Decide on compare_schemas function usage",
+      "details": [
+        "Option A: Integrate compare_schemas into BodyTemplateValidator if needed",
+        "Option B: Remove compare_schemas if field_in_schema is sufficient",
+        "Current state: Function exists but is never called anywhere"
+      ],
+      "code_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/schema_comparator.py:59"
+    },
+    {
+      "priority": "P1",
+      "action": "Add acceptance tests",
+      "details": [
+        "Create expertAgent/tests/acceptance/test_issue_358_acceptance.py",
+        "Test E2E workflow with actual API calls to verify validation is executed",
+        "Verify error cases: missing fields, invalid task references, etc."
+      ],
+      "code_location": "expertAgent/tests/acceptance/test_issue_358_acceptance.py"
+    },
+    {
+      "priority": "P2",
+      "action": "Export BodyTemplateValidator in validators/__init__.py",
+      "details": [
+        "Add actual import and export instead of just a comment",
+        "Makes it easier to import from validators package"
+      ],
+      "code_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/__init__.py"
+    }
+  ],
+  "root_cause_analysis": {
+    "issue": "TDD phase created well-tested code but skipped actual integration step",
+    "evidence": [
+      "Task 1.4 was marked as SKIPPED in tdd-result.json",
+      "Reason given: 'validator can be called before create_masters() by the caller'",
+      "This assumption is incorrect - validator must be integrated into the workflow"
+    ],
+    "lesson_learned": "Integration tests that only demonstrate 'how to use' are not sufficient - must verify actual production code calls the new feature"
+  },
+  "next_steps": [
+    "1. PM Auto-Dev should re-run TDD phase with explicit integration task",
+    "2. Add BodyTemplateValidator instantiation and call to master_manager.py",
+    "3. Remove or integrate compare_schemas function",
+    "4. Create acceptance tests to verify E2E behavior",
+    "5. Re-run verification to confirm 100% integration"
+  ]
+}

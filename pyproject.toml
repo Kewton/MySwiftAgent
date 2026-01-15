@@ -26,6 +26,12 @@ dev = [
     "types-psutil>=6.0.0",
     "types-requests>=2.31.0",
 ]
+# Issue #357: JSON Schema Single Source of Truth
+# Generate TypeScript and Pydantic types from JSON Schema
+schema-gen = [
+    "datamodel-code-generator>=0.25.0",
+    "jsonschema>=4.0.0",
+]
 
 [project.scripts]
 msa-status = "cli.status_dashboard:cli_main"

@@ -564,6 +564,24 @@ docker run --rm -p 8000:8000 test-image
 
 ---
 
+## 🔧 Schema Generation
+
+JSON SchemaからTypeScript型定義とPydanticモデルを生成できます（Issue #357: JSON Schema Single Source of Truth）。
+
+```bash
+# 依存関係のインストール
+uv sync --extra schema-gen
+
+# スキーマ生成
+uv run python scripts/generate_schemas.py
+```
+
+生成されるファイル:
+- `graphAiServer/src/engine/schemas/generated/taskflow.d.ts` (TypeScript)
+- `expertAgent/.../schemas/generated/taskflow_types.py` (Pydantic)
+
+---
+
 ## 📚 参考資料
 
 - **[uv公式ドキュメント](https://docs.astral.sh/uv/)**

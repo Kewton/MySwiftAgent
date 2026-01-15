@@ -1,0 +1,25 @@
+{
+  "workflow_name": "api_with_body",
+  "description": "An API workflow with JSON body as string",
+  "input_schema": "{\"user_id\": \"string\", \"action\": \"string\", \"data\": \"object\"}",
+  "output_schema": "{\"success\": \"boolean\", \"response_id\": \"string\"}",
+  "output": "{\"success\": \"${step_001.output.ok}\", \"response_id\": \"${step_001.output.id}\"}",
+  "steps": [
+    {
+      "id": "step_001",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "https://api.example.com/actions",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "${secrets.API_KEY}"
+        },
+        "body": "{\"user\": \"${inputs.user_id}\", \"action\": \"${inputs.action}\", \"payload\": \"${inputs.data}\"}",
+        "timeout_ms": 30000,
+        "verify_ssl": true
+      }
+    }
+  ]
+}

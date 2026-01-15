@@ -1,0 +1,22 @@
+{
+  "workflow_name": "simple_api_rest",
+  "description": "A simple API REST workflow for contract testing",
+  "input_schema": "{\"query\": \"string\"}",
+  "output_schema": "{\"result\": \"string\"}",
+  "output": "{\"result\": \"${step_001.output.data}\"}",
+  "steps": [
+    {
+      "id": "step_001",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "GET",
+        "url": "https://api.example.com/search",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "timeout_ms": 30000
+      }
+    }
+  ]
+}

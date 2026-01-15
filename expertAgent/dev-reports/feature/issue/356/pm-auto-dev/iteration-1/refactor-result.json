@@ -1,0 +1,85 @@
+{
+  "status": "success",
+  "issue_number": 356,
+  "refactoring_summary": {
+    "files_modified": [
+      "tests/contract/conftest.py",
+      "tests/contract/test_taskflow_schema_contract.py"
+    ],
+    "patterns_applied": [
+      "Factory Pattern - created helper functions for workflow and step creation",
+      "DRY - extracted common assertion patterns into helper functions",
+      "Single Responsibility - moved skip_if_graphai_unavailable to conftest.py"
+    ],
+    "improvements": [
+      "Added factory functions: create_workflow(), create_api_rest_step(), create_transform_step()",
+      "Added assertion helpers: assert_conversion_success(), assert_field_is_dict(), assert_schema_fields_are_dicts()",
+      "Added health check helper: check_graphai_server_health()",
+      "Moved skip_if_graphai_unavailable fixture to conftest.py for reusability",
+      "Removed inline imports (os, httpx) - moved to module level",
+      "Improved code organization with section separators",
+      "Updated docstrings with design pattern references",
+      "Used factory functions in sample_multi_step_workflow fixture",
+      "Refactored test methods to use assertion helpers"
+    ],
+    "code_quality_metrics": {
+      "lines_reduced_in_test_file": 15,
+      "reusable_functions_added": 7,
+      "duplicate_fixture_removed": 1
+    }
+  },
+  "test_results": {
+    "total": 15,
+    "passed": 13,
+    "skipped": 2,
+    "failed": 0,
+    "skip_reason": "GraphAiServer not reachable (integration tests)"
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "solid_principles_applied": {
+    "single_responsibility": "Each helper function has one clear purpose",
+    "open_closed": "Factory functions allow extension without modification",
+    "dependency_inversion": "Test methods depend on abstract helper functions"
+  },
+  "additional_principles_applied": {
+    "DRY": "Common assertion patterns extracted to helper functions",
+    "KISS": "Simple factory functions with clear parameter names"
+  },
+  "files_details": {
+    "conftest.py": {
+      "path": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/tests/contract/conftest.py",
+      "changes": [
+        "Added DEFAULT_GRAPHAI_SERVER_URL constant",
+        "Added create_api_rest_step() factory function",
+        "Added create_transform_step() factory function",
+        "Added create_workflow() factory function",
+        "Added check_graphai_server_health() helper",
+        "Added skip_if_graphai_unavailable fixture",
+        "Updated graphai_validate_url to use constant and f-string",
+        "Refactored sample_multi_step_workflow to use factory functions",
+        "Fixed mypy error in load_fixture_workflow()"
+      ]
+    },
+    "test_taskflow_schema_contract.py": {
+      "path": "/Users/maenokota/share/work/github_kewton/MySwiftAgent/expertAgent/tests/contract/test_taskflow_schema_contract.py",
+      "changes": [
+        "Added assert_conversion_success() helper function",
+        "Added assert_field_is_dict() helper function",
+        "Added assert_schema_fields_are_dicts() helper function",
+        "Imported httpx at module level",
+        "Imported factory functions from conftest",
+        "Removed duplicate skip_if_graphai_unavailable fixture",
+        "Refactored test_json_string_fields_are_converted to use helpers",
+        "Refactored test_already_object_fields_are_preserved to use helpers",
+        "Refactored test_mixed_string_and_object_fields to use factory functions",
+        "Refactored test_invalid_json_string_returns_error to use factory functions",
+        "Refactored Pydantic test methods to use assertion helpers",
+        "Refactored integration tests to use shared fixture and helpers",
+        "Fixed mypy error in assert_conversion_success()"
+      ]
+    }
+  }
+}

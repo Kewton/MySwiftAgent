@@ -1,0 +1,84 @@
+{
+  "issue_number": 353,
+  "issue_title": "Job Generator V2: WORKFLOW_GEN フェーズ未完了時に __PENDING__ プレースホルダーが残存しジョブ実行失敗",
+  "iteration": 1,
+  "max_iterations": 3,
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/353/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/353/work-plan.md",
+  "acceptance_plan_path": "dev-reports/feature/issue/353/acceptance-plan.md",
+  "tasks": [
+    {
+      "id": "T1.1",
+      "name": "エラータイプとバリデーター実装",
+      "description": "ErrorType.INCOMPLETE_WORKFLOW追加、PendingWorkflowValidatorクラス実装、関連データクラス定義",
+      "files_to_create": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/pending_workflow.py"
+      ],
+      "files_to_modify": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py"
+      ],
+      "test_files": [
+        "expertAgent/tests/unit/test_pending_workflow_validator.py"
+      ]
+    },
+    {
+      "id": "T1.2",
+      "name": "リトライロジック強化",
+      "description": "WorkflowGenRetryConfig実装、Exponential backoff、タイムアウト処理",
+      "files_to_create": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/retry/workflow_gen_retry.py"
+      ],
+      "files_to_modify": [],
+      "test_files": [
+        "expertAgent/tests/unit/test_workflow_gen_retry.py"
+      ]
+    },
+    {
+      "id": "T1.3",
+      "name": "Orchestrator統合",
+      "description": "_can_proceed_to_finalizationメソッド追加、ValidationPipeline統合、ErrorRecoveryManager拡張",
+      "files_to_create": [],
+      "files_to_modify": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py"
+      ],
+      "test_files": [
+        "expertAgent/tests/integration/test_orchestrator_finalization_guard.py"
+      ]
+    },
+    {
+      "id": "T1.4",
+      "name": "API レスポンス拡張",
+      "description": "notificationフィールド追加、pending_workflowsフィールド追加、ErrorNotificationモデル実装",
+      "files_to_create": [],
+      "files_to_modify": [
+        "expertAgent/app/api/v1/job_generator.py"
+      ],
+      "test_files": [
+        "expertAgent/tests/unit/test_error_notification.py",
+        "expertAgent/tests/integration/test_job_status_api_notification.py"
+      ]
+    }
+  ],
+  "implementation_guidelines": {
+    "patterns": ["Chain of Responsibility", "Strategy Pattern", "Protocol-based Architecture"],
+    "error_types": ["INCOMPLETE_WORKFLOW"],
+    "retry_config": {
+      "max_retries": 3,
+      "base_delay_seconds": 1.0,
+      "max_delay_seconds": 30.0,
+      "exponential_base": 2.0
+    }
+  },
+  "test_requirements": {
+    "unit_test_coverage": "90%",
+    "integration_test_required": true,
+    "patterns_to_verify": [
+      "PendingWorkflowValidator is integrated into ValidationPipeline",
+      "ErrorType.INCOMPLETE_WORKFLOW is used in error handling",
+      "WorkflowGenRetryConfig is used in WORKFLOW_GEN phase",
+      "ErrorNotification is included in API response"
+    ]
+  }
+}

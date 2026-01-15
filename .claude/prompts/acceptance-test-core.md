@@ -390,7 +390,37 @@ fi
 
 ---
 
-### Step 5: 外部サービス連携確認（該当する場合）
+### Step 5: E2E統合テスト（Issue #359追加）
+
+**Job Generation機能を含むIssueの場合、以下のE2Eテストを実行します**：
+
+#### Job Generate API直接実行テスト
+
+```bash
+# Job Generate APIテストの実行（pytest）
+cd expertAgent
+uv run pytest tests/acceptance/test_job_generate_api.py -v -s
+
+# または個別テスト
+uv run pytest tests/acceptance/test_job_generate_api.py::test_job_generation_e2e -v -s
+```
+
+**検証項目**：
+| 項目 | 検証内容 |
+|------|---------|
+| Job生成開始 | `POST /v1/job-generator` が成功し、job_idが返却される |
+| ステータスポーリング | `GET /v1/jobs/{job_id}/status` が適切なフェーズを返す |
+| タスク分析完了 | `task_breakdown` が生成される |
+| ワークフロー生成 | `workflow_statuses` にワークフローが含まれる |
+| 最終ステータス | `status: "success"` または意味のあるエラーメッセージ |
+
+**E2Eテストの必須条件**：
+- ❌ モックを使用したテストは不可
+- ✅ 実際のLLM APIを呼び出すこと
+- ✅ 実際のワークフロー生成を実行すること
+- ✅ 生成されたTaskFlow JSONの妥当性を検証すること
+
+### Step 6: 外部サービス連携確認（該当する場合）
 
 ```bash
 # LLM API連携（実際のAPIキーが必要）
@@ -407,7 +437,7 @@ docker exec myswiftagent-valkey redis-cli PING
 
 ---
 
-### Step 6: エビデンス収集
+### Step 7: エビデンス収集
 
 テスト実行のエビデンスを収集します：
 

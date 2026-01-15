@@ -1,0 +1,120 @@
+{
+  "issue_number": 358,
+  "iteration": 1,
+  "acceptance_status": "PASS",
+  "test_file": "expertAgent/tests/acceptance/test_issue_358_acceptance.py",
+  "test_results": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0
+  },
+  "test_classes": [
+    {
+      "name": "TestTC001ValidTemplateJobGeneration",
+      "tests": 2,
+      "passed": 2,
+      "description": "Valid body_template validation success"
+    },
+    {
+      "name": "TestTC002TemplateVariableExtraction",
+      "tests": 5,
+      "passed": 5,
+      "description": "Template variable extraction accuracy"
+    },
+    {
+      "name": "TestTC003JobBodyReferenceValid",
+      "tests": 2,
+      "passed": 2,
+      "description": "job.body reference validation (valid cases)"
+    },
+    {
+      "name": "TestTC004JobBodyReferenceInvalid",
+      "tests": 2,
+      "passed": 2,
+      "description": "job.body reference validation (invalid cases)"
+    },
+    {
+      "name": "TestTC005TaskReferenceValid",
+      "tests": 2,
+      "passed": 2,
+      "description": "tasks[N] reference validation (valid cases)"
+    },
+    {
+      "name": "TestTC006TaskReferenceFutureTaskError",
+      "tests": 1,
+      "passed": 1,
+      "description": "Future task reference error detection"
+    },
+    {
+      "name": "TestTC007TaskReferenceOutOfRange",
+      "tests": 2,
+      "passed": 2,
+      "description": "Out of range task index error detection"
+    },
+    {
+      "name": "TestTC008ValidationResultStructure",
+      "tests": 4,
+      "passed": 4,
+      "description": "ValidationResult structure verification"
+    },
+    {
+      "name": "TestTC009ValidationErrorStopsGeneration",
+      "tests": 2,
+      "passed": 2,
+      "description": "Validation error stops job generation"
+    },
+    {
+      "name": "TestTC010WarningAllowsContinuation",
+      "tests": 2,
+      "passed": 2,
+      "description": "Warnings allow continuation"
+    },
+    {
+      "name": "TestTC011RequiredFieldExtraction",
+      "tests": 3,
+      "passed": 3,
+      "description": "Required field extraction from job.body references"
+    },
+    {
+      "name": "TestTC013TaskFlowEngineValidation",
+      "tests": 4,
+      "passed": 4,
+      "description": "TaskFlow engine validation"
+    },
+    {
+      "name": "TestTC014GraphAIEngineValidation",
+      "tests": 4,
+      "passed": 4,
+      "description": "GraphAI engine validation"
+    },
+    {
+      "name": "TestMasterManagerIntegration",
+      "tests": 2,
+      "passed": 2,
+      "description": "MasterManagerSubWorkflow integration"
+    },
+    {
+      "name": "TestTemplateVariableResultMethods",
+      "tests": 3,
+      "passed": 3,
+      "description": "TemplateVariableResult utility methods"
+    }
+  ],
+  "acceptance_criteria_coverage": {
+    "AC-1: BodyTemplateValidatorクラスの実装": "PASS",
+    "AC-2: テンプレート変数の抽出機能": "PASS",
+    "AC-3: job.body参照の検証": "PASS",
+    "AC-4: tasks[N].output_data参照の検証": "PASS",
+    "AC-5: 検証結果のレポート生成": "PASS",
+    "AC-6: REGISTRATIONフェーズへの統合": "PASS",
+    "AC-7: エラー時の明確なメッセージで生成中止": "PASS",
+    "AC-8: 警告時はログ出力して続行": "PASS"
+  },
+  "design_policy_coverage": {
+    "DP-1: Strategy Patternによるエンジン別検証": "PASS",
+    "DP-2: Result型パターンによるエラー情報伝達": "PASS",
+    "DP-3: 既存フローへの影響最小化": "PASS"
+  },
+  "timestamp": "2026-01-13T00:00:00Z"
+}

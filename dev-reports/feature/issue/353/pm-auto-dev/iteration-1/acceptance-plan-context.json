@@ -1,0 +1,27 @@
+{
+  "issue_number": 353,
+  "issue_title": "Job Generator V2: WORKFLOW_GEN フェーズ未完了時に __PENDING__ プレースホルダーが残存しジョブ実行失敗",
+  "acceptance_criteria": [
+    "WORKFLOW_GEN フェーズ失敗時に適切なエラーハンドリング",
+    "__PENDING__ が残った状態で FINALIZATION に進まないバリデーション追加",
+    "ジョブ生成 UI で WORKFLOW_GEN 失敗を明示的に表示",
+    "既存の __PENDING__ ジョブの検出・修復手段の提供"
+  ],
+  "technical_requirements": [
+    "TR-1: WORKFLOW_GEN フェーズ完了検証 - FINALIZATION 移行前に全 TaskMaster の workflow_name が __PENDING__ でないことを検証、検証失敗時はジョブ生成を失敗としてマーク",
+    "TR-2: エラーハンドリング改善 - WORKFLOW_GEN 失敗時のリトライ機構、失敗理由のログ記録と UI 表示",
+    "TR-3: 既存データ修復 - __PENDING__ が残存している TaskMaster を検出する API、手動または自動でワークフロー生成を再試行する機能"
+  ],
+  "target_project": "expertAgent",
+  "related_projects": ["jobqueue", "myAgentDesk"],
+  "design_policy_path": "dev-reports/feature/issue/353/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/353/work-plan.md",
+  "phase": "pre-tdd",
+  "related_files": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow_registrar.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py"
+  ]
+}

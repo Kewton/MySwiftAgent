@@ -25,7 +25,7 @@ from aiagent.langgraph.jobGeneratorV2.llm_utils import (
     get_callbacks_from_context,
     invoke_structured_llm,
 )
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     Capability,
     RelaxationSuggestion,
     TaskDefinition,

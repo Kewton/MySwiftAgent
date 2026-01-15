@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
-from .types import Phase, PhaseStatus
+from .types_old import Phase, PhaseStatus
 
 
 class ErrorType(Enum):

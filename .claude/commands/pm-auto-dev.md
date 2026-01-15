@@ -12,6 +12,21 @@ Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリ�
 
 **新アーキテクチャ**: サブエージェント方式を採用し、各フェーズを専門エージェントに委譲します。
 
+## 前提条件（Issue #359追加）
+
+**受入テスト計画の事前完了が必須**です。pm-auto-dev開始前に以下を完了してください：
+
+1. `/acceptance-plan [Issue番号]` を実行
+2. `dev-reports/feature/issue/{issue_number}/acceptance-plan.md` が生成されていることを確認
+3. 受入テスト計画がレビュー・承認されていること
+
+**前提条件が満たされていない場合**:
+```
+❌ Error: 受入テスト計画が見つかりません
+以下のコマンドを先に実行してください:
+  /acceptance-plan {issue_number}
+```
+
 ## 使用方法
 - `/pm-auto-dev [Issue番号]`
 - `/pm-auto-dev [Issue番号] --max-iterations=5`（イテレーション回数変更）
@@ -33,7 +48,35 @@ Issue開発（Phase 8-11: TDD実装 → 受入テスト → リファクタリ�
 
 ### Phase 0: 初期設定とTodoリスト作成
 
-まず、TodoWriteツールで作業計画を作成してください：
+#### 0-1. 受入テスト計画の存在確認【必須】（Issue #359追加）
+
+**重要**: pm-auto-dev開始前に受入テスト計画が存在することを確認します。
+
+```bash
+ISSUE_NUM={issue_number}
+ACCEPTANCE_PLAN_FILE="dev-reports/feature/issue/${ISSUE_NUM}/acceptance-plan.md"
+
+if [ -f "$ACCEPTANCE_PLAN_FILE" ]; then
+  echo "✅ 受入テスト計画が見つかりました: $ACCEPTANCE_PLAN_FILE"
+else
+  echo "❌ Error: 受入テスト計画が見つかりません"
+  echo ""
+  echo "pm-auto-devを開始する前に、以下のコマンドを実行してください:"
+  echo "  /acceptance-plan ${ISSUE_NUM}"
+  echo ""
+  echo "受入テスト計画が承認されてから、再度pm-auto-devを実行してください。"
+  exit 1
+fi
+```
+
+**受入テスト計画が存在しない場合**:
+- pm-auto-devを中断
+- ユーザーに `/acceptance-plan {issue_number}` の実行を促す
+- 受入テスト計画が作成・承認されてから再開
+
+#### 0-2. Todoリスト作成
+
+TodoWriteツールで作業計画を作成してください：
 
 ```
 - [ ] Phase 1: Issue情報収集
@@ -864,7 +907,8 @@ TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定。
     "total_features": 3,
     "passed": 1,
     "dead_code": 2,
-    "missing_tests": 0
+    "missing_tests": 0,
+    "integration_rate": "33%"
   },
   "dead_code_list": [
     {
@@ -888,41 +932,145 @@ TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定。
 }
 ```
 
-→ **Phase 2に戻る**
+→ **Phase 2.8（デッドコード解消イテレーション）へ進む【必須】**
 
-デッドコードが検出された場合：
+**重要: 統合率ゲート（Issue #353教訓）**
 
-1. `recommended_actions` を tdd-context.json の `implementation_tasks` に追加
-2. Phase 2（TDD実装）を再実行
-3. イテレーション回数を+1
+| 統合率 | 判定 | 次のアクション |
+|--------|------|---------------|
+| **80%以上** | 合格 | Phase 3へ進む |
+| **80%未満** | 不合格 | **Phase 2.8【必須】** |
 
-**Phase 2 再実行時のコンテキスト例**:
+デッドコードが検出された場合、**必ず** Phase 2.8 に進みます。Phase 3 には進めません。
+
+#### 2.7-3. 検証完了
+
+検証結果に基づいて次のフェーズを決定：
+
+| 条件 | 次のフェーズ |
+|------|------------|
+| `status: "passed"` かつ 統合率 >= 80% | Phase 3（受入テスト実行） |
+| `status: "failed"` または 統合率 < 80% | **Phase 2.8【必須】** |
+
+**統合率 >= 80% の場合**:
+1. TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定
+2. Phase 3（受入テスト実行）へ進む
+
+**統合率 < 80% の場合**:
+1. TodoWriteでPhase 2.7を`completed`に、Phase 2.8を`in_progress`に設定
+2. Phase 2.8（デッドコード解消イテレーション）へ進む
+
+---
+
+### Phase 2.8: デッドコード解消イテレーション【条件付き必須】（Issue #353教訓）
+
+**トリガー条件**: Phase 2.7 で統合率 < 80% の場合
+
+**重要**: このフェーズをスキップして Phase 3 に進むことは**禁止**です。
+デッドコードが残ったまま受入テストを行っても、本番環境で機能が動作しません。
+
+#### 2.8-1. デッドコード解消タスクの作成
+
+Phase 2.7 の `recommended_actions` を基に、tdd-context.json を更新します。
+
+**コンテキスト更新例**:
 
 ```json
 {
-  "issue_number": 338,
-  "retry_reason": "Phase 2.7 でデッドコードを検出",
+  "issue_number": 353,
+  "iteration": 2,
+  "retry_reason": "Phase 2.7 でデッドコード検出（統合率 29%）",
   "dead_code_fixes": [
     {
-      "feature": "_transform_to_interface",
-      "action": "worker.py の _execute_tasks 内で呼び出しを追加",
-      "file": "jobqueue/app/core/worker.py",
-      "line": 223
+      "feature": "PendingWorkflowValidator",
+      "action": "_can_proceed_to_finalization 内で呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "expected_integration": "validator.validate(task_masters)"
+    }
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T2.1",
+      "description": "PendingWorkflowValidator を _can_proceed_to_finalization に統合",
+      "type": "integration",
+      "target_file": "orchestrator.py",
+      "integration_point": "_can_proceed_to_finalization メソッド内"
     }
   ],
   "already_completed": [
-    "_transform_to_interface 関数の実装",
-    "単体テストの作成"
+    "PendingWorkflowValidator クラスの実装",
+    "単体テストの作成",
+    "ErrorType.INCOMPLETE_WORKFLOW の定義"
   ]
 }
 ```
 
-#### 2.7-3. 検証完了
+#### 2.8-2. TDD実装サブエージェント呼び出し（統合タスク）
 
-検証がすべてパスしたら：
+以下のテキストを記述してください：
 
-1. TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定
-2. Phase 3（受入テスト実行）へ進む
+```
+Use tdd-impl-agent to integrate dead code for Issue #{issue_number}.
+
+Context file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{n}/tdd-context.json
+Output file: dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{n}/tdd-result.json
+
+CRITICAL: This iteration focuses on INTEGRATION, not new implementation.
+- Import the dead code modules into the caller files
+- Add actual function/method calls at the expected locations
+- Update integration tests to verify the calls
+- Ensure integration rate reaches >= 80%
+```
+
+#### 2.8-3. 統合結果の検証
+
+TDD結果を確認後、再度 Phase 2.7（実装検証）を実行します。
+
+```
+Phase 2.8 完了 → Phase 2.7 再実行 → 統合率確認
+```
+
+**ループ条件**:
+
+| 結果 | 次のアクション |
+|------|---------------|
+| 統合率 >= 80% | Phase 3へ進む |
+| 統合率 < 80% かつ イテレーション < 3 | Phase 2.8 を再実行 |
+| 統合率 < 80% かつ イテレーション >= 3 | **エスカレーション**（下記参照） |
+
+#### 2.8-4. エスカレーション（3回失敗時）
+
+3回のイテレーションでも統合率 80% を達成できない場合：
+
+1. ユーザーに状況を報告
+2. 以下の選択肢を提示：
+   - A: 追加イテレーションを実行
+   - B: 現状のまま Phase 3 に進む（警告付き）
+   - C: フォローアップ Issue を作成して部分的にマージ
+
+**報告テンプレート**:
+
+```markdown
+## デッドコード解消エスカレーション
+
+### 状況
+- イテレーション回数: 3
+- 現在の統合率: {X}%
+- 目標統合率: 80%
+
+### 未解消のデッドコード
+| 機能 | ファイル | 理由 |
+|------|---------|------|
+| {feature_name} | {file_path} | {reason} |
+
+### 推奨アクション
+{recommendation}
+
+### 選択肢
+- A: 追加イテレーションを実行
+- B: 現状のまま Phase 3 に進む（警告付き）
+- C: フォローアップ Issue を作成して部分的にマージ
+```
 
 ---
 
