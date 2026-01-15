@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 from core.config import settings
 
+# Re-export from adapter_old for backward compatibility
+from .adapter_old import JobGeneratorV2Adapter
 from .error_recovery import ErrorRecoveryManager
 from .nodes.job_analyzer import AnalyzedTask, InterfaceDefinition
 from .orchestrator import (
@@ -244,8 +246,5 @@ class JobGeneratorAdapter:
                 langfuse_trace_id=langfuse_trace_id,
             )
 
-
-# Re-export from adapter_old for backward compatibility
-from .adapter_old import JobGeneratorV2Adapter
 
 __all__ = ["JobGeneratorAdapter", "JobGeneratorV2Adapter"]

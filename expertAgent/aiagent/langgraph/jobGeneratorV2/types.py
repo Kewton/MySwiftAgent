@@ -16,6 +16,41 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
+# Re-export types from types_old for backward compatibility
+from .types_old import (
+    Capability,
+    CompatibilityReport,
+    DerivedFieldDefinition,
+    EnrichmentReport,
+    FeasibilityReport,
+    InterfaceDesignInput,
+    InterfaceDesignOutput,
+    InterfaceSchema,
+    InterfaceSchemaDefinition,
+    InterfaceSchemaResponse,
+    JobBodyParameter,
+    JobGenerationRequest,
+    JobGenerationResult,
+    RecommendedAPI,
+    RegistrationInput,
+    RegistrationOutput,
+    RelaxationSuggestion,
+    RetryAttempt,
+    RetryState,
+    SchemaCountMismatchResult,
+    SkipAggregator,
+    SkipInfo,
+    TaskBreakdownInput,
+    TaskBreakdownItem,
+    TaskBreakdownOutput,
+    TaskBreakdownResponse,
+    TaskDefinition,
+    TaskIdMapping,
+    WorkflowGenInput,
+    WorkflowGenOutput,
+    WorkflowGenPhaseOutput,
+)
+
 
 class ErrorType(Enum):
     """Error type classification for recovery decisions.
@@ -279,41 +314,6 @@ class PhaseStatus(Enum):
     NEEDS_RETRY = "needs_retry"
     NEEDS_RELAXATION = "needs_relaxation"
 
-
-# Re-export types from types_old for backward compatibility
-from .types_old import (
-    Capability,
-    CompatibilityReport,
-    DerivedFieldDefinition,
-    EnrichmentReport,
-    FeasibilityReport,
-    InterfaceDesignInput,
-    InterfaceDesignOutput,
-    InterfaceSchema,
-    InterfaceSchemaDefinition,
-    InterfaceSchemaResponse,
-    JobBodyParameter,
-    JobGenerationRequest,
-    JobGenerationResult,
-    RecommendedAPI,
-    RegistrationInput,
-    RegistrationOutput,
-    RelaxationSuggestion,
-    RetryAttempt,
-    RetryState,
-    SchemaCountMismatchResult,
-    SkipAggregator,
-    SkipInfo,
-    TaskBreakdownInput,
-    TaskBreakdownItem,
-    TaskBreakdownOutput,
-    TaskBreakdownResponse,
-    TaskDefinition,
-    TaskIdMapping,
-    WorkflowGenInput,
-    WorkflowGenOutput,
-    WorkflowGenPhaseOutput,
-)
 
 # Export all types
 __all__ = [
