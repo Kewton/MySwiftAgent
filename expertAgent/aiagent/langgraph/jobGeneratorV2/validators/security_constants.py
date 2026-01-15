@@ -20,19 +20,21 @@ Usage:
 
 # Allowed localhost hostnames for HTTP connections
 # These hosts are permitted to use HTTP instead of HTTPS
-ALLOWED_LOCAL_HOSTS: frozenset[str] = frozenset([
-    "localhost",       # Standard localhost
-    "127.0.0.1",       # IPv4 loopback
-    "0.0.0.0",         # All interfaces (Docker networking)  # noqa: S104
-    "[::1]",           # IPv6 loopback
-])
+ALLOWED_LOCAL_HOSTS: frozenset[str] = frozenset(
+    [
+        "localhost",  # Standard localhost
+        "127.0.0.1",  # IPv4 loopback
+        "0.0.0.0",  # All interfaces (Docker networking)  # noqa: S104
+        "[::1]",  # IPv6 loopback
+    ]
+)
 
 # Allowed domain suffixes for local development
 # Hosts ending with these suffixes are treated as local
 ALLOWED_LOCAL_SUFFIXES: tuple[str, ...] = (
-    ".local",          # mDNS/Bonjour local network
-    ".localhost",      # localhost subdomains
-    ".internal",       # Internal network
+    ".local",  # mDNS/Bonjour local network
+    ".localhost",  # localhost subdomains
+    ".internal",  # Internal network
 )
 
 

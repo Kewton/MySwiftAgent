@@ -667,7 +667,9 @@ class TaskIdMapping:
     master_to_logical: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_registration(cls, registration_output: "RegistrationOutput") -> "TaskIdMapping":
+    def from_registration(
+        cls, registration_output: "RegistrationOutput"
+    ) -> "TaskIdMapping":
         """Create TaskIdMapping from RegistrationOutput.
 
         Args:

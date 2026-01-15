@@ -46,16 +46,12 @@ class InterfaceDefinition(BaseModel):
         derived_fields: Optional derived field definitions
     """
 
-    input_schema: dict[str, Any] = Field(
-        description="JSON Schema for task input"
-    )
-    output_schema: dict[str, Any] = Field(
-        description="JSON Schema for task output"
-    )
+    input_schema: dict[str, Any] = Field(description="JSON Schema for task input")
+    output_schema: dict[str, Any] = Field(description="JSON Schema for task output")
     description: str = Field(default="", description="Interface description")
     derived_fields: dict[str, Any] = Field(
         default_factory=dict,
-        description="Derived field definitions for downstream tasks"
+        description="Derived field definitions for downstream tasks",
     )
 
 
@@ -82,16 +78,13 @@ class AnalyzedTask(BaseModel):
     task_type: str = Field(description="Type of task (fetch, transform, send)")
     recommended_api: str = Field(description="Recommended API endpoint")
     dependencies: list[str] = Field(
-        default_factory=list,
-        description="List of task_ids this task depends on"
+        default_factory=list, description="List of task_ids this task depends on"
     )
     input_schema: dict[str, Any] = Field(
-        default_factory=dict,
-        description="JSON Schema for task input"
+        default_factory=dict, description="JSON Schema for task input"
     )
     output_schema: dict[str, Any] = Field(
-        default_factory=dict,
-        description="JSON Schema for task output"
+        default_factory=dict, description="JSON Schema for task output"
     )
     priority: int = Field(default=5, ge=1, le=10, description="Task priority")
 
@@ -117,20 +110,16 @@ class JobAnalysisResponse(BaseModel):
     """
 
     tasks: list[AnalyzedTask] = Field(
-        default_factory=list,
-        description="List of analyzed tasks"
+        default_factory=list, description="List of analyzed tasks"
     )
     interfaces: dict[str, InterfaceDefinition] = Field(
-        default_factory=dict,
-        description="Interface definitions keyed by task_id"
+        default_factory=dict, description="Interface definitions keyed by task_id"
     )
     job_body_parameters: list[JobParameter] = Field(
-        default_factory=list,
-        description="Parameters extracted from requirements"
+        default_factory=list, description="Parameters extracted from requirements"
     )
     overall_summary: str = Field(
-        default="",
-        description="Summary of the entire workflow"
+        default="", description="Summary of the entire workflow"
     )
 
     def get_task_identifiers(self) -> list[UnifiedTaskIdentifier]:
@@ -155,12 +144,10 @@ class JobAnalysisInput(BaseModel):
     user_requirement: str = Field(description="Natural language requirement")
     max_tasks: int = Field(default=10, description="Maximum tasks to generate")
     retry_feedback: str | None = Field(
-        default=None,
-        description="Feedback from previous failed attempt"
+        default=None, description="Feedback from previous failed attempt"
     )
     available_apis: list[str] = Field(
-        default_factory=list,
-        description="List of available API endpoints"
+        default_factory=list, description="List of available API endpoints"
     )
 
 
@@ -207,10 +194,7 @@ async def analyze_job(
     Returns:
         JobAnalysisResponse with tasks, interfaces, and parameters
     """
-    logger.info(
-        "Analyzing job requirement: %s...",
-        input_data.user_requirement[:100]
-    )
+    logger.info("Analyzing job requirement: %s...", input_data.user_requirement[:100])
 
     # Build user prompt
     user_prompt_parts = [
@@ -251,7 +235,7 @@ async def analyze_job(
         logger.info(
             "Job analysis complete: %d tasks, %d interfaces",
             len(response.tasks),
-            len(response.interfaces)
+            len(response.interfaces),
         )
 
         return response

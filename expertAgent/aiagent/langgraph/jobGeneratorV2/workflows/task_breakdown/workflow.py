@@ -101,7 +101,9 @@ class TaskBreakdownWorkflow:
 
         # Issue #342: Load capabilities FIRST using shared utility
         shared_capabilities = load_shared_capabilities()
-        logger.info("Loaded %d capabilities for task breakdown", len(shared_capabilities))
+        logger.info(
+            "Loaded %d capabilities for task breakdown", len(shared_capabilities)
+        )
 
         # Step 1: Decompose requirements into tasks WITH capabilities
         decomposer = TaskDecomposerSubWorkflow(capabilities=shared_capabilities)

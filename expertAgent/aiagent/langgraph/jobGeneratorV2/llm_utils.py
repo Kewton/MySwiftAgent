@@ -240,7 +240,7 @@ Define dependencies between tasks where necessary.
 
 
 def _build_task_breakdown_system_prompt(
-    capabilities: list[dict[str, Any]] | None = None
+    capabilities: list[dict[str, Any]] | None = None,
 ) -> str:
     """Build the system prompt for task breakdown with API info.
 

@@ -56,7 +56,9 @@ class TestValidationPipelineAPISchemaIntegration:
         # Check for API parameter error (query is a known alias for queries)
         # Issue #344: PARAMETER_NAME_MISMATCH is used for typo detection
         api_errors = [
-            e for e in result.errors if e.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH
+            e
+            for e in result.errors
+            if e.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH
         ]
         assert len(api_errors) >= 1
 

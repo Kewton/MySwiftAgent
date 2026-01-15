@@ -245,7 +245,9 @@ class TestFewShotPatternsIntegration:
 
         # Should include gmail_send_pattern
         pattern_names = [e.name for e in examples]
-        assert "gmail_send_pattern" in pattern_names or "api_call_pattern" in pattern_names
+        assert (
+            "gmail_send_pattern" in pattern_names or "api_call_pattern" in pattern_names
+        )
 
     def test_few_shot_selection_slack(self) -> None:
         """Test few-shot selection prefers slack_notify_pattern for slack APIs."""
@@ -261,7 +263,8 @@ class TestFewShotPatternsIntegration:
         # Should include slack_notify_pattern
         pattern_names = [e.name for e in examples]
         assert (
-            "slack_notify_pattern" in pattern_names or "api_call_pattern" in pattern_names
+            "slack_notify_pattern" in pattern_names
+            or "api_call_pattern" in pattern_names
         )
 
     def test_all_patterns_graphai_compliant(self) -> None:
@@ -291,7 +294,9 @@ class TestFewShotPatternsIntegration:
                 if node_def.get("agent") == "fetchAgent":
                     inputs = node_def.get("inputs", {})
                     assert "url" in inputs, f"Node {node_name} missing url in inputs"
-                    assert "method" in inputs, f"Node {node_name} missing method in inputs"
+                    assert "method" in inputs, (
+                        f"Node {node_name} missing method in inputs"
+                    )
 
 
 class TestDeadCodeRemoval:

@@ -254,9 +254,7 @@ class TestIssue356Acceptance:
         project_root = Path(__file__).parent.parent.parent.parent
         workflow_file = project_root / ".github" / "workflows" / "contract-tests.yml"
 
-        assert workflow_file.exists(), (
-            f"CI/CD workflow file not found: {workflow_file}"
-        )
+        assert workflow_file.exists(), f"CI/CD workflow file not found: {workflow_file}"
 
     def test_tc_007_cicd_workflow_has_proper_triggers(self) -> None:
         """TC-007: CI/CDワークフローに適切なトリガーが設定されている.

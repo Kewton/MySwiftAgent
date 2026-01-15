@@ -125,6 +125,7 @@ class TestTaskFlowVariableContract:
         ]
 
         import re
+
         pattern = re.compile(r"\$\{[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*\}")
 
         for ref in valid_references:
@@ -157,7 +158,7 @@ class TestTaskFlowVariableContract:
         """Step output references must follow ${step_id.output} pattern."""
         workflow = TaskFlowWorkflow(
             workflow_name="test",
-            input_schema='{}',
+            input_schema="{}",
             output_schema='{"result": "string"}',
             steps=[
                 TaskFlowStep(
@@ -220,7 +221,7 @@ class TestTaskFlowJSONSerializationContract:
 
     def test_workflow_deserializes_from_json(self):
         """Workflow must deserialize from JSON."""
-        json_str = '''
+        json_str = """
         {
             "workflow_name": "test_workflow",
             "input_schema": "{\\"query\\": \\"string\\"}",
@@ -238,7 +239,7 @@ class TestTaskFlowJSONSerializationContract:
             ],
             "output": "{\\"result\\": \\"${step_001.output}\\"}"
         }
-        '''
+        """
 
         workflow = TaskFlowWorkflow.from_json(json_str)
 
@@ -262,8 +263,8 @@ class TestGraphAiServerCompatibility:
         for name in valid_names:
             workflow = TaskFlowWorkflow(
                 workflow_name=name,
-                input_schema='{}',
-                output_schema='{}',
+                input_schema="{}",
+                output_schema="{}",
                 steps=[
                     TaskFlowStep(
                         id="step_001",
@@ -275,7 +276,7 @@ class TestGraphAiServerCompatibility:
                         ),
                     )
                 ],
-                output='{}',
+                output="{}",
             )
             assert workflow.workflow_name == name
 
@@ -351,7 +352,7 @@ class TestExpertAgentOutputContract:
                         "step_type": "api_rest",
                         "method": "GET",
                         "url": "https://api.example.com/data",
-                    }
+                    },
                 }
             ],
             "output": '{"result": "${fetch.output}"}',

@@ -17,6 +17,7 @@ Issue:
   3. 既存のテストが全てパスする
   4. 新規テストケースを追加（変数参照を含むoutputのバリデーション）
 """
+
 from __future__ import annotations
 
 import pytest
@@ -85,7 +86,10 @@ class TestIssue351Acceptance:
         # Assert: ワークフローが正常に作成され、変数参照が保持されている
         assert workflow.workflow_name == "google_search_workflow"
         assert "${google_search.output.search_results}" in workflow.output
-        assert workflow.output == '{"search_results": "${google_search.output.search_results}"}'
+        assert (
+            workflow.output
+            == '{"search_results": "${google_search.output.search_results}"}'
+        )
 
     def test_acceptance_criterion_1_nested_variable_reference(self) -> None:
         """受入条件1: ネストした変数参照（${step.output.data.name}）も設定できる"""
@@ -208,7 +212,7 @@ class TestIssue351Acceptance:
         # Act
         workflow = TaskFlowWorkflow(
             workflow_name="mixed_output_workflow",
-            input_schema='{}',
+            input_schema="{}",
             output_schema='{"status": "string", "data": "object", "version": "string"}',
             steps=[step],
             output='{"status": "success", "data": "${api_call.output}", "version": "1.0.0"}',

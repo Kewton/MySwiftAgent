@@ -96,9 +96,7 @@ class TestIssue355Acceptance:
     # TC-003: JSON文字列 output の変換
     # ==========================================================================
 
-    def test_tc_003_convert_json_string_output(
-        self, adapter: TaskFlowAdapter
-    ) -> None:
+    def test_tc_003_convert_json_string_output(self, adapter: TaskFlowAdapter) -> None:
         """TC-003: output がJSON文字列の場合にオブジェクトに変換される.
 
         受入条件: output が JSON文字列の場合、オブジェクトに変換される
@@ -165,9 +163,7 @@ class TestIssue355Acceptance:
     # TC-005: 既存オブジェクトの保持
     # ==========================================================================
 
-    def test_tc_005_preserve_existing_objects(
-        self, adapter: TaskFlowAdapter
-    ) -> None:
+    def test_tc_005_preserve_existing_objects(self, adapter: TaskFlowAdapter) -> None:
         """TC-005: 既にオブジェクトのフィールドがそのまま保持される.
 
         受入条件: 既にオブジェクトの場合、そのまま保持される
@@ -194,9 +190,7 @@ class TestIssue355Acceptance:
     # TC-006: 不正JSON時のエラー返却
     # ==========================================================================
 
-    def test_tc_006_error_on_invalid_json(
-        self, adapter: TaskFlowAdapter
-    ) -> None:
+    def test_tc_006_error_on_invalid_json(self, adapter: TaskFlowAdapter) -> None:
         """TC-006: 不正なJSONの場合にエラーが返却される.
 
         受入条件: 不正なJSONの場合、エラーを返却
@@ -246,9 +240,7 @@ class TestIssue355Acceptance:
     # TC-011: 複数フィールド同時変換
     # ==========================================================================
 
-    def test_tc_011_convert_multiple_fields(
-        self, adapter: TaskFlowAdapter
-    ) -> None:
+    def test_tc_011_convert_multiple_fields(self, adapter: TaskFlowAdapter) -> None:
         """TC-011: 複数のJSON文字列フィールドが同時に変換される.
 
         受入条件: 全ての対象フィールドが変換される
@@ -288,9 +280,7 @@ class TestIssue355Acceptance:
     # TC-012: ディープコピー検証
     # ==========================================================================
 
-    def test_tc_012_deep_copy_preservation(
-        self, adapter: TaskFlowAdapter
-    ) -> None:
+    def test_tc_012_deep_copy_preservation(self, adapter: TaskFlowAdapter) -> None:
         """TC-012: 入力データが変換により破壊されない.
 
         受入条件: オリジナルデータが保持される

@@ -166,12 +166,8 @@ class TestV2TaskBreakdownAcceptance:
 
         # Validate interface structure
         for task_id, interface in interface_definitions.items():
-            assert "input_schema" in interface, (
-                f"Missing input_schema for {task_id}"
-            )
-            assert "output_schema" in interface, (
-                f"Missing output_schema for {task_id}"
-            )
+            assert "input_schema" in interface, f"Missing input_schema for {task_id}"
+            assert "output_schema" in interface, f"Missing output_schema for {task_id}"
 
     def test_v2_task_count_matches_interface_count(
         self, services_available: bool

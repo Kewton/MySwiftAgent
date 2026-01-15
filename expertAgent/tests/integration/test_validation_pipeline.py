@@ -472,4 +472,8 @@ class TestValidationPipelinePromptFeedback:
         result = pipeline.validate(workflow)
         feedback = pipeline.to_prompt_feedback(result)
         # Should include suggestion
-        assert "Fix" in feedback or "fix" in feedback.lower() or "suggestion" in feedback.lower()
+        assert (
+            "Fix" in feedback
+            or "fix" in feedback.lower()
+            or "suggestion" in feedback.lower()
+        )

@@ -93,7 +93,9 @@ async def register_workflow_to_graphai(
 
             if response.status_code == 200:
                 result = response.json()
-                workflow_path = result.get("workflow_path", f"taskmaster/{task_master_id}/{workflow_name}")
+                workflow_path = result.get(
+                    "workflow_path", f"taskmaster/{task_master_id}/{workflow_name}"
+                )
                 model_name = f"taskmaster/{task_master_id}/{workflow_name}"
 
                 logger.info(
@@ -181,7 +183,9 @@ async def register_taskflow_workflow(
 
             if response.status_code == 200:
                 result = response.json()
-                workflow_path = result.get("file_path", f"config/taskflow/workflows/{workflow_name}.json")
+                workflow_path = result.get(
+                    "file_path", f"config/taskflow/workflows/{workflow_name}.json"
+                )
 
                 logger.info(
                     "Registered TaskFlow V2 workflow to GraphAiServer: %s -> %s",

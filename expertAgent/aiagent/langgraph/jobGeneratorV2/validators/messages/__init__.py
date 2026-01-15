@@ -106,8 +106,7 @@ ERROR_MESSAGES: dict[str, dict[str, str]] = {
             "パストラバーサルが検出されました: {path}"
         ),
         TaskFlowValidationErrorCode.CODE_JS_FUNCTION_NOT_ALLOWED.value: (
-            "関数 '{function_name}' は許可リストにありません。"
-            "許可: {allowed_list}"
+            "関数 '{function_name}' は許可リストにありません。許可: {allowed_list}"
         ),
     },
 }

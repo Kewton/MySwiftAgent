@@ -324,8 +324,7 @@ def create_strategy(
         return TaskFlowGeneratorStrategy()
     else:
         raise ValueError(
-            f"Unknown engine: {engine}. "
-            f"Valid engines: {[e.value for e in EngineType]}"
+            f"Unknown engine: {engine}. Valid engines: {[e.value for e in EngineType]}"
         )
 
 

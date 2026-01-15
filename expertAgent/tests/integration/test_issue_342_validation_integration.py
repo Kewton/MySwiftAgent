@@ -132,7 +132,11 @@ class TestWorkflowPatternLibraryIntegration:
         # Should be able to suggest patterns
         pattern = library.suggest_pattern("Google検索して要約する")
         assert isinstance(pattern, str)
-        assert pattern in ["search_and_summarize", "search_fetch_summarize", "api_transform_output"]
+        assert pattern in [
+            "search_and_summarize",
+            "search_fetch_summarize",
+            "api_transform_output",
+        ]
 
     def test_prompt_assembler_can_use_pattern_library(self) -> None:
         """Verify PromptAssembler can incorporate pattern suggestions."""

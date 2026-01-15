@@ -116,6 +116,7 @@ class JobGeneratorAdapter:
 
         # Run workflow
         import uuid
+
         actual_job_id = job_id or str(uuid.uuid4())
         result = await self._orchestrator.run_workflow(request)
 
@@ -204,9 +205,7 @@ class JobGeneratorAdapter:
 
         if result.success:
             task_breakdown = (
-                self._convert_tasks_to_breakdown(result.tasks)
-                if result.tasks
-                else None
+                self._convert_tasks_to_breakdown(result.tasks) if result.tasks else None
             )
             interface_definitions = (
                 self._convert_interfaces(result.interfaces)

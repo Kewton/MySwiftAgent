@@ -44,27 +44,31 @@ def load_capabilities_from_yaml() -> list[dict[str, Any]]:
 
     # Utility APIs
     for api in config.get("utility_apis", []):
-        capabilities.append({
-            "name": api.get("name", ""),
-            "endpoint": api.get("endpoint", ""),
-            "description": api.get("description", ""),
-            "use_cases": api.get("use_cases", []),
-            "method": api.get("method", "POST"),
-            "request_schema": api.get("request_schema", {}),
-            "response_schema": api.get("response_schema", {}),
-        })
+        capabilities.append(
+            {
+                "name": api.get("name", ""),
+                "endpoint": api.get("endpoint", ""),
+                "description": api.get("description", ""),
+                "use_cases": api.get("use_cases", []),
+                "method": api.get("method", "POST"),
+                "request_schema": api.get("request_schema", {}),
+                "response_schema": api.get("response_schema", {}),
+            }
+        )
 
     # AI Agent APIs
     for api in config.get("ai_agent_apis", []):
-        capabilities.append({
-            "name": api.get("name", ""),
-            "endpoint": api.get("endpoint", ""),
-            "description": api.get("description", ""),
-            "use_cases": api.get("use_cases", []),
-            "method": api.get("method", "POST"),
-            "request_schema": api.get("request_schema", {}),
-            "response_schema": api.get("response_schema", {}),
-        })
+        capabilities.append(
+            {
+                "name": api.get("name", ""),
+                "endpoint": api.get("endpoint", ""),
+                "description": api.get("description", ""),
+                "use_cases": api.get("use_cases", []),
+                "method": api.get("method", "POST"),
+                "request_schema": api.get("request_schema", {}),
+                "response_schema": api.get("response_schema", {}),
+            }
+        )
 
     logger.info("Loaded %d capabilities from YAML", len(capabilities))
     return capabilities
@@ -85,8 +89,12 @@ def format_capabilities_for_prompt(capabilities: list[dict[str, Any]]) -> str:
     lines = ["## 利用可能なAPI", ""]
 
     # Group by type based on endpoint prefix
-    utility_apis = [c for c in capabilities if c.get("endpoint", "").startswith("/v1/utility/")]
-    ai_apis = [c for c in capabilities if not c.get("endpoint", "").startswith("/v1/utility/")]
+    utility_apis = [
+        c for c in capabilities if c.get("endpoint", "").startswith("/v1/utility/")
+    ]
+    ai_apis = [
+        c for c in capabilities if not c.get("endpoint", "").startswith("/v1/utility/")
+    ]
 
     if utility_apis:
         lines.append("### Utility API (Direct API)")

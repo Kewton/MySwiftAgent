@@ -434,7 +434,9 @@ class APISchemaValidator(WorkflowValidator):
                     elif expected_type == "integer":
                         if not isinstance(param_value, int):
                             # Skip if it's a reference
-                            if isinstance(param_value, str) and param_value.startswith(":"):
+                            if isinstance(param_value, str) and param_value.startswith(
+                                ":"
+                            ):
                                 continue
                             # Allow string representation of int
                             if isinstance(param_value, str) and param_value.isdigit():

@@ -624,8 +624,7 @@ nodes:
         assert len(rendered) > 100, "Prompt should have substantial content"
         # Should mention email-related concepts
         assert any(
-            word in rendered.lower()
-            for word in ["email", "send", "mail", "gmail"]
+            word in rendered.lower() for word in ["email", "send", "mail", "gmail"]
         )
 
     def test_e2e_full_validation_pipeline(self) -> None:

@@ -113,7 +113,9 @@ class JobGenerationOrchestrator:
         request: JobGenerationRequest,
     ) -> JobGenerationResult:
         """Execute the complete 3-phase workflow."""
-        logger.info("Starting 3-phase workflow for: %s...", request.user_requirement[:50])
+        logger.info(
+            "Starting 3-phase workflow for: %s...", request.user_requirement[:50]
+        )
 
         try:
             # Phase 1: JOB_ANALYSIS
@@ -166,10 +168,15 @@ class JobGenerationOrchestrator:
         )
         result = await analyze_job(input_data, llm_client=self._llm_client)
         # Validate task dependencies (DC-1: TaskDependencyValidator integration)
-        tasks_for_val = [{"task_id": t.task_id, "dependencies": t.dependencies} for t in result.tasks]
+        tasks_for_val = [
+            {"task_id": t.task_id, "dependencies": t.dependencies} for t in result.tasks
+        ]
         dep_result = TaskDependencyValidator().validate(tasks_for_val)
         if not dep_result.is_valid:
-            raise OrchestratorError(f"Task dependency validation failed: {dep_result.to_error_message()}", phase=Phase.JOB_ANALYSIS)
+            raise OrchestratorError(
+                f"Task dependency validation failed: {dep_result.to_error_message()}",
+                phase=Phase.JOB_ANALYSIS,
+            )
         return result
 
     async def _execute_registration(
@@ -259,15 +266,26 @@ class JobGenerationOrchestrator:
             if tr.success and tr.workflow:
                 val_res = pipeline.validate(tr.workflow, workflow_id=tr.task_id)
                 if not val_res.is_valid:
-                    logger.warning("Workflow %s validation issues: %s", tr.task_id, [e.message for e in val_res.errors])
+                    logger.warning(
+                        "Workflow %s validation issues: %s",
+                        tr.task_id,
+                        [e.message for e in val_res.errors],
+                    )
         return result
 
     def _build_result(
-        self, analysis: JobAnalysisResponse, registration: dict[str, Any],
-        identifiers: list[UnifiedTaskIdentifier], workflow_result: ParallelExecutionResult,
+        self,
+        analysis: JobAnalysisResponse,
+        registration: dict[str, Any],
+        identifiers: list[UnifiedTaskIdentifier],
+        workflow_result: ParallelExecutionResult,
     ) -> JobGenerationResult:
         """Build final result from phase outputs."""
-        workflows = {tr.task_id: tr.workflow for tr in workflow_result.successful_tasks if tr.workflow}
+        workflows = {
+            tr.task_id: tr.workflow
+            for tr in workflow_result.successful_tasks
+            if tr.workflow
+        }
         # Issue #360: Require all tasks to succeed, not just partial success
         # Changed from: all_succeeded or partial_success or not identifiers
         # To: all_succeeded or not identifiers (strict success requirement)

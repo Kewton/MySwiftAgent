@@ -29,8 +29,14 @@ class TestTypeGuardPromptIntegration:
         prompt = create_llm_evaluation_prompt(
             task_name="Test Task",
             task_description="Test description",
-            input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"result": {"type": "string"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"result": {"type": "string"}},
+            },
             recommended_apis=["google_search", "summarize_api"],
             yaml_content="version: 0.5\nnodes: {}",
             sample_input={"query": "test"},
@@ -74,7 +80,10 @@ class TestTypeGuardPromptIntegration:
             output_schema={"type": "object"},
             recommended_apis=[
                 "google_search",  # string format
-                {"api_name": "summarize_api", "endpoint": "/v1/ai/summarize"},  # dict format
+                {
+                    "api_name": "summarize_api",
+                    "endpoint": "/v1/ai/summarize",
+                },  # dict format
                 {"name": "legacy_api"},  # dict with 'name' key
             ],
             yaml_content="version: 0.5\nnodes: {}",
@@ -94,7 +103,10 @@ class TestTypeGuardPromptIntegration:
         prompt = create_test_data_regeneration_prompt(
             task_name="Test Task",
             task_description="Test description",
-            input_schema={"type": "object", "properties": {"input": {"type": "string"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"input": {"type": "string"}},
+            },
             recommended_apis=[
                 "api_string",
                 {"api_name": "api_dict", "endpoint": "/v1/test"},

@@ -4,7 +4,6 @@ This test verifies that the V2 Job Generator returns task_breakdown
 and interface_definitions in the response.
 """
 
-
 from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
 from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
 from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
@@ -172,14 +171,26 @@ class TestV2ResponseTaskBreakdown:
         interfaces = {
             "task_001": InterfaceSchema(
                 task_id="task_001",
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"results": {"type": "array"}},
+                },
                 description="Gmail search interface",
             ),
             "task_002": InterfaceSchema(
                 task_id="task_002",
-                input_schema={"type": "object", "properties": {"to": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"success": {"type": "boolean"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"to": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"success": {"type": "boolean"}},
+                },
                 description="Email send interface",
             ),
         }

@@ -159,7 +159,9 @@ class TestIssue342Acceptance:
         orchestrator = JobGenerationOrchestrator(recovery_manager=recovery_manager)
 
         # Act & Assert
-        assert orchestrator.get_next_phase(Phase.TASK_BREAKDOWN) == Phase.INTERFACE_DESIGN
+        assert (
+            orchestrator.get_next_phase(Phase.TASK_BREAKDOWN) == Phase.INTERFACE_DESIGN
+        )
         assert orchestrator.get_next_phase(Phase.INTERFACE_DESIGN) == Phase.REGISTRATION
         assert orchestrator.get_next_phase(Phase.REGISTRATION) == Phase.WORKFLOW_GEN
         assert orchestrator.get_next_phase(Phase.WORKFLOW_GEN) is None

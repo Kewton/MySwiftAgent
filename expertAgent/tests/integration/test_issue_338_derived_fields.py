@@ -64,7 +64,10 @@ class TestIssue338DerivedFieldsIntegration:
 
         # Verify valid derived_fields preserved
         assert "result_count" in result.interfaces[0].derived_fields
-        assert result.interfaces[0].derived_fields["result_count"].template == "{count} found"
+        assert (
+            result.interfaces[0].derived_fields["result_count"].template
+            == "{count} found"
+        )
 
         # Verify invalid derived_fields gracefully degraded to empty dict
         assert result.interfaces[1].derived_fields == {}
@@ -85,7 +88,7 @@ class TestIssue338DerivedFieldsIntegration:
                 "description": f"Interface {i}",
                 "input_schema": {"type": "object", "properties": {}},
                 "output_schema": {"type": "object", "properties": {}},
-                "derived_fields": f"field_{i} -> task_{i+1}.input.data",  # All invalid
+                "derived_fields": f"field_{i} -> task_{i + 1}.input.data",  # All invalid
             }
             for i in range(5)
         ]
@@ -172,7 +175,9 @@ class TestIssue338DerivedFieldsIntegration:
 
         # Verify workflow produced results
         assert len(interface_masters) == 2
-        assert interface_masters["task_001"]["interface_name"] == "gmail_search_interface"
+        assert (
+            interface_masters["task_001"]["interface_name"] == "gmail_search_interface"
+        )
         assert interface_masters["task_002"]["interface_name"] == "email_send_interface"
 
         # First interface had invalid derived_fields (degraded)

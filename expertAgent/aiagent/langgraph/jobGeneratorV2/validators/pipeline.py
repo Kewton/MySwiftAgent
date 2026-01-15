@@ -45,7 +45,13 @@ class StructuralValidator(WorkflowValidator):
     - Required top-level fields exist
     """
 
-    REQUIRED_FIELDS = ["workflow_name", "steps", "input_schema", "output_schema", "output"]
+    REQUIRED_FIELDS = [
+        "workflow_name",
+        "steps",
+        "input_schema",
+        "output_schema",
+        "output",
+    ]
 
     def validate(self, workflow: dict[str, Any]) -> list[ValidationError]:
         """Validate workflow structure."""
@@ -54,83 +60,99 @@ class StructuralValidator(WorkflowValidator):
         # Check required fields
         for field in self.REQUIRED_FIELDS:
             if field not in workflow:
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message=f"Missing required field: {field}",
-                    location=f"workflow.{field}",
-                    suggestion=f"Add '{field}' field to workflow definition",
-                    severity="critical",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message=f"Missing required field: {field}",
+                        location=f"workflow.{field}",
+                        suggestion=f"Add '{field}' field to workflow definition",
+                        severity="critical",
+                    )
+                )
 
         # Check workflow_name format
         if "workflow_name" in workflow:
             name = workflow["workflow_name"]
             if not isinstance(name, str) or not name:
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message="workflow_name must be a non-empty string",
-                    location="workflow.workflow_name",
-                    suggestion="Provide a valid workflow name",
-                    severity="critical",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message="workflow_name must be a non-empty string",
+                        location="workflow.workflow_name",
+                        suggestion="Provide a valid workflow name",
+                        severity="critical",
+                    )
+                )
             elif not re.match(r"^[a-zA-Z_][a-zA-Z0-9_-]*$", name):
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message=f"Invalid workflow_name format: {name}",
-                    location="workflow.workflow_name",
-                    suggestion="Use alphanumeric, underscore, hyphen; start with letter/underscore",
-                    severity="major",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message=f"Invalid workflow_name format: {name}",
+                        location="workflow.workflow_name",
+                        suggestion="Use alphanumeric, underscore, hyphen; start with letter/underscore",
+                        severity="major",
+                    )
+                )
 
         # Check steps
         if "steps" in workflow:
             steps = workflow["steps"]
             if not isinstance(steps, list):
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message="steps must be an array",
-                    location="workflow.steps",
-                    suggestion="Define steps as an array of step objects",
-                    severity="critical",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message="steps must be an array",
+                        location="workflow.steps",
+                        suggestion="Define steps as an array of step objects",
+                        severity="critical",
+                    )
+                )
             elif len(steps) == 0:
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message="steps array cannot be empty",
-                    location="workflow.steps",
-                    suggestion="Add at least one step to the workflow",
-                    severity="critical",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message="steps array cannot be empty",
+                        location="workflow.steps",
+                        suggestion="Add at least one step to the workflow",
+                        severity="critical",
+                    )
+                )
             else:
                 # Validate each step has id and type
                 for i, step in enumerate(steps):
                     if not isinstance(step, dict):
-                        errors.append(ValidationError(
-                            code=ValidationErrorCode.VALIDATION_FAILED,
-                            message=f"Step {i} is not an object",
-                            location=f"workflow.steps[{i}]",
-                            suggestion="Each step must be an object with id, type, config",
-                            severity="critical",
-                        ))
+                        errors.append(
+                            ValidationError(
+                                code=ValidationErrorCode.VALIDATION_FAILED,
+                                message=f"Step {i} is not an object",
+                                location=f"workflow.steps[{i}]",
+                                suggestion="Each step must be an object with id, type, config",
+                                severity="critical",
+                            )
+                        )
                         continue
 
                     if "id" not in step:
-                        errors.append(ValidationError(
-                            code=ValidationErrorCode.VALIDATION_FAILED,
-                            message=f"Step {i} missing 'id' field",
-                            location=f"workflow.steps[{i}]",
-                            suggestion="Add unique 'id' to each step",
-                            severity="critical",
-                        ))
+                        errors.append(
+                            ValidationError(
+                                code=ValidationErrorCode.VALIDATION_FAILED,
+                                message=f"Step {i} missing 'id' field",
+                                location=f"workflow.steps[{i}]",
+                                suggestion="Add unique 'id' to each step",
+                                severity="critical",
+                            )
+                        )
 
                     if "type" not in step:
-                        errors.append(ValidationError(
-                            code=ValidationErrorCode.VALIDATION_FAILED,
-                            message=f"Step {i} missing 'type' field",
-                            location=f"workflow.steps[{i}]",
-                            suggestion="Add 'type' (api_rest, transform, code_js) to each step",
-                            severity="critical",
-                        ))
+                        errors.append(
+                            ValidationError(
+                                code=ValidationErrorCode.VALIDATION_FAILED,
+                                message=f"Step {i} missing 'type' field",
+                                location=f"workflow.steps[{i}]",
+                                suggestion="Add 'type' (api_rest, transform, code_js) to each step",
+                                severity="critical",
+                            )
+                        )
 
         return errors
 
@@ -150,24 +172,30 @@ class SchemaValidator(WorkflowValidator):
 
         # Validate input_schema
         if "input_schema" in workflow:
-            errors.extend(self._validate_json_field(
-                workflow["input_schema"],
-                "input_schema",
-            ))
+            errors.extend(
+                self._validate_json_field(
+                    workflow["input_schema"],
+                    "input_schema",
+                )
+            )
 
         # Validate output_schema
         if "output_schema" in workflow:
-            errors.extend(self._validate_json_field(
-                workflow["output_schema"],
-                "output_schema",
-            ))
+            errors.extend(
+                self._validate_json_field(
+                    workflow["output_schema"],
+                    "output_schema",
+                )
+            )
 
         # Validate output mapping
         if "output" in workflow:
-            errors.extend(self._validate_json_field(
-                workflow["output"],
-                "output",
-            ))
+            errors.extend(
+                self._validate_json_field(
+                    workflow["output"],
+                    "output",
+                )
+            )
 
         return errors
 
@@ -181,36 +209,42 @@ class SchemaValidator(WorkflowValidator):
 
         if isinstance(value, str):
             # Replace variable references for validation
-            test_value = re.sub(r'\$\{[^}]+\}', '"PLACEHOLDER"', value)
+            test_value = re.sub(r"\$\{[^}]+\}", '"PLACEHOLDER"', value)
             try:
                 parsed = json.loads(test_value)
                 if not isinstance(parsed, dict):
-                    errors.append(ValidationError(
-                        code=ValidationErrorCode.VALIDATION_FAILED,
-                        message=f"{field_name} must be a JSON object",
-                        location=f"workflow.{field_name}",
-                        suggestion="Ensure the JSON parses to an object {}",
-                        severity="major",
-                    ))
+                    errors.append(
+                        ValidationError(
+                            code=ValidationErrorCode.VALIDATION_FAILED,
+                            message=f"{field_name} must be a JSON object",
+                            location=f"workflow.{field_name}",
+                            suggestion="Ensure the JSON parses to an object {}",
+                            severity="major",
+                        )
+                    )
             except json.JSONDecodeError as e:
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message=f"{field_name} is not valid JSON: {e}",
-                    location=f"workflow.{field_name}",
-                    suggestion="Fix JSON syntax errors",
-                    severity="critical",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message=f"{field_name} is not valid JSON: {e}",
+                        location=f"workflow.{field_name}",
+                        suggestion="Fix JSON syntax errors",
+                        severity="critical",
+                    )
+                )
         elif isinstance(value, dict):
             # Already a dict, valid
             pass
         else:
-            errors.append(ValidationError(
-                code=ValidationErrorCode.VALIDATION_FAILED,
-                message=f"{field_name} must be a JSON string or object",
-                location=f"workflow.{field_name}",
-                suggestion="Provide valid JSON",
-                severity="critical",
-            ))
+            errors.append(
+                ValidationError(
+                    code=ValidationErrorCode.VALIDATION_FAILED,
+                    message=f"{field_name} must be a JSON string or object",
+                    location=f"workflow.{field_name}",
+                    suggestion="Provide valid JSON",
+                    severity="critical",
+                )
+            )
 
         return errors
 
@@ -224,7 +258,7 @@ class SemanticValidator(WorkflowValidator):
     - Output references valid steps
     """
 
-    REFERENCE_PATTERN = re.compile(r'\$\{([a-zA-Z_][a-zA-Z0-9_]*)\.([^}]+)\}')
+    REFERENCE_PATTERN = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)\.([^}]+)\}")
 
     def validate(self, workflow: dict[str, Any]) -> list[ValidationError]:
         """Validate semantic correctness."""
@@ -246,21 +280,25 @@ class SemanticValidator(WorkflowValidator):
                 # Check config for references
                 config = step.get("config", {})
                 if isinstance(config, dict):
-                    errors.extend(self._check_references_in_dict(
-                        config,
-                        f"workflow.steps[{i}].config",
-                        step_ids,
-                    ))
+                    errors.extend(
+                        self._check_references_in_dict(
+                            config,
+                            f"workflow.steps[{i}].config",
+                            step_ids,
+                        )
+                    )
 
         # Check output references
         if "output" in workflow:
             output_str = workflow["output"]
             if isinstance(output_str, str):
-                errors.extend(self._check_references_in_string(
-                    output_str,
-                    "workflow.output",
-                    step_ids,
-                ))
+                errors.extend(
+                    self._check_references_in_string(
+                        output_str,
+                        "workflow.output",
+                        step_ids,
+                    )
+                )
 
         return errors
 
@@ -276,13 +314,17 @@ class SemanticValidator(WorkflowValidator):
         for key, value in obj.items():
             field_location = f"{location}.{key}"
             if isinstance(value, str):
-                errors.extend(self._check_references_in_string(
-                    value, field_location, valid_step_ids
-                ))
+                errors.extend(
+                    self._check_references_in_string(
+                        value, field_location, valid_step_ids
+                    )
+                )
             elif isinstance(value, dict):
-                errors.extend(self._check_references_in_dict(
-                    value, field_location, valid_step_ids
-                ))
+                errors.extend(
+                    self._check_references_in_dict(
+                        value, field_location, valid_step_ids
+                    )
+                )
 
         return errors
 
@@ -304,13 +346,15 @@ class SemanticValidator(WorkflowValidator):
 
             # Check if step exists
             if ref_name not in valid_step_ids:
-                errors.append(ValidationError(
-                    code=ValidationErrorCode.INVALID_SOURCE_PATH,
-                    message=f"Reference to non-existent step: {ref_name}",
-                    location=location,
-                    suggestion=f"Valid step IDs: {', '.join(sorted(valid_step_ids))}",
-                    severity="critical",
-                ))
+                errors.append(
+                    ValidationError(
+                        code=ValidationErrorCode.INVALID_SOURCE_PATH,
+                        message=f"Reference to non-existent step: {ref_name}",
+                        location=location,
+                        suggestion=f"Valid step IDs: {', '.join(sorted(valid_step_ids))}",
+                        severity="critical",
+                    )
+                )
 
         return errors
 

@@ -9,6 +9,7 @@ Phase 1: JOB_ANALYSIS -> Phase 2: REGISTRATION -> Phase 3: WORKFLOW_GEN
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
     ParallelExecutionResult,
@@ -38,8 +39,14 @@ class TestJobGenerationE2ESuccess:
                     task_type="fetch",
                     recommended_api="/v1/utility/gmail/search",
                     dependencies=[],
-                    input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                    output_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
+                    input_schema={
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                    },
+                    output_schema={
+                        "type": "object",
+                        "properties": {"messages": {"type": "array"}},
+                    },
                 ),
                 AnalyzedTask(
                     task_id="task_002",
@@ -48,19 +55,37 @@ class TestJobGenerationE2ESuccess:
                     task_type="transform",
                     recommended_api="/v1/llm/summarize",
                     dependencies=["task_001"],
-                    input_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
-                    output_schema={"type": "object", "properties": {"summary": {"type": "string"}}},
+                    input_schema={
+                        "type": "object",
+                        "properties": {"messages": {"type": "array"}},
+                    },
+                    output_schema={
+                        "type": "object",
+                        "properties": {"summary": {"type": "string"}},
+                    },
                 ),
             ],
             interfaces={
                 "task_001": InterfaceDefinition(
-                    input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                    output_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
+                    input_schema={
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                    },
+                    output_schema={
+                        "type": "object",
+                        "properties": {"messages": {"type": "array"}},
+                    },
                     description="Gmail search interface",
                 ),
                 "task_002": InterfaceDefinition(
-                    input_schema={"type": "object", "properties": {"messages": {"type": "array"}}},
-                    output_schema={"type": "object", "properties": {"summary": {"type": "string"}}},
+                    input_schema={
+                        "type": "object",
+                        "properties": {"messages": {"type": "array"}},
+                    },
+                    output_schema={
+                        "type": "object",
+                        "properties": {"summary": {"type": "string"}},
+                    },
                     description="Summarization interface",
                 ),
             },
@@ -106,8 +131,8 @@ class TestJobGenerationE2ESuccess:
         )
 
         # Mock the phase executors
-        with patch.object(orchestrator, '_execute_job_analysis', mock_llm_client):
-            with patch.object(orchestrator, '_execute_registration') as mock_reg:
+        with patch.object(orchestrator, "_execute_job_analysis", mock_llm_client):
+            with patch.object(orchestrator, "_execute_registration") as mock_reg:
                 mock_reg.return_value = {
                     "job_master_id": "jm_test123",
                     "task_id_to_master_id": {
@@ -116,11 +141,19 @@ class TestJobGenerationE2ESuccess:
                     },
                 }
 
-                with patch.object(orchestrator, '_execute_workflow_gen') as mock_wf:
+                with patch.object(orchestrator, "_execute_workflow_gen") as mock_wf:
                     mock_wf.return_value = ParallelExecutionResult(
                         successful_tasks=[
-                            TaskResult(task_id="task_001", success=True, workflow={"workflow_name": "wf_001"}),
-                            TaskResult(task_id="task_002", success=True, workflow={"workflow_name": "wf_002"}),
+                            TaskResult(
+                                task_id="task_001",
+                                success=True,
+                                workflow={"workflow_name": "wf_001"},
+                            ),
+                            TaskResult(
+                                task_id="task_002",
+                                success=True,
+                                workflow={"workflow_name": "wf_002"},
+                            ),
                         ],
                         failed_tasks=[],
                         total_execution_time_ms=500.0,
@@ -166,7 +199,7 @@ class TestJobGenerationE2ESuccess:
 
         async def capture_phase2(tasks, *args, **kwargs):
             for task in tasks:
-                phase2_task_ids.add(task.task_id if hasattr(task, 'task_id') else task)
+                phase2_task_ids.add(task.task_id if hasattr(task, "task_id") else task)
             return {
                 "job_master_id": "jm_123",
                 "task_id_to_master_id": {t: f"tm_{t}" for t in phase2_task_ids},
@@ -183,9 +216,11 @@ class TestJobGenerationE2ESuccess:
                 failed_tasks=[],
             )
 
-        with patch.object(orchestrator, '_execute_job_analysis', capture_phase1):
-            with patch.object(orchestrator, '_execute_registration', capture_phase2):
-                with patch.object(orchestrator, '_execute_workflow_gen', capture_phase3):
+        with patch.object(orchestrator, "_execute_job_analysis", capture_phase1):
+            with patch.object(orchestrator, "_execute_registration", capture_phase2):
+                with patch.object(
+                    orchestrator, "_execute_workflow_gen", capture_phase3
+                ):
                     request = JobGenerationRequestV3(
                         user_requirement="Test workflow",
                         project_id="test",
@@ -221,7 +256,7 @@ class TestJobGenerationE2EErrors:
         async def failing_analysis(*args, **kwargs):
             raise ValueError("Validation error in LLM response")
 
-        with patch.object(orchestrator, '_execute_job_analysis', failing_analysis):
+        with patch.object(orchestrator, "_execute_job_analysis", failing_analysis):
             request = JobGenerationRequestV3(
                 user_requirement="Test",
                 project_id="test",
@@ -254,15 +289,21 @@ class TestJobGenerationE2EErrors:
             from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
                 JobAnalysisResponse,
             )
+
             return JobAnalysisResponse(
-                tasks=[], interfaces={}, job_body_parameters=[],
-                overall_summary="Success"
+                tasks=[],
+                interfaces={},
+                job_body_parameters=[],
+                overall_summary="Success",
             )
 
-        with patch.object(orchestrator, '_execute_job_analysis', successful_analysis):
-            with patch.object(orchestrator, '_execute_registration') as mock_reg:
-                mock_reg.return_value = {"job_master_id": "jm_1", "task_id_to_master_id": {}}
-                with patch.object(orchestrator, '_execute_workflow_gen') as mock_wf:
+        with patch.object(orchestrator, "_execute_job_analysis", successful_analysis):
+            with patch.object(orchestrator, "_execute_registration") as mock_reg:
+                mock_reg.return_value = {
+                    "job_master_id": "jm_1",
+                    "task_id_to_master_id": {},
+                }
+                with patch.object(orchestrator, "_execute_workflow_gen") as mock_wf:
                     mock_wf.return_value = ParallelExecutionResult(
                         successful_tasks=[], failed_tasks=[]
                     )
@@ -294,35 +335,47 @@ class TestJobGenerationE2EErrors:
             error_recovery_manager=ErrorRecoveryManager(),
         )
 
-        with patch.object(orchestrator, '_execute_job_analysis') as mock_analysis:
+        with patch.object(orchestrator, "_execute_job_analysis") as mock_analysis:
             from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3 import (
                 AnalyzedTask,
                 JobAnalysisResponse,
             )
+
             mock_analysis.return_value = JobAnalysisResponse(
                 tasks=[
                     AnalyzedTask(
-                        task_id="task_001", name="T1", description="D1",
-                        task_type="fetch", recommended_api="/api",
-                        dependencies=[], input_schema={}, output_schema={},
+                        task_id="task_001",
+                        name="T1",
+                        description="D1",
+                        task_type="fetch",
+                        recommended_api="/api",
+                        dependencies=[],
+                        input_schema={},
+                        output_schema={},
                     ),
                     AnalyzedTask(
-                        task_id="task_002", name="T2", description="D2",
-                        task_type="fetch", recommended_api="/api",
-                        dependencies=[], input_schema={}, output_schema={},
+                        task_id="task_002",
+                        name="T2",
+                        description="D2",
+                        task_type="fetch",
+                        recommended_api="/api",
+                        dependencies=[],
+                        input_schema={},
+                        output_schema={},
                     ),
                 ],
-                interfaces={}, job_body_parameters=[],
+                interfaces={},
+                job_body_parameters=[],
                 overall_summary="Test",
             )
 
-            with patch.object(orchestrator, '_execute_registration') as mock_reg:
+            with patch.object(orchestrator, "_execute_registration") as mock_reg:
                 mock_reg.return_value = {
                     "job_master_id": "jm_1",
                     "task_id_to_master_id": {"task_001": "tm_1", "task_002": "tm_2"},
                 }
 
-                with patch.object(orchestrator, '_execute_workflow_gen') as mock_wf:
+                with patch.object(orchestrator, "_execute_workflow_gen") as mock_wf:
                     # One success, one failure
                     mock_wf.return_value = ParallelExecutionResult(
                         successful_tasks=[
@@ -440,36 +493,50 @@ class TestValidatorIntegration:
             return JobAnalysisResponse(
                 tasks=[
                     AnalyzedTask(
-                        task_id="task_A", name="A", description="A",
-                        task_type="fetch", recommended_api="/api",
+                        task_id="task_A",
+                        name="A",
+                        description="A",
+                        task_type="fetch",
+                        recommended_api="/api",
                         dependencies=["task_B"],  # A depends on B
-                        input_schema={}, output_schema={},
+                        input_schema={},
+                        output_schema={},
                     ),
                     AnalyzedTask(
-                        task_id="task_B", name="B", description="B",
-                        task_type="fetch", recommended_api="/api",
+                        task_id="task_B",
+                        name="B",
+                        description="B",
+                        task_type="fetch",
+                        recommended_api="/api",
                         dependencies=["task_A"],  # B depends on A -> circular
-                        input_schema={}, output_schema={},
+                        input_schema={},
+                        output_schema={},
                     ),
                 ],
-                interfaces={}, job_body_parameters=[],
+                interfaces={},
+                job_body_parameters=[],
                 overall_summary="Circular deps",
             )
 
         # Mock analyze_job to return circular deps
         with patch(
-            'aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3.analyze_job',
-            mock_analyze_with_circular
+            "aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3.analyze_job",
+            mock_analyze_with_circular,
         ):
             request = JobGenerationRequestV3(
-                user_requirement="Test", project_id="test", max_tasks=5,
+                user_requirement="Test",
+                project_id="test",
+                max_tasks=5,
             )
             # Should raise OrchestratorError due to circular dependency
             with pytest.raises(OrchestratorError) as exc_info:
                 await orchestrator._execute_job_analysis(request)
 
             assert "Task dependency validation failed" in str(exc_info.value)
-            assert "Circular" in str(exc_info.value) or "circular" in str(exc_info.value).lower()
+            assert (
+                "Circular" in str(exc_info.value)
+                or "circular" in str(exc_info.value).lower()
+            )
 
     @pytest.mark.asyncio
     async def test_task_dependency_validator_passes_valid_deps(self):
@@ -495,28 +562,39 @@ class TestValidatorIntegration:
             return JobAnalysisResponse(
                 tasks=[
                     AnalyzedTask(
-                        task_id="task_A", name="A", description="A",
-                        task_type="fetch", recommended_api="/api",
+                        task_id="task_A",
+                        name="A",
+                        description="A",
+                        task_type="fetch",
+                        recommended_api="/api",
                         dependencies=[],  # No deps
-                        input_schema={}, output_schema={},
+                        input_schema={},
+                        output_schema={},
                     ),
                     AnalyzedTask(
-                        task_id="task_B", name="B", description="B",
-                        task_type="fetch", recommended_api="/api",
+                        task_id="task_B",
+                        name="B",
+                        description="B",
+                        task_type="fetch",
+                        recommended_api="/api",
                         dependencies=["task_A"],  # B depends on A (valid)
-                        input_schema={}, output_schema={},
+                        input_schema={},
+                        output_schema={},
                     ),
                 ],
-                interfaces={}, job_body_parameters=[],
+                interfaces={},
+                job_body_parameters=[],
                 overall_summary="Valid deps",
             )
 
         with patch(
-            'aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3.analyze_job',
-            mock_analyze_valid
+            "aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3.analyze_job",
+            mock_analyze_valid,
         ):
             request = JobGenerationRequestV3(
-                user_requirement="Test", project_id="test", max_tasks=5,
+                user_requirement="Test",
+                project_id="test",
+                max_tasks=5,
             )
             # Should not raise (valid deps)
             result = await orchestrator._execute_job_analysis(request)
@@ -531,7 +609,6 @@ class TestValidatorIntegration:
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
-
         from aiagent.langgraph.jobGeneratorV2.validators.pipeline import (
             ValidationPipelineV3,
         )
@@ -553,7 +630,7 @@ class TestValidatorIntegration:
             validation_calls.append({"workflow_id": workflow_id, "workflow": workflow})
             return original_validate(self, workflow, workflow_id)
 
-        with patch.object(ValidationPipelineV3, 'validate', mock_validate):
+        with patch.object(ValidationPipelineV3, "validate", mock_validate):
             await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
 
         # Verify ValidationPipelineV3.validate was called for successful workflow
@@ -570,7 +647,6 @@ class TestValidatorIntegration:
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
         )
-
         from aiagent.langgraph.jobGeneratorV2.validators import (
             ValidationError,
             ValidationErrorCode,
@@ -591,21 +667,29 @@ class TestValidatorIntegration:
 
         # Mock ValidationPipelineV3.validate to return errors
         def mock_validate_with_errors(self, workflow, workflow_id=""):
-            return ValidationResult.failure([
-                ValidationError(
-                    code=ValidationErrorCode.VALIDATION_FAILED,
-                    message="Test validation error",
-                    location="test",
-                )
-            ])
+            return ValidationResult.failure(
+                [
+                    ValidationError(
+                        code=ValidationErrorCode.VALIDATION_FAILED,
+                        message="Test validation error",
+                        location="test",
+                    )
+                ]
+            )
 
-        with patch.object(ValidationPipelineV3, 'validate', mock_validate_with_errors):
-            with patch('aiagent.langgraph.jobGeneratorV2.orchestrator_v3.logger') as mock_logger:
-                result = await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
+        with patch.object(ValidationPipelineV3, "validate", mock_validate_with_errors):
+            with patch(
+                "aiagent.langgraph.jobGeneratorV2.orchestrator_v3.logger"
+            ) as mock_logger:
+                result = await orchestrator._execute_workflow_gen(
+                    task_identifiers, interfaces
+                )
                 # Check warning was logged
                 mock_logger.warning.assert_called()
                 call_args = str(mock_logger.warning.call_args)
-                assert "validation issues" in call_args.lower() or "Workflow" in call_args
+                assert (
+                    "validation issues" in call_args.lower() or "Workflow" in call_args
+                )
 
         # Result should still be returned (not failed)
         assert result is not None

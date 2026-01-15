@@ -218,6 +218,7 @@ class TaskDecomposerSubWorkflow:
             from aiagent.langgraph.shared.capability_utils import (
                 load_capabilities_from_yaml,
             )
+
             capabilities = load_capabilities_from_yaml()
             logger.info("Auto-loaded %d capabilities", len(capabilities))
 

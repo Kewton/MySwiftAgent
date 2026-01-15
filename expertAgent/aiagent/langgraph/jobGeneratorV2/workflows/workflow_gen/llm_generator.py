@@ -310,22 +310,26 @@ class LLMGeneratorSubWorkflow:
         for api_name in recommended_apis:
             mapping = self._agent_selector.select_agent(api_name)
             if mapping:
-                mappings.append({
-                    "api_name": api_name,
-                    "agent_type": mapping.agent_type,
-                    "endpoint_url": f"${{EXPERTAGENT_BASE_URL}}{mapping.endpoint_path}",
-                    "http_method": mapping.http_method,
-                    "description": mapping.description,
-                })
+                mappings.append(
+                    {
+                        "api_name": api_name,
+                        "agent_type": mapping.agent_type,
+                        "endpoint_url": f"${{EXPERTAGENT_BASE_URL}}{mapping.endpoint_path}",
+                        "http_method": mapping.http_method,
+                        "description": mapping.description,
+                    }
+                )
             else:
                 # Unknown API - provide generic mapping
-                mappings.append({
-                    "api_name": api_name,
-                    "agent_type": "fetchAgent",
-                    "endpoint_url": f"${{EXPERTAGENT_BASE_URL}}/aiagent-api/v1/utility/{api_name}",  # noqa: E501
-                    "http_method": "POST",
-                    "description": f"API call to {api_name}",
-                })
+                mappings.append(
+                    {
+                        "api_name": api_name,
+                        "agent_type": "fetchAgent",
+                        "endpoint_url": f"${{EXPERTAGENT_BASE_URL}}/aiagent-api/v1/utility/{api_name}",  # noqa: E501
+                        "http_method": "POST",
+                        "description": f"API call to {api_name}",
+                    }
+                )
 
         return mappings
 

@@ -73,9 +73,7 @@ async def parallel_workflow_generation(
     """
     if not tasks:
         return ParallelExecutionResult(
-            successful_tasks=[],
-            failed_tasks=[],
-            total_execution_time_ms=0.0
+            successful_tasks=[], failed_tasks=[], total_execution_time_ms=0.0
         )
 
     start_time = time.monotonic()
@@ -87,20 +85,17 @@ async def parallel_workflow_generation(
             task_start = time.monotonic()
             try:
                 workflow = await asyncio.wait_for(
-                    generate_func(task),
-                    timeout=timeout_per_task
+                    generate_func(task), timeout=timeout_per_task
                 )
                 return TaskResult(
                     task_id=task.task_id,
                     success=True,
                     workflow=workflow,
-                    execution_time_ms=(time.monotonic() - task_start) * 1000
+                    execution_time_ms=(time.monotonic() - task_start) * 1000,
                 )
             except asyncio.TimeoutError:
                 logger.warning(
-                    "Task %s timed out after %.1fs",
-                    task.task_id,
-                    timeout_per_task
+                    "Task %s timed out after %.1fs", task.task_id, timeout_per_task
                 )
                 return TaskResult(
                     task_id=task.task_id,
@@ -108,16 +103,12 @@ async def parallel_workflow_generation(
                     error=TaskExecutionError(
                         error_type=ErrorType.TRANSIENT,
                         message=f"Task execution timed out after {timeout_per_task}s",
-                        recoverable=True
+                        recoverable=True,
                     ),
-                    execution_time_ms=(time.monotonic() - task_start) * 1000
+                    execution_time_ms=(time.monotonic() - task_start) * 1000,
                 )
             except ValidationError as e:
-                logger.warning(
-                    "Task %s validation error: %s",
-                    task.task_id,
-                    str(e)
-                )
+                logger.warning("Task %s validation error: %s", task.task_id, str(e))
                 return TaskResult(
                     task_id=task.task_id,
                     success=False,
@@ -125,9 +116,11 @@ async def parallel_workflow_generation(
                         error_type=ErrorType.VALIDATION,
                         message=str(e),
                         recoverable=True,
-                        details={"errors": e.errors()} if hasattr(e, "errors") else None
+                        details={"errors": e.errors()}
+                        if hasattr(e, "errors")
+                        else None,
                     ),
-                    execution_time_ms=(time.monotonic() - task_start) * 1000
+                    execution_time_ms=(time.monotonic() - task_start) * 1000,
                 )
             except Exception as e:
                 # Determine error type based on exception
@@ -136,7 +129,7 @@ async def parallel_workflow_generation(
                     "Task %s failed with %s error: %s",
                     task.task_id,
                     error_type.value,
-                    str(e)
+                    str(e),
                 )
                 return TaskResult(
                     task_id=task.task_id,
@@ -144,15 +137,13 @@ async def parallel_workflow_generation(
                     error=TaskExecutionError(
                         error_type=error_type,
                         message=str(e),
-                        recoverable=error_type != ErrorType.FATAL
+                        recoverable=error_type != ErrorType.FATAL,
                     ),
-                    execution_time_ms=(time.monotonic() - task_start) * 1000
+                    execution_time_ms=(time.monotonic() - task_start) * 1000,
                 )
 
     # Execute all tasks in parallel
-    results = await asyncio.gather(
-        *[execute_with_timeout(task) for task in tasks]
-    )
+    results = await asyncio.gather(*[execute_with_timeout(task) for task in tasks])
 
     # Classify results
     successful = [r for r in results if r.success]
@@ -164,13 +155,13 @@ async def parallel_workflow_generation(
         "Parallel execution complete: %d/%d successful in %.1fms",
         len(successful),
         len(tasks),
-        total_time
+        total_time,
     )
 
     return ParallelExecutionResult(
         successful_tasks=successful,
         failed_tasks=failed,
-        total_execution_time_ms=total_time
+        total_execution_time_ms=total_time,
     )
 
 
@@ -254,8 +245,7 @@ class ParallelExecutionErrorAggregator:
         self.recovery_manager = recovery_manager
 
     def aggregate_and_decide(
-        self,
-        result: ParallelExecutionResult
+        self, result: ParallelExecutionResult
     ) -> AggregatedRecoveryDecision:
         """Aggregate parallel results and decide on recovery action.
 
@@ -269,16 +259,13 @@ class ParallelExecutionErrorAggregator:
         if result.all_succeeded:
             workflows = [r.workflow for r in result.successful_tasks if r.workflow]
             return AggregatedRecoveryDecision(
-                overall_status="success",
-                proceed=True,
-                successful_workflows=workflows
+                overall_status="success", proceed=True, successful_workflows=workflows
             )
 
         # Partial success - check if failed tasks can be retried
         if result.partial_success:
             retryable = [
-                f for f in result.failed_tasks
-                if f.error and f.error.recoverable
+                f for f in result.failed_tasks if f.error and f.error.recoverable
             ]
 
             successful_workflows = [
@@ -292,7 +279,7 @@ class ParallelExecutionErrorAggregator:
                     proceed=False,
                     tasks_to_retry=[f.task_id for f in retryable],
                     successful_workflows=successful_workflows,
-                    error_summary=result.get_error_summary()
+                    error_summary=result.get_error_summary(),
                 )
 
             # Non-retryable failures - proceed with partial success
@@ -301,7 +288,7 @@ class ParallelExecutionErrorAggregator:
                 proceed=True,
                 successful_workflows=successful_workflows,
                 failed_task_ids=[f.task_id for f in result.failed_tasks],
-                error_summary=result.get_error_summary()
+                error_summary=result.get_error_summary(),
             )
 
         # All failed
@@ -310,14 +297,14 @@ class ParallelExecutionErrorAggregator:
                 overall_status="all_failed",
                 proceed=False,
                 recovery_strategy=RecoveryStrategy.ROLLBACK_TO_ANALYSIS,
-                error_summary=result.get_error_summary()
+                error_summary=result.get_error_summary(),
             )
 
         # Default case (shouldn't reach here normally)
         return AggregatedRecoveryDecision(
             overall_status="unknown",
             proceed=False,
-            recovery_strategy=RecoveryStrategy.FAIL_FAST
+            recovery_strategy=RecoveryStrategy.FAIL_FAST,
         )
 
 

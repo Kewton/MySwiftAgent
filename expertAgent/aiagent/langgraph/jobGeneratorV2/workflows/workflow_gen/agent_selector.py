@@ -132,9 +132,7 @@ class AgentSelector:
         """Initialize AgentSelector with API mappings."""
         self._mappings = API_AGENT_MAPPINGS.copy()
         # Build lowercase lookup table for case-insensitive matching
-        self._lowercase_lookup: dict[str, str] = {
-            k.lower(): k for k in self._mappings
-        }
+        self._lowercase_lookup: dict[str, str] = {k.lower(): k for k in self._mappings}
 
     def select_agent(self, api_name: str) -> AgentMapping | None:
         """Select agent mapping for an API name.

@@ -187,13 +187,12 @@ class TaskFlowLLMGenerator:
             raise
         except Exception as e:
             logger.error("TaskFlow generation failed: %s", e)
-            raise StructuredLLMError(
-                f"TaskFlow workflow generation failed: {e}"
-            ) from e
+            raise StructuredLLMError(f"TaskFlow workflow generation failed: {e}") from e
 
     def _build_system_prompt(self) -> str:
         """Build system prompt for TaskFlow generation."""
-        return """You are a TaskFlow V2 workflow generator.
+        return (
+            """You are a TaskFlow V2 workflow generator.
 
 Your task is to generate a valid TaskFlow V2 JSON workflow based on:
 1. Task definitions provided by the user
@@ -206,7 +205,9 @@ IMPORTANT:
 - Follow the variable reference syntax: ${step_id.field}
 - Use only allowed code_js functions
 
-""" + TASKFLOW_RULES_FULL
+"""
+            + TASKFLOW_RULES_FULL
+        )
 
     def _build_user_prompt(
         self,
@@ -241,12 +242,8 @@ IMPORTANT:
                 if hasattr(interface, "output_schema")
                 else interface.get("output_schema", {})
             )
-            sections.append(
-                f"Input: {json.dumps(input_schema, ensure_ascii=False)}"
-            )
-            sections.append(
-                f"Output: {json.dumps(output_schema, ensure_ascii=False)}"
-            )
+            sections.append(f"Input: {json.dumps(input_schema, ensure_ascii=False)}")
+            sections.append(f"Output: {json.dumps(output_schema, ensure_ascii=False)}")
             sections.append("")
 
         # Add examples

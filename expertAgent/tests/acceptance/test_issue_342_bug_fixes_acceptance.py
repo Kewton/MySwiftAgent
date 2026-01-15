@@ -123,9 +123,7 @@ class TestIssue342BugFixesAcceptance:
         SkipAggregator の動作はユニットテストで検証済みです。
         """
         # Arrange: ジョブ生成
-        requirement = (
-            "APIからデータを取得して処理する"
-        )
+        requirement = "APIからデータを取得して処理する"
 
         # Act
         job_id = self._submit_job(requirement)
@@ -281,9 +279,7 @@ class TestIssue342BugFixesAcceptance:
         - 全フェーズ（TASK_BREAKDOWN → INTERFACE_DESIGN → REGISTRATION → WORKFLOW_GEN）通過
         """
         # Arrange
-        requirement = (
-            "APIから天気情報を取得して、温度が30度以上ならアラートを出力する"
-        )
+        requirement = "APIから天気情報を取得して、温度が30度以上ならアラートを出力する"
 
         # Act
         job_id = self._submit_job(requirement)

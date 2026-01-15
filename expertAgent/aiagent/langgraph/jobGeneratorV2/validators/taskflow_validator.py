@@ -115,7 +115,8 @@ class TaskFlowSecurityValidator:
                 errors.append(
                     ValidationError(
                         code=ValidationErrorCode.VALIDATION_FAILED,
-                        message=f"[{code.value}] " + get_error_message(code, url=url[:100]),
+                        message=f"[{code.value}] "
+                        + get_error_message(code, url=url[:100]),
                         location="url",
                         suggestion="Use a public URL instead of private network addresses",
                         severity="critical",

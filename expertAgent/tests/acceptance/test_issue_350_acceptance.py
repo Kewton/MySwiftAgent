@@ -21,6 +21,7 @@ Note: Job Generator APIは非同期パターンを使用します。
       2. GET /api/v1/jobs/{job_id}/status でステータスをポーリング
       3. 完了後にワークフロー結果を検証
 """
+
 import time
 from typing import Any
 
@@ -63,10 +64,7 @@ class TestIssue350Acceptance:
                 )
 
     def _create_job(
-        self,
-        user_requirement: str,
-        project_id: str,
-        engine: str | None = None
+        self, user_requirement: str, project_id: str, engine: str | None = None
     ) -> dict[str, Any]:
         """ジョブを作成してレスポンスを返す"""
         endpoint = f"{self.EXPERT_AGENT_URL}/v1/job-generator"

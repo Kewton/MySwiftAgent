@@ -43,6 +43,7 @@ class ErrorContractProtocol(Protocol):
         """Create feedback for retry."""
         ...
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,14 +94,16 @@ class JobAnalysisErrorContract:
         if error.details:
             feedback_lines.append(f"**Details:** {error.details}")
 
-        feedback_lines.extend([
-            "",
-            "### Please fix the following:",
-            "- Ensure JSON structure is valid",
-            "- Include all required fields",
-            "- Verify task dependencies have no cycles",
-            "- Check schema definitions are valid JSON Schema",
-        ])
+        feedback_lines.extend(
+            [
+                "",
+                "### Please fix the following:",
+                "- Ensure JSON structure is valid",
+                "- Include all required fields",
+                "- Verify task dependencies have no cycles",
+                "- Check schema definitions are valid JSON Schema",
+            ]
+        )
 
         return "\n".join(feedback_lines)
 
@@ -274,7 +277,7 @@ class ErrorRecoveryManager:
             "Handling error in %s phase: %s (%s)",
             error.phase,
             error.message,
-            error.error_type.value
+            error.error_type.value,
         )
 
         # Check total retry limit first
@@ -282,12 +285,12 @@ class ErrorRecoveryManager:
             logger.warning(
                 "Total retry limit reached (%d/%d)",
                 self.total_retry_count,
-                self.max_total_retries
+                self.max_total_retries,
             )
             return RecoveryAction(
                 strategy=RecoveryStrategy.FAIL_FAST,
                 reason="Total retry limit exceeded",
-                error_summary=self._generate_error_summary()
+                error_summary=self._generate_error_summary(),
             )
 
         # Get phase-specific contract
@@ -296,7 +299,7 @@ class ErrorRecoveryManager:
             logger.warning("Unknown phase: %s", error.phase)
             return RecoveryAction(
                 strategy=RecoveryStrategy.FAIL_FAST,
-                reason=f"Unknown phase: {error.phase}"
+                reason=f"Unknown phase: {error.phase}",
             )
 
         # Get strategy from contract
@@ -311,7 +314,7 @@ class ErrorRecoveryManager:
         # when max_retries is 0 - they are the intended action
         is_retry_strategy = strategy in (
             RecoveryStrategy.RETRY_CURRENT,
-            RecoveryStrategy.RETRY_WITH_FEEDBACK
+            RecoveryStrategy.RETRY_WITH_FEEDBACK,
         )
 
         if is_retry_strategy and phase_retries >= max_retries and max_retries > 0:
@@ -319,12 +322,15 @@ class ErrorRecoveryManager:
                 "Phase %s retry limit reached (%d/%d), escalating",
                 error.phase,
                 phase_retries,
-                max_retries
+                max_retries,
             )
             strategy = self._escalate_strategy(strategy)
 
         # Update retry counts for retry strategies
-        if strategy in (RecoveryStrategy.RETRY_CURRENT, RecoveryStrategy.RETRY_WITH_FEEDBACK):
+        if strategy in (
+            RecoveryStrategy.RETRY_CURRENT,
+            RecoveryStrategy.RETRY_WITH_FEEDBACK,
+        ):
             self.phase_retry_counts[error.phase] = phase_retries + 1
             self.total_retry_count += 1
 
@@ -337,7 +343,7 @@ class ErrorRecoveryManager:
             strategy=strategy,
             feedback=feedback,
             retry_count=phase_retries + 1,
-            max_retries=max_retries
+            max_retries=max_retries,
         )
 
     def _escalate_strategy(self, current: RecoveryStrategy) -> RecoveryStrategy:

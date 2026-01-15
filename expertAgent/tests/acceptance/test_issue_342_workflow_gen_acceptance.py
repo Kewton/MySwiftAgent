@@ -94,9 +94,7 @@ class TestIssue342WorkflowGenCoreComponents:
             # Parse YAML
             parsed = yaml.safe_load(example.workflow_yaml)
             assert parsed is not None, f"Pattern '{example.name}' has invalid YAML"
-            assert "version" in parsed, (
-                f"Pattern '{example.name}' missing 'version'"
-            )
+            assert "version" in parsed, f"Pattern '{example.name}' missing 'version'"
             assert "nodes" in parsed, f"Pattern '{example.name}' missing 'nodes'"
             assert "source" in parsed["nodes"], (
                 f"Pattern '{example.name}' missing 'source' node"
@@ -124,8 +122,14 @@ class TestIssue342WorkflowGenCoreComponents:
         prompt = builder.build(
             task_name="Test Task",
             task_description="A test task for validation",
-            input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"result": {"type": "string"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"result": {"type": "string"}},
+            },
             recommended_apis=["google_search"],
         )
 
@@ -252,7 +256,9 @@ class TestIssue342WorkflowGenCoreComponents:
                     "process": NodeDefinition(agent="echoAgent"),
                 },
             )
-        assert "isResult" in str(exc_info.value) or "result" in str(exc_info.value).lower()
+        assert (
+            "isResult" in str(exc_info.value) or "result" in str(exc_info.value).lower()
+        )
 
     def test_f4_node_definition_validates_agent(self) -> None:
         """F.4: Verify NodeDefinition validates agent field."""
@@ -354,8 +360,7 @@ class TestIssue342WorkflowGenCoreComponents:
     # =========================================================================
 
     @pytest.mark.skipif(
-        not os.environ.get("GOOGLE_API_KEY"),
-        reason="GOOGLE_API_KEY not set"
+        not os.environ.get("GOOGLE_API_KEY"), reason="GOOGLE_API_KEY not set"
     )
     def test_f7_llm_generator_produces_valid_yaml(self) -> None:
         """F.7: Verify LLM generator can produce valid YAML with gemini-3-flash-preview.
@@ -410,7 +415,8 @@ class TestIssue342WorkflowGenCoreComponents:
         if not result["is_valid"]:
             # Allow non-critical issues in LLM generation
             critical_errors = [
-                e for e in result["errors"]
+                e
+                for e in result["errors"]
                 if "source" in e.lower() or "isResult" in e.lower()
             ]
             assert not critical_errors, f"Critical validation errors: {critical_errors}"
@@ -732,7 +738,9 @@ nodes:
 
         result = validator.validate(workflow_yaml)
 
-        assert result.is_valid, f"Validation failed: {[e.message for e in result.errors]}"
+        assert result.is_valid, (
+            f"Validation failed: {[e.message for e in result.errors]}"
+        )
         assert result.node_count == 3
         assert result.parsed_yaml is not None
 
@@ -751,7 +759,10 @@ nodes:
             task_name="Data Fetch Task",
             task_description="Fetch data from an API endpoint",
             input_schema={"type": "object", "properties": {"url": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"data": {"type": "object"}}},
+            output_schema={
+                "type": "object",
+                "properties": {"data": {"type": "object"}},
+            },
             recommended_apis=["fetch"],
         )
 
@@ -780,11 +791,12 @@ nodes:
         validator = YamlValidatorSubWorkflow()
         result = validator.validate(mock_yaml)
 
-        assert result.is_valid, f"Mock YAML should be valid: {[e.message for e in result.errors]}"
+        assert result.is_valid, (
+            f"Mock YAML should be valid: {[e.message for e in result.errors]}"
+        )
 
     @pytest.mark.skipif(
-        not os.environ.get("GOOGLE_API_KEY"),
-        reason="GOOGLE_API_KEY not set"
+        not os.environ.get("GOOGLE_API_KEY"), reason="GOOGLE_API_KEY not set"
     )
     def test_e2e_full_llm_generation_and_validation(self) -> None:
         """E2E: Full LLM generation and validation flow.
@@ -819,7 +831,10 @@ nodes:
                 output_schema={
                     "type": "object",
                     "properties": {
-                        "greeting": {"type": "string", "description": "Greeting message"},
+                        "greeting": {
+                            "type": "string",
+                            "description": "Greeting message",
+                        },
                     },
                     "required": ["greeting"],
                 },
@@ -853,7 +868,8 @@ nodes:
             # For LLM-generated content, we accept minor validation issues
             # but fail on critical structure issues
             critical_errors = [
-                e for e in result["validation"]["errors"]
+                e
+                for e in result["validation"]["errors"]
                 if e["code"] in ["MISSING_SOURCE", "MISSING_RESULT", "YAML_SYNTAX"]
             ]
             assert not critical_errors, f"Critical errors found: {critical_errors}"
@@ -902,7 +918,8 @@ nodes:
         assert "Previous" in rendered or "Error" in rendered
         # At least one error should be mentioned
         assert any(
-            e.message.lower() in rendered.lower() or e.code.value.lower() in rendered.lower()
+            e.message.lower() in rendered.lower()
+            or e.code.value.lower() in rendered.lower()
             for e in val_result.errors
         )
 
@@ -941,7 +958,9 @@ nodes:
         validator = YamlValidatorSubWorkflow()
         result = validator.validate(yaml_content)
 
-        assert result.is_valid, f"Round-trip validation failed: {[e.message for e in result.errors]}"
+        assert result.is_valid, (
+            f"Round-trip validation failed: {[e.message for e in result.errors]}"
+        )
         assert result.node_count == 3
 
     def test_integration_few_shot_selection_scoring(self) -> None:
@@ -962,7 +981,9 @@ nodes:
             max_examples=2,
         )
         pattern_names = [e.name for e in examples]
-        assert "map_pattern" in pattern_names, f"Expected map_pattern for array output, got {pattern_names}"
+        assert "map_pattern" in pattern_names, (
+            f"Expected map_pattern for array output, got {pattern_names}"
+        )
 
         # Test with search API (should select search_pattern)
         examples = select_few_shot_examples(

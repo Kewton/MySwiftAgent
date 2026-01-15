@@ -227,7 +227,9 @@ class TestErrorRecoveryIntegration:
         mock_workflow = AsyncMock()
         mock_workflow.execute = AsyncMock(
             side_effect=[
-                WorkflowError("Transient error", ErrorType.TRANSIENT, Phase.TASK_BREAKDOWN),
+                WorkflowError(
+                    "Transient error", ErrorType.TRANSIENT, Phase.TASK_BREAKDOWN
+                ),
                 success_output,
             ]
         )

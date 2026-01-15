@@ -164,7 +164,11 @@ class ErrorRecoveryManager:
             return self._handle_incomplete_workflow_error(phase, error, context)
 
         # Transient, validation, and API errors can be retried
-        if error.error_type in (ErrorType.TRANSIENT, ErrorType.VALIDATION, ErrorType.API):
+        if error.error_type in (
+            ErrorType.TRANSIENT,
+            ErrorType.VALIDATION,
+            ErrorType.API,
+        ):
             return self._handle_retriable_error(phase, error, context)
 
         # Default: fail fast for unknown error types
@@ -410,9 +414,7 @@ class ErrorRecoveryManager:
             )
 
         # Can't retry, can't rollback - fail fast
-        logger.error(
-            "INCOMPLETE_WORKFLOW: All recovery attempts exhausted, failing"
-        )
+        logger.error("INCOMPLETE_WORKFLOW: All recovery attempts exhausted, failing")
         return ErrorRecoveryDecision(
             strategy=ErrorRecoveryStrategy.FAIL_FAST,
             feedback=(

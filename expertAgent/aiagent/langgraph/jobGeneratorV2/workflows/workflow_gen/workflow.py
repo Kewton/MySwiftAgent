@@ -205,7 +205,9 @@ class WorkflowGenWorkflow:
                 workflow_name=strategy_result.workflow_name,
                 yaml_content=strategy_result.content,  # Strategy uses 'content'
                 node_count=strategy_result.node_count,
-                raw_result=strategy_result.raw_result if hasattr(strategy_result, 'raw_result') else {},
+                raw_result=strategy_result.raw_result
+                if hasattr(strategy_result, "raw_result")
+                else {},
             )
 
         else:
@@ -295,7 +297,9 @@ class WorkflowGenWorkflow:
         except WorkflowError:
             raise
         except Exception as e:
-            logger.error("Unexpected error in workflow generation: %s", e, exc_info=True)
+            logger.error(
+                "Unexpected error in workflow generation: %s", e, exc_info=True
+            )
             raise WorkflowError(
                 f"Workflow generation failed: {e}",
                 ErrorType.TRANSIENT,
@@ -318,7 +322,9 @@ class WorkflowGenWorkflow:
                 registration_result = await self._register_taskflow_workflow(
                     task_master_ids=task_master_ids,
                     workflow_name=yaml_result.workflow_name,
-                    workflow_json=yaml_result.raw_result if hasattr(yaml_result, 'raw_result') else {},
+                    workflow_json=yaml_result.raw_result
+                    if hasattr(yaml_result, "raw_result")
+                    else {},
                 )
             else:
                 # GraphAI: Register YAML workflow and update TaskMasters
@@ -491,7 +497,9 @@ class WorkflowGenWorkflow:
         # Issue #360: Require all TaskMasters to be updated successfully
         # Changed from: len(updated_task_masters) > 0 (partial success allowed)
         # To: len(failed_task_masters) == 0 (all must succeed)
-        overall_success = len(failed_task_masters) == 0 and len(updated_task_masters) > 0
+        overall_success = (
+            len(failed_task_masters) == 0 and len(updated_task_masters) > 0
+        )
 
         if failed_task_masters:
             logger.warning(

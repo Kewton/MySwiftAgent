@@ -641,9 +641,7 @@ class TestTC009ValidationErrorStopsGeneration:
             assert len(error.message) > 0
             assert len(error.location) > 0
 
-    def test_task_field_missing_error(
-        self, validator: BodyTemplateValidator
-    ) -> None:
+    def test_task_field_missing_error(self, validator: BodyTemplateValidator) -> None:
         """タスク出力の存在しないフィールド参照はエラーを返す."""
         # Arrange
         body_template = {
@@ -1047,8 +1045,12 @@ class TestMasterManagerIntegration:
         # Assert
         assert hasattr(manager_taskflow, "_body_template_validator")
         assert hasattr(manager_graphai, "_body_template_validator")
-        assert isinstance(manager_taskflow._body_template_validator, BodyTemplateValidator)
-        assert isinstance(manager_graphai._body_template_validator, BodyTemplateValidator)
+        assert isinstance(
+            manager_taskflow._body_template_validator, BodyTemplateValidator
+        )
+        assert isinstance(
+            manager_graphai._body_template_validator, BodyTemplateValidator
+        )
 
     def test_master_manager_uses_correct_strategy(self) -> None:
         """MasterManagerSubWorkflowがエンジンに応じた正しいStrategyを使用する."""

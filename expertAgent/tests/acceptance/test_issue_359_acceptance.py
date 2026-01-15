@@ -39,16 +39,15 @@ from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
     JobGenerationOrchestratorV3,
     OrchestratorError,
 )
+from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
+    parallel_workflow_generation,
+)
 from aiagent.langgraph.jobGeneratorV2.types_v3 import (
     ErrorType,
     PhaseError,
     PhaseV3,
     RecoveryStrategy,
     UnifiedTaskIdentifier,
-)
-
-from aiagent.langgraph.jobGeneratorV2.parallel_executor import (
-    parallel_workflow_generation,
 )
 from aiagent.langgraph.jobGeneratorV2.validators.pipeline import ValidationPipelineV3
 from aiagent.langgraph.jobGeneratorV2.validators.task_dependency import (
@@ -138,7 +137,9 @@ class TestTC012OrchestratorCodeLines:
         line_count = int(result.stdout.strip().split()[0])
 
         # Assert
-        assert line_count <= 300, f"orchestrator_v3.py has {line_count} lines (max: 300)"
+        assert line_count <= 300, (
+            f"orchestrator_v3.py has {line_count} lines (max: 300)"
+        )
 
 
 @pytest.mark.acceptance

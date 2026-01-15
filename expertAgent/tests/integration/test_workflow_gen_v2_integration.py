@@ -314,9 +314,7 @@ class TestEndToEndWorkflowGeneration:
     """End-to-end tests for workflow generation."""
 
     @pytest.mark.asyncio
-    async def test_search_and_send_workflow(
-        self, execution_context, sample_interfaces
-    ):
+    async def test_search_and_send_workflow(self, execution_context, sample_interfaces):
         """Test generating a search-and-send workflow."""
         # Step 1: Build prompts for each task
         builder = PromptBuilderSubWorkflow()

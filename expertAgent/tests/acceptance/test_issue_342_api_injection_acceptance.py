@@ -10,6 +10,7 @@ V2 タスク分割 API情報注入メカニズムの検証
 実行方法:
   uv run pytest tests/acceptance/test_issue_342_api_injection_acceptance.py -v
 """
+
 import time
 from typing import Any
 
@@ -38,8 +39,7 @@ class TestIssue342APIInjectionAcceptance:
         for url, name in services:
             try:
                 response = requests.get(
-                    f"{url}/health",
-                    timeout=self.HEALTH_CHECK_TIMEOUT
+                    f"{url}/health", timeout=self.HEALTH_CHECK_TIMEOUT
                 )
                 assert response.status_code == 200, f"{name} is not healthy"
             except requests.exceptions.ConnectionError:
@@ -78,9 +78,7 @@ class TestIssue342APIInjectionAcceptance:
         data = response.json()
 
         # job_idが返されること
-        assert "job_id" in data, (
-            f"Response missing 'job_id' field: {data}"
-        )
+        assert "job_id" in data, f"Response missing 'job_id' field: {data}"
 
     def test_scenario_2_all_tasks_have_recommended_apis(self) -> None:
         """シナリオ2: 全タスクにrecommended_apisが設定される
@@ -128,13 +126,11 @@ class TestIssue342APIInjectionAcceptance:
                     tasks = status_data.get("tasks", [])
                     if tasks:
                         tasks_with_apis = sum(
-                            1 for t in tasks
-                            if t.get("recommended_apis") is not None
+                            1 for t in tasks if t.get("recommended_apis") is not None
                         )
                         api_coverage = tasks_with_apis / len(tasks) * 100
                         assert api_coverage >= 80, (
-                            f"API coverage too low: {api_coverage}% "
-                            f"(expected >= 80%)"
+                            f"API coverage too low: {api_coverage}% (expected >= 80%)"
                         )
                     return  # テスト成功
 
@@ -201,11 +197,11 @@ class TestIssue342APIInjectionAcceptance:
         test_cases = [
             {
                 "user_requirement": "データベースからユーザー一覧を取得するAPIを実装",
-                "expected_api_keywords": ["database", "user", "list", "get"]
+                "expected_api_keywords": ["database", "user", "list", "get"],
             },
             {
                 "user_requirement": "外部APIと連携してデータを取得する機能",
-                "expected_api_keywords": ["http", "api", "fetch", "request"]
+                "expected_api_keywords": ["http", "api", "fetch", "request"],
             },
         ]
 
@@ -236,6 +232,5 @@ class TestIssue342APIInjectionAcceptance:
         # 成功率80%以上を確認
         success_rate = successful_generations / len(test_cases) * 100
         assert success_rate >= 80, (
-            f"LLM generation success rate too low: {success_rate}% "
-            f"(expected >= 80%)"
+            f"LLM generation success rate too low: {success_rate}% (expected >= 80%)"
         )

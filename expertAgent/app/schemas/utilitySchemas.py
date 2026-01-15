@@ -29,7 +29,11 @@ class UtilityResponse(BaseModel):
 
 class SearchUtilityRequest(BaseModel):
     queries: List[str]
-    num: int | None = Field(default=None, le=3, description="Number of results per query (max=3 to prevent timeout)")
+    num: int | None = Field(
+        default=None,
+        le=3,
+        description="Number of results per query (max=3 to prevent timeout)",
+    )
     project: str | None = None  # MyVault project name for secrets
     test_mode: bool = False  # Test mode flag for development/debugging
     test_response: dict | None = None  # Mock response for test mode
@@ -108,15 +112,9 @@ class ExtractArticleUrlsResponse(BaseModel):
     - :extract_urls.article_url_2
     """
 
-    article_url_1: str | None = Field(
-        default=None, description="First article URL"
-    )
-    article_url_2: str | None = Field(
-        default=None, description="Second article URL"
-    )
-    article_url_3: str | None = Field(
-        default=None, description="Third article URL"
-    )
+    article_url_1: str | None = Field(default=None, description="First article URL")
+    article_url_2: str | None = Field(default=None, description="Second article URL")
+    article_url_3: str | None = Field(default=None, description="Third article URL")
     urls: List[str] = Field(
         default_factory=list, description="List of all extracted URLs"
     )

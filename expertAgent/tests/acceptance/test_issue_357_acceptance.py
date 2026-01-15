@@ -267,7 +267,8 @@ class TestIssue357Acceptance:
                 "pytest",
                 str(REPO_ROOT / "expertAgent/tests/unit/test_issue_357_json_schema.py"),
                 str(
-                    REPO_ROOT / "expertAgent/tests/unit/test_issue_357_generate_schemas.py"
+                    REPO_ROOT
+                    / "expertAgent/tests/unit/test_issue_357_generate_schemas.py"
                 ),
                 "-v",
                 "--tb=short",

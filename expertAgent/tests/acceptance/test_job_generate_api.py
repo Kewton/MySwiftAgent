@@ -200,7 +200,9 @@ class JobGeneratorClient:
             if current_status in ("success", "failed", "error"):
                 return JobGenerationResult(
                     job_id=job_id,
-                    status=JobStatus(current_status) if current_status in JobStatus.__members__.values() else JobStatus.FAILED,
+                    status=JobStatus(current_status)
+                    if current_status in JobStatus.__members__.values()
+                    else JobStatus.FAILED,
                     phase=JobPhase(current_phase) if current_phase else None,
                     task_breakdown=status_response.get("task_breakdown"),
                     workflow_statuses=status_response.get("workflow_statuses"),
@@ -294,7 +296,11 @@ async def test_job_generation_simple(client: JobGeneratorClient) -> None:
     """
     result = await client.generate_and_wait(SIMPLE_REQUIREMENT)
 
-    logger.info("Job completed: status=%s, duration=%.1fs", result.status, result.duration_seconds)
+    logger.info(
+        "Job completed: status=%s, duration=%.1fs",
+        result.status,
+        result.duration_seconds,
+    )
 
     if result.status == JobStatus.SUCCESS:
         logger.info("Task breakdown: %s", result.task_breakdown)
@@ -322,7 +328,9 @@ async def test_job_generation_e2e(client: JobGeneratorClient) -> None:
     def capture_status(status: dict) -> None:
         status_updates.append(status)
 
-    result = await client.generate_and_wait(SIMPLE_REQUIREMENT, on_status_update=capture_status)
+    result = await client.generate_and_wait(
+        SIMPLE_REQUIREMENT, on_status_update=capture_status
+    )
 
     # Log all status updates for debugging
     logger.info("Total status updates: %d", len(status_updates))
@@ -447,13 +455,17 @@ async def main() -> None:
         if result.task_breakdown:
             print(f"\nTask Breakdown ({len(result.task_breakdown)} tasks):")
             for task in result.task_breakdown:
-                print(f"  - {task.get('name', 'Unknown')}: {task.get('description', '')[:50]}...")
+                print(
+                    f"  - {task.get('name', 'Unknown')}: {task.get('description', '')[:50]}..."
+                )
 
         if result.workflow_statuses:
             print(f"\nWorkflow Statuses ({len(result.workflow_statuses)} workflows):")
             for ws in result.workflow_statuses:
                 status_icon = "✓" if ws.get("status") == "success" else "✗"
-                print(f"  {status_icon} {ws.get('task_name', ws.get('task_id'))}: {ws.get('status')}")
+                print(
+                    f"  {status_icon} {ws.get('task_name', ws.get('task_id'))}: {ws.get('status')}"
+                )
                 if ws.get("error_message"):
                     print(f"      Error: {ws.get('error_message')[:100]}...")
 

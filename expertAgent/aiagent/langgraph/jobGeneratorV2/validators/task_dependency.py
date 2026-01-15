@@ -139,13 +139,11 @@ class TaskDependencyValidator:
             errors=errors,
             circular_references=circular_refs,
             missing_dependencies=list(set(missing_deps)),
-            execution_order=execution_order
+            execution_order=execution_order,
         )
 
     def _find_cycle(
-        self,
-        dependencies: dict[str, list[str]],
-        task_ids: set[str]
+        self, dependencies: dict[str, list[str]], task_ids: set[str]
     ) -> list[str] | None:
         """Find a cycle in the dependency graph using DFS.
 
@@ -192,9 +190,7 @@ class TaskDependencyValidator:
         return None
 
     def _topological_sort(
-        self,
-        dependencies: dict[str, list[str]],
-        task_ids: set[str]
+        self, dependencies: dict[str, list[str]], task_ids: set[str]
     ) -> list[str]:
         """Perform topological sort on the dependency graph.
 
@@ -233,8 +229,7 @@ class TaskDependencyValidator:
 
         # Find all nodes with in_degree 0 (no dependencies)
         queue: list[str] = [
-            task_id for task_id, degree in in_degree.items()
-            if degree == 0
+            task_id for task_id, degree in in_degree.items() if degree == 0
         ]
         queue.sort()  # Ensure deterministic order
 

@@ -94,25 +94,22 @@ class Settings(BaseSettings):
     # Job Generator V2 Feature Flag (Issue #342)
     USE_JOB_GENERATOR_V2: bool = Field(
         default=False,
-        description="Enable new Job Generator V2 architecture with improved retry management"
+        description="Enable new Job Generator V2 architecture with improved retry management",
     )
 
     # Workflow Generator V2 Configuration (Issue #342 Phase F)
     WORKFLOW_GENERATOR_V2_MODEL: str = Field(
         default="gemini-3-flash-preview",
-        description="LLM model for V2 workflow generation"
+        description="LLM model for V2 workflow generation",
     )
     WORKFLOW_GENERATOR_V2_TEMPERATURE: float = Field(
-        default=0.3,
-        description="Sampling temperature for V2 workflow generation"
+        default=0.3, description="Sampling temperature for V2 workflow generation"
     )
     WORKFLOW_GENERATOR_V2_MAX_RETRY: int = Field(
-        default=2,
-        description="Maximum retry count for V2 workflow generation"
+        default=2, description="Maximum retry count for V2 workflow generation"
     )
     WORKFLOW_GENERATOR_V2_ENABLE_EXECUTION_TEST: bool = Field(
-        default=False,
-        description="Enable execution testing of generated workflows"
+        default=False, description="Enable execution testing of generated workflows"
     )
 
     # GraphAI Server Configuration

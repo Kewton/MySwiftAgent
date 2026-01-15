@@ -195,7 +195,9 @@ class JobGenerationOrchestrator:
                     )
                 else:
                     # Transform input from previous phase
-                    phase_input = self._create_phase_input(phase, request, phase_outputs)
+                    phase_input = self._create_phase_input(
+                        phase, request, phase_outputs
+                    )
 
                     # Execute phase
                     output = await self.execute_phase(
@@ -582,7 +584,9 @@ class JobGenerationOrchestrator:
         breakdown_output: TaskBreakdownOutput = phase_outputs[Phase.TASK_BREAKDOWN]
         interface_output: InterfaceDesignOutput = phase_outputs[Phase.INTERFACE_DESIGN]
         registration_output: RegistrationOutput = phase_outputs[Phase.REGISTRATION]
-        workflow_phase_output: WorkflowGenPhaseOutput = phase_outputs[Phase.WORKFLOW_GEN]
+        workflow_phase_output: WorkflowGenPhaseOutput = phase_outputs[
+            Phase.WORKFLOW_GEN
+        ]
 
         # Issue #342 V2 Fix: Combine all task workflows into one summary YAML
         # Individual task YAMLs are stored separately in job_state_manager
@@ -591,7 +595,9 @@ class JobGenerationOrchestrator:
         for task in breakdown_output.tasks:
             task_workflow = workflow_phase_output.task_workflows.get(task.id)
             if task_workflow and task_workflow.workflow_yaml:
-                task_yamls.append(f"# --- Task: {task.id} ({task.name}) ---\n{task_workflow.workflow_yaml}")
+                task_yamls.append(
+                    f"# --- Task: {task.id} ({task.name}) ---\n{task_workflow.workflow_yaml}"
+                )
 
         if task_yamls:
             combined_yaml = "\n\n".join(task_yamls)

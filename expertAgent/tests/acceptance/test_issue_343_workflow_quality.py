@@ -101,9 +101,9 @@ class TestTimeoutMillisecondsAcceptance:
         errors = validator.validate_workflow(workflow)
         assert len(errors) > 0, "Should detect likely seconds value"
         error_messages = " ".join(str(e) for e in errors)
-        assert (
-            "milliseconds" in error_messages.lower() or "ms" in error_messages
-        ), f"Error should mention milliseconds: {error_messages}"
+        assert "milliseconds" in error_messages.lower() or "ms" in error_messages, (
+            f"Error should mention milliseconds: {error_messages}"
+        )
 
     def test_validator_rejects_boundary_value_60(self):
         """AC1: Validator rejects timeout=60 (likely 60 seconds, not 60ms)."""
@@ -384,7 +384,9 @@ class TestAPIDuplicationWarningAcceptance:
                 if issubclass(warning.category, DeprecationWarning)
                 and "api_mappings" in str(warning.message)
             ]
-            assert len(api_dup_warnings) == 0, "Should not warn with only recommended_apis"
+            assert len(api_dup_warnings) == 0, (
+                "Should not warn with only recommended_apis"
+            )
 
     def test_no_warning_when_only_api_mappings(self):
         """AC3: No warning when only api_mappings is provided."""

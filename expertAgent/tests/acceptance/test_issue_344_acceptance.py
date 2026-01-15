@@ -15,6 +15,7 @@ Issue #344 APIスキーマ検証 受入テスト（L3: ローカル受入テス�
 - AC-4: 必須パラメータ欠落の検出が動作する
 - AC-5: 型不一致の検出が動作する
 """
+
 import os
 
 import pytest
@@ -171,7 +172,11 @@ class TestIssue344APISchemaValidatorAcceptance:
 
         # PARAMETER_NAME_MISMATCH エラーコードが使用される
         typo_error = next(
-            (e for e in errors if e.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH),
+            (
+                e
+                for e in errors
+                if e.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH
+            ),
             None,
         )
         assert typo_error is not None, (
@@ -215,7 +220,11 @@ class TestIssue344APISchemaValidatorAcceptance:
 
         # PARAMETER_NAME_MISMATCH エラーコードが使用される
         typo_error = next(
-            (e for e in errors if e.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH),
+            (
+                e
+                for e in errors
+                if e.code == ValidationErrorCode.PARAMETER_NAME_MISMATCH
+            ),
             None,
         )
         assert typo_error is not None, (
@@ -257,7 +266,11 @@ class TestIssue344APISchemaValidatorAcceptance:
 
         # MISSING_REQUIRED_PARAMETER エラーコードが使用される
         missing_error = next(
-            (e for e in errors if e.code == ValidationErrorCode.MISSING_REQUIRED_PARAMETER),
+            (
+                e
+                for e in errors
+                if e.code == ValidationErrorCode.MISSING_REQUIRED_PARAMETER
+            ),
             None,
         )
         assert missing_error is not None, (
@@ -295,7 +308,11 @@ class TestIssue344APISchemaValidatorAcceptance:
         assert len(errors) >= 1, "Missing required parameter should be detected"
 
         missing_error = next(
-            (e for e in errors if e.code == ValidationErrorCode.MISSING_REQUIRED_PARAMETER),
+            (
+                e
+                for e in errors
+                if e.code == ValidationErrorCode.MISSING_REQUIRED_PARAMETER
+            ),
             None,
         )
         assert missing_error is not None
@@ -335,7 +352,11 @@ class TestIssue344APISchemaValidatorAcceptance:
         assert len(errors) >= 1, "Type mismatch should be detected"
 
         type_error = next(
-            (e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH),
+            (
+                e
+                for e in errors
+                if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH
+            ),
             None,
         )
         assert type_error is not None, (
@@ -375,7 +396,9 @@ class TestIssue344APISchemaValidatorAcceptance:
         type_errors = [
             e for e in errors if e.code == ValidationErrorCode.PARAMETER_TYPE_MISMATCH
         ]
-        assert len(type_errors) == 0, f"Reference should skip type validation: {type_errors}"
+        assert len(type_errors) == 0, (
+            f"Reference should skip type validation: {type_errors}"
+        )
 
 
 @pytest.mark.acceptance
@@ -415,7 +438,9 @@ class TestIssue344Integration:
         # google_search のよくあるtypo
         google_search_aliases = PARAMETER_ALIASES["/utility/google_search"]
         assert "query" in google_search_aliases, "Should detect 'query' -> 'queries'"
-        assert "num_results" in google_search_aliases, "Should detect 'num_results' -> 'num'"
+        assert "num_results" in google_search_aliases, (
+            "Should detect 'num_results' -> 'num'"
+        )
 
 
 @pytest.mark.acceptance

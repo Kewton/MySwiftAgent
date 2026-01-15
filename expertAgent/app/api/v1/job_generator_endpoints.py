@@ -382,7 +382,9 @@ async def _create_job_in_background_v2(
                 job_id=job_id,
                 error_message=response.error_message or "Job generation failed",
             )
-            logger.warning(f"[BG:{job_id}] Job creation failed (V2): {response.error_message}")
+            logger.warning(
+                f"[BG:{job_id}] Job creation failed (V2): {response.error_message}"
+            )
 
     except Exception as e:
         logger.error(f"[BG:{job_id}] Job creation failed (V2): {e}", exc_info=True)

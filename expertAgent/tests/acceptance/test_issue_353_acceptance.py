@@ -14,6 +14,7 @@ Issue #353 WORKFLOW_GEN フェーズ未完了時のエラーハンドリング �
 - AC-3: ジョブ生成 UI で WORKFLOW_GEN 失敗を明示的に表示
 - AC-4: 既存の __PENDING__ ジョブの検出・修復手段の提供
 """
+
 import os
 from typing import Any
 from unittest.mock import MagicMock
@@ -244,7 +245,9 @@ class TestIssue353WorkflowGenIncompleteAcceptance:
         mock_task_output.status = PhaseStatus.SUCCESS  # Use SUCCESS, not COMPLETED
 
         mock_workflow_gen_output = MagicMock(spec=WorkflowGenPhaseOutput)
-        mock_workflow_gen_output.status = PhaseStatus.SUCCESS  # Use SUCCESS, not COMPLETED
+        mock_workflow_gen_output.status = (
+            PhaseStatus.SUCCESS
+        )  # Use SUCCESS, not COMPLETED
         mock_workflow_gen_output.task_workflows = {"task-1": mock_task_output}
 
         phase_outputs: dict[Phase, Any] = {
@@ -317,7 +320,10 @@ class TestIssue353WorkflowGenIncompleteAcceptance:
         notification = create_notification_from_pending_result(result, job_id="job-123")
 
         assert notification.level == NotificationLevel.ERROR
-        assert "incomplete" in notification.title.lower() or "pending" in notification.title.lower()
+        assert (
+            "incomplete" in notification.title.lower()
+            or "pending" in notification.title.lower()
+        )
         assert notification.can_retry is True
         assert len(notification.suggested_actions) > 0
 
@@ -335,11 +341,31 @@ class TestIssue353WorkflowGenIncompleteAcceptance:
 
         # Simulate existing TaskMasters with mixed states
         task_masters = [
-            {"id": "tm-1", "name": "Task 1", "body_template": {"workflow_name": "workflow_a"}},
-            {"id": "tm-2", "name": "Task 2", "body_template": {"workflow_name": "__PENDING__"}},
-            {"id": "tm-3", "name": "Task 3", "body_template": {"workflow_name": "workflow_b"}},
-            {"id": "tm-4", "name": "Task 4", "body_template": {"workflow_name": "__PENDING__"}},
-            {"id": "tm-5", "name": "Task 5", "body_template": {"workflow_name": "workflow_c"}},
+            {
+                "id": "tm-1",
+                "name": "Task 1",
+                "body_template": {"workflow_name": "workflow_a"},
+            },
+            {
+                "id": "tm-2",
+                "name": "Task 2",
+                "body_template": {"workflow_name": "__PENDING__"},
+            },
+            {
+                "id": "tm-3",
+                "name": "Task 3",
+                "body_template": {"workflow_name": "workflow_b"},
+            },
+            {
+                "id": "tm-4",
+                "name": "Task 4",
+                "body_template": {"workflow_name": "__PENDING__"},
+            },
+            {
+                "id": "tm-5",
+                "name": "Task 5",
+                "body_template": {"workflow_name": "workflow_c"},
+            },
         ]
 
         result = validator.validate(task_masters)
@@ -427,7 +453,7 @@ class TestIssue353WorkflowGenIncompleteAcceptance:
 
     @pytest.mark.skipif(
         not os.getenv("RUN_E2E_TESTS", "").lower() == "true",
-        reason="E2E tests require running services. Set RUN_E2E_TESTS=true to run."
+        reason="E2E tests require running services. Set RUN_E2E_TESTS=true to run.",
     )
     def test_e2e_job_generation_with_all_workflows_complete(
         self, services_running: bool
@@ -442,7 +468,7 @@ class TestIssue353WorkflowGenIncompleteAcceptance:
 
     @pytest.mark.skipif(
         not os.getenv("RUN_E2E_TESTS", "").lower() == "true",
-        reason="E2E tests require running services. Set RUN_E2E_TESTS=true to run."
+        reason="E2E tests require running services. Set RUN_E2E_TESTS=true to run.",
     )
     def test_e2e_job_status_includes_notification_on_failure(
         self, services_running: bool

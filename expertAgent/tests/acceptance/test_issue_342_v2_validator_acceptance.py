@@ -15,6 +15,7 @@ Issue #342 V2バリデーター修正 受入テスト（L3: ローカル受入�
 - DC-2: V1互換パスパターン（:source.query等）
 - E2E: ワークフロー実行時にInvalid URLエラーが発生しないこと
 """
+
 import os
 from typing import Any
 
@@ -156,9 +157,7 @@ class TestIssue342V2ValidatorAcceptance:
         スキップする場合: pytest -m "not external"
         """
         # V2が有効か確認
-        response = requests.get(
-            f"{self.EXPERT_AGENT_URL}/v1/feature-flags", timeout=10
-        )
+        response = requests.get(f"{self.EXPERT_AGENT_URL}/v1/feature-flags", timeout=10)
         if response.status_code != 200:
             pytest.skip("Feature flags endpoint not available")
 

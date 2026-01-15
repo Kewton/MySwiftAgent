@@ -198,9 +198,7 @@ class RegistrationWorkflow:
 
         # Issue #342 Bug #5: Build task_id_to_master_id mapping for proper interface lookup
         # This maps logical task_id (e.g., 'task_001') to task_master_id (e.g., 'tm_xxx')
-        task_id_to_master_id = {
-            tm.task_id: tm.id for tm in master_result.task_masters
-        }
+        task_id_to_master_id = {tm.task_id: tm.id for tm in master_result.task_masters}
 
         logger.info(
             "Built task_id_to_master_id mapping: %d entries",

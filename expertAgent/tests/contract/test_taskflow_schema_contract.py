@@ -249,7 +249,13 @@ class TestPydanticModelOutputConversion:
         workflow_dict = sample_pydantic_workflow.model_dump()
 
         # Verify Pydantic output structure has required fields
-        required_fields = ["workflow_name", "input_schema", "output_schema", "output", "steps"]
+        required_fields = [
+            "workflow_name",
+            "input_schema",
+            "output_schema",
+            "output",
+            "steps",
+        ]
         for field in required_fields:
             assert field in workflow_dict, f"Missing required field: {field}"
 

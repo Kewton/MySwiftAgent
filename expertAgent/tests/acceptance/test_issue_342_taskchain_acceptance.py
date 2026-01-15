@@ -129,9 +129,10 @@ class TestIssue342TaskChainAcceptance:
         assert "Output Node Naming" in BASE_RULES, (
             "BASE_RULES should include OUTPUT_NODE_RULE content"
         )
-        assert "MUST be named `output`" in BASE_RULES or "must be named" in BASE_RULES.lower(), (
-            "BASE_RULES should instruct that output node must be named 'output'"
-        )
+        assert (
+            "MUST be named `output`" in BASE_RULES
+            or "must be named" in BASE_RULES.lower()
+        ), "BASE_RULES should instruct that output node must be named 'output'"
 
     def test_get_base_rules_returns_output_node_rule(self) -> None:
         """検証: get_base_rules()がOUTPUT_NODE_RULEを含むルールを返す"""
@@ -142,9 +143,7 @@ class TestIssue342TaskChainAcceptance:
         assert "Output Node Naming" in rules, (
             "get_base_rules() should return rules containing OUTPUT_NODE_RULE"
         )
-        assert "output" in rules.lower(), (
-            "Rules should mention 'output' node name"
-        )
+        assert "output" in rules.lower(), "Rules should mention 'output' node name"
 
     def test_output_node_rule_forbids_format_output(self) -> None:
         """検証: OUTPUT_NODE_RULEがformat_output等の使用を禁止している

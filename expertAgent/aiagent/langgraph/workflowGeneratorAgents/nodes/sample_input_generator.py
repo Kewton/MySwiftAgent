@@ -42,13 +42,13 @@ def _extract_keywords_from_description(description: str) -> list[str]:
     import re
 
     # Extract quoted strings
-    quoted = re.findall(r'「(.+?)」', description)
+    quoted = re.findall(r"「(.+?)」", description)
     keywords.extend(quoted)
 
     # Extract terms before common action words
     patterns = [
-        r'(.+?)(?:に関する|について|の最新|をGoogle|で検索|を検索|を取得)',
-        r'(.+?)(?:ニュース|情報|データ)',
+        r"(.+?)(?:に関する|について|の最新|をGoogle|で検索|を検索|を取得)",
+        r"(.+?)(?:ニュース|情報|データ)",
     ]
     for pattern in patterns:
         matches = re.findall(pattern, description)
@@ -59,7 +59,7 @@ def _extract_keywords_from_description(description: str) -> list[str]:
                 keywords.append(cleaned)
 
     # Filter out common generic terms
-    generic_terms = {'最新', 'ニュース', '情報', 'データ', 'サマリ', 'メール'}
+    generic_terms = {"最新", "ニュース", "情報", "データ", "サマリ", "メール"}
     keywords = [k for k in keywords if k not in generic_terms]
 
     logger.debug(f"Extracted keywords from description: {keywords}")

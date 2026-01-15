@@ -89,7 +89,15 @@ class TaskFlowAdapter:
     # Allowed fields per step type (matching GraphAiServer Zod schema)
     # See: graphAiServer/src/engine/schemas/workflow-schema.ts
     STEP_TYPE_ALLOWED_FIELDS: dict[str, set[str]] = {
-        "api_rest": {"step_type", "method", "url", "headers", "body", "timeout_ms", "verify_ssl"},
+        "api_rest": {
+            "step_type",
+            "method",
+            "url",
+            "headers",
+            "body",
+            "timeout_ms",
+            "verify_ssl",
+        },
         "code_js": {"step_type", "path", "function_name"},
         "transform": {
             "step_type",
@@ -130,13 +138,17 @@ class TaskFlowAdapter:
             # Step 2: Convert IOSchema fields (full JSON Schema -> simplified format)
             for field in self.IO_SCHEMA_FIELDS:
                 if field in result and isinstance(result[field], dict):
-                    converted, field_warnings = self._convert_io_schema(result[field], field)
+                    converted, field_warnings = self._convert_io_schema(
+                        result[field], field
+                    )
                     result[field] = converted
                     warnings.extend(field_warnings)
 
             # Step 3: Clean output field (ensure all values are strings)
             if "output" in result and isinstance(result["output"], dict):
-                result["output"], output_warnings = self._clean_output_field(result["output"])
+                result["output"], output_warnings = self._clean_output_field(
+                    result["output"]
+                )
                 warnings.extend(output_warnings)
 
             # Step 4: Convert step-level fields
@@ -226,7 +238,9 @@ class TaskFlowAdapter:
 
         # Step 1: Remove null values from step-level fields
         # GraphAiServer's Zod schema uses .default({}) which expects undefined, not null
-        null_step_fields = [k for k, v in step.items() if k in self.STEP_NULLABLE_FIELDS and v is None]
+        null_step_fields = [
+            k for k, v in step.items() if k in self.STEP_NULLABLE_FIELDS and v is None
+        ]
         for field in null_step_fields:
             del step[field]
         if null_step_fields:
@@ -264,7 +278,9 @@ class TaskFlowAdapter:
 
         return errors
 
-    def _clean_config(self, config: dict[str, Any], step_type: str | None) -> dict[str, Any]:
+    def _clean_config(
+        self, config: dict[str, Any], step_type: str | None
+    ) -> dict[str, Any]:
         """Clean up step config by removing null values and invalid fields.
 
         GraphAiServer's Zod schema uses discriminatedUnion for step types.
@@ -382,8 +398,14 @@ class TaskFlowAdapter:
             # No properties - check if there are direct field->type mappings
             # (excluding JSON Schema keywords)
             json_schema_keywords = {
-                "$schema", "$id", "type", "properties", "required",
-                "additionalProperties", "description", "title"
+                "$schema",
+                "$id",
+                "type",
+                "properties",
+                "required",
+                "additionalProperties",
+                "description",
+                "title",
             }
             for key, value in schema.items():
                 if key not in json_schema_keywords:
@@ -402,7 +424,9 @@ class TaskFlowAdapter:
         # Extract type from each property
         for prop_name, prop_def in properties.items():
             if isinstance(prop_def, dict):
-                io_schema[prop_name] = self._extract_type_from_property(prop_def, prop_name)
+                io_schema[prop_name] = self._extract_type_from_property(
+                    prop_def, prop_name
+                )
             elif isinstance(prop_def, str) and prop_def in VALID_IO_SCHEMA_TYPES:
                 io_schema[prop_name] = prop_def
             else:
