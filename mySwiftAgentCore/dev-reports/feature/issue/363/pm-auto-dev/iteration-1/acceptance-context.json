@@ -1,0 +1,45 @@
+{
+  "issue_number": 363,
+  "project": "mySwiftAgentCore",
+  "acceptance_plan_path": "dev-reports/feature/issue/363/acceptance-plan.md",
+  "source_directory": "mySwiftAgentCore/src/taskflowEngine",
+  "test_directory": "mySwiftAgentCore/tests",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "TaskFlow JSON format can be loaded and converted to internal format",
+      "verification_method": "Test file loading and adapter conversion"
+    },
+    {
+      "id": "AC-2", 
+      "description": "5 node types (api_rest, code_js, transform, parallel, llm) are executable",
+      "verification_method": "Test each node executor with sample configs"
+    },
+    {
+      "id": "AC-3",
+      "description": "Step dependencies are resolved and executed in order",
+      "verification_method": "Test workflow with dependent steps"
+    },
+    {
+      "id": "AC-4",
+      "description": "Parallel steps respect maxConcurrency limits",
+      "verification_method": "Test parallel execution manager"
+    },
+    {
+      "id": "AC-5",
+      "description": "Execution traces are sent to Langfuse",
+      "verification_method": "Test tracer integration"
+    },
+    {
+      "id": "AC-6",
+      "description": "REST API endpoints work for workflow management",
+      "verification_method": "Test API handlers"
+    },
+    {
+      "id": "AC-7",
+      "description": "TypeScript SDK provides type-safe client",
+      "verification_method": "Test TaskFlowClient"
+    }
+  ],
+  "output_path": "dev-reports/feature/issue/363/pm-auto-dev/iteration-1/acceptance-result.json"
+}

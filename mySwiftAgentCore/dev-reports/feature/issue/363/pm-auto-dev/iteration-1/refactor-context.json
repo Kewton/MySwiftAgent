@@ -1,0 +1,19 @@
+{
+  "issue_number": 363,
+  "project": "mySwiftAgentCore",
+  "source_directory": "mySwiftAgentCore/src/taskflowEngine",
+  "test_directory": "mySwiftAgentCore/tests/unit/taskflowEngine",
+  "focus_areas": [
+    "Code duplication removal",
+    "SOLID principles adherence",
+    "Error handling consistency",
+    "Type safety improvements"
+  ],
+  "files_to_review": [
+    "nodes/index.ts",
+    "loader/WorkflowLoader.ts",
+    "api/handlers.ts",
+    "executor/WorkflowExecutor.ts"
+  ],
+  "output_path": "dev-reports/feature/issue/363/pm-auto-dev/iteration-1/refactor-result.json"
+}

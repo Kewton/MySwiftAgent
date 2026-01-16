@@ -1,0 +1,115 @@
+{
+  "issue_number": 363,
+  "test_timestamp": "2026-01-16T15:05:00Z",
+  "overall_status": "PASSED",
+  "acceptance_criteria_results": [
+    {
+      "id": "AC-1",
+      "description": "プロジェクト単位でTaskFlowワークフローを管理",
+      "status": "PASSED",
+      "evidence": "WorkflowRegistry.registerForProject(), WorkflowLoader.loadWorkflowsForProject(), ProjectManager - all tests pass"
+    },
+    {
+      "id": "AC-2",
+      "description": "graphAiServerと互換性のあるTaskFlow形式をサポート",
+      "status": "PASSED",
+      "evidence": "TaskFlowDefinitionAdapter implemented and integrated in WorkflowLoader"
+    },
+    {
+      "id": "AC-3",
+      "description": "Langfuseトレーシング統合",
+      "status": "PASSED",
+      "evidence": "LangfuseTracer, SpanBuilder - 32 tests pass"
+    },
+    {
+      "id": "AC-4",
+      "description": "REST API経由での実行",
+      "status": "PASSED",
+      "evidence": "handlers.ts, routes.ts - 16 tests pass"
+    },
+    {
+      "id": "AC-5",
+      "description": "TypeScript SDKの提供",
+      "status": "PASSED",
+      "evidence": "TaskFlowClient - 16 tests pass"
+    },
+    {
+      "id": "AC-6",
+      "description": "エラーハンドリングと部分成功モデル",
+      "status": "PASSED",
+      "evidence": "WorkflowExecutor, ContextManager - 34 tests pass"
+    },
+    {
+      "id": "AC-7",
+      "description": "テストカバレッジ90%以上",
+      "status": "PASSED",
+      "evidence": "93.32% coverage, 619 tests pass"
+    }
+  ],
+  "design_policy_results": [
+    {
+      "id": "DP-1",
+      "description": "graphAiServerとの設計統一性",
+      "status": "PASSED"
+    },
+    {
+      "id": "DP-2",
+      "description": "プロジェクトベース管理との統合",
+      "status": "PASSED"
+    },
+    {
+      "id": "DP-3",
+      "description": "Langfuseトレーシングのネイティブ統合",
+      "status": "PASSED"
+    },
+    {
+      "id": "DP-4",
+      "description": "モジュラーなノード実装",
+      "status": "PASSED"
+    },
+    {
+      "id": "DP-5",
+      "description": "型定義の整合性確保（アダプターパターン）",
+      "status": "PASSED"
+    },
+    {
+      "id": "DP-6",
+      "description": "code_jsノードのセキュリティ強化（サンドボックス実装）",
+      "status": "PASSED"
+    },
+    {
+      "id": "DP-7",
+      "description": "並列実行制御の具体化（p-limitパターン）",
+      "status": "PASSED"
+    }
+  ],
+  "integration_gaps_fixed": [
+    {
+      "issue": "TaskFlowDefinitionAdapter was dead code",
+      "fix_applied": true,
+      "verified": true
+    },
+    {
+      "issue": "TaskFlowEngine facade bypassed",
+      "fix_applied": true,
+      "verified": true
+    },
+    {
+      "issue": "CodeJsSandbox not properly initialized",
+      "fix_applied": true,
+      "verified": true
+    }
+  ],
+  "test_summary": {
+    "total_tests": 619,
+    "passed": 619,
+    "failed": 0,
+    "skipped": 0,
+    "coverage": "93.32%"
+  },
+  "recommendations": [
+    "Consider adding E2E integration tests that test the full workflow execution path",
+    "Add performance benchmarks for parallel execution",
+    "Consider adding contract tests for graphAiServer compatibility"
+  ]
+}
