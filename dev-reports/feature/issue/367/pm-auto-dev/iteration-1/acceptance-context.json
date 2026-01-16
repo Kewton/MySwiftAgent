@@ -1,0 +1,56 @@
+{
+  "issue_number": 367,
+  "feature_summary": "RETRY_WITH_FEEDBACK フィードバックループ実装（フェーズ1: 基盤整備）",
+  "acceptance_criteria": [
+    "検証エラー時に LLMValidationError が throw される（WorkflowValidationError として実装）",
+    "ErrorHandler が検証エラーを RETRY_WITH_FEEDBACK に分類する",
+    "単体テストでフィードバックループを検証"
+  ],
+  "labels": ["bug", "enhancement"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": ["mySwiftAgentCore", "myVault"],
+  "external_dependencies": ["LLM API (Anthropic/OpenAI)"],
+  "test_cases": [
+    {
+      "tc_id": "TC-001",
+      "name": "WorkflowValidationError クラスの検証",
+      "type": "unit",
+      "expected_result": "name='WorkflowValidationError', instanceof Error=true, workflow/validationResult プロパティが設定される"
+    },
+    {
+      "tc_id": "TC-002",
+      "name": "WorkflowGenerator が WorkflowValidationError を throw",
+      "type": "unit",
+      "expected_result": "検証失敗時に WorkflowValidationError が throw される"
+    },
+    {
+      "tc_id": "TC-003",
+      "name": "ErrorHandler が WorkflowValidationError を RETRY_WITH_FEEDBACK に分類",
+      "type": "unit",
+      "expected_result": "error_type=VALIDATION_ERROR, recoverable=true, recovery_suggestion=RETRY_WITH_FEEDBACK"
+    },
+    {
+      "tc_id": "TC-004",
+      "name": "LLMValidationError と WorkflowValidationError の一貫性",
+      "type": "unit",
+      "expected_result": "両エラータイプが同じリカバリー戦略を返す"
+    },
+    {
+      "tc_id": "TC-005",
+      "name": "統合テスト - ValidationPipeline エラーからの ErrorHandler 呼び出し",
+      "type": "integration",
+      "expected_result": "E2E でエラー処理フローが機能する（要サービス起動）"
+    },
+    {
+      "tc_id": "TC-006",
+      "name": "デッドコード検証 - WorkflowValidationError の使用確認",
+      "type": "static_analysis",
+      "expected_result": "定義1箇所、throw 2箇所、instanceof 4箇所以上"
+    }
+  ],
+  "unit_test_commands": [
+    "npm run test -- tests/unit/taskflowGeneratorAgent/recovery/ErrorHandler.test.ts",
+    "npm run test -- tests/unit/taskflowGeneratorAgent/generator/WorkflowGenerator.test.ts"
+  ]
+}

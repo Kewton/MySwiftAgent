@@ -17,6 +17,7 @@ import {
   LLMApiError,
   LLMParseError,
   LLMValidationError,
+  WorkflowValidationError,
 } from '../../../../src/taskflowGeneratorAgent/llm/LLMClient.js';
 import { z } from 'zod';
 
@@ -94,6 +95,38 @@ describe('ErrorHandler', () => {
       expect(result.details).toBeDefined();
     });
 
+    it('should handle WorkflowValidationError (Issue #367)', async () => {
+      const validationResult = {
+        isValid: false,
+        errors: [
+          { code: 'SECURITY_001', message: 'Potential shell injection detected', path: 'steps[0].params.template' },
+        ],
+        warnings: [
+          { code: 'WARN_001', message: 'Consider using more specific capability' },
+        ],
+      };
+      const workflow = {
+        workflow_name: 'test_workflow',
+        description: 'Test workflow',
+        steps: [],
+      };
+      const error = new WorkflowValidationError(
+        'Validation failed: Potential shell injection detected',
+        workflow,
+        validationResult
+      );
+      const context = { task_id: 'task_001' };
+
+      const result = await handler.handle(error, context);
+
+      expect(result.error_type).toBe(ErrorType.VALIDATION_ERROR);
+      expect(result.recoverable).toBe(true);
+      expect(result.recovery_suggestion).toBe(RecoveryStrategy.RETRY_WITH_FEEDBACK);
+      expect(result.details).toBeDefined();
+      expect(result.details?.['validationErrors']).toEqual(validationResult.errors);
+      expect(result.details?.['validationWarnings']).toEqual(validationResult.warnings);
+    });
+
     it('should handle timeout error', async () => {
       const error = new Error('Timeout exceeded');
       error.name = 'TimeoutError';
@@ -160,6 +193,16 @@ describe('ErrorHandler', () => {
 
       expect(handler.isRecoverable(error)).toBe(true);
     });
+
+    it('should return true for workflow validation errors (Issue #367)', () => {
+      const error = new WorkflowValidationError(
+        'Validation failed',
+        { workflow_name: 'test' },
+        { isValid: false, errors: [{ code: 'ERR', message: 'Error' }] }
+      );
+
+      expect(handler.isRecoverable(error)).toBe(true);
+    });
   });
 
   describe('getRecoverySuggestion', () => {
@@ -183,6 +226,18 @@ describe('ErrorHandler', () => {
 
       expect(handler.getRecoverySuggestion(error)).toBe(
         RecoveryStrategy.ROLLBACK_TO_ANALYSIS
+      );
+    });
+
+    it('should suggest RETRY_WITH_FEEDBACK for workflow validation errors (Issue #367)', () => {
+      const error = new WorkflowValidationError(
+        'Validation failed',
+        { workflow_name: 'test' },
+        { isValid: false, errors: [{ code: 'ERR', message: 'Error' }] }
+      );
+
+      expect(handler.getRecoverySuggestion(error)).toBe(
+        RecoveryStrategy.RETRY_WITH_FEEDBACK
       );
     });
   });

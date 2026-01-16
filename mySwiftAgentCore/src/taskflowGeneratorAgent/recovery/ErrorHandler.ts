@@ -13,6 +13,7 @@ import {
   LLMApiError,
   LLMParseError,
   LLMValidationError,
+  WorkflowValidationError,
 } from '../llm/LLMClient.js';
 
 /**
@@ -76,7 +77,11 @@ export class ErrorHandler {
       return ErrorType.LLM_ERROR;
     }
 
-    if (error instanceof LLMParseError || error instanceof LLMValidationError) {
+    if (
+      error instanceof LLMParseError ||
+      error instanceof LLMValidationError ||
+      error instanceof WorkflowValidationError
+    ) {
       return ErrorType.VALIDATION_ERROR;
     }
 
@@ -108,7 +113,11 @@ export class ErrorHandler {
       return true;
     }
 
-    if (error instanceof LLMParseError || error instanceof LLMValidationError) {
+    if (
+      error instanceof LLMParseError ||
+      error instanceof LLMValidationError ||
+      error instanceof WorkflowValidationError
+    ) {
       return true;
     }
 
@@ -140,7 +149,11 @@ export class ErrorHandler {
       return RecoveryStrategy.RETRY_CURRENT;
     }
 
-    if (error instanceof LLMParseError || error instanceof LLMValidationError) {
+    if (
+      error instanceof LLMParseError ||
+      error instanceof LLMValidationError ||
+      error instanceof WorkflowValidationError
+    ) {
       return RecoveryStrategy.RETRY_WITH_FEEDBACK;
     }
 
@@ -179,6 +192,14 @@ export class ErrorHandler {
     if (error instanceof LLMValidationError) {
       details['validationErrors'] = error.zodError.errors;
       details['rawContent'] = error.rawContent.substring(0, 500);
+    }
+
+    if (error instanceof WorkflowValidationError) {
+      details['validationErrors'] = error.validationResult.errors;
+      details['validationWarnings'] = error.validationResult.warnings;
+      // Serialize workflow for debugging (truncated)
+      const workflowStr = JSON.stringify(error.workflow);
+      details['workflow'] = workflowStr.substring(0, 500);
     }
 
     return details;

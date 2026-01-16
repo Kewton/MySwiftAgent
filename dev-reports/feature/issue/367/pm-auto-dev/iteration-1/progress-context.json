@@ -1,0 +1,67 @@
+{
+  "issue_number": 367,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "unit_tests": {
+        "total": 908,
+        "passed": 908,
+        "failed": 0
+      },
+      "issue_specific_tests": {
+        "ErrorHandler": 19,
+        "WorkflowGenerator": 8,
+        "issue_367_marked": 3
+      }
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": {
+        "TC-001": "passed",
+        "TC-002": "passed",
+        "TC-003": "passed",
+        "TC-004": "passed",
+        "TC-005": "skipped (requires service startup)",
+        "TC-006": "passed"
+      }
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "Minimal scope implementation, no refactoring needed"
+    },
+    "verification": {
+      "status": "passed",
+      "integration_rate": "100%",
+      "dead_code": 0
+    }
+  },
+  "implemented_features": [
+    {
+      "name": "WorkflowValidationError class",
+      "file": "LLMClient.ts",
+      "description": "ValidationPipeline検証エラー用のカスタムエラークラス"
+    },
+    {
+      "name": "ErrorHandler.classifyError",
+      "file": "ErrorHandler.ts",
+      "description": "WorkflowValidationError を VALIDATION_ERROR に分類"
+    },
+    {
+      "name": "ErrorHandler.isRecoverable",
+      "file": "ErrorHandler.ts",
+      "description": "WorkflowValidationError を recoverable として判定"
+    },
+    {
+      "name": "ErrorHandler.getRecoverySuggestion",
+      "file": "ErrorHandler.ts",
+      "description": "WorkflowValidationError に RETRY_WITH_FEEDBACK を返す"
+    },
+    {
+      "name": "ErrorHandler.extractDetails",
+      "file": "ErrorHandler.ts",
+      "description": "WorkflowValidationError から詳細情報を抽出"
+    }
+  ],
+  "scope_note": "Issue #367 はフェーズ1（基盤整備）のスコープ。AC-3(プロンプト反映)、AC-4(リトライ実行)はフェーズ2で実装予定。"
+}

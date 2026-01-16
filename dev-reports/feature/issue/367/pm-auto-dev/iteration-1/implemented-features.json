@@ -1,0 +1,106 @@
+{
+  "issue_number": 367,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "WorkflowValidationError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/llm/LLMClient.ts",
+      "line_number": 199,
+      "description": "ValidationPipeline検証エラー用のカスタムエラークラス。workflow と validationResult プロパティを保持",
+      "expected_callers": ["WorkflowGenerator.generateSingle", "WorkflowGenerator.generateWithMetadata"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "ErrorHandler.classifyError (WorkflowValidationError handling)",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts",
+      "line_number": 75,
+      "description": "WorkflowValidationError を VALIDATION_ERROR に分類",
+      "expected_callers": ["ErrorHandler.handle"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "ErrorHandler.isRecoverable (WorkflowValidationError handling)",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts",
+      "line_number": 106,
+      "description": "WorkflowValidationError を recoverable=true として判定",
+      "expected_callers": ["ErrorHandler.handle"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "ErrorHandler.getRecoverySuggestion (WorkflowValidationError handling)",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts",
+      "line_number": 142,
+      "description": "WorkflowValidationError に対して RETRY_WITH_FEEDBACK を返す",
+      "expected_callers": ["ErrorHandler.handle"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "ErrorHandler.extractDetails (WorkflowValidationError handling)",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts",
+      "line_number": 178,
+      "description": "WorkflowValidationError から validationErrors, validationWarnings, workflow を抽出",
+      "expected_callers": ["ErrorHandler.handle"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "should handle WorkflowValidationError (Issue #367)",
+        "should return true for workflow validation errors (Issue #367)",
+        "should suggest RETRY_WITH_FEEDBACK for workflow validation errors (Issue #367)"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001", "TC-002"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["should handle WorkflowValidationError (Issue #367)"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["should return true for workflow validation errors (Issue #367)"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["should suggest RETRY_WITH_FEEDBACK for workflow validation errors (Issue #367)"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003", "TC-004"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["should handle WorkflowValidationError (Issue #367)"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "integration_type": "throw_error",
+      "integration_method": "throw new WorkflowValidationError(...)"
+    },
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts",
+      "integration_type": "instanceof_check",
+      "integration_method": "error instanceof WorkflowValidationError"
+    }
+  ]
+}

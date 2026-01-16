@@ -5,6 +5,7 @@
  */
 
 import type { LLMClient } from '../llm/LLMClient.js';
+import { WorkflowValidationError } from '../llm/LLMClient.js';
 import { PromptBuilder } from '../prompts/PromptBuilder.js';
 import { RetryStrategy } from '../recovery/RetryStrategy.js';
 import { ValidationPipeline, type ValidationContext } from '../validator/ValidationPipeline.js';
@@ -114,7 +115,11 @@ export class WorkflowGenerator {
           const errorMessages = validationResult.errors
             ?.map((e) => e.message)
             .join('; ');
-          throw new Error(`Validation failed: ${errorMessages}`);
+          throw new WorkflowValidationError(
+            `Validation failed: ${errorMessages}`,
+            workflow,
+            validationResult
+          );
         }
       }
 
@@ -162,7 +167,11 @@ export class WorkflowGenerator {
         const errorMessages = validationResult.errors
           ?.map((e) => e.message)
           .join('; ');
-        throw new Error(`Validation failed: ${errorMessages}`);
+        throw new WorkflowValidationError(
+          `Validation failed: ${errorMessages}`,
+          workflow,
+          validationResult
+        );
       }
 
       return {

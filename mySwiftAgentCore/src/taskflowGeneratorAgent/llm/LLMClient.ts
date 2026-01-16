@@ -191,6 +191,36 @@ export class LLMValidationError extends Error {
 }
 
 /**
+ * Workflow Validation Error - Thrown when workflow fails pipeline validation
+ *
+ * Issue #367: Error type for ValidationPipeline failures
+ * This error triggers RETRY_WITH_FEEDBACK recovery strategy
+ */
+export class WorkflowValidationError extends Error {
+  readonly workflow: unknown;
+  readonly validationResult: {
+    isValid: boolean;
+    errors?: Array<{ code: string; message: string; path?: string }>;
+    warnings?: Array<{ code: string; message: string }>;
+  };
+
+  constructor(
+    message: string,
+    workflow: unknown,
+    validationResult: {
+      isValid: boolean;
+      errors?: Array<{ code: string; message: string; path?: string }>;
+      warnings?: Array<{ code: string; message: string }>;
+    }
+  ) {
+    super(message);
+    this.name = 'WorkflowValidationError';
+    this.workflow = workflow;
+    this.validationResult = validationResult;
+  }
+}
+
+/**
  * LLM API Error - Thrown when API call fails
  */
 export class LLMApiError extends Error {
