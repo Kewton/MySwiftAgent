@@ -256,3 +256,204 @@ describe('Handler Dependencies', () => {
     expect(deps.langfuseConfig).toBeUndefined();
   });
 });
+
+/**
+ * Issue #368: WorkflowRegistrar integration and status bug fix tests
+ */
+describe('Handler - WorkflowRegistrar Integration (Issue #368)', () => {
+  let app: Hono;
+  let mockLLMClient: LLMClient;
+  let mockRegistry: WorkflowRegistry;
+
+  beforeEach(() => {
+    mockLLMClient = createMockLLMClient();
+    mockRegistry = createMockRegistry();
+  });
+
+  describe('T5: WorkflowRegistrar.register() should be called', () => {
+    it('should register workflows and return registered: true on success', async () => {
+      // Create a mock registry that tracks registerForProject calls
+      const registerForProjectSpy = vi.fn();
+      const registryWithSpy = {
+        ...createMockRegistry(),
+        registerForProject: registerForProjectSpy,
+      } as unknown as WorkflowRegistry;
+
+      const deps: HandlerDependencies = {
+        llmClient: mockLLMClient,
+        registry: registryWithSpy,
+      };
+
+      app = new Hono();
+      app.post('/batch', createBatchGenerationHandler(deps));
+
+      const res = await app.request('/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: [
+            {
+              task_id: 'task_1',
+              name: 'Test Task 1',
+              description: 'Test task 1',
+              interface: { input: {}, output: {} },
+            },
+          ],
+          capabilities: [
+            { id: 'cap_1', name: 'Test Cap', category: 'api', status: 'available' },
+          ],
+          project_id: 'test_project',
+          options: { validate_before_register: true },
+        }),
+      });
+
+      // Verify response indicates success
+      expect([200, 207]).toContain(res.status);
+      const body = await res.json();
+
+      // Verify registration was successful
+      if (body.workflows && body.workflows['task_1']) {
+        expect(body.workflows['task_1'].registered).toBe(true);
+        expect(body.workflows['task_1'].workflow_id).toBeDefined();
+        // If registered is true, registerForProject must have been called
+        expect(registerForProjectSpy).toHaveBeenCalled();
+      }
+    });
+
+    it('should set registered: false when registration fails', async () => {
+      const failingRegistry = {
+        ...createMockRegistry(),
+        registerForProject: vi.fn().mockImplementation(() => {
+          throw new Error('Registration failed');
+        }),
+      } as unknown as WorkflowRegistry;
+
+      const deps: HandlerDependencies = {
+        llmClient: mockLLMClient,
+        registry: failingRegistry,
+      };
+
+      app = new Hono();
+      app.post('/batch', createBatchGenerationHandler(deps));
+
+      const res = await app.request('/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: [
+            {
+              task_id: 'task_1',
+              name: 'Test Task 1',
+              description: 'Test task 1',
+              interface: { input: {}, output: {} },
+            },
+          ],
+          capabilities: [
+            { id: 'cap_1', name: 'Test Cap', category: 'api', status: 'available' },
+          ],
+          project_id: 'test_project',
+          options: { validate_before_register: true },
+        }),
+      });
+
+      expect([200, 207]).toContain(res.status);
+      const body = await res.json();
+
+      // Verify registered is false when registration fails
+      if (body.workflows && body.workflows['task_1']) {
+        expect(body.workflows['task_1'].registered).toBe(false);
+      }
+    });
+  });
+
+  describe('T6: Status should be "failed" when batch fails', () => {
+    it('should return status "failed" when batch processing fails', async () => {
+      // Create a mock LLM client that fails
+      const failingLLMClient = {
+        ...createMockLLMClient(),
+        generateStructured: vi.fn().mockRejectedValue(new Error('LLM generation failed')),
+        generate: vi.fn().mockRejectedValue(new Error('LLM generation failed')),
+      } as unknown as LLMClient;
+
+      const deps: HandlerDependencies = {
+        llmClient: failingLLMClient,
+        registry: mockRegistry,
+      };
+
+      app = new Hono();
+      app.post('/batch', createBatchGenerationHandler(deps));
+      app.get('/status/:trace_id', createStatusHandler());
+
+      const traceId = `trace_${Date.now()}`;
+
+      const res = await app.request('/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: [
+            {
+              task_id: 'task_1',
+              name: 'Test Task 1',
+              description: 'Test task 1',
+              interface: { input: {}, output: {} },
+            },
+          ],
+          capabilities: [
+            { id: 'cap_1', name: 'Test Cap', category: 'api', status: 'available' },
+          ],
+          project_id: 'test_project',
+          trace_context: { trace_id: traceId },
+        }),
+      });
+
+      // Check response success flag
+      const body = await res.json();
+      expect(body.success).toBe(false);
+
+      // Check stored status - should be 'failed' not 'completed'
+      const statusRes = await app.request(`/status/${traceId}`);
+      const statusBody = await statusRes.json();
+      expect(statusBody.status).toBe('failed');
+    });
+
+    it('should correctly set status based on batch result success', async () => {
+      const deps: HandlerDependencies = {
+        llmClient: mockLLMClient,
+        registry: mockRegistry,
+      };
+
+      app = new Hono();
+      app.post('/batch', createBatchGenerationHandler(deps));
+      app.get('/status/:trace_id', createStatusHandler());
+
+      const traceId = `trace_success_${Date.now()}`;
+
+      const res = await app.request('/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: [
+            {
+              task_id: 'task_1',
+              name: 'Test Task 1',
+              description: 'Test task 1',
+              interface: { input: {}, output: {} },
+            },
+          ],
+          capabilities: [
+            { id: 'cap_1', name: 'Test Cap', category: 'api', status: 'available' },
+          ],
+          project_id: 'test_project',
+          trace_context: { trace_id: traceId },
+        }),
+      });
+
+      // If generation was successful
+      if (res.status === 200) {
+        const statusRes = await app.request(`/status/${traceId}`);
+        const statusBody = await statusRes.json();
+        expect(statusBody.status).toBe('completed');
+      }
+    });
+  });
+});

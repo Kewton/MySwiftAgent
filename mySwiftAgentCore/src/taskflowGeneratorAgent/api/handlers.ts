@@ -69,8 +69,8 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
       const langfuse = new LangfuseIntegration(deps.langfuseConfig);
       const generator = new WorkflowGenerator({ llmClient: deps.llmClient });
       const batchProcessor = new BatchProcessor({ generator });
-      // Note: registrar and errorHandler will be used in future iterations
-      void new WorkflowRegistrar({ registry: deps.registry });
+      // Issue #368: Use WorkflowRegistrar to register generated workflows
+      const registrar = new WorkflowRegistrar({ registry: deps.registry });
       void new ErrorHandler();
 
       // Start tracing
@@ -97,24 +97,34 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
       // Process batch
       const batchResult = await batchProcessor.processBatch(request);
 
-      // Register successful workflows
+      // Issue #368: Register successful workflows using WorkflowRegistrar
       const registeredWorkflows: Record<string, {
         workflow_name: string;
         registered: boolean;
         workflow_id?: string;
       }> = {};
 
-      for (const [taskId, result] of Object.entries(batchResult.workflows)) {
+      for (const [taskId, metadata] of Object.entries(batchResult.workflows)) {
         registeredWorkflows[taskId] = {
-          workflow_name: result.workflow_name,
+          workflow_name: metadata.workflow_name,
           registered: false,
         };
 
         // Try to register if validation passed
         if (request.options?.validate_before_register !== false) {
-          // Registration would happen here with actual workflow
-          registeredWorkflows[taskId].registered = true;
-          registeredWorkflows[taskId].workflow_id = result.workflow_name;
+          // Issue #368: Get actual workflow definition and register it
+          const workflow = batchResult.workflowDefinitions[taskId];
+          if (workflow) {
+            try {
+              const regResult = await registrar.register(workflow, request.project_id);
+              registeredWorkflows[taskId].registered = regResult.success;
+              registeredWorkflows[taskId].workflow_id = regResult.workflowId;
+            } catch (error) {
+              // Registration failed, log error but continue
+              console.error(`Registration failed for ${taskId}:`, error);
+              registeredWorkflows[taskId].registered = false;
+            }
+          }
         }
       }
 
@@ -131,11 +141,11 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
         );
       }
 
-      // Update status
+      // Issue #368: Fix status bug - should be 'failed' when batch fails
       const durationMs = Date.now() - startTime;
       statusStorage.set(traceId, {
         trace_id: traceId,
-        status: batchResult.success ? 'completed' : 'completed',
+        status: batchResult.success ? 'completed' : 'failed',
         total_tasks: request.tasks.length,
         completed_tasks: Object.keys(registeredWorkflows).length,
         failed_tasks: batchResult.failed_tasks.length,

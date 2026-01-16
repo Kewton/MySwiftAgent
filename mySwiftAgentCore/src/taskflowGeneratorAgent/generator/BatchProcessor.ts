@@ -8,13 +8,25 @@ import type { WorkflowGenerator } from './WorkflowGenerator.js';
 import { ErrorHandler } from '../recovery/ErrorHandler.js';
 import {
   type BatchGenerationRequest,
-  type BatchGenerationResponse,
   type WorkflowGenerationResult,
   type TaskError,
   type TaskGenerationRequest,
   type Capability,
 } from '../types/generator.js';
 import type { TaskFlowDefinition } from '../../taskflowEngine/types/TaskFlowDefinition.js';
+
+/**
+ * Issue #368: Internal batch result type with workflow definitions
+ *
+ * This type extends the public BatchGenerationResponse with actual workflow definitions
+ * for use by the Handler to register workflows with WorkflowRegistrar.
+ */
+export interface InternalBatchResult {
+  success: boolean;
+  workflows: Record<string, WorkflowGenerationResult>;
+  workflowDefinitions: Record<string, TaskFlowDefinition>;
+  failed_tasks: TaskError[];
+}
 
 /**
  * Batch Processor Configuration
@@ -82,10 +94,12 @@ export class BatchProcessor {
   /**
    * Process batch of tasks
    *
+   * Issue #368: Returns InternalBatchResult with workflowDefinitions for registration
+   *
    * @param request - Batch generation request
-   * @returns Batch generation response with results and failures
+   * @returns Internal batch result with workflow definitions and metadata
    */
-  async processBatch(request: BatchGenerationRequest): Promise<BatchGenerationResponse> {
+  async processBatch(request: BatchGenerationRequest): Promise<InternalBatchResult> {
     const { tasks, capabilities, project_id, options } = request;
 
     // Use options from request if provided
@@ -97,6 +111,7 @@ export class BatchProcessor {
       return {
         success: true,
         workflows: {},
+        workflowDefinitions: {},
         failed_tasks: [],
       };
     }
@@ -113,6 +128,7 @@ export class BatchProcessor {
 
     // Aggregate results
     const workflows: Record<string, WorkflowGenerationResult> = {};
+    const workflowDefinitions: Record<string, TaskFlowDefinition> = {};
     const failedTasks: TaskError[] = [];
 
     for (let i = 0; i < results.length; i++) {
@@ -122,10 +138,13 @@ export class BatchProcessor {
       if (!task) continue;
 
       if (result?.status === 'fulfilled' && result.value) {
+        // Store workflow metadata
         workflows[task.task_id] = {
           workflow_name: result.value.workflow_name,
           registered: false, // Will be set by WorkflowRegistrar
         };
+        // Issue #368: Store actual workflow definition for registration
+        workflowDefinitions[task.task_id] = result.value;
       } else if (result?.status === 'rejected') {
         const error = result.reason instanceof Error
           ? result.reason
@@ -142,6 +161,7 @@ export class BatchProcessor {
     return {
       success: failedTasks.length === 0,
       workflows,
+      workflowDefinitions,
       failed_tasks: failedTasks,
     };
   }

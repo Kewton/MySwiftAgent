@@ -262,3 +262,93 @@ describe('createBatchProcessor', () => {
     expect(processor).toBeInstanceOf(BatchProcessor);
   });
 });
+
+/**
+ * Issue #368: WorkflowRegistrar integration tests
+ */
+describe('BatchProcessor - workflowDefinitions (Issue #368)', () => {
+  it('should return workflowDefinitions along with metadata', async () => {
+    const mockGenerator = createMockGenerator();
+    const processor = new BatchProcessor({
+      generator: mockGenerator,
+      maxConcurrency: 3,
+    });
+
+    const capabilities: Capability[] = [
+      { id: 'api_1', name: 'API 1', category: 'api', status: 'available' },
+    ];
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_1',
+        name: 'Task 1',
+        description: 'Description 1',
+        interface: { input: {}, output: {} },
+      },
+      {
+        task_id: 'task_2',
+        name: 'Task 2',
+        description: 'Description 2',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    const result = await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    // T4: Verify workflowDefinitions is returned
+    expect(result.workflowDefinitions).toBeDefined();
+    expect(Object.keys(result.workflowDefinitions)).toHaveLength(2);
+    expect(result.workflowDefinitions['task_1']).toBeDefined();
+    expect(result.workflowDefinitions['task_2']).toBeDefined();
+
+    // Verify structure of returned workflow definitions
+    const workflow1 = result.workflowDefinitions['task_1'];
+    expect(workflow1.workflow_name).toBe('workflow_task_1');
+    expect(workflow1.steps).toBeDefined();
+    expect(workflow1.input_schema).toBeDefined();
+    expect(workflow1.output_schema).toBeDefined();
+  });
+
+  it('should only include successful workflow definitions', async () => {
+    const failingGenerator = createMockGenerator(new Set(['task_2']));
+    const processor = new BatchProcessor({
+      generator: failingGenerator,
+      maxConcurrency: 3,
+    });
+
+    const capabilities: Capability[] = [
+      { id: 'api_1', name: 'API 1', category: 'api', status: 'available' },
+    ];
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_1',
+        name: 'Task 1',
+        description: 'Description 1',
+        interface: { input: {}, output: {} },
+      },
+      {
+        task_id: 'task_2',
+        name: 'Task 2',
+        description: 'Description 2',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    const result = await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    // Only task_1 should have a workflow definition
+    expect(result.workflowDefinitions).toBeDefined();
+    expect(Object.keys(result.workflowDefinitions)).toHaveLength(1);
+    expect(result.workflowDefinitions['task_1']).toBeDefined();
+    expect(result.workflowDefinitions['task_2']).toBeUndefined();
+  });
+});
