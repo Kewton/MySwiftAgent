@@ -210,11 +210,12 @@ jobs:
           echo "🚨 Running critical tests for hotfix: ${{ matrix.project }}"
 
           # Try critical tests first, fallback to all tests
-          if uv run pytest tests/ -v -m "critical" --maxfail=5 --tb=short 2>/dev/null; then
+          # Acceptance tests are excluded from CI (require API keys, local execution only)
+          if uv run pytest tests/ -v -m "critical" --maxfail=5 --tb=short --ignore=tests/acceptance 2>/dev/null; then
             echo "✅ Critical tests passed"
           elif [[ $? -eq 5 ]]; then
             echo "⚠️ No critical-marked tests found, running basic tests"
-            uv run pytest tests/ -v --maxfail=5 -x --tb=short
+            uv run pytest tests/ -v --maxfail=5 -x --tb=short --ignore=tests/acceptance
           else
             echo "⚠️ Some critical tests failed, but proceeding with emergency hotfix"
           fi
