@@ -1,0 +1,53 @@
+{
+  "issue_number": 365,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 94.51,
+      "tests_passed": 304,
+      "tests_failed": 0
+    },
+    "verification": {
+      "status": "passed",
+      "integration_rate": "100%",
+      "dead_code_count": 0
+    },
+    "acceptance": {
+      "status": "passed",
+      "tests_passed": 25,
+      "tests_failed": 0
+    },
+    "refactoring": {
+      "status": "skipped",
+      "reason": "Code quality already satisfactory"
+    }
+  },
+  "files_created": [
+    "mySwiftAgentCore/src/capabilityManagement/registry/CapabilityRegistry.ts",
+    "mySwiftAgentCore/src/capabilityManagement/registry/ProjectManager.ts",
+    "mySwiftAgentCore/src/capabilityManagement/registry/index.ts",
+    "mySwiftAgentCore/src/capabilityManagement/api/handlers.ts",
+    "mySwiftAgentCore/src/capabilityManagement/api/routes.ts",
+    "mySwiftAgentCore/src/capabilityManagement/api/middleware.ts",
+    "mySwiftAgentCore/src/capabilityManagement/api/index.ts",
+    "mySwiftAgentCore/src/capabilityManagement/client/CapabilityClient.ts",
+    "mySwiftAgentCore/src/capabilityManagement/client/index.ts",
+    "mySwiftAgentCore/config/capabilities/default_project/index.yaml",
+    "mySwiftAgentCore/config/capabilities/default_project/google_search.yaml",
+    "mySwiftAgentCore/config/capabilities/default_project/weather_api.yaml",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/CapabilityRegistry.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/ProjectManager.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/handlers.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/CapabilityClient.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/YamlLoader.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/middleware.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/routes.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/index.test.ts",
+    "mySwiftAgentCore/tests/acceptance/test_issue_365_acceptance.py"
+  ],
+  "files_modified": [
+    "mySwiftAgentCore/src/capabilityManagement/index.ts",
+    "mySwiftAgentCore/src/shared/types/capability.types.ts"
+  ]
+}

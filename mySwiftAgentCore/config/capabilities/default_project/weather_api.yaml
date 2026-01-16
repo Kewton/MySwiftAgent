@@ -1,0 +1,44 @@
+# Weather API Capability
+# Issue #365: Sample capability for weather information
+
+id: weather_api
+name: Weather API
+description: Get current weather information for a location
+version: "1.0.0"
+status: available
+category: utility
+parameters:
+  - name: location
+    type: string
+    required: true
+    description: City name or coordinates (lat,lon)
+  - name: units
+    type: string
+    required: false
+    description: Temperature units (metric, imperial)
+    defaultValue: metric
+    validation:
+      enum:
+        - metric
+        - imperial
+returnType: object
+tags:
+  - weather
+  - api
+  - utility
+examples:
+  - description: Get weather for Tokyo
+    input:
+      location: "Tokyo"
+      units: "metric"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+
+# Internal implementation details
+_internal:
+  endpoint: https://api.openweathermap.org/data/2.5/weather
+  method: GET
+  auth_type: api_key
+  secret_key: OPENWEATHER_API_KEY
+  timeout_ms: 5000

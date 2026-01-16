@@ -216,3 +216,51 @@ export function createCapabilityManagement(
 }
 
 // Types are exported via their interface definitions above
+
+// ============================================
+// Issue #365: Extended exports for project-based capability management
+// ============================================
+
+// Registry exports
+export {
+  CapabilityRegistry,
+  createCapabilityRegistry,
+  type RegistryStats,
+} from './registry/CapabilityRegistry.js';
+
+export {
+  ProjectManager,
+  createProjectManager,
+  type ProjectInfo,
+  type ProjectUpdate,
+  type ProjectStats,
+} from './registry/ProjectManager.js';
+
+// Loader exports
+export {
+  YamlLoader,
+  CapabilitySanitizer,
+  createYamlLoader,
+  createSanitizer,
+  type YamlLoaderConfig,
+  type LoaderStrategy,
+} from './loader/YamlLoader.js';
+
+// API exports
+export {
+  createCapabilityHandlers,
+  createCapabilityRoutes,
+  createRateLimiter,
+  requireProject,
+  requireAdminForCreate,
+  type CapabilityHandlerDependencies,
+  type RateLimitConfig,
+} from './api/index.js';
+
+// Client exports
+export {
+  CapabilityClient,
+  createCapabilityClient,
+  CapabilityClientError,
+  type CapabilityClientConfig,
+} from './client/CapabilityClient.js';

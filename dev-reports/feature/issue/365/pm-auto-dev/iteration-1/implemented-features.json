@@ -1,0 +1,189 @@
+{
+  "issue_number": 365,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "CapabilityRegistry",
+      "type": "class",
+      "file_path": "src/capabilityManagement/registry/CapabilityRegistry.ts",
+      "line_number": 44,
+      "description": "Project-based capability management with registerForProject, getByProject, filter support",
+      "expected_callers": ["createCapabilityHandlers", "API handlers"],
+      "expected_call_location": "src/capabilityManagement/api/handlers.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "ProjectManager",
+      "type": "class",
+      "file_path": "src/capabilityManagement/registry/ProjectManager.ts",
+      "line_number": 42,
+      "description": "Project lifecycle management with createProject, getProject, listProjects",
+      "expected_callers": ["Application initialization"],
+      "expected_call_location": "src/capabilityManagement/api/handlers.ts or app.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "createCapabilityHandlers",
+      "type": "function",
+      "file_path": "src/capabilityManagement/api/handlers.ts",
+      "line_number": 40,
+      "description": "Factory function to create API request handlers with dependencies injection",
+      "expected_callers": ["API routes setup"],
+      "expected_call_location": "src/capabilityManagement/api/routes.ts or app.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "createCapabilityRoutes",
+      "type": "function",
+      "file_path": "src/capabilityManagement/api/routes.ts",
+      "line_number": 15,
+      "description": "Creates Hono router with capability API endpoints",
+      "expected_callers": ["Application setup"],
+      "expected_call_location": "src/index.ts or app.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "CapabilityClient",
+      "type": "class",
+      "file_path": "src/capabilityManagement/client/CapabilityClient.ts",
+      "line_number": 36,
+      "description": "TypeScript HTTP client SDK for capability API",
+      "expected_callers": ["External services (expertAgent)"],
+      "expected_call_location": "External usage via npm package"
+    },
+    {
+      "feature_id": "F6",
+      "name": "createRateLimiter",
+      "type": "function",
+      "file_path": "src/capabilityManagement/api/middleware.ts",
+      "line_number": 41,
+      "description": "Creates rate limiting middleware for API protection",
+      "expected_callers": ["API route setup"],
+      "expected_call_location": "src/capabilityManagement/api/routes.ts"
+    },
+    {
+      "feature_id": "F7",
+      "name": "requireProject",
+      "type": "function",
+      "file_path": "src/capabilityManagement/api/middleware.ts",
+      "line_number": 77,
+      "description": "Middleware to validate project query parameter",
+      "expected_callers": ["API route handlers"],
+      "expected_call_location": "src/capabilityManagement/api/routes.ts"
+    },
+    {
+      "feature_id": "F8",
+      "name": "YamlLoader",
+      "type": "class",
+      "file_path": "src/capabilityManagement/loader/YamlLoader.ts",
+      "line_number": 52,
+      "description": "Secure YAML loading with JSON_SCHEMA for XXE prevention",
+      "expected_callers": ["CapabilityRegistry.loadFromDisk"],
+      "expected_call_location": "src/capabilityManagement/registry/CapabilityRegistry.ts"
+    },
+    {
+      "feature_id": "F9",
+      "name": "CapabilitySanitizer",
+      "type": "class",
+      "file_path": "src/capabilityManagement/loader/YamlLoader.ts",
+      "line_number": 203,
+      "description": "Removes _internal section from capabilities for client responses",
+      "expected_callers": ["API handlers"],
+      "expected_call_location": "src/capabilityManagement/api/handlers.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["CapabilityRegistry.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["ProjectManager.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["handlers.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["routes.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["CapabilityClient.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["middleware.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": ["middleware.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F8",
+      "unit_tests": ["YamlLoader.test.ts"],
+      "integration_tests": []
+    },
+    {
+      "feature_id": "F9",
+      "unit_tests": ["YamlLoader.test.ts"],
+      "integration_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "src/capabilityManagement/api/handlers.ts",
+      "integration_type": "dependency_injection",
+      "integration_method": "CapabilityHandlerDependencies.registry"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "src/capabilityManagement/api/routes.ts",
+      "integration_type": "factory_call",
+      "integration_method": "createCapabilityHandlers(deps)"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "src/capabilityManagement/index.ts",
+      "integration_type": "export",
+      "integration_method": "export { createCapabilityRoutes }"
+    },
+    {
+      "feature_id": "F8",
+      "integration_file": "src/capabilityManagement/registry/CapabilityRegistry.ts",
+      "integration_type": "import_usage",
+      "integration_method": "Used in loadFromDisk() method"
+    },
+    {
+      "feature_id": "F9",
+      "integration_file": "src/capabilityManagement/api/handlers.ts",
+      "integration_type": "dependency_injection",
+      "integration_method": "CapabilityHandlerDependencies.sanitizer"
+    }
+  ],
+  "config_files_created": [
+    {
+      "file": "config/capabilities/default_project/index.yaml",
+      "description": "Capability list for default project"
+    },
+    {
+      "file": "config/capabilities/default_project/google_search.yaml",
+      "description": "Google Search capability with _internal section"
+    },
+    {
+      "file": "config/capabilities/default_project/weather_api.yaml",
+      "description": "Weather API capability with _internal section"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "issue_number": 365,
+  "iteration": 1,
+  "acceptance_plan_path": "dev-reports/feature/issue/365/acceptance-plan.md",
+  "tdd_result_path": "dev-reports/feature/issue/365/pm-auto-dev/iteration-1/tdd-result.json",
+  "implemented_features_path": "dev-reports/feature/issue/365/pm-auto-dev/iteration-1/implemented-features.json",
+  "project_root": "/Users/maenokota/share/work/github_kewton/MySwiftAgent",
+  "test_target_project": "mySwiftAgentCore",
+  "acceptance_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_365_acceptance.py",
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "name": "Capability一覧取得（プロジェクト指定）",
+      "acceptance_criteria": ["AC-1", "AC-3"],
+      "test_method": "E2E",
+      "priority": "high"
+    },
+    {
+      "id": "TC-002",
+      "name": "特定Capability取得",
+      "acceptance_criteria": ["AC-3"],
+      "test_method": "E2E",
+      "priority": "high"
+    },
+    {
+      "id": "TC-003",
+      "name": "_internal除外確認",
+      "acceptance_criteria": ["AC-4"],
+      "test_method": "E2E/セキュリティ",
+      "priority": "critical"
+    },
+    {
+      "id": "TC-004",
+      "name": "YAML形式取得",
+      "acceptance_criteria": ["AC-5"],
+      "test_method": "E2E",
+      "priority": "high"
+    },
+    {
+      "id": "TC-005",
+      "name": "認証なしアクセス拒否",
+      "acceptance_criteria": ["AC-3"],
+      "test_method": "セキュリティ",
+      "priority": "critical"
+    },
+    {
+      "id": "TC-006",
+      "name": "Capability登録（Admin権限）",
+      "acceptance_criteria": ["AC-1"],
+      "test_method": "E2E",
+      "priority": "medium"
+    },
+    {
+      "id": "TC-007",
+      "name": "権限不足での登録拒否",
+      "acceptance_criteria": ["AC-3"],
+      "test_method": "セキュリティ",
+      "priority": "high"
+    },
+    {
+      "id": "TC-008",
+      "name": "Python（expertAgent）からの利用",
+      "acceptance_criteria": ["AC-6"],
+      "test_method": "統合",
+      "priority": "high"
+    },
+    {
+      "id": "TC-009",
+      "name": "YAML形式でのPython利用（LLMプロンプト用）",
+      "acceptance_criteria": ["AC-5", "AC-6"],
+      "test_method": "統合",
+      "priority": "high"
+    },
+    {
+      "id": "TC-010",
+      "name": "セキュアYAML読込（悪意のあるYAML拒否）",
+      "acceptance_criteria": [],
+      "test_method": "セキュリティ",
+      "priority": "critical"
+    }
+  ],
+  "services_required": [
+    {
+      "name": "mySwiftAgentCore",
+      "url": "http://localhost:8006",
+      "health_check": "GET /health"
+    }
+  ],
+  "environment_variables": {
+    "API_TOKEN": "Bearer token for API authentication",
+    "ADMIN_TOKEN": "Admin token for capability registration"
+  },
+  "skip_service_dependency": true,
+  "test_mode": "unit_test_based",
+  "note": "受入テストはサービス起動なしで単体テストベースで検証。API E2Eはモックを使用し、セキュリティ検証はYamlLoaderとCapabilitySanitizerの単体テストで確認。"
+}

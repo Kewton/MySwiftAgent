@@ -1,0 +1,121 @@
+{
+  "issue_number": 365,
+  "issue_title": "feat(mySwiftAgentCore): capabilityManagement - Capability一元管理システムの実装",
+  "target_project": "mySwiftAgentCore",
+  "acceptance_criteria": [
+    "プロジェクト単位でcapabilitiesを管理できる",
+    "既存YAMLファイルがdefault_projectに移行されている",
+    "REST API経由でcapabilitiesを取得できる",
+    "クライアント向けレスポンスから内部詳細（_internal）が除外される",
+    "YAML形式でcapabilitiesを返却できる",
+    "expertAgent（Python）からHTTP経由で利用できる",
+    "単体テストカバレッジ90%以上"
+  ],
+  "implementation_tasks": [
+    "Task 1.2: CapabilityRegistry.ts実装（プロジェクト単位管理機能追加）",
+    "Task 1.2: ProjectManager.ts実装",
+    "Task 1.3: SchemaValidator.ts実装（Zodバリデーション統合）",
+    "Task 1.4: API routes.ts - APIエンドポイント定義",
+    "Task 1.4: API handlers.ts - リクエストハンドラ実装",
+    "Task 1.4: API middleware.ts - 認証・レート制限統合",
+    "Task 1.5: CapabilityClient.ts実装（TypeScript SDK）",
+    "Task 2.1: 既存YAML移行（expertAgentからdefault_projectへ）",
+    "Task 2.2: 単体テスト実装"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.2",
+      "description": "レジストリ実装（CapabilityRegistry.ts, ProjectManager.ts）",
+      "estimated_hours": 3,
+      "deliverables": [
+        "src/capabilityManagement/registry/CapabilityRegistry.ts",
+        "src/capabilityManagement/registry/ProjectManager.ts"
+      ],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ローダー実装（SchemaValidator.ts）",
+      "estimated_hours": 2,
+      "deliverables": [
+        "src/capabilityManagement/loader/SchemaValidator.ts"
+      ],
+      "dependencies": ["1.1"],
+      "status": "partially_completed",
+      "notes": "YamlLoader.ts, Sanitizer.tsは実装済み"
+    },
+    {
+      "task_id": "1.4",
+      "description": "API実装（routes.ts, handlers.ts, middleware.ts）",
+      "estimated_hours": 4,
+      "deliverables": [
+        "src/capabilityManagement/api/routes.ts",
+        "src/capabilityManagement/api/handlers.ts",
+        "src/capabilityManagement/api/middleware.ts"
+      ],
+      "dependencies": ["1.2", "1.3"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "クライアントライブラリ実装",
+      "estimated_hours": 2,
+      "deliverables": [
+        "src/capabilityManagement/client/CapabilityClient.ts"
+      ],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "既存YAML移行",
+      "estimated_hours": 3,
+      "deliverables": [
+        "config/capabilities/default_project/index.yaml",
+        "config/capabilities/default_project/*.yaml"
+      ],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "単体テスト実装",
+      "estimated_hours": 4,
+      "deliverables": [
+        "tests/unit/capabilityManagement/CapabilityRegistry.test.ts",
+        "tests/unit/capabilityManagement/YamlLoader.test.ts",
+        "tests/unit/capabilityManagement/handlers.test.ts",
+        "tests/unit/capabilityManagement/CapabilityClient.test.ts"
+      ],
+      "dependencies": ["1.2", "1.3", "1.4", "1.5"]
+    }
+  ],
+  "already_completed": [
+    "src/shared/types/capability.types.ts（型定義拡張済み）",
+    "src/capabilityManagement/loader/YamlLoader.ts（セキュアYAMLローダー）",
+    "src/capabilityManagement/loader/index.ts（エクスポート）"
+  ],
+  "deliverables_checklist": [
+    "src/capabilityManagement/registry/CapabilityRegistry.ts",
+    "src/capabilityManagement/registry/ProjectManager.ts",
+    "src/capabilityManagement/api/routes.ts",
+    "src/capabilityManagement/api/handlers.ts",
+    "src/capabilityManagement/client/CapabilityClient.ts",
+    "config/capabilities/default_project/index.yaml",
+    "tests/unit/capabilityManagement/*.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー0件",
+    "TypeScriptビルド成功"
+  ],
+  "target_coverage": 90,
+  "design_patterns": [
+    "Registry Pattern（既存CapabilityManagement拡張）",
+    "Strategy Pattern（LoaderStrategy）",
+    "Facade Pattern（API handlers）"
+  ],
+  "security_requirements": [
+    "JSON_SCHEMAによるセキュアなYAML読込（実装済み）",
+    "_internal セクションの除外（CapabilitySanitizer実装済み）",
+    "認証ミドルウェアによるAPIアクセス制御"
+  ]
+}

@@ -1,0 +1,45 @@
+# Google Search Capability
+# Issue #365: Sample capability with _internal section
+
+id: google_search
+name: Google Search
+description: Search the web using Google Custom Search API
+version: "1.0.0"
+status: available
+category: search
+parameters:
+  - name: query
+    type: string
+    required: true
+    description: The search query string
+  - name: num_results
+    type: number
+    required: false
+    description: Number of results to return (1-10)
+    defaultValue: 10
+    validation:
+      min: 1
+      max: 10
+returnType: object
+tags:
+  - search
+  - web
+  - google
+examples:
+  - description: Basic search
+    input:
+      query: "TypeScript best practices"
+      num_results: 5
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+
+# Internal implementation details (not exposed to clients)
+_internal:
+  endpoint: https://www.googleapis.com/customsearch/v1
+  method: GET
+  auth_type: api_key
+  secret_key: GOOGLE_API_KEY
+  timeout_ms: 10000
+  config:
+    search_engine_id: GOOGLE_CSE_ID

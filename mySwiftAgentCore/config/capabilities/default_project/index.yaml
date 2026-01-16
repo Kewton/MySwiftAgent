@@ -1,0 +1,6 @@
+# Default Project Capability Index
+# Issue #365: Capability list for the default project
+
+capabilities:
+  - google_search
+  - weather_api
