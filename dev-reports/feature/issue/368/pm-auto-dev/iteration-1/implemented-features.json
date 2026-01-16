@@ -1,0 +1,98 @@
+{
+  "issue_number": 368,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "InternalBatchResult",
+      "type": "interface",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+      "line_number": 24,
+      "description": "BatchProcessor の内部結果型。workflowDefinitions フィールドを含む",
+      "expected_callers": ["handlers.ts - createBatchGenerationHandler"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "workflowDefinitions",
+      "type": "property",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+      "line_number": 27,
+      "description": "生成されたワークフロー定義を保持するフィールド",
+      "expected_callers": ["handlers.ts - registration loop"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts:116"
+    },
+    {
+      "feature_id": "F3",
+      "name": "registrar.register()",
+      "type": "method_call",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "line_number": 119,
+      "description": "WorkflowRegistrar.register() の実際の呼び出し",
+      "expected_callers": ["createBatchGenerationHandler"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "status bug fix",
+      "type": "code_fix",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "line_number": 148,
+      "description": "ステータス更新バグの修正: 'completed' : 'completed' → 'completed' : 'failed'",
+      "expected_callers": ["statusStorage.set"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts:146-148"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["should return workflowDefinitions along with metadata"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["should only include successful workflow definitions"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001", "TC-007"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "should register workflows and return registered: true on success",
+        "should set registered: false when registration fails"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-002", "TC-003", "TC-004"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [
+        "should return status 'failed' when batch processing fails",
+        "should correctly set status based on batch result success"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-005", "TC-006"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "integration_type": "type_usage",
+      "integration_method": "BatchProcessor.processBatch() returns InternalBatchResult"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "integration_type": "property_access",
+      "integration_method": "batchResult.workflowDefinitions[taskId]"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "integration_type": "method_call",
+      "integration_method": "registrar.register(workflow, request.project_id)"
+    }
+  ]
+}

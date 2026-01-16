@@ -1,0 +1,56 @@
+{
+  "issue_number": 368,
+  "issue_title": "taskflowGeneratorAgent: WorkflowRegistrar 統合とステータス更新の修正",
+  "target_project": "mySwiftAgentCore",
+  "acceptance_criteria": [
+    "生成成功したワークフローが WorkflowRegistrar.register() で登録される",
+    "登録失敗時は適切なエラーハンドリングが行われる",
+    "失敗時のステータスが 'failed' になる",
+    "単体テストで登録フローを検証"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T1",
+      "description": "BatchProcessor に InternalBatchResult 型を追加し、workflowDefinitions フィールドを含めて返却するよう修正",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts"
+    },
+    {
+      "id": "T2",
+      "description": "Handler で WorkflowRegistrar.register() を実際に呼び出し、各ワークフローを登録",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts"
+    },
+    {
+      "id": "T3",
+      "description": "ステータス更新のバグ修正: 'completed' : 'completed' を 'completed' : 'failed' に修正",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts"
+    },
+    {
+      "id": "T4",
+      "description": "BatchProcessor のテスト追加: workflowDefinitions が返却されることを検証",
+      "file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts"
+    },
+    {
+      "id": "T5",
+      "description": "Handler のテスト追加: WorkflowRegistrar.register() 呼び出しを検証",
+      "file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts"
+    },
+    {
+      "id": "T6",
+      "description": "Handler のテスト追加: 失敗時のステータスが 'failed' になることを検証",
+      "file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts"
+    }
+  ],
+  "design_policy_path": "dev-reports/feature/issue/368/design-policy.md",
+  "acceptance_plan_path": "dev-reports/feature/issue/368/acceptance-plan.md",
+  "target_coverage": 90,
+  "test_files": [
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts"
+  ],
+  "key_code_locations": {
+    "BatchProcessor": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+    "handlers": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+    "WorkflowRegistrar": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+    "types": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts"
+  }
+}

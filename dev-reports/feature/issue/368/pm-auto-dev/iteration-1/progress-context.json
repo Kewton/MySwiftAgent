@@ -1,0 +1,73 @@
+{
+  "issue_number": 368,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "unit_tests": {
+        "total": 914,
+        "passed": 914,
+        "failed": 0
+      },
+      "issue_specific_tests": {
+        "handlers.test.ts": 7,
+        "BatchProcessor.test.ts": 2,
+        "total": 9
+      },
+      "coverage": 96.49
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": {
+        "TC-001": "passed",
+        "TC-002": "passed",
+        "TC-003": "passed",
+        "TC-004": "passed",
+        "TC-005": "passed",
+        "TC-006": "passed",
+        "TC-007": "passed",
+        "TC-008": "skipped (optional - service not running)"
+      }
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "Bug fix implementation with minimal scope"
+    },
+    "verification": {
+      "status": "passed",
+      "integration_rate": "100%",
+      "dead_code": 0
+    }
+  },
+  "implemented_features": [
+    {
+      "name": "InternalBatchResult interface",
+      "file": "BatchProcessor.ts",
+      "description": "内部結果型を追加し、workflowDefinitions フィールドを含む"
+    },
+    {
+      "name": "workflowDefinitions retention",
+      "file": "BatchProcessor.ts",
+      "description": "processBatch で生成されたワークフロー定義を保持して返却"
+    },
+    {
+      "name": "WorkflowRegistrar.register() integration",
+      "file": "handlers.ts",
+      "description": "WorkflowRegistrar を実際に使用してワークフローを登録"
+    },
+    {
+      "name": "Status bug fix",
+      "file": "handlers.ts",
+      "description": "'completed' : 'completed' を 'completed' : 'failed' に修正"
+    }
+  ],
+  "commits": [
+    "39f8233: feat(taskflowGeneratorAgent): Issue #368 - WorkflowRegistrar integration and status fix"
+  ],
+  "files_modified": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts"
+  ]
+}

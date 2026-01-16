@@ -1,0 +1,83 @@
+{
+  "issue_number": 368,
+  "feature_summary": "WorkflowRegistrar 統合とステータス更新の修正",
+  "acceptance_criteria": [
+    "生成成功したワークフローが WorkflowRegistrar.register() で登録される",
+    "登録失敗時は適切なエラーハンドリングが行われる",
+    "失敗時のステータスが 'failed' になる",
+    "単体テストで登録フローを検証"
+  ],
+  "labels": ["bug", "fix"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": ["mySwiftAgentCore"],
+  "external_dependencies": ["LLM API (OpenAI/Anthropic)"],
+  "test_cases": [
+    {
+      "tc_id": "TC-001",
+      "description": "BatchProcessor が workflowDefinitions を返却する",
+      "type": "unit",
+      "method": "vitest"
+    },
+    {
+      "tc_id": "TC-002",
+      "description": "Handler が WorkflowRegistrar.register() を呼び出す",
+      "type": "unit",
+      "method": "vitest"
+    },
+    {
+      "tc_id": "TC-003",
+      "description": "登録成功時に registered: true が設定される",
+      "type": "unit",
+      "method": "vitest"
+    },
+    {
+      "tc_id": "TC-004",
+      "description": "登録失敗時に registered: false が設定される",
+      "type": "unit",
+      "method": "vitest"
+    },
+    {
+      "tc_id": "TC-005",
+      "description": "失敗時のステータスが 'failed' になる",
+      "type": "unit",
+      "method": "vitest"
+    },
+    {
+      "tc_id": "TC-006",
+      "description": "成功時のステータスが 'completed' になる",
+      "type": "unit",
+      "method": "vitest"
+    },
+    {
+      "tc_id": "TC-007",
+      "description": "デッドコード検証 - InternalBatchResult 使用確認",
+      "type": "static",
+      "method": "grep"
+    },
+    {
+      "tc_id": "TC-008",
+      "description": "E2E API テスト - ワークフロー登録確認",
+      "type": "e2e",
+      "method": "curl"
+    }
+  ],
+  "acceptance_plan_path": "dev-reports/feature/issue/368/acceptance-plan.md",
+  "design_policy_path": "dev-reports/feature/issue/368/design-policy.md",
+  "vitest_test_files": [
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts"
+  ],
+  "health_checks": [
+    {
+      "service": "mySwiftAgentCore",
+      "url": "http://localhost:8106/health"
+    }
+  ],
+  "verification_results": {
+    "integration_rate": "100%",
+    "dead_code": 0,
+    "unit_tests_passed": true,
+    "all_features_integrated": true
+  }
+}

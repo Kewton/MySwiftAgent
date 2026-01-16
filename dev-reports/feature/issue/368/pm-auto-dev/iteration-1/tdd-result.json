@@ -1,0 +1,89 @@
+{
+  "status": "success",
+  "issue_number": 368,
+  "coverage": 96.49,
+  "unit_tests": {
+    "total": 914,
+    "passed": 914,
+    "failed": 0
+  },
+  "static_analysis": {
+    "eslint_errors": 0,
+    "typescript_errors": 0
+  },
+  "executed_tasks": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "skipped_tasks": [],
+  "files_modified": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts"
+  ],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": true,
+    "exports_added": true
+  },
+  "commits": [
+    "39f8233: feat(taskflowGeneratorAgent): Issue #368 - WorkflowRegistrar integration and status fix"
+  ],
+  "implementation_details": {
+    "T1": {
+      "description": "BatchProcessor に InternalBatchResult 型を追加し、workflowDefinitions フィールドを含めて返却",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+      "changes": [
+        "Added InternalBatchResult interface",
+        "Modified processBatch return type from BatchGenerationResponse to InternalBatchResult",
+        "Added workflowDefinitions storage in processBatch method"
+      ]
+    },
+    "T2": {
+      "description": "Handler で WorkflowRegistrar.register() を実際に呼び出し",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "changes": [
+        "Changed from void instantiation to actual registrar usage",
+        "Added registrar.register(workflow, project_id) call",
+        "Added try-catch for registration failures"
+      ]
+    },
+    "T3": {
+      "description": "ステータス更新のバグ修正",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "changes": [
+        "Changed 'completed' : 'completed' to 'completed' : 'failed'"
+      ]
+    },
+    "T4": {
+      "description": "BatchProcessor のテスト追加",
+      "file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts",
+      "changes": [
+        "Added test: should return workflowDefinitions along with metadata",
+        "Added test: should only include successful workflow definitions"
+      ]
+    },
+    "T5": {
+      "description": "Handler のテスト追加 - WorkflowRegistrar.register() 呼び出し検証",
+      "file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts",
+      "changes": [
+        "Added test: should register workflows and return registered: true on success",
+        "Added test: should set registered: false when registration fails"
+      ]
+    },
+    "T6": {
+      "description": "Handler のテスト追加 - ステータスバグ修正検証",
+      "file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts",
+      "changes": [
+        "Added test: should return status 'failed' when batch processing fails",
+        "Added test: should correctly set status based on batch result success"
+      ]
+    }
+  },
+  "message": "TDD implementation completed. All 6 tasks executed successfully. Coverage 96.49% on BatchProcessor.ts. All 914 tests pass. Static analysis clean."
+}
