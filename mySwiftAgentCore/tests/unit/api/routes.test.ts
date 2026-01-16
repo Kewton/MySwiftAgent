@@ -17,7 +17,8 @@ describe('API Routes', () => {
 
   it('should return service info at root', async () => {
     const app = new Hono();
-    app.route('/', createApiRoutes(config));
+    const routes = await createApiRoutes(config);
+    app.route('/', routes);
 
     const res = await app.request('/');
     expect(res.status).toBe(200);
@@ -31,7 +32,8 @@ describe('API Routes', () => {
 
   it('should return API v1 info', async () => {
     const app = new Hono();
-    app.route('/', createApiRoutes(config));
+    const routes = await createApiRoutes(config);
+    app.route('/', routes);
 
     const res = await app.request('/api/v1');
     expect(res.status).toBe(200);
@@ -43,7 +45,8 @@ describe('API Routes', () => {
 
   it('should return taskflow stub', async () => {
     const app = new Hono();
-    app.route('/', createApiRoutes(config));
+    const routes = await createApiRoutes(config);
+    app.route('/', routes);
 
     const res = await app.request('/api/v1/taskflow');
     expect(res.status).toBe(200);
@@ -53,21 +56,24 @@ describe('API Routes', () => {
     expect(body.status).toBe('stub');
   });
 
-  it('should return generator stub', async () => {
+  it('should return generator routes', async () => {
     const app = new Hono();
-    app.route('/', createApiRoutes(config));
+    const routes = await createApiRoutes(config);
+    app.route('/', routes);
 
-    const res = await app.request('/api/v1/generator');
+    // Generator routes are now real (not stubs)
+    // Check that the health endpoint exists
+    const res = await app.request('/api/v1/generator/health');
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.service).toBe('TaskFlow Generator Agent');
-    expect(body.status).toBe('stub');
+    expect(body.status).toBe('healthy');
   });
 
   it('should return capabilities stub', async () => {
     const app = new Hono();
-    app.route('/', createApiRoutes(config));
+    const routes = await createApiRoutes(config);
+    app.route('/', routes);
 
     const res = await app.request('/api/v1/capabilities');
     expect(res.status).toBe(200);
@@ -79,7 +85,8 @@ describe('API Routes', () => {
 
   it('should include health routes', async () => {
     const app = new Hono();
-    app.route('/', createApiRoutes(config));
+    const routes = await createApiRoutes(config);
+    app.route('/', routes);
 
     const res = await app.request('/health');
     expect(res.status).toBe(200);
@@ -95,7 +102,8 @@ describe('API Routes', () => {
     };
 
     const app = new Hono();
-    app.route('/', createApiRoutes(configWithVault));
+    const routes = await createApiRoutes(configWithVault);
+    app.route('/', routes);
 
     // Just verify it doesn't crash
     const res = await app.request('/health');

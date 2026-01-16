@@ -46,8 +46,11 @@ function getServerConfig(): ServerConfig {
 
 /**
  * Create the Hono application
+ *
+ * Note: This is an async function to support LLM client initialization
+ * which requires fetching API keys from MyVault.
  */
-function createApp(): Hono {
+async function createApp(): Promise<Hono> {
   const app = new Hono();
   const startTime = new Date();
 
@@ -84,8 +87,8 @@ function createApp(): Hono {
     );
   }
 
-  // Mount API routes
-  const apiRoutes = createApiRoutes({
+  // Mount API routes (await since it's async now)
+  const apiRoutes = await createApiRoutes({
     serviceName: SERVICE_NAME,
     version: VERSION,
     startTime,
@@ -116,7 +119,7 @@ async function startServer(): Promise<void> {
   }
 
   const config = getServerConfig();
-  const app = createApp();
+  const app = await createApp();
 
   console.log(`
 ========================================
@@ -148,8 +151,49 @@ startServer().catch((error) => {
 export { createApp, startServer, SERVICE_NAME, VERSION };
 
 // Re-export modules
+// Note: Named exports to avoid conflicts between modules
 export * from './shared/types/index.js';
 export * from './shared/context/index.js';
 export * from './taskflowEngine/index.js';
-export * from './taskflowGeneratorAgent/index.js';
+// taskflowGeneratorAgent has its own types that may conflict, import separately
+export {
+  // LLM
+  BaseLLMClient,
+  LLMParseError,
+  LLMValidationError,
+  LLMApiError,
+  AnthropicClient,
+  OpenAIClient,
+  GeminiClient,
+  LLMClientFactory,
+  // Generator
+  WorkflowGenerator,
+  BatchProcessor,
+  WorkflowRegistrar,
+  // Recovery
+  ErrorHandler,
+  RetryStrategy,
+  // Prompts
+  PromptBuilder,
+  // Tracing
+  LangfuseIntegration,
+  // API
+  createGeneratorRoutes,
+  createGeneratorApi,
+  createBatchGenerationHandler,
+  createStatusHandler,
+  createHealthHandler,
+  // Client
+  TaskFlowGeneratorClient,
+  TaskFlowGeneratorClientError,
+  // Legacy
+  TaskFlowGeneratorAgent,
+  createTaskFlowGeneratorAgent,
+  // Types (with prefixes to avoid conflicts)
+  type GenerationRequest,
+  type GenerationConstraints,
+  type LegacyGenerationResult,
+  type TaskFlowGeneratorConfig,
+  type ValidationResult as GeneratorValidationResult,
+} from './taskflowGeneratorAgent/index.js';
 export * from './capabilityManagement/index.js';

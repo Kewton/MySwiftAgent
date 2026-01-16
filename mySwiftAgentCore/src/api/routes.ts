@@ -6,6 +6,10 @@
 
 import { Hono } from 'hono';
 import { createHealthRoutes, createMyVaultCheck, type HealthCheckConfig } from './health.js';
+import { createGeneratorApi, type HandlerDependencies } from '../taskflowGeneratorAgent/api/index.js';
+import { WorkflowRegistry } from '../taskflowEngine/registry/WorkflowRegistry.js';
+import { createSecretManagerFromEnv } from '../shared/context/SecretManager.js';
+import { AnthropicClient } from '../taskflowGeneratorAgent/llm/clients/AnthropicClient.js';
 
 /**
  * API configuration
@@ -33,9 +37,47 @@ interface RootResponse {
 }
 
 /**
- * Create main API router
+ * Create generator dependencies
+ *
+ * Note: This function creates dependencies for the TaskFlow Generator API handlers.
+ * The handlers will create WorkflowGenerator and BatchProcessor internally.
  */
-export function createApiRoutes(config: ApiConfig): Hono {
+async function createGeneratorDependencies(): Promise<HandlerDependencies> {
+  // Create workflow registry for registration
+  const registry = new WorkflowRegistry();
+
+  // Get API key from SecretManager (MyVault or environment fallback)
+  const secretManager = createSecretManagerFromEnv();
+  const apiKey = await secretManager.get('ANTHROPIC_API_KEY') ?? '';
+
+  // Create LLM client (default: Anthropic Claude)
+  const llmClient = new AnthropicClient({
+    apiKey,
+    defaultModel: 'claude-3-5-sonnet-20241022',
+  });
+
+  // Langfuse configuration from environment
+  const langfuseConfig = {
+    enabled: process.env['LANGFUSE_ENABLED'] === 'true',
+    publicKey: process.env['LANGFUSE_PUBLIC_KEY'],
+    secretKey: process.env['LANGFUSE_SECRET_KEY'],
+    baseUrl: process.env['LANGFUSE_BASE_URL'],
+  };
+
+  return {
+    llmClient,
+    registry,
+    langfuseConfig,
+  };
+}
+
+/**
+ * Create main API router
+ *
+ * Note: This is an async function to support LLM client initialization
+ * which requires fetching API keys from MyVault.
+ */
+export async function createApiRoutes(config: ApiConfig): Promise<Hono> {
   const app = new Hono();
 
   // Health check configuration
@@ -92,14 +134,10 @@ export function createApiRoutes(config: ApiConfig): Hono {
     });
   });
 
-  // TaskFlow Generator routes (stub)
-  app.get('/api/v1/generator', (c) => {
-    return c.json({
-      service: 'TaskFlow Generator Agent',
-      status: 'stub',
-      message: 'TaskFlow Generator Agent API is not yet implemented',
-    });
-  });
+  // TaskFlow Generator routes - Issue #364 integration
+  const generatorDeps = await createGeneratorDependencies();
+  const generatorApi = createGeneratorApi(generatorDeps);
+  app.route('/', generatorApi);
 
   // Capabilities routes (stub)
   app.get('/api/v1/capabilities', (c) => {
