@@ -1,0 +1,60 @@
+{
+  "status": "success",
+  "issue_number": 369,
+  "iteration": 1,
+  "coverage": 100,
+  "unit_tests": {
+    "total": 931,
+    "passed": 931,
+    "failed": 0,
+    "skipped": 0
+  },
+  "security_validator_tests": {
+    "total": 39,
+    "passed": 39,
+    "failed": 0,
+    "issue_369_specific": 10
+  },
+  "static_analysis": {
+    "eslint_errors": 0,
+    "typescript_errors": 0
+  },
+  "files_modified": [
+    "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+    "src/taskflowGeneratorAgent/validator/validators/security-config.ts",
+    "tests/unit/taskflowGeneratorAgent/validator/validators/SecurityValidator.test.ts"
+  ],
+  "features_implemented": [
+    {
+      "name": "isShellContext",
+      "type": "method",
+      "file": "SecurityValidator.ts",
+      "description": "Context-aware shell detection using Set and RegExp"
+    },
+    {
+      "name": "getContextType",
+      "type": "method",
+      "file": "SecurityValidator.ts",
+      "description": "Returns ValidationContextType for a step"
+    },
+    {
+      "name": "getMetrics",
+      "type": "method",
+      "file": "SecurityValidator.ts",
+      "description": "Returns collected security metrics"
+    },
+    {
+      "name": "debugLog",
+      "type": "method",
+      "file": "SecurityValidator.ts",
+      "description": "Conditional debug logging"
+    },
+    {
+      "name": "security-config.ts",
+      "type": "module",
+      "file": "security-config.ts",
+      "description": "Externalized security configuration"
+    }
+  ],
+  "test_duration_ms": 21620
+}

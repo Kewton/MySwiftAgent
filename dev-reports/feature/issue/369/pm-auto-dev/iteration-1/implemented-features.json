@@ -1,0 +1,138 @@
+{
+  "issue_number": 369,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "isShellContext",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "line_number": 143,
+      "description": "Context-aware shell detection using Set and RegExp patterns",
+      "expected_callers": ["getContextType", "checkDangerousPatterns"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "getContextType",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "line_number": 168,
+      "description": "Returns ValidationContextType (SHELL_EXECUTION, JAVASCRIPT_SANDBOX, TEMPLATE_ENGINE, DATA_REFERENCE)",
+      "expected_callers": ["checkDangerousPatterns"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "getMetrics",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "line_number": 65,
+      "description": "Returns SecurityMetrics collected during validation",
+      "expected_callers": ["test code", "monitoring code"],
+      "expected_call_location": "tests/unit/taskflowGeneratorAgent/validator/validators/SecurityValidator.test.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "debugLog",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "line_number": 381,
+      "description": "Conditional debug logging when config.debug is true",
+      "expected_callers": ["validate", "isShellContext", "getContextType"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "security-config.ts",
+      "type": "module",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/security-config.ts",
+      "line_number": 1,
+      "description": "Externalized security configuration with SHELL_STEP_TYPES, SHELL_FIELD_PATTERNS, ValidationContextType, etc.",
+      "expected_callers": ["SecurityValidator constructor"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "SHELL_STEP_TYPES",
+      "type": "constant",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/security-config.ts",
+      "line_number": 45,
+      "description": "Set of shell step types for O(1) lookup",
+      "expected_callers": ["getShellStepTypes"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/security-config.ts"
+    },
+    {
+      "feature_id": "F7",
+      "name": "SHELL_FIELD_PATTERNS",
+      "type": "constant",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/security-config.ts",
+      "line_number": 58,
+      "description": "Array of RegExp patterns for shell field detection",
+      "expected_callers": ["getShellFieldPatterns"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/security-config.ts"
+    },
+    {
+      "feature_id": "F8",
+      "name": "ValidationContextType",
+      "type": "enum",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/security-config.ts",
+      "line_number": 13,
+      "description": "Enum for validation context types (SHELL_EXECUTION, JAVASCRIPT_SANDBOX, TEMPLATE_ENGINE, DATA_REFERENCE)",
+      "expected_callers": ["getContextType", "checkDangerousPatterns"],
+      "expected_call_location": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["should detect backticks in shell step", "should detect backticks in code_js shell field"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-002", "TC-003"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["should allow JavaScript template literals in transform expressions"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["should collect metrics when enabled", "should track pattern detection in metrics"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-006"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["should output debug logs when enabled", "should not output logs when disabled"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-007"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["should export security configuration"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-008"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "integration_type": "method_call",
+      "integration_method": "this.isShellContext(step, fieldPath)"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "integration_type": "method_call",
+      "integration_method": "this.getContextType(step, path)"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "integration_type": "import",
+      "integration_method": "import { ... } from './security-config.js'"
+    }
+  ]
+}

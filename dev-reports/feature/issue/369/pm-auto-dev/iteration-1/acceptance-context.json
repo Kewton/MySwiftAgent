@@ -1,0 +1,18 @@
+{
+  "issue_number": 369,
+  "feature_summary": "SecurityValidator のバッククォート誤検出修正",
+  "acceptance_criteria": [
+    "JavaScript テンプレートリテラルが誤検出されない",
+    "実際のシェルコマンド置換は検出される",
+    "E2E テストの task_002 が成功する",
+    "単体テストで検出パターンを検証"
+  ],
+  "labels": ["bug", "fix"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": [],
+  "external_dependencies": [],
+  "test_method": "vitest unit tests",
+  "pytest_test_file": null,
+  "acceptance_test_approach": "Unit tests serve as acceptance tests for internal logic changes"
+}
