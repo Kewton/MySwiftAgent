@@ -421,6 +421,9 @@ docs/build/
 # Exception for myvault_secrets.yaml (contains secret key NAMES, not VALUES)
 !**/myvault_secrets.yaml
 
+# Exception for SecretManager.ts (secret management code, not actual secrets)
+!**/SecretManager.ts
+
 # Certificate files
 *.pem
 *.key
