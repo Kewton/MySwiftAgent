@@ -1,0 +1,73 @@
+{
+  "issue_number": 373,
+  "feature_summary": "ワークフロー生成でcapability_id使用とタスクIDディレクトリ構造対応",
+  "acceptance_criteria": [
+    "AC-1: capability_id パラメータの使用 - api_restステップでcapability参照時にcapability_idを使用",
+    "AC-2: プロンプトルールの更新 - taskflow-rules.tsにcapability_idの使用方法を追加",
+    "AC-3: タスクIDディレクトリ構造 - ファイル保存パスを{project_id}/{task_id}/{workflow_name}.jsonに変更",
+    "AC-4: 後方互換性 - 既存の{project_id}/{workflow_name}.json構造のワークフローも読み込み可能",
+    "AC-5: テスト - 単体テストカバレッジ90%以上、統合テストでE2E動作確認"
+  ],
+  "labels": ["enhancement", "feature"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": ["mySwiftAgentCore", "myVault"],
+  "external_dependencies": ["LLM API (Anthropic)"],
+  "l3_test_plan": {
+    "source": "acceptance-plan.md",
+    "restart_commands": [
+      "./scripts/dev-hybrid.sh stop --local-only",
+      "./scripts/dev-hybrid.sh start --local-only"
+    ],
+    "health_checks": [
+      {"service": "mySwiftAgentCore", "url": "http://localhost:8006/health"},
+      {"service": "Generator", "url": "http://localhost:8006/api/v1/generator/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"}
+    ],
+    "test_cases": [
+      {
+        "id": "TC-001",
+        "name": "サービス再起動後のヘルスチェック",
+        "command": "curl -s http://localhost:8006/health | jq .",
+        "expected_status": 200
+      },
+      {
+        "id": "TC-002",
+        "name": "E2Eテストスクリプトによるワークフロー生成",
+        "command": "./mySwiftAgentCore/dev-reports/feature/issue/364/e2e-test-script.sh",
+        "expected_result": "Test 1, 2, 3 すべて PASS"
+      },
+      {
+        "id": "TC-003",
+        "name": "capability_id使用の検証",
+        "description": "生成されたワークフローでcapability_idが使用されていること"
+      },
+      {
+        "id": "TC-004",
+        "name": "タスクIDディレクトリ構造の検証",
+        "description": "JSONファイルがタスクIDディレクトリに保存されること"
+      },
+      {
+        "id": "TC-005",
+        "name": "後方互換性確認",
+        "description": "旧構造ファイルが読み込めること"
+      },
+      {
+        "id": "TC-006",
+        "name": "生成ワークフローの実行確認",
+        "description": "生成されたワークフローがTaskFlowEngineで実行可能"
+      },
+      {
+        "id": "TC-007",
+        "name": "キャッシュ機構の動作確認",
+        "description": "loadAll()のキャッシュが正常動作"
+      },
+      {
+        "id": "TC-008",
+        "name": "キャッシュ無効化の検証",
+        "description": "save/delete時にキャッシュが無効化"
+      }
+    ]
+  },
+  "pytest_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_373_acceptance.py"
+}

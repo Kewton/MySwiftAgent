@@ -1,0 +1,303 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-17T00:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "CAPABILITY_ID_RULES",
+      "type": "prompt_rule",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/templates/taskflow-rules.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 173-207 in taskflow-rules.ts"
+        },
+        "is_included_in_prompt": {
+          "passed": true,
+          "evidence": "TASKFLOW_RULES is imported and used in system.ts:7,16,39"
+        },
+        "is_used_in_prompt_builder": {
+          "passed": true,
+          "evidence": "buildSystemPromptTemplate() uses TASKFLOW_RULES (system.ts:16)"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No test_issue_373_acceptance.py found"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "WorkflowStorage.save() with taskId",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 117-122, parameter taskId?: string"
+        },
+        "is_called_with_taskId": {
+          "passed": true,
+          "evidence": "Called from WorkflowRegistrar.ts:157 with taskId parameter"
+        },
+        "taskId_propagation": {
+          "passed": false,
+          "evidence": "CRITICAL BUG: handlers.ts:136 calls register(workflow, project_id) WITHOUT taskId. The taskId is available in the loop variable but NOT passed to register()."
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "WorkflowStorage.test.ts (lines 298, 305, 314, 321)"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies actual E2E flow"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No test_issue_373_acceptance.py found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Feature F2 has a critical integration gap: handlers.ts does not pass taskId to register(), so the nested directory structure is never created in the actual API flow."
+    },
+    {
+      "feature_id": "F3",
+      "name": "CacheEntry / WorkflowCacheConfig",
+      "type": "interface",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at lines 48-60"
+        },
+        "is_used": {
+          "passed": true,
+          "evidence": "Used in constructor, cache Map type definition"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "WorkflowStorage.test.ts (lines 375-489)"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No test_issue_373_acceptance.py found"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F4",
+      "name": "getFromCache / setCache / invalidateCache",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at lines 405, 422, 444"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "getFromCache: line 228, setCache: line 269, invalidateCache: lines 156, 334"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "WorkflowStorage.test.ts (lines 411-489)"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No test_issue_373_acceptance.py found"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F5",
+      "name": "WorkflowRegistrar.register() with taskId",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 126-130, parameter taskId?: string"
+        },
+        "is_called_with_taskId": {
+          "passed": true,
+          "evidence": "Called from registerBatch() at line 228 with taskId"
+        },
+        "is_called_from_api": {
+          "passed": false,
+          "evidence": "CRITICAL BUG: handlers.ts:136 calls register() WITHOUT taskId parameter, even though taskId is available"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "WorkflowRegistrar.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies API -> Registrar -> Storage flow"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No test_issue_373_acceptance.py found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Feature F5 is partially dead code: the taskId parameter exists and works in registerBatch(), but the main API handler does not use it. The nested directory feature is not activated in production."
+    },
+    {
+      "feature_id": "F6",
+      "name": "WorkflowRegistrar.registerBatch() taskId pass-through",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 226-228"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "registerBatch() is NOT called anywhere. Only individual register() is called from handlers.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "WorkflowRegistrar.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No test_issue_373_acceptance.py found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Feature F6 is completely dead code: registerBatch() method exists but is NEVER called. The API handler uses a for-loop with individual register() calls instead."
+    }
+  ],
+  "summary": {
+    "total_features": 6,
+    "passed": 3,
+    "dead_code": 3,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F2",
+      "name": "WorkflowStorage.save() with taskId",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "line": 121,
+      "issue": "taskId parameter is never passed from API handler",
+      "recommended_caller": "handlers.ts:136",
+      "recommended_fix": "Pass taskId as third parameter to register()"
+    },
+    {
+      "feature_id": "F5",
+      "name": "WorkflowRegistrar.register() with taskId",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line": 129,
+      "issue": "taskId parameter exists but not used in main API flow",
+      "recommended_caller": "handlers.ts:136",
+      "recommended_fix": "Pass taskId as third parameter: register(workflow, request.project_id, taskId)"
+    },
+    {
+      "feature_id": "F6",
+      "name": "WorkflowRegistrar.registerBatch()",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line": 226,
+      "issue": "Method exists but is never called",
+      "recommended_caller": "handlers.ts:124",
+      "recommended_fix": "Replace for-loop with: await registrar.registerBatch(batchResult.workflowDefinitions, request.project_id)"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F6",
+      "action": "Replace individual register() calls with registerBatch()",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "line": 124,
+      "code_snippet": "// Replace lines 124-148 with:\nconst registrationResults = await registrar.registerBatch(\n  batchResult.workflowDefinitions,\n  request.project_id\n);\n\nfor (const [taskId, regResult] of Object.entries(registrationResults)) {\n  registeredWorkflows[taskId] = {\n    workflow_name: batchResult.workflows[taskId].workflow_name,\n    registered: regResult.success,\n    workflow_id: regResult.workflowId,\n    file_path: regResult.filePath,\n  };\n}"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F2+F5",
+      "action": "If keeping individual register() calls, pass taskId parameter",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "line": 136,
+      "code_snippet": "// Change from:\nconst regResult = await registrar.register(workflow, request.project_id);\n\n// To:\nconst regResult = await registrar.register(workflow, request.project_id, taskId);"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "ALL",
+      "action": "Create acceptance test file",
+      "file": "mySwiftAgentCore/tests/acceptance/test_issue_373_acceptance.py",
+      "code_snippet": "# Test cases:\n# - TC-003: Verify capability_id in generated workflows\n# - TC-004: Verify {projectId}/{taskId}/{workflow}.json structure\n# - TC-007: Verify cache mechanism with TTL\n# - TC-008: Verify cache invalidation on save/delete"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "ALL",
+      "action": "Create integration test",
+      "file": "mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/test_workflow_registration_e2e.ts",
+      "code_snippet": "// Test E2E flow:\n// 1. POST /api/v1/generator/workflow/batch\n// 2. Verify workflows saved with taskId in path\n// 3. Verify cache is used on subsequent loadAll()\n// 4. Verify cache invalidation on save/delete"
+    }
+  ],
+  "root_cause_analysis": {
+    "issue": "Integration gap between API handler and feature implementation",
+    "symptoms": [
+      "registerBatch() method exists but never called",
+      "taskId parameter exists but never passed from API layer",
+      "Nested directory feature implemented but not activated"
+    ],
+    "root_causes": [
+      "handlers.ts uses for-loop with individual register() calls instead of registerBatch()",
+      "handlers.ts does not pass taskId even though it's available in loop variable",
+      "No integration test to verify API -> Registrar -> Storage flow",
+      "No acceptance test to verify E2E behavior"
+    ],
+    "impact": [
+      "All workflows are saved in flat structure {projectId}/{workflow}.json",
+      "taskId parameter is never used in production",
+      "registerBatch() is dead code",
+      "Cache mechanism works but nested directory feature is inactive"
+    ]
+  },
+  "test_coverage_gaps": [
+    {
+      "gap": "No acceptance test file",
+      "recommended_file": "mySwiftAgentCore/tests/acceptance/test_issue_373_acceptance.py",
+      "reason": "Issue #373 must have acceptance test to verify E2E behavior"
+    },
+    {
+      "gap": "No integration test for API -> Registrar -> Storage flow",
+      "recommended_file": "mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/test_workflow_registration_e2e.ts",
+      "reason": "Unit tests verify components in isolation, but no test verifies actual integration"
+    },
+    {
+      "gap": "Unit tests do not verify that taskId is passed from API handler",
+      "recommended_test": "Add test in WorkflowRegistrar.test.ts that mocks API request and verifies taskId propagation",
+      "reason": "Current unit tests assume taskId is passed, but do not verify API layer integration"
+    }
+  ]
+}

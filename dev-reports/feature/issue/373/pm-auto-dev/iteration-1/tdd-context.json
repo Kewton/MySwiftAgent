@@ -1,0 +1,80 @@
+{
+  "issue_number": 373,
+  "issue_title": "ワークフロー生成でcapability_id使用とタスクIDディレクトリ構造対応",
+  "acceptance_criteria": [
+    "AC-1: capability_id パラメータの使用 - api_restステップでcapability参照時にcapability_idを使用",
+    "AC-2: プロンプトルールの更新 - taskflow-rules.tsにcapability_idの使用方法を追加",
+    "AC-3: タスクIDディレクトリ構造 - ファイル保存パスを{project_id}/{task_id}/{workflow_name}.jsonに変更",
+    "AC-4: 後方互換性 - 既存の{project_id}/{workflow_name}.json構造のワークフローも読み込み可能",
+    "AC-5: テスト - 単体テストカバレッジ90%以上、統合テストでE2E動作確認"
+  ],
+  "implementation_tasks": [
+    "T1: taskflow-rules.tsにcapability_idルールを追加",
+    "T2: WorkflowStorage.save()にtaskIdパラメータを追加",
+    "T3: WorkflowStorage.loadAll()を新構造に対応（キャッシュ機構含む）",
+    "T4: WorkflowRegistrar.register()にtaskIdを伝播",
+    "T5: BatchProcessor → WorkflowRegistrar間のtaskId受け渡し",
+    "T6: 単体テスト作成・更新",
+    "T7: 統合テスト作成",
+    "T8: 受入テスト作成・実行"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "プロンプトルール拡張 - taskflow-rules.tsにcapability_id使用方法を追加",
+      "estimated_hours": 1,
+      "deliverables": ["src/taskflowGeneratorAgent/prompts/templates/taskflow-rules.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "WorkflowStorage拡張 - save()メソッドにtaskIdパラメータ追加、キャッシュ機構実装",
+      "estimated_hours": 3,
+      "deliverables": ["src/taskflowGeneratorAgent/storage/WorkflowStorage.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3",
+      "description": "loadAll()新構造対応 - タスクディレクトリの再帰的読み込み、旧構造との互換性維持",
+      "estimated_hours": 2,
+      "deliverables": ["src/taskflowGeneratorAgent/storage/WorkflowStorage.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "WorkflowRegistrar更新 - register()メソッドにtaskIdパラメータ追加",
+      "estimated_hours": 1,
+      "deliverables": ["src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "BatchProcessor連携 - taskIdをWorkflowRegistrarに伝播",
+      "estimated_hours": 1,
+      "deliverables": ["src/taskflowGeneratorAgent/generator/BatchProcessor.ts"],
+      "dependencies": ["1.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/taskflowGeneratorAgent/prompts/templates/taskflow-rules.ts",
+    "src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+    "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+    "src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+    "tests/unit/taskflowGeneratorAgent/storage/WorkflowStorage.test.ts",
+    "tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts",
+    "tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts",
+    "tests/integration/workflow-generation.test.ts"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー0件（Ruff、ESLint、TypeScript）",
+    "キャッシュ機構が正常動作（TTL、LRU、無効化）",
+    "旧構造ファイルの読み込み可能",
+    "capability_idルールがLLMプロンプトに含まれる"
+  ],
+  "target_coverage": 90,
+  "target_project": "mySwiftAgentCore",
+  "design_policy_path": "dev-reports/feature/issue/373/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/373/work-plan.md"
+}

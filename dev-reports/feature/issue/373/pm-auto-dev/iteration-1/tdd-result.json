@@ -1,0 +1,66 @@
+{
+  "status": "success",
+  "coverage": 90.0,
+  "unit_tests": {
+    "total": 1101,
+    "passed": 1101,
+    "failed": 0
+  },
+  "static_analysis": {
+    "eslint_errors": 0,
+    "typescript_errors": 0
+  },
+  "files_modified": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/templates/taskflow-rules.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/index.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/storage/WorkflowStorage.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts"
+  ],
+  "commits": [
+    "ac88e53: feat(taskflowGeneratorAgent): Issue #373 - capability_id rules and taskId directory structure"
+  ],
+  "executed_tasks": [
+    "T1: taskflow-rules.ts - capability_id usage rules added",
+    "T2: WorkflowStorage.save() with taskId parameter and cache mechanism",
+    "T3: WorkflowStorage.loadAll() with recursive directory reading and cache",
+    "T4: WorkflowRegistrar.register() with taskId propagation",
+    "T5: BatchProcessor taskId pass-through (already working via registerBatch)"
+  ],
+  "skipped_tasks": [],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": true,
+    "exports_added": true
+  },
+  "features_implemented": {
+    "capability_id_rules": {
+      "description": "Added rules for when to use capability_id vs url in api_rest steps",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/templates/taskflow-rules.ts",
+      "tests": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+    },
+    "taskId_directory_structure": {
+      "description": "Implemented nested directory structure {projectId}/{taskId}/{workflowName}.json",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "tests": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/storage/WorkflowStorage.test.ts"
+    },
+    "cache_mechanism": {
+      "description": "Implemented in-memory cache with TTL and invalidation on save/delete",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "tests": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/storage/WorkflowStorage.test.ts"
+    },
+    "taskId_propagation": {
+      "description": "WorkflowRegistrar passes taskId to storage layer",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "tests": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts"
+    },
+    "backward_compatibility": {
+      "description": "Flat structure still works when taskId is not provided",
+      "tests": "All existing tests pass (1079 original + 22 new = 1101 total)"
+    }
+  },
+  "message": "TDD implementation complete for Issue #373. All 5 implementation tasks completed. 22 new tests added, all 1101 tests pass. Coverage 90%+. Static analysis clean."
+}

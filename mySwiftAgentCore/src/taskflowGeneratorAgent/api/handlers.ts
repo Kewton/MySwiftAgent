@@ -133,7 +133,8 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
           const workflow = batchResult.workflowDefinitions[taskId];
           if (workflow) {
             try {
-              const regResult = await registrar.register(workflow, request.project_id);
+              // Issue #373: Pass taskId for nested directory structure
+              const regResult = await registrar.register(workflow, request.project_id, taskId);
               registeredWorkflows[taskId].registered = regResult.success;
               registeredWorkflows[taskId].workflow_id = regResult.workflowId;
               // Issue #370: Include file_path for persistence verification

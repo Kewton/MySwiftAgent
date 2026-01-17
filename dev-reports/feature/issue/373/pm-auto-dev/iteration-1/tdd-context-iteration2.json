@@ -1,0 +1,52 @@
+{
+  "issue_number": 373,
+  "iteration": 2,
+  "retry_reason": "Phase 2.7 でデッドコード検出（統合率 50%）",
+  "dead_code_fixes": [
+    {
+      "feature": "F2: WorkflowStorage.save() with taskId",
+      "issue": "taskIdパラメータがAPIハンドラから渡されていない",
+      "action": "handlers.ts:136 で register() に taskId を渡す",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "expected_integration": "register(workflow, request.project_id, taskId)"
+    },
+    {
+      "feature": "F5: WorkflowRegistrar.register() with taskId",
+      "issue": "taskIdパラメータが存在するが、本番のAPIフローで使用されていない",
+      "action": "handlers.ts:136 で taskId を渡す",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "expected_integration": "register(workflow, request.project_id, taskId)"
+    },
+    {
+      "feature": "F6: WorkflowRegistrar.registerBatch()",
+      "issue": "メソッドが存在するが一度も呼び出されていない",
+      "action": "Option 1: for-loop内のregister()にtaskIdを渡す (簡単な修正) または Option 2: registerBatch()を使用する (より大きな変更)",
+      "chosen_option": "Option 1 - for-loopのままtaskIdを渡す。registerBatch()は将来の最適化用として残す",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "expected_integration": "register(workflow, request.project_id, taskId)"
+    }
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T2.1",
+      "description": "handlers.ts の register() 呼び出しに taskId を追加",
+      "type": "integration",
+      "target_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "integration_point": "Line 136: register(workflow, request.project_id) → register(workflow, request.project_id, taskId)"
+    },
+    {
+      "id": "T2.2",
+      "description": "ハンドラのテストを更新して taskId が渡されることを確認",
+      "type": "test",
+      "target_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/api/handlers.test.ts"
+    }
+  ],
+  "already_completed": [
+    "T1: taskflow-rules.ts - capability_id usage rules added",
+    "T2: WorkflowStorage.save() with taskId parameter and cache mechanism",
+    "T3: WorkflowStorage.loadAll() with recursive directory reading and cache",
+    "T4: WorkflowRegistrar.register() with taskId propagation",
+    "T5: BatchProcessor taskId pass-through (via registerBatch)"
+  ],
+  "target_coverage": 90
+}

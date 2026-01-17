@@ -1,0 +1,130 @@
+{
+  "issue_number": 373,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "CAPABILITY_ID_RULES",
+      "type": "prompt_rule",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/templates/taskflow-rules.ts",
+      "line_number": 173,
+      "description": "api_restステップでcapability_idを使用するためのLLMプロンプトルール",
+      "expected_callers": ["PromptBuilder.buildApiRestRules"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "WorkflowStorage.save() with taskId",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "line_number": 121,
+      "description": "save()メソッドにtaskIdパラメータを追加、{projectId}/{taskId}/{workflow}.json構造をサポート",
+      "expected_callers": ["WorkflowRegistrar.register"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "CacheEntry / WorkflowCacheConfig",
+      "type": "interface",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "line_number": 48,
+      "description": "loadAll()のキャッシュ機構用インターフェース定義",
+      "expected_callers": ["WorkflowStorage constructor"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "getFromCache / setCache / invalidateCache",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "line_number": 405,
+      "description": "キャッシュ操作メソッド群（TTL、LRU、無効化）",
+      "expected_callers": ["WorkflowStorage.loadAll", "WorkflowStorage.save", "WorkflowStorage.delete"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "WorkflowRegistrar.register() with taskId",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line_number": 129,
+      "description": "register()メソッドにtaskIdパラメータを追加、storageへの伝播",
+      "expected_callers": ["WorkflowRegistrar.registerBatch", "BatchProcessor"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "WorkflowRegistrar.registerBatch() taskId pass-through",
+      "type": "method_update",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line_number": 226,
+      "description": "registerBatch()がtask_idをtaskIdとしてregister()に渡す",
+      "expected_callers": ["BatchProcessor.process"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["should include capability_id usage rules in prompt"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003: capability_id使用の検証"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["should save workflow with taskId in nested directory", "should save workflow without taskId in flat structure"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-004: タスクIDディレクトリ構造の検証"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["cache tests"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-007: キャッシュ機構の動作確認"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["should return cached data on second loadAll", "should invalidate cache on save", "should invalidate cache on delete"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-008: キャッシュ無効化の検証"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["should pass taskId to storage.save"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-004"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["should pass task_id as taskId to register"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-002"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "integration_type": "import_and_use",
+      "integration_method": "TASKFLOW_RULES is imported and used in buildPrompt()"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "integration_type": "method_call",
+      "integration_method": "this.storage.save(project, workflowName, workflow, taskId)"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "integration_type": "internal_call",
+      "integration_method": "registerBatch calls register with taskId"
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+      "integration_type": "method_call",
+      "integration_method": "WorkflowRegistrar.registerBatch is called from BatchProcessor"
+    }
+  ]
+}

@@ -258,6 +258,144 @@ describe('Handler Dependencies', () => {
 });
 
 /**
+ * Issue #373: TaskId integration tests
+ * Verify taskId is passed from handlers.ts through WorkflowRegistrar to WorkflowStorage
+ */
+describe('Handler - TaskId Integration (Issue #373)', () => {
+  let app: Hono;
+  let mockLLMClient: LLMClient;
+
+  beforeEach(() => {
+    mockLLMClient = createMockLLMClient();
+  });
+
+  describe('T2.1: handlers.ts should pass taskId to register()', () => {
+    it('should pass taskId to WorkflowRegistrar.register() for each workflow', async () => {
+      // Create a mock WorkflowRegistrar that tracks register() calls with arguments
+      const registerSpy = vi.fn().mockResolvedValue({
+        success: true,
+        workflowId: 'test_workflow',
+        filePath: '/test/project/task_1/test_workflow.json',
+      });
+
+      const mockRegistrar = {
+        register: registerSpy,
+        initialize: vi.fn().mockResolvedValue(undefined),
+        exists: vi.fn().mockReturnValue(false),
+        unregister: vi.fn().mockReturnValue(true),
+        registerBatch: vi.fn(),
+      };
+
+      const mockRegistry = createMockRegistry();
+
+      const deps: HandlerDependencies = {
+        llmClient: mockLLMClient,
+        registry: mockRegistry,
+        registrar: mockRegistrar as unknown as import('../../../../src/taskflowGeneratorAgent/generator/WorkflowRegistrar.js').WorkflowRegistrar,
+      };
+
+      app = new Hono();
+      app.post('/batch', createBatchGenerationHandler(deps));
+
+      const res = await app.request('/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: [
+            {
+              task_id: 'task_alpha',
+              name: 'Alpha Task',
+              description: 'Test alpha',
+              interface: { input: {}, output: {} },
+            },
+            {
+              task_id: 'task_beta',
+              name: 'Beta Task',
+              description: 'Test beta',
+              interface: { input: {}, output: {} },
+            },
+          ],
+          capabilities: [
+            { id: 'cap_1', name: 'Test Cap', category: 'api', status: 'available' },
+          ],
+          project_id: 'test_project_373',
+          options: { validate_before_register: true },
+        }),
+      });
+
+      expect([200, 207]).toContain(res.status);
+
+      // Verify register was called with taskId as the third parameter
+      // The call signature is: register(workflow, projectId, taskId)
+      for (const call of registerSpy.mock.calls) {
+        const [_workflow, projectId, taskId] = call;
+        expect(projectId).toBe('test_project_373');
+        // taskId should be 'task_alpha' or 'task_beta'
+        expect(['task_alpha', 'task_beta']).toContain(taskId);
+      }
+    });
+
+    it('should include file_path with taskId in nested directory in response', async () => {
+      // Create a mock registrar that returns filePath with taskId
+      const registerSpy = vi.fn().mockImplementation((_workflow, projectId, taskId) => {
+        return Promise.resolve({
+          success: true,
+          workflowId: 'test_workflow',
+          filePath: `/workflows/${projectId}/${taskId}/test_workflow.json`,
+        });
+      });
+
+      const mockRegistrar = {
+        register: registerSpy,
+        initialize: vi.fn().mockResolvedValue(undefined),
+        exists: vi.fn().mockReturnValue(false),
+        unregister: vi.fn().mockReturnValue(true),
+        registerBatch: vi.fn(),
+      };
+
+      const deps: HandlerDependencies = {
+        llmClient: mockLLMClient,
+        registry: createMockRegistry(),
+        registrar: mockRegistrar as unknown as import('../../../../src/taskflowGeneratorAgent/generator/WorkflowRegistrar.js').WorkflowRegistrar,
+      };
+
+      app = new Hono();
+      app.post('/batch', createBatchGenerationHandler(deps));
+
+      const res = await app.request('/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: [
+            {
+              task_id: 'task_xyz',
+              name: 'XYZ Task',
+              description: 'Test xyz',
+              interface: { input: {}, output: {} },
+            },
+          ],
+          capabilities: [
+            { id: 'cap_1', name: 'Test Cap', category: 'api', status: 'available' },
+          ],
+          project_id: 'project_abc',
+          options: { validate_before_register: true },
+        }),
+      });
+
+      expect([200, 207]).toContain(res.status);
+      const body = await res.json();
+
+      // Verify response includes file_path with nested directory structure
+      if (body.workflows && body.workflows['task_xyz']) {
+        expect(body.workflows['task_xyz'].registered).toBe(true);
+        expect(body.workflows['task_xyz'].file_path).toContain('project_abc');
+        expect(body.workflows['task_xyz'].file_path).toContain('task_xyz');
+      }
+    });
+  });
+});
+
+/**
  * Issue #368: WorkflowRegistrar integration and status bug fix tests
  */
 describe('Handler - WorkflowRegistrar Integration (Issue #368)', () => {

@@ -1,0 +1,18 @@
+{
+  "issue_number": 373,
+  "refactor_targets": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90.5,
+    "complexity_score": "N/A"
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コードの可読性向上",
+    "重複コードの削除（ある場合）"
+  ],
+  "note": "今回の実装はシンプルで、大きなリファクタリングは不要。主要な品質基準は既に満たしている。"
+}
