@@ -1,0 +1,48 @@
+{
+  "workflow_name": "execute_google_search_task_001",
+  "description": "Performs a web search using Google to gather relevant information",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search query to execute"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array",
+        "description": "Search results from Google"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "search_google",
+      "type": "api_rest",
+      "description": "Execute Google search with provided query",
+      "config": {
+        "method": "POST",
+        "url": "/capabilities/google_search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "timeout": 30000
+      },
+      "params": {
+        "body": {
+          "query": "$input.query"
+        }
+      }
+    }
+  ],
+  "output": {
+    "results": "$steps.search_google.results"
+  }
+}

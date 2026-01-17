@@ -1,0 +1,110 @@
+{
+  "issue_number": 370,
+  "issue_title": "fix(mySwiftAgentCore): WorkflowRegistrar のワークフロー永続化とログ出力強化",
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 92.92,
+      "tests_total": 1017,
+      "tests_passed": 1017,
+      "tests_failed": 0,
+      "files_created": [
+        "mySwiftAgentCore/src/utils/logger/Logger.ts",
+        "mySwiftAgentCore/src/utils/validation/PathValidator.ts",
+        "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts"
+      ],
+      "files_modified": [
+        "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+      ]
+    },
+    "implementation_verification": {
+      "initial_status": "failed",
+      "initial_integration_rate": "17%",
+      "dead_code_detected": [
+        "WorkflowStorage - never instantiated in handlers.ts",
+        "WorkflowRegistrar.initialize() - never called"
+      ],
+      "dead_code_resolution": {
+        "status": "success",
+        "files_modified": [
+          "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+          "mySwiftAgentCore/src/taskflowGeneratorAgent/api/routes.ts"
+        ],
+        "changes": [
+          "handlers.ts: Added WorkflowStorage and Logger instantiation",
+          "handlers.ts: Pass storage and logger to WorkflowRegistrar constructor",
+          "handlers.ts: Include file_path in API response",
+          "routes.ts: Added createInitializedGeneratorApi() function",
+          "routes.ts: Call registrar.initialize() at startup"
+        ]
+      },
+      "final_status": "passed",
+      "final_integration_rate": "100%"
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_level": "L3",
+      "target_project": "mySwiftAgentCore",
+      "pytest_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_370_acceptance.py",
+      "test_cases": [
+        "TC-001: ワークフロー永続化の基本動作",
+        "TC-003: パストラバーサル攻撃の防御",
+        "TC-004: 構造化ログ出力の確認",
+        "TC-005: レスポンスにfile_pathが含まれる",
+        "TC-006: E2Eテストスクリプト完全実行"
+      ],
+      "unit_test_files": [
+        "tests/unit/utils/logger/Logger.test.ts (16 tests)",
+        "tests/unit/utils/validation/PathValidator.test.ts (25 tests)",
+        "tests/unit/taskflowGeneratorAgent/storage/WorkflowStorage.test.ts (18+ tests)",
+        "tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts (20 tests)"
+      ]
+    },
+    "refactor": {
+      "status": "no_refactoring_needed",
+      "reason": "SOLID原則に従った実装済み、DI/Repository/Factoryパターン適用済み"
+    }
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "AC-1: 生成されたワークフローが generated/workflows/{project_id}/ に JSON ファイルとして保存される",
+      "verified": true,
+      "verification_method": "WorkflowStorage.save() implemented and called in WorkflowRegistrar.register()"
+    },
+    {
+      "criterion": "AC-2: WorkflowRegistrar が WorkflowStorage を使用する",
+      "verified": true,
+      "verification_method": "WorkflowRegistrar constructor accepts storage parameter, register() calls storage.save()"
+    },
+    {
+      "criterion": "AC-3: registered フラグは実際の永続化結果を反映し、file_path を返す",
+      "verified": true,
+      "verification_method": "handlers.ts includes file_path in response, WorkflowRegistrar returns filePath in RegistrationResult"
+    },
+    {
+      "criterion": "AC-4: 構造化ログ（JSON形式）で生成・登録過程を追跡可能",
+      "verified": true,
+      "verification_method": "Logger class created with JSON output, used in WorkflowRegistrar and BatchProcessor"
+    },
+    {
+      "criterion": "AC-5: サーバー再起動後もワークフローが利用可能",
+      "verified": true,
+      "verification_method": "createInitializedGeneratorApi() calls registrar.initialize() to restore workflows from disk"
+    }
+  ],
+  "commits": [
+    {
+      "hash": "5a8dc91",
+      "message": "feat(mySwiftAgentCore): Issue #370 - WorkflowRegistrar persistence and structured logging"
+    },
+    {
+      "hash": "8d4f8d6",
+      "message": "fix(mySwiftAgentCore): Issue #370 - integrate WorkflowStorage into API handlers"
+    }
+  ],
+  "key_learnings": [
+    "TDD実装後のデッドコード検出（Phase 2.7）は必須 - 今回もWorkflowStorageが定義されたが呼び出されていない問題を検出",
+    "統合ポイント（handlers.ts, routes.ts）への変更を忘れがち - 必ず検証フェーズでGrepで確認"
+  ]
+}

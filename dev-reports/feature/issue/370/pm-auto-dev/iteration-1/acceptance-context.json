@@ -1,0 +1,38 @@
+{
+  "issue_number": 370,
+  "feature_summary": "WorkflowRegistrar のワークフロー永続化とログ出力強化",
+  "acceptance_criteria": [
+    "AC-1: 生成されたワークフローが generated/workflows/{project_id}/ に JSON ファイルとして保存される",
+    "AC-2: WorkflowRegistrar が WorkflowStorage を使用する",
+    "AC-3: registered フラグは実際の永続化結果を反映し、file_path を返す",
+    "AC-4: 構造化ログ（JSON形式）で生成・登録過程を追跡可能",
+    "AC-5: サーバー再起動後もワークフローが利用可能"
+  ],
+  "labels": ["bug", "enhancement"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": ["mySwiftAgentCore"],
+  "external_dependencies": ["MyVault (ANTHROPIC_API_KEY)"],
+  "l3_test_plan": {
+    "source": "acceptance-plan.md",
+    "health_checks": [
+      {"service": "mySwiftAgentCore", "url": "http://localhost:8006/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "TC-001: ワークフロー永続化基本動作",
+        "command": "./mySwiftAgentCore/dev-reports/feature/issue/364/e2e-test-script.sh",
+        "expected_status": 0,
+        "expected_result": "ファイルが generated/workflows/ に作成される"
+      },
+      {
+        "name": "TC-003: パストラバーサル攻撃防御",
+        "command": "curl -s -X POST http://localhost:8006/api/v1/generator/workflow/batch -H 'Content-Type: application/json' -d '{\"tasks\": [{\"task_id\": \"test\", \"name\": \"Test\", \"description\": \"Test\"}], \"capabilities\": [], \"project_id\": \"../etc/passwd\"}'",
+        "expected_status": 400,
+        "expected_response_contains": ["error", "INVALID_PATH"]
+      }
+    ]
+  },
+  "pytest_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_370_acceptance.py",
+  "acceptance_plan_path": "dev-reports/feature/issue/370/acceptance-plan.md"
+}
