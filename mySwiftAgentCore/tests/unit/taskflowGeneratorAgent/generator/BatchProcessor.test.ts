@@ -2,6 +2,7 @@
  * BatchProcessor Unit Tests
  *
  * Issue #364: Parallel batch generation
+ * Issue #370: Add structured logging
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -17,6 +18,7 @@ import type {
   BatchGenerationRequest,
 } from '../../../../src/taskflowGeneratorAgent/types/generator.js';
 import type { TaskFlowDefinition } from '../../../../src/taskflowEngine/types/TaskFlowDefinition.js';
+import type { Logger } from '../../../../src/utils/logger/Logger.js';
 
 // Mock WorkflowGenerator
 const createMockGenerator = (
@@ -350,5 +352,128 @@ describe('BatchProcessor - workflowDefinitions (Issue #368)', () => {
     expect(Object.keys(result.workflowDefinitions)).toHaveLength(1);
     expect(result.workflowDefinitions['task_1']).toBeDefined();
     expect(result.workflowDefinitions['task_2']).toBeUndefined();
+  });
+});
+
+/**
+ * Issue #370: Structured logging tests
+ */
+describe('BatchProcessor - logging (Issue #370)', () => {
+  const createMockLogger = (): Logger => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+    getLevel: vi.fn().mockReturnValue('debug'),
+  } as unknown as Logger);
+
+  const capabilities: Capability[] = [
+    { id: 'api_1', name: 'API 1', category: 'api', status: 'available' },
+  ];
+
+  it('should log batch start and completion', async () => {
+    const mockLogger = createMockLogger();
+    const mockGenerator = createMockGenerator();
+    const processor = new BatchProcessor({
+      generator: mockGenerator,
+      logger: mockLogger,
+    });
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_1',
+        name: 'Task 1',
+        description: 'Description 1',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    // Should log start
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'Starting batch processing',
+      expect.objectContaining({
+        projectId: 'test_project',
+        taskCount: 1,
+      })
+    );
+
+    // Should log completion
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'Batch processing complete',
+      expect.objectContaining({
+        projectId: 'test_project',
+        successCount: 1,
+        failCount: 0,
+      })
+    );
+  });
+
+  it('should log task failures', async () => {
+    const mockLogger = createMockLogger();
+    const failingGenerator = createMockGenerator(new Set(['task_1']));
+    const processor = new BatchProcessor({
+      generator: failingGenerator,
+      logger: mockLogger,
+    });
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_1',
+        name: 'Task 1',
+        description: 'Description 1',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Task failed',
+      expect.objectContaining({
+        taskId: 'task_1',
+      })
+    );
+  });
+
+  it('should log individual task processing in debug', async () => {
+    const mockLogger = createMockLogger();
+    const mockGenerator = createMockGenerator();
+    const processor = new BatchProcessor({
+      generator: mockGenerator,
+      logger: mockLogger,
+    });
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_1',
+        name: 'Task 1',
+        description: 'Description 1',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'Processing task',
+      expect.objectContaining({
+        taskId: 'task_1',
+      })
+    );
   });
 });

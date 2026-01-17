@@ -2,6 +2,7 @@
  * BatchProcessor - Parallel batch workflow generation
  *
  * Issue #364: Parallel execution with concurrency control
+ * Issue #370: Add structured logging
  */
 
 import type { WorkflowGenerator } from './WorkflowGenerator.js';
@@ -14,6 +15,7 @@ import {
   type Capability,
 } from '../types/generator.js';
 import type { TaskFlowDefinition } from '../../taskflowEngine/types/TaskFlowDefinition.js';
+import { Logger, createLogger } from '../../utils/logger/Logger.js';
 
 /**
  * Issue #368: Internal batch result type with workflow definitions
@@ -35,6 +37,7 @@ export interface BatchProcessorConfig {
   generator: WorkflowGenerator;
   maxConcurrency?: number;
   timeoutPerTaskMs?: number;
+  logger?: Logger;
 }
 
 /**
@@ -77,24 +80,28 @@ class Semaphore {
  * - Partial success handling
  * - Error aggregation
  * - Timeout per task
+ * - Structured logging (Issue #370)
  */
 export class BatchProcessor {
   private readonly generator: WorkflowGenerator;
   private readonly maxConcurrency: number;
   private readonly timeoutPerTaskMs: number;
   private readonly errorHandler: ErrorHandler;
+  private readonly logger: Logger;
 
   constructor(config: BatchProcessorConfig) {
     this.generator = config.generator;
     this.maxConcurrency = config.maxConcurrency ?? 5;
     this.timeoutPerTaskMs = config.timeoutPerTaskMs ?? 30000;
     this.errorHandler = new ErrorHandler();
+    this.logger = config.logger ?? createLogger({ name: 'BatchProcessor' });
   }
 
   /**
    * Process batch of tasks
    *
    * Issue #368: Returns InternalBatchResult with workflowDefinitions for registration
+   * Issue #370: Add structured logging
    *
    * @param request - Batch generation request
    * @returns Internal batch result with workflow definitions and metadata
@@ -106,8 +113,16 @@ export class BatchProcessor {
     const concurrency = options?.max_concurrency ?? this.maxConcurrency;
     const timeout = options?.timeout_per_task_ms ?? this.timeoutPerTaskMs;
 
+    this.logger.info('Starting batch processing', {
+      projectId: project_id,
+      taskCount: tasks.length,
+      concurrency,
+      timeoutMs: timeout,
+    });
+
     // Handle empty task list
     if (tasks.length === 0) {
+      this.logger.debug('Empty task list, returning early');
       return {
         success: true,
         workflows: {},
@@ -118,6 +133,7 @@ export class BatchProcessor {
 
     // Create semaphore for concurrency control
     const semaphore = new Semaphore(concurrency);
+    const startTime = Date.now();
 
     // Process all tasks in parallel (with concurrency limit)
     const results = await Promise.allSettled(
@@ -145,6 +161,11 @@ export class BatchProcessor {
         };
         // Issue #368: Store actual workflow definition for registration
         workflowDefinitions[task.task_id] = result.value;
+
+        this.logger.debug('Task completed successfully', {
+          taskId: task.task_id,
+          workflowName: result.value.workflow_name,
+        });
       } else if (result?.status === 'rejected') {
         const error = result.reason instanceof Error
           ? result.reason
@@ -155,8 +176,26 @@ export class BatchProcessor {
         });
 
         failedTasks.push(taskError);
+
+        this.logger.warn('Task failed', {
+          taskId: task.task_id,
+          error: error.message,
+          recoverable: taskError.recoverable,
+        });
       }
     }
+
+    const duration = Date.now() - startTime;
+    const successCount = Object.keys(workflows).length;
+    const failCount = failedTasks.length;
+
+    this.logger.info('Batch processing complete', {
+      projectId: project_id,
+      duration,
+      successCount,
+      failCount,
+      success: failCount === 0,
+    });
 
     return {
       success: failedTasks.length === 0,
@@ -178,6 +217,11 @@ export class BatchProcessor {
   ): Promise<TaskFlowDefinition> {
     // Acquire semaphore permit
     await semaphore.acquire();
+
+    this.logger.debug('Processing task', {
+      taskId: task.task_id,
+      taskName: task.name,
+    });
 
     try {
       // Create timeout promise

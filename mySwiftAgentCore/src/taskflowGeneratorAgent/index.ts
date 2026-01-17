@@ -36,6 +36,9 @@ export * from './recovery/index.js';
 // Generator
 export * from './generator/index.js';
 
+// Storage (Issue #370)
+export * from './storage/index.js';
+
 // Tracing
 export * from './tracing/index.js';
 
