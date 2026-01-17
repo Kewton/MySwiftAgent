@@ -43,17 +43,18 @@ describe('API Routes', () => {
     expect(body.endpoints).toBeDefined();
   });
 
-  it('should return taskflow stub', async () => {
+  it('should return taskflow stats endpoint', async () => {
     const app = new Hono();
     const routes = await createApiRoutes(config);
     app.route('/', routes);
 
-    const res = await app.request('/api/v1/taskflow');
+    // TaskFlow Engine now has real routes - check the stats endpoint
+    const res = await app.request('/api/v1/taskflow/stats');
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.service).toBe('TaskFlow Engine');
-    expect(body.status).toBe('stub');
+    expect(body.totalProjects).toBeDefined();
+    expect(body.totalWorkflows).toBeDefined();
   });
 
   it('should return generator routes', async () => {

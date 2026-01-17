@@ -10,6 +10,10 @@ import { createGeneratorApi, type HandlerDependencies } from '../taskflowGenerat
 import { WorkflowRegistry } from '../taskflowEngine/registry/WorkflowRegistry.js';
 import { createSecretManagerFromEnv } from '../shared/context/SecretManager.js';
 import { AnthropicClient } from '../taskflowGeneratorAgent/llm/clients/AnthropicClient.js';
+import { createTaskFlowRoutes } from '../taskflowEngine/api/routes.js';
+import type { HandlerDependencies as TaskFlowHandlerDependencies } from '../taskflowEngine/api/handlers.js';
+import { createTaskFlowEngine } from '../taskflowEngine/TaskFlowEngine.js';
+import { createSchemaValidator } from '../taskflowEngine/validator/SchemaValidator.js';
 
 /**
  * API configuration
@@ -72,6 +76,25 @@ async function createGeneratorDependencies(): Promise<HandlerDependencies> {
 }
 
 /**
+ * Create TaskFlow Engine dependencies
+ *
+ * Creates all required dependencies for TaskFlow Engine API handlers.
+ */
+function createTaskFlowEngineDependencies(registry: WorkflowRegistry): TaskFlowHandlerDependencies {
+  // Create TaskFlowEngine instance
+  const executor = createTaskFlowEngine();
+
+  // Create schema validator
+  const validator = createSchemaValidator();
+
+  return {
+    registry,
+    executor,
+    validator,
+  };
+}
+
+/**
  * Create main API router
  *
  * Note: This is an async function to support LLM client initialization
@@ -125,19 +148,16 @@ export async function createApiRoutes(config: ApiConfig): Promise<Hono> {
     });
   });
 
-  // TaskFlow Engine routes (stub)
-  app.get('/api/v1/taskflow', (c) => {
-    return c.json({
-      service: 'TaskFlow Engine',
-      status: 'stub',
-      message: 'TaskFlow Engine API is not yet implemented',
-    });
-  });
-
   // TaskFlow Generator routes - Issue #364 integration
   const generatorDeps = await createGeneratorDependencies();
   const generatorApi = createGeneratorApi(generatorDeps);
   app.route('/', generatorApi);
+
+  // TaskFlow Engine routes - Issue #363 integration
+  // Share registry between Generator and Engine for workflow access
+  const taskFlowDeps = createTaskFlowEngineDependencies(generatorDeps.registry);
+  const taskFlowRoutes = createTaskFlowRoutes(taskFlowDeps);
+  app.route('/api/v1/taskflow', taskFlowRoutes);
 
   // Capabilities routes (stub)
   app.get('/api/v1/capabilities', (c) => {
