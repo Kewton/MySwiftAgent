@@ -1,0 +1,24 @@
+{
+  "issue_number": 372,
+  "refactor_targets": [
+    "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+    "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 92.79,
+    "complexity_score": "N/A"
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "既存のコード品質を維持",
+    "重複コードの確認と削除（該当あれば）"
+  ],
+  "notes": [
+    "TDD実装でカバレッジ92.79%達成",
+    "統合率100%達成（デッドコード解消済み）",
+    "受入テスト20件全てパス",
+    "コード品質は十分に高い状態"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "status": "success",
+  "issue_number": 372,
+  "quality_metrics": {
+    "before_coverage": 92.79,
+    "after_coverage": 92.79,
+    "before_eslint_errors": 6,
+    "after_eslint_errors": 0,
+    "before_tsc_errors": 0,
+    "after_tsc_errors": 0
+  },
+  "refactorings_applied": [
+    {
+      "file": "EndpointConfigManager.ts",
+      "change": "non-null assertion (!) を安全なnullチェックに置換",
+      "rule": "@typescript-eslint/no-non-null-assertion"
+    },
+    {
+      "file": "types.ts",
+      "change": "index signature を Record<> 型に置換",
+      "rule": "@typescript-eslint/consistent-indexed-object-style"
+    },
+    {
+      "file": "ApiRestNode.ts",
+      "change": "|| を ?? (nullish coalescing) に置換",
+      "rule": "@typescript-eslint/prefer-nullish-coalescing"
+    },
+    {
+      "file": "ApiRestNode.ts",
+      "change": "if文 を ??= 演算子に置換",
+      "rule": "@typescript-eslint/prefer-nullish-coalescing"
+    },
+    {
+      "file": "CapabilityExecutor.ts",
+      "change": "不要な型注釈の削除",
+      "rule": "@typescript-eslint/no-inferrable-types"
+    }
+  ],
+  "tests_after_refactoring": {
+    "total": 1079,
+    "passed": 1079,
+    "failed": 0
+  },
+  "message": "ESLintエラー6件を修正。TypeScriptのベストプラクティスに従ったコード品質改善。全テストパス。"
+}

@@ -1,0 +1,53 @@
+{
+  "workflow_name": "test_capability_id_usage_test_capability_373",
+  "description": "Test workflow that uses capability_id instead of url for API calls",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "search_google",
+      "type": "api_rest",
+      "description": "Search using Google Search capability",
+      "config": {
+        "capability_id": "google_search",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "query": "$input.query"
+        }
+      }
+    },
+    {
+      "id": "format_results",
+      "type": "transform",
+      "description": "Format search results into array",
+      "config": {
+        "expression": "({ results: data.results || [] })"
+      },
+      "params": {
+        "data": "$steps.search_google"
+      }
+    }
+  ],
+  "output": {
+    "results": "$steps.format_results.results"
+  }
+}

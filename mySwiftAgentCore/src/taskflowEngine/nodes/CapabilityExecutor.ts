@@ -7,6 +7,7 @@
  * - Resolves capability IDs to full URLs using URLResolver
  * - Handles authentication based on capability configuration
  * - Executes HTTP requests with proper error handling
+ * - Capability-specific timeout support via _internal.timeout_ms
  */
 
 import type { CapabilityRegistry } from '../../capabilityManagement/registry/CapabilityRegistry.js';
@@ -42,6 +43,9 @@ export class CapabilityExecutor {
     this.urlResolver = options.urlResolver;
   }
 
+  /** Default timeout in milliseconds */
+  private static readonly DEFAULT_TIMEOUT_MS = 30000;
+
   /**
    * Execute a capability by ID
    *
@@ -71,6 +75,9 @@ export class CapabilityExecutor {
           },
         };
       }
+
+      // Issue #372: Get capability-specific timeout or use default
+      const timeoutMs = capability._internal?.timeout_ms ?? CapabilityExecutor.DEFAULT_TIMEOUT_MS;
 
       // Resolve URL
       let resolvedEndpoint: ResolvedEndpoint;
@@ -102,11 +109,16 @@ export class CapabilityExecutor {
         }
       }
 
+      // Issue #372: Setup AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
       // Build request options
       const method = resolvedEndpoint.method ?? 'POST';
       const options: RequestInit = {
         method,
         headers,
+        signal: controller.signal,
       };
 
       // Add body for non-GET/HEAD methods
@@ -118,44 +130,72 @@ export class CapabilityExecutor {
         }
       }
 
-      // Execute request
-      const response = await fetch(resolvedEndpoint.url, options);
+      try {
+        // Execute request with timeout
+        const response = await fetch(resolvedEndpoint.url, options);
 
-      if (!response.ok) {
-        let errorBody: unknown;
-        try {
-          errorBody = await response.json();
-        } catch {
-          errorBody = response.statusText;
+        // Clear timeout on successful response
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          let errorBody: unknown;
+          try {
+            errorBody = await response.json();
+          } catch {
+            errorBody = response.statusText;
+          }
+
+          return {
+            success: false,
+            output: null,
+            error: {
+              code: 'HTTP_ERROR',
+              message: `HTTP ${response.status}: ${response.statusText}`,
+              details: {
+                status: response.status,
+                body: errorBody,
+              },
+            },
+          };
         }
 
+        // Parse response
+        const data = await response.json();
+
         return {
-          success: false,
-          output: null,
-          error: {
-            code: 'HTTP_ERROR',
-            message: `HTTP ${response.status}: ${response.statusText}`,
-            details: {
-              status: response.status,
-              body: errorBody,
-            },
+          success: true,
+          output: data,
+          metadata: {
+            url: resolvedEndpoint.url,
+            method,
+            status: response.status,
+            capabilityId,
+            timeoutMs,
           },
         };
+      } catch (fetchError) {
+        // Clear timeout on error
+        clearTimeout(timeoutId);
+
+        // Issue #372: Handle abort error (timeout)
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          return {
+            success: false,
+            output: null,
+            error: {
+              code: 'TIMEOUT_ERROR',
+              message: `Request to capability '${capabilityId}' timed out after ${timeoutMs}ms`,
+              details: {
+                timeoutMs,
+                url: resolvedEndpoint.url,
+              },
+            },
+          };
+        }
+
+        // Re-throw other errors to be caught by outer catch
+        throw fetchError;
       }
-
-      // Parse response
-      const data = await response.json();
-
-      return {
-        success: true,
-        output: data,
-        metadata: {
-          url: resolvedEndpoint.url,
-          method,
-          status: response.status,
-          capabilityId,
-        },
-      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {

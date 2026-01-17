@@ -1,0 +1,101 @@
+{
+  "issue_number": 372,
+  "issue_title": "feat(mySwiftAgentCore): ケイパビリティAPIエンドポイントのベースURL解決機能",
+  "acceptance_criteria": [
+    "AC-1: CapabilityLoader が index.yaml の api_endpoints を読み込める",
+    "AC-2: CapabilityLoader が環境変数 ${VAR:-default} 形式を解決できる",
+    "AC-3: 各ケイパビリティの _internal.api_source からベースURLを特定できる",
+    "AC-4: api_source がない場合、endpoint_prefix でフォールバック解決できる",
+    "AC-5: taskflowGeneratorAgent が完全URLを含むワークフローを生成できる",
+    "AC-6: 生成されたワークフローが taskflowEngine で正常に実行できる",
+    "AC-7: 環境変数 EXPERT_AGENT_BASE_URL でベースURLをオーバーライドできる",
+    "AC-8: 単体テストカバレッジ90%以上"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "EndpointConfigManager 型定義",
+      "deliverables": ["src/capabilityManagement/endpoint/types.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "EndpointConfigManager 実装",
+      "deliverables": ["src/capabilityManagement/endpoint/EndpointConfigManager.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "EndpointConfigManager 単体テスト",
+      "deliverables": ["tests/unit/capabilityManagement/endpoint/EndpointConfigManager.test.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "URLResolver 実装",
+      "deliverables": ["src/capabilityManagement/endpoint/URLResolver.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "URLResolver 単体テスト",
+      "deliverables": ["tests/unit/capabilityManagement/endpoint/URLResolver.test.ts"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "CapabilityExecutor 実装",
+      "deliverables": ["src/taskflowEngine/nodes/CapabilityExecutor.ts"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "CapabilityExecutor 単体テスト",
+      "deliverables": ["tests/unit/taskflowEngine/nodes/CapabilityExecutor.test.ts"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.1",
+      "description": "ApiRestNode 拡張（capability_id サポート）",
+      "deliverables": ["src/taskflowEngine/nodes/ApiRestNode.ts"],
+      "dependencies": ["3.1"]
+    },
+    {
+      "task_id": "4.2",
+      "description": "ApiRestNode 単体テスト拡張",
+      "deliverables": ["tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts"],
+      "dependencies": ["4.1"]
+    },
+    {
+      "task_id": "5.1",
+      "description": "capability YAML に api_source 追加",
+      "deliverables": ["config/capabilities/default_project/*.yaml"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "6.1",
+      "description": "結合テスト作成",
+      "deliverables": ["tests/integration/capabilityExecution.test.ts"],
+      "dependencies": ["4.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/capabilityManagement/endpoint/types.ts",
+    "src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+    "src/capabilityManagement/endpoint/URLResolver.ts",
+    "src/taskflowEngine/nodes/CapabilityExecutor.ts",
+    "tests/unit/capabilityManagement/endpoint/EndpointConfigManager.test.ts",
+    "tests/unit/capabilityManagement/endpoint/URLResolver.test.ts",
+    "tests/unit/taskflowEngine/nodes/CapabilityExecutor.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー0件（eslint, tsc）",
+    "すべてのテストがパス"
+  ],
+  "target_coverage": 90,
+  "target_project": "mySwiftAgentCore",
+  "design_policy_path": "dev-reports/feature/issue/372/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/372/work-plan.md"
+}

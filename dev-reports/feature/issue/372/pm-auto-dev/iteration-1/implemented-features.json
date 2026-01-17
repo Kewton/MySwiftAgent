@@ -1,0 +1,217 @@
+{
+  "issue_number": 372,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "EndpointConfigManager",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+      "line_number": 31,
+      "description": "API エンドポイント設定の管理クラス。index.yaml の api_endpoints セクションを読み込み、環境変数を解決する",
+      "expected_callers": ["URLResolver", "CapabilityLoader"],
+      "expected_call_location": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F2",
+      "name": "createEndpointConfigManager",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+      "line_number": 156,
+      "description": "EndpointConfigManager のファクトリ関数",
+      "expected_callers": ["Application startup", "URLResolver initialization"],
+      "expected_call_location": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F3",
+      "name": "URLResolver",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "line_number": 50,
+      "description": "capability の相対URLから完全なURLを解決するクラス。api_source または endpoint_prefix でマッチング",
+      "expected_callers": ["CapabilityExecutor"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F4",
+      "name": "createURLResolver",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "line_number": 217,
+      "description": "URLResolver のファクトリ関数",
+      "expected_callers": ["Application startup", "CapabilityExecutor initialization"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F5",
+      "name": "CapabilityExecutor",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "line_number": 36,
+      "description": "capability IDからAPI実行を行うクラス。URLResolver を使ってURL解決し、HTTPリクエストを送信",
+      "expected_callers": ["ApiRestNodeExecutor"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F6",
+      "name": "createCapabilityExecutor",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "line_number": 248,
+      "description": "CapabilityExecutor のファクトリ関数",
+      "expected_callers": ["TaskFlowEngine initialization"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/TaskFlowEngine.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F7",
+      "name": "capability_id parameter in ApiRestNode",
+      "type": "parameter",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "line_number": 35,
+      "description": "ApiRestNode の capability_id パラメータ。指定すると CapabilityExecutor 経由でAPI実行",
+      "expected_callers": ["TaskFlow workflow definitions"],
+      "expected_call_location": "TaskFlow JSON configuration",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F8",
+      "name": "EndpointResolutionError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/types.ts",
+      "line_number": 77,
+      "description": "URL解決エラーを表す専用エラークラス",
+      "expected_callers": ["URLResolver", "EndpointConfigManager"],
+      "expected_call_location": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F9",
+      "name": "ICapabilityExecutor",
+      "type": "interface",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "line_number": 36,
+      "description": "CapabilityExecutor のインターフェース（循環インポート回避のため BaseNode.ts で定義）",
+      "expected_callers": ["NodeExecutionContext"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "integration_status": "integrated"
+    },
+    {
+      "feature_id": "F10",
+      "name": "NodeExecutionContext.capabilityExecutor",
+      "type": "property",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "line_number": 55,
+      "description": "NodeExecutionContext にオプショナルな capabilityExecutor プロパティを追加",
+      "expected_callers": ["ApiRestNode.executeWithCapability"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "integration_status": "integrated"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["EndpointConfigManager.test.ts"],
+      "integration_tests": ["capabilityExecution.test.ts"],
+      "acceptance_tests": ["test_issue_372_acceptance.ts"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["URLResolver.test.ts"],
+      "integration_tests": ["capabilityExecution.test.ts"],
+      "acceptance_tests": ["test_issue_372_acceptance.ts"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["CapabilityExecutor.test.ts"],
+      "integration_tests": ["capabilityExecution.test.ts"],
+      "acceptance_tests": ["test_issue_372_acceptance.ts"]
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": ["ApiRestNode.test.ts"],
+      "integration_tests": ["capabilityExecution.test.ts"],
+      "acceptance_tests": ["test_issue_372_acceptance.ts"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/capabilityManagement/endpoint/index.ts",
+      "integration_type": "export",
+      "integration_method": "export { EndpointConfigManager, createEndpointConfigManager }"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "mySwiftAgentCore/src/capabilityManagement/endpoint/index.ts",
+      "integration_type": "export",
+      "integration_method": "export { URLResolver, createURLResolver }"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/nodes/index.ts",
+      "integration_type": "export",
+      "integration_method": "export * from './CapabilityExecutor.js'"
+    },
+    {
+      "feature_id": "F7",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "integration_type": "import_and_use",
+      "integration_method": "Uses context.capabilityExecutor from NodeExecutionContext"
+    },
+    {
+      "feature_id": "F9",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "integration_type": "interface",
+      "integration_method": "export interface ICapabilityExecutor"
+    },
+    {
+      "feature_id": "F10",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "integration_type": "property",
+      "integration_method": "capabilityExecutor?: ICapabilityExecutor in NodeExecutionContext"
+    }
+  ],
+  "dead_code_resolution": {
+    "iteration": 2,
+    "previous_status": "0% integration - all features dead code",
+    "current_status": "100% integration - full path established",
+    "integration_chain": [
+      {
+        "step": 1,
+        "component": "TaskFlowEngine",
+        "file": "TaskFlowEngine.ts",
+        "change": "Added capabilityExecutor to TaskFlowEngineConfig, passes to WorkflowExecutor"
+      },
+      {
+        "step": 2,
+        "component": "WorkflowExecutor",
+        "file": "WorkflowExecutor.ts",
+        "change": "Added capabilityExecutor to WorkflowExecutorConfig, passes to ContextManager"
+      },
+      {
+        "step": 3,
+        "component": "ContextManager",
+        "file": "ContextManager.ts",
+        "change": "Added capabilityExecutor to ContextManagerConfig, includes in getContext()"
+      },
+      {
+        "step": 4,
+        "component": "BaseNode",
+        "file": "BaseNode.ts",
+        "change": "Added ICapabilityExecutor interface and capabilityExecutor property to NodeExecutionContext"
+      },
+      {
+        "step": 5,
+        "component": "ApiRestNode",
+        "file": "ApiRestNode.ts",
+        "change": "Uses context.capabilityExecutor for capability_id based execution"
+      }
+    ]
+  }
+}

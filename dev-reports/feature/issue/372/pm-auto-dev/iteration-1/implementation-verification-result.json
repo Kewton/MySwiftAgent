@@ -1,0 +1,437 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-17T08:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "EndpointConfigManager",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 31"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only called in factory function createEndpointConfigManager (line 157), no actual instantiation in production code",
+          "grep_result": "Only found: factory function definition and type exports"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Exported in capabilityManagement/index.ts and endpoint/index.ts"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "No production code creates or uses EndpointConfigManager instance"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/EndpointConfigManager.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined and exported but never instantiated in production code. Factory function exists but is never called."
+    },
+    {
+      "feature_id": "F2",
+      "name": "createEndpointConfigManager",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 156"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Factory function defined but never called in production code",
+          "grep_result": "No calls found outside of definition"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in capabilityManagement/index.ts and endpoint/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/EndpointConfigManager.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Factory function defined but never called in production code"
+    },
+    {
+      "feature_id": "F3",
+      "name": "URLResolver",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 50"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only called in factory function createURLResolver (line 221), no actual instantiation in production code",
+          "grep_result": "URLResolver used in CapabilityExecutor as type import only"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Type imported in CapabilityExecutor.ts (line 13)"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "CapabilityExecutor expects URLResolver but never creates it; no production code instantiates URLResolver"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/URLResolver.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined, exported, and type-imported in CapabilityExecutor, but never instantiated in production code"
+    },
+    {
+      "feature_id": "F4",
+      "name": "createURLResolver",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 217"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Factory function defined but never called in production code",
+          "grep_result": "No calls found outside of definition"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in capabilityManagement/index.ts and endpoint/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/URLResolver.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Factory function defined but never called in production code"
+    },
+    {
+      "feature_id": "F5",
+      "name": "CapabilityExecutor",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 36"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Only called in factory function createCapabilityExecutor (line 252), no actual instantiation in production code",
+          "grep_result": "Type imported in ApiRestNode.ts but never instantiated"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Type imported in ApiRestNode.ts (line 15)"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "ApiRestNode expects capabilityExecutor in context but ContextManager never provides it"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/CapabilityExecutor.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined and type-imported in ApiRestNode, but never instantiated. ContextManager.getContext() does not provide capabilityExecutor property, making the feature unusable in production."
+    },
+    {
+      "feature_id": "F6",
+      "name": "createCapabilityExecutor",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 248"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Factory function defined but never called in production code",
+          "grep_result": "No calls found outside of definition"
+        },
+        "is_exported": {
+          "passed": false,
+          "evidence": "Not exported in taskflowEngine/index.ts or nodes/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/CapabilityExecutor.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Factory function defined but never called and not exported"
+    },
+    {
+      "feature_id": "F7",
+      "name": "capability_id parameter in ApiRestNode",
+      "type": "parameter",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 35 in ApiRestNodeConfig interface"
+        },
+        "is_used_in_code": {
+          "passed": true,
+          "evidence": "Used in execute() method (line 84-86) to call executeWithCapability()"
+        },
+        "integration_works": {
+          "passed": false,
+          "evidence": "Parameter is handled but cannot work because ContextManager never provides capabilityExecutor in context"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts (lines 304-410)"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "MISSING_INTEGRATION",
+      "failure_reason": "Parameter is defined and used in code, but the feature is not integrated into the execution pipeline. ContextManager.getContext() does not provide capabilityExecutor, so capability_id mode will always fail with EXECUTOR_NOT_AVAILABLE error in production."
+    },
+    {
+      "feature_id": "F8",
+      "name": "EndpointResolutionError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/capabilityManagement/endpoint/types.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 62"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Instantiated in URLResolver.ts (lines 75, 90)"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in URLResolver.ts (line 21)"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in capabilityManagement/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/URLResolver.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "tests/integration directory is empty"
+        }
+      },
+      "classification": "PASSED_BUT_UNUSED",
+      "failure_reason": "Error class is properly implemented and used by URLResolver, but since URLResolver is never instantiated in production, this error is also never thrown in production."
+    }
+  ],
+  "summary": {
+    "total_features": 8,
+    "passed": 0,
+    "dead_code": 6,
+    "missing_integration": 1,
+    "passed_but_unused": 1,
+    "integration_rate": "0%"
+  },
+  "critical_gap": {
+    "title": "CapabilityExecutor not integrated into execution pipeline",
+    "description": "ContextManager.getContext() does not provide capabilityExecutor property. ApiRestNode expects context.capabilityExecutor but it is never provided by the framework.",
+    "impact": "All capability_id based API calls will fail with EXECUTOR_NOT_AVAILABLE error in production",
+    "evidence_files": [
+      "mySwiftAgentCore/src/taskflowEngine/executor/ContextManager.ts (lines 52-58)",
+      "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts (lines 118-128)"
+    ]
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F1",
+      "name": "EndpointConfigManager",
+      "file": "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+      "line": 31,
+      "reason": "Never instantiated in production code",
+      "recommended_caller": "Application startup or CapabilityExecutor initialization"
+    },
+    {
+      "feature_id": "F2",
+      "name": "createEndpointConfigManager",
+      "file": "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+      "line": 156,
+      "reason": "Factory function never called",
+      "recommended_caller": "Application startup"
+    },
+    {
+      "feature_id": "F3",
+      "name": "URLResolver",
+      "file": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "line": 50,
+      "reason": "Never instantiated in production code",
+      "recommended_caller": "CapabilityExecutor initialization"
+    },
+    {
+      "feature_id": "F4",
+      "name": "createURLResolver",
+      "file": "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+      "line": 217,
+      "reason": "Factory function never called",
+      "recommended_caller": "Application startup or CapabilityExecutor initialization"
+    },
+    {
+      "feature_id": "F5",
+      "name": "CapabilityExecutor",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "line": 36,
+      "reason": "Never instantiated in production code",
+      "recommended_caller": "TaskFlowEngine or WorkflowExecutor initialization"
+    },
+    {
+      "feature_id": "F6",
+      "name": "createCapabilityExecutor",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+      "line": 248,
+      "reason": "Factory function never called and not exported",
+      "recommended_caller": "TaskFlowEngine constructor"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "action": "Add capabilityExecutor to ExecutionContext interface",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "description": "Extend ExecutionContext interface to include optional capabilityExecutor property",
+      "code_snippet": "export interface ExecutionContext {\n  workflowId: string;\n  stepResults: Record<string, unknown>;\n  variables: Record<string, unknown>;\n  secrets: Record<string, string>;\n  capabilityExecutor?: CapabilityExecutor; // Add this\n}"
+    },
+    {
+      "priority": "P0",
+      "action": "Initialize CapabilityExecutor in TaskFlowEngine constructor",
+      "file": "mySwiftAgentCore/src/taskflowEngine/TaskFlowEngine.ts",
+      "description": "Create and store CapabilityExecutor instance during TaskFlowEngine initialization",
+      "code_snippet": "import { createCapabilityExecutor } from './nodes/CapabilityExecutor.js';\nimport { createURLResolver } from '../capabilityManagement/endpoint/URLResolver.js';\nimport { createEndpointConfigManager } from '../capabilityManagement/endpoint/EndpointConfigManager.js';\n\nexport class TaskFlowEngine {\n  private readonly capabilityExecutor: CapabilityExecutor;\n\n  constructor(config: TaskFlowEngineConfig = {}) {\n    // ... existing code ...\n    \n    // Initialize capability execution\n    const endpointManager = createEndpointConfigManager(config.capabilityBasePath ?? './capabilities');\n    const urlResolver = createURLResolver(endpointManager, 'default_project');\n    this.capabilityExecutor = createCapabilityExecutor(urlResolver);\n  }\n}"
+    },
+    {
+      "priority": "P0",
+      "action": "Pass capabilityExecutor to ContextManager",
+      "file": "mySwiftAgentCore/src/taskflowEngine/executor/ContextManager.ts",
+      "description": "Add capabilityExecutor to ContextManagerConfig and include it in getContext() return value",
+      "code_snippet": "export interface ContextManagerConfig {\n  secrets?: Record<string, string>;\n  variables?: Record<string, unknown>;\n  capabilityExecutor?: CapabilityExecutor; // Add this\n}\n\nexport class ContextManager {\n  private readonly capabilityExecutor?: CapabilityExecutor;\n\n  constructor(workflow, config) {\n    // ... existing code ...\n    this.capabilityExecutor = config.capabilityExecutor;\n  }\n\n  getContext(): ExecutionContext {\n    return {\n      workflowId: this.workflowId,\n      stepResults: Object.fromEntries(this.stepResults),\n      variables: Object.fromEntries(this.variables),\n      secrets: this.secrets,\n      capabilityExecutor: this.capabilityExecutor, // Add this\n    };\n  }\n}"
+    },
+    {
+      "priority": "P0",
+      "action": "Update WorkflowExecutor to pass capabilityExecutor",
+      "file": "mySwiftAgentCore/src/taskflowEngine/executor/WorkflowExecutor.ts",
+      "description": "Accept capabilityExecutor in constructor and pass it to ContextManager",
+      "code_snippet": "export interface WorkflowExecutorConfig {\n  nodeRegistry: NodeRegistry;\n  parallelManager?: ParallelExecutionManager;\n  defaultTimeout?: number;\n  capabilityExecutor?: CapabilityExecutor; // Add this\n}\n\nexport class WorkflowExecutor {\n  async execute(workflow, options) {\n    const contextConfig: ContextManagerConfig = {\n      secrets: options.secrets,\n      variables: options.variables,\n      capabilityExecutor: this.config.capabilityExecutor, // Add this\n    };\n    const contextManager = new ContextManager(workflow, contextConfig);\n    // ... rest of code ...\n  }\n}"
+    },
+    {
+      "priority": "P0",
+      "action": "Update TaskFlowEngine to pass capabilityExecutor to WorkflowExecutor",
+      "file": "mySwiftAgentCore/src/taskflowEngine/TaskFlowEngine.ts",
+      "description": "Pass capabilityExecutor to WorkflowExecutor constructor",
+      "code_snippet": "this.executor = new WorkflowExecutor({\n  nodeRegistry: this.config.nodeRegistry,\n  defaultTimeout: this.config.defaultTimeout,\n  capabilityExecutor: this.capabilityExecutor, // Add this\n});"
+    },
+    {
+      "priority": "P0",
+      "action": "Export createCapabilityExecutor factory function",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/index.ts",
+      "description": "Export createCapabilityExecutor so it can be used by TaskFlowEngine",
+      "code_snippet": "export { CapabilityExecutor, createCapabilityExecutor } from './CapabilityExecutor.js';"
+    },
+    {
+      "priority": "P1",
+      "action": "Create integration test for capability_id execution flow",
+      "file": "mySwiftAgentCore/tests/integration/capabilityExecution.test.ts",
+      "description": "Create integration test that verifies the full flow: TaskFlowEngine -> WorkflowExecutor -> ContextManager -> ApiRestNode -> CapabilityExecutor -> URLResolver -> EndpointConfigManager",
+      "test_cases": [
+        "Test that TaskFlowEngine initializes CapabilityExecutor",
+        "Test that context includes capabilityExecutor",
+        "Test that ApiRestNode can execute capability_id based calls",
+        "Test that URLResolver resolves URLs correctly",
+        "Test error handling when capability not found"
+      ]
+    },
+    {
+      "priority": "P1",
+      "action": "Create acceptance test for Issue #372",
+      "file": "mySwiftAgentCore/tests/acceptance/test_issue_372_acceptance.ts",
+      "description": "Create E2E acceptance test that calls TaskFlowEngine with a workflow containing capability_id",
+      "test_scenario": "Execute a real workflow with capability_id parameter and verify API call is made to correct URL"
+    }
+  ],
+  "integration_gaps": [
+    {
+      "gap_id": "G1",
+      "title": "ExecutionContext missing capabilityExecutor property",
+      "severity": "critical",
+      "impact": "All capability_id based executions will fail",
+      "fix_priority": "P0"
+    },
+    {
+      "gap_id": "G2",
+      "title": "ContextManager does not provide capabilityExecutor",
+      "severity": "critical",
+      "impact": "ApiRestNode cannot access CapabilityExecutor",
+      "fix_priority": "P0"
+    },
+    {
+      "gap_id": "G3",
+      "title": "No initialization of EndpointConfigManager, URLResolver, CapabilityExecutor",
+      "severity": "critical",
+      "impact": "Feature components are never instantiated",
+      "fix_priority": "P0"
+    },
+    {
+      "gap_id": "G4",
+      "title": "No integration tests",
+      "severity": "high",
+      "impact": "Cannot verify feature works end-to-end",
+      "fix_priority": "P1"
+    },
+    {
+      "gap_id": "G5",
+      "title": "No acceptance tests",
+      "severity": "high",
+      "impact": "Cannot verify feature meets requirements",
+      "fix_priority": "P1"
+    }
+  ],
+  "conclusion": "All features are implemented with unit tests, but NONE are integrated into the execution pipeline. The feature is 100% dead code. ContextManager does not provide capabilityExecutor in the execution context, making it impossible for ApiRestNode to use the capability_id feature in production. This is a critical integration gap that makes the entire Issue #372 implementation non-functional."
+}

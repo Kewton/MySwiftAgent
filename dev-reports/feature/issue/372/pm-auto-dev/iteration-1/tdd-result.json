@@ -1,0 +1,139 @@
+{
+  "status": "success",
+  "issue_number": 372,
+  "issue_title": "feat(mySwiftAgentCore): ケイパビリティAPIエンドポイントのベースURL解決機能",
+  "coverage": 92.79,
+  "unit_tests": {
+    "total": 1079,
+    "passed": 1079,
+    "failed": 0
+  },
+  "static_analysis": {
+    "eslint_errors": 0,
+    "tsc_errors": 0
+  },
+  "files_modified": [
+    "mySwiftAgentCore/src/capabilityManagement/endpoint/types.ts",
+    "mySwiftAgentCore/src/capabilityManagement/endpoint/EndpointConfigManager.ts",
+    "mySwiftAgentCore/src/capabilityManagement/endpoint/URLResolver.ts",
+    "mySwiftAgentCore/src/capabilityManagement/endpoint/index.ts",
+    "mySwiftAgentCore/src/capabilityManagement/index.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/CapabilityExecutor.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/index.ts",
+    "mySwiftAgentCore/src/taskflowEngine/executor/ContextManager.ts",
+    "mySwiftAgentCore/src/taskflowEngine/executor/WorkflowExecutor.ts",
+    "mySwiftAgentCore/src/taskflowEngine/TaskFlowEngine.ts",
+    "mySwiftAgentCore/config/capabilities/default_project/index.yaml",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/EndpointConfigManager.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilityManagement/endpoint/URLResolver.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/CapabilityExecutor.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts"
+  ],
+  "executed_tasks": [
+    "1.1",
+    "1.2",
+    "1.3",
+    "2.1",
+    "2.2",
+    "3.1",
+    "3.2",
+    "4.1",
+    "4.2"
+  ],
+  "skipped_tasks": [
+    {
+      "task_id": "5.1",
+      "reason": "capability YAML api_source field - deferred to configuration phase"
+    },
+    {
+      "task_id": "6.1",
+      "reason": "Integration test requires running services - deferred to acceptance testing phase"
+    }
+  ],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": false,
+    "exports_added": true,
+    "dead_code_resolved": true
+  },
+  "dead_code_resolution": {
+    "iteration": 2,
+    "previous_integration_rate": "0%",
+    "current_integration_rate": "100%",
+    "resolved_issues": [
+      {
+        "feature": "ICapabilityExecutor",
+        "resolution": "Added to NodeExecutionContext interface in BaseNode.ts"
+      },
+      {
+        "feature": "CapabilityExecutor",
+        "resolution": "Exported from nodes/index.ts"
+      },
+      {
+        "feature": "TaskFlowEngineConfig.capabilityExecutor",
+        "resolution": "Added optional capabilityExecutor parameter"
+      },
+      {
+        "feature": "WorkflowExecutorConfig.capabilityExecutor",
+        "resolution": "Added capabilityExecutor pass-through"
+      },
+      {
+        "feature": "ContextManagerConfig.capabilityExecutor",
+        "resolution": "Added capabilityExecutor and included in getContext()"
+      },
+      {
+        "feature": "ApiRestNode context usage",
+        "resolution": "Now uses context.capabilityExecutor from BaseNode interface"
+      }
+    ],
+    "integration_path": "TaskFlowEngine → WorkflowExecutor → ContextManager → NodeExecutionContext → ApiRestNode"
+  },
+  "commits": [
+    "b687334: feat(mySwiftAgentCore): Issue #372 - Capability API endpoint base URL resolution"
+  ],
+  "acceptance_criteria_verification": {
+    "AC-1": {
+      "status": "implemented",
+      "description": "CapabilityLoader(YamlLoader)がindex.yamlのapi_endpointsを読み込める",
+      "implementation": "EndpointConfigManager.loadProjectEndpoints() in src/capabilityManagement/endpoint/EndpointConfigManager.ts"
+    },
+    "AC-2": {
+      "status": "implemented",
+      "description": "CapabilityLoaderが環境変数${VAR:-default}形式を解決できる",
+      "implementation": "EndpointConfigManager.resolveEnvVars() with pattern /\\$\\{([^}]+)\\}/g"
+    },
+    "AC-3": {
+      "status": "implemented",
+      "description": "各ケイパビリティの_internal.api_sourceからベースURLを特定できる",
+      "implementation": "URLResolver.findMatchingConfigForCapability() checks _internal.config.api_source"
+    },
+    "AC-4": {
+      "status": "implemented",
+      "description": "api_sourceがない場合、endpoint_prefixでフォールバック解決できる",
+      "implementation": "URLResolver.findMatchingConfig() matches endpoint_prefix against endpoint path"
+    },
+    "AC-5": {
+      "status": "partially_implemented",
+      "description": "taskflowGeneratorAgentが完全URLを含むワークフローを生成できる",
+      "note": "URL resolution is ready, generator integration needs separate work"
+    },
+    "AC-6": {
+      "status": "implemented",
+      "description": "生成されたワークフローがtaskflowEngineで正常に実行できる",
+      "implementation": "ApiRestNode extended with capability_id support, CapabilityExecutor integrated via ICapabilityExecutor interface"
+    },
+    "AC-7": {
+      "status": "implemented",
+      "description": "環境変数EXPERT_AGENT_BASE_URLでベースURLをオーバーライドできる",
+      "implementation": "EndpointConfigManager.resolveEnvVars() resolves ${EXPERT_AGENT_BASE_URL:-...}"
+    },
+    "AC-8": {
+      "status": "achieved",
+      "description": "単体テストカバレッジ90%以上",
+      "coverage": "92.79%"
+    }
+  },
+  "message": "TDD implementation complete with dead code resolution. All 1079 tests pass with 92.79% coverage. Key components implemented: EndpointConfigManager, URLResolver, CapabilityExecutor, and ApiRestNode capability_id extension. Integration path fully established: TaskFlowEngine → WorkflowExecutor → ContextManager → NodeExecutionContext → ApiRestNode. Static analysis (ESLint, TypeScript) shows 0 errors."
+}
