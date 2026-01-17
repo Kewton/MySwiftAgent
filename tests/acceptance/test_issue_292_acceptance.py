@@ -16,6 +16,7 @@ Issue #292 受入テスト（L3: ローカル受入テスト）
 実行方法:
   uv run pytest tests/acceptance/test_issue_292_acceptance.py -v
 """
+
 import json
 import os
 import re
@@ -78,9 +79,7 @@ class DBHelper:
             )
         return None
 
-    def get_job_versions_by_workbench(
-        self, workbench_id: str
-    ) -> list[JobVersionData]:
+    def get_job_versions_by_workbench(self, workbench_id: str) -> list[JobVersionData]:
         """Workbench に属する JobVersion 一覧を取得"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -214,10 +213,7 @@ class TestIssue292Acceptance:
             response = requests.get(self.MYAGENTDESK_URL, timeout=5)
             assert response.status_code == 200, "myAgentDesk is not running"
         except requests.exceptions.ConnectionError:
-            pytest.skip(
-                "myAgentDesk is not running. "
-                "Run: cd myAgentDesk && npm run dev"
-            )
+            pytest.skip("myAgentDesk is not running. Run: cd myAgentDesk && npm run dev")
 
         # DBヘルパー初期化
         db_path = os.path.join(self.MYAGENTDESK_DIR, "data", "local.db")
@@ -231,9 +227,7 @@ class TestIssue292Acceptance:
         if not self.workbench:
             pytest.skip("Workbench wb_001 not found in database")
 
-        self.__class__.job_versions = self.db_helper.get_job_versions_by_workbench(
-            "wb_001"
-        )
+        self.__class__.job_versions = self.db_helper.get_job_versions_by_workbench("wb_001")
 
     # ==========================================================================
     # シナリオ1: Review画面 - JobVersion一覧の表示検証
@@ -302,9 +296,7 @@ class TestIssue292Acceptance:
 
         # 各JobVersionのstatusが含まれているか確認
         for jv in self.job_versions:
-            assert jv.status.lower() in html_lower, (
-                f"Status '{jv.status}' not found in response"
-            )
+            assert jv.status.lower() in html_lower, f"Status '{jv.status}' not found in response"
 
     # ==========================================================================
     # シナリオ2: JobVersion詳細画面 - タスク分解の表示検証
@@ -315,9 +307,7 @@ class TestIssue292Acceptance:
         assert self.workbench is not None
 
         # task_breakdownが存在するJobVersionを取得
-        jv_with_tasks = next(
-            (jv for jv in self.job_versions if jv.task_breakdown), None
-        )
+        jv_with_tasks = next((jv for jv in self.job_versions if jv.task_breakdown), None)
         if not jv_with_tasks:
             pytest.skip("No JobVersion with task_breakdown in database")
 
@@ -345,9 +335,7 @@ class TestIssue292Acceptance:
         """JobVersion詳細にタスク名が順序通り表示される"""
         assert self.workbench is not None
 
-        jv_with_tasks = next(
-            (jv for jv in self.job_versions if jv.task_breakdown), None
-        )
+        jv_with_tasks = next((jv for jv in self.job_versions if jv.task_breakdown), None)
         if not jv_with_tasks:
             pytest.skip("No JobVersion with task_breakdown in database")
 
@@ -370,9 +358,7 @@ class TestIssue292Acceptance:
             task_name = task.get("name", "")
             if task_name:
                 pos = response.text.find(task_name)
-                assert pos > last_pos, (
-                    f"Task '{task_name}' appears before expected position"
-                )
+                assert pos > last_pos, f"Task '{task_name}' appears before expected position"
                 last_pos = pos
 
     # ==========================================================================
@@ -383,9 +369,7 @@ class TestIssue292Acceptance:
         """JobVersion詳細にInput Interfaceが正しく表示される"""
         assert self.workbench is not None
 
-        jv_with_if = next(
-            (jv for jv in self.job_versions if jv.interface_definitions), None
-        )
+        jv_with_if = next((jv for jv in self.job_versions if jv.interface_definitions), None)
         if not jv_with_if:
             pytest.skip("No JobVersion with interface_definitions in database")
 
@@ -401,17 +385,13 @@ class TestIssue292Acceptance:
         # Input Interfaceのキーが含まれているか確認
         input_if = jv_with_if.interface_definitions.get("input", {})
         for key in input_if.keys():
-            assert key in response.text, (
-                f"Input interface key '{key}' not found in response"
-            )
+            assert key in response.text, f"Input interface key '{key}' not found in response"
 
     def test_detail_page_displays_interface_output_schema(self) -> None:
         """JobVersion詳細にOutput Interfaceが正しく表示される"""
         assert self.workbench is not None
 
-        jv_with_if = next(
-            (jv for jv in self.job_versions if jv.interface_definitions), None
-        )
+        jv_with_if = next((jv for jv in self.job_versions if jv.interface_definitions), None)
         if not jv_with_if:
             pytest.skip("No JobVersion with interface_definitions in database")
 
@@ -427,9 +407,7 @@ class TestIssue292Acceptance:
         # Output Interfaceのキーが含まれているか確認
         output_if = jv_with_if.interface_definitions.get("output", {})
         for key in output_if.keys():
-            assert key in response.text, (
-                f"Output interface key '{key}' not found in response"
-            )
+            assert key in response.text, f"Output interface key '{key}' not found in response"
 
     # ==========================================================================
     # シナリオ4: Active切り替えAPI - データ整合性検証
@@ -441,18 +419,12 @@ class TestIssue292Acceptance:
 
         # success または deprecated のJobVersionを取得（activeは切替不可）
         jv_to_activate = next(
-            (
-                jv
-                for jv in self.job_versions
-                if jv.status in ["success", "deprecated"]
-            ),
+            (jv for jv in self.job_versions if jv.status in ["success", "deprecated"]),
             None,
         )
         if not jv_to_activate:
             # activeのJobVersionでバリデーションエラーを確認
-            jv_to_activate = next(
-                (jv for jv in self.job_versions if jv.status == "active"), None
-            )
+            jv_to_activate = next((jv for jv in self.job_versions if jv.status == "active"), None)
             if not jv_to_activate:
                 pytest.skip("No JobVersion available for activate test")
 
@@ -461,9 +433,9 @@ class TestIssue292Acceptance:
         response = requests.post(url, timeout=10)
 
         # レスポンスがJSONであることを確認
-        assert response.headers.get("content-type", "").startswith(
-            "application/json"
-        ), f"Expected JSON response, got {response.headers.get('content-type')}"
+        assert response.headers.get("content-type", "").startswith("application/json"), (
+            f"Expected JSON response, got {response.headers.get('content-type')}"
+        )
 
         data = response.json()
 
@@ -484,9 +456,7 @@ class TestIssue292Acceptance:
         """既にActiveのJobVersionは切り替え不可（バリデーションエラー）"""
         assert self.db_helper is not None
 
-        active_jv = next(
-            (jv for jv in self.job_versions if jv.status == "active"), None
-        )
+        active_jv = next((jv for jv in self.job_versions if jv.status == "active"), None)
         if not active_jv:
             pytest.skip("No active JobVersion in database")
 
@@ -502,9 +472,7 @@ class TestIssue292Acceptance:
         data = response.json()
         # エラーメッセージにactive関連の説明が含まれる
         error_msg = data.get("message", "") or data.get("error", "")
-        assert "active" in error_msg.lower(), (
-            f"Error message should mention 'active': {error_msg}"
-        )
+        assert "active" in error_msg.lower(), f"Error message should mention 'active': {error_msg}"
 
     # ==========================================================================
     # シナリオ5: エラーハンドリング - セキュリティ検証
@@ -522,9 +490,7 @@ class TestIssue292Acceptance:
 
         response = requests.get(url, timeout=10)
 
-        assert response.status_code == 404, (
-            f"Expected 404, got {response.status_code}"
-        )
+        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
         # エラーメッセージが含まれているか確認
         assert "not found" in response.text.lower() or "404" in response.text, (
             "404 page should contain 'not found' or '404'"
@@ -617,10 +583,9 @@ class TestIssue292Acceptance:
 
         # Step 2: JobVersionへのリンクが含まれているか確認
         detail_path = f"/job-versions/{jv.id}"
-        assert (
-            detail_path in review_response.text
-            or jv.version_label in review_response.text
-        ), f"Link to {detail_path} not found in review page"
+        assert detail_path in review_response.text or jv.version_label in review_response.text, (
+            f"Link to {detail_path} not found in review page"
+        )
 
         # Step 3: 詳細画面にアクセス
         detail_url = (
@@ -650,14 +615,10 @@ class TestIssue292Acceptance:
 
         if response.status_code == 200:
             data = response.json()
-            job_versions_from_api = (
-                data if isinstance(data, list) else data.get("jobVersions", [])
-            )
+            job_versions_from_api = data if isinstance(data, list) else data.get("jobVersions", [])
 
             # DBのデータとAPIのデータを比較
-            api_jv = next(
-                (j for j in job_versions_from_api if j.get("id") == jv.id), None
-            )
+            api_jv = next((j for j in job_versions_from_api if j.get("id") == jv.id), None)
             if api_jv:
                 # バージョンラベルの一致確認
                 assert api_jv.get("versionLabel") == jv.version_label, (

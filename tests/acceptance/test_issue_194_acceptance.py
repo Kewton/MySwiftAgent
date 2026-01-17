@@ -42,10 +42,7 @@ class TestIssue194Acceptance:
                 response = requests.get(url, timeout=5)
                 assert response.status_code == 200, f"{name} is not healthy"
             except requests.exceptions.ConnectionError:
-                pytest.skip(
-                    f"{name} is not running. "
-                    "Run: ./scripts/dev-start.sh or make dev-all"
-                )
+                pytest.skip(f"{name} is not running. Run: ./scripts/dev-start.sh or make dev-all")
 
     # ==========================================================================
     # シナリオ1: Chat API呼び出しでtrace_idが保存される
@@ -100,9 +97,7 @@ class TestIssue194Acceptance:
                         pass
 
         # Assert - SSEレスポンスが返された
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}"
-        )
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         assert len(events) > 0, "No SSE events received"
 
         # trace_idイベントが含まれているか確認
@@ -188,9 +183,7 @@ class TestIssue194Acceptance:
 
         # Assert - 有効なURLは /trace/demo を含まない
         for url in valid_urls:
-            assert "/trace/demo" not in url, (
-                f"Valid URL should not contain /trace/demo: {url}"
-            )
+            assert "/trace/demo" not in url, f"Valid URL should not contain /trace/demo: {url}"
 
     # ==========================================================================
     # シナリオ5: Langfuseヘルスチェック（オプション）
@@ -216,9 +209,7 @@ class TestIssue194Acceptance:
             return
 
         # Assert
-        assert response.status_code == 200, (
-            f"Langfuse health check failed: {response.status_code}"
-        )
+        assert response.status_code == 200, f"Langfuse health check failed: {response.status_code}"
 
     # ==========================================================================
     # シナリオ6: E2E - Chat → Valkey保存 → trace_id確認
@@ -288,8 +279,12 @@ class TestIssue194Acceptance:
             # 会話キーを検索
             keys_result = subprocess.run(
                 [
-                    "docker", "exec", "myswiftagent-valkey",
-                    "redis-cli", "KEYS", f"*{conversation_id}*"
+                    "docker",
+                    "exec",
+                    "myswiftagent-valkey",
+                    "redis-cli",
+                    "KEYS",
+                    f"*{conversation_id}*",
                 ],
                 capture_output=True,
                 text=True,
@@ -308,10 +303,7 @@ class TestIssue194Acceptance:
             # 最初のキーからデータを取得
             first_key = valkey_keys.split("\n")[0]
             data_result = subprocess.run(
-                [
-                    "docker", "exec", "myswiftagent-valkey",
-                    "redis-cli", "GET", first_key
-                ],
+                ["docker", "exec", "myswiftagent-valkey", "redis-cli", "GET", first_key],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -402,10 +394,7 @@ class TestIssue194Acceptance:
         print(f"Looking for conversation_id: {conversation_id}")
 
         # Assert - 会話データを検索
-        matching_items = [
-            item for item in items
-            if item.get("conversation_id") == conversation_id
-        ]
+        matching_items = [item for item in items if item.get("conversation_id") == conversation_id]
 
         if matching_items:
             item = matching_items[0]
@@ -448,10 +437,7 @@ class TestIssue194Acceptance:
         # Arrange & Act - Valkeyから全会話キーを取得
         try:
             keys_result = subprocess.run(
-                [
-                    "docker", "exec", "myswiftagent-valkey",
-                    "redis-cli", "KEYS", "conversation:*"
-                ],
+                ["docker", "exec", "myswiftagent-valkey", "redis-cli", "KEYS", "conversation:*"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -472,10 +458,7 @@ class TestIssue194Acceptance:
         print(f"Inspecting Valkey key: {first_key}")
 
         data_result = subprocess.run(
-            [
-                "docker", "exec", "myswiftagent-valkey",
-                "redis-cli", "GET", first_key
-            ],
+            ["docker", "exec", "myswiftagent-valkey", "redis-cli", "GET", first_key],
             capture_output=True,
             text=True,
             timeout=10,
@@ -503,7 +486,9 @@ class TestIssue194Acceptance:
             # metadataフィールドの確認
             if "metadata" in conversation_data:
                 metadata = conversation_data["metadata"]
-                print(f"  metadata fields: {list(metadata.keys()) if isinstance(metadata, dict) else type(metadata)}")
+                print(
+                    f"  metadata fields: {list(metadata.keys()) if isinstance(metadata, dict) else type(metadata)}"
+                )
 
                 # trace_idの確認
                 if isinstance(metadata, dict) and "trace_id" in metadata:
@@ -533,16 +518,14 @@ class TestIssue194Acceptance:
         3. Diagnostics APIで各会話が取得可能
         """
         # Arrange - 3つの異なる会話を作成
-        conversation_ids = [
-            f"conv-multi-{i}-{uuid.uuid4().hex[:6]}" for i in range(3)
-        ]
+        conversation_ids = [f"conv-multi-{i}-{uuid.uuid4().hex[:6]}" for i in range(3)]
         chat_endpoint = f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/chat/requirement-definition"
 
         # Act - 各会話にメッセージを送信
         for i, conv_id in enumerate(conversation_ids):
             payload: dict[str, Any] = {
                 "conversation_id": conv_id,
-                "user_message": f"複数会話テスト {i+1}: タスク{i+1}を自動化したい",
+                "user_message": f"複数会話テスト {i + 1}: タスク{i + 1}を自動化したい",
                 "context": {
                     "previous_messages": [],
                     "current_requirements": {

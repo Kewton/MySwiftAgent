@@ -10,9 +10,9 @@ Issue #288 受入テスト（L3: ローカル受入テスト）
   uv run pytest tests/acceptance/test_issue_288_acceptance.py -v
 """
 
+
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance
@@ -34,10 +34,7 @@ class TestIssue288Acceptance:
                 304,
             ], f"myAgentDesk is not responding correctly: {response.status_code}"
         except requests.exceptions.ConnectionError:
-            pytest.skip(
-                "myAgentDesk is not running. "
-                "Run: cd myAgentDesk && npm run dev"
-            )
+            pytest.skip("myAgentDesk is not running. Run: cd myAgentDesk && npm run dev")
 
     # ==========================================================================
     # 正常系テスト
@@ -75,9 +72,7 @@ class TestIssue288Acceptance:
         assert response.status_code == 200
         content = response.text.lower()
         # "project" という単語がページに含まれることを確認
-        assert "project" in content, (
-            f"Expected 'project' in page content"
-        )
+        assert "project" in content, "Expected 'project' in page content"
 
     def test_project_detail_page_returns_200_for_valid_id(self) -> None:
         """シナリオ2: /projects/:projectId が有効なIDで200を返す
@@ -181,9 +176,7 @@ class TestIssue288Acceptance:
         # Assert
         assert response.status_code == 200
         content_type = response.headers.get("content-type", "")
-        assert "text/html" in content_type, (
-            f"Expected text/html, got {content_type}"
-        )
+        assert "text/html" in content_type, f"Expected text/html, got {content_type}"
 
     def test_projects_page_has_doctype(self) -> None:
         """シナリオ8: /projects ページが有効なHTMLドキュメント"""

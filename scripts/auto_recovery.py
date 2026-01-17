@@ -5,12 +5,12 @@ This module provides automatic service recovery functionality including
 restart management, history tracking, and retry limit enforcement.
 """
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Dict
-import json
+from typing import Dict, List, Optional
 
 
 class RecoveryAction(Enum):
@@ -163,9 +163,7 @@ class RecoveryHistory:
         Returns:
             List of restart records
         """
-        return [
-            record for record in self._records if record["service_name"] == service_name
-        ]
+        return [record for record in self._records if record["service_name"] == service_name]
 
     def get_all_records(self) -> List[Dict]:
         """

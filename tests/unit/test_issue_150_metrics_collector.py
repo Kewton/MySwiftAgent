@@ -3,14 +3,15 @@ Unit tests for Issue #150: Metrics Collection
 受入条件: サービス異常が自動検知されること
 """
 
-import pytest
 from datetime import datetime, timedelta
-from typing import Dict, List
+
+import pytest
+
 from scripts.metrics_collector import (
+    AnomalyDetector,
+    HealthStatus,
     MetricsCollector,
     ServiceMetrics,
-    HealthStatus,
-    AnomalyDetector,
 )
 
 
@@ -66,10 +67,7 @@ class TestMetricsCollector:
         Then: タイムウィンドウ外の古いメトリクスは除外される
         """
         # Arrange
-        collector = MetricsCollector(
-            service_name="expertagent",
-            time_window_minutes=5
-        )
+        collector = MetricsCollector(service_name="expertagent", time_window_minutes=5)
 
         # Act
         old_time = datetime.now() - timedelta(minutes=10)
@@ -174,10 +172,7 @@ class TestAnomalyDetector:
         Then: 異常なしと判定される
         """
         # Arrange
-        detector = AnomalyDetector(
-            success_rate_threshold=0.8,
-            response_time_threshold=2.0
-        )
+        detector = AnomalyDetector(success_rate_threshold=0.8, response_time_threshold=2.0)
         metrics = ServiceMetrics(
             service_name="expertagent",
             success_rate=0.95,
@@ -204,7 +199,7 @@ class TestAnomalyDetector:
         # Act & Assert
         assert detector.check_consecutive_failures(success=False) is False  # 1回目
         assert detector.check_consecutive_failures(success=False) is False  # 2回目
-        assert detector.check_consecutive_failures(success=False) is True   # 3回目（検知）
+        assert detector.check_consecutive_failures(success=False) is True  # 3回目（検知）
 
         # 成功でリセット
         assert detector.check_consecutive_failures(success=True) is False
@@ -221,7 +216,7 @@ class TestMetricsPersistence:
         Then: メトリクスが正しく復元される
         """
         # Arrange
-        from pathlib import Path
+
         metrics_file = tmp_path / "metrics.json"
         collector = MetricsCollector(service_name="jobqueue")
 

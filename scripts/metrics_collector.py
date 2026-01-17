@@ -5,12 +5,12 @@ This module provides functionality to collect and analyze service metrics
 including response time, success rate, and health status.
 """
 
-from dataclasses import dataclass, field, asdict
+import json
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
-import json
 from pathlib import Path
+from typing import List, Optional
 
 
 class HealthStatus(Enum):
@@ -55,9 +55,7 @@ class MetricsCollector:
         self._requests: List[dict] = []
         self._response_times: List[float] = []
 
-    def record_request(
-        self, success: bool, timestamp: Optional[datetime] = None
-    ) -> None:
+    def record_request(self, success: bool, timestamp: Optional[datetime] = None) -> None:
         """
         Record a request result.
 
@@ -107,9 +105,7 @@ class MetricsCollector:
 
         # Calculate average response time
         avg_response_time = (
-            sum(self._response_times) / len(self._response_times)
-            if self._response_times
-            else 0.0
+            sum(self._response_times) / len(self._response_times) if self._response_times else 0.0
         )
 
         # Count failures

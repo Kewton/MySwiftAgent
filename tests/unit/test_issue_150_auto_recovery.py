@@ -6,15 +6,16 @@ Unit tests for Issue #150: Auto Recovery
 - 無限ループに陥らないこと
 """
 
-import pytest
 from datetime import datetime, timedelta
-from pathlib import Path
+
+import pytest
+
 from scripts.auto_recovery import (
     AutoRecoveryManager,
-    RecoveryAction,
-    RecoveryHistory,
-    RecoveryConfig,
     MaxRetriesExceededError,
+    RecoveryAction,
+    RecoveryConfig,
+    RecoveryHistory,
 )
 
 
@@ -249,10 +250,7 @@ class TestRecoveryHistory:
         )
 
         # Assert
-        recent = history.get_recent_restarts(
-            service_name="jobqueue",
-            hours=1
-        )
+        recent = history.get_recent_restarts(service_name="jobqueue", hours=1)
         assert len(recent) == 1
         assert recent[0]["reason"] == "recent restart"
 

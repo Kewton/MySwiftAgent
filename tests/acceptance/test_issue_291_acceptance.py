@@ -9,6 +9,7 @@ Issue #291 受入テスト（L3: ローカル受入テスト）
 実行方法:
   uv run pytest tests/acceptance/test_issue_291_acceptance.py -v
 """
+
 import os
 import subprocess
 import time
@@ -26,10 +27,7 @@ class TestIssue291Acceptance:
     EXPERT_AGENT_URL = os.getenv("EXPERT_AGENT_URL", "http://localhost:8104")
     MYVAULT_URL = os.getenv("MYVAULT_URL", "http://localhost:8103")
     MYAGENTDESK_URL = os.getenv("MYAGENTDESK_URL", "http://localhost:5173")
-    DB_PATH = os.getenv(
-        "MYAGENTDESK_DB_PATH",
-        "myAgentDesk/data/local.db"
-    )
+    DB_PATH = os.getenv("MYAGENTDESK_DB_PATH", "myAgentDesk/data/local.db")
 
     @pytest.fixture(autouse=True)
     def check_services_running(self) -> None:
@@ -52,9 +50,7 @@ class TestIssue291Acceptance:
         try:
             response = requests.get(self.MYAGENTDESK_URL, timeout=5)
             # SvelteKitはHTMLを返すので、2xx系であればOK
-            assert response.status_code < 400, (
-                f"myAgentDesk returned {response.status_code}"
-            )
+            assert response.status_code < 400, f"myAgentDesk returned {response.status_code}"
         except requests.exceptions.ConnectionError:
             pytest.skip(
                 f"myAgentDesk is not running at {self.MYAGENTDESK_URL}. "
@@ -64,10 +60,7 @@ class TestIssue291Acceptance:
     def _run_sqlite_query(self, query: str) -> str:
         """SQLiteクエリを実行してresultを返す"""
         result = subprocess.run(
-            ["sqlite3", self.DB_PATH, query],
-            capture_output=True,
-            text=True,
-            check=False
+            ["sqlite3", self.DB_PATH, query], capture_output=True, text=True, check=False
         )
         return result.stdout.strip()
 
@@ -114,19 +107,14 @@ class TestIssue291Acceptance:
             data = response.json()
             # ANTHROPIC_API_KEYが含まれていることを確認
             secrets = data if isinstance(data, list) else data.get("secrets", [])
-            has_api_key = any(
-                "ANTHROPIC" in str(s).upper()
-                for s in secrets
-            ) if secrets else False
+            has_api_key = any("ANTHROPIC" in str(s).upper() for s in secrets) if secrets else False
             if not has_api_key:
                 pytest.skip(
                     "ANTHROPIC_API_KEY is not configured in myVault. "
                     "This is required for actual job generation."
                 )
         else:
-            pytest.skip(
-                f"Could not retrieve secrets from myVault: {response.status_code}"
-            )
+            pytest.skip(f"Could not retrieve secrets from myVault: {response.status_code}")
 
     @pytest.mark.external
     def test_scenario_3_job_generator_api_call(self) -> None:
@@ -139,7 +127,7 @@ class TestIssue291Acceptance:
         endpoint = f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/job-generator"
         payload: dict[str, Any] = {
             "user_requirement": "テスト用: ファイルをコピーするだけの簡単な処理",
-            "max_retry": 1
+            "max_retry": 1,
         }
 
         # Act
@@ -162,9 +150,7 @@ class TestIssue291Acceptance:
         print(f"Job ID: {job_id}")
 
         # ポーリングでステータス確認（最大30秒）
-        status_endpoint = (
-            f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/jobs/{job_id}/status"
-        )
+        status_endpoint = f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/jobs/{job_id}/status"
         for attempt in range(15):
             time.sleep(2)
             status_response = requests.get(status_endpoint, timeout=10)
@@ -175,10 +161,7 @@ class TestIssue291Acceptance:
                 if status in ("completed", "failed"):
                     break
             else:
-                print(
-                    f"Attempt {attempt + 1}: status check failed "
-                    f"({status_response.status_code})"
-                )
+                print(f"Attempt {attempt + 1}: status check failed ({status_response.status_code})")
 
     def test_scenario_4_database_schema_exists(self) -> None:
         """シナリオ4: job_versionテーブルが存在する
@@ -191,9 +174,7 @@ class TestIssue291Acceptance:
         )
 
         # Assert
-        assert "job_version" in result, (
-            f"job_version table not found in database. Result: {result}"
-        )
+        assert "job_version" in result, f"job_version table not found in database. Result: {result}"
 
     def test_scenario_5_job_version_columns_exist(self) -> None:
         """シナリオ5: job_versionテーブルに必要なカラムが存在
@@ -213,10 +194,7 @@ class TestIssue291Acceptance:
             "external_trace_id",
         ]
         for col in required_columns:
-            assert col in result, (
-                f"Column '{col}' not found in job_version table. "
-                f"Schema: {result}"
-            )
+            assert col in result, f"Column '{col}' not found in job_version table. Schema: {result}"
 
     # ==========================================================================
     # 異常系テスト
@@ -253,9 +231,7 @@ class TestIssue291Acceptance:
             pass
         else:
             # その他のエラー（400, 500等）も許容
-            assert response.status_code < 600, (
-                f"Unexpected status code: {response.status_code}"
-            )
+            assert response.status_code < 600, f"Unexpected status code: {response.status_code}"
 
     def test_scenario_7_job_status_not_found(self) -> None:
         """シナリオ7: 存在しないジョブIDでステータス確認
@@ -264,9 +240,7 @@ class TestIssue291Acceptance:
         """
         # Arrange
         fake_job_id = "nonexistent-job-id-12345"
-        endpoint = (
-            f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/jobs/{fake_job_id}/status"
-        )
+        endpoint = f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/jobs/{fake_job_id}/status"
 
         # Act
         response = requests.get(endpoint, timeout=10)
@@ -294,9 +268,7 @@ class TestIssue291Acceptance:
         response = requests.get(url, timeout=10)
 
         # Assert
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}"
-        )
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         # SvelteKitが返すHTMLにbodyタグが含まれることを確認
         assert "<body" in response.text or "<!DOCTYPE" in response.text, (
             "Response does not appear to be HTML"

@@ -9,7 +9,6 @@ Tests verify that docker-compose.yml correctly defines Valkey service with:
 - Network configuration
 """
 
-import os
 from pathlib import Path
 
 import pytest
@@ -45,9 +44,7 @@ class TestValkeyServiceDefinition:
     def test_valkey_service_exists(self, docker_compose_config: dict):
         """Valkey service が定義されていること."""
         assert "services" in docker_compose_config, "services が定義されていません"
-        assert (
-            "valkey" in docker_compose_config["services"]
-        ), "valkey service が定義されていません"
+        assert "valkey" in docker_compose_config["services"], "valkey service が定義されていません"
 
     def test_valkey_image_specification(self, docker_compose_config: dict):
         """Valkey イメージが正しく指定されていること."""
@@ -58,9 +55,7 @@ class TestValkeyServiceDefinition:
     def test_valkey_container_name(self, docker_compose_config: dict):
         """Valkey コンテナ名が設定されていること."""
         valkey_service = docker_compose_config["services"]["valkey"]
-        assert (
-            "container_name" in valkey_service
-        ), "Valkey container_name が設定されていません"
+        assert "container_name" in valkey_service, "Valkey container_name が設定されていません"
         assert valkey_service["container_name"] == "myswiftagent-valkey"
 
 
@@ -108,9 +103,9 @@ class TestValkeyVolumeConfiguration:
             if isinstance(volume, str) and ":/data" in volume:
                 data_volume_found = True
                 # Verify it uses valkey directory
-                assert (
-                    "./valkey/data" in volume or "valkey-data" in volume
-                ), "Valkey データディレクトリパスが不正です"
+                assert "./valkey/data" in volume or "valkey-data" in volume, (
+                    "Valkey データディレクトリパスが不正です"
+                )
                 break
 
         assert data_volume_found, "Valkey /data ボリュームがマウントされていません"
@@ -129,9 +124,7 @@ class TestValkeyVolumeConfiguration:
                 config_volume_found = True
                 break
 
-        assert (
-            config_volume_found
-        ), "Valkey 設定ファイルボリュームがマウントされていません"
+        assert config_volume_found, "Valkey 設定ファイルボリュームがマウントされていません"
 
 
 class TestValkeyHealthCheck:
@@ -140,9 +133,7 @@ class TestValkeyHealthCheck:
     def test_valkey_healthcheck_exists(self, docker_compose_config: dict):
         """Valkey ヘルスチェックが定義されていること."""
         valkey_service = docker_compose_config["services"]["valkey"]
-        assert (
-            "healthcheck" in valkey_service
-        ), "Valkey healthcheck が定義されていません"
+        assert "healthcheck" in valkey_service, "Valkey healthcheck が定義されていません"
 
     def test_valkey_healthcheck_test(self, docker_compose_config: dict):
         """Valkey ヘルスチェックコマンドが正しく設定されていること."""
@@ -153,18 +144,16 @@ class TestValkeyHealthCheck:
 
         test_cmd = healthcheck["test"]
         # Should use valkey-cli PING
-        assert any(
-            "valkey-cli" in str(cmd) or "PING" in str(cmd) for cmd in test_cmd
-        ), "Valkey ヘルスチェックコマンドが不正です"
+        assert any("valkey-cli" in str(cmd) or "PING" in str(cmd) for cmd in test_cmd), (
+            "Valkey ヘルスチェックコマンドが不正です"
+        )
 
     def test_valkey_healthcheck_interval(self, docker_compose_config: dict):
         """Valkey ヘルスチェック間隔が設定されていること."""
         valkey_service = docker_compose_config["services"]["valkey"]
         healthcheck = valkey_service["healthcheck"]
 
-        assert (
-            "interval" in healthcheck
-        ), "Valkey healthcheck interval が設定されていません"
+        assert "interval" in healthcheck, "Valkey healthcheck interval が設定されていません"
 
 
 class TestValkeyNetworkConfiguration:
@@ -174,9 +163,9 @@ class TestValkeyNetworkConfiguration:
         """Valkey が myswiftagent ネットワークに接続されていること."""
         valkey_service = docker_compose_config["services"]["valkey"]
         assert "networks" in valkey_service, "Valkey networks が設定されていません"
-        assert (
-            "myswiftagent" in valkey_service["networks"]
-        ), "Valkey が myswiftagent ネットワークに接続されていません"
+        assert "myswiftagent" in valkey_service["networks"], (
+            "Valkey が myswiftagent ネットワークに接続されていません"
+        )
 
 
 class TestValkeyEnvironmentConfiguration:

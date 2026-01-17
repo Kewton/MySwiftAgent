@@ -367,6 +367,7 @@ describe('SecretManager', () => {
     const managerWithVault = createSecretManager({
       myVault: {
         baseUrl: 'http://localhost:8003',
+        serviceName: 'testService',
         serviceToken: 'token',
       },
     });
@@ -417,6 +418,7 @@ describe('SecretManager', () => {
       const manager = createSecretManager({
         myVault: {
           baseUrl: 'http://localhost:8003',
+          serviceName: 'testService',
           serviceToken: 'test-token',
         },
       });
@@ -448,6 +450,7 @@ describe('SecretManager', () => {
       const manager = createSecretManager({
         myVault: {
           baseUrl: 'http://localhost:8003',
+          serviceName: 'testService',
           serviceToken: 'test-token',
         },
         fallbackToEnv: false,
@@ -470,6 +473,7 @@ describe('SecretManager', () => {
       const manager = createSecretManager({
         myVault: {
           baseUrl: 'http://localhost:8003',
+          serviceName: 'testService',
           serviceToken: 'test-token',
         },
         fallbackToEnv: true,
@@ -495,6 +499,7 @@ describe('SecretManager', () => {
       const manager = createSecretManager({
         myVault: {
           baseUrl: 'http://localhost:8003',
+          serviceName: 'testService',
           serviceToken: 'test-token',
           project: 'custom-project',
         },
@@ -533,6 +538,7 @@ describe('SecretManager createSecretManagerFromEnv', () => {
   beforeEach(() => {
     originalEnv['MYVAULT_ENABLED'] = process.env['MYVAULT_ENABLED'];
     originalEnv['MYVAULT_BASE_URL'] = process.env['MYVAULT_BASE_URL'];
+    originalEnv['MYVAULT_SERVICE_NAME'] = process.env['MYVAULT_SERVICE_NAME'];
     originalEnv['MYVAULT_SERVICE_TOKEN'] = process.env['MYVAULT_SERVICE_TOKEN'];
     originalEnv['MYVAULT_DEFAULT_PROJECT'] = process.env['MYVAULT_DEFAULT_PROJECT'];
   });

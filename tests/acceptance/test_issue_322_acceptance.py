@@ -9,7 +9,6 @@ Issue #322 受入テスト（L3: ローカル受入テスト）
   uv run pytest tests/acceptance/test_issue_322_acceptance.py -v
 """
 
-import json
 import os
 import uuid
 
@@ -40,8 +39,7 @@ class TestIssue322Acceptance:
                     pytest.skip(f"{name} health check failed: {response.status_code}")
             except requests.exceptions.ConnectionError:
                 pytest.skip(
-                    f"{name} is not running at {url}. "
-                    "Run: ./scripts/dev-hybrid.sh or make dev-all"
+                    f"{name} is not running at {url}. Run: ./scripts/dev-hybrid.sh or make dev-all"
                 )
 
     @pytest.fixture(autouse=True)
@@ -101,12 +99,8 @@ class TestIssue322Acceptance:
             f"Response missing 'template_validation' field: {data}"
         )
         validation = data["template_validation"]
-        assert validation["is_valid"] is True, (
-            f"Expected is_valid=True: {validation}"
-        )
-        assert validation["warnings"] == [], (
-            f"Expected no warnings: {validation}"
-        )
+        assert validation["is_valid"] is True, f"Expected is_valid=True: {validation}"
+        assert validation["warnings"] == [], f"Expected no warnings: {validation}"
         assert validation["extracted_variables"] == [], (
             f"Expected no extracted variables: {validation}"
         )
@@ -171,9 +165,7 @@ class TestIssue322Acceptance:
 
         # 抽出された変数を確認
         extracted = validation["extracted_variables"]
-        assert len(extracted) == 2, (
-            f"Expected 2 extracted variables: {extracted}"
-        )
+        assert len(extracted) == 2, f"Expected 2 extracted variables: {extracted}"
         assert "{{job.body.recipient_email}}" in extracted, (
             f"Expected recipient_email variable: {extracted}"
         )
@@ -197,9 +189,7 @@ class TestIssue322Acceptance:
             "name": unique_name,
             "method": "POST",
             "url": "http://example.com/api",
-            "body_template": {
-                "previous_result": "{{tasks[0].output_data.result}}"
-            },
+            "body_template": {"previous_result": "{{tasks[0].output_data.result}}"},
         }
 
         # Act
@@ -228,9 +218,7 @@ class TestIssue322Acceptance:
 
         # 抽出された変数を確認
         extracted = validation["extracted_variables"]
-        assert len(extracted) == 1, (
-            f"Expected 1 extracted variable: {extracted}"
-        )
+        assert len(extracted) == 1, f"Expected 1 extracted variable: {extracted}"
         assert "{{tasks[0].output_data.result}}" in extracted, (
             f"Expected task reference variable: {extracted}"
         )
@@ -256,9 +244,7 @@ class TestIssue322Acceptance:
             f"Expected 404, got {response.status_code}: {response.text}"
         )
         data = response.json()
-        assert "detail" in data, (
-            f"Expected 'detail' in error response: {data}"
-        )
+        assert "detail" in data, f"Expected 'detail' in error response: {data}"
 
     # ==========================================================================
     # テストケース5: TaskMaster更新時のバリデーション
@@ -295,11 +281,7 @@ class TestIssue322Acceptance:
 
         # Act: TaskMasterを更新
         update_endpoint = f"{self.JOBQUEUE_URL}/api/v1/task-masters/{task_master_id}"
-        update_payload = {
-            "body_template": {
-                "new_field": "{{job.body.new_param}}"
-            }
-        }
+        update_payload = {"body_template": {"new_field": "{{job.body.new_param}}"}}
 
         update_response = requests.put(
             update_endpoint,
@@ -322,9 +304,7 @@ class TestIssue322Acceptance:
 
         # 新しいテンプレートの検証結果が含まれる
         extracted = validation["extracted_variables"]
-        assert "{{job.body.new_param}}" in extracted, (
-            f"Expected new_param variable: {extracted}"
-        )
+        assert "{{job.body.new_param}}" in extracted, f"Expected new_param variable: {extracted}"
 
     # ==========================================================================
     # テストケース6: サイズ制限（64KB超）
@@ -340,9 +320,7 @@ class TestIssue322Acceptance:
         unique_name = f"test_large_template_{uuid.uuid4().hex[:8]}"
 
         # 64KB超のテンプレートを生成
-        large_template = {
-            f"key_{i}": f"value_{i}_{'x' * 100}" for i in range(1000)
-        }
+        large_template = {f"key_{i}": f"value_{i}_{'x' * 100}" for i in range(1000)}
 
         payload = {
             "name": unique_name,

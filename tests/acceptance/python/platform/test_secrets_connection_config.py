@@ -15,7 +15,7 @@ Test categories:
 import logging
 import os
 import sys
-from typing import Any, Generator
+from typing import Generator
 from unittest.mock import patch
 
 import httpx
@@ -23,9 +23,7 @@ import pytest
 
 # Add expertAgent to path for import
 PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    )
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 )
 EXPERT_AGENT_PATH = os.path.join(PROJECT_ROOT, "expertAgent")
 if EXPERT_AGENT_PATH not in sys.path:
@@ -134,9 +132,7 @@ class TestEnvironmentFallback:
         test_port = "6380"
 
         with patch.object(secrets_manager_real.settings, "TEST_PORT", test_port):
-            result = secrets_manager_real.get_connection_config(
-                "TEST_PORT", value_type=int
-            )
+            result = secrets_manager_real.get_connection_config("TEST_PORT", value_type=int)
             print(f"\n[PASS] Got TEST_PORT: {result} (type: {type(result).__name__})")
             assert result == 6380
             assert isinstance(result, int)
@@ -150,9 +146,7 @@ class TestEnvironmentFallback:
             print(f"\n[PASS] Got default value: {result}")
             assert result == "my-default-value"
 
-    def test_raises_valueerror_when_not_found_and_no_default(
-        self, secrets_manager_real
-    ):
+    def test_raises_valueerror_when_not_found_and_no_default(self, secrets_manager_real):
         """Test ValueError raised when key not found and no default."""
         with patch.object(secrets_manager_real.settings, "DEFINITELY_NOT_FOUND", ""):
             with pytest.raises(ValueError) as exc_info:
@@ -180,14 +174,10 @@ class TestTypeConversion:
             ("65535", 65535),
         ],
     )
-    def test_int_conversion(
-        self, secrets_manager_real, value: str, expected: int
-    ):
+    def test_int_conversion(self, secrets_manager_real, value: str, expected: int):
         """Test integer type conversion with various port numbers."""
         with patch.object(secrets_manager_real.settings, "TEST_INT_PORT", value):
-            result = secrets_manager_real.get_connection_config(
-                "TEST_INT_PORT", value_type=int
-            )
+            result = secrets_manager_real.get_connection_config("TEST_INT_PORT", value_type=int)
             print(f"\n[PASS] Converted '{value}' to {result}")
             assert result == expected
             assert isinstance(result, int)
@@ -209,14 +199,10 @@ class TestTypeConversion:
             ("off", False),
         ],
     )
-    def test_bool_conversion(
-        self, secrets_manager_real, value: str, expected: bool
-    ):
+    def test_bool_conversion(self, secrets_manager_real, value: str, expected: bool):
         """Test boolean type conversion with various truthy/falsy values."""
         with patch.object(secrets_manager_real.settings, "TEST_BOOL_FLAG", value):
-            result = secrets_manager_real.get_connection_config(
-                "TEST_BOOL_FLAG", value_type=bool
-            )
+            result = secrets_manager_real.get_connection_config("TEST_BOOL_FLAG", value_type=bool)
             print(f"\n[PASS] Converted '{value}' to {result}")
             assert result is expected
             assert isinstance(result, bool)
@@ -225,9 +211,7 @@ class TestTypeConversion:
         """Test string values are passed through unchanged."""
         test_value = "redis.example.com"
         with patch.object(secrets_manager_real.settings, "TEST_STRING_HOST", test_value):
-            result = secrets_manager_real.get_connection_config(
-                "TEST_STRING_HOST", value_type=str
-            )
+            result = secrets_manager_real.get_connection_config("TEST_STRING_HOST", value_type=str)
             print(f"\n[PASS] String passthrough: '{result}'")
             assert result == test_value
             assert isinstance(result, str)
@@ -245,9 +229,7 @@ class TestValidation:
         """Test port number validation rejects value < 1."""
         with patch.object(secrets_manager_real.settings, "INVALID_PORT", "0"):
             with pytest.raises(ValueError) as exc_info:
-                secrets_manager_real.get_connection_config(
-                    "INVALID_PORT", value_type=int
-                )
+                secrets_manager_real.get_connection_config("INVALID_PORT", value_type=int)
 
             print(f"\n[PASS] Port validation error: {exc_info.value}")
             assert "port" in str(exc_info.value).lower()
@@ -257,9 +239,7 @@ class TestValidation:
         """Test port number validation rejects value > 65535."""
         with patch.object(secrets_manager_real.settings, "INVALID_PORT", "65536"):
             with pytest.raises(ValueError) as exc_info:
-                secrets_manager_real.get_connection_config(
-                    "INVALID_PORT", value_type=int
-                )
+                secrets_manager_real.get_connection_config("INVALID_PORT", value_type=int)
 
             print(f"\n[PASS] Port validation error: {exc_info.value}")
             assert "port" in str(exc_info.value).lower()
@@ -268,30 +248,22 @@ class TestValidation:
         """Test port number validation accepts boundary values."""
         # Test lower boundary
         with patch.object(secrets_manager_real.settings, "VALID_PORT", "1"):
-            result = secrets_manager_real.get_connection_config(
-                "VALID_PORT", value_type=int
-            )
+            result = secrets_manager_real.get_connection_config("VALID_PORT", value_type=int)
             print(f"\n[PASS] Port 1 is valid: {result}")
             assert result == 1
 
         # Test upper boundary
         with patch.object(secrets_manager_real.settings, "VALID_PORT", "65535"):
-            result = secrets_manager_real.get_connection_config(
-                "VALID_PORT", value_type=int
-            )
+            result = secrets_manager_real.get_connection_config("VALID_PORT", value_type=int)
             print(f"\n[PASS] Port 65535 is valid: {result}")
             assert result == 65535
 
     def test_hostname_validation_too_long(self, secrets_manager_real):
         """Test hostname validation rejects value > 255 characters."""
         long_hostname = "a" * 256
-        with patch.object(
-            secrets_manager_real.settings, "INVALID_HOST", long_hostname
-        ):
+        with patch.object(secrets_manager_real.settings, "INVALID_HOST", long_hostname):
             with pytest.raises(ValueError) as exc_info:
-                secrets_manager_real.get_connection_config(
-                    "INVALID_HOST", value_type=str
-                )
+                secrets_manager_real.get_connection_config("INVALID_HOST", value_type=str)
 
             print(f"\n[PASS] Hostname validation error: {exc_info.value}")
             assert "hostname" in str(exc_info.value).lower()
@@ -309,9 +281,7 @@ class TestLogOutput:
         """Test port numbers are logged without masking."""
         with patch.object(secrets_manager_real.settings, "VALKEY_PORT", "6379"):
             with caplog.at_level(logging.INFO):
-                secrets_manager_real.get_connection_config(
-                    "VALKEY_PORT", value_type=int
-                )
+                secrets_manager_real.get_connection_config("VALKEY_PORT", value_type=int)
 
             # Port should appear in logs
             log_text = caplog.text
@@ -323,13 +293,9 @@ class TestLogOutput:
 
     def test_hostname_partially_masked(self, secrets_manager_real, caplog):
         """Test hostnames are partially masked in logs."""
-        with patch.object(
-            secrets_manager_real.settings, "VALKEY_HOST", "redis.example.com"
-        ):
+        with patch.object(secrets_manager_real.settings, "VALKEY_HOST", "redis.example.com"):
             with caplog.at_level(logging.INFO):
-                secrets_manager_real.get_connection_config(
-                    "VALKEY_HOST", value_type=str
-                )
+                secrets_manager_real.get_connection_config("VALKEY_HOST", value_type=str)
 
             log_text = caplog.text
             print(f"\n[INFO] Log output:\n{log_text}")
@@ -343,9 +309,7 @@ class TestLogOutput:
 
     def test_other_values_fully_masked(self, secrets_manager_real, caplog):
         """Test non-port/host values are fully masked in logs."""
-        with patch.object(
-            secrets_manager_real.settings, "API_SECRET", "super-secret-value"
-        ):
+        with patch.object(secrets_manager_real.settings, "API_SECRET", "super-secret-value"):
             with caplog.at_level(logging.INFO):
                 secrets_manager_real.get_connection_config(
                     "API_SECRET", value_type=str, default="default-secret"
@@ -372,17 +336,11 @@ class TestIntegrationScenario:
         # Simulate realistic Valkey configuration
         with patch.object(secrets_manager_real.settings, "VALKEY_HOST", "localhost"):
             with patch.object(secrets_manager_real.settings, "VALKEY_PORT", "6379"):
-                with patch.object(
-                    secrets_manager_real.settings, "VALKEY_ENABLED", "true"
-                ):
+                with patch.object(secrets_manager_real.settings, "VALKEY_ENABLED", "true"):
                     # Get host
-                    host = secrets_manager_real.get_connection_config(
-                        "VALKEY_HOST", value_type=str
-                    )
+                    host = secrets_manager_real.get_connection_config("VALKEY_HOST", value_type=str)
                     # Get port
-                    port = secrets_manager_real.get_connection_config(
-                        "VALKEY_PORT", value_type=int
-                    )
+                    port = secrets_manager_real.get_connection_config("VALKEY_PORT", value_type=int)
                     # Get enabled flag
                     enabled = secrets_manager_real.get_connection_config(
                         "VALKEY_ENABLED", value_type=bool

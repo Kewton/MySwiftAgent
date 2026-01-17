@@ -1,0 +1,36 @@
+{
+  "workflow_name": "summarize_search_results",
+  "description": "Workflow for summarizing search results into a concise email body using an LLM.",
+  "input_schema": {
+    "search_results": "array",
+    "prompt_instruction": "string"
+  },
+  "output_schema": {
+    "summary_text": "string"
+  },
+  "steps": [
+    {
+      "id": "llm_process",
+      "type": "api_rest",
+      "config": {
+        "step_type": "api_rest",
+        "method": "POST",
+        "url": "http://localhost:8004/v1/mylllm",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${inputs.prompt_instruction} ${inputs.search_results}",
+          "system_prompt": "You are a helpful assistant.",
+          "model": "gpt-4o-mini"
+        },
+        "timeout_ms": 30000,
+        "verify_ssl": false
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "summary_text": "${llm_process.output.result}"
+  }
+}

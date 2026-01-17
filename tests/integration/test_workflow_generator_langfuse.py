@@ -187,9 +187,7 @@ class TestWorkflowGeneratorLangfuseIntegration:
 
     def test_langfuse_service_source_has_required_class(self):
         """Verify langfuse_service.py source code defines LangfuseService class."""
-        langfuse_service_path = (
-            expertAgent_path / "app" / "services" / "langfuse_service.py"
-        )
+        langfuse_service_path = expertAgent_path / "app" / "services" / "langfuse_service.py"
         assert langfuse_service_path.exists(), "langfuse_service.py not found"
 
         content = langfuse_service_path.read_text()
@@ -200,9 +198,7 @@ class TestWorkflowGeneratorLangfuseIntegration:
 
     def test_langfuse_service_has_required_methods_in_source(self):
         """Verify LangfuseService source defines all required methods."""
-        langfuse_service_path = (
-            expertAgent_path / "app" / "services" / "langfuse_service.py"
-        )
+        langfuse_service_path = expertAgent_path / "app" / "services" / "langfuse_service.py"
         content = langfuse_service_path.read_text()
 
         # Check required methods exist in source
@@ -212,9 +208,7 @@ class TestWorkflowGeneratorLangfuseIntegration:
 
     def test_workflow_generator_endpoints_imports_langfuse_service(self):
         """Verify workflow_generator_endpoints.py imports langfuse_service."""
-        endpoints_path = (
-            expertAgent_path / "app" / "api" / "v1" / "workflow_generator_endpoints.py"
-        )
+        endpoints_path = expertAgent_path / "app" / "api" / "v1" / "workflow_generator_endpoints.py"
         content = endpoints_path.read_text()
 
         # Check that langfuse_service is imported

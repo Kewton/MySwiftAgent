@@ -1,0 +1,25 @@
+{
+  "status": "not_found",
+  "verification_timestamp": "2026-01-16T00:00:00Z",
+  "verification_results": [],
+  "summary": {
+    "total_features": 0,
+    "passed": 0,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "action": "Issue #365 has not been implemented yet",
+      "details": "No implemented-features.json file found at expected path: dev-reports/feature/issue/365/pm-auto-dev/iteration-1/implemented-features.json"
+    }
+  ],
+  "error": {
+    "message": "implemented-features.json file not found",
+    "expected_path": "dev-reports/feature/issue/365/pm-auto-dev/iteration-1/implemented-features.json",
+    "current_status": "Issue #365 appears to not have been implemented yet or the implementation files have not been created"
+  }
+}

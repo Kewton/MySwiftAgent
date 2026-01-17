@@ -8,9 +8,9 @@ Acceptance tests for Issue #149: Status Dashboard Feature
 - [ ] `--watch`で自動更新されること
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
-import subprocess
 
 
 class TestAcceptanceCriteria:
@@ -39,9 +39,7 @@ class TestAcceptanceCriteria:
                 assert "jobqueue" in service_names, "jobqueue が一覧に含まれていない"
                 assert "myscheduler" in service_names, "myscheduler が一覧に含まれていない"
                 assert "expertagent" in service_names, "expertagent が一覧に含まれていない"
-                assert (
-                    "graphaiserver" in service_names
-                ), "graphaiserver が一覧に含まれていない"
+                assert "graphaiserver" in service_names, "graphaiserver が一覧に含まれていない"
                 assert "commonui" in service_names, "commonui が一覧に含まれていない"
                 assert len(statuses) == 5, f"サービス数が5でない: {len(statuses)}"
 
@@ -65,9 +63,7 @@ class TestAcceptanceCriteria:
         output = formatter.format_table(statuses)
 
         # 緑色コードが含まれること（healthy）
-        assert (
-            "\033[0;32m" in output
-        ), "健全なサービスに対する緑色コードが含まれていない"
+        assert "\033[0;32m" in output, "健全なサービスに対する緑色コードが含まれていない"
 
         # 赤色コードが含まれること（unhealthy/down）
         assert "\033[0;31m" in output, "異常なサービスに対する赤色コードが含まれていない"
@@ -135,12 +131,10 @@ class TestAcceptanceCriteria:
                 main(["--watch"])
 
                 # collect_service_statuses が複数回呼ばれたことを確認
-                call_count = (
-                    mock_collector.return_value.collect_service_statuses.call_count
+                call_count = mock_collector.return_value.collect_service_statuses.call_count
+                assert call_count >= 2, (
+                    f"collect_service_statusesの呼び出し回数が2回未満: {call_count}"
                 )
-                assert (
-                    call_count >= 2
-                ), f"collect_service_statusesの呼び出し回数が2回未満: {call_count}"
 
     def test_acceptance_json_output_format(self):
         """
@@ -150,8 +144,9 @@ class TestAcceptanceCriteria:
         When: ステータスを取得
         Then: 有効なJSON形式で出力される
         """
-        from cli.status_dashboard import main
         import json
+
+        from cli.status_dashboard import main
 
         with patch("cli.status_dashboard.ServiceStatusCollector") as mock_collector:
             mock_collector.return_value.collect_service_statuses.return_value = [
@@ -165,9 +160,7 @@ class TestAcceptanceCriteria:
                 assert mock_stdout.write.called, "stdout.writeが呼ばれていない"
 
                 # 書き込まれた内容を取得
-                written_content = "".join(
-                    [call[0][0] for call in mock_stdout.write.call_args_list]
-                )
+                written_content = "".join([call[0][0] for call in mock_stdout.write.call_args_list])
 
                 # 有効なJSONであることを確認
                 try:
@@ -200,21 +193,17 @@ class TestAcceptanceCriteria:
                 assert mock_stdout.write.called, "stdout.writeが呼ばれていない"
 
                 # 書き込まれた内容を取得
-                written_content = "".join(
-                    [call[0][0] for call in mock_stdout.write.call_args_list]
-                )
+                written_content = "".join([call[0][0] for call in mock_stdout.write.call_args_list])
 
                 # CSVヘッダーが含まれること
                 assert "name" in written_content, "CSVヘッダーにnameが含まれていない"
-                assert (
-                    "health_status" in written_content
-                ), "CSVヘッダーにhealth_statusが含まれていない"
+                assert "health_status" in written_content, (
+                    "CSVヘッダーにhealth_statusが含まれていない"
+                )
 
                 # CSVデータが含まれること
                 assert "jobqueue" in written_content, "CSVデータにjobqueueが含まれていない"
-                assert (
-                    "healthy" in written_content
-                ), "CSVデータにhealthyが含まれていない"
+                assert "healthy" in written_content, "CSVデータにhealthyが含まれていない"
 
 
 class TestEndToEndScenario:
@@ -231,7 +220,7 @@ class TestEndToEndScenario:
           3. CSV形式でステータス出力
         Then: すべての操作が正常に完了する
         """
-        from cli.status_dashboard import main, ServiceStatusCollector
+        from cli.status_dashboard import main
 
         mock_statuses = [
             {
@@ -251,9 +240,7 @@ class TestEndToEndScenario:
         ]
 
         with patch("cli.status_dashboard.ServiceStatusCollector") as mock_collector:
-            mock_collector.return_value.collect_service_statuses.return_value = (
-                mock_statuses
-            )
+            mock_collector.return_value.collect_service_statuses.return_value = mock_statuses
 
             # 1. 通常モードでステータス表示
             with patch("sys.stdout") as mock_stdout:

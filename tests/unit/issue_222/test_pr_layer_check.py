@@ -144,11 +144,7 @@ def detect_layers(files: list[str]) -> set[str]:
     Returns:
         Set of layer names (excluding Docs)
     """
-    return {
-        layer
-        for f in files
-        if (layer := detect_layer(f)) is not None and layer != "Docs"
-    }
+    return {layer for f in files if (layer := detect_layer(f)) is not None and layer != "Docs"}
 
 
 def is_cross_layer(files: list[str]) -> bool:

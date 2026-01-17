@@ -16,9 +16,7 @@ import pytest
 
 # Add expertAgent to path
 PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    )
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 )
 EXPERT_AGENT_PATH = os.path.join(PROJECT_ROOT, "expertAgent")
 if EXPERT_AGENT_PATH not in sys.path:
@@ -51,10 +49,10 @@ def is_myvault_available() -> bool:
 def myvault_status():
     """Check MyVault availability once per module."""
     available = is_myvault_available()
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"MyVault Status: {'AVAILABLE' if available else 'NOT AVAILABLE'}")
     print(f"URL: {MYVAULT_URL}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     return available
 
 
@@ -62,6 +60,7 @@ def myvault_status():
 def secrets_manager():
     """Create SecretsManager instance."""
     from core.secrets import SecretsManager
+
     return SecretsManager()
 
 
@@ -87,7 +86,7 @@ class TestMyVaultConnection:
 
     def test_secrets_manager_initialization(self, myvault_status, secrets_manager):
         """Verify SecretsManager initializes with MyVault."""
-        print(f"\n[REAL TEST] SecretsManager state:")
+        print("\n[REAL TEST] SecretsManager state:")
         print(f"  - myvault_enabled: {secrets_manager.myvault_enabled}")
         print(f"  - myvault_client: {secrets_manager.myvault_client is not None}")
 
@@ -170,9 +169,7 @@ class TestValidationReal:
 
     def test_validate_hostname_valid(self, secrets_manager):
         """Test valid hostname passes validation."""
-        secrets_manager._validate_connection_config(
-            "VALKEY_HOST", "redis.example.com", str
-        )
+        secrets_manager._validate_connection_config("VALKEY_HOST", "redis.example.com", str)
         secrets_manager._validate_connection_config("VALKEY_HOST", "a", str)
         secrets_manager._validate_connection_config("VALKEY_HOST", "a" * 255, str)
         print("\n[REAL TEST] Valid hostnames passed validation")
@@ -205,30 +202,26 @@ class TestLogMaskingReal:
             secrets_manager._log_config_retrieval("VALKEY_PORT", "myvault", 6379)
 
         assert "6379" in caplog.text
-        print(f"\n[REAL TEST] Port log (unmasked): '6379' found in logs")
+        print("\n[REAL TEST] Port log (unmasked): '6379' found in logs")
 
     def test_log_hostname_partially_masked(self, secrets_manager, caplog):
         """Test hostnames are partially masked in logs."""
         with caplog.at_level(logging.INFO):
-            secrets_manager._log_config_retrieval(
-                "VALKEY_HOST", "myvault", "redis.example.com"
-            )
+            secrets_manager._log_config_retrieval("VALKEY_HOST", "myvault", "redis.example.com")
 
         # Should show "red***" not full hostname
         assert "***" in caplog.text
         assert "redis.example.com" not in caplog.text
-        print(f"\n[REAL TEST] Hostname log (masked): '***' found, full hostname hidden")
+        print("\n[REAL TEST] Hostname log (masked): '***' found, full hostname hidden")
 
     def test_log_secret_fully_masked(self, secrets_manager, caplog):
         """Test other values are fully masked in logs."""
         with caplog.at_level(logging.INFO):
-            secrets_manager._log_config_retrieval(
-                "API_KEY", "myvault", "sk-secret-key-12345"
-            )
+            secrets_manager._log_config_retrieval("API_KEY", "myvault", "sk-secret-key-12345")
 
         assert "sk-secret-key-12345" not in caplog.text
         assert "****" in caplog.text
-        print(f"\n[REAL TEST] Secret log (fully masked): original value hidden")
+        print("\n[REAL TEST] Secret log (fully masked): original value hidden")
 
 
 # =============================================================================
@@ -300,7 +293,7 @@ class TestFullScenario:
             value_type=bool,
         )
 
-        print(f"\n[REAL TEST] Valkey config scenario:")
+        print("\n[REAL TEST] Valkey config scenario:")
         print(f"  - host: {host} (type: {type(host).__name__})")
         print(f"  - port: {port} (type: {type(port).__name__})")
         print(f"  - enabled: {enabled} (type: {type(enabled).__name__})")

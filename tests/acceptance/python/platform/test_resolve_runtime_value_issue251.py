@@ -14,7 +14,6 @@ These tests require:
 import os
 import sys
 from pathlib import Path
-from typing import Any
 
 import httpx
 import pytest
@@ -123,9 +122,7 @@ class TestExistingCallSitesCompatibility:
         # This mimics the call in mymcp/stdio_action.py line 150
         result = resolve_runtime_value("MAIL_TO", default="test@example.com")
 
-        assert isinstance(result, str), (
-            f"MAIL_TO should be string, got {type(result)}"
-        )
+        assert isinstance(result, str), f"MAIL_TO should be string, got {type(result)}"
 
     def test_chatollama_model_config(self) -> None:
         """Verify chatollama.py model config calls work (expects string)."""
@@ -148,9 +145,7 @@ class TestExistingCallSitesCompatibility:
         # This mimics the call in mymcp/tool/file_reader_processors.py
         result = resolve_runtime_value("OPENAI_API_KEY", default="")
 
-        assert isinstance(result, str), (
-            f"OPENAI_API_KEY should be string, got {type(result)}"
-        )
+        assert isinstance(result, str), f"OPENAI_API_KEY should be string, got {type(result)}"
 
 
 class TestTypeConversionEdgeCases:
@@ -222,9 +217,7 @@ class TestRealWorldScenarios:
             default=False,
         )
 
-        assert isinstance(debug_enabled, bool), (
-            f"DEBUG should be bool, got {type(debug_enabled)}"
-        )
+        assert isinstance(debug_enabled, bool), f"DEBUG should be bool, got {type(debug_enabled)}"
 
         # Use in conditional (real usage pattern)
         if debug_enabled:
@@ -247,9 +240,7 @@ class TestRealWorldScenarios:
             default=300,
         )
 
-        assert isinstance(cache_ttl, int), (
-            f"Cache TTL should be int, got {type(cache_ttl)}"
-        )
+        assert isinstance(cache_ttl, int), f"Cache TTL should be int, got {type(cache_ttl)}"
         assert cache_ttl >= 0, f"Cache TTL should be non-negative, got {cache_ttl}"
 
         # Use in configuration (real usage pattern)

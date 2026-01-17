@@ -21,7 +21,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Load project-level .env files
-for project in myVault jobqueue myscheduler expertAgent graphAiServer commonUI myAgentDesk; do
+for project in myVault jobqueue myscheduler expertAgent graphAiServer commonUI myAgentDesk mySwiftAgentCore; do
     if [[ -f "$PROJECT_ROOT/$project/.env" ]]; then
         set -a
         source "$PROJECT_ROOT/$project/.env"
@@ -476,9 +476,14 @@ start_myswiftagentcore() {
 
     cd "$MYSWIFTAGENTCORE_DIR"
 
-    # Start service
-    nohup bash -c "cd '$MYSWIFTAGENTCORE_DIR' && PORT=$MYSWIFTAGENTCORE_PORT \
+    # Start service with MyVault configuration
+    nohup bash -c "cd '$MYSWIFTAGENTCORE_DIR' && \
+        PORT=$MYSWIFTAGENTCORE_PORT \
+        MYVAULT_ENABLED=${MYVAULT_ENABLED:-true} \
         MYVAULT_BASE_URL=http://localhost:$MYVAULT_PORT \
+        MYVAULT_SERVICE_NAME=${MYVAULT_SERVICE_NAME:-myswiftagentcore} \
+        MYVAULT_SERVICE_TOKEN=${MYVAULT_SERVICE_TOKEN:-} \
+        MYVAULT_DEFAULT_PROJECT=${MYVAULT_DEFAULT_PROJECT:-default} \
         npm run dev" > "$MYSWIFTAGENTCORE_LOG" 2>&1 &
 
     echo $! > "$MYSWIFTAGENTCORE_PID"

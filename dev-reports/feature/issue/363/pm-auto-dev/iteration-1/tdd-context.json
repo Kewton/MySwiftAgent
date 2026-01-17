@@ -1,0 +1,200 @@
+{
+  "issue_number": 363,
+  "issue_title": "feat(mySwiftAgentCore): taskflowEngine - TaskFlow実行エンジンの実装",
+  "project": "mySwiftAgentCore",
+  "language": "typescript",
+  "test_framework": "vitest",
+  "coverage_target": 90,
+  "design_policy_path": "dev-reports/feature/issue/363/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/363/work-plan.md",
+  "acceptance_plan_path": "dev-reports/feature/issue/363/acceptance-plan.md",
+  "source_directory": "mySwiftAgentCore/src/taskflowEngine",
+  "test_directory": "mySwiftAgentCore/tests/unit/taskflowEngine",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "プロジェクト単位でTaskFlowワークフローを管理",
+      "test_focus": "ProjectManager, WorkflowRegistry"
+    },
+    {
+      "id": "AC-2",
+      "description": "graphAiServerと互換性のあるTaskFlow形式をサポート（api_rest, code_js, transform, parallel, llm）",
+      "test_focus": "NodeExecutors, TaskFlowDefinitionAdapter"
+    },
+    {
+      "id": "AC-3",
+      "description": "Langfuseトレーシング統合",
+      "test_focus": "LangfuseTracer, SpanBuilder"
+    },
+    {
+      "id": "AC-4",
+      "description": "REST API経由での実行（POST /api/v1/taskflow/execute）",
+      "test_focus": "API handlers, routes"
+    },
+    {
+      "id": "AC-5",
+      "description": "TypeScript SDKの提供（TaskFlowClient）",
+      "test_focus": "TaskFlowClient"
+    },
+    {
+      "id": "AC-6",
+      "description": "エラーハンドリングと部分成功モデル",
+      "test_focus": "WorkflowExecutor, error handling"
+    },
+    {
+      "id": "AC-7",
+      "description": "テストカバレッジ90%以上",
+      "test_focus": "全コンポーネント"
+    }
+  ],
+  "design_policies": [
+    {
+      "id": "DP-1",
+      "description": "graphAiServerとの設計統一性",
+      "implementation": "WorkflowDefinitionインターフェース、ノードタイプ"
+    },
+    {
+      "id": "DP-2",
+      "description": "プロジェクトベース管理との統合（Issue #365パターン）",
+      "implementation": "WorkflowRegistry, ProjectManager"
+    },
+    {
+      "id": "DP-3",
+      "description": "Langfuseトレーシングのネイティブ統合",
+      "implementation": "LangfuseTracer, 自動トレース"
+    },
+    {
+      "id": "DP-4",
+      "description": "モジュラーなノード実装（Strategy Pattern）",
+      "implementation": "NodeExecutorインターフェース、各ノード実装"
+    },
+    {
+      "id": "DP-5",
+      "description": "型定義の整合性確保（TaskFlowDefinitionAdapter）",
+      "implementation": "adapter/TaskFlowDefinitionAdapter.ts"
+    },
+    {
+      "id": "DP-6",
+      "description": "code_jsノードのセキュリティ強化（isolated-vm）",
+      "implementation": "sandbox/CodeJsSandbox.ts, ScriptWhitelist"
+    },
+    {
+      "id": "DP-7",
+      "description": "並列実行制御の具体化（p-limit 3層制限）",
+      "implementation": "executor/ParallelExecutionManager.ts"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1.1",
+      "name": "型定義とアダプター実装",
+      "files": [
+        "types/TaskFlowDefinition.ts",
+        "types/InternalWorkflowDefinition.ts",
+        "adapter/TaskFlowDefinitionAdapter.ts"
+      ],
+      "priority": 1
+    },
+    {
+      "id": "T1.2",
+      "name": "プロジェクト管理基盤",
+      "files": [
+        "registry/ProjectManager.ts",
+        "registry/WorkflowRegistry.ts",
+        "loader/WorkflowLoader.ts"
+      ],
+      "priority": 1
+    },
+    {
+      "id": "T1.3",
+      "name": "セキュリティ基盤",
+      "files": [
+        "sandbox/CodeJsSandbox.ts",
+        "sandbox/ScriptWhitelist.ts",
+        "sandbox/SecurityError.ts"
+      ],
+      "priority": 1
+    },
+    {
+      "id": "T1.4",
+      "name": "並列実行管理",
+      "files": [
+        "executor/ParallelExecutionManager.ts"
+      ],
+      "priority": 1
+    },
+    {
+      "id": "T2.1",
+      "name": "基本ノード実装",
+      "files": [
+        "nodes/BaseNode.ts",
+        "nodes/ApiRestNode.ts",
+        "nodes/TransformNode.ts"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "T2.2",
+      "name": "高度なノード実装",
+      "files": [
+        "nodes/CodeJsNode.ts",
+        "nodes/LlmNode.ts",
+        "nodes/ParallelNode.ts"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "T3.1",
+      "name": "コンテキスト管理",
+      "files": [
+        "executor/ContextManager.ts"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "T3.2",
+      "name": "ワークフロー実行",
+      "files": [
+        "executor/WorkflowExecutor.ts",
+        "executor/SequentialExecutor.ts",
+        "executor/ParallelExecutor.ts"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "T3.3",
+      "name": "スキーマ検証",
+      "files": [
+        "validator/SchemaValidator.ts"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "T4.1",
+      "name": "Langfuse統合",
+      "files": [
+        "tracer/LangfuseTracer.ts",
+        "tracer/SpanBuilder.ts"
+      ],
+      "priority": 4
+    },
+    {
+      "id": "T5.1",
+      "name": "REST APIエンドポイント",
+      "files": [
+        "api/handlers.ts",
+        "api/routes.ts"
+      ],
+      "priority": 5
+    },
+    {
+      "id": "T5.2",
+      "name": "クライアントSDK",
+      "files": [
+        "client/TaskFlowClient.ts"
+      ],
+      "priority": 5
+    }
+  ],
+  "output_path": "dev-reports/feature/issue/363/pm-auto-dev/iteration-1/tdd-result.json"
+}

@@ -17,7 +17,7 @@ Issue #293 受入テスト（L3: ローカル受入テスト）
 実行方法:
   uv run pytest tests/acceptance/test_issue_293_acceptance.py -v
 """
-import json
+
 import os
 import sqlite3
 import time
@@ -226,9 +226,7 @@ class TestIssue293Acceptance:
             response = requests.get(self.MYAGENTDESK_URL, timeout=5)
             assert response.status_code == 200, "myAgentDesk is not running"
         except requests.exceptions.ConnectionError:
-            pytest.skip(
-                "myAgentDesk is not running. " "Run: cd myAgentDesk && npm run dev"
-            )
+            pytest.skip("myAgentDesk is not running. Run: cd myAgentDesk && npm run dev")
 
         # DBヘルパー初期化
         db_path = os.path.join(self.MYAGENTDESK_DIR, "data", "local.db")
@@ -303,9 +301,7 @@ class TestIssue293Acceptance:
         )
 
         data = response.json()
-        assert "error" in data or "message" in data, (
-            f"Error response missing error field: {data}"
-        )
+        assert "error" in data or "message" in data, f"Error response missing error field: {data}"
 
     def test_run_creation_rejects_invalid_payload(self) -> None:
         """不正なペイロードでRun開始を試みると400が返る"""
@@ -314,9 +310,7 @@ class TestIssue293Acceptance:
 
         response = requests.post(url, json=payload, timeout=10)
 
-        assert response.status_code == 400, (
-            f"Expected 400, got {response.status_code}"
-        )
+        assert response.status_code == 400, f"Expected 400, got {response.status_code}"
 
     # ==========================================================================
     # シナリオ3: ステータス取得API
@@ -367,9 +361,7 @@ class TestIssue293Acceptance:
         url = f"{self.MYAGENTDESK_URL}/api/runs/run_nonexistent_999/status"
         response = requests.get(url, timeout=10)
 
-        assert response.status_code == 404, (
-            f"Expected 404, got {response.status_code}"
-        )
+        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
 
     # ==========================================================================
     # シナリオ4: Rerun API
@@ -405,14 +397,10 @@ class TestIssue293Acceptance:
         assert self.db_helper is not None
 
         # 成功Runを探す
-        conn = sqlite3.connect(
-            os.path.join(self.MYAGENTDESK_DIR, "data", "local.db")
-        )
+        conn = sqlite3.connect(os.path.join(self.MYAGENTDESK_DIR, "data", "local.db"))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id FROM run WHERE status = 'success' LIMIT 1"
-        )
+        cursor.execute("SELECT id FROM run WHERE status = 'success' LIMIT 1")
         row = cursor.fetchone()
         conn.close()
 
@@ -438,9 +426,7 @@ class TestIssue293Acceptance:
         workbench_id = self.job_version.workbench_id
 
         # Project IDを取得
-        conn = sqlite3.connect(
-            os.path.join(self.MYAGENTDESK_DIR, "data", "local.db")
-        )
+        conn = sqlite3.connect(os.path.join(self.MYAGENTDESK_DIR, "data", "local.db"))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
@@ -455,20 +441,13 @@ class TestIssue293Acceptance:
 
         project_id = row["project_id"]
 
-        url = (
-            f"{self.MYAGENTDESK_URL}/projects/{project_id}"
-            f"/workbenches/{workbench_id}/runs"
-        )
+        url = f"{self.MYAGENTDESK_URL}/projects/{project_id}/workbenches/{workbench_id}/runs"
         response = requests.get(url, timeout=10)
 
-        assert response.status_code == 200, (
-            f"Runs list page failed to load: {response.status_code}"
-        )
+        assert response.status_code == 200, f"Runs list page failed to load: {response.status_code}"
 
         # ページ内容にRunsに関するコンテンツが含まれる
-        assert "run" in response.text.lower(), (
-            "Page should contain 'run' related content"
-        )
+        assert "run" in response.text.lower(), "Page should contain 'run' related content"
 
     # ==========================================================================
     # シナリオ6: ステータス遷移の監視（シミュレーション）
@@ -520,6 +499,4 @@ class TestIssue293Acceptance:
             check=False,
         )
 
-        assert result.returncode == 0, (
-            f"Build failed:\nSTDERR: {result.stderr[-1000:]}"
-        )
+        assert result.returncode == 0, f"Build failed:\nSTDERR: {result.stderr[-1000:]}"

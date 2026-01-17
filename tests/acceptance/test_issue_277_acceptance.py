@@ -11,10 +11,10 @@ Issue #277 受入テスト（L3: ローカル受入テスト）
 
 import os
 import uuid
+from typing import Any
 
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance
@@ -36,10 +36,7 @@ class TestIssue277Acceptance:
                 response = requests.get(url, timeout=5)
                 assert response.status_code == 200, f"{name} is not healthy"
             except requests.exceptions.ConnectionError:
-                pytest.skip(
-                    f"{name} is not running. "
-                    "Run: ./scripts/dev-start.sh or make dev-all"
-                )
+                pytest.skip(f"{name} is not running. Run: ./scripts/dev-start.sh or make dev-all")
 
     def _get_headers(self) -> dict[str, str]:
         """API呼び出し用ヘッダーを取得"""

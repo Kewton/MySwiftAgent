@@ -40,9 +40,9 @@ class TestCIWorkflowExclusion:
         """ci-feature.yml should exclude tests/acceptance/** from paths."""
         content = CI_FEATURE_YML.read_text()
         # Check for exclusion pattern in paths section
-        assert (
-            "!tests/acceptance/**" in content
-        ), "ci-feature.yml should exclude '!tests/acceptance/**' in paths"
+        assert "!tests/acceptance/**" in content, (
+            "ci-feature.yml should exclude '!tests/acceptance/**' in paths"
+        )
 
     def test_cd_develop_yml_exists(self) -> None:
         """cd-develop.yml should exist."""
@@ -60,9 +60,9 @@ class TestCIWorkflowExclusion:
         """cd-develop.yml should exclude tests/acceptance/** from paths."""
         content = CD_DEVELOP_YML.read_text()
         # Check for exclusion pattern in paths section
-        assert (
-            "!tests/acceptance/**" in content
-        ), "cd-develop.yml should exclude '!tests/acceptance/**' in paths"
+        assert "!tests/acceptance/**" in content, (
+            "cd-develop.yml should exclude '!tests/acceptance/**' in paths"
+        )
 
     def test_ci_main_yml_exists(self) -> None:
         """ci-main.yml should exist."""
@@ -80,9 +80,9 @@ class TestCIWorkflowExclusion:
         """ci-main.yml should exclude tests/acceptance/** from paths."""
         content = CI_MAIN_YML.read_text()
         # Check for exclusion pattern in paths section
-        assert (
-            "!tests/acceptance/**" in content
-        ), "ci-main.yml should exclude '!tests/acceptance/**' in paths"
+        assert "!tests/acceptance/**" in content, (
+            "ci-main.yml should exclude '!tests/acceptance/**' in paths"
+        )
 
 
 class TestPytestIniConfiguration:
@@ -119,9 +119,9 @@ class TestPytestIniConfiguration:
                     norecursedirs_content.append(line)
 
             norecursedirs_block = "\n".join(norecursedirs_content)
-            assert (
-                "tests/acceptance" in norecursedirs_block
-            ), f"norecursedirs should include 'tests/acceptance'. Found: {norecursedirs_block}"
+            assert "tests/acceptance" in norecursedirs_block, (
+                f"norecursedirs should include 'tests/acceptance'. Found: {norecursedirs_block}"
+            )
         else:
             pytest.fail("norecursedirs setting not found in pytest.ini")
 

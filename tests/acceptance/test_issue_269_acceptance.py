@@ -13,7 +13,6 @@ import os
 
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance
@@ -57,8 +56,7 @@ class TestIssue269Acceptance:
                     )
             except requests.exceptions.ConnectionError:
                 pytest.skip(
-                    f"{name} is not running at {url}. "
-                    "Run: ./scripts/dev-start.sh or make dev-all"
+                    f"{name} is not running at {url}. Run: ./scripts/dev-start.sh or make dev-all"
                 )
 
     def _get_myvault_headers(self) -> dict[str, str]:
@@ -99,8 +97,7 @@ class TestIssue269Acceptance:
 
         for key in self.MODEL_SETTINGS_KEYS:
             assert key in registered_keys, (
-                f"Model setting '{key}' not found in myVault. "
-                f"Registered keys: {registered_keys}"
+                f"Model setting '{key}' not found in myVault. Registered keys: {registered_keys}"
             )
 
     def test_scenario_2_individual_model_setting_retrievable(self) -> None:
@@ -147,7 +144,9 @@ class TestIssue269Acceptance:
             timeout=10,
         )
         original_value = get_response.json().get("value", "gemini-2.0-flash")
-        test_value = "claude-haiku-4-5" if original_value != "claude-haiku-4-5" else "gemini-2.0-flash"
+        test_value = (
+            "claude-haiku-4-5" if original_value != "claude-haiku-4-5" else "gemini-2.0-flash"
+        )
 
         try:
             # Act: 値を更新

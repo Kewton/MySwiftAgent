@@ -1,0 +1,36 @@
+{
+  "issue_number": 370,
+  "issue_title": "WorkflowRegistrar のワークフロー永続化とログ出力強化",
+  "target_project": "mySwiftAgentCore",
+  "language": "typescript",
+  "test_framework": "vitest",
+  "acceptance_criteria": [
+    "AC-1: 生成されたワークフローが generated/workflows/{project_id}/ に JSON ファイルとして保存される",
+    "AC-2: WorkflowRegistrar が WorkflowStorage を使用する",
+    "AC-3: registered フラグは実際の永続化結果を反映し、file_path を返す",
+    "AC-4: 構造化ログ（JSON形式）で生成・登録過程を追跡可能",
+    "AC-5: サーバー再起動後もワークフローが利用可能"
+  ],
+  "implementation_tasks": [
+    "T1: Logger ユーティリティクラスの作成 (src/utils/logger/)",
+    "T2: PathValidator ユーティリティの作成 (src/utils/validation/)",
+    "T3: WorkflowStorage の実装 (src/taskflowGeneratorAgent/storage/)",
+    "T4: WorkflowRegistrar を WorkflowStorage を使用するように修正",
+    "T5: BatchProcessor にログ出力を追加",
+    "T6: 初期化処理（起動時の復元）を追加"
+  ],
+  "design_policy_path": "dev-reports/feature/issue/370/design-policy.md",
+  "key_design_decisions": {
+    "storage_pattern": "File-based JSON storage with atomic write (.tmp -> rename)",
+    "directory_structure": "generated/workflows/{projectId}/{workflowId}.json",
+    "security": "PathValidator for path traversal prevention",
+    "logging": "Structured JSON logging with Logger utility",
+    "error_handling": "CoreError extension for domain-specific errors"
+  },
+  "target_coverage": 90,
+  "existing_code_paths": {
+    "WorkflowRegistrar": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+    "WorkflowRegistry": "src/taskflowEngine/registry/WorkflowRegistry.ts",
+    "CoreError": "src/types/errors.ts"
+  }
+}

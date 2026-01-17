@@ -9,7 +9,6 @@ Tests verify that scripts/setup-valkey-worktree.sh:
 """
 
 import os
-import re
 from pathlib import Path
 
 import pytest
@@ -30,9 +29,7 @@ def valkey_worktree_script(project_root: Path) -> Path:
 @pytest.fixture
 def valkey_worktree_content(valkey_worktree_script: Path) -> str:
     """Load setup-valkey-worktree.sh script content."""
-    assert (
-        valkey_worktree_script.exists()
-    ), "scripts/setup-valkey-worktree.sh が存在しません"
+    assert valkey_worktree_script.exists(), "scripts/setup-valkey-worktree.sh が存在しません"
 
     with open(valkey_worktree_script, "r") as f:
         content = f.read()
@@ -45,15 +42,13 @@ class TestWorktreeScriptExistence:
 
     def test_script_file_exists(self, valkey_worktree_script: Path):
         """setup-valkey-worktree.sh ファイルが存在すること."""
-        assert (
-            valkey_worktree_script.exists()
-        ), "scripts/setup-valkey-worktree.sh が存在しません"
+        assert valkey_worktree_script.exists(), "scripts/setup-valkey-worktree.sh が存在しません"
 
     def test_script_is_executable(self, valkey_worktree_script: Path):
         """setup-valkey-worktree.sh が実行可能であること."""
-        assert os.access(
-            valkey_worktree_script, os.X_OK
-        ), "scripts/setup-valkey-worktree.sh が実行可能ではありません"
+        assert os.access(valkey_worktree_script, os.X_OK), (
+            "scripts/setup-valkey-worktree.sh が実行可能ではありません"
+        )
 
 
 class TestPortAllocationLogic:
@@ -62,13 +57,13 @@ class TestPortAllocationLogic:
     def test_port_range_defined(self, valkey_worktree_content: str):
         """ポート範囲が定義されていること (6380-6399)."""
         # Look for port range definition
-        assert (
-            "6380" in valkey_worktree_content or "PORT_MIN" in valkey_worktree_content
-        ), "ポート範囲の開始値が定義されていません"
+        assert "6380" in valkey_worktree_content or "PORT_MIN" in valkey_worktree_content, (
+            "ポート範囲の開始値が定義されていません"
+        )
 
-        assert (
-            "6399" in valkey_worktree_content or "PORT_MAX" in valkey_worktree_content
-        ), "ポート範囲の終了値が定義されていません"
+        assert "6399" in valkey_worktree_content or "PORT_MAX" in valkey_worktree_content, (
+            "ポート範囲の終了値が定義されていません"
+        )
 
     def test_port_allocation_function_exists(self, valkey_worktree_content: str):
         """ポート割り当て関数が存在すること."""
@@ -82,9 +77,9 @@ class TestPortAllocationLogic:
     def test_port_conflict_check_exists(self, valkey_worktree_content: str):
         """ポート衝突チェック処理が存在すること."""
         # Look for port conflict detection (lsof or similar)
-        assert (
-            "lsof" in valkey_worktree_content or "netstat" in valkey_worktree_content
-        ), "ポート衝突チェック処理が見つかりません"
+        assert "lsof" in valkey_worktree_content or "netstat" in valkey_worktree_content, (
+            "ポート衝突チェック処理が見つかりません"
+        )
 
 
 class TestWorktreeDataDirectory:
@@ -93,14 +88,11 @@ class TestWorktreeDataDirectory:
     def test_data_directory_creation(self, valkey_worktree_content: str):
         """worktree専用データディレクトリ作成処理が存在すること."""
         # Look for mkdir or data directory creation
-        assert (
-            "mkdir" in valkey_worktree_content
-        ), "データディレクトリ作成処理が見つかりません"
+        assert "mkdir" in valkey_worktree_content, "データディレクトリ作成処理が見つかりません"
 
         # Should reference valkey/data
         assert (
-            "valkey/data" in valkey_worktree_content
-            or "VALKEY_DATA" in valkey_worktree_content
+            "valkey/data" in valkey_worktree_content or "VALKEY_DATA" in valkey_worktree_content
         ), "Valkey データディレクトリパスが見つかりません"
 
     def test_worktree_isolation(self, valkey_worktree_content: str):
@@ -120,9 +112,7 @@ class TestWorktreeConfigGeneration:
     def test_config_file_generation(self, valkey_worktree_content: str):
         """worktree専用の設定ファイル生成処理が存在すること."""
         # Look for config file generation
-        assert (
-            "valkey.conf" in valkey_worktree_content
-        ), "設定ファイル生成処理が見つかりません"
+        assert "valkey.conf" in valkey_worktree_content, "設定ファイル生成処理が見つかりません"
 
     def test_port_substitution_in_config(self, valkey_worktree_content: str):
         """設定ファイル内のポート番号が動的に設定されること."""

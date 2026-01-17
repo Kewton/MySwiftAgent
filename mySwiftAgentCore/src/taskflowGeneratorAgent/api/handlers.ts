@@ -8,8 +8,10 @@ import type { Context } from 'hono';
 import { BatchProcessor } from '../generator/BatchProcessor.js';
 import { WorkflowGenerator } from '../generator/WorkflowGenerator.js';
 import { WorkflowRegistrar } from '../generator/WorkflowRegistrar.js';
+import { WorkflowStorage } from '../storage/WorkflowStorage.js';
 import { LangfuseIntegration } from '../tracing/LangfuseIntegration.js';
 import { ErrorHandler } from '../recovery/ErrorHandler.js';
+import { createLogger } from '../../utils/logger/Logger.js';
 import type { LLMClient } from '../llm/LLMClient.js';
 import type { WorkflowRegistry } from '../../taskflowEngine/registry/WorkflowRegistry.js';
 import {
@@ -31,6 +33,12 @@ export interface HandlerDependencies {
     secretKey?: string;
     baseUrl?: string;
   };
+  /**
+   * Issue #370: Optional pre-configured WorkflowRegistrar
+   * If provided, will be used instead of creating a new one per request.
+   * This allows initialize() to be called once at server startup.
+   */
+  registrar?: WorkflowRegistrar;
 }
 
 /**
@@ -66,11 +74,18 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
       const request: BatchGenerationRequest = parseResult.data;
 
       // Initialize components
+      // Issue #370: Create Logger and WorkflowStorage for persistence
+      const logger = createLogger({ name: 'generator-api' });
       const langfuse = new LangfuseIntegration(deps.langfuseConfig);
       const generator = new WorkflowGenerator({ llmClient: deps.llmClient });
-      const batchProcessor = new BatchProcessor({ generator });
+      const batchProcessor = new BatchProcessor({ generator, logger });
       // Issue #368: Use WorkflowRegistrar to register generated workflows
-      const registrar = new WorkflowRegistrar({ registry: deps.registry });
+      // Issue #370: Use pre-configured registrar if provided, otherwise create new one with storage
+      const registrar = deps.registrar ?? new WorkflowRegistrar({
+        registry: deps.registry,
+        storage: new WorkflowStorage(),
+        logger,
+      });
       void new ErrorHandler();
 
       // Start tracing
@@ -98,10 +113,12 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
       const batchResult = await batchProcessor.processBatch(request);
 
       // Issue #368: Register successful workflows using WorkflowRegistrar
+      // Issue #370: Include file_path in response for persistence verification
       const registeredWorkflows: Record<string, {
         workflow_name: string;
         registered: boolean;
         workflow_id?: string;
+        file_path?: string;
       }> = {};
 
       for (const [taskId, metadata] of Object.entries(batchResult.workflows)) {
@@ -119,6 +136,8 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
               const regResult = await registrar.register(workflow, request.project_id);
               registeredWorkflows[taskId].registered = regResult.success;
               registeredWorkflows[taskId].workflow_id = regResult.workflowId;
+              // Issue #370: Include file_path for persistence verification
+              registeredWorkflows[taskId].file_path = regResult.filePath;
             } catch (error) {
               // Registration failed, log error but continue
               console.error(`Registration failed for ${taskId}:`, error);

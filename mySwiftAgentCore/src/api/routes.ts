@@ -53,7 +53,7 @@ async function createGeneratorDependencies(): Promise<HandlerDependencies> {
   // Create LLM client (default: Anthropic Claude)
   const llmClient = new AnthropicClient({
     apiKey,
-    defaultModel: 'claude-3-5-sonnet-20241022',
+    defaultModel: 'claude-sonnet-4-20250514',
   });
 
   // Langfuse configuration from environment

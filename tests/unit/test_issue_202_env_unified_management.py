@@ -128,8 +128,7 @@ class TestGraphAiServerNoHardcoding:
                         hardcoded_urls.append(f"Line {i}: {line.strip()}")
 
         assert len(hardcoded_urls) == 0, (
-            "Found hardcoded localhost URLs in graphai.ts:\n"
-            + "\n".join(hardcoded_urls)
+            "Found hardcoded localhost URLs in graphai.ts:\n" + "\n".join(hardcoded_urls)
         )
 
     def test_no_hardcoded_localhost_urls_in_settings_ts(self):
@@ -179,10 +178,10 @@ class TestComposeFileEnvFormat:
         # Check for ${VAR_PORT:-default} patterns
         # At minimum, port mappings should be configurable
         expected_patterns = [
-            r'\$\{VALKEY_PORT:-6381\}',
-            r'\$\{JOBQUEUE_PORT:-8001\}',
-            r'\$\{MYSCHEDULER_PORT:-8002\}',
-            r'\$\{MYVAULT_PORT:-8003\}',
+            r"\$\{VALKEY_PORT:-6381\}",
+            r"\$\{JOBQUEUE_PORT:-8001\}",
+            r"\$\{MYSCHEDULER_PORT:-8002\}",
+            r"\$\{MYVAULT_PORT:-8003\}",
         ]
 
         for pattern in expected_patterns:
@@ -198,8 +197,8 @@ class TestComposeFileEnvFormat:
         content = compose_file.read_text()
 
         expected_patterns = [
-            r'\$\{EXPERTAGENT_PORT:-8004\}',
-            r'\$\{GRAPHAISERVER_PORT:-8005\}',
+            r"\$\{EXPERTAGENT_PORT:-8004\}",
+            r"\$\{GRAPHAISERVER_PORT:-8005\}",
         ]
 
         for pattern in expected_patterns:
@@ -215,8 +214,8 @@ class TestComposeFileEnvFormat:
         content = compose_file.read_text()
 
         expected_patterns = [
-            r'\$\{COMMONUI_PORT:-8501\}',
-            r'\$\{MYAGENTDESK_PORT:-5173\}',
+            r"\$\{COMMONUI_PORT:-8501\}",
+            r"\$\{MYAGENTDESK_PORT:-5173\}",
         ]
 
         for pattern in expected_patterns:
@@ -275,6 +274,6 @@ class TestEnvDockerConsistency:
                     f"{var}: .env.example={example_val}, .env.docker={docker_val}"
                 )
 
-        assert len(inconsistencies) == 0, (
-            "Port variable inconsistencies found:\n" + "\n".join(inconsistencies)
+        assert len(inconsistencies) == 0, "Port variable inconsistencies found:\n" + "\n".join(
+            inconsistencies
         )

@@ -5,8 +5,9 @@ Tests for scripts/lib/docker-utils.sh functionality.
 """
 
 import subprocess
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture
@@ -34,6 +35,7 @@ class TestDockerUtilsScriptExists:
         assert docker_utils_script.exists(), f"Script not found: {docker_utils_script}"
         # Check if file has execute permission
         import os
+
         assert os.access(docker_utils_script, os.X_OK), "Script is not executable"
 
 

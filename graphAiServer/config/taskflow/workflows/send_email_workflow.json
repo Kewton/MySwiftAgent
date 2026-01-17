@@ -1,14 +1,14 @@
 {
   "workflow_name": "send_email_workflow",
-  "description": "Send an email to the specified recipient",
+  "description": "Sends an email via Gmail API",
   "input_schema": {
-    "to_email": "string",
+    "recipient_email": "string",
     "subject": "string",
-    "body": "string"
+    "email_body": "string"
   },
   "output_schema": {
-    "success": "boolean",
-    "message_id": "string"
+    "message_id": "string",
+    "status": "string"
   },
   "steps": [
     {
@@ -22,14 +22,18 @@
           "Content-Type": "application/json"
         },
         "body": {
-          "to": "${inputs.to_email}",
+          "to": "${inputs.recipient_email}",
           "subject": "${inputs.subject}",
-          "body": "${inputs.body}"
+          "body": "${inputs.email_body}"
         },
         "timeout_ms": 30000,
         "verify_ssl": false
       },
-      "params": {}
+      "params": {
+        "recipient_email": "${inputs.recipient_email}",
+        "subject": "${inputs.subject}",
+        "email_body": "${inputs.email_body}"
+      }
     },
     {
       "id": "format_output",
@@ -37,7 +41,7 @@
       "config": {
         "step_type": "transform",
         "mode": "template",
-        "template": "{\"to\": \"${inputs.to_email}\", \"subject\": \"${inputs.subject}\", \"body\": \"${inputs.body}\"}",
+        "template": "{\"to\": \"${inputs.recipient_email}\", \"subject\": \"${inputs.subject}\", \"body\": \"${inputs.email_body}\"}",
         "separator": ", ",
         "fields": [
           "to",
@@ -45,11 +49,15 @@
           "body"
         ]
       },
-      "params": {}
+      "params": {
+        "recipient_email": "${inputs.recipient_email}",
+        "subject": "${inputs.subject}",
+        "email_body": "${inputs.email_body}"
+      }
     }
   ],
   "output": {
-    "success": "${send_email.output.success}",
-    "message_id": "${send_email.output.message_id}"
+    "message_id": "${send_email.output.message_id}",
+    "status": "${send_email.output.status}"
   }
 }

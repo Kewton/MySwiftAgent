@@ -2,6 +2,7 @@
  * API Routes - Hono route definitions for generator API
  *
  * Issue #364: REST API routes
+ * Issue #370: WorkflowRegistrar initialization for persistence
  */
 
 import { Hono } from 'hono';
@@ -11,6 +12,9 @@ import {
   createStatusHandler,
   createHealthHandler,
 } from './handlers.js';
+import { WorkflowRegistrar } from '../generator/WorkflowRegistrar.js';
+import { WorkflowStorage } from '../storage/WorkflowStorage.js';
+import { createLogger } from '../../utils/logger/Logger.js';
 
 /**
  * Create Generator API routes
@@ -48,4 +52,36 @@ export function createGeneratorApi(deps: HandlerDependencies): Hono {
   app.get('/api/v1/generator/health', createHealthHandler());
 
   return app;
+}
+
+/**
+ * Issue #370: Create initialized Generator API with WorkflowRegistrar
+ *
+ * This function creates a WorkflowRegistrar with storage and initializes it
+ * to restore workflows from disk. Use this for production deployments.
+ *
+ * @param deps - Handler dependencies (llmClient, registry, langfuseConfig)
+ * @returns Promise resolving to initialized Hono app
+ */
+export async function createInitializedGeneratorApi(
+  deps: Omit<HandlerDependencies, 'registrar'>
+): Promise<Hono> {
+  const logger = createLogger({ name: 'generator-api' });
+  const storage = new WorkflowStorage();
+
+  // Create WorkflowRegistrar with storage for persistence
+  const registrar = new WorkflowRegistrar({
+    registry: deps.registry,
+    storage,
+    logger,
+  });
+
+  // Initialize registrar to restore workflows from disk
+  await registrar.initialize();
+
+  // Create API with initialized registrar
+  return createGeneratorApi({
+    ...deps,
+    registrar,
+  });
 }

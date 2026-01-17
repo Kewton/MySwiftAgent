@@ -35,8 +35,7 @@ class TestIssue331Acceptance:
                     pytest.skip(f"{name} health check failed: {response.status_code}")
             except requests.exceptions.ConnectionError:
                 pytest.skip(
-                    f"{name} is not running at {url}. "
-                    "Run: ./scripts/dev-hybrid.sh or make dev-all"
+                    f"{name} is not running at {url}. Run: ./scripts/dev-hybrid.sh or make dev-all"
                 )
 
     # ==========================================================================
@@ -77,12 +76,8 @@ class TestIssue331Acceptance:
         # ワークフロー test/model.yml で source を参照し、その構造を返すことで検証
         if "source_echo" in data["results"]:
             source_data = data["results"]["source_echo"]
-            assert "user_input" in source_data, (
-                f"source node missing 'user_input': {source_data}"
-            )
-            assert "job_params" in source_data, (
-                f"source node missing 'job_params': {source_data}"
-            )
+            assert "user_input" in source_data, f"source node missing 'user_input': {source_data}"
+            assert "job_params" in source_data, f"source node missing 'job_params': {source_data}"
             assert source_data["job_params"]["recipient_email"] == "test@example.com", (
                 f"job_params.recipient_email mismatch: {source_data}"
             )

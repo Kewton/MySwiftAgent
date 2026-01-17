@@ -9,6 +9,7 @@ Issue #316 受入テスト（L3: ローカル受入テスト）
 実行方法:
   uv run pytest tests/acceptance/test_issue_316_acceptance.py -v
 """
+
 import subprocess
 from pathlib import Path
 
@@ -36,9 +37,7 @@ class TestIssue316Acceptance:
             capture_output=True,
             text=True,
         )
-        assert result.returncode == 0, (
-            f"docker-compose.platform.yml syntax error: {result.stderr}"
-        )
+        assert result.returncode == 0, f"docker-compose.platform.yml syntax error: {result.stderr}"
 
     def test_docker_compose_agent_yml_syntax(self) -> None:
         """Docker Compose Agent 構文検証
@@ -51,9 +50,7 @@ class TestIssue316Acceptance:
             capture_output=True,
             text=True,
         )
-        assert result.returncode == 0, (
-            f"docker-compose.agent.yml syntax error: {result.stderr}"
-        )
+        assert result.returncode == 0, f"docker-compose.agent.yml syntax error: {result.stderr}"
 
     # ==========================================================================
     # 層構造検証
@@ -127,7 +124,11 @@ class TestIssue316Acceptance:
 
             if in_myscheduler:
                 # 次のトップレベルサービス定義に到達したら終了
-                if line.startswith("  ") is False and line.strip() and not line.strip().startswith("#"):
+                if (
+                    line.startswith("  ") is False
+                    and line.strip()
+                    and not line.strip().startswith("#")
+                ):
                     if line.strip() != "":
                         break
 
@@ -210,9 +211,7 @@ class TestIssue316Acceptance:
 
         for line in content.split("\n"):
             if "DOCKER_SERVICES=" in line and not line.strip().startswith("#"):
-                assert "jobqueue" not in line, (
-                    "jobqueue should not be in DOCKER_SERVICES"
-                )
+                assert "jobqueue" not in line, "jobqueue should not be in DOCKER_SERVICES"
                 break
 
     def test_dev_hybrid_has_start_jobqueue_function(self) -> None:
@@ -223,9 +222,7 @@ class TestIssue316Acceptance:
         script = self.PROJECT_ROOT / "scripts" / "dev-hybrid.sh"
         content = script.read_text()
 
-        assert "start_jobqueue()" in content, (
-            "start_jobqueue() function not found in dev-hybrid.sh"
-        )
+        assert "start_jobqueue()" in content, "start_jobqueue() function not found in dev-hybrid.sh"
 
     def test_dev_hybrid_has_start_myscheduler_function(self) -> None:
         """start_myscheduler 関数があることを確認
@@ -254,6 +251,4 @@ class TestIssue316Acceptance:
         # Agent層の説明にjobqueue/myschedulerが含まれていることを確認
         # レイヤテーブルで Agent 層に jobqueue, myscheduler があることを確認
         assert "jobqueue" in content, "jobqueue not mentioned in service-dependencies.md"
-        assert "myscheduler" in content, (
-            "myscheduler not mentioned in service-dependencies.md"
-        )
+        assert "myscheduler" in content, "myscheduler not mentioned in service-dependencies.md"

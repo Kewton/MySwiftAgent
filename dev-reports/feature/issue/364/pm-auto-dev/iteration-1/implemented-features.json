@@ -1,0 +1,269 @@
+{
+  "issue_number": 364,
+  "iteration": 1,
+  "timestamp": "2026-01-16T20:10:00Z",
+  "implemented_features": [
+    {
+      "id": "F-001",
+      "name": "RecoveryStrategy Enum",
+      "type": "enum",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts",
+      "expected_callers": ["ErrorHandler", "handlers", "TaskFlowGeneratorClient"],
+      "acceptance_criteria": ["AC-3"],
+      "design_policy": ["DP-6"]
+    },
+    {
+      "id": "F-002",
+      "name": "ErrorType Enum",
+      "type": "enum",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts",
+      "expected_callers": ["ErrorHandler", "handlers"],
+      "acceptance_criteria": ["AC-3"],
+      "design_policy": ["DP-6"]
+    },
+    {
+      "id": "F-003",
+      "name": "BatchGenerationRequest Type",
+      "type": "interface",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts",
+      "expected_callers": ["handlers", "WorkflowGenerator", "BatchProcessor"],
+      "acceptance_criteria": ["AC-2"],
+      "design_policy": ["DP-1"]
+    },
+    {
+      "id": "F-004",
+      "name": "BatchGenerationResponse Type",
+      "type": "interface",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts",
+      "expected_callers": ["handlers", "WorkflowGenerator", "BatchProcessor"],
+      "acceptance_criteria": ["AC-2"],
+      "design_policy": ["DP-1"]
+    },
+    {
+      "id": "F-005",
+      "name": "BaseLLMClient",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/llm/LLMClient.ts",
+      "expected_callers": ["AnthropicClient", "OpenAIClient", "GeminiClient"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-2"]
+    },
+    {
+      "id": "F-006",
+      "name": "AnthropicClient",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/llm/clients/AnthropicClient.ts",
+      "expected_callers": ["LLMClientFactory", "WorkflowGenerator"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-2"]
+    },
+    {
+      "id": "F-007",
+      "name": "OpenAIClient",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/llm/clients/OpenAIClient.ts",
+      "expected_callers": ["LLMClientFactory", "WorkflowGenerator"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-2"]
+    },
+    {
+      "id": "F-008",
+      "name": "GeminiClient",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/llm/clients/GeminiClient.ts",
+      "expected_callers": ["LLMClientFactory", "WorkflowGenerator"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-2"]
+    },
+    {
+      "id": "F-009",
+      "name": "LLMClientFactory",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/llm/LLMClientFactory.ts",
+      "expected_callers": ["WorkflowGenerator", "handlers"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-2"]
+    },
+    {
+      "id": "F-010",
+      "name": "PromptBuilder",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "expected_callers": ["WorkflowGenerator"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-3"]
+    },
+    {
+      "id": "F-011",
+      "name": "ValidationPipeline",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "expected_callers": ["WorkflowGenerator", "handlers"],
+      "acceptance_criteria": ["AC-5"],
+      "design_policy": ["DP-7"]
+    },
+    {
+      "id": "F-012",
+      "name": "SchemaValidator",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/SchemaValidator.ts",
+      "expected_callers": ["ValidationPipeline"],
+      "acceptance_criteria": ["AC-5"],
+      "design_policy": ["DP-7"]
+    },
+    {
+      "id": "F-013",
+      "name": "DependencyValidator",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/DependencyValidator.ts",
+      "expected_callers": ["ValidationPipeline"],
+      "acceptance_criteria": ["AC-5"],
+      "design_policy": ["DP-7"]
+    },
+    {
+      "id": "F-014",
+      "name": "VariableValidator",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/VariableValidator.ts",
+      "expected_callers": ["ValidationPipeline"],
+      "acceptance_criteria": ["AC-5"],
+      "design_policy": ["DP-7"]
+    },
+    {
+      "id": "F-015",
+      "name": "CapabilityValidator",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/CapabilityValidator.ts",
+      "expected_callers": ["ValidationPipeline"],
+      "acceptance_criteria": ["AC-5"],
+      "design_policy": ["DP-7"]
+    },
+    {
+      "id": "F-016",
+      "name": "SecurityValidator",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/SecurityValidator.ts",
+      "expected_callers": ["ValidationPipeline"],
+      "acceptance_criteria": ["AC-5"],
+      "design_policy": ["DP-7"]
+    },
+    {
+      "id": "F-017",
+      "name": "WorkflowGenerator",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "expected_callers": ["BatchProcessor", "handlers"],
+      "acceptance_criteria": ["AC-1"],
+      "design_policy": ["DP-1", "DP-2", "DP-3"]
+    },
+    {
+      "id": "F-018",
+      "name": "BatchProcessor",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+      "expected_callers": ["handlers"],
+      "acceptance_criteria": ["AC-2"],
+      "design_policy": ["DP-4"]
+    },
+    {
+      "id": "F-019",
+      "name": "WorkflowRegistrar",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "expected_callers": ["WorkflowGenerator", "handlers"],
+      "acceptance_criteria": ["AC-6"],
+      "design_policy": ["DP-8"]
+    },
+    {
+      "id": "F-020",
+      "name": "ErrorHandler",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/ErrorHandler.ts",
+      "expected_callers": ["WorkflowGenerator", "BatchProcessor", "handlers"],
+      "acceptance_criteria": ["AC-3"],
+      "design_policy": ["DP-6"]
+    },
+    {
+      "id": "F-021",
+      "name": "RetryStrategy",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/RetryStrategy.ts",
+      "expected_callers": ["WorkflowGenerator", "BatchProcessor"],
+      "acceptance_criteria": ["AC-3"],
+      "design_policy": ["DP-6"]
+    },
+    {
+      "id": "F-022",
+      "name": "LangfuseIntegration",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/tracing/LangfuseIntegration.ts",
+      "expected_callers": ["WorkflowGenerator", "BatchProcessor", "handlers"],
+      "acceptance_criteria": ["AC-4"],
+      "design_policy": ["DP-5"]
+    },
+    {
+      "id": "F-023",
+      "name": "createBatchGenerationHandler",
+      "type": "function",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "expected_callers": ["routes.ts"],
+      "acceptance_criteria": ["AC-2"],
+      "design_policy": ["DP-1"]
+    },
+    {
+      "id": "F-024",
+      "name": "createStatusHandler",
+      "type": "function",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "expected_callers": ["routes.ts"],
+      "acceptance_criteria": ["AC-2"],
+      "design_policy": ["DP-1"]
+    },
+    {
+      "id": "F-025",
+      "name": "createHealthHandler",
+      "type": "function",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "expected_callers": ["routes.ts"],
+      "acceptance_criteria": [],
+      "design_policy": ["DP-1"]
+    },
+    {
+      "id": "F-026",
+      "name": "createGeneratorRoutes",
+      "type": "function",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/routes.ts",
+      "expected_callers": ["src/api/routes.ts (main router)"],
+      "acceptance_criteria": ["AC-2"],
+      "design_policy": ["DP-1"]
+    },
+    {
+      "id": "F-027",
+      "name": "TaskFlowGeneratorClient",
+      "type": "class",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/client/TaskFlowGeneratorClient.ts",
+      "expected_callers": ["External (expertAgent)"],
+      "acceptance_criteria": ["AC-7"],
+      "design_policy": ["DP-1"]
+    }
+  ],
+  "acceptance_criteria_coverage": {
+    "AC-1": ["F-005", "F-006", "F-007", "F-008", "F-009", "F-010", "F-017"],
+    "AC-2": ["F-003", "F-004", "F-018", "F-023", "F-024", "F-026"],
+    "AC-3": ["F-001", "F-002", "F-020", "F-021"],
+    "AC-4": ["F-022"],
+    "AC-5": ["F-011", "F-012", "F-013", "F-014", "F-015", "F-016"],
+    "AC-6": ["F-019"],
+    "AC-7": ["F-027"]
+  },
+  "design_policy_coverage": {
+    "DP-1": ["F-003", "F-004", "F-023", "F-024", "F-025", "F-026", "F-027"],
+    "DP-2": ["F-005", "F-006", "F-007", "F-008", "F-009"],
+    "DP-3": ["F-010", "F-017"],
+    "DP-4": ["F-018"],
+    "DP-5": ["F-022"],
+    "DP-6": ["F-001", "F-002", "F-020", "F-021"],
+    "DP-7": ["F-011", "F-012", "F-013", "F-014", "F-015", "F-016"],
+    "DP-8": ["F-019"]
+  }
+}

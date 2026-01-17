@@ -39,9 +39,7 @@ class TestServiceStartupAcceptance:
         # Check that DATABASE_URL doesn't use aiosqlite (comments may mention it)
         for line in myscheduler_content.splitlines():
             if line.startswith("DATABASE_URL="):
-                assert "aiosqlite" not in line, (
-                    "myscheduler DATABASE_URL should not use aiosqlite"
-                )
+                assert "aiosqlite" not in line, "myscheduler DATABASE_URL should not use aiosqlite"
 
     def test_dev_start_script_creates_env_files(self):
         """受入条件: dev-start.shが.envファイルを自動生成すること"""

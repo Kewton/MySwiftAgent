@@ -44,8 +44,7 @@ class TestIssue305Acceptance:
                     pytest.skip(f"{name} is not healthy (status: {response.status_code})")
             except requests.exceptions.ConnectionError:
                 pytest.skip(
-                    f"{name} is not running at {url}. "
-                    "Run: ./scripts/dev-hybrid.sh or make dev-all"
+                    f"{name} is not running at {url}. Run: ./scripts/dev-hybrid.sh or make dev-all"
                 )
 
     # ==========================================================================
@@ -122,9 +121,7 @@ class TestIssue305Acceptance:
         - 部分失敗時もJob全体はcompletedになる
         """
         # Arrange: Job作成
-        job_response = self._create_job(
-            "メールの件名を取得して一覧表示するシンプルなワークフロー"
-        )
+        job_response = self._create_job("メールの件名を取得して一覧表示するシンプルなワークフロー")
         job_id = job_response["job_id"]
 
         # Act: 完了までポーリング（進捗履歴を記録）
@@ -172,9 +169,7 @@ class TestIssue305Acceptance:
         Note: 新規フィールドはOptionalなので、ジョブ完了後に確認
         """
         # Arrange: Job作成
-        job_response = self._create_job(
-            "テキストファイルを読み込んで内容を要約するワークフロー"
-        )
+        job_response = self._create_job("テキストファイルを読み込んで内容を要約するワークフロー")
         job_id = job_response["job_id"]
 
         # Act: 完了までポーリング
@@ -195,7 +190,9 @@ class TestIssue305Acceptance:
         assert "task_breakdown" in final_status, "Response must contain 'task_breakdown' field"
         task_breakdown = final_status["task_breakdown"]
         assert task_breakdown is not None, "task_breakdown should not be None"
-        assert isinstance(task_breakdown, list), f"task_breakdown should be list, got: {type(task_breakdown)}"
+        assert isinstance(task_breakdown, list), (
+            f"task_breakdown should be list, got: {type(task_breakdown)}"
+        )
         assert len(task_breakdown) > 0, "task_breakdown should contain at least one task"
 
         # task_breakdownの各項目の構造を検証
@@ -205,10 +202,14 @@ class TestIssue305Acceptance:
             assert "description" in task, f"task_breakdown[{i}] missing 'description'"
 
         # Assert: workflow_statusesが存在し、ステータスが含まれること
-        assert "workflow_statuses" in final_status, "Response must contain 'workflow_statuses' field"
+        assert "workflow_statuses" in final_status, (
+            "Response must contain 'workflow_statuses' field"
+        )
         workflow_statuses = final_status["workflow_statuses"]
         assert workflow_statuses is not None, "workflow_statuses should not be None"
-        assert isinstance(workflow_statuses, list), f"workflow_statuses should be list, got: {type(workflow_statuses)}"
+        assert isinstance(workflow_statuses, list), (
+            f"workflow_statuses should be list, got: {type(workflow_statuses)}"
+        )
         assert len(workflow_statuses) > 0, "workflow_statuses should contain at least one status"
 
         # workflow_statusesの各項目の構造と値を検証
@@ -221,7 +222,9 @@ class TestIssue305Acceptance:
             )
 
         # 少なくとも1つのworkflowがsuccessまたはfailedで完了していること
-        completed_workflows = [ws for ws in workflow_statuses if ws["status"] in ["success", "failed"]]
+        completed_workflows = [
+            ws for ws in workflow_statuses if ws["status"] in ["success", "failed"]
+        ]
         assert len(completed_workflows) > 0, (
             "At least one workflow should be completed (success or failed)"
         )
@@ -239,9 +242,7 @@ class TestIssue305Acceptance:
         - 少なくとも1つのWorkflowがsuccessステータスで完了する
         """
         # Arrange: Job作成
-        job_response = self._create_job(
-            "ファイルを読み込んでその内容をログに出力するワークフロー"
-        )
+        job_response = self._create_job("ファイルを読み込んでその内容をログに出力するワークフロー")
         job_id = job_response["job_id"]
 
         # Act: 完了までポーリング（進捗履歴を記録）
@@ -270,9 +271,7 @@ class TestIssue305Acceptance:
                 phases_seen.add(record["phase"])
 
         # task_analysisまたはworkflow_generationフェーズを通過していること
-        assert len(phases_seen) >= 1, (
-            f"Should have seen at least one phase, got: {phases_seen}"
-        )
+        assert len(phases_seen) >= 1, f"Should have seen at least one phase, got: {phases_seen}"
 
         # Assert: workflow_statusesが存在し、追跡されていること
         workflow_statuses = final_status.get("workflow_statuses", [])
@@ -359,7 +358,7 @@ class TestIssue305Acceptance:
             job_status = status.get("status", "unknown")
             progress = status.get("progress", 0)
 
-            print(f"[{i+1}/{self.MAX_POLL_COUNT}] Status: {job_status}, Progress: {progress}%")
+            print(f"[{i + 1}/{self.MAX_POLL_COUNT}] Status: {job_status}, Progress: {progress}%")
 
             if job_status in ["completed", "failed"]:
                 return status
@@ -389,15 +388,17 @@ class TestIssue305Acceptance:
             phase = status.get("phase", "unknown")
 
             # 進捗履歴を記録
-            history.append({
-                "progress": progress,
-                "status": job_status,
-                "phase": phase,
-                "workflow_statuses": status.get("workflow_statuses"),
-            })
+            history.append(
+                {
+                    "progress": progress,
+                    "status": job_status,
+                    "phase": phase,
+                    "workflow_statuses": status.get("workflow_statuses"),
+                }
+            )
 
             print(
-                f"[{i+1}/{self.MAX_POLL_COUNT}] Status: {job_status}, "
+                f"[{i + 1}/{self.MAX_POLL_COUNT}] Status: {job_status}, "
                 f"Progress: {progress}%, Phase: {phase}"
             )
 

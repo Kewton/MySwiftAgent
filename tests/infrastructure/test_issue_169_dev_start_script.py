@@ -8,7 +8,6 @@ Tests verify that scripts/dev-start.sh:
 - Manages Valkey PID files and logs
 """
 
-import os
 import re
 from pathlib import Path
 
@@ -43,9 +42,7 @@ class TestValkeyPortConfiguration:
 
     def test_valkey_port_variable_exists(self, dev_start_content: str):
         """VALKEY_PORT 変数が定義されていること."""
-        assert (
-            "VALKEY_PORT" in dev_start_content
-        ), "VALKEY_PORT 変数が定義されていません"
+        assert "VALKEY_PORT" in dev_start_content, "VALKEY_PORT 変数が定義されていません"
 
     def test_valkey_default_port_is_6379(self, dev_start_content: str):
         """VALKEY_PORT のデフォルト値が6379であること."""
@@ -66,9 +63,7 @@ class TestValkeyLogAndPidFiles:
 
         # Check if it points to logs directory
         log_pattern = r'VALKEY_LOG="\$LOG_DIR/valkey\.log"'
-        assert re.search(
-            log_pattern, dev_start_content
-        ), "VALKEY_LOG のパスが不正です"
+        assert re.search(log_pattern, dev_start_content), "VALKEY_LOG のパスが不正です"
 
     def test_valkey_pid_file_defined(self, dev_start_content: str):
         """VALKEY_PID ファイルパスが定義されていること."""
@@ -76,9 +71,7 @@ class TestValkeyLogAndPidFiles:
 
         # Check if it points to PID directory
         pid_pattern = r'VALKEY_PID="\$PID_DIR/valkey\.pid"'
-        assert re.search(
-            pid_pattern, dev_start_content
-        ), "VALKEY_PID のパスが不正です"
+        assert re.search(pid_pattern, dev_start_content), "VALKEY_PID のパスが不正です"
 
 
 class TestValkeyStartupLogic:
@@ -87,9 +80,7 @@ class TestValkeyStartupLogic:
     def test_valkey_service_start_exists(self, dev_start_content: str):
         """Valkey サービス起動処理が存在すること."""
         # Look for start command with valkey
-        assert (
-            "valkey" in dev_start_content.lower()
-        ), "Valkey 起動処理が見つかりません"
+        assert "valkey" in dev_start_content.lower(), "Valkey 起動処理が見つかりません"
 
     def test_valkey_starts_before_services(self, dev_start_content: str):
         """Valkey が他のサービスより前に起動すること."""
@@ -100,9 +91,7 @@ class TestValkeyStartupLogic:
         jobqueue_start_pos = dev_start_content.find("# Start JobQueue")
 
         # Valkey should start before JobQueue (or be present at least)
-        assert (
-            valkey_start_pos > 0
-        ), "Valkey 起動処理のコメントまたはラベルが見つかりません"
+        assert valkey_start_pos > 0, "Valkey 起動処理のコメントまたはラベルが見つかりません"
 
 
 class TestValkeyHealthCheck:
@@ -111,9 +100,9 @@ class TestValkeyHealthCheck:
     def test_valkey_health_check_exists(self, dev_start_content: str):
         """Valkey ヘルスチェック処理が存在すること."""
         # Look for PING command or health check
-        assert (
-            "PING" in dev_start_content or "valkey-cli" in dev_start_content
-        ), "Valkey ヘルスチェック処理が見つかりません"
+        assert "PING" in dev_start_content or "valkey-cli" in dev_start_content, (
+            "Valkey ヘルスチェック処理が見つかりません"
+        )
 
 
 class TestValkeyStopLogic:
@@ -123,8 +112,7 @@ class TestValkeyStopLogic:
         """Valkey サービス停止処理が存在すること."""
         # Look for stop command section
         stop_section_found = (
-            'stop_service "Valkey"' in dev_start_content
-            or "Stop Valkey" in dev_start_content
+            'stop_service "Valkey"' in dev_start_content or "Stop Valkey" in dev_start_content
         )
 
         assert stop_section_found, "Valkey 停止処理が見つかりません"
@@ -138,7 +126,8 @@ class TestValkeyStatusCheck:
         # Look for status command with valkey
         status_section_found = (
             'check_service_status "Valkey"' in dev_start_content
-            or "Valkey" in dev_start_content and "status" in dev_start_content.lower()
+            or "Valkey" in dev_start_content
+            and "status" in dev_start_content.lower()
         )
 
         assert status_section_found, "Valkey ステータスチェック処理が見つかりません"
@@ -158,11 +147,9 @@ class TestValkeyServiceUrlDisplay:
 
         if show_urls_match:
             show_urls_content = show_urls_match.group(1)
-            assert (
-                "valkey" in show_urls_content.lower() or "6379" in show_urls_content
-            ), "show_service_urls に Valkey 情報が含まれていません"
+            assert "valkey" in show_urls_content.lower() or "6379" in show_urls_content, (
+                "show_service_urls に Valkey 情報が含まれていません"
+            )
         else:
             # If function structure is different, just check for Valkey mention in URL context
-            assert (
-                "Valkey" in dev_start_content
-            ), "Valkey サービス URL 表示が見つかりません"
+            assert "Valkey" in dev_start_content, "Valkey サービス URL 表示が見つかりません"

@@ -8,10 +8,7 @@ Unit tests for Issue #149: Status Dashboard Feature
 - [ ] `--watch`で自動更新されること
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 
 
 class TestServiceStatusCollector:
@@ -85,7 +82,7 @@ class TestServiceStatusCollector:
                         "uptime": "2h 30m",
                         "cpu_percent": 5.2,
                         "memory_percent": 12.5,
-                        "memory_mb": 128.5
+                        "memory_mb": 128.5,
                     }
 
                     collector = ServiceStatusCollector()
@@ -220,12 +217,11 @@ class TestStatusFormatter:
         When: format_json()を実行
         Then: 有効なJSON形式で出力される
         """
-        from cli.status_dashboard import StatusFormatter
         import json
 
-        statuses = [
-            {"name": "jobqueue", "health_status": "healthy", "port": 8001}
-        ]
+        from cli.status_dashboard import StatusFormatter
+
+        statuses = [{"name": "jobqueue", "health_status": "healthy", "port": 8001}]
 
         formatter = StatusFormatter()
         output = formatter.format_json(statuses)
@@ -244,9 +240,7 @@ class TestStatusFormatter:
         """
         from cli.status_dashboard import StatusFormatter
 
-        statuses = [
-            {"name": "jobqueue", "health_status": "healthy", "port": 8001}
-        ]
+        statuses = [{"name": "jobqueue", "health_status": "healthy", "port": 8001}]
 
         formatter = StatusFormatter()
         output = formatter.format_csv(statuses)
@@ -296,7 +290,9 @@ class TestStatusDashboardCLI:
                 {"name": "jobqueue", "health_status": "healthy"}
             ]
 
-            with patch("cli.status_dashboard.time.sleep", side_effect=KeyboardInterrupt):  # 無限ループ防止
+            with patch(
+                "cli.status_dashboard.time.sleep", side_effect=KeyboardInterrupt
+            ):  # 無限ループ防止
                 main(["--watch"])  # KeyboardInterruptはmain内でキャッチされる
 
                 # collect_service_statuses が複数回呼ばれること
@@ -310,8 +306,8 @@ class TestStatusDashboardCLI:
         When: 実行完了
         Then: JSON形式で出力される
         """
+
         from cli.status_dashboard import main
-        import json
 
         with patch("cli.status_dashboard.ServiceStatusCollector") as mock_collector:
             mock_collector.return_value.collect_service_statuses.return_value = [
@@ -414,8 +410,9 @@ class TestHelperFunctions:
         When: check_health_endpoint()を実行
         Then: Noneが返される
         """
-        from cli.status_dashboard import check_health_endpoint
         import requests
+
+        from cli.status_dashboard import check_health_endpoint
 
         with patch("cli.status_dashboard.requests.get", side_effect=requests.Timeout):
             result = check_health_endpoint("http://localhost:8001/health")
@@ -452,8 +449,8 @@ class TestHelperFunctions:
         When: read_log_file()を実行
         Then: ログ行が返される
         """
+
         from cli.status_dashboard import read_log_file
-        from pathlib import Path
 
         with patch("cli.status_dashboard.Path.exists", return_value=True):
             with patch("builtins.open", create=True) as mock_open:

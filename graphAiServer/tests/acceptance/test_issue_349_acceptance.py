@@ -24,11 +24,10 @@ Environment Variables:
 
 import json
 import os
+from pathlib import Path
+
 import pytest
 import requests
-from pathlib import Path
-from typing import Any
-
 
 # Test configuration
 BASE_URL = os.getenv("GRAPHAI_SERVER_URL", "http://localhost:8000")
@@ -174,10 +173,10 @@ class TestIssue349TransformConditional:
         shallow_config = output.get("shallow_config", {})
 
         # STRICT assertions for shallow merge
-        assert shallow_config.get("theme") == "dark", \
-            f"User theme not applied: {shallow_config}"
-        assert shallow_config.get("language") == "ja", \
+        assert shallow_config.get("theme") == "dark", f"User theme not applied: {shallow_config}"
+        assert shallow_config.get("language") == "ja", (
             f"Default language not preserved: {shallow_config}"
+        )
 
     def test_ac2_merge_deep_preserves_nested_defaults(self):
         """
@@ -206,10 +205,12 @@ class TestIssue349TransformConditional:
 
         # STRICT assertions for deep merge
         notifications = deep_config.get("notifications", {})
-        assert notifications.get("push") == True, \
+        assert notifications.get("push") == True, (
             f"User notification setting not applied: {notifications}"
-        assert notifications.get("email") == True, \
+        )
+        assert notifications.get("email") == True, (
             f"Default email setting not preserved in deep merge: {notifications}"
+        )
 
     # ================================================================
     # AC-3: Coalesce chain for conditional output
@@ -376,5 +377,6 @@ class TestIssue349TransformConditional:
         assert "message" in output, f"message field missing: {output}"
 
         # Verify grade is correct for score=75
-        assert output.get("grade") == "B (合格)", \
+        assert output.get("grade") == "B (合格)", (
             f"Expected 'B (合格)' for score=75, got: {output.get('grade')}"
+        )

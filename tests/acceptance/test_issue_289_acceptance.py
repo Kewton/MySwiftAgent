@@ -13,9 +13,10 @@ Prerequisites:
 - Database seeded with test data (npm run db:seed)
 """
 
-import pytest
-import httpx
 from typing import Any
+
+import httpx
+import pytest
 
 # Base URL for myAgentDesk
 BASE_URL = "http://localhost:5173"
@@ -58,20 +59,16 @@ class TestWorkbenchListPage:
         response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches")
         assert "Workbenches" in response.text, "Page should contain 'Workbenches' title"
 
-    def test_workbench_list_contains_workbench_cards(
-        self, client: httpx.Client
-    ) -> None:
+    def test_workbench_list_contains_workbench_cards(self, client: httpx.Client) -> None:
         """Workbench list page should contain workbench cards."""
         response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches")
-        assert (
-            'data-testid="workbench-card"' in response.text
-        ), "Page should contain workbench cards"
+        assert 'data-testid="workbench-card"' in response.text, (
+            "Page should contain workbench cards"
+        )
 
     def test_status_filter_active_returns_200(self, client: httpx.Client) -> None:
         """Filtering by active status should return HTTP 200."""
-        response = client.get(
-            f"/projects/{TEST_PROJECT_ID}/workbenches?status=active"
-        )
+        response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches?status=active")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
     def test_status_filter_draft_returns_200(self, client: httpx.Client) -> None:
@@ -81,9 +78,7 @@ class TestWorkbenchListPage:
 
     def test_status_filter_archived_returns_200(self, client: httpx.Client) -> None:
         """Filtering by archived status should return HTTP 200."""
-        response = client.get(
-            f"/projects/{TEST_PROJECT_ID}/workbenches?status=archived"
-        )
+        response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches?status=archived")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
 
@@ -92,27 +87,19 @@ class TestWorkbenchDetailPage:
 
     def test_workbench_detail_returns_200(self, client: httpx.Client) -> None:
         """Valid workbench detail page should return HTTP 200."""
-        response = client.get(
-            f"/projects/{TEST_PROJECT_ID}/workbenches/{TEST_WORKBENCH_ID}"
-        )
+        response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches/{TEST_WORKBENCH_ID}")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
-    def test_workbench_detail_contains_workbench_name(
-        self, client: httpx.Client
-    ) -> None:
+    def test_workbench_detail_contains_workbench_name(self, client: httpx.Client) -> None:
         """Workbench detail page should contain the workbench name."""
-        response = client.get(
-            f"/projects/{TEST_PROJECT_ID}/workbenches/{TEST_WORKBENCH_ID}"
+        response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches/{TEST_WORKBENCH_ID}")
+        assert "Email Auto Reply" in response.text, (
+            "Page should contain workbench name 'Email Auto Reply'"
         )
-        assert (
-            "Email Auto Reply" in response.text
-        ), "Page should contain workbench name 'Email Auto Reply'"
 
     def test_invalid_workbench_id_returns_404(self, client: httpx.Client) -> None:
         """Invalid workbench ID should return HTTP 404."""
-        response = client.get(
-            f"/projects/{TEST_PROJECT_ID}/workbenches/{INVALID_WORKBENCH_ID}"
-        )
+        response = client.get(f"/projects/{TEST_PROJECT_ID}/workbenches/{INVALID_WORKBENCH_ID}")
         assert response.status_code == 404, f"Expected 404, got {response.status_code}"
 
     def test_project_mismatch_returns_404(self, client: httpx.Client) -> None:
@@ -120,9 +107,7 @@ class TestWorkbenchDetailPage:
         Accessing a workbench that belongs to a different project should return 404.
         This is a security test - wb_001 belongs to proj_001, not proj_002.
         """
-        response = client.get(
-            f"/projects/{WRONG_PROJECT_ID}/workbenches/{TEST_WORKBENCH_ID}"
-        )
+        response = client.get(f"/projects/{WRONG_PROJECT_ID}/workbenches/{TEST_WORKBENCH_ID}")
         assert response.status_code == 404, (
             f"Expected 404 for project mismatch, got {response.status_code}. "
             "This is a security vulnerability if not returning 404."
@@ -176,9 +161,7 @@ class TestWorkbenchListAPI:
 
         # Status validation
         valid_statuses = ["draft", "active", "archived"]
-        assert (
-            workbench["status"] in valid_statuses
-        ), f"Status should be one of {valid_statuses}"
+        assert workbench["status"] in valid_statuses, f"Status should be one of {valid_statuses}"
 
     def test_api_workbench_stats_fields(self, api_client: httpx.Client) -> None:
         """Workbench items should include statistical fields."""
@@ -191,9 +174,7 @@ class TestWorkbenchListAPI:
         stats_fields = ["runCount", "scheduleCount"]
         for field in stats_fields:
             assert field in workbench, f"Workbench should have '{field}' stat field"
-            assert isinstance(
-                workbench[field], int
-            ), f"'{field}' should be an integer"
+            assert isinstance(workbench[field], int), f"'{field}' should be an integer"
 
     def test_api_status_counts_structure(self, api_client: httpx.Client) -> None:
         """Status counts should have all status types."""
@@ -206,23 +187,15 @@ class TestWorkbenchListAPI:
         required_counts = ["all", "active", "draft", "archived"]
         for count_type in required_counts:
             assert count_type in status_counts, f"statusCounts should have '{count_type}'"
-            assert isinstance(
-                status_counts[count_type], int
-            ), f"'{count_type}' count should be an integer"
+            assert isinstance(status_counts[count_type], int), (
+                f"'{count_type}' count should be an integer"
+            )
 
         # 'all' should equal sum of other counts
-        expected_all = (
-            status_counts["active"]
-            + status_counts["draft"]
-            + status_counts["archived"]
-        )
-        assert (
-            status_counts["all"] == expected_all
-        ), "'all' count should equal sum of status counts"
+        expected_all = status_counts["active"] + status_counts["draft"] + status_counts["archived"]
+        assert status_counts["all"] == expected_all, "'all' count should equal sum of status counts"
 
-    def test_api_filter_active_returns_only_active(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_filter_active_returns_only_active(self, api_client: httpx.Client) -> None:
         """Filtering by active should return only active workbenches."""
         response = api_client.get(f"/projects/{TEST_PROJECT_ID}/workbenches?status=active")
         data: dict[str, Any] = response.json()
@@ -230,13 +203,9 @@ class TestWorkbenchListAPI:
         assert data["currentFilter"] == "active"
 
         for wb in data["workbenches"]:
-            assert (
-                wb["status"] == "active"
-            ), f"Expected only active workbenches, got {wb['status']}"
+            assert wb["status"] == "active", f"Expected only active workbenches, got {wb['status']}"
 
-    def test_api_filter_draft_returns_only_draft(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_filter_draft_returns_only_draft(self, api_client: httpx.Client) -> None:
         """Filtering by draft should return only draft workbenches."""
         response = api_client.get(f"/projects/{TEST_PROJECT_ID}/workbenches?status=draft")
         data: dict[str, Any] = response.json()
@@ -244,17 +213,11 @@ class TestWorkbenchListAPI:
         assert data["currentFilter"] == "draft"
 
         for wb in data["workbenches"]:
-            assert (
-                wb["status"] == "draft"
-            ), f"Expected only draft workbenches, got {wb['status']}"
+            assert wb["status"] == "draft", f"Expected only draft workbenches, got {wb['status']}"
 
-    def test_api_invalid_status_filter_returns_400(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_invalid_status_filter_returns_400(self, api_client: httpx.Client) -> None:
         """Invalid status filter should return 400 Bad Request."""
-        response = api_client.get(
-            f"/projects/{TEST_PROJECT_ID}/workbenches?status=invalid_status"
-        )
+        response = api_client.get(f"/projects/{TEST_PROJECT_ID}/workbenches?status=invalid_status")
         assert response.status_code == 400, f"Expected 400, got {response.status_code}"
 
 
@@ -270,13 +233,10 @@ class TestWorkbenchCreateAPI:
         """Creating a workbench should return 201 with workbench data."""
         payload = {
             "name": "Test Workbench from Acceptance Test",
-            "description": "Created by automated test"
+            "description": "Created by automated test",
         }
 
-        response = api_client.post(
-            f"/projects/{TEST_PROJECT_ID}/workbenches",
-            json=payload
-        )
+        response = api_client.post(f"/projects/{TEST_PROJECT_ID}/workbenches", json=payload)
 
         assert response.status_code == 201, f"Expected 201, got {response.status_code}"
 
@@ -294,10 +254,7 @@ class TestWorkbenchCreateAPI:
         """Creating a workbench with only name should succeed."""
         payload = {"name": "Minimal Workbench"}
 
-        response = api_client.post(
-            f"/projects/{TEST_PROJECT_ID}/workbenches",
-            json=payload
-        )
+        response = api_client.post(f"/projects/{TEST_PROJECT_ID}/workbenches", json=payload)
 
         assert response.status_code == 201, f"Expected 201, got {response.status_code}"
 
@@ -306,56 +263,39 @@ class TestWorkbenchCreateAPI:
         assert workbench["name"] == payload["name"]
         assert workbench["description"] is None, "Description should be null when not provided"
 
-    def test_api_create_workbench_empty_name_fails(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_create_workbench_empty_name_fails(self, api_client: httpx.Client) -> None:
         """Creating a workbench without name should return 400."""
         payload: dict[str, str] = {"description": "No name provided"}
 
-        response = api_client.post(
-            f"/projects/{TEST_PROJECT_ID}/workbenches",
-            json=payload
-        )
+        response = api_client.post(f"/projects/{TEST_PROJECT_ID}/workbenches", json=payload)
 
         assert response.status_code == 400, f"Expected 400, got {response.status_code}"
 
-    def test_api_create_workbench_whitespace_name_fails(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_create_workbench_whitespace_name_fails(self, api_client: httpx.Client) -> None:
         """Creating a workbench with whitespace-only name should return 400."""
         payload = {"name": "   "}
 
-        response = api_client.post(
-            f"/projects/{TEST_PROJECT_ID}/workbenches",
-            json=payload
-        )
+        response = api_client.post(f"/projects/{TEST_PROJECT_ID}/workbenches", json=payload)
 
         assert response.status_code == 400, f"Expected 400, got {response.status_code}"
 
-    def test_api_create_workbench_invalid_json_fails(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_create_workbench_invalid_json_fails(self, api_client: httpx.Client) -> None:
         """Creating a workbench with invalid JSON should return 400."""
         response = api_client.post(
             f"/projects/{TEST_PROJECT_ID}/workbenches",
             content="not valid json",
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
 
         assert response.status_code == 400, f"Expected 400, got {response.status_code}"
 
-    def test_api_create_workbench_appears_in_list(
-        self, api_client: httpx.Client
-    ) -> None:
+    def test_api_create_workbench_appears_in_list(self, api_client: httpx.Client) -> None:
         """Created workbench should appear in the list."""
         # Create a uniquely named workbench
         unique_name = f"Verification Test {__import__('time').time()}"
         payload = {"name": unique_name}
 
-        create_response = api_client.post(
-            f"/projects/{TEST_PROJECT_ID}/workbenches",
-            json=payload
-        )
+        create_response = api_client.post(f"/projects/{TEST_PROJECT_ID}/workbenches", json=payload)
         assert create_response.status_code == 201
 
         created_wb = create_response.json()["workbench"]
@@ -366,9 +306,7 @@ class TestWorkbenchCreateAPI:
         data: dict[str, Any] = list_response.json()
 
         workbench_ids = [wb["id"] for wb in data["workbenches"]]
-        assert created_id in workbench_ids, (
-            f"Created workbench {created_id} should appear in list"
-        )
+        assert created_id in workbench_ids, f"Created workbench {created_id} should appear in list"
 
 
 # =============================================================================
@@ -382,9 +320,7 @@ class TestServiceHealth:
     def test_myagentdesk_is_running(self, client: httpx.Client) -> None:
         """myAgentDesk dev server should be accessible."""
         response = client.get("/")
-        assert (
-            response.status_code == 200
-        ), "myAgentDesk dev server is not running on port 5173"
+        assert response.status_code == 200, "myAgentDesk dev server is not running on port 5173"
 
     def test_projects_page_accessible(self, client: httpx.Client) -> None:
         """Projects page should be accessible."""

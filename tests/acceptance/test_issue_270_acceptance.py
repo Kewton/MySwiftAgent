@@ -8,6 +8,7 @@ Issue #270 受入テスト（L3: ローカル受入テスト）
 実行方法:
   uv run pytest tests/acceptance/test_issue_270_acceptance.py -v
 """
+
 import os
 import sys
 from pathlib import Path
@@ -15,7 +16,6 @@ from typing import Any
 
 import pytest
 import requests
-
 
 # expertAgentのパスを追加
 EXPERT_AGENT_PATH = Path(__file__).parent.parent.parent / "expertAgent"
@@ -42,10 +42,7 @@ class TestIssue270Acceptance:
                 response = requests.get(url, timeout=5)
                 assert response.status_code == 200, f"{name} is not healthy"
             except requests.exceptions.ConnectionError:
-                pytest.skip(
-                    f"{name} is not running. "
-                    "Run: ./scripts/dev-start.sh or make dev-all"
-                )
+                pytest.skip(f"{name} is not running. Run: ./scripts/dev-start.sh or make dev-all")
 
     # ==========================================================================
     # AC1: 主要API（10件以上）のスキーマが capabilities.yaml に追加されている
@@ -60,9 +57,7 @@ class TestIssue270Acceptance:
             EXPERT_AGENT_APIS,
         )
 
-        apis_with_schema = [
-            a for a in EXPERT_AGENT_APIS if a.request_schema or a.response_schema
-        ]
+        apis_with_schema = [a for a in EXPERT_AGENT_APIS if a.request_schema or a.response_schema]
 
         assert len(apis_with_schema) >= 10, (
             f"Expected at least 10 APIs with schema, got {len(apis_with_schema)}"
@@ -80,9 +75,7 @@ class TestIssue270Acceptance:
         assert gmail is not None, "Gmail検索 API not found"
         assert gmail.request_schema is not None, "Gmail検索 has no request_schema"
         # The schema format is field_name -> {type, description, required}
-        assert "query" in gmail.request_schema, (
-            "request_schema missing 'query' field"
-        )
+        assert "query" in gmail.request_schema, "request_schema missing 'query' field"
         print(f"[PASS] Gmail検索 request_schema: {list(gmail.request_schema.keys())}")
 
     def test_ac1_all_apis_have_method_field(self) -> None:
@@ -144,9 +137,7 @@ class TestIssue270Acceptance:
 
         # The hint should contain required fields
         assert "query" in hint, "Hint should contain 'query'"
-        assert "required" in hint.lower(), (
-            "Hint should indicate required fields"
-        )
+        assert "required" in hint.lower(), "Hint should indicate required fields"
         print(f"[PASS] Schema hint generated: {hint}")
 
     # ==========================================================================
@@ -180,9 +171,7 @@ class TestIssue270Acceptance:
         )
 
         data = response.json()
-        assert data.get("status") in ["success", "completed"], (
-            f"Job generation failed: {data}"
-        )
+        assert data.get("status") in ["success", "completed"], f"Job generation failed: {data}"
 
         # タスク情報にinterfaceが含まれていることを確認
         tasks = data.get("tasks", []) or data.get("task_breakdown", [])
@@ -226,9 +215,7 @@ class TestIssue270Acceptance:
 
         data = response.json()
         # エラーではないことを確認（成功または処理中）
-        assert "error" not in data.get("status", "").lower(), (
-            f"Workflow generation error: {data}"
-        )
+        assert "error" not in data.get("status", "").lower(), f"Workflow generation error: {data}"
         print(f"✅ Existing workflow generation works: {data.get('status')}")
 
     # ==========================================================================

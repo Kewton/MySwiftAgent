@@ -1,0 +1,274 @@
+{
+  "issue_number": 364,
+  "issue_title": "feat(mySwiftAgentCore): taskflowGeneratorAgent - ワークフロー生成エージェントの実装",
+  "project": "mySwiftAgentCore",
+  "language": "TypeScript",
+  "iteration": 1,
+  "phase": "TDD_IMPLEMENTATION",
+  "design_policy_path": "dev-reports/feature/issue/364/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/364/work-plan.md",
+  "acceptance_plan_path": "dev-reports/feature/issue/364/acceptance-plan.md",
+  "openapi_spec_path": "docs/spec/api/taskflow-generator-api.yaml",
+  "reference_implementation": {
+    "taskflowEngine": "mySwiftAgentCore/src/taskflowEngine/",
+    "expertAgent_workflow_gen": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "title": "ワークフロー生成",
+      "description": "タスク定義、capabilities、interfacesを入力としてTaskFlow JSONを生成できる"
+    },
+    {
+      "id": "AC-2",
+      "title": "バッチ生成API",
+      "description": "複数タスクの並列生成（max_concurrency制御）、POST /api/v1/generator/workflow/batch エンドポイント"
+    },
+    {
+      "id": "AC-3",
+      "title": "リカバリー戦略",
+      "description": "RETRY_CURRENT, ROLLBACK_TO_ANALYSIS, FAIL_FAST の3種類のリカバリー戦略"
+    },
+    {
+      "id": "AC-4",
+      "title": "Langfuseトレース",
+      "description": "expertAgentからtrace_contextを引き継ぎ、WORKFLOW_GENスパン作成、LLM Generation記録"
+    },
+    {
+      "id": "AC-5",
+      "title": "バリデーション",
+      "description": "生成されたTaskFlow JSONのスキーマ検証、依存関係チェック、変数参照検出"
+    },
+    {
+      "id": "AC-6",
+      "title": "taskflowEngine統合",
+      "description": "生成したワークフローをtaskflowEngineに登録、WorkflowRegistryへの保存"
+    },
+    {
+      "id": "AC-7",
+      "title": "TypeScript SDK",
+      "description": "TaskFlowGeneratorClientクラスの提供、expertAgentからの呼び出しインターフェース"
+    }
+  ],
+  "design_policies": [
+    {
+      "id": "DP-1",
+      "title": "サービス境界の明確化",
+      "description": "expertAgentとmySwiftAgentCore間をHTTP APIで完全分離"
+    },
+    {
+      "id": "DP-2",
+      "title": "LLMクライアント抽象化",
+      "description": "プロバイダー非依存のLLMClientインターフェース"
+    },
+    {
+      "id": "DP-3",
+      "title": "Capabilityコンテキスト統合",
+      "description": "Capabilityをプロンプトに構造化して注入"
+    },
+    {
+      "id": "DP-4",
+      "title": "並列実行アーキテクチャ",
+      "description": "Promise.allSettledによる並列処理とp-limit統合"
+    },
+    {
+      "id": "DP-5",
+      "title": "Langfuseトレース統合設計",
+      "description": "expertAgentからのトレースコンテキスト継続"
+    },
+    {
+      "id": "DP-6",
+      "title": "エラーハンドリングとリカバリー",
+      "description": "構造化されたエラーレスポンスとリカバリー提案"
+    },
+    {
+      "id": "DP-7",
+      "title": "TaskFlow検証パイプライン",
+      "description": "多段階検証によるワークフロー品質保証"
+    },
+    {
+      "id": "DP-8",
+      "title": "TaskFlow形式の互換性維持",
+      "description": "graphAiServer形式への準拠とIssue #363との整合性"
+    }
+  ],
+  "directory_structure": {
+    "base": "mySwiftAgentCore/src/taskflowGeneratorAgent/",
+    "components": [
+      {
+        "path": "index.ts",
+        "description": "エントリーポイント"
+      },
+      {
+        "path": "generator/WorkflowGenerator.ts",
+        "description": "メイン生成ロジック"
+      },
+      {
+        "path": "generator/BatchProcessor.ts",
+        "description": "並列実行管理"
+      },
+      {
+        "path": "generator/WorkflowRegistrar.ts",
+        "description": "taskflowEngine連携"
+      },
+      {
+        "path": "llm/LLMClient.ts",
+        "description": "抽象インターフェース"
+      },
+      {
+        "path": "llm/clients/AnthropicClient.ts",
+        "description": "Anthropic実装"
+      },
+      {
+        "path": "llm/clients/OpenAIClient.ts",
+        "description": "OpenAI実装"
+      },
+      {
+        "path": "llm/clients/GeminiClient.ts",
+        "description": "Gemini実装"
+      },
+      {
+        "path": "llm/LLMClientFactory.ts",
+        "description": "ファクトリー"
+      },
+      {
+        "path": "prompts/PromptBuilder.ts",
+        "description": "プロンプト構築"
+      },
+      {
+        "path": "prompts/templates/system.ts",
+        "description": "システムプロンプト"
+      },
+      {
+        "path": "prompts/templates/taskflow-rules.ts",
+        "description": "TaskFlowルール"
+      },
+      {
+        "path": "validator/ValidationPipeline.ts",
+        "description": "パイプライン"
+      },
+      {
+        "path": "validator/validators/SchemaValidator.ts",
+        "description": "スキーマ検証"
+      },
+      {
+        "path": "validator/validators/DependencyValidator.ts",
+        "description": "依存関係検証"
+      },
+      {
+        "path": "validator/validators/VariableValidator.ts",
+        "description": "変数参照検証"
+      },
+      {
+        "path": "validator/validators/CapabilityValidator.ts",
+        "description": "capability存在確認"
+      },
+      {
+        "path": "validator/validators/SecurityValidator.ts",
+        "description": "セキュリティチェック"
+      },
+      {
+        "path": "recovery/ErrorHandler.ts",
+        "description": "エラーハンドリング"
+      },
+      {
+        "path": "recovery/RetryStrategy.ts",
+        "description": "リトライロジック"
+      },
+      {
+        "path": "tracing/LangfuseIntegration.ts",
+        "description": "トレース統合"
+      },
+      {
+        "path": "tracing/SpanManager.ts",
+        "description": "スパン管理"
+      },
+      {
+        "path": "api/routes.ts",
+        "description": "Honoルート定義"
+      },
+      {
+        "path": "api/handlers.ts",
+        "description": "リクエストハンドラ"
+      },
+      {
+        "path": "client/TaskFlowGeneratorClient.ts",
+        "description": "TypeScript SDK"
+      },
+      {
+        "path": "types/generator.ts",
+        "description": "生成関連の型"
+      },
+      {
+        "path": "types/llm.ts",
+        "description": "LLM関連の型"
+      },
+      {
+        "path": "types/api.ts",
+        "description": "API関連の型"
+      }
+    ]
+  },
+  "test_directory": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/",
+  "coverage_target": 90,
+  "typescript_config": {
+    "strict": true,
+    "moduleResolution": "node",
+    "target": "ES2022"
+  },
+  "dependencies": {
+    "runtime": [
+      "hono",
+      "zod",
+      "langfuse",
+      "p-limit",
+      "axios",
+      "@anthropic-ai/sdk",
+      "openai",
+      "@google/generative-ai"
+    ],
+    "dev": [
+      "vitest",
+      "@types/node",
+      "typescript"
+    ]
+  },
+  "tdd_phases": [
+    {
+      "phase": 1,
+      "name": "基盤実装",
+      "tasks": [
+        "プロジェクト基盤セットアップ",
+        "LLMクライアント抽象化",
+        "プロンプト管理システム",
+        "エラーハンドリング基盤"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "コア機能実装",
+      "tasks": [
+        "ワークフロー生成ロジック",
+        "バリデーションパイプライン",
+        "並列実行管理"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "統合実装",
+      "tasks": [
+        "taskflowEngine連携",
+        "Langfuseトレース統合"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "API実装",
+      "tasks": [
+        "REST APIエンドポイント",
+        "TypeScript SDK"
+      ]
+    }
+  ],
+  "output_file": "dev-reports/feature/issue/364/pm-auto-dev/iteration-1/tdd-result.json"
+}

@@ -196,7 +196,7 @@ def check_port_usage(port: int) -> Dict[str, Any]:
                 ["lsof", "-i", f":{port}", "-sTCP:LISTEN", "-t"],
                 capture_output=True,
                 text=True,
-                timeout=2
+                timeout=2,
             )
             if result.returncode == 0 and result.stdout.strip():
                 pid = int(result.stdout.strip().split()[0])

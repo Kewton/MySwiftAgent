@@ -16,9 +16,12 @@ export interface SecretProvider {
 
 /**
  * MyVault client configuration
+ *
+ * Compatible with MyVault API (same pattern as graphAiServer)
  */
 export interface MyVaultConfig {
   baseUrl: string;
+  serviceName: string;
   serviceToken: string;
   project?: string;
 }
@@ -80,19 +83,24 @@ export class SecretManager implements SecretProvider {
 
   /**
    * Get a secret from MyVault
+   *
+   * Uses MyVault API compatible with graphAiServer pattern:
+   * - Endpoint: /api/secrets/{project}/{key}
+   * - Headers: X-Service, X-Token
    */
   private async getFromMyVault(key: string): Promise<string | undefined> {
-    const { baseUrl, serviceToken, project } = this.config.myVault!;
+    const { baseUrl, serviceName, serviceToken, project } = this.config.myVault!;
 
     const url = new URL(
-      `/api/v1/secrets/${encodeURIComponent(project ?? 'default')}/${encodeURIComponent(key)}`,
+      `/api/secrets/${encodeURIComponent(project ?? 'default')}/${encodeURIComponent(key)}`,
       baseUrl
     );
 
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${serviceToken}`,
+        'X-Service': serviceName,
+        'X-Token': serviceToken,
         'Content-Type': 'application/json',
       },
     });
@@ -149,6 +157,13 @@ export function createSecretManager(config?: SecretManagerConfig): SecretManager
 
 /**
  * Create SecretManager from environment variables
+ *
+ * Required environment variables for MyVault:
+ * - MYVAULT_ENABLED: 'true' to enable MyVault
+ * - MYVAULT_BASE_URL: MyVault server URL (default: http://localhost:8003)
+ * - MYVAULT_SERVICE_NAME: Service name for X-Service header (default: mySwiftAgentCore)
+ * - MYVAULT_SERVICE_TOKEN: Token for X-Token header
+ * - MYVAULT_DEFAULT_PROJECT: Default project name (default: default)
  */
 export function createSecretManagerFromEnv(): SecretManager {
   const myVaultEnabled = process.env['MYVAULT_ENABLED'] === 'true';
@@ -157,8 +172,9 @@ export function createSecretManagerFromEnv(): SecretManager {
     return new SecretManager({
       myVault: {
         baseUrl: process.env['MYVAULT_BASE_URL'] ?? 'http://localhost:8003',
+        serviceName: process.env['MYVAULT_SERVICE_NAME'] ?? 'mySwiftAgentCore',
         serviceToken: process.env['MYVAULT_SERVICE_TOKEN'] ?? '',
-        project: process.env['MYVAULT_DEFAULT_PROJECT'],
+        project: process.env['MYVAULT_DEFAULT_PROJECT'] ?? 'default',
       },
       fallbackToEnv: true,
     });

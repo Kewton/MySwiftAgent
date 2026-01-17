@@ -23,9 +23,9 @@ Usage:
     uv run pytest tests/acceptance/test_issue_348_acceptance.py -v
 """
 
+
 import pytest
 import requests
-from typing import Any
 
 # Test configuration
 BASE_URL = "http://localhost:8005"
@@ -581,9 +581,9 @@ class TestIssue348TaskFlowEngine:
             errors = result.get("errors", [])
             # Check that there's an error about HTTPS or SSRF
             error_messages = " ".join([e.get("message", "") for e in errors])
-            assert (
-                "HTTPS" in error_messages or "https" in error_messages
-            ), f"Expected HTTPS enforcement error: {errors}"
+            assert "HTTPS" in error_messages or "https" in error_messages, (
+                f"Expected HTTPS enforcement error: {errors}"
+            )
 
     def test_ac7_ssrf_localhost_rejection(self):
         """AC-7: localhost must be rejected."""
@@ -648,9 +648,9 @@ class TestIssue348TaskFlowEngine:
             assert result.get("valid") is False, "HTTP should be rejected, HTTPS required"
             errors = result.get("errors", [])
             error_messages = " ".join([e.get("message", "") for e in errors])
-            assert (
-                "HTTPS" in error_messages or "https" in error_messages.lower()
-            ), f"Expected HTTPS enforcement error: {errors}"
+            assert "HTTPS" in error_messages or "https" in error_messages.lower(), (
+                f"Expected HTTPS enforcement error: {errors}"
+            )
 
     def test_ac7_https_allowed(self):
         """AC-7: HTTPS URLs should be allowed."""
@@ -718,9 +718,9 @@ class TestIssue348TaskFlowEngine:
             assert result.get("valid") is False, "Path traversal should be rejected"
             errors = result.get("errors", [])
             error_messages = " ".join([e.get("message", "") for e in errors])
-            assert (
-                "traversal" in error_messages.lower() or ".." in error_messages
-            ), f"Expected path traversal error: {errors}"
+            assert "traversal" in error_messages.lower() or ".." in error_messages, (
+                f"Expected path traversal error: {errors}"
+            )
 
     def test_ac8_code_js_valid_path(self):
         """AC-8: Valid script paths should be accepted."""
@@ -929,7 +929,9 @@ class TestIssue348V2Extensions:
 
             assert response.status_code == 200, f"Condition '{condition}' failed"
             result = response.json()
-            assert result.get("valid") is True, f"Condition '{condition}' was rejected: {result.get('errors')}"
+            assert result.get("valid") is True, (
+                f"Condition '{condition}' was rejected: {result.get('errors')}"
+            )
 
     def test_condition_no_eval_injection(self):
         """AC-COND-2: eval() injection attempts are rejected."""
@@ -970,7 +972,9 @@ class TestIssue348V2Extensions:
 
             result = response.json()
             if response.status_code == 200:
-                assert result.get("valid") is False, f"Malicious condition '{condition}' should be rejected"
+                assert result.get("valid") is False, (
+                    f"Malicious condition '{condition}' should be rejected"
+                )
 
     # ================================================================
     # AC-VAL-1: 3-Level Validation
@@ -1092,10 +1096,16 @@ class TestIssue348V2Extensions:
         # If there are errors, agentSummary should be present
         if not result.get("valid"):
             agent_summary = result.get("agentSummary")
-            assert agent_summary is not None, "agentSummary should be included for invalid workflows"
+            assert agent_summary is not None, (
+                "agentSummary should be included for invalid workflows"
+            )
             # Check structure
             if agent_summary:
-                assert "fixRequired" in agent_summary or "suggestedFixes" in agent_summary or "regenerationHints" in agent_summary
+                assert (
+                    "fixRequired" in agent_summary
+                    or "suggestedFixes" in agent_summary
+                    or "regenerationHints" in agent_summary
+                )
 
     def test_agent_feedback_fix_hints(self):
         """AC-VAL-2: agentSummary provides actionable fix hints for LLM."""
@@ -1133,10 +1143,7 @@ class TestIssue348V2Extensions:
         agent_summary = result.get("agentSummary")
 
         # At least one of these should have actionable information
-        has_feedback = (
-            agent_summary is not None
-            or any(i.get("agentFeedback") for i in issues)
-        )
+        has_feedback = agent_summary is not None or any(i.get("agentFeedback") for i in issues)
         # Note: This test verifies the feedback mechanism exists
         # The actual content depends on implementation details
 

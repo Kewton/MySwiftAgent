@@ -39,8 +39,7 @@ class TestIssue321Acceptance:
                     pytest.skip(f"{name} health check failed: {response.status_code}")
             except requests.exceptions.ConnectionError:
                 pytest.skip(
-                    f"{name} is not running at {url}. "
-                    "Run: ./scripts/dev-hybrid.sh or make dev-all"
+                    f"{name} is not running at {url}. Run: ./scripts/dev-hybrid.sh or make dev-all"
                 )
 
     # ==========================================================================
@@ -82,13 +81,9 @@ class TestIssue321Acceptance:
         if "job_body_parameters" in data:
             params = data["job_body_parameters"]
             email_found = any(
-                "gmail.com" in str(p.get("value", ""))
-                for p in params
-                if isinstance(p, dict)
+                "gmail.com" in str(p.get("value", "")) for p in params if isinstance(p, dict)
             )
-            assert email_found or len(params) > 0, (
-                "Expected email parameter in job_body_parameters"
-            )
+            assert email_found or len(params) > 0, "Expected email parameter in job_body_parameters"
 
     # ==========================================================================
     # テストケース2: 複数パラメータの抽出
@@ -128,9 +123,7 @@ class TestIssue321Acceptance:
         if "job_body_parameters" in data:
             params = data["job_body_parameters"]
             # パラメータが抽出されていることを確認（具体的な値はLLMに依存）
-            assert isinstance(params, list), (
-                f"job_body_parameters should be a list: {params}"
-            )
+            assert isinstance(params, list), f"job_body_parameters should be a list: {params}"
 
     # ==========================================================================
     # テストケース3: パラメータなしの要件
@@ -164,16 +157,12 @@ class TestIssue321Acceptance:
         data = response.json()
 
         # job_id が返されること（正常処理の証拠）
-        assert "job_id" in data or "error" not in data, (
-            f"Expected successful response: {data}"
-        )
+        assert "job_id" in data or "error" not in data, f"Expected successful response: {data}"
 
         # job_body_parameters が空でもエラーにならない
         if "job_body_parameters" in data:
             params = data["job_body_parameters"]
-            assert isinstance(params, list), (
-                f"job_body_parameters should be a list: {params}"
-            )
+            assert isinstance(params, list), f"job_body_parameters should be a list: {params}"
 
     # ==========================================================================
     # テストケース4: 機密パラメータの除外
@@ -189,9 +178,7 @@ class TestIssue321Acceptance:
         endpoint = f"{self.EXPERT_AGENT_URL}/v1/job-generator"
         sensitive_key = "sk-1234567890"
         payload = {
-            "user_requirement": (
-                f"APIキー {sensitive_key} を使ってOpenAI APIを呼び出してください"
-            ),
+            "user_requirement": (f"APIキー {sensitive_key} を使ってOpenAI APIを呼び出してください"),
             "project_id": "test-project-321",
         }
 
@@ -220,15 +207,11 @@ class TestIssue321Acceptance:
                     value = str(param.get("value", ""))
                     name = str(param.get("name", "")).lower()
                     # 機密パラメータ名が含まれていないことを確認
-                    assert "password" not in name, (
-                        f"Sensitive parameter 'password' found: {param}"
-                    )
+                    assert "password" not in name, f"Sensitive parameter 'password' found: {param}"
                     assert "api_key" not in name and "apikey" not in name, (
                         f"Sensitive parameter 'api_key' found: {param}"
                     )
-                    assert "secret" not in name, (
-                        f"Sensitive parameter 'secret' found: {param}"
-                    )
+                    assert "secret" not in name, f"Sensitive parameter 'secret' found: {param}"
 
     # ==========================================================================
     # 補助テスト: Job取得確認
@@ -243,9 +226,7 @@ class TestIssue321Acceptance:
         # Arrange: まずJobを作成
         generate_endpoint = f"{self.EXPERT_AGENT_URL}/v1/job-generator"
         payload = {
-            "user_requirement": (
-                "test@example.com にテスト結果を送信してください"
-            ),
+            "user_requirement": ("test@example.com にテスト結果を送信してください"),
             "project_id": "test-project-321",
         }
 
@@ -273,9 +254,7 @@ class TestIssue321Acceptance:
         if job_response.status_code == 404:
             pytest.skip(f"Job {job_id} not found in JobQueue")
 
-        assert job_response.status_code == 200, (
-            f"Failed to get job: {job_response.text}"
-        )
+        assert job_response.status_code == 200, f"Failed to get job: {job_response.text}"
 
         job_data = job_response.json()
         # body フィールドが存在し、null でないことを確認
@@ -283,6 +262,4 @@ class TestIssue321Acceptance:
         if "body" in job_data:
             body = job_data["body"]
             if body is not None:
-                assert isinstance(body, dict), (
-                    f"Job body should be a dict: {body}"
-                )
+                assert isinstance(body, dict), f"Job body should be a dict: {body}"

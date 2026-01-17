@@ -3,12 +3,12 @@ Integration tests for Issue #150: Auto Recovery Acceptance Tests
 全受入条件を検証する統合テスト
 """
 
-import pytest
 import time
-import subprocess
-from pathlib import Path
+
+import pytest
+
 from scripts.auto_recovery import AutoRecoveryManager, RecoveryConfig
-from scripts.metrics_collector import MetricsCollector, AnomalyDetector
+from scripts.metrics_collector import AnomalyDetector, MetricsCollector
 
 
 class TestAutoRecoveryAcceptance:
@@ -84,7 +84,8 @@ class TestAutoRecoveryAcceptance:
         Then: 再起動履歴がファイルに記録される
         """
         # Arrange
-        from scripts.auto_recovery import RecoveryHistory, RecoveryAction
+        from scripts.auto_recovery import RecoveryAction, RecoveryHistory
+
         history_file = setup_test_environment["history_file"]
         history = RecoveryHistory(history_file=history_file)
 
@@ -130,6 +131,7 @@ class TestAutoRecoveryAcceptance:
 
         # 4回目はエラー
         from scripts.auto_recovery import MaxRetriesExceededError
+
         with pytest.raises(MaxRetriesExceededError) as exc_info:
             manager.handle_anomaly()
 
@@ -145,7 +147,7 @@ class TestAutoRecoveryAcceptance:
         Then: 異常検知から再起動、履歴記録まで自動的に実行される
         """
         # Arrange
-        from scripts.auto_recovery import RecoveryHistory, RecoveryAction
+        from scripts.auto_recovery import RecoveryAction, RecoveryHistory
 
         collector = MetricsCollector(service_name="expertagent")
         detector = AnomalyDetector(success_rate_threshold=0.8)
@@ -154,9 +156,7 @@ class TestAutoRecoveryAcceptance:
             service_name="expertagent",
             config=config,
         )
-        history = RecoveryHistory(
-            history_file=setup_test_environment["history_file"]
-        )
+        history = RecoveryHistory(history_file=setup_test_environment["history_file"])
 
         # Act - Step 1: 異常なメトリクスを生成
         for _ in range(50):
@@ -238,6 +238,7 @@ class TestAutoRecoveryAcceptance:
 
         # Assert
         from scripts.auto_recovery import RecoveryAction
+
         assert action1 == RecoveryAction.RESTART
         assert action2 == RecoveryAction.WAIT, "間隔が短すぎる場合は待機すべき"
         assert manager.get_restart_count() == 1

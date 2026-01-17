@@ -4,13 +4,14 @@ TDD実装テンプレート - Python版
 Issue: #[Issue番号]
 """
 
+from typing import Any, Dict, Optional
+
 import pytest
-from typing import Optional, Dict, Any
-from unittest.mock import Mock, patch
 
 # ========================================
 # 🔴 RED PHASE - 失敗するテストを書く
 # ========================================
+
 
 class TestUserAuthentication:
     """ユーザー認証機能のテストクラス"""
@@ -84,12 +85,15 @@ class TestUserAuthentication:
             authenticate_user("username", "")
         assert "Password cannot be empty" in str(exc_info.value)
 
-    @pytest.mark.parametrize("username,password,expected_error", [
-        ("u" * 256, "password", "Username too long"),
-        ("username", "p" * 256, "Password too long"),
-        ("user@", "password", "Invalid username format"),
-        ("username", "pass", "Password too short"),
-    ])
+    @pytest.mark.parametrize(
+        "username,password,expected_error",
+        [
+            ("u" * 256, "password", "Username too long"),
+            ("username", "p" * 256, "Password too long"),
+            ("user@", "password", "Invalid username format"),
+            ("username", "pass", "Password too short"),
+        ],
+    )
     def test_入力検証エラー(self, username, password, expected_error):
         """
         Given: 不正な形式の入力値
@@ -101,38 +105,44 @@ class TestUserAuthentication:
             authenticate_user(username, password)
         assert expected_error in str(exc_info.value)
 
+
 # ========================================
 # 🟢 GREEN PHASE - テストを通す最小限の実装
 # ========================================
 
-from dataclasses import dataclass
-from typing import Optional
 import hashlib
 import secrets
+from dataclasses import dataclass
+
 
 @dataclass
 class User:
     """ユーザーモデル"""
+
     username: str
     email: Optional[str] = None
     id: Optional[int] = None
 
+
 @dataclass
 class AuthResult:
     """認証結果モデル"""
+
     is_authenticated: bool
     user: Optional[User] = None
     token: Optional[str] = None
     error_message: Optional[str] = None
+
 
 # 仮のユーザーデータベース
 MOCK_USERS = {
     "test_user": {
         "password_hash": hashlib.sha256("secure_password_123".encode()).hexdigest(),
         "email": "test@example.com",
-        "id": 1
+        "id": 1,
     }
 }
+
 
 def authenticate_user(username: str, password: str) -> AuthResult:
     """
@@ -164,39 +174,27 @@ def authenticate_user(username: str, password: str) -> AuthResult:
 
     # ユーザー存在確認
     if username not in MOCK_USERS:
-        return AuthResult(
-            is_authenticated=False,
-            error_message="User not found"
-        )
+        return AuthResult(is_authenticated=False, error_message="User not found")
 
     # パスワード検証
     user_data = MOCK_USERS[username]
     password_hash = hashlib.sha256(password.encode()).hexdigest()
 
     if password_hash != user_data["password_hash"]:
-        return AuthResult(
-            is_authenticated=False,
-            error_message="Invalid credentials"
-        )
+        return AuthResult(is_authenticated=False, error_message="Invalid credentials")
 
     # 認証成功
-    user = User(
-        username=username,
-        email=user_data["email"],
-        id=user_data["id"]
-    )
+    user = User(username=username, email=user_data["email"], id=user_data["id"])
 
     token = secrets.token_urlsafe(32)
 
-    return AuthResult(
-        is_authenticated=True,
-        user=user,
-        token=token
-    )
+    return AuthResult(is_authenticated=True, user=user, token=token)
+
 
 # ========================================
 # 🔵 REFACTOR PHASE - コードを改善する
 # ========================================
+
 
 class UserRepository:
     """ユーザーリポジトリ（リファクタリング版）"""
@@ -204,6 +202,7 @@ class UserRepository:
     def find_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """ユーザー名でユーザーを検索"""
         return MOCK_USERS.get(username)
+
 
 class PasswordHasher:
     """パスワードハッシュ処理（リファクタリング版）"""
@@ -215,6 +214,7 @@ class PasswordHasher:
     def verify(self, password: str, hash: str) -> bool:
         """パスワードを検証"""
         return self.hash(password) == hash
+
 
 class InputValidator:
     """入力検証（リファクタリング版）"""
@@ -234,6 +234,7 @@ class InputValidator:
         if len(password) < 8:
             raise ValueError("Password too short")
 
+
 class AuthenticationService:
     """認証サービス（リファクタリング版）"""
 
@@ -241,7 +242,7 @@ class AuthenticationService:
         self,
         user_repository: UserRepository,
         password_hasher: PasswordHasher,
-        input_validator: InputValidator
+        input_validator: InputValidator,
     ):
         self.user_repository = user_repository
         self.password_hasher = password_hasher
@@ -255,43 +256,28 @@ class AuthenticationService:
         # ユーザー検索
         user_data = self.user_repository.find_by_username(username)
         if not user_data:
-            return AuthResult(
-                is_authenticated=False,
-                error_message="User not found"
-            )
+            return AuthResult(is_authenticated=False, error_message="User not found")
 
         # パスワード検証
         if not self.password_hasher.verify(password, user_data["password_hash"]):
-            return AuthResult(
-                is_authenticated=False,
-                error_message="Invalid credentials"
-            )
+            return AuthResult(is_authenticated=False, error_message="Invalid credentials")
 
         # 認証成功
-        user = User(
-            username=username,
-            email=user_data["email"],
-            id=user_data["id"]
-        )
+        user = User(username=username, email=user_data["email"], id=user_data["id"])
 
         token = secrets.token_urlsafe(32)
 
-        return AuthResult(
-            is_authenticated=True,
-            user=user,
-            token=token
-        )
+        return AuthResult(is_authenticated=True, user=user, token=token)
+
 
 # グローバル関数をリファクタリング版に置き換え
-_auth_service = AuthenticationService(
-    UserRepository(),
-    PasswordHasher(),
-    InputValidator()
-)
+_auth_service = AuthenticationService(UserRepository(), PasswordHasher(), InputValidator())
+
 
 def authenticate_user(username: str, password: str) -> AuthResult:
     """ユーザー認証を実行（ファサード）"""
     return _auth_service.authenticate(username, password)
+
 
 # ========================================
 # 📊 COVERAGE CHECK - カバレッジ確認
@@ -306,15 +292,19 @@ if __name__ == "__main__":
     print("=" * 50)
 
     # テスト実行
-    result = subprocess.run([
-        sys.executable, "-m", "pytest",
-        __file__,
-        "-v",
-        "--cov=.",
-        "--cov-report=term-missing",
-        "--cov-report=html:test-results/coverage/tdd",
-        "--cov-fail-under=90"
-    ])
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            __file__,
+            "-v",
+            "--cov=.",
+            "--cov-report=term-missing",
+            "--cov-report=html:test-results/coverage/tdd",
+            "--cov-fail-under=90",
+        ]
+    )
 
     if result.returncode == 0:
         print("\n✅ すべてのテストが成功しました！")

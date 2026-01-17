@@ -1,0 +1,40 @@
+{
+  "issue_number": 363,
+  "project": "mySwiftAgentCore",
+  "source_directory": "mySwiftAgentCore/src/taskflowEngine",
+  "test_directory": "mySwiftAgentCore/tests/unit/taskflowEngine",
+  "tdd_result_path": "dev-reports/feature/issue/363/pm-auto-dev/iteration-1/tdd-result.json",
+  "components_to_verify": [
+    {
+      "name": "TaskFlowDefinitionAdapter",
+      "file": "adapter/TaskFlowDefinitionAdapter.ts",
+      "expected_callers": ["WorkflowRegistry", "handlers"]
+    },
+    {
+      "name": "CodeJsSandbox",
+      "file": "sandbox/CodeJsSandbox.ts",
+      "expected_callers": ["CodeJsNode"]
+    },
+    {
+      "name": "ParallelExecutionManager",
+      "file": "executor/ParallelExecutionManager.ts",
+      "expected_callers": ["WorkflowExecutor", "ParallelNode"]
+    },
+    {
+      "name": "LangfuseTracer",
+      "file": "tracer/LangfuseTracer.ts",
+      "expected_callers": ["WorkflowExecutor"]
+    },
+    {
+      "name": "TaskFlowClient",
+      "file": "client/TaskFlowClient.ts",
+      "expected_callers": ["external"]
+    },
+    {
+      "name": "TaskFlowEngine",
+      "file": "TaskFlowEngine.ts",
+      "expected_callers": ["index.ts", "handlers"]
+    }
+  ],
+  "output_path": "dev-reports/feature/issue/363/pm-auto-dev/iteration-1/verification-result.json"
+}

@@ -1,0 +1,429 @@
+openapi: 3.1.0
+info:
+  title: TaskFlow Generator Agent API
+  version: 1.0.0
+  description: |
+    TaskFlow Generator Agent API specification.
+
+    This OpenAPI specification serves as the **Single Source of Truth** for:
+    - expertAgent (Python) - API client
+    - mySwiftAgentCore (TypeScript) - API server
+
+    Both implementations MUST use these definitions to ensure type compatibility.
+
+    Related Issues:
+    - Issue #359: 3-Phase Unified ID Architecture
+    - Issue #364: TaskFlow Generator Agent Implementation
+
+servers:
+  - url: http://localhost:8006
+    description: Development server (mySwiftAgentCore)
+
+paths:
+  /api/v1/generator/workflow/batch:
+    post:
+      operationId: generateWorkflowBatch
+      summary: Generate TaskFlow workflows for multiple tasks
+      description: |
+        Generates TaskFlow JSON workflows for a batch of tasks with parallel execution.
+        Returns partial success results if some tasks fail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchGenerationRequest'
+      responses:
+        '200':
+          description: All workflows generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchGenerationResponse'
+        '207':
+          description: Partial success - some workflows failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchGenerationResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/generator/status/{trace_id}:
+    get:
+      operationId: getGenerationStatus
+      summary: Get workflow generation status
+      parameters:
+        - name: trace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Generation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatusResponse'
+
+  /api/v1/generator/health:
+    get:
+      operationId: healthCheck
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+
+components:
+  schemas:
+    # ============================================================
+    # SHARED ENUMS (Single Source of Truth)
+    # ============================================================
+
+    RecoveryStrategy:
+      type: string
+      description: |
+        **Unified Recovery Strategy** for error handling across expertAgent and mySwiftAgentCore.
+
+        This enum is the single source of truth and MUST be used by both:
+        - expertAgent (Python): Used in RecoveryAction.strategy
+        - mySwiftAgentCore (TypeScript): Used in TaskError.recovery_suggestion
+
+        Strategy Selection Guide:
+        - RETRY_CURRENT: Transient errors (timeout, rate limit)
+        - RETRY_WITH_FEEDBACK: Validation errors that can be corrected with LLM feedback
+        - ROLLBACK_TO_ANALYSIS: Structural issues requiring re-analysis
+        - UPDATE_CAPABILITIES: Missing or incorrect capability definitions
+        - MANUAL_INTERVENTION: Unrecoverable errors requiring human decision
+      enum:
+        - RETRY_CURRENT
+        - RETRY_WITH_FEEDBACK
+        - ROLLBACK_TO_ANALYSIS
+        - UPDATE_CAPABILITIES
+        - MANUAL_INTERVENTION
+      x-enum-descriptions:
+        RETRY_CURRENT: "Retry the current operation with backoff (transient errors)"
+        RETRY_WITH_FEEDBACK: "Retry with LLM feedback about the error (validation errors)"
+        ROLLBACK_TO_ANALYSIS: "Go back to JOB_ANALYSIS phase (structural issues)"
+        UPDATE_CAPABILITIES: "Update/relax capability requirements (capability mismatch)"
+        MANUAL_INTERVENTION: "Stop and require human intervention (fatal errors)"
+
+    ErrorType:
+      type: string
+      description: |
+        **Unified Error Type** classification for recovery decisions.
+
+        Used to determine the appropriate RecoveryStrategy.
+      enum:
+        - VALIDATION_ERROR
+        - LLM_ERROR
+        - TIMEOUT_ERROR
+        - REGISTRATION_ERROR
+        - CAPABILITY_NOT_FOUND
+        - INTERNAL_ERROR
+      x-enum-descriptions:
+        VALIDATION_ERROR: "Schema or format validation failed"
+        LLM_ERROR: "LLM API error (rate limit, timeout, invalid response)"
+        TIMEOUT_ERROR: "Operation timed out"
+        REGISTRATION_ERROR: "Failed to register workflow in taskflowEngine"
+        CAPABILITY_NOT_FOUND: "Required capability not available"
+        INTERNAL_ERROR: "Unexpected internal error"
+
+    # ============================================================
+    # REQUEST/RESPONSE SCHEMAS
+    # ============================================================
+
+    BatchGenerationRequest:
+      type: object
+      required:
+        - tasks
+        - capabilities
+        - project_id
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskGenerationRequest'
+          description: Tasks to generate workflows for
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Capability'
+          description: Available capabilities for workflow generation
+        project_id:
+          type: string
+          description: Project identifier for workflow registration
+        options:
+          $ref: '#/components/schemas/GenerationOptions'
+        trace_context:
+          $ref: '#/components/schemas/TraceContext'
+
+    TaskGenerationRequest:
+      type: object
+      required:
+        - task_id
+        - name
+        - description
+        - interface
+      properties:
+        task_id:
+          type: string
+          description: Logical task identifier
+        task_master_id:
+          type: string
+          description: Database master ID (from registration phase)
+        name:
+          type: string
+          description: Human-readable task name
+        description:
+          type: string
+          description: Detailed task description
+        dependencies:
+          type: array
+          items:
+            type: string
+          description: IDs of tasks this task depends on
+        interface:
+          $ref: '#/components/schemas/InterfaceDefinition'
+
+    InterfaceDefinition:
+      type: object
+      properties:
+        input:
+          type: object
+          additionalProperties:
+            type: string
+          description: Input parameter definitions
+        output:
+          type: object
+          additionalProperties:
+            type: string
+          description: Output parameter definitions
+
+    Capability:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [api, llm, transform, utility]
+        status:
+          type: string
+          enum: [available, unavailable, deprecated]
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/CapabilityParameter'
+
+    CapabilityParameter:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        description:
+          type: string
+
+    GenerationOptions:
+      type: object
+      properties:
+        max_concurrency:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: Maximum concurrent LLM calls
+        timeout_per_task_ms:
+          type: integer
+          minimum: 1000
+          maximum: 120000
+          default: 30000
+          description: Timeout per task in milliseconds
+        validate_before_register:
+          type: boolean
+          default: true
+          description: Validate workflow before registration
+        max_retries:
+          type: integer
+          minimum: 0
+          maximum: 5
+          default: 3
+          description: Maximum retry attempts per task
+
+    TraceContext:
+      type: object
+      description: Langfuse trace context for observability
+      properties:
+        trace_id:
+          type: string
+          description: Langfuse trace ID to continue
+        parent_span_id:
+          type: string
+          description: Parent span ID for WORKFLOW_GEN span
+        user_id:
+          type: string
+        session_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    BatchGenerationResponse:
+      type: object
+      required:
+        - success
+        - workflows
+        - failed_tasks
+      properties:
+        success:
+          type: boolean
+          description: True if all tasks succeeded, false if any failed
+        workflows:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/WorkflowGenerationResult'
+          description: Map of task_id to generation result
+        failed_tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskError'
+          description: Details of failed tasks
+        trace_url:
+          type: string
+          format: uri
+          description: Langfuse trace URL for debugging
+
+    WorkflowGenerationResult:
+      type: object
+      properties:
+        workflow_name:
+          type: string
+        registered:
+          type: boolean
+        workflow_id:
+          type: string
+          description: Registered workflow ID in taskflowEngine
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+
+    ValidationResult:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+
+    ValidationError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
+    ValidationWarning:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    TaskError:
+      type: object
+      required:
+        - task_id
+        - error_type
+        - message
+        - recoverable
+      properties:
+        task_id:
+          type: string
+        error_type:
+          $ref: '#/components/schemas/ErrorType'
+        message:
+          type: string
+        recoverable:
+          type: boolean
+        recovery_suggestion:
+          $ref: '#/components/schemas/RecoveryStrategy'
+        details:
+          type: object
+          additionalProperties: true
+
+    GenerationStatusResponse:
+      type: object
+      properties:
+        trace_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+        total_tasks:
+          type: integer
+        completed_tasks:
+          type: integer
+        failed_tasks:
+          type: integer
+        duration_ms:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+security:
+  - bearerAuth: []

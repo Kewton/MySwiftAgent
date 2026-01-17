@@ -180,7 +180,9 @@ class TestLangfuseApiDocumentation:
 
     def test_api_reference_documents_langfuse_trace_id(self):
         """Verify API_REFERENCE.md documents the langfuse_trace_id field."""
-        api_ref_path = Path(__file__).parent.parent.parent / "expertAgent" / "docs" / "API_REFERENCE.md"
+        api_ref_path = (
+            Path(__file__).parent.parent.parent / "expertAgent" / "docs" / "API_REFERENCE.md"
+        )
 
         if not api_ref_path.exists():
             pytest.skip("API_REFERENCE.md not found")

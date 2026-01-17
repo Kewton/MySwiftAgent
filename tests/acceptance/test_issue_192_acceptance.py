@@ -10,9 +10,11 @@ Create JobとMLOps Chat UIの統合
 実行方法:
   uv run pytest tests/acceptance/test_issue_192_acceptance.py -v
 """
+
+from typing import Any
+
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance
@@ -23,6 +25,7 @@ class TestIssue192Acceptance:
     # 標準ポート: 8004/8003/5173 (dev-start.sh)
     # Docker ポート: 8104/8103 (make dev-all)
     import os
+
     EXPERT_AGENT_URL = os.environ.get("EXPERT_AGENT_URL", "http://localhost:8004")
     MYVAULT_URL = os.environ.get("MYVAULT_URL", "http://localhost:8003")
     MYAGENTDESK_URL = os.environ.get("MYAGENTDESK_URL", "http://localhost:5173")
@@ -39,10 +42,7 @@ class TestIssue192Acceptance:
                 response = requests.get(f"{url}/health", timeout=5)
                 assert response.status_code == 200, f"{name} is not healthy"
             except requests.exceptions.ConnectionError:
-                pytest.skip(
-                    f"{name} is not running. "
-                    "Run: ./scripts/dev-start.sh or make dev-all"
-                )
+                pytest.skip(f"{name} is not running. Run: ./scripts/dev-start.sh or make dev-all")
 
     # ==========================================================================
     # 正常系テスト: 候補選択API
@@ -61,7 +61,7 @@ class TestIssue192Acceptance:
         # 有効な候補ID形式 ('A' or 'B') でテスト
         payload: dict[str, Any] = {
             "conversation_id": "test-conv-192-acceptance",
-            "selected_candidate_id": "A"  # API仕様に従い 'A' or 'B' を使用
+            "selected_candidate_id": "A",  # API仕様に従い 'A' or 'B' を使用
         }
 
         # Act
@@ -102,7 +102,7 @@ class TestIssue192Acceptance:
             "interpretation_accuracy": 5,
             "response_helpfulness": 4,
             "overall_satisfaction": 4,
-            "comment": "L3受入テスト Issue #192"
+            "comment": "L3受入テスト Issue #192",
         }
 
         # Act
@@ -133,7 +133,9 @@ class TestIssue192Acceptance:
         受入条件: フィードバックがMLOps Dashboardのメトリクスに反映される
         """
         # Arrange
-        endpoint = f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/observability/requirement-definition-metrics"
+        endpoint = (
+            f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/observability/requirement-definition-metrics"
+        )
 
         # Act
         response = requests.get(endpoint, timeout=10)
@@ -159,7 +161,7 @@ class TestIssue192Acceptance:
         endpoint = f"{self.EXPERT_AGENT_URL}/aiagent-api/v1/chat/select-candidate"
         payload: dict[str, Any] = {
             "conversation_id": "",  # 空のconversation_id
-            "selected_candidate_id": ""
+            "selected_candidate_id": "",
         }
 
         # Act
@@ -194,10 +196,7 @@ class TestIssue192Acceptance:
                 f"myAgentDesk not accessible: {response.status_code}"
             )
         except requests.exceptions.ConnectionError:
-            pytest.skip(
-                "myAgentDesk is not running. "
-                "Run: cd myAgentDesk && npm run dev"
-            )
+            pytest.skip("myAgentDesk is not running. Run: cd myAgentDesk && npm run dev")
 
     # ==========================================================================
     # 外部サービス連携テスト

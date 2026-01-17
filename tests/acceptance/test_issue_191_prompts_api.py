@@ -10,9 +10,10 @@ Issue #191 受入テスト（L3: ローカル受入テスト）
 実行方法:
   uv run pytest tests/acceptance/test_issue_191_prompts_api.py -v
 """
+
+
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance
@@ -30,10 +31,7 @@ class TestIssue191PromptsApiAcceptance:
             response = requests.get(f"{self.EXPERT_AGENT_URL}/health", timeout=5)
             assert response.status_code == 200, "expertAgent is not healthy"
         except requests.exceptions.ConnectionError:
-            pytest.skip(
-                "expertAgent is not running. "
-                "Run: ./scripts/dev-start.sh or make dev-all"
-            )
+            pytest.skip("expertAgent is not running. Run: ./scripts/dev-start.sh or make dev-all")
 
     # ==========================================================================
     # 正常系テスト
@@ -72,8 +70,14 @@ class TestIssue191PromptsApiAcceptance:
         # Arrange
         endpoint = f"{self.API_BASE}/v1/prompts"
         required_fields = [
-            "id", "name", "description", "category",
-            "current_version", "versions", "created_at", "updated_at"
+            "id",
+            "name",
+            "description",
+            "category",
+            "current_version",
+            "versions",
+            "created_at",
+            "updated_at",
         ]
 
         # Act
@@ -86,9 +90,7 @@ class TestIssue191PromptsApiAcceptance:
 
         item = data["items"][0]
         for field in required_fields:
-            assert field in item, (
-                f"Missing required field '{field}' in prompt item: {item}"
-            )
+            assert field in item, f"Missing required field '{field}' in prompt item: {item}"
 
     def test_get_prompt_detail_returns_full_content(self) -> None:
         """シナリオ3: GET /v1/prompts/{prompt_id} がプロンプト詳細を返す
@@ -142,13 +144,9 @@ class TestIssue191PromptsApiAcceptance:
 
         version_fields = ["id", "version", "content", "description", "created_at", "is_active"]
         for field in version_fields:
-            assert field in version, (
-                f"Missing required field '{field}' in version: {version}"
-            )
+            assert field in version, f"Missing required field '{field}' in version: {version}"
 
-        assert len(version["content"]) > 0, (
-            f"Version content is empty: {version}"
-        )
+        assert len(version["content"]) > 0, f"Version content is empty: {version}"
 
     # ==========================================================================
     # 異常系テスト
@@ -170,9 +168,7 @@ class TestIssue191PromptsApiAcceptance:
             f"Expected 404, got {response.status_code}: {response.text}"
         )
         data = response.json()
-        assert "detail" in data, (
-            f"Error response missing 'detail' field: {data}"
-        )
+        assert "detail" in data, f"Error response missing 'detail' field: {data}"
 
     # ==========================================================================
     # OpenAPI仕様テスト
@@ -190,9 +186,7 @@ class TestIssue191PromptsApiAcceptance:
         response = requests.get(endpoint, timeout=30)
 
         # Assert
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}"
-        )
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         data = response.json()
         paths = data.get("paths", {})
 
@@ -200,7 +194,7 @@ class TestIssue191PromptsApiAcceptance:
             f"/v1/prompts not found in OpenAPI paths: {list(paths.keys())}"
         )
         assert "/v1/prompts/{prompt_id}" in paths, (
-            f"/v1/prompts/{{prompt_id}} not found in OpenAPI paths"
+            "/v1/prompts/{prompt_id} not found in OpenAPI paths"
         )
 
     # ==========================================================================
@@ -253,9 +247,7 @@ class TestIssue191PromptsApiAcceptance:
         data = response.json()
 
         # 少なくとも1つ以上のプロンプトが存在すること
-        assert data["total"] >= 1, (
-            f"Expected at least 1 prompt, got {data['total']}"
-        )
+        assert data["total"] >= 1, f"Expected at least 1 prompt, got {data['total']}"
         assert len(data["items"]) == data["total"], (
             f"items count ({len(data['items'])}) does not match total ({data['total']})"
         )

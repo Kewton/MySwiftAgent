@@ -1,0 +1,357 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-17T00:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "Logger",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/utils/logger/Logger.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at mySwiftAgentCore/src/utils/logger/Logger.ts:52-140"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "21 method calls found across WorkflowRegistrar (15 calls) and BatchProcessor (6 calls)",
+          "grep_result": "logger.debug|logger.info|logger.warn|logger.error: 21 occurrences"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in WorkflowRegistrar.ts:12 and BatchProcessor.ts:18"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in utils/logger/index.ts and utils/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/utils/logger/Logger.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies Logger is instantiated in API handlers"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "handlers.ts:73 creates WorkflowRegistrar WITHOUT logger parameter - uses default logger instead",
+          "code_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts:73"
+        }
+      },
+      "classification": "MISSING_INTEGRATION",
+      "failure_reason": "Logger is defined and used in WorkflowRegistrar/BatchProcessor constructors, but API handlers do not instantiate Logger to pass to these components. Default logger is used instead, which is acceptable but not the intended design."
+    },
+    {
+      "feature_id": "F2",
+      "name": "PathValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/utils/validation/PathValidator.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at mySwiftAgentCore/src/utils/validation/PathValidator.ts:58-123"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "9 validate() calls found in WorkflowStorage.ts",
+          "grep_result": "this.pathValidator.validate: 9 occurrences in WorkflowStorage.ts"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in WorkflowStorage.ts:15"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in utils/validation/index.ts and utils/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/utils/validation/PathValidator.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "WorkflowStorage.test.ts verifies PathValidator is used internally"
+        },
+        "is_used_in_production": {
+          "passed": true,
+          "evidence": "WorkflowStorage creates PathValidator in constructor and uses it for validation",
+          "code_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts:63"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F3",
+      "name": "WorkflowStorage",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts:57-296"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "storage.save() called in WorkflowRegistrar.ts:152",
+          "grep_result": "storage.save: 1 occurrence in WorkflowRegistrar.ts"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in WorkflowRegistrar.ts:11"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in taskflowGeneratorAgent/storage/index.ts and taskflowGeneratorAgent/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowGeneratorAgent/storage/WorkflowStorage.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "WorkflowRegistrar.test.ts verifies WorkflowStorage.save() is called"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "handlers.ts:73 creates WorkflowRegistrar WITHOUT storage parameter - storage is undefined in production",
+          "code_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts:73",
+          "critical_issue": "WorkflowStorage is never instantiated in API handlers, so workflows are NOT persisted to filesystem in production"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "WorkflowStorage is defined and tested, but handlers.ts creates WorkflowRegistrar without passing storage parameter. This means workflows are only registered in memory (WorkflowRegistry) but NOT persisted to filesystem as intended by Issue #370."
+    },
+    {
+      "feature_id": "F4",
+      "name": "WorkflowRegistrar.initialize",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at WorkflowRegistrar.ts:62-112"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "No calls to .initialize() found in entire codebase",
+          "grep_result": "registrar.initialize|workflowRegistrar.initialize: 0 occurrences"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "WorkflowRegistrar is imported in handlers.ts but initialize() is never called"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Method is public and exported as part of WorkflowRegistrar class"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies initialize() is called at server startup"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "Not called in handlers.ts, routes.ts, or any server initialization code",
+          "expected_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/routes.ts or server startup"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "initialize() method exists to restore workflows from storage on startup, but it is NEVER CALLED in any initialization code. Workflows persisted to disk will not be restored on server restart."
+    },
+    {
+      "feature_id": "F5",
+      "name": "WorkflowRegistrar.register (modified)",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at WorkflowRegistrar.ts:123-199"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in handlers.ts:119",
+          "grep_result": "registrar.register: 1 occurrence in handlers.ts"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "WorkflowRegistrar imported in handlers.ts:10"
+        },
+        "calls_storage_save": {
+          "passed": true,
+          "evidence": "Line 152: await this.storage.save(project, workflowName, workflow)",
+          "code_location": "WorkflowRegistrar.ts:152"
+        },
+        "returns_file_path": {
+          "passed": true,
+          "evidence": "Line 183: returns filePath in RegistrationResult"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "WorkflowRegistrar.test.ts verifies storage.save() is called and filePath is returned"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "handlers.ts:119 calls register(), but storage is undefined so storage.save() never executes",
+          "code_location": "handlers.ts:73 creates registrar without storage",
+          "critical_issue": "register() is called but storage parameter is missing, so persistence feature does not work in production"
+        }
+      },
+      "classification": "PARTIALLY_INTEGRATED",
+      "failure_reason": "register() method is called from handlers.ts:119, but WorkflowRegistrar is created without storage (line 73), so the new persistence logic (storage.save) never executes in production."
+    },
+    {
+      "feature_id": "F6",
+      "name": "BatchProcessor logging",
+      "type": "enhancement",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/BatchProcessor.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Logging added at lines 116, 125, 165, 180, 192, 221"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "6 logger method calls in BatchProcessor.ts",
+          "grep_result": "logger.debug|logger.info|logger.warn: 6 occurrences"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Logger imported at line 18"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowGeneratorAgent/generator/BatchProcessor.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test verifies logging actually occurs during batch processing"
+        },
+        "is_used_in_production": {
+          "passed": false,
+          "evidence": "handlers.ts:71 creates BatchProcessor WITHOUT logger parameter - uses default logger",
+          "code_location": "handlers.ts:71",
+          "note": "Default logger is used, which works but may not have correct configuration"
+        }
+      },
+      "classification": "MISSING_INTEGRATION",
+      "failure_reason": "Logging code is present and called, but handlers.ts creates BatchProcessor without logger parameter. Default logger is used instead of a properly configured production logger."
+    }
+  ],
+  "summary": {
+    "total_features": 6,
+    "passed": 1,
+    "dead_code": 2,
+    "missing_integration": 2,
+    "partially_integrated": 1,
+    "not_found": 0
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F3",
+      "name": "WorkflowStorage",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/storage/WorkflowStorage.ts",
+      "issue": "WorkflowStorage class is fully implemented but never instantiated in production code",
+      "root_cause": "handlers.ts:73 creates WorkflowRegistrar without storage parameter",
+      "impact": "CRITICAL - Workflows are NOT persisted to filesystem as intended by Issue #370",
+      "recommended_caller": "createBatchGenerationHandler",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts:73"
+    },
+    {
+      "feature_id": "F4",
+      "name": "WorkflowRegistrar.initialize",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line": 62,
+      "issue": "initialize() method exists but is never called at server startup",
+      "root_cause": "No initialization logic in routes.ts or server startup code",
+      "impact": "HIGH - Persisted workflows will not be restored on server restart",
+      "recommended_caller": "Server startup / API initialization",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/routes.ts or createGeneratorApi"
+    }
+  ],
+  "integration_gaps": [
+    {
+      "feature_id": "F1",
+      "name": "Logger",
+      "issue": "Logger parameter not passed to WorkflowRegistrar and BatchProcessor in handlers.ts",
+      "location": "handlers.ts:71-73",
+      "impact": "LOW - Default logger is used, which works but may lack production configuration",
+      "recommended_fix": "Create and pass Logger instance in handlers.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "BatchProcessor logging",
+      "issue": "Logger parameter not passed to BatchProcessor in handlers.ts",
+      "location": "handlers.ts:71",
+      "impact": "LOW - Default logger is used, which works but may lack production configuration",
+      "recommended_fix": "Pass Logger instance to BatchProcessor constructor"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F3",
+      "action": "Instantiate WorkflowStorage and pass to WorkflowRegistrar in handlers.ts",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "line": 73,
+      "code_snippet": "// Add before line 68:\nconst storage = new WorkflowStorage();\nconst logger = createLogger({ name: 'generator-api' });\n\n// Modify line 73:\nconst registrar = new WorkflowRegistrar({ \n  registry: deps.registry,\n  storage,  // Add this\n  logger    // Add this\n});"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F4",
+      "action": "Call registrar.initialize() during server startup or API initialization",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/routes.ts",
+      "location": "createGeneratorApi function or server startup",
+      "code_snippet": "// In createGeneratorApi or server startup:\nconst storage = new WorkflowStorage();\nconst registrar = new WorkflowRegistrar({ registry, storage });\nawait registrar.initialize(); // Restore workflows from disk\n\n// Then pass registrar to handlers via deps"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "F6",
+      "action": "Pass Logger instance to BatchProcessor constructor in handlers.ts",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/api/handlers.ts",
+      "line": 71,
+      "code_snippet": "const logger = createLogger({ name: 'generator-api' });\nconst batchProcessor = new BatchProcessor({ \n  generator,\n  logger  // Add this\n});"
+    }
+  ],
+  "critical_findings": {
+    "persistence_not_working": {
+      "severity": "CRITICAL",
+      "description": "Issue #370 goal was to persist workflows to filesystem, but WorkflowStorage is never instantiated in production handlers. Workflows are only stored in memory (WorkflowRegistry) and will be lost on server restart.",
+      "evidence": [
+        "handlers.ts:73 creates WorkflowRegistrar WITHOUT storage parameter",
+        "No 'new WorkflowStorage()' or 'createWorkflowStorage()' found in handlers.ts",
+        "WorkflowStorage.save() has guard: 'if (!this.storage) return' - storage is always undefined in production"
+      ],
+      "required_fix": "Create WorkflowStorage instance and pass to WorkflowRegistrar in handlers.ts"
+    },
+    "initialization_not_called": {
+      "severity": "HIGH",
+      "description": "WorkflowRegistrar.initialize() method exists to restore workflows from disk on startup, but it is never called in any initialization code.",
+      "evidence": [
+        "No calls to .initialize() found in entire codebase",
+        "routes.ts does not call initialize()",
+        "handlers.ts does not call initialize()"
+      ],
+      "required_fix": "Call registrar.initialize() in createGeneratorApi or server startup code"
+    },
+    "integration_test_missing": {
+      "severity": "MEDIUM",
+      "description": "No integration tests verify that WorkflowStorage and Logger are actually used in the API handlers workflow.",
+      "evidence": [
+        "No integration test calls the API endpoint and verifies file was created",
+        "No integration test verifies initialize() restores workflows",
+        "Tests only verify components in isolation"
+      ],
+      "required_fix": "Create integration test that calls POST /api/v1/generator/workflow/batch and verifies .json file is created"
+    }
+  }
+}

@@ -65,6 +65,8 @@ services:
       - TOKEN_myscheduler=${MYVAULT_TOKEN_MYSCHEDULER}
       - TOKEN_jobqueue=${MYVAULT_TOKEN_JOBQUEUE}
       - TOKEN_commonui=${MYVAULT_TOKEN_COMMONUI}
+      - TOKEN_myswiftagentcore=${MYVAULT_TOKEN_MYSWIFTAGENTCORE}
+      - TOKEN_graphaiserver=${MYVAULT_TOKEN_GRAPHAISERVER}
       # Logging
       - LOG_DIR=/app/logs
       - LOG_LEVEL=${LOG_LEVEL:-INFO}

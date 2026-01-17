@@ -11,36 +11,29 @@ TaskFlow V2: URL変数参照バリデーション不整合修正
   cd graphAiServer
   uv run pytest tests/acceptance/test_issue_352_acceptance.py -v
 """
+
 import os
+from typing import Any
+
 import pytest
 import requests
-from typing import Any
 
 
 @pytest.mark.acceptance
 class TestIssue352Acceptance:
     """Issue #352: TaskFlow V2 URL変数参照バリデーション不整合修正"""
 
-    GRAPHAI_SERVER_URL = os.environ.get(
-        "GRAPHAI_SERVER_URL", "http://localhost:8005"
-    )
-    ADMIN_TOKEN = os.environ.get(
-        "ADMIN_TOKEN", "duxwHg0N-MrYHZD__T5zLUc50ATvlpXKmHN0xtkdxuY"
-    )
+    GRAPHAI_SERVER_URL = os.environ.get("GRAPHAI_SERVER_URL", "http://localhost:8005")
+    ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "duxwHg0N-MrYHZD__T5zLUc50ATvlpXKmHN0xtkdxuY")
 
     @pytest.fixture(autouse=True)
     def check_services_running(self) -> None:
         """サービス起動確認"""
         try:
-            response = requests.get(
-                f"{self.GRAPHAI_SERVER_URL}/health", timeout=5
-            )
+            response = requests.get(f"{self.GRAPHAI_SERVER_URL}/health", timeout=5)
             assert response.status_code == 200, "GraphAiServer is not healthy"
         except requests.exceptions.ConnectionError:
-            pytest.skip(
-                "GraphAiServer is not running. "
-                "Run: ./scripts/dev-hybrid.sh start"
-            )
+            pytest.skip("GraphAiServer is not running. Run: ./scripts/dev-hybrid.sh start")
 
     @pytest.fixture
     def headers(self) -> dict[str, str]:
@@ -65,9 +58,7 @@ class TestIssue352Acceptance:
             timeout=30,
         )
 
-    def _delete_workflow(
-        self, headers: dict[str, str], workflow_name: str
-    ) -> None:
+    def _delete_workflow(self, headers: dict[str, str], workflow_name: str) -> None:
         """ワークフロー削除ヘルパー"""
         requests.delete(
             f"{self.GRAPHAI_SERVER_URL}/api/v2/workflows/{workflow_name}",

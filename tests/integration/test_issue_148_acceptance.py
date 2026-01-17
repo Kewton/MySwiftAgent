@@ -5,9 +5,9 @@ Acceptance criteria tests for Docker Compose integration feature.
 """
 
 import subprocess
-import pytest
 from pathlib import Path
-import time
+
+import pytest
 
 
 @pytest.fixture
@@ -31,9 +31,7 @@ def docker_utils_script(project_root):
 class TestAcceptanceCriteria1:
     """受入条件1: langfuseがDocker Composeで起動できること."""
 
-    def test_langfuse_can_start_via_docker_compose(
-        self, project_root, docker_utils_script
-    ):
+    def test_langfuse_can_start_via_docker_compose(self, project_root, docker_utils_script):
         """
         Given: docker-compose.ymlにlangfuseサービスが定義されている
         When: Docker Composeでlangfuseを起動
@@ -115,9 +113,7 @@ class TestAcceptanceCriteria3:
 class TestAcceptanceCriteria4:
     """受入条件4: worktreeごとにDockerコンテナを分離できること."""
 
-    def test_worktree_isolation_via_project_name(
-        self, project_root, docker_utils_script
-    ):
+    def test_worktree_isolation_via_project_name(self, project_root, docker_utils_script):
         """
         Given: 複数のworktree環境が存在する
         When: get_worktree_project_name関数を呼び出す
