@@ -287,3 +287,13 @@ export {
   type IEndpointConfigManager,
   EndpointResolutionError,
 } from './endpoint/types.js';
+
+// ============================================
+// Issue #372: Capability Loader exports
+// ============================================
+
+export {
+  CapabilityLoader,
+  createCapabilityLoader,
+  type CapabilityLoaderOptions,
+} from './loader/CapabilityLoader.js';

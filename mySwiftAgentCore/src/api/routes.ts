@@ -5,6 +5,7 @@
  */
 
 import { Hono } from 'hono';
+import * as path from 'path';
 import { createHealthRoutes, createMyVaultCheck, type HealthCheckConfig } from './health.js';
 import { createGeneratorApi, type HandlerDependencies } from '../taskflowGeneratorAgent/api/index.js';
 import { WorkflowRegistry } from '../taskflowEngine/registry/WorkflowRegistry.js';
@@ -14,6 +15,14 @@ import { createTaskFlowRoutes } from '../taskflowEngine/api/routes.js';
 import type { HandlerDependencies as TaskFlowHandlerDependencies } from '../taskflowEngine/api/handlers.js';
 import { createTaskFlowEngine } from '../taskflowEngine/TaskFlowEngine.js';
 import { createSchemaValidator } from '../taskflowEngine/validator/SchemaValidator.js';
+// Issue #372: CapabilityExecutor integration imports
+import {
+  createCapabilityRegistry,
+  createCapabilityLoader,
+  createEndpointConfigManager,
+  createURLResolver,
+} from '../capabilityManagement/index.js';
+import { createCapabilityExecutor } from '../taskflowEngine/nodes/CapabilityExecutor.js';
 
 /**
  * API configuration
@@ -78,11 +87,52 @@ async function createGeneratorDependencies(): Promise<HandlerDependencies> {
 /**
  * Create TaskFlow Engine dependencies
  *
+ * Issue #372: Now includes CapabilityExecutor for capability_id based API execution.
  * Creates all required dependencies for TaskFlow Engine API handlers.
+ *
+ * @param registry - WorkflowRegistry for workflow management
+ * @param capabilitiesBasePath - Base path for capability configuration files
  */
-function createTaskFlowEngineDependencies(registry: WorkflowRegistry): TaskFlowHandlerDependencies {
-  // Create TaskFlowEngine instance
-  const executor = createTaskFlowEngine();
+async function createTaskFlowEngineDependencies(
+  registry: WorkflowRegistry,
+  capabilitiesBasePath: string
+): Promise<TaskFlowHandlerDependencies> {
+  // Issue #372: Create capability management dependencies
+  // 1. Create CapabilityRegistry
+  const capabilityRegistry = createCapabilityRegistry();
+
+  // 2. Create CapabilityLoader and load capabilities
+  const capabilityLoader = createCapabilityLoader(capabilitiesBasePath, capabilityRegistry);
+  const loadResult = await capabilityLoader.loadProject('default_project');
+
+  // Log capability loading result
+  if (loadResult.hasCapabilities) {
+    console.log(
+      `[TaskFlowEngine] Loaded ${loadResult.successful.length} capabilities for default_project`
+    );
+    if (loadResult.failed.length > 0) {
+      console.warn(
+        `[TaskFlowEngine] Failed to load ${loadResult.failed.length} capabilities:`,
+        loadResult.failed.map((f) => f.file)
+      );
+    }
+  } else {
+    console.warn('[TaskFlowEngine] No capabilities loaded for default_project');
+  }
+
+  // 3. Create EndpointConfigManager for URL resolution
+  const endpointConfigManager = createEndpointConfigManager(capabilitiesBasePath);
+
+  // 4. Create URLResolver
+  const urlResolver = createURLResolver(endpointConfigManager, 'default_project');
+
+  // 5. Create CapabilityExecutor
+  const capabilityExecutor = createCapabilityExecutor(capabilityRegistry, urlResolver);
+
+  // 6. Create TaskFlowEngine with CapabilityExecutor
+  const executor = createTaskFlowEngine({
+    capabilityExecutor,
+  });
 
   // Create schema validator
   const validator = createSchemaValidator();
@@ -154,8 +204,10 @@ export async function createApiRoutes(config: ApiConfig): Promise<Hono> {
   app.route('/', generatorApi);
 
   // TaskFlow Engine routes - Issue #363 integration
-  // Share registry between Generator and Engine for workflow access
-  const taskFlowDeps = createTaskFlowEngineDependencies(generatorDeps.registry);
+  // Issue #372: Share registry and load capabilities for capability_id based execution
+  // Capabilities are loaded from config/capabilities directory
+  const capabilitiesBasePath = path.resolve(process.cwd(), 'config', 'capabilities');
+  const taskFlowDeps = await createTaskFlowEngineDependencies(generatorDeps.registry, capabilitiesBasePath);
   const taskFlowRoutes = createTaskFlowRoutes(taskFlowDeps);
   app.route('/api/v1/taskflow', taskFlowRoutes);
 
