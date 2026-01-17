@@ -165,6 +165,46 @@ Use the following patterns for variable references:
   ]
 }
 \`\`\`
+
+## Capability vs External API Usage
+
+When making API calls, distinguish between:
+
+### Internal Capability (use capability_id)
+For registered capabilities, use \`capability_id\` instead of \`url\`:
+\`\`\`json
+{
+  "id": "search_google",
+  "type": "api_rest",
+  "config": {
+    "capability_id": "google_search",
+    "method": "POST"
+  },
+  "params": {
+    "body": { "query": "$input.search_term" }
+  }
+}
+\`\`\`
+
+### External API (use url)
+For external APIs with full URLs:
+\`\`\`json
+{
+  "id": "fetch_weather",
+  "type": "api_rest",
+  "config": {
+    "url": "https://api.weather.com/v1/forecast",
+    "method": "GET"
+  },
+  "params": {}
+}
+\`\`\`
+
+**Important Rules:**
+- Use \`capability_id\` when referencing a registered capability
+- Use \`url\` only for external APIs with full URLs
+- Never use both \`capability_id\` and \`url\` in the same step
+- Prefer \`capability_id\` when the capability is available
 `;
 
 /**

@@ -88,7 +88,8 @@ describe('WorkflowRegistrar', () => {
       expect(mockStorage.save).toHaveBeenCalledWith(
         'project1',
         'test_workflow',
-        sampleWorkflow
+        sampleWorkflow,
+        undefined
       );
     });
 
@@ -112,7 +113,8 @@ describe('WorkflowRegistrar', () => {
       expect(mockStorage.save).toHaveBeenCalledWith(
         'default',
         'test_workflow',
-        sampleWorkflow
+        sampleWorkflow,
+        undefined
       );
     });
 
@@ -313,5 +315,128 @@ describe('createWorkflowRegistrar factory', () => {
     };
     const result = await registrar.register(workflow);
     expect(result.success).toBe(true);
+  });
+});
+
+/**
+ * Issue #373: taskId propagation tests
+ */
+describe('WorkflowRegistrar - taskId support (Issue #373)', () => {
+  let registrar: WorkflowRegistrar;
+  let registry: WorkflowRegistry;
+  let mockStorage: WorkflowStorage;
+  let mockLogger: Logger;
+
+  const sampleWorkflow: TaskFlowDefinition = {
+    workflow_name: 'test_workflow',
+    description: 'Test workflow',
+    input_schema: { type: 'object', properties: {} },
+    output_schema: { type: 'object', properties: {} },
+    steps: [
+      {
+        id: 'step_1',
+        type: 'api_rest',
+        config: { method: 'GET', url: 'https://api.example.com' },
+        params: {},
+      },
+    ],
+    output: {},
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    registry = new WorkflowRegistry();
+
+    mockStorage = {
+      save: vi.fn().mockResolvedValue({ success: true, filePath: '/test/path.json' } as SaveResult),
+      load: vi.fn().mockResolvedValue(undefined),
+      loadAll: vi.fn().mockResolvedValue({}),
+      exists: vi.fn().mockResolvedValue(false),
+      getAllProjects: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(true),
+      getBaseDir: vi.fn().mockReturnValue('generated/workflows'),
+    } as unknown as WorkflowStorage;
+
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      getLevel: vi.fn().mockReturnValue('debug'),
+    } as unknown as Logger;
+
+    registrar = createWorkflowRegistrar({
+      registry,
+      storage: mockStorage,
+      logger: mockLogger,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('register with taskId', () => {
+    it('should pass taskId to storage save', async () => {
+      await registrar.register(sampleWorkflow, 'project1', 'task_123');
+
+      expect(mockStorage.save).toHaveBeenCalledWith(
+        'project1',
+        'test_workflow',
+        sampleWorkflow,
+        'task_123'
+      );
+    });
+
+    it('should work without taskId (backward compatible)', async () => {
+      await registrar.register(sampleWorkflow, 'project1');
+
+      expect(mockStorage.save).toHaveBeenCalledWith(
+        'project1',
+        'test_workflow',
+        sampleWorkflow,
+        undefined
+      );
+    });
+
+    it('should include taskId in log context', async () => {
+      await registrar.register(sampleWorkflow, 'project1', 'task_123');
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Registering workflow',
+        expect.objectContaining({
+          projectId: 'project1',
+          workflowName: 'test_workflow',
+          taskId: 'task_123',
+        })
+      );
+    });
+  });
+
+  describe('registerBatch with taskId', () => {
+    const workflows: Record<string, TaskFlowDefinition> = {
+      task_1: { ...sampleWorkflow, workflow_name: 'workflow1' },
+      task_2: { ...sampleWorkflow, workflow_name: 'workflow2' },
+    };
+
+    it('should pass taskId (key) to each register call', async () => {
+      await registrar.registerBatch(workflows, 'project1');
+
+      // Each workflow should be registered with its task_id as the taskId
+      expect(mockStorage.save).toHaveBeenCalledWith(
+        'project1',
+        'workflow1',
+        workflows['task_1'],
+        'task_1'
+      );
+      expect(mockStorage.save).toHaveBeenCalledWith(
+        'project1',
+        'workflow2',
+        workflows['task_2'],
+        'task_2'
+      );
+    });
   });
 });

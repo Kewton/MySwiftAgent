@@ -3,6 +3,7 @@
  *
  * Issue #364: Register generated workflows in taskflowEngine
  * Issue #370: Add persistence and logging
+ * Issue #373: Add taskId support for nested directory structure
  */
 
 import type { TaskFlowDefinition } from '../../taskflowEngine/types/TaskFlowDefinition.js';
@@ -115,14 +116,17 @@ export class WorkflowRegistrar {
    * Register a workflow
    *
    * Issue #370: Also persist to filesystem
+   * Issue #373: Add taskId support for nested directory structure
    *
    * @param workflow - TaskFlow definition to register
    * @param projectId - Project identifier (optional)
+   * @param taskId - Task identifier for nested directory (optional)
    * @returns Registration result
    */
   async register(
     workflow: TaskFlowDefinition,
-    projectId?: string
+    projectId?: string,
+    taskId?: string
   ): Promise<RegistrationResult> {
     const project = projectId ?? this.defaultProject;
     const workflowName = workflow.workflow_name;
@@ -130,6 +134,7 @@ export class WorkflowRegistrar {
     this.logger.info('Registering workflow', {
       projectId: project,
       workflowName,
+      taskId,
     });
 
     try {
@@ -149,7 +154,7 @@ export class WorkflowRegistrar {
       let storageError: string | undefined;
 
       if (this.storage) {
-        const saveResult = await this.storage.save(project, workflowName, workflow);
+        const saveResult = await this.storage.save(project, workflowName, workflow, taskId);
 
         if (saveResult.success) {
           filePath = saveResult.filePath;
@@ -201,6 +206,8 @@ export class WorkflowRegistrar {
   /**
    * Register multiple workflows
    *
+   * Issue #373: Pass task_id as taskId for directory structure
+   *
    * @param workflows - Map of task_id to workflow
    * @param projectId - Project identifier (optional)
    * @returns Map of task_id to registration result
@@ -217,7 +224,8 @@ export class WorkflowRegistrar {
     });
 
     for (const [taskId, workflow] of Object.entries(workflows)) {
-      results[taskId] = await this.register(workflow, projectId);
+      // Pass taskId for nested directory structure
+      results[taskId] = await this.register(workflow, projectId, taskId);
     }
 
     const successCount = Object.values(results).filter((r) => r.success).length;

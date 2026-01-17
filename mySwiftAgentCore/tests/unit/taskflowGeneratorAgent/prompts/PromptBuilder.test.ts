@@ -243,3 +243,53 @@ describe('createPromptBuilder', () => {
     expect(builder).toBeInstanceOf(PromptBuilder);
   });
 });
+
+/**
+ * Issue #373: capability_id rules tests
+ */
+describe('PromptBuilder - capability_id rules (Issue #373)', () => {
+  let builder: PromptBuilder;
+
+  beforeEach(() => {
+    builder = new PromptBuilder();
+  });
+
+  it('should include capability_id usage rules in system prompt', () => {
+    const capabilities: Capability[] = [
+      { id: 'google_search', name: 'Google Search', category: 'api', status: 'available' },
+    ];
+
+    const prompt = builder.buildSystemPrompt(capabilities);
+
+    expect(prompt).toContain('capability_id');
+    expect(prompt).toContain('google_search');
+  });
+
+  it('should explain when to use capability_id vs url', () => {
+    const capabilities: Capability[] = [];
+
+    const prompt = builder.buildSystemPrompt(capabilities);
+
+    expect(prompt).toContain('capability_id');
+    expect(prompt).toContain('url');
+    expect(prompt).toContain('Internal Capability');
+    expect(prompt).toContain('External API');
+  });
+
+  it('should include example of capability_id usage', () => {
+    const capabilities: Capability[] = [];
+
+    const prompt = builder.buildSystemPrompt(capabilities);
+
+    expect(prompt).toContain('"capability_id"');
+    expect(prompt).toContain('api_rest');
+  });
+
+  it('should include rule about not using both capability_id and url', () => {
+    const capabilities: Capability[] = [];
+
+    const prompt = builder.buildSystemPrompt(capabilities);
+
+    expect(prompt).toContain('Never use both');
+  });
+});

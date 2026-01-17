@@ -356,6 +356,70 @@ describe('BatchProcessor - workflowDefinitions (Issue #368)', () => {
 });
 
 /**
+ * Issue #373: taskId pass-through tests
+ */
+describe('BatchProcessor - taskId pass-through (Issue #373)', () => {
+  const capabilities: Capability[] = [
+    { id: 'api_1', name: 'API 1', category: 'api', status: 'available' },
+  ];
+
+  it('should include task_id in workflowDefinitions for registration', async () => {
+    const mockGenerator = createMockGenerator();
+    const processor = new BatchProcessor({
+      generator: mockGenerator,
+      maxConcurrency: 3,
+    });
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_abc',
+        name: 'Task ABC',
+        description: 'Description ABC',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    const result = await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    // task_id should be the key in workflowDefinitions
+    expect(result.workflowDefinitions['task_abc']).toBeDefined();
+    expect(Object.keys(result.workflowDefinitions)).toContain('task_abc');
+  });
+
+  it('should preserve task_id mapping even when workflow_name differs', async () => {
+    const mockGenerator = createMockGenerator();
+    const processor = new BatchProcessor({
+      generator: mockGenerator,
+      maxConcurrency: 3,
+    });
+
+    const tasks: TaskGenerationRequest[] = [
+      {
+        task_id: 'task_xyz',
+        name: 'Some Task',
+        description: 'Description',
+        interface: { input: {}, output: {} },
+      },
+    ];
+
+    const result = await processor.processBatch({
+      tasks,
+      capabilities,
+      project_id: 'test_project',
+    });
+
+    // task_id is the key, not workflow_name
+    expect(result.workflowDefinitions['task_xyz']).toBeDefined();
+    // workflow_name is different from task_id
+    expect(result.workflowDefinitions['task_xyz'].workflow_name).toBe('workflow_task_xyz');
+  });
+});
+
+/**
  * Issue #370: Structured logging tests
  */
 describe('BatchProcessor - logging (Issue #370)', () => {

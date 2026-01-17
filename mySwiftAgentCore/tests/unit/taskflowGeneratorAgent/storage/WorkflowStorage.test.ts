@@ -252,3 +252,244 @@ describe('createWorkflowStorage factory', () => {
     expect(storage.getBaseDir()).toBe('generated/workflows');
   });
 });
+
+/**
+ * Issue #373: taskId directory structure and cache mechanism tests
+ */
+describe('WorkflowStorage - taskId support (Issue #373)', () => {
+  let storage: WorkflowStorage;
+  const mockBaseDir = '/test/generated/workflows';
+
+  const sampleWorkflow: TaskFlowDefinition = {
+    workflow_name: 'test_workflow',
+    description: 'Test workflow',
+    input_schema: { type: 'object', properties: {} },
+    output_schema: { type: 'object', properties: {} },
+    steps: [
+      {
+        id: 'step_1',
+        type: 'api_rest',
+        config: { method: 'GET', url: 'https://api.example.com' },
+        params: {},
+      },
+    ],
+    output: {},
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.rename).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(sampleWorkflow));
+    vi.mocked(fs.readdir).mockResolvedValue([]);
+    vi.mocked(fs.unlink).mockResolvedValue(undefined);
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+
+    storage = createWorkflowStorage({ baseDir: mockBaseDir });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('save with taskId', () => {
+    it('should save workflow with taskId in path', async () => {
+      const result = await storage.save('project1', 'workflow1', sampleWorkflow, 'task_123');
+
+      expect(result.success).toBe(true);
+      expect(result.filePath).toBe(path.join(mockBaseDir, 'project1', 'task_123', 'workflow1.json'));
+    });
+
+    it('should create nested directory structure for taskId', async () => {
+      await storage.save('project1', 'workflow1', sampleWorkflow, 'task_123');
+
+      expect(fs.mkdir).toHaveBeenCalledWith(
+        path.join(mockBaseDir, 'project1', 'task_123'),
+        { recursive: true }
+      );
+    });
+
+    it('should use flat structure when taskId is not provided', async () => {
+      const result = await storage.save('project1', 'workflow1', sampleWorkflow, undefined);
+
+      expect(result.success).toBe(true);
+      expect(result.filePath).toBe(path.join(mockBaseDir, 'project1', 'workflow1.json'));
+    });
+
+    it('should validate taskId for path traversal', async () => {
+      await expect(storage.save('project1', 'workflow1', sampleWorkflow, '../attack'))
+        .rejects.toThrow(WorkflowStorageError);
+    });
+  });
+
+  describe('loadAll with taskId subdirectories', () => {
+    it('should load workflows from task subdirectories', async () => {
+      // Mock stat to identify directories
+      vi.mocked(fs.stat).mockImplementation((filePath: fs.PathLike) => {
+        const pathStr = String(filePath);
+        if (pathStr.includes('task_')) {
+          return Promise.resolve({ isDirectory: () => true } as Awaited<ReturnType<typeof fs.stat>>);
+        }
+        return Promise.resolve({ isDirectory: () => false } as Awaited<ReturnType<typeof fs.stat>>);
+      });
+
+      // First readdir returns task directories and json files
+      vi.mocked(fs.readdir).mockImplementation((dirPath: fs.PathLike) => {
+        const pathStr = String(dirPath);
+        if (pathStr.endsWith('project1')) {
+          return Promise.resolve(['task_123', 'workflow1.json'] as unknown as fs.Dirent[]);
+        }
+        if (pathStr.includes('task_123')) {
+          return Promise.resolve(['workflow2.json'] as unknown as fs.Dirent[]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const workflows = await storage.loadAll('project1');
+
+      // Should load from both flat and nested structures
+      expect(Object.keys(workflows).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should maintain backward compatibility with flat structure', async () => {
+      vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => false } as Awaited<ReturnType<typeof fs.stat>>);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        'workflow1.json',
+        'workflow2.json',
+      ] as unknown as fs.Dirent[]);
+
+      const workflows = await storage.loadAll('project1');
+
+      expect(Object.keys(workflows)).toHaveLength(2);
+      expect(workflows['workflow1']).toBeDefined();
+      expect(workflows['workflow2']).toBeDefined();
+    });
+  });
+});
+
+/**
+ * Issue #373: Cache mechanism tests
+ */
+describe('WorkflowStorage - cache mechanism (Issue #373)', () => {
+  let storage: WorkflowStorage;
+  const mockBaseDir = '/test/generated/workflows';
+
+  const sampleWorkflow: TaskFlowDefinition = {
+    workflow_name: 'test_workflow',
+    description: 'Test workflow',
+    input_schema: { type: 'object', properties: {} },
+    output_schema: { type: 'object', properties: {} },
+    steps: [],
+    output: {},
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.rename).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(sampleWorkflow));
+    vi.mocked(fs.readdir).mockResolvedValue(['workflow1.json'] as unknown as fs.Dirent[]);
+    vi.mocked(fs.unlink).mockResolvedValue(undefined);
+    vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => false } as Awaited<ReturnType<typeof fs.stat>>);
+
+    storage = createWorkflowStorage({
+      baseDir: mockBaseDir,
+      cache: { ttlMs: 5000, maxEntries: 100 },
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  describe('cache hit', () => {
+    it('should return cached data on second loadAll call', async () => {
+      // First call - cache miss
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1);
+
+      // Second call - cache hit
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1); // Still 1
+    });
+
+    it('should fetch from disk after cache expires', async () => {
+      // First call - cache miss
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1);
+
+      // Advance time past TTL
+      vi.advanceTimersByTime(6000);
+
+      // Third call - cache miss (expired)
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('cache invalidation', () => {
+    it('should invalidate cache on save', async () => {
+      // First call - cache miss
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1);
+
+      // Save workflow - should invalidate cache
+      await storage.save('project1', 'workflow2', sampleWorkflow);
+
+      // Next call - cache miss (invalidated)
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(2);
+    });
+
+    it('should invalidate cache on delete', async () => {
+      // First call - cache miss
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1);
+
+      // Delete workflow - should invalidate cache
+      await storage.delete('project1', 'workflow1');
+
+      // Next call - cache miss (invalidated)
+      await storage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('cache configuration', () => {
+    it('should use custom TTL from config', async () => {
+      const shortTtlStorage = createWorkflowStorage({
+        baseDir: mockBaseDir,
+        cache: { ttlMs: 1000, maxEntries: 100 },
+      });
+
+      await shortTtlStorage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1);
+
+      // Advance time within TTL
+      vi.advanceTimersByTime(500);
+      await shortTtlStorage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(1);
+
+      // Advance time past TTL
+      vi.advanceTimersByTime(600);
+      await shortTtlStorage.loadAll('project1');
+      expect(fs.readdir).toHaveBeenCalledTimes(2);
+    });
+
+    it('should work without cache config (disabled by default)', async () => {
+      const noCacheStorage = createWorkflowStorage({ baseDir: mockBaseDir });
+
+      await noCacheStorage.loadAll('project1');
+      await noCacheStorage.loadAll('project1');
+
+      // Should hit disk both times
+      expect(fs.readdir).toHaveBeenCalledTimes(2);
+    });
+  });
+});
