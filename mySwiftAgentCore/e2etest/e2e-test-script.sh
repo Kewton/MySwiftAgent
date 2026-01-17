@@ -75,6 +75,37 @@ echo -e "${YELLOW}[Test 3] Batch Generation API${NC}"
 echo "POST ${BASE_URL}/api/v1/generator/workflow/batch"
 echo ""
 
+# 生成先ディレクトリ
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+GENERATED_DIR="${PROJECT_ROOT}/generated/workflows/default_project"
+
+# 既存の生成ファイルを削除
+echo "Cleaning up existing generated workflows..."
+WORKFLOW_PATTERNS=(
+  "execute_google_search_task_001"
+  "summarize_search_results_task_002"
+  "send_email_via_gmail_task_003"
+)
+
+for pattern in "${WORKFLOW_PATTERNS[@]}"; do
+  # ルートレベルのファイル
+  if [ -f "${GENERATED_DIR}/${pattern}.json" ]; then
+    echo "  Deleting: ${pattern}.json"
+    rm -f "${GENERATED_DIR}/${pattern}.json"
+  fi
+  # タスクディレクトリ内のファイル
+  TASK_ID=$(echo "$pattern" | grep -oE 'task_[0-9]+')
+  if [ -d "${GENERATED_DIR}/${TASK_ID}" ]; then
+    echo "  Deleting directory: ${TASK_ID}/"
+    rm -rf "${GENERATED_DIR}/${TASK_ID}"
+  fi
+done
+
+# タイムスタンプマーカー（生成ファイル検出用）
+touch /tmp/.e2e_test_start
+echo ""
+
 # テストデータ（Google検索 → サマリ → メール送信のワークフロー）
 REQUEST_BODY='{
   "tasks": [
@@ -181,6 +212,106 @@ fi
 echo ""
 
 # ============================================
+# Test 4: Execute Generated Workflows
+# ============================================
+echo -e "${YELLOW}[Test 4] Execute Generated Workflows${NC}"
+echo ""
+
+EXECUTION_SUCCESS=true
+EXECUTION_RESULTS=()
+
+if [ "$SUCCESS" = "true" ]; then
+    # 生成されたワークフローを取得
+    GENERATED_WORKFLOWS=$(echo "$BATCH_RESPONSE" | jq -r '.workflows[]?.workflow_name // empty' 2>/dev/null)
+
+    if [ -z "$GENERATED_WORKFLOWS" ]; then
+        echo "No workflows found in response, checking generated directory..."
+        # ディレクトリから生成されたファイルを探す
+        GENERATED_FILES=$(find "${GENERATED_DIR}" -maxdepth 2 -name "*.json" -newer /tmp/.e2e_test_start 2>/dev/null | head -5)
+
+        if [ -n "$GENERATED_FILES" ]; then
+            for file in $GENERATED_FILES; do
+                WORKFLOW_NAME=$(basename "$file" .json)
+                GENERATED_WORKFLOWS="${GENERATED_WORKFLOWS}${WORKFLOW_NAME}"$'\n'
+            done
+        fi
+    fi
+
+    # task_001のワークフローのみ実行（依存関係のないタスク）
+    echo "Executing task_001 workflow (google_search)..."
+    echo ""
+
+    # task_001のワークフロー名を特定
+    TASK_001_WORKFLOW=""
+    for wf in $GENERATED_WORKFLOWS; do
+        if [[ "$wf" == *"task_001"* ]]; then
+            TASK_001_WORKFLOW="$wf"
+            break
+        fi
+    done
+
+    # ディレクトリからも検索
+    if [ -z "$TASK_001_WORKFLOW" ]; then
+        if [ -d "${GENERATED_DIR}/task_001" ]; then
+            TASK_001_FILE=$(ls "${GENERATED_DIR}/task_001"/*.json 2>/dev/null | head -1)
+            if [ -n "$TASK_001_FILE" ]; then
+                TASK_001_WORKFLOW=$(basename "$TASK_001_FILE" .json)
+            fi
+        fi
+    fi
+
+    if [ -n "$TASK_001_WORKFLOW" ]; then
+        echo "  Workflow: ${TASK_001_WORKFLOW}"
+        echo "  POST ${BASE_URL}/api/v1/taskflow/execute"
+        echo ""
+
+        # ワークフロー実行
+        EXEC_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/v1/taskflow/execute" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"project\": \"default_project\",
+            \"workflow\": \"task_001/${TASK_001_WORKFLOW}\",
+            \"inputs\": {
+              \"query\": \"TypeScript 5.0 new features\"
+            }
+          }" \
+          --max-time 120)
+
+        EXEC_STATUS=$(echo "$EXEC_RESPONSE" | jq -r '.status' 2>/dev/null || echo "error")
+        EXEC_DURATION=$(echo "$EXEC_RESPONSE" | jq -r '.durationMs' 2>/dev/null || echo "N/A")
+
+        echo "  Execution Response:"
+        echo "$EXEC_RESPONSE" | jq '.' 2>/dev/null || echo "$EXEC_RESPONSE"
+        echo ""
+
+        if [ "$EXEC_STATUS" = "success" ]; then
+            echo -e "  ${GREEN}✅ Workflow executed successfully${NC} (${EXEC_DURATION}ms)"
+            EXECUTION_RESULTS+=("task_001: ✅ PASS (${EXEC_DURATION}ms)")
+        elif [ "$EXEC_STATUS" = "error" ]; then
+            ERROR_CODE=$(echo "$EXEC_RESPONSE" | jq -r '.error.code' 2>/dev/null || echo "unknown")
+            if [ "$ERROR_CODE" = "TIMEOUT_ERROR" ]; then
+                echo -e "  ${YELLOW}⚠️ Workflow timed out${NC} (google_search may take 1-3 minutes)"
+                EXECUTION_RESULTS+=("task_001: ⚠️ TIMEOUT (expected for google_search)")
+            else
+                echo -e "  ${RED}❌ Workflow execution failed${NC}"
+                EXECUTION_RESULTS+=("task_001: ❌ FAIL")
+                EXECUTION_SUCCESS=false
+            fi
+        else
+            echo -e "  ${YELLOW}⚠️ Unknown execution status: ${EXEC_STATUS}${NC}"
+            EXECUTION_RESULTS+=("task_001: ⚠️ UNKNOWN")
+        fi
+    else
+        echo -e "  ${YELLOW}⚠️ No task_001 workflow found to execute${NC}"
+        EXECUTION_RESULTS+=("task_001: ⚠️ NOT FOUND")
+    fi
+else
+    echo -e "${YELLOW}⚠️ Skipping workflow execution (generation failed or partial)${NC}"
+    EXECUTION_RESULTS+=("Skipped (generation not successful)")
+fi
+echo ""
+
+# ============================================
 # Test Summary
 # ============================================
 echo "============================================"
@@ -198,7 +329,25 @@ else
     echo "Test 3 (Batch Generation):       ❌ FAIL"
 fi
 
+# Test 4 結果表示
+if [ ${#EXECUTION_RESULTS[@]} -gt 0 ]; then
+    for result in "${EXECUTION_RESULTS[@]}"; do
+        echo "Test 4 (Workflow Execution):     $result"
+    done
+else
+    echo "Test 4 (Workflow Execution):     ⚠️ SKIPPED"
+fi
+
 echo ""
 echo "============================================"
 echo "  E2E Test Complete"
 echo "============================================"
+
+# 全体の終了ステータス
+if [ "$SUCCESS" != "true" ] && [ "$ERROR_TYPE" != "LLM_ERROR" ]; then
+    exit 1
+fi
+if [ "$EXECUTION_SUCCESS" != "true" ]; then
+    exit 1
+fi
+exit 0
