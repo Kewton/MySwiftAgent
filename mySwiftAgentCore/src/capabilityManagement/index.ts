@@ -264,3 +264,26 @@ export {
   CapabilityClientError,
   type CapabilityClientConfig,
 } from './client/CapabilityClient.js';
+
+// ============================================
+// Issue #372: Endpoint management exports
+// ============================================
+
+export {
+  EndpointConfigManager,
+  createEndpointConfigManager,
+} from './endpoint/EndpointConfigManager.js';
+
+export { URLResolver, createURLResolver } from './endpoint/URLResolver.js';
+
+export {
+  type EndpointConfig,
+  type ApiEndpointsConfig,
+  type EndpointAuthConfig,
+  type ResolvedEndpoint,
+  type ProjectIndexConfig,
+  type EndpointConfigManagerOptions,
+  type URLResolverOptions,
+  type IEndpointConfigManager,
+  EndpointResolutionError,
+} from './endpoint/types.js';

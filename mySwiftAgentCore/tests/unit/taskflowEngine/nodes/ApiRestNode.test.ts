@@ -2,6 +2,7 @@
  * ApiRestNode Unit Tests
  *
  * Issue #363: REST API node executor
+ * Issue #372: Extended with capability_id support
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -9,7 +10,9 @@ import {
   ApiRestNodeExecutor,
   createApiRestNodeExecutor,
 } from '../../../../src/taskflowEngine/nodes/ApiRestNode.js';
+import type { ExtendedNodeExecutionContext } from '../../../../src/taskflowEngine/nodes/ApiRestNode.js';
 import type { NodeConfig, ExecutionContext } from '../../../../src/taskflowEngine/nodes/BaseNode.js';
+import type { CapabilityExecutor } from '../../../../src/taskflowEngine/nodes/CapabilityExecutor.js';
 
 // Mock fetch
 global.fetch = vi.fn();
@@ -51,7 +54,7 @@ describe('ApiRestNodeExecutor', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('should require url', () => {
+    it('should require either url or capability_id', () => {
       const config: NodeConfig = {
         nodeId: 'fetch_data',
         type: 'api_rest',
@@ -63,10 +66,10 @@ describe('ApiRestNodeExecutor', () => {
       const result = executor.validate(config);
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain('url is required');
+      expect(result.errors).toContain('Either url or capability_id is required');
     });
 
-    it('should require method', () => {
+    it('should require method when using url', () => {
       const config: NodeConfig = {
         nodeId: 'fetch_data',
         type: 'api_rest',
@@ -78,7 +81,36 @@ describe('ApiRestNodeExecutor', () => {
       const result = executor.validate(config);
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain('method is required');
+      expect(result.errors).toContain('method is required when using url');
+    });
+
+    it('should not require method when using capability_id', () => {
+      const config: NodeConfig = {
+        nodeId: 'fetch_data',
+        type: 'api_rest',
+        config: {
+          capability_id: 'google_search',
+        },
+      };
+
+      const result = executor.validate(config);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('should validate with capability_id and optional method', () => {
+      const config: NodeConfig = {
+        nodeId: 'fetch_data',
+        type: 'api_rest',
+        config: {
+          capability_id: 'google_search',
+          method: 'POST',
+        },
+      };
+
+      const result = executor.validate(config);
+
+      expect(result.valid).toBe(true);
     });
 
     it('should validate method value', () => {
@@ -263,5 +295,159 @@ describe('createApiRestNodeExecutor factory', () => {
   it('should create an ApiRestNodeExecutor instance', () => {
     const executor = createApiRestNodeExecutor();
     expect(executor).toBeInstanceOf(ApiRestNodeExecutor);
+  });
+});
+
+/**
+ * Issue #372: capability_id execution mode tests
+ */
+describe('ApiRestNodeExecutor capability_id mode', () => {
+  let executor: ApiRestNodeExecutor;
+  let mockCapabilityExecutor: CapabilityExecutor;
+  let extendedContext: ExtendedNodeExecutionContext;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    executor = new ApiRestNodeExecutor();
+    mockCapabilityExecutor = {
+      execute: vi.fn().mockResolvedValue({
+        success: true,
+        output: { results: ['test result'] },
+        metadata: { capabilityId: 'google_search' },
+      }),
+      validate: vi.fn(),
+    } as unknown as CapabilityExecutor;
+
+    extendedContext = {
+      workflowId: 'wf_test',
+      stepResults: {},
+      variables: {},
+      secrets: { API_KEY: 'test-key' },
+      capabilityExecutor: mockCapabilityExecutor,
+    };
+  });
+
+  it('should delegate to CapabilityExecutor when capability_id is specified', async () => {
+    const config: NodeConfig = {
+      nodeId: 'search_node',
+      type: 'api_rest',
+      config: {
+        capability_id: 'google_search',
+      },
+    };
+
+    const result = await executor.execute(
+      config,
+      { queries: ['test query'] },
+      extendedContext
+    );
+
+    expect(result.success).toBe(true);
+    expect(mockCapabilityExecutor.execute).toHaveBeenCalledWith(
+      'google_search',
+      { queries: ['test query'] },
+      extendedContext,
+      'default_project'
+    );
+  });
+
+  it('should use specified project_id', async () => {
+    const config: NodeConfig = {
+      nodeId: 'search_node',
+      type: 'api_rest',
+      config: {
+        capability_id: 'google_search',
+        project_id: 'custom_project',
+      },
+    };
+
+    await executor.execute(config, {}, extendedContext);
+
+    expect(mockCapabilityExecutor.execute).toHaveBeenCalledWith(
+      'google_search',
+      {},
+      extendedContext,
+      'custom_project'
+    );
+  });
+
+  it('should return error when CapabilityExecutor is not available', async () => {
+    const config: NodeConfig = {
+      nodeId: 'search_node',
+      type: 'api_rest',
+      config: {
+        capability_id: 'google_search',
+      },
+    };
+
+    const contextWithoutExecutor: ExecutionContext = {
+      workflowId: 'wf_test',
+      stepResults: {},
+      variables: {},
+      secrets: {},
+    };
+
+    const result = await executor.execute(config, {}, contextWithoutExecutor);
+
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('EXECUTOR_NOT_AVAILABLE');
+  });
+
+  it('should return error when neither url nor capability_id is specified', async () => {
+    const config: NodeConfig = {
+      nodeId: 'bad_config',
+      type: 'api_rest',
+      config: {
+        method: 'GET',
+      },
+    };
+
+    const result = await executor.execute(config, {}, extendedContext);
+
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('CONFIGURATION_ERROR');
+    expect(result.error?.message).toContain('Either url or capability_id must be specified');
+  });
+
+  it('should prefer capability_id when both url and capability_id are specified', async () => {
+    const config: NodeConfig = {
+      nodeId: 'mixed_config',
+      type: 'api_rest',
+      config: {
+        url: 'https://api.example.com',
+        capability_id: 'google_search',
+        method: 'POST',
+      },
+    };
+
+    await executor.execute(config, {}, extendedContext);
+
+    // Should use CapabilityExecutor, not direct URL
+    expect(mockCapabilityExecutor.execute).toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('should forward capability execution errors', async () => {
+    (mockCapabilityExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: false,
+      output: null,
+      error: {
+        code: 'CAPABILITY_NOT_FOUND',
+        message: "Capability 'nonexistent' not found",
+      },
+    });
+
+    const config: NodeConfig = {
+      nodeId: 'search_node',
+      type: 'api_rest',
+      config: {
+        capability_id: 'nonexistent',
+      },
+    };
+
+    const result = await executor.execute(config, {}, extendedContext);
+
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('CAPABILITY_NOT_FOUND');
   });
 });

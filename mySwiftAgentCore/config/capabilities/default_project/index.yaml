@@ -1,6 +1,85 @@
 # Default Project Capability Index
 # Issue #365: Capability list for the default project
+# Migrated from expert_agent_capabilities.yaml
+
+# ===================
+# API Endpoints Configuration
+# ===================
+# Base URLs for API endpoints (can be overridden by environment variables)
+# These are used to construct full URLs from capability _internal.endpoint paths
+
+api_endpoints:
+  # expertAgent API - Main AI Agent Server
+  # Override with: EXPERT_AGENT_BASE_URL env var
+  expert_agent:
+    base_url: "${EXPERT_AGENT_BASE_URL:-http://localhost:8004}"
+    description: "AI Agent API (LangGraph agents, utilities)"
+    # Maps to capabilities with endpoints starting with /v1/
+    endpoint_prefix: "/v1/"
+
+  # External APIs (if capabilities need direct external access)
+  google_apis:
+    base_url: "https://www.googleapis.com"
+    description: "Google APIs (Drive, Gmail, etc.)"
+
+# ===================
+# Capability List
+# ===================
 
 capabilities:
-  - google_search
-  - weather_api
+  # ===================
+  # Utility Direct APIs
+  # ===================
+  # High-speed, direct APIs without LLM reasoning
+
+  # Gmail APIs
+  - gmail_search          # Gmail検索（高速・AIフレンドリー）
+  - gmail_send            # メール送信（高速・Direct API）
+
+  # Google Search APIs
+  - google_search         # Web検索（Serper API使用）
+  - google_search_overview # Web検索概要取得
+
+  # Google Drive APIs
+  - google_drive_upload            # ファイルアップロード
+  - google_drive_upload_from_url   # URLからファイルダウンロード＆アップロード
+
+  # Text-to-Speech APIs
+  - text_to_speech              # 音声合成（Base64エンコード）
+  - text_to_speech_drive        # 音声合成 + Google Driveアップロード
+  - tts_upload_drive_and_notify # TTS + アップロード + メール通知
+
+  # Other Utility APIs
+  - weather_api           # 天気API（既存）
+
+  # ===================
+  # AI Agent APIs
+  # ===================
+  # LangGraph-based AI agents with LLM reasoning
+
+  # Direct LLM
+  - direct_llm            # 直接LLM呼び出し（システムプロンプト指定可能）
+
+  # LangGraph Agents
+  - sample_agent          # LangGraph サンプルエージェント
+  - json_output_agent     # 構造化JSON出力専用エージェント
+  - explorer_agent        # ファイルシステム探索エージェント
+  - action_agent          # 汎用アクション実行エージェント
+  - playwright_agent      # ブラウザ自動化エージェント（MCP Playwright使用）
+  - wikipedia_agent       # Wikipedia検索エージェント
+  - file_reader_agent     # ファイル読み取りエージェント
+
+# ===================
+# Best Practices
+# ===================
+best_practices:
+  - pattern: "Web scraping"
+    recommendation: "Playwright Agentは不安定なため、google_search + fetchAgent の組み合わせを推奨"
+  - pattern: "File upload"
+    recommendation: "大ファイル（>5MB）は自動でResumable Upload に切り替わる"
+  - pattern: "Email processing"
+    recommendation: "gmail_searchは高速（5秒）、Utility Agentは遅い（25-180秒）"
+  - pattern: "JSON output guarantee"
+    recommendation: "json_output_agent を使用"
+  - pattern: "TTS + storage"
+    recommendation: "text_to_speech_drive を使用すると、Google Driveアップロード + リンク返却が一度に可能"

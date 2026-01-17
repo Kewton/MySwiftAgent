@@ -2,6 +2,7 @@
  * ApiRestNode - REST API executor
  *
  * Issue #363: Executes HTTP requests
+ * Issue #372: Extended with capability_id support for URL resolution
  */
 
 import type {
@@ -11,6 +12,7 @@ import type {
   NodeExecutionContext,
   NodeValidationResult,
 } from './BaseNode.js';
+import type { CapabilityExecutor } from './CapabilityExecutor.js';
 
 const VALID_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -24,6 +26,32 @@ interface AuthConfig {
 }
 
 /**
+ * Extended node configuration with capability support
+ */
+export interface ApiRestNodeConfig {
+  /** Direct URL (legacy mode) */
+  url?: string;
+  /** Capability ID for URL resolution (new mode) */
+  capability_id?: string;
+  /** Project ID for capability lookup */
+  project_id?: string;
+  /** HTTP method (required for url mode, optional for capability_id mode) */
+  method?: string;
+  /** Custom headers */
+  headers?: Record<string, string>;
+  /** Authentication configuration */
+  auth?: AuthConfig;
+}
+
+/**
+ * Extended execution context with capability executor
+ */
+export interface ExtendedNodeExecutionContext extends NodeExecutionContext {
+  /** Capability executor for capability_id based execution */
+  capabilityExecutor?: CapabilityExecutor;
+}
+
+/**
  * ApiRestNodeExecutor - Executes REST API calls
  *
  * Supports:
@@ -32,25 +60,98 @@ interface AuthConfig {
  * - Request headers
  * - Request body
  * - Authentication (Bearer, Basic, API Key)
+ * - capability_id for URL resolution (Issue #372)
  */
 export class ApiRestNodeExecutor implements NodeExecutor {
   readonly type = 'api_rest' as const;
 
   /**
    * Execute HTTP request
+   *
+   * Two modes of operation:
+   * 1. Direct URL (legacy): url is specified directly
+   * 2. Capability mode (new): capability_id is specified, URL is resolved
    */
   async execute(
     config: NodeConfig,
     params: Record<string, unknown>,
     context: NodeExecutionContext
   ): Promise<NodeResult> {
-    try {
-      const { url, method, headers = {}, auth } = config.config as {
-        url: string;
-        method: string;
-        headers?: Record<string, string>;
-        auth?: AuthConfig;
+    const nodeConfig = config.config as ApiRestNodeConfig;
+    const { url, capability_id, project_id } = nodeConfig;
+
+    // Mode 1: capability_id specified - delegate to CapabilityExecutor
+    if (capability_id) {
+      return this.executeWithCapability(
+        capability_id,
+        project_id ?? 'default_project',
+        params,
+        context as ExtendedNodeExecutionContext
+      );
+    }
+
+    // Mode 2: Direct URL - execute directly
+    if (url) {
+      return this.executeDirectUrl(nodeConfig, params, context);
+    }
+
+    // Neither url nor capability_id specified
+    return {
+      success: false,
+      output: null,
+      error: {
+        code: 'CONFIGURATION_ERROR',
+        message: 'Either url or capability_id must be specified',
+      },
+    };
+  }
+
+  /**
+   * Execute using capability_id with CapabilityExecutor
+   */
+  private async executeWithCapability(
+    capabilityId: string,
+    projectId: string,
+    params: Record<string, unknown>,
+    context: ExtendedNodeExecutionContext
+  ): Promise<NodeResult> {
+    if (!context.capabilityExecutor) {
+      return {
+        success: false,
+        output: null,
+        error: {
+          code: 'EXECUTOR_NOT_AVAILABLE',
+          message:
+            'CapabilityExecutor is not available in context. Ensure the executor is properly initialized.',
+        },
       };
+    }
+
+    return context.capabilityExecutor.execute(capabilityId, params, context, projectId);
+  }
+
+  /**
+   * Execute with direct URL (legacy mode)
+   */
+  private async executeDirectUrl(
+    nodeConfig: ApiRestNodeConfig,
+    params: Record<string, unknown>,
+    context: NodeExecutionContext
+  ): Promise<NodeResult> {
+    try {
+      const { url, method = 'GET', headers = {}, auth } = nodeConfig;
+
+      // URL should be defined at this point (checked in execute)
+      if (!url) {
+        return {
+          success: false,
+          output: null,
+          error: {
+            code: 'CONFIGURATION_ERROR',
+            message: 'URL is required for direct URL execution',
+          },
+        };
+      }
 
       // Interpolate URL variables
       const interpolatedUrl = this.interpolateUrl(url, params);
@@ -128,18 +229,25 @@ export class ApiRestNodeExecutor implements NodeExecutor {
 
   /**
    * Validate configuration
+   *
+   * Validates both legacy URL mode and capability_id mode.
+   * At least one of url or capability_id must be specified.
    */
   validate(config: NodeConfig): NodeValidationResult {
     const errors: string[] = [];
-    const { url, method } = config.config as { url?: string; method?: string };
+    const nodeConfig = config.config as ApiRestNodeConfig;
+    const { url, capability_id, method } = nodeConfig;
 
-    if (!url) {
-      errors.push('url is required');
+    // Either url or capability_id must be specified
+    if (!url && !capability_id) {
+      errors.push('Either url or capability_id is required');
     }
 
-    if (!method) {
-      errors.push('method is required');
-    } else if (!VALID_METHODS.includes(method.toUpperCase())) {
+    // Method is required for direct URL mode
+    // For capability_id mode, method is optional (derived from capability)
+    if (!capability_id && !method) {
+      errors.push('method is required when using url');
+    } else if (method && !VALID_METHODS.includes(method.toUpperCase())) {
       errors.push(`Invalid method: ${method}. Must be one of: ${VALID_METHODS.join(', ')}`);
     }
 
