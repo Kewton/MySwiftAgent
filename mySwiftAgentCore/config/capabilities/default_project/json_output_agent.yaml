@@ -32,14 +32,33 @@ tags:
   - json
   - structured-output
 examples:
-  - description: 自然言語からJSONに変換
-    input:
-      user_input: "名前: 田中太郎、年齢: 30歳、職業: エンジニア"
-      system_prompt: "入力をJSON形式に変換してください。{name, age, occupation}の形式で出力してください。"
-  - description: テキスト解析してJSON出力
-    input:
-      user_input: "東京は日本の首都で、人口は約1400万人です。"
-      system_prompt: "テキストから情報を抽出して{city, country, population}のJSON形式で出力してください。"
+  # TaskFlow形式でのcapability使用例
+  - description: 自然言語からJSONに変換（TaskFlow）
+    taskflow_step:
+      id: "json_convert"
+      type: "api_rest"
+      config:
+        capability_id: "json_output_agent"
+        method: "POST"
+      params:
+        body:
+          user_input: "$input.text"
+          system_prompt: "入力をJSON形式に変換してください。{name, age, occupation}の形式で出力してください。"
+    output_mapping:
+      json_result: "$steps.json_convert.result"
+  - description: テキスト解析してJSON出力（TaskFlow）
+    taskflow_step:
+      id: "text_analysis"
+      type: "api_rest"
+      config:
+        capability_id: "json_output_agent"
+        method: "POST"
+      params:
+        body:
+          user_input: "$input.text"
+          system_prompt: "$input.schema_instruction"
+    output_mapping:
+      structured_data: "$steps.text_analysis.result"
 metadata:
   author: MySwiftAgent Team
   created: "2024-01-15"

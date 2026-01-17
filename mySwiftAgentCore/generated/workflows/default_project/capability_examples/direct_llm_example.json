@@ -1,0 +1,51 @@
+{
+  "workflow_name": "direct_llm_example",
+  "description": "Direct LLMを使用してテキスト生成を行うTaskFlowサンプル",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "description": "ユーザー入力プロンプト"
+      },
+      "system_prompt": {
+        "type": "string",
+        "description": "システムプロンプト（オプション）"
+      },
+      "model": {
+        "type": "string",
+        "description": "使用するLLMモデル（デフォルト: gpt-4o-mini）"
+      }
+    },
+    "required": ["prompt"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "response": {
+        "type": "string",
+        "description": "LLMからの応答"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "llm_call",
+      "type": "api_rest",
+      "config": {
+        "capability_id": "direct_llm",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "user_input": "$input.prompt",
+          "system_prompt": "$input.system_prompt",
+          "model": "gpt-4o-mini"
+        }
+      }
+    }
+  ],
+  "output": {
+    "response": "$steps.llm_call.result"
+  }
+}

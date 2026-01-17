@@ -42,17 +42,38 @@ tags:
   - send
   - utility
 examples:
-  - description: プレーンテキストメール送信
-    input:
-      to: "recipient@example.com"
-      subject: "テストメール"
-      body: "これはテストメールです。"
-  - description: HTMLメール送信
-    input:
-      to: "recipient@example.com"
-      subject: "HTMLメール"
-      body: "プレーンテキスト版"
-      html_body: "<h1>HTMLメール</h1><p>本文</p>"
+  # TaskFlow形式でのcapability使用例
+  - description: プレーンテキストメール送信（TaskFlow）
+    taskflow_step:
+      id: "send_email"
+      type: "api_rest"
+      config:
+        capability_id: "gmail_send"
+        method: "POST"
+      params:
+        body:
+          to: "$input.recipient"
+          subject: "$input.subject"
+          body: "$input.message"
+    output_mapping:
+      result: "$steps.send_email.result"
+      message_id: "$steps.send_email.message_id"
+  - description: HTMLメール送信（TaskFlow）
+    taskflow_step:
+      id: "send_html_email"
+      type: "api_rest"
+      config:
+        capability_id: "gmail_send"
+        method: "POST"
+      params:
+        body:
+          to: "$input.recipient"
+          subject: "$input.subject"
+          body: "$input.plain_text"
+          html_body: "$input.html_content"
+    output_mapping:
+      result: "$steps.send_html_email.result"
+      message_id: "$steps.send_html_email.message_id"
 metadata:
   author: MySwiftAgent Team
   created: "2024-01-15"

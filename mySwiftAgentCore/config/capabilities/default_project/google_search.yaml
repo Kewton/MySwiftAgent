@@ -53,17 +53,36 @@ tags:
   - serper
   - knowledge-extraction
 examples:
-  - description: 単一クエリ検索
-    input:
-      queries:
-        - "TypeScript best practices"
-      num: 5
-  - description: 複数クエリ一括検索
-    input:
-      queries:
-        - "React hooks tutorial"
-        - "Vue 3 composition API"
-      num: 3
+  # TaskFlow形式でのcapability使用例
+  - description: 単一クエリ検索（TaskFlow）
+    taskflow_step:
+      id: "google_search"
+      type: "api_rest"
+      config:
+        capability_id: "google_search"
+        method: "POST"
+      params:
+        body:
+          queries: ["$input.search_query"]
+          num: 3
+    output_mapping:
+      search_results: "$steps.google_search.search_results"
+      results_count: "$steps.google_search.search_results_count"
+  - description: 複数クエリ一括検索（TaskFlow）
+    taskflow_step:
+      id: "multi_search"
+      type: "api_rest"
+      config:
+        capability_id: "google_search"
+        method: "POST"
+      params:
+        body:
+          queries:
+            - "$input.query1"
+            - "$input.query2"
+          num: 5
+    output_mapping:
+      all_results: "$steps.multi_search.search_results"
 metadata:
   author: MySwiftAgent Team
   created: "2024-01-15"
@@ -75,21 +94,26 @@ metadata:
     - 複数クエリ一括検索（queries配列）
     - 検索結果件数指定（num）
   workflow_usage_example: |
-    # fetchAgentでAPIを呼び出した後、結果を参照するパターン:
-    # 1. APIレスポンス全体: :google_search_api
-    # 2. 検索結果配列: :google_search_api.result.search_results
-    # 3. 最初の検索結果: :google_search_api.result.search_results[0]
-    #
-    # shiftAgentを使う場合（推奨）:
-    # extract_first:
-    #   agent: shiftAgent
-    #   inputs:
-    #     array: :google_search_api.result.search_results
-    #
-    # その後: :extract_first.item.title, :extract_first.item.link, :extract_first.item.knowledge でアクセス
-    #
-    # 注意: fetchAgentのレスポンスは .result プロパティに格納されるため、
-    # :api_node.result.search_results のようにアクセスする必要がある
+    # TaskFlow形式でのワークフロー使用例:
+    {
+      "workflow_name": "search_workflow",
+      "steps": [
+        {
+          "id": "search",
+          "type": "api_rest",
+          "config": { "capability_id": "google_search", "method": "POST" },
+          "params": { "body": { "queries": ["$input.query"], "num": 3 } }
+        }
+      ],
+      "output": {
+        "results": "$steps.search.search_results",
+        "count": "$steps.search.search_results_count"
+      }
+    }
+    # 結果参照パターン:
+    # - 検索結果配列: $steps.search.search_results
+    # - 結果件数: $steps.search.search_results_count
+    # - 最初の結果のタイトル: $steps.search.search_results[0].title
 
 _internal:
   endpoint: /v1/utility/google_search

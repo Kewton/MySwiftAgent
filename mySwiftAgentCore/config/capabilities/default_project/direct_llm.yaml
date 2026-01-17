@@ -40,15 +40,34 @@ tags:
   - gemini
   - ollama
 examples:
-  - description: GPT-4o-miniでテキスト生成
-    input:
-      user_input: "TypeScriptの型システムについて説明してください"
-      model: "gpt-4o-mini"
-  - description: カスタムシステムプロンプトで実行
-    input:
-      user_input: "東京の観光スポットを教えて"
-      system_prompt: "あなたは日本の観光ガイドです。簡潔に回答してください。"
-      model: "gemini-1.5-flash"
+  # TaskFlow形式でのcapability使用例
+  - description: GPT-4o-miniでテキスト生成（TaskFlow）
+    taskflow_step:
+      id: "llm_call"
+      type: "api_rest"
+      config:
+        capability_id: "direct_llm"
+        method: "POST"
+      params:
+        body:
+          user_input: "$input.prompt"
+          model: "gpt-4o-mini"
+    output_mapping:
+      response: "$steps.llm_call.result"
+  - description: カスタムシステムプロンプトで実行（TaskFlow）
+    taskflow_step:
+      id: "custom_llm"
+      type: "api_rest"
+      config:
+        capability_id: "direct_llm"
+        method: "POST"
+      params:
+        body:
+          user_input: "$input.question"
+          system_prompt: "$input.system_prompt"
+          model: "gemini-1.5-flash"
+    output_mapping:
+      answer: "$steps.custom_llm.result"
 metadata:
   author: MySwiftAgent Team
   created: "2024-01-15"

@@ -1,0 +1,56 @@
+{
+  "workflow_name": "gmail_send_example",
+  "description": "Gmailでメールを送信するTaskFlowサンプル",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "to": {
+        "type": "string",
+        "description": "宛先メールアドレス"
+      },
+      "subject": {
+        "type": "string",
+        "description": "メール件名"
+      },
+      "body": {
+        "type": "string",
+        "description": "メール本文"
+      }
+    },
+    "required": ["to", "subject", "body"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "result": {
+        "type": "string",
+        "description": "送信結果"
+      },
+      "message_id": {
+        "type": "string",
+        "description": "送信されたメールID"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "send_email",
+      "type": "api_rest",
+      "config": {
+        "capability_id": "gmail_send",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "to": "$input.to",
+          "subject": "$input.subject",
+          "body": "$input.body"
+        }
+      }
+    }
+  ],
+  "output": {
+    "result": "$steps.send_email.result",
+    "message_id": "$steps.send_email.message_id"
+  }
+}

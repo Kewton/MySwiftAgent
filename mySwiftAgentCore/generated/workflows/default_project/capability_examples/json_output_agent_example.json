@@ -1,0 +1,46 @@
+{
+  "workflow_name": "json_output_agent_example",
+  "description": "JSON Output Agentで自然言語からJSONを生成するTaskFlowサンプル",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "変換対象のテキスト"
+      },
+      "schema_instruction": {
+        "type": "string",
+        "description": "出力JSONのスキーマ指示"
+      }
+    },
+    "required": ["text", "schema_instruction"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "json_result": {
+        "type": "object",
+        "description": "生成されたJSON"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "json_convert",
+      "type": "api_rest",
+      "config": {
+        "capability_id": "json_output_agent",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "user_input": "$input.text",
+          "system_prompt": "$input.schema_instruction"
+        }
+      }
+    }
+  ],
+  "output": {
+    "json_result": "$steps.json_convert.result"
+  }
+}

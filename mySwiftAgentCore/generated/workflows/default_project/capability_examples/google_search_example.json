@@ -1,0 +1,51 @@
+{
+  "workflow_name": "google_search_example",
+  "description": "Google検索を実行して検索結果を取得するTaskFlowサンプル",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "search_query": {
+        "type": "string",
+        "description": "検索クエリ"
+      },
+      "result_count": {
+        "type": "number",
+        "description": "取得件数"
+      }
+    },
+    "required": ["search_query"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "search_results": {
+        "type": "array",
+        "description": "検索結果の配列"
+      },
+      "results_count": {
+        "type": "number",
+        "description": "検索結果件数"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "google_search",
+      "type": "api_rest",
+      "config": {
+        "capability_id": "google_search",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "queries": ["$input.search_query"],
+          "num": 3
+        }
+      }
+    }
+  ],
+  "output": {
+    "search_results": "$steps.google_search.search_results",
+    "results_count": "$steps.google_search.search_results_count"
+  }
+}
