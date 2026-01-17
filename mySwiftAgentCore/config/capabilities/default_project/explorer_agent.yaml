@@ -1,0 +1,51 @@
+# Explorer Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: explorer_agent
+name: Explorer Agent
+description: ファイルシステム探索エージェント - ディレクトリ構造の取得、ファイル検索、ファイルリスト作成
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: 探索指示（例: '/tmp配下のファイル一覧を取得'）
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: 探索結果
+tags:
+  - ai
+  - agent
+  - filesystem
+  - explorer
+  - mcp
+examples:
+  - description: ディレクトリ構造を取得
+    input:
+      user_input: "/tmp配下のファイル一覧を取得してください"
+  - description: ファイル検索
+    input:
+      user_input: "/home/user/documentsフォルダ内の.pdfファイルを探してください"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - ディレクトリ構造の取得
+    - ファイル検索
+    - ファイルリスト作成
+  mcp_tools:
+    - read_file
+    - write_file
+    - create_directory
+    - list_directory
+    - directory_tree
+
+_internal:
+  endpoint: /v1/aiagent/utility/explorer
+  method: POST
+  auth_type: api_key
+  timeout_ms: 90000

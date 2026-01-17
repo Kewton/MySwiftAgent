@@ -1,0 +1,56 @@
+# Sample Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: sample_agent
+name: Sample Agent
+description: LangGraph サンプルエージェント - GraphAIワークフロー統合、force_json=True で JSON保証、max_retries でリトライ回数指定
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: ユーザー入力
+  - name: force_json
+    type: boolean
+    required: false
+    description: JSON形式での出力を強制
+    defaultValue: false
+  - name: max_retries
+    type: integer
+    required: false
+    description: 最大リトライ回数
+    defaultValue: 3
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: エージェントからの応答
+tags:
+  - ai
+  - agent
+  - langgraph
+  - sample
+examples:
+  - description: 基本的な実行
+    input:
+      user_input: "天気予報を取得してください"
+  - description: JSON形式で出力
+    input:
+      user_input: "東京の天気情報をJSON形式で取得"
+      force_json: true
+      max_retries: 5
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - GraphAIワークフロー統合
+    - force_json=True で JSON保証
+    - max_retries でリトライ回数指定
+
+_internal:
+  endpoint: /v1/aiagent/sample
+  method: POST
+  auth_type: api_key
+  timeout_ms: 90000

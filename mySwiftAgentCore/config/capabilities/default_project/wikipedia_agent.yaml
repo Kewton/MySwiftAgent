@@ -1,0 +1,51 @@
+# Wikipedia Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: wikipedia_agent
+name: Wikipedia Agent
+description: Wikipedia検索エージェント - Wikipedia記事検索、多言語対応（language指定）
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: 検索クエリ
+  - name: language
+    type: string
+    required: false
+    description: 言語コード（ja, en, etc.）
+    defaultValue: "ja"
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: Wikipedia記事の内容
+tags:
+  - ai
+  - agent
+  - wikipedia
+  - search
+  - knowledge
+examples:
+  - description: 日本語でWikipedia検索
+    input:
+      user_input: "東京タワー"
+      language: "ja"
+  - description: 英語でWikipedia検索
+    input:
+      user_input: "Tokyo Tower"
+      language: "en"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - Wikipedia記事検索
+    - 多言語対応（language指定）
+
+_internal:
+  endpoint: /v1/aiagent/utility/wikipedia
+  method: POST
+  auth_type: api_key
+  timeout_ms: 60000

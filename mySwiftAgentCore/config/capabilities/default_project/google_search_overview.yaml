@@ -1,0 +1,95 @@
+# Google Search Overview Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: google_search_overview
+name: Google検索概要
+description: Web検索概要取得（Serper API使用）- キーワード検索 + サマリー取得、複数クエリ一括検索
+version: "1.0.0"
+status: available
+category: search
+parameters:
+  - name: queries
+    type: array
+    required: true
+    description: 検索クエリのリスト
+  - name: num
+    type: number
+    required: false
+    description: 各クエリの検索結果件数
+    defaultValue: 10
+returnType: object
+responseSchema:
+  result:
+    type: object
+    description: API応答のラッパーオブジェクト
+    properties:
+      text:
+        type: string
+        description: ステータスメッセージ（通常 'ok'）
+      result:
+        type: array
+        description: 検索結果の配列（各クエリごとに1つのオブジェクト）
+        items:
+          type: object
+          properties:
+            organic:
+              type: array
+              description: オーガニック検索結果のリスト
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    description: 検索結果のタイトル
+                  link:
+                    type: string
+                    description: 検索結果のURL
+                  snippet:
+                    type: string
+                    description: 検索結果のスニペット
+                  position:
+                    type: integer
+                    description: 検索結果の順位
+tags:
+  - search
+  - web
+  - google
+  - overview
+examples:
+  - description: 単一クエリ検索
+    input:
+      queries:
+        - "TypeScript best practices"
+      num: 5
+  - description: 複数クエリ一括検索
+    input:
+      queries:
+        - "React hooks"
+        - "Vue composition API"
+      num: 3
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - キーワード検索 + サマリー取得
+    - 複数クエリ一括検索
+  workflow_usage_example: |
+    # fetchAgentでAPIを呼び出した後、結果を参照するパターン:
+    # 1. APIレスポンス全体: :search_api
+    # 2. resultオブジェクト: :search_api.result
+    # 3. 検索結果配列: :search_api.result.result
+    # 4. 最初のクエリの結果: :search_api.result.result[0]
+    # 5. organic検索結果: :search_api.result.result[0].organic
+    #
+    # shiftAgentを使う場合（推奨）:
+    # extract_first:
+    #   agent: shiftAgent
+    #   inputs:
+    #     array: :search_api.result.result
+
+_internal:
+  endpoint: /v1/utility/google_search_overview
+  method: POST
+  auth_type: api_key
+  secret_key: SERPER_API_KEY
+  timeout_ms: 60000

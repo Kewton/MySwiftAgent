@@ -1,0 +1,69 @@
+# Direct LLM Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: direct_llm
+name: Direct LLM
+description: 直接LLM呼び出し（システムプロンプト指定可能）- カスタムシステムプロンプトでLLM実行、複数モデル対応（GPT, Gemini, Ollama）
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: ユーザー入力メッセージ
+  - name: system_prompt
+    type: string
+    required: false
+    description: システムプロンプト
+  - name: model
+    type: string
+    required: false
+    description: 使用するLLMモデル
+    defaultValue: "gpt-4o-mini"
+    validation:
+      enum:
+        - gpt-4o-mini
+        - gpt-4o
+        - gemini-1.5-flash
+        - gemini-1.5-pro
+        - ollama/llama3
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: LLMからの応答
+tags:
+  - ai
+  - llm
+  - gpt
+  - gemini
+  - ollama
+examples:
+  - description: GPT-4o-miniでテキスト生成
+    input:
+      user_input: "TypeScriptの型システムについて説明してください"
+      model: "gpt-4o-mini"
+  - description: カスタムシステムプロンプトで実行
+    input:
+      user_input: "東京の観光スポットを教えて"
+      system_prompt: "あなたは日本の観光ガイドです。簡潔に回答してください。"
+      model: "gemini-1.5-flash"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - カスタムシステムプロンプトでLLM実行
+    - 複数モデル対応（GPT, Gemini, Ollama）
+  models:
+    - gpt-4o-mini（デフォルト）
+    - gpt-4o
+    - gemini-1.5-flash
+    - gemini-1.5-pro
+    - ollama/llama3
+
+_internal:
+  endpoint: /v1/mylllm
+  method: POST
+  auth_type: api_key
+  timeout_ms: 60000

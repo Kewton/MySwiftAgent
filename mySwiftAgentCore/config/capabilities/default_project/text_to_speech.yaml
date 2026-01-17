@@ -1,0 +1,86 @@
+# Text-to-Speech (Base64) Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: text_to_speech
+name: Text-to-Speech（Base64）
+description: 音声合成（Base64エンコードで返却）- テキストを音声ファイル（MP3）に変換してBase64エンコードでJSON形式で返却
+version: "1.0.0"
+status: available
+category: media
+parameters:
+  - name: text
+    type: string
+    required: true
+    description: 音声合成するテキスト（最大4096文字）
+  - name: model
+    type: string
+    required: false
+    description: TTSモデル（tts-1, tts-1-hd）
+    defaultValue: "tts-1"
+    validation:
+      enum:
+        - tts-1
+        - tts-1-hd
+  - name: voice
+    type: string
+    required: false
+    description: 音声タイプ
+    defaultValue: "alloy"
+    validation:
+      enum:
+        - alloy
+        - echo
+        - fable
+        - onyx
+        - nova
+        - shimmer
+returnType: object
+responseSchema:
+  audio_content:
+    type: string
+    description: Base64エンコードされた音声データ（MP3形式）
+  format:
+    type: string
+    description: 音声フォーマット（常に 'mp3'）
+  size_bytes:
+    type: integer
+    description: 元のファイルサイズ（バイト単位）
+tags:
+  - media
+  - tts
+  - audio
+  - speech
+examples:
+  - description: 標準品質で音声生成
+    input:
+      text: "こんにちは、音声合成のテストです。"
+      model: "tts-1"
+      voice: "alloy"
+  - description: 高品質で音声生成
+    input:
+      text: "高品質な音声を生成します。"
+      model: "tts-1-hd"
+      voice: "nova"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - テキストを音声ファイル（MP3）に変換
+    - Base64エンコードでJSON形式で返却
+  models:
+    - tts-1（標準品質）
+    - tts-1-hd（高品質）
+  voices:
+    - alloy
+    - echo
+    - fable
+    - onyx
+    - nova
+    - shimmer
+
+_internal:
+  endpoint: /v1/utility/text_to_speech
+  method: POST
+  auth_type: api_key
+  secret_key: OPENAI_API_KEY
+  timeout_ms: 60000

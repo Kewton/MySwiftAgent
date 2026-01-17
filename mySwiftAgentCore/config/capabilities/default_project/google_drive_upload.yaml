@@ -1,0 +1,102 @@
+# Google Drive Upload Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: google_drive_upload
+name: Google Drive Upload
+description: ファイルアップロード（ローカルファイル/コンテンツから生成）- サブディレクトリ自動作成、重複ファイル名自動回避、大ファイル対応（Resumable Upload自動切替）
+version: "1.0.0"
+status: available
+category: storage
+parameters:
+  - name: file_path
+    type: string
+    required: true
+    description: ローカルファイルパスまたは作成先パス
+  - name: drive_folder_url
+    type: string
+    required: false
+    description: Google DriveフォルダURL
+  - name: file_name
+    type: string
+    required: false
+    description: 保存ファイル名（未指定時は元のファイル名）
+  - name: sub_directory
+    type: string
+    required: false
+    description: サブディレクトリパス（例: 'reports/2025'）
+  - name: content
+    type: string
+    required: false
+    description: ファイル内容（create_file=true時のみ）
+  - name: file_format
+    type: string
+    required: false
+    description: 拡張子（create_file=true時のみ、例: 'pdf', 'txt'）
+  - name: create_file
+    type: boolean
+    required: false
+    description: ファイル作成モード
+    defaultValue: false
+returnType: object
+responseSchema:
+  status:
+    type: string
+    description: 処理ステータス（'success' または 'error'）
+  file_id:
+    type: string
+    description: Google Drive ファイルID
+  file_name:
+    type: string
+    description: アップロードされたファイル名
+  web_view_link:
+    type: string
+    description: ファイル閲覧用URL
+  web_content_link:
+    type: string
+    description: ファイルダウンロード用URL
+  folder_path:
+    type: string
+    description: アップロード先フォルダパス
+  file_size_mb:
+    type: number
+    description: ファイルサイズ（MB）
+  upload_method:
+    type: string
+    description: アップロードメソッド（'normal' または 'resumable'）
+tags:
+  - storage
+  - google-drive
+  - upload
+  - file
+examples:
+  - description: ローカルファイルのアップロード
+    input:
+      file_path: "/tmp/report.pdf"
+      drive_folder_url: "https://drive.google.com/drive/folders/xxxxx"
+  - description: コンテンツからファイル生成＆アップロード
+    input:
+      file_path: "/tmp/generated.txt"
+      content: "ファイル内容"
+      file_format: "txt"
+      create_file: true
+      drive_folder_url: "https://drive.google.com/drive/folders/xxxxx"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - ローカルファイルのアップロード
+    - コンテンツからファイル生成＆アップロード
+    - サブディレクトリ自動作成
+    - 重複ファイル名自動回避
+    - 大ファイル対応（Resumable Upload自動切替）
+  supported_formats:
+    - PDF
+    - 画像（PNG, JPEG, GIF, etc.）
+    - テキストファイル（TXT, JSON, CSV, etc.）
+    - 音声ファイル（MP3, WAV, etc.）
+
+_internal:
+  endpoint: /v1/utility/drive/upload
+  method: POST
+  auth_type: oauth
+  timeout_ms: 120000

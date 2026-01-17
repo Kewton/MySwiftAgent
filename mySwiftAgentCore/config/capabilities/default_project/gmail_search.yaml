@@ -1,0 +1,90 @@
+# Gmail Search Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: gmail_search
+name: Gmail検索
+description: Gmail検索（高速・AIフレンドリー）- キーワード検索、日付範囲指定、未読メール検索、添付ファイル付きメール検索に対応
+version: "1.0.0"
+status: available
+category: utility
+parameters:
+  - name: query
+    type: string
+    required: true
+    description: "Gmail検索クエリ（例: 'is:unread from:sender@example.com'）"
+  - name: max_results
+    type: number
+    required: false
+    description: 取得する最大メール数
+    defaultValue: 10
+  - name: date_after
+    type: string
+    required: false
+    description: この日付以降のメールを検索（YYYY-MM-DD形式）
+  - name: date_before
+    type: string
+    required: false
+    description: この日付以前のメールを検索（YYYY-MM-DD形式）
+  - name: unread_only
+    type: boolean
+    required: false
+    description: 未読メールのみを検索
+    defaultValue: false
+  - name: has_attachment
+    type: boolean
+    required: false
+    description: 添付ファイル付きメールのみを検索
+    defaultValue: false
+returnType: object
+responseSchema:
+  messages:
+    type: array
+    description: 検索結果のメール一覧
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+        threadId:
+          type: string
+        subject:
+          type: string
+        from:
+          type: string
+        date:
+          type: string
+        snippet:
+          type: string
+  result_count:
+    type: integer
+    description: 検索結果の件数
+tags:
+  - email
+  - gmail
+  - search
+  - utility
+examples:
+  - description: 未読メール検索
+    input:
+      query: "is:unread"
+      max_results: 10
+      unread_only: true
+  - description: 特定送信者からのメール検索
+    input:
+      query: "from:sender@example.com"
+      date_after: "2024-01-01"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  performance: "5秒で完了（Utility Agentの36倍高速）"
+  use_cases:
+    - キーワード検索
+    - 日付範囲指定（date_after, date_before）
+    - 未読メール検索（unread_only）
+    - 添付ファイル付きメール検索（has_attachment）
+
+_internal:
+  endpoint: /v1/utility/gmail/search
+  method: POST
+  auth_type: oauth
+  timeout_ms: 30000

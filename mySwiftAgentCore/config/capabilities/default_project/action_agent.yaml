@@ -1,0 +1,45 @@
+# Action Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: action_agent
+name: Action Agent
+description: 汎用アクション実行エージェント - 複数API組み合わせ、複雑なタスク実行
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: 実行指示
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: 実行結果
+tags:
+  - ai
+  - agent
+  - action
+  - mcp
+examples:
+  - description: 複雑なタスク実行
+    input:
+      user_input: "レポートを作成して保存してください"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - 複数API組み合わせ
+    - 複雑なタスク実行
+  mcp_tools:
+    - read_file
+    - write_file
+    - create_directory
+    - list_directory
+
+_internal:
+  endpoint: /v1/aiagent/utility/action
+  method: POST
+  auth_type: api_key
+  timeout_ms: 90000

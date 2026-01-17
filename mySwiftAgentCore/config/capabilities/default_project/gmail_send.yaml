@@ -1,0 +1,68 @@
+# Gmail Send Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: gmail_send
+name: Gmail送信
+description: メール送信（高速・Direct API）- 宛先、件名、本文を指定してメール送信、HTML形式メール対応
+version: "1.0.0"
+status: available
+category: utility
+parameters:
+  - name: to
+    type: string
+    required: true
+    description: 宛先メールアドレス
+  - name: subject
+    type: string
+    required: true
+    description: 件名
+  - name: body
+    type: string
+    required: true
+    description: メール本文（プレーンテキスト）
+  - name: html_body
+    type: string
+    required: false
+    description: HTML本文（html_bodyを指定した場合、bodyより優先される）
+  - name: project
+    type: string
+    required: false
+    description: MyVaultプロジェクト名（認証情報取得用）
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: 送信結果メッセージ
+  message_id:
+    type: string
+    description: 送信されたメールのID
+tags:
+  - email
+  - gmail
+  - send
+  - utility
+examples:
+  - description: プレーンテキストメール送信
+    input:
+      to: "recipient@example.com"
+      subject: "テストメール"
+      body: "これはテストメールです。"
+  - description: HTMLメール送信
+    input:
+      to: "recipient@example.com"
+      subject: "HTMLメール"
+      body: "プレーンテキスト版"
+      html_body: "<h1>HTMLメール</h1><p>本文</p>"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  performance: "3-5秒で完了"
+  use_cases:
+    - 宛先、件名、本文を指定してメール送信
+    - HTML形式メール対応
+
+_internal:
+  endpoint: /v1/utility/gmail/send
+  method: POST
+  auth_type: oauth
+  timeout_ms: 30000

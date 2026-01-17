@@ -1,0 +1,60 @@
+# Google Drive Upload from URL Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: google_drive_upload_from_url
+name: Google Drive Upload from URL
+description: URLからファイルダウンロード＆Google Driveアップロード - Web上のファイルを直接Google Driveにアップロード
+version: "1.0.0"
+status: available
+category: storage
+parameters:
+  - name: url
+    type: string
+    required: true
+    description: ダウンロード元URL
+  - name: drive_folder_url
+    type: string
+    required: false
+    description: Google DriveフォルダURL
+  - name: file_name
+    type: string
+    required: false
+    description: 保存ファイル名
+returnType: object
+responseSchema:
+  status:
+    type: string
+    description: 処理ステータス
+  file_id:
+    type: string
+    description: Google Drive ファイルID
+  file_name:
+    type: string
+    description: アップロードされたファイル名
+  web_view_link:
+    type: string
+    description: ファイル閲覧用URL
+tags:
+  - storage
+  - google-drive
+  - upload
+  - url
+  - download
+examples:
+  - description: URLからPDFをダウンロードしてアップロード
+    input:
+      url: "https://example.com/document.pdf"
+      drive_folder_url: "https://drive.google.com/drive/folders/xxxxx"
+      file_name: "downloaded_document.pdf"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - Web上のファイルを直接Google Driveにアップロード
+    - PDFダウンロード＆アップロード
+
+_internal:
+  endpoint: /v1/utility/drive/upload_from_url
+  method: POST
+  auth_type: oauth
+  timeout_ms: 120000

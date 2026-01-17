@@ -1,0 +1,28 @@
+# JSON Stringify Capability
+# Simple test capability for verification
+
+id: json_stringify
+name: JSON Stringify
+description: Convert data object to JSON string
+version: "1.0.0"
+status: available
+category: utility
+parameters:
+  - name: data
+    type: object
+    required: true
+    description: Data object to stringify
+returnType: object
+responseSchema:
+  json_string:
+    type: string
+    description: JSON stringified data
+tags:
+  - utility
+  - json
+  - test
+
+_internal:
+  endpoint: /v1/utility/json_stringify
+  method: POST
+  timeout_ms: 10000

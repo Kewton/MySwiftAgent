@@ -1,0 +1,56 @@
+# JSON Output Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: json_output_agent
+name: JSON Output Agent
+description: 構造化JSON出力専用エージェント - 自然言語→JSON変換、常にJSON形式で返却、force_json不要（常にJSON）
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: ユーザー入力（自然言語またはJSON変換対象テキスト）
+  - name: system_prompt
+    type: string
+    required: false
+    description: システムプロンプト（JSON構造を指定）
+  - name: model
+    type: string
+    required: false
+    description: 使用するLLMモデル
+    defaultValue: "gemini-2.5-flash"
+returnType: object
+responseSchema:
+  result:
+    type: object
+    description: JSON形式の構造化出力
+tags:
+  - ai
+  - agent
+  - json
+  - structured-output
+examples:
+  - description: 自然言語からJSONに変換
+    input:
+      user_input: "名前: 田中太郎、年齢: 30歳、職業: エンジニア"
+      system_prompt: "入力をJSON形式に変換してください。{name, age, occupation}の形式で出力してください。"
+  - description: テキスト解析してJSON出力
+    input:
+      user_input: "東京は日本の首都で、人口は約1400万人です。"
+      system_prompt: "テキストから情報を抽出して{city, country, population}のJSON形式で出力してください。"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  recommended_timeout: 90
+  use_cases:
+    - 自然言語→JSON変換
+    - 常にJSON形式で返却
+    - force_json不要（常にJSON）
+
+_internal:
+  endpoint: /v1/aiagent/utility/jsonoutput
+  method: POST
+  auth_type: api_key
+  timeout_ms: 90000

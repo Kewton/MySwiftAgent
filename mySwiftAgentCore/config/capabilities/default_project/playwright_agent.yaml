@@ -1,0 +1,58 @@
+# Playwright Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: playwright_agent
+name: Playwright Agent
+description: ブラウザ自動化エージェント（MCP Playwright使用）- Webスクレイピング、フォーム操作、ブラウザ自動化、スクリーンショット取得
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: ブラウザ操作指示
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: 操作結果
+tags:
+  - ai
+  - agent
+  - browser
+  - playwright
+  - scraping
+  - mcp
+examples:
+  - description: Webスクレイピング
+    input:
+      user_input: "https://example.com のページをスクレイピングして内容を取得してください"
+  - description: スクリーンショット取得
+    input:
+      user_input: "https://news.ycombinator.com を開いてスクリーンショットを撮影してください"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - Webスクレイピング
+    - フォーム操作
+    - ブラウザ自動化
+    - スクリーンショット取得
+  mcp_tools:
+    - browser_navigate
+    - browser_snapshot
+    - browser_click
+    - browser_type
+    - browser_evaluate
+    - browser_take_screenshot
+  limitations:
+    - 不安定な動作の可能性あり
+    - 複雑なWebページでは失敗する可能性
+    - 推奨代替: Google検索API + fetchAgent
+
+_internal:
+  endpoint: /v1/aiagent/utility/playwright
+  method: POST
+  auth_type: api_key
+  timeout_ms: 180000

@@ -1,0 +1,96 @@
+# Text-to-Speech + Google Drive Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: text_to_speech_drive
+name: Text-to-Speech + Google Drive
+description: 音声合成 + Google Driveアップロード - テキストを音声ファイル（MP3）に変換して自動でGoogle Driveにアップロード、公開リンクを返却
+version: "1.0.0"
+status: available
+category: media
+parameters:
+  - name: text
+    type: string
+    required: true
+    description: 音声合成するテキスト（最大4096文字）
+  - name: drive_folder_url
+    type: string
+    required: false
+    description: Google DriveフォルダURL
+  - name: file_name
+    type: string
+    required: false
+    description: 保存ファイル名（未指定時は自動生成）
+  - name: sub_directory
+    type: string
+    required: false
+    description: サブディレクトリパス（例: 'podcasts/2025'）
+  - name: model
+    type: string
+    required: false
+    description: TTSモデル（tts-1, tts-1-hd）
+    defaultValue: "tts-1"
+    validation:
+      enum:
+        - tts-1
+        - tts-1-hd
+  - name: voice
+    type: string
+    required: false
+    description: 音声タイプ
+    defaultValue: "alloy"
+    validation:
+      enum:
+        - alloy
+        - echo
+        - fable
+        - onyx
+        - nova
+        - shimmer
+returnType: object
+responseSchema:
+  file_id:
+    type: string
+    description: Google Drive ファイルID
+  file_name:
+    type: string
+    description: アップロードされたファイル名（拡張子.mp3を含む）
+  web_view_link:
+    type: string
+    description: ファイル閲覧用URL（ブラウザで開く用の公開リンク）
+  web_content_link:
+    type: string
+    description: ファイルダウンロード用URL（直接ダウンロード用）
+  folder_path:
+    type: string
+    description: アップロード先フォルダパス（例: 'ルート' または 'podcasts/2025'）
+  file_size_mb:
+    type: number
+    description: ファイルサイズ（メガバイト単位）
+tags:
+  - media
+  - tts
+  - audio
+  - speech
+  - google-drive
+  - storage
+examples:
+  - description: 音声生成してGoogle Driveにアップロード
+    input:
+      text: "ポッドキャストの音声を生成します。"
+      drive_folder_url: "https://drive.google.com/drive/folders/xxxxx"
+      file_name: "podcast_episode_1.mp3"
+      sub_directory: "podcasts/2025"
+      voice: "nova"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - テキストを音声ファイル（MP3）に変換
+    - 自動でGoogle Driveにアップロード
+    - 公開リンクを返却
+
+_internal:
+  endpoint: /v1/utility/text_to_speech_drive
+  method: POST
+  auth_type: oauth
+  timeout_ms: 120000

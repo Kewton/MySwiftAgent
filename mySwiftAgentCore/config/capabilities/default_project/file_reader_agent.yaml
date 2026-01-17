@@ -1,0 +1,54 @@
+# File Reader Agent Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: file_reader_agent
+name: File Reader Agent
+description: ファイル読み取りエージェント - テキストファイル読み取り、PDFファイル読み取り、画像の読み取り・OCR、複数ファイルの一括処理
+version: "1.0.0"
+status: available
+category: ai_agent
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: 読み取り指示（ファイルパスや処理内容）
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: ファイル内容または処理結果
+tags:
+  - ai
+  - agent
+  - file
+  - reader
+  - ocr
+  - pdf
+  - mcp
+examples:
+  - description: テキストファイル読み取り
+    input:
+      user_input: "/tmp/document.txt の内容を読み取ってください"
+  - description: PDF読み取り
+    input:
+      user_input: "/tmp/report.pdf からテキストを抽出してください"
+  - description: 画像のOCR処理
+    input:
+      user_input: "/tmp/screenshot.png の文字を読み取ってください"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - テキストファイル読み取り
+    - PDFファイル読み取り
+    - 画像の読み取り・OCR
+    - 複数ファイルの一括処理
+  mcp_tools:
+    - read_file
+    - list_directory
+
+_internal:
+  endpoint: /v1/aiagent/utility/file_reader
+  method: POST
+  auth_type: api_key
+  timeout_ms: 90000

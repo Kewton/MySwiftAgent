@@ -1,0 +1,43 @@
+# TTS + Google Drive + Gmail Notification Capability
+# Migrated from expert_agent_capabilities.yaml
+
+id: tts_upload_drive_and_notify
+name: TTS + Google Drive + Gmail通知
+description: 音声合成 + アップロード + メール通知 - テキストを音声ファイルに変換してGoogle Driveにアップロード、完了通知をメール送信
+version: "1.0.0"
+status: available
+category: media
+parameters:
+  - name: user_input
+    type: string
+    required: true
+    description: 音声合成するテキストメッセージ
+returnType: object
+responseSchema:
+  result:
+    type: string
+    description: アップロード結果メッセージとURL
+tags:
+  - media
+  - tts
+  - audio
+  - google-drive
+  - gmail
+  - notification
+examples:
+  - description: 音声生成してアップロード＆メール通知
+    input:
+      user_input: "ポッドキャストエピソードの内容をここに入力します。"
+metadata:
+  author: MySwiftAgent Team
+  created: "2024-01-15"
+  use_cases:
+    - テキストを音声ファイルに変換
+    - Google Driveにアップロード
+    - 完了通知をメール送信
+
+_internal:
+  endpoint: /v1/utility/tts_and_upload_drive
+  method: POST
+  auth_type: oauth
+  timeout_ms: 180000
