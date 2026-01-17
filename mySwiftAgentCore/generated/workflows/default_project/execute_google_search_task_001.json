@@ -1,12 +1,11 @@
 {
   "workflow_name": "execute_google_search_task_001",
-  "description": "Performs a web search using Google to gather relevant information",
+  "description": "Perform a web search using Google to gather relevant information",
   "input_schema": {
     "type": "object",
     "properties": {
       "query": {
-        "type": "string",
-        "description": "Search query to execute"
+        "type": "string"
       }
     },
     "required": [
@@ -17,23 +16,21 @@
     "type": "object",
     "properties": {
       "results": {
-        "type": "array",
-        "description": "Search results from Google"
+        "type": "array"
       }
     }
   },
   "steps": [
     {
-      "id": "search_google",
+      "id": "perform_google_search",
       "type": "api_rest",
-      "description": "Execute Google search with provided query",
+      "description": "Execute Google search with the provided query",
       "config": {
         "method": "POST",
-        "url": "/capabilities/google_search",
+        "url": "/capabilities/google_search/execute",
         "headers": {
           "Content-Type": "application/json"
-        },
-        "timeout": 30000
+        }
       },
       "params": {
         "body": {
@@ -43,6 +40,6 @@
     }
   ],
   "output": {
-    "results": "$steps.search_google.results"
+    "results": "$steps.perform_google_search.results"
   }
 }

@@ -2,9 +2,10 @@
  * ContextManager - Workflow execution context management
  *
  * Issue #363: Manages context during workflow execution
+ * Issue #372: Extended to support CapabilityExecutor
  */
 
-import type { ExecutionContext } from '../nodes/BaseNode.js';
+import type { ExecutionContext, ICapabilityExecutor } from '../nodes/BaseNode.js';
 import type { InternalWorkflowDefinition } from '../types/InternalWorkflowDefinition.js';
 
 /**
@@ -13,6 +14,8 @@ import type { InternalWorkflowDefinition } from '../types/InternalWorkflowDefini
 export interface ContextManagerConfig {
   secrets?: Record<string, string>;
   variables?: Record<string, unknown>;
+  /** Issue #372: CapabilityExecutor for capability_id based API execution */
+  capabilityExecutor?: ICapabilityExecutor;
 }
 
 /**
@@ -22,12 +25,14 @@ export interface ContextManagerConfig {
  * - Variable resolution
  * - Step result storage
  * - Secret management
+ * - Issue #372: CapabilityExecutor support
  */
 export class ContextManager {
   private readonly workflowId: string;
   private readonly stepResults: Map<string, unknown>;
   private readonly variables: Map<string, unknown>;
   private readonly secrets: Record<string, string>;
+  private readonly capabilityExecutor?: ICapabilityExecutor;
 
   constructor(
     workflow: InternalWorkflowDefinition,
@@ -37,6 +42,7 @@ export class ContextManager {
     this.stepResults = new Map();
     this.variables = new Map(Object.entries(workflow.variables || {}));
     this.secrets = config.secrets || {};
+    this.capabilityExecutor = config.capabilityExecutor;
 
     // Add initial variables from config
     if (config.variables) {
@@ -48,6 +54,7 @@ export class ContextManager {
 
   /**
    * Get execution context for a step
+   * Issue #372: Now includes capabilityExecutor if configured
    */
   getContext(): ExecutionContext {
     return {
@@ -55,6 +62,7 @@ export class ContextManager {
       stepResults: Object.fromEntries(this.stepResults),
       variables: Object.fromEntries(this.variables),
       secrets: this.secrets,
+      capabilityExecutor: this.capabilityExecutor,
     };
   }
 
@@ -95,21 +103,43 @@ export class ContextManager {
 
   /**
    * Resolve variable references in a value
-   * Handles ${stepId.output} and ${input.field} patterns
+   * Issue #372: Handles both ${stepId.output} and $stepId.output patterns
+   * Also recursively resolves values in arrays and objects
    */
   resolveValue(value: unknown, inputs: Record<string, unknown>): unknown {
+    // Handle arrays recursively
+    if (Array.isArray(value)) {
+      return value.map((item) => this.resolveValue(item, inputs));
+    }
+
+    // Handle objects recursively (but not null)
+    if (value !== null && typeof value === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value)) {
+        result[key] = this.resolveValue(val, inputs);
+      }
+      return result;
+    }
+
     if (typeof value !== 'string') {
       return value;
     }
 
     // Check for ${...} pattern
-    const match = value.match(/^\$\{(.+)\}$/);
-    if (!match) {
-      return value;
+    const match1 = value.match(/^\$\{(.+)\}$/);
+    if (match1) {
+      const path = match1[1]!;
+      return this.resolvePath(path, inputs);
     }
 
-    const path = match[1]!;
-    return this.resolvePath(path, inputs);
+    // Issue #372: Check for $xxx.yyy pattern (without curly braces)
+    const match2 = value.match(/^\$(\w+(?:\.\w+)*)$/);
+    if (match2) {
+      const path = match2[1]!;
+      return this.resolvePath(path, inputs);
+    }
+
+    return value;
   }
 
   /**

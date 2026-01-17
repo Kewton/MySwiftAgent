@@ -12,7 +12,6 @@ import type {
   NodeExecutionContext,
   NodeValidationResult,
 } from './BaseNode.js';
-import type { CapabilityExecutor } from './CapabilityExecutor.js';
 
 const VALID_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -41,14 +40,6 @@ export interface ApiRestNodeConfig {
   headers?: Record<string, string>;
   /** Authentication configuration */
   auth?: AuthConfig;
-}
-
-/**
- * Extended execution context with capability executor
- */
-export interface ExtendedNodeExecutionContext extends NodeExecutionContext {
-  /** Capability executor for capability_id based execution */
-  capabilityExecutor?: CapabilityExecutor;
 }
 
 /**
@@ -86,7 +77,7 @@ export class ApiRestNodeExecutor implements NodeExecutor {
         capability_id,
         project_id ?? 'default_project',
         params,
-        context as ExtendedNodeExecutionContext
+        context
       );
     }
 
@@ -108,12 +99,13 @@ export class ApiRestNodeExecutor implements NodeExecutor {
 
   /**
    * Execute using capability_id with CapabilityExecutor
+   * Issue #372: Uses ICapabilityExecutor from NodeExecutionContext
    */
   private async executeWithCapability(
     capabilityId: string,
     projectId: string,
     params: Record<string, unknown>,
-    context: ExtendedNodeExecutionContext
+    context: NodeExecutionContext
   ): Promise<NodeResult> {
     if (!context.capabilityExecutor) {
       return {
@@ -176,9 +168,7 @@ export class ApiRestNodeExecutor implements NodeExecutor {
       // Add body for non-GET methods
       if (method !== 'GET' && method !== 'HEAD' && params.body) {
         options.body = JSON.stringify(params.body);
-        if (!requestHeaders['Content-Type']) {
-          requestHeaders['Content-Type'] = 'application/json';
-        }
+        requestHeaders['Content-Type'] ??= 'application/json';
       }
 
       // Execute request
@@ -285,7 +275,7 @@ export class ApiRestNodeExecutor implements NodeExecutor {
       case 'basic':
         return { Authorization: `Basic ${token}` };
       case 'api_key':
-        return { [auth.header_name || 'X-API-Key']: token };
+        return { [auth.header_name ?? 'X-API-Key']: token };
       default:
         return null;
     }

@@ -9,8 +9,11 @@ import * as path from 'path';
 import { createHealthRoutes, createMyVaultCheck, type HealthCheckConfig } from './health.js';
 import { createGeneratorApi, type HandlerDependencies } from '../taskflowGeneratorAgent/api/index.js';
 import { WorkflowRegistry } from '../taskflowEngine/registry/WorkflowRegistry.js';
+import { WorkflowRegistrar } from '../taskflowGeneratorAgent/generator/WorkflowRegistrar.js';
+import { WorkflowStorage } from '../taskflowGeneratorAgent/storage/WorkflowStorage.js';
 import { createSecretManagerFromEnv } from '../shared/context/SecretManager.js';
 import { AnthropicClient } from '../taskflowGeneratorAgent/llm/clients/AnthropicClient.js';
+import { createLogger } from '../utils/logger/Logger.js';
 import { createTaskFlowRoutes } from '../taskflowEngine/api/routes.js';
 import type { HandlerDependencies as TaskFlowHandlerDependencies } from '../taskflowEngine/api/handlers.js';
 import { createTaskFlowEngine } from '../taskflowEngine/TaskFlowEngine.js';
@@ -54,10 +57,26 @@ interface RootResponse {
  *
  * Note: This function creates dependencies for the TaskFlow Generator API handlers.
  * The handlers will create WorkflowGenerator and BatchProcessor internally.
+ *
+ * Issue #372: Initialize WorkflowRegistrar to load persisted workflows from disk.
  */
 async function createGeneratorDependencies(): Promise<HandlerDependencies> {
+  const logger = createLogger({ name: 'api-routes' });
+
   // Create workflow registry for registration
   const registry = new WorkflowRegistry();
+
+  // Issue #372: Create WorkflowStorage and Registrar to load persisted workflows
+  const storage = new WorkflowStorage();
+  const registrar = new WorkflowRegistrar({
+    registry,
+    storage,
+    logger,
+  });
+
+  // Initialize registrar to load workflows from disk
+  await registrar.initialize();
+  logger.info('WorkflowRegistrar initialized with persisted workflows');
 
   // Get API key from SecretManager (MyVault or environment fallback)
   const secretManager = createSecretManagerFromEnv();
@@ -81,6 +100,7 @@ async function createGeneratorDependencies(): Promise<HandlerDependencies> {
     llmClient,
     registry,
     langfuseConfig,
+    registrar,
   };
 }
 

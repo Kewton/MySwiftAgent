@@ -55,7 +55,7 @@ export class CapabilityExecutor {
     capabilityId: string,
     params: Record<string, unknown>,
     context: NodeExecutionContext,
-    projectId: string = 'default_project'
+    projectId = 'default_project'
   ): Promise<NodeResult> {
     try {
       // Look up capability
@@ -110,8 +110,12 @@ export class CapabilityExecutor {
       };
 
       // Add body for non-GET/HEAD methods
-      if (method !== 'GET' && method !== 'HEAD' && Object.keys(params).length > 0) {
-        options.body = JSON.stringify(params);
+      // Issue #372: Extract params.body if it exists (TaskFlow workflow format)
+      if (method !== 'GET' && method !== 'HEAD') {
+        const bodyContent = ('body' in params) ? params.body : params;
+        if (bodyContent && typeof bodyContent === 'object' && Object.keys(bodyContent as Record<string, unknown>).length > 0) {
+          options.body = JSON.stringify(bodyContent);
+        }
       }
 
       // Execute request
@@ -174,7 +178,7 @@ export class CapabilityExecutor {
    */
   async validate(
     capabilityId: string,
-    projectId: string = 'default_project'
+    projectId = 'default_project'
   ): Promise<NodeValidationResult> {
     const errors: string[] = [];
 

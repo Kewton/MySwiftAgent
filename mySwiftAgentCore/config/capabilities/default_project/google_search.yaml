@@ -1,45 +1,99 @@
 # Google Search Capability
-# Issue #365: Sample capability with _internal section
+# Migrated from expert_agent_capabilities.yaml
 
 id: google_search
-name: Google Search
-description: Search the web using Google Custom Search API
+name: Google検索
+description: Web検索（Serper API使用）- LLMによるナレッジ抽出を含むため処理時間が長い。キーワード検索、複数クエリ一括検索対応
 version: "1.0.0"
 status: available
 category: search
 parameters:
-  - name: query
-    type: string
+  - name: queries
+    type: array
     required: true
-    description: The search query string
-  - name: num_results
+    description: 検索クエリのリスト
+  - name: num
     type: number
     required: false
-    description: Number of results to return (1-10)
+    description: 各クエリの検索結果件数
     defaultValue: 10
     validation:
       min: 1
-      max: 10
+      max: 100
 returnType: object
+responseSchema:
+  search_results:
+    type: array
+    description: 検索結果のリスト（クエリごとに1つのオブジェクト）
+    items:
+      type: object
+      properties:
+        title:
+          type: string
+          description: 検索結果のタイトル
+        link:
+          type: string
+          description: 検索結果のURL
+        knowledge:
+          type: string
+          description: LLMが抽出したナレッジ情報
+        original_query:
+          type: string
+          description: 元の検索クエリ
+  search_results_count:
+    type: integer
+    description: 検索結果の件数
+  status:
+    type: string
+    description: ステータス（通常 'ok'）
 tags:
   - search
   - web
   - google
+  - serper
+  - knowledge-extraction
 examples:
-  - description: Basic search
+  - description: 単一クエリ検索
     input:
-      query: "TypeScript best practices"
-      num_results: 5
+      queries:
+        - "TypeScript best practices"
+      num: 5
+  - description: 複数クエリ一括検索
+    input:
+      queries:
+        - "React hooks tutorial"
+        - "Vue 3 composition API"
+      num: 3
 metadata:
   author: MySwiftAgent Team
   created: "2024-01-15"
+  recommended_timeout: 180
+  implementation: "Serper API経由でGoogle検索 + LLMナレッジ抽出"
+  performance_note: "各検索結果に対してLLMでナレッジ抽出を行うため、num=3で約2分程度かかる場合がある"
+  use_cases:
+    - キーワード検索
+    - 複数クエリ一括検索（queries配列）
+    - 検索結果件数指定（num）
+  workflow_usage_example: |
+    # fetchAgentでAPIを呼び出した後、結果を参照するパターン:
+    # 1. APIレスポンス全体: :google_search_api
+    # 2. 検索結果配列: :google_search_api.result.search_results
+    # 3. 最初の検索結果: :google_search_api.result.search_results[0]
+    #
+    # shiftAgentを使う場合（推奨）:
+    # extract_first:
+    #   agent: shiftAgent
+    #   inputs:
+    #     array: :google_search_api.result.search_results
+    #
+    # その後: :extract_first.item.title, :extract_first.item.link, :extract_first.item.knowledge でアクセス
+    #
+    # 注意: fetchAgentのレスポンスは .result プロパティに格納されるため、
+    # :api_node.result.search_results のようにアクセスする必要がある
 
-# Internal implementation details (not exposed to clients)
 _internal:
-  endpoint: https://www.googleapis.com/customsearch/v1
-  method: GET
+  endpoint: /v1/utility/google_search
+  method: POST
   auth_type: api_key
-  secret_key: GOOGLE_API_KEY
-  timeout_ms: 10000
-  config:
-    search_engine_id: GOOGLE_CSE_ID
+  secret_key: SERPER_API_KEY
+  timeout_ms: 180000

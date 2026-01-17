@@ -38,26 +38,25 @@
       "description": "Send email via Gmail API",
       "config": {
         "method": "POST",
-        "url": "/api/capabilities/gmail_send/execute",
+        "url": "/capabilities/gmail_send",
         "headers": {
           "Content-Type": "application/json"
-        },
-        "timeout": 30000
+        }
       },
       "params": {
         "body": {
           "to": "$input.to_email",
           "subject": "$input.subject",
-          "body": "$input.summary"
+          "text": "$input.summary"
         }
       }
     },
     {
       "id": "format_response",
       "type": "transform",
-      "description": "Format the response to match output schema",
+      "description": "Format the response",
       "config": {
-        "expression": "({ success: response.success || false, message_id: response.message_id || '' })"
+        "expression": "({ success: !!response.message_id, message_id: response.message_id || '' })"
       },
       "params": {
         "response": "$steps.send_gmail"

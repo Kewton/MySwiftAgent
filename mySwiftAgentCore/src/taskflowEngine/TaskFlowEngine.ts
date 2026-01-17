@@ -2,12 +2,13 @@
  * TaskFlowEngine - High-level facade for TaskFlow execution
  *
  * Issue #363: Main entry point for executing workflows
+ * Issue #372: Extended to support CapabilityExecutor for capability_id based API execution
  */
 
 import type { WorkflowDefinition, WorkflowExecutionResult } from '../shared/types/workflow.types.js';
 import { createDefaultNodeRegistry } from './nodes/index.js';
 import { WorkflowExecutor } from './executor/WorkflowExecutor.js';
-import type { NodeRegistry } from './nodes/BaseNode.js';
+import type { NodeRegistry, ICapabilityExecutor } from './nodes/BaseNode.js';
 import type { InternalWorkflowDefinition } from './types/InternalWorkflowDefinition.js';
 import type { NodeType } from './types/TaskFlowDefinition.js';
 
@@ -23,6 +24,8 @@ export interface TaskFlowEngineConfig {
   enableRecovery?: boolean;
   /** Custom node registry */
   nodeRegistry?: NodeRegistry;
+  /** Issue #372: CapabilityExecutor for capability_id based API execution */
+  capabilityExecutor?: ICapabilityExecutor;
 }
 
 /**
@@ -40,13 +43,21 @@ export interface TaskFlowExecutionOptions {
 }
 
 /**
+ * Required config type with capabilityExecutor as optional
+ */
+type ResolvedTaskFlowEngineConfig = Required<Omit<TaskFlowEngineConfig, 'capabilityExecutor'>> & {
+  capabilityExecutor?: ICapabilityExecutor;
+};
+
+/**
  * TaskFlowEngine - Main workflow execution facade
  *
  * Provides a simplified interface for executing TaskFlow workflows.
  * Wraps the underlying WorkflowExecutor with sensible defaults.
+ * Issue #372: Supports CapabilityExecutor for capability_id based API execution
  */
 export class TaskFlowEngine {
-  private readonly config: Required<TaskFlowEngineConfig>;
+  private readonly config: ResolvedTaskFlowEngineConfig;
   private readonly executor: WorkflowExecutor;
 
   constructor(config: TaskFlowEngineConfig = {}) {
@@ -55,11 +66,13 @@ export class TaskFlowEngine {
       defaultTimeout: config.defaultTimeout ?? 30000,
       enableRecovery: config.enableRecovery ?? true,
       nodeRegistry: config.nodeRegistry ?? createDefaultNodeRegistry(),
+      capabilityExecutor: config.capabilityExecutor,
     };
 
     this.executor = new WorkflowExecutor({
       nodeRegistry: this.config.nodeRegistry,
       defaultTimeout: this.config.defaultTimeout,
+      capabilityExecutor: this.config.capabilityExecutor,
     });
   }
 
@@ -101,22 +114,29 @@ export class TaskFlowEngine {
     }
 
     // Convert WorkflowDefinition to InternalWorkflowDefinition
-    const internalWorkflow: InternalWorkflowDefinition = {
-      id: workflow.id,
-      name: workflow.name,
-      version: workflow.version,
-      steps: workflow.steps.map((step) => ({
-        id: step.id,
-        name: step.name || step.id,
-        type: (step.type || 'action') as NodeType,
-        config: step.config || {},
-        params: {},
-        dependsOn: step.dependsOn,
-      })),
-      inputSchema: { type: 'object' },
-      outputSchema: { type: 'object' },
-      outputMapping: {},
-    };
+    // Issue #372: Check if workflow is already InternalWorkflowDefinition (has inputSchema)
+    // If so, use it directly to preserve params
+    const isInternalWorkflow = 'inputSchema' in workflow && 'outputMapping' in workflow;
+
+    const internalWorkflow: InternalWorkflowDefinition = isInternalWorkflow
+      ? (workflow as unknown as InternalWorkflowDefinition)
+      : {
+          id: workflow.id,
+          name: workflow.name,
+          version: workflow.version,
+          steps: workflow.steps.map((step) => ({
+            id: step.id,
+            name: step.name || step.id,
+            type: (step.type || 'action') as NodeType,
+            config: step.config || {},
+            // Issue #372: Preserve params if they exist (for InternalWorkflowStep)
+            params: ('params' in step ? step.params : {}) as Record<string, unknown>,
+            dependsOn: step.dependsOn,
+          })),
+          inputSchema: { type: 'object' },
+          outputSchema: { type: 'object' },
+          outputMapping: {},
+        };
 
     // Execute
     const result = await this.executor.execute(internalWorkflow, {
@@ -159,8 +179,9 @@ export class TaskFlowEngine {
 
   /**
    * Get engine configuration
+   * Issue #372: Returns ResolvedTaskFlowEngineConfig (capabilityExecutor is optional)
    */
-  getConfig(): Readonly<Required<TaskFlowEngineConfig>> {
+  getConfig(): Readonly<ResolvedTaskFlowEngineConfig> {
     return { ...this.config };
   }
 }

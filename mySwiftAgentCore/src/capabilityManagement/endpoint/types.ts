@@ -24,9 +24,7 @@ export interface EndpointConfig {
 /**
  * API endpoints configuration map
  */
-export interface ApiEndpointsConfig {
-  [key: string]: EndpointConfig;
-}
+export type ApiEndpointsConfig = Record<string, EndpointConfig>;
 
 /**
  * Authentication configuration for resolved endpoints

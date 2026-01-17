@@ -2,10 +2,11 @@
  * WorkflowExecutor - Main workflow execution engine
  *
  * Issue #363: Executes TaskFlow workflows
+ * Issue #372: Extended to support CapabilityExecutor
  */
 
 import type { InternalWorkflowDefinition, InternalWorkflowStep } from '../types/InternalWorkflowDefinition.js';
-import type { NodeRegistry, NodeConfig } from '../nodes/BaseNode.js';
+import type { NodeRegistry, NodeConfig, ICapabilityExecutor } from '../nodes/BaseNode.js';
 import { ContextManager, type ContextManagerConfig } from './ContextManager.js';
 import { ParallelExecutionManager } from './ParallelExecutionManager.js';
 import type { ExecutionStatus, StepResult, StepError, WorkflowExecutionResult } from '../../shared/types/workflow.types.js';
@@ -17,6 +18,8 @@ export interface WorkflowExecutorConfig {
   nodeRegistry: NodeRegistry;
   parallelManager?: ParallelExecutionManager;
   defaultTimeout?: number;
+  /** Issue #372: CapabilityExecutor for capability_id based API execution */
+  capabilityExecutor?: ICapabilityExecutor;
 }
 
 /**
@@ -37,14 +40,17 @@ export interface ExecutionOptions {
  * - Dependency resolution
  * - Error handling with partial success
  * - Context management
+ * - Issue #372: CapabilityExecutor support
  */
 export class WorkflowExecutor {
   private readonly config: WorkflowExecutorConfig;
   private readonly parallelManager: ParallelExecutionManager;
+  private readonly capabilityExecutor?: ICapabilityExecutor;
 
   constructor(config: WorkflowExecutorConfig) {
     this.config = config;
     this.parallelManager = config.parallelManager || new ParallelExecutionManager();
+    this.capabilityExecutor = config.capabilityExecutor;
   }
 
   /**
@@ -59,10 +65,11 @@ export class WorkflowExecutor {
     const errors: StepError[] = [];
     const inputs = options.inputs || {};
 
-    // Create context manager
+    // Create context manager with capabilityExecutor (Issue #372)
     const contextConfig: ContextManagerConfig = {
       secrets: options.secrets,
       variables: options.variables,
+      capabilityExecutor: this.capabilityExecutor,
     };
     const contextManager = new ContextManager(workflow, contextConfig);
 

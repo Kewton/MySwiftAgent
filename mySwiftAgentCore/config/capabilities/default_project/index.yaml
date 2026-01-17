@@ -51,6 +51,7 @@ capabilities:
 
   # Other Utility APIs
   - weather_api           # 天気API（既存）
+  - json_stringify        # JSON文字列化（テスト用）
 
   # ===================
   # AI Agent APIs

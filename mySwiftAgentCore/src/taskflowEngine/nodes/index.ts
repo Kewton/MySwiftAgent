@@ -2,6 +2,7 @@
  * TaskFlow Engine Nodes - Index
  *
  * Issue #363: Export all node executors
+ * Issue #372: Export CapabilityExecutor and ICapabilityExecutor interface
  */
 
 // Export specific items from BaseNode to avoid conflicts with shared/context exports
@@ -11,6 +12,7 @@ export type {
   NodeExecutionContext,
   NodeValidationResult,
   NodeExecutor,
+  ICapabilityExecutor,
 } from './BaseNode.js';
 
 export {
@@ -24,6 +26,7 @@ export * from './CodeJsNode.js';
 export * from './LlmNode.js';
 export * from './ParallelNode.js';
 export * from './ActionNode.js';
+export * from './CapabilityExecutor.js';
 
 import { NodeRegistry } from './BaseNode.js';
 import { ApiRestNodeExecutor } from './ApiRestNode.js';

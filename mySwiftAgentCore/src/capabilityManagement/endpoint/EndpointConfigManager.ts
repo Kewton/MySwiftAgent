@@ -51,8 +51,11 @@ export class EndpointConfigManager implements IEndpointConfigManager {
    */
   async loadProjectEndpoints(projectId: string): Promise<ApiEndpointsConfig> {
     // Check cache first
-    if (this.enableCache && this.cache.has(projectId)) {
-      return this.cache.get(projectId)!;
+    if (this.enableCache) {
+      const cached = this.cache.get(projectId);
+      if (cached) {
+        return cached;
+      }
     }
 
     const indexPath = path.resolve(this.basePath, projectId, 'index.yaml');

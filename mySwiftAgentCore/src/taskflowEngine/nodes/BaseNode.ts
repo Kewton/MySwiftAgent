@@ -30,6 +30,19 @@ export interface NodeResult {
 }
 
 /**
+ * CapabilityExecutor interface for URL resolution and execution
+ * Issue #372: Defined here to avoid circular imports
+ */
+export interface ICapabilityExecutor {
+  execute(
+    capabilityId: string,
+    params: Record<string, unknown>,
+    context: NodeExecutionContext,
+    projectId?: string
+  ): Promise<NodeResult>;
+}
+
+/**
  * Execution context passed to nodes
  */
 export interface NodeExecutionContext {
@@ -38,6 +51,8 @@ export interface NodeExecutionContext {
   variables: Record<string, unknown>;
   secrets: Record<string, string>;
   timeout?: number;
+  /** Issue #372: CapabilityExecutor for capability_id based API execution */
+  capabilityExecutor?: ICapabilityExecutor;
 }
 
 /**
