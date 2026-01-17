@@ -265,12 +265,12 @@ if [ "$SUCCESS" = "true" ]; then
         echo "  POST ${BASE_URL}/api/v1/taskflow/execute"
         echo ""
 
-        # ワークフロー実行
+        # ワークフロー実行（ワークフロー名のみ、task_001/ プレフィックスは不要）
         EXEC_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/v1/taskflow/execute" \
           -H "Content-Type: application/json" \
           -d "{
             \"project\": \"default_project\",
-            \"workflow\": \"task_001/${TASK_001_WORKFLOW}\",
+            \"workflow\": \"${TASK_001_WORKFLOW}\",
             \"inputs\": {
               \"query\": \"TypeScript 5.0 new features\"
             }
@@ -287,19 +287,33 @@ if [ "$SUCCESS" = "true" ]; then
         if [ "$EXEC_STATUS" = "success" ]; then
             echo -e "  ${GREEN}✅ Workflow executed successfully${NC} (${EXEC_DURATION}ms)"
             EXECUTION_RESULTS+=("task_001: ✅ PASS (${EXEC_DURATION}ms)")
-        elif [ "$EXEC_STATUS" = "error" ]; then
-            ERROR_CODE=$(echo "$EXEC_RESPONSE" | jq -r '.error.code' 2>/dev/null || echo "unknown")
+        elif [ "$EXEC_STATUS" = "failed" ]; then
+            # ワークフローは見つかったがステップ実行に失敗
+            ERROR_CODE=$(echo "$EXEC_RESPONSE" | jq -r '.errors[0].code' 2>/dev/null || echo "unknown")
+            ERROR_MSG=$(echo "$EXEC_RESPONSE" | jq -r '.errors[0].message' 2>/dev/null || echo "unknown")
+
             if [ "$ERROR_CODE" = "TIMEOUT_ERROR" ]; then
                 echo -e "  ${YELLOW}⚠️ Workflow timed out${NC} (google_search may take 1-3 minutes)"
                 EXECUTION_RESULTS+=("task_001: ⚠️ TIMEOUT (expected for google_search)")
+            elif [ "$ERROR_CODE" = "HTTP_ERROR" ]; then
+                echo -e "  ${YELLOW}⚠️ Workflow found but step execution failed${NC}"
+                echo "     Error: ${ERROR_MSG}"
+                EXECUTION_RESULTS+=("task_001: ⚠️ HTTP_ERROR (${ERROR_MSG})")
             else
                 echo -e "  ${RED}❌ Workflow execution failed${NC}"
-                EXECUTION_RESULTS+=("task_001: ❌ FAIL")
+                echo "     Error: ${ERROR_CODE} - ${ERROR_MSG}"
+                EXECUTION_RESULTS+=("task_001: ❌ FAIL (${ERROR_CODE})")
                 EXECUTION_SUCCESS=false
             fi
+        elif [ "$EXEC_STATUS" = "error" ]; then
+            ERROR_MSG=$(echo "$EXEC_RESPONSE" | jq -r '.error' 2>/dev/null || echo "unknown")
+            echo -e "  ${RED}❌ Workflow not found or error${NC}"
+            echo "     Error: ${ERROR_MSG}"
+            EXECUTION_RESULTS+=("task_001: ❌ ERROR")
+            EXECUTION_SUCCESS=false
         else
             echo -e "  ${YELLOW}⚠️ Unknown execution status: ${EXEC_STATUS}${NC}"
-            EXECUTION_RESULTS+=("task_001: ⚠️ UNKNOWN")
+            EXECUTION_RESULTS+=("task_001: ⚠️ UNKNOWN (${EXEC_STATUS})")
         fi
     else
         echo -e "  ${YELLOW}⚠️ No task_001 workflow found to execute${NC}"
