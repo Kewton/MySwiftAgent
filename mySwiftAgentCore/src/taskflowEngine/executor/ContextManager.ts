@@ -144,6 +144,12 @@ export class ContextManager {
 
   /**
    * Resolve a path reference
+   *
+   * Supports the following path formats:
+   * - $input.field - Access input fields
+   * - $steps.stepId.field - Access step results (graphAiServer format)
+   * - $stepId.field - Access step results directly
+   * - $variable - Access variables
    */
   private resolvePath(path: string, inputs: Record<string, unknown>): unknown {
     const parts = path.split('.');
@@ -153,14 +159,23 @@ export class ContextManager {
     }
 
     const root = parts[0]!;
-    const rest = parts.slice(1);
+    let rest = parts.slice(1);
 
     let value: unknown;
 
     if (root === 'input') {
       value = inputs;
+    } else if (root === 'steps') {
+      // Issue #372: Handle $steps.stepId.field format (graphAiServer compatible)
+      // Extract stepId from rest and use it to get step result
+      if (rest.length === 0) {
+        return undefined;
+      }
+      const stepId = rest[0]!;
+      rest = rest.slice(1);
+      value = this.stepResults.get(stepId);
     } else {
-      // Try step results
+      // Try step results directly (e.g., $stepId.field)
       value = this.stepResults.get(root);
       if (value === undefined) {
         // Try variables

@@ -135,7 +135,8 @@ export class TaskFlowEngine {
           })),
           inputSchema: { type: 'object' },
           outputSchema: { type: 'object' },
-          outputMapping: {},
+          // Issue #372: Convert output field to outputMapping for result extraction
+          outputMapping: workflow.output || {},
         };
 
     // Execute

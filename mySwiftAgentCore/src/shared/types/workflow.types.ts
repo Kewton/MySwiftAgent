@@ -81,6 +81,8 @@ export interface WorkflowDefinition {
   steps: WorkflowStep[];
   variables?: Record<string, unknown>;
   timeout?: number;
+  /** Issue #372: Output mapping for workflow results (maps output keys to step result paths) */
+  output?: Record<string, string>;
 }
 
 /**
