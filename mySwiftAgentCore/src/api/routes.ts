@@ -18,6 +18,10 @@ import { createTaskFlowRoutes } from '../taskflowEngine/api/routes.js';
 import type { HandlerDependencies as TaskFlowHandlerDependencies } from '../taskflowEngine/api/handlers.js';
 import { createTaskFlowEngine } from '../taskflowEngine/TaskFlowEngine.js';
 import { createSchemaValidator } from '../taskflowEngine/validator/SchemaValidator.js';
+// Issue #375: Workflow reload API integration
+import { createTaskFlowReloadRoutes, type ReloadHandlerDependencies } from './routes/taskflow-reload.js';
+import { createWorkflowReloader } from '../taskflowEngine/loader/WorkflowReloader.js';
+import { createWorkflowLoader } from '../taskflowEngine/loader/WorkflowLoader.js';
 // Issue #372: CapabilityExecutor integration imports
 import {
   createCapabilityRegistry,
@@ -48,6 +52,7 @@ interface RootResponse {
     health: string;
     taskflowEngine: string;
     taskflowGenerator: string;
+    taskflowReload: string;
     capabilities: string;
   };
 }
@@ -59,8 +64,13 @@ interface RootResponse {
  * The handlers will create WorkflowGenerator and BatchProcessor internally.
  *
  * Issue #372: Initialize WorkflowRegistrar to load persisted workflows from disk.
+ * Issue #374: Accept CapabilityRegistry for capability enrichment in handlers.
+ *
+ * @param capabilityRegistry - Optional CapabilityRegistry for enriching capabilities
  */
-async function createGeneratorDependencies(): Promise<HandlerDependencies> {
+async function createGeneratorDependencies(
+  capabilityRegistry?: import('../capabilityManagement/registry/CapabilityRegistry.js').CapabilityRegistry
+): Promise<HandlerDependencies> {
   const logger = createLogger({ name: 'api-routes' });
 
   // Create workflow registry for registration
@@ -101,55 +111,39 @@ async function createGeneratorDependencies(): Promise<HandlerDependencies> {
     registry,
     langfuseConfig,
     registrar,
+    // Issue #374: Include capabilityRegistry for capability enrichment
+    capabilityRegistry,
   };
 }
 
 /**
- * Create TaskFlow Engine dependencies
+ * Create TaskFlow Engine dependencies with shared CapabilityRegistry
  *
- * Issue #372: Now includes CapabilityExecutor for capability_id based API execution.
- * Creates all required dependencies for TaskFlow Engine API handlers.
+ * Issue #374: Uses pre-loaded CapabilityRegistry shared with Generator API.
+ * This ensures consistency between capability enrichment and execution.
  *
  * @param registry - WorkflowRegistry for workflow management
  * @param capabilitiesBasePath - Base path for capability configuration files
+ * @param capabilityRegistry - Pre-loaded CapabilityRegistry
+ * @param secretManager - Optional SecretManager for LLM API key access
  */
-async function createTaskFlowEngineDependencies(
+async function createTaskFlowEngineDependenciesWithRegistry(
   registry: WorkflowRegistry,
-  capabilitiesBasePath: string
+  capabilitiesBasePath: string,
+  capabilityRegistry: import('../capabilityManagement/registry/CapabilityRegistry.js').CapabilityRegistry,
+  secretManager?: import('../shared/context/SecretManager.js').SecretManager
 ): Promise<TaskFlowHandlerDependencies> {
-  // Issue #372: Create capability management dependencies
-  // 1. Create CapabilityRegistry
-  const capabilityRegistry = createCapabilityRegistry();
-
-  // 2. Create CapabilityLoader and load capabilities
-  const capabilityLoader = createCapabilityLoader(capabilitiesBasePath, capabilityRegistry);
-  const loadResult = await capabilityLoader.loadProject('default_project');
-
-  // Log capability loading result
-  if (loadResult.hasCapabilities) {
-    console.log(
-      `[TaskFlowEngine] Loaded ${loadResult.successful.length} capabilities for default_project`
-    );
-    if (loadResult.failed.length > 0) {
-      console.warn(
-        `[TaskFlowEngine] Failed to load ${loadResult.failed.length} capabilities:`,
-        loadResult.failed.map((f) => f.file)
-      );
-    }
-  } else {
-    console.warn('[TaskFlowEngine] No capabilities loaded for default_project');
-  }
-
-  // 3. Create EndpointConfigManager for URL resolution
+  // Issue #374: Use provided capabilityRegistry (already loaded)
+  // 1. Create EndpointConfigManager for URL resolution
   const endpointConfigManager = createEndpointConfigManager(capabilitiesBasePath);
 
-  // 4. Create URLResolver
+  // 2. Create URLResolver
   const urlResolver = createURLResolver(endpointConfigManager, 'default_project');
 
-  // 5. Create CapabilityExecutor
+  // 3. Create CapabilityExecutor with shared registry
   const capabilityExecutor = createCapabilityExecutor(capabilityRegistry, urlResolver);
 
-  // 6. Create TaskFlowEngine with CapabilityExecutor
+  // 4. Create TaskFlowEngine with CapabilityExecutor
   const executor = createTaskFlowEngine({
     capabilityExecutor,
   });
@@ -161,6 +155,7 @@ async function createTaskFlowEngineDependencies(
     registry,
     executor,
     validator,
+    secretManager,
   };
 }
 
@@ -200,6 +195,7 @@ export async function createApiRoutes(config: ApiConfig): Promise<Hono> {
         health: '/health',
         taskflowEngine: '/api/v1/taskflow',
         taskflowGenerator: '/api/v1/generator',
+        taskflowReload: '/api/v1/taskflow/reload',
         capabilities: '/api/v1/capabilities',
       },
     };
@@ -212,24 +208,65 @@ export async function createApiRoutes(config: ApiConfig): Promise<Hono> {
       version: 'v1',
       endpoints: [
         { path: '/api/v1/taskflow', description: 'TaskFlow Engine API' },
+        { path: '/api/v1/taskflow/reload', description: 'TaskFlow Reload API (Issue #375)' },
         { path: '/api/v1/generator', description: 'TaskFlow Generator Agent API' },
         { path: '/api/v1/capabilities', description: 'Capability Management API' },
       ],
     });
   });
 
+  // Issue #374: Create CapabilityRegistry early and share between Generator and Engine
+  // This ensures that capability enrichment in Generator uses the same registry as Engine
+  const capabilitiesBasePath = path.resolve(process.cwd(), 'config', 'capabilities');
+  const capabilityRegistry = createCapabilityRegistry();
+  const capabilityLoader = createCapabilityLoader(capabilitiesBasePath, capabilityRegistry);
+
+  // Load capabilities for default_project
+  const loadResult = await capabilityLoader.loadProject('default_project');
+  if (loadResult.hasCapabilities) {
+    console.log(
+      `[API Routes] Loaded ${loadResult.successful.length} capabilities for default_project`
+    );
+    if (loadResult.failed.length > 0) {
+      console.warn(
+        `[API Routes] Failed to load ${loadResult.failed.length} capabilities:`,
+        loadResult.failed.map((f) => f.file)
+      );
+    }
+  } else {
+    console.warn('[API Routes] No capabilities loaded for default_project');
+  }
+
   // TaskFlow Generator routes - Issue #364 integration
-  const generatorDeps = await createGeneratorDependencies();
+  // Issue #374: Pass capabilityRegistry for capability enrichment
+  const generatorDeps = await createGeneratorDependencies(capabilityRegistry);
   const generatorApi = createGeneratorApi(generatorDeps);
   app.route('/', generatorApi);
 
+  // Create SecretManager for LLM API key access
+  const secretManager = createSecretManagerFromEnv();
+
   // TaskFlow Engine routes - Issue #363 integration
   // Issue #372: Share registry and load capabilities for capability_id based execution
-  // Capabilities are loaded from config/capabilities directory
-  const capabilitiesBasePath = path.resolve(process.cwd(), 'config', 'capabilities');
-  const taskFlowDeps = await createTaskFlowEngineDependencies(generatorDeps.registry, capabilitiesBasePath);
+  // Issue #374: Reuse capabilityRegistry created above (already loaded)
+  const taskFlowDeps = await createTaskFlowEngineDependenciesWithRegistry(
+    generatorDeps.registry,
+    capabilitiesBasePath,
+    capabilityRegistry,
+    secretManager
+  );
   const taskFlowRoutes = createTaskFlowRoutes(taskFlowDeps);
   app.route('/api/v1/taskflow', taskFlowRoutes);
+
+  // Issue #375: TaskFlow Reload API routes
+  // Create WorkflowLoader with same base path as generator storage
+  const workflowsBasePath = path.resolve(process.cwd(), 'config', 'taskflow', 'projects');
+  const workflowLoader = createWorkflowLoader({ basePath: workflowsBasePath });
+  const workflowReloader = createWorkflowReloader(workflowLoader, generatorDeps.registry);
+
+  const reloadDeps: ReloadHandlerDependencies = { reloader: workflowReloader };
+  const reloadRoutes = createTaskFlowReloadRoutes(reloadDeps);
+  app.route('/api/v1/taskflow', reloadRoutes);
 
   // Capabilities routes (stub)
   app.get('/api/v1/capabilities', (c) => {

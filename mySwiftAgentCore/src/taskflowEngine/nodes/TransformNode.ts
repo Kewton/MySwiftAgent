@@ -29,7 +29,7 @@ export class TransformNodeExecutor implements NodeExecutor {
   async execute(
     config: NodeConfig,
     params: Record<string, unknown>,
-    _context: NodeExecutionContext
+    context: NodeExecutionContext
   ): Promise<NodeResult> {
     try {
       const { template, mapping } = config.config as {
@@ -37,12 +37,19 @@ export class TransformNodeExecutor implements NodeExecutor {
         mapping?: Record<string, string>;
       };
 
+      // Build context with input and steps for resolution
+      const templateContext: Record<string, unknown> = {
+        ...params,
+        input: context.variables['input'] ?? {},
+        steps: context.stepResults,
+      };
+
       let output: unknown;
 
       if (template) {
-        output = this.transformWithTemplate(template, params);
+        output = this.transformWithTemplate(template, templateContext);
       } else if (mapping) {
-        output = this.transformWithMapping(mapping, params);
+        output = this.transformWithMapping(mapping, templateContext);
       } else {
         return {
           success: false,

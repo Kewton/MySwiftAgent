@@ -1,0 +1,68 @@
+{
+  "workflow_name": "send_email_via_gmail_task_003",
+  "description": "Send summarized search results via Gmail",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string"
+      },
+      "to_email": {
+        "type": "string"
+      },
+      "subject": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "summary",
+      "to_email",
+      "subject"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "message_id": {
+        "type": "string"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "send_gmail",
+      "type": "api_rest",
+      "description": "Send email via Gmail API",
+      "config": {
+        "capability_id": "gmail_send",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "to": "$input.to_email",
+          "subject": "$input.subject",
+          "body": "$input.summary"
+        }
+      }
+    },
+    {
+      "id": "format_response",
+      "type": "transform",
+      "description": "Format the response to match output schema",
+      "config": {
+        "mapping": {
+          "success": "$.steps.send_gmail.success",
+          "message_id": "$.steps.send_gmail.message_id"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "success": "$steps.format_response.success",
+    "message_id": "$steps.format_response.message_id"
+  }
+}

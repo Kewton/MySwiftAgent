@@ -68,7 +68,13 @@ export class LlmNodeExecutor implements NodeExecutor {
       }
 
       // Build user prompt from template
-      const userPrompt = this.interpolateTemplate(prompt, params);
+      // Include step results and input in template context
+      const templateContext: Record<string, unknown> = {
+        ...params,
+        steps: context.stepResults,
+        input: context.variables['input'] ?? {},
+      };
+      const userPrompt = this.interpolateTemplate(prompt, templateContext);
 
       // Build messages
       const messages: Array<{ role: string; content: string }> = [];
@@ -171,7 +177,14 @@ export class LlmNodeExecutor implements NodeExecutor {
   ): string {
     return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
       const value = this.getNestedValue(params, key.trim());
-      return value !== undefined ? String(value) : match;
+      if (value !== undefined) {
+        // For arrays and objects, return JSON string
+        if (typeof value === 'object') {
+          return JSON.stringify(value);
+        }
+        return String(value);
+      }
+      return match;
     });
   }
 

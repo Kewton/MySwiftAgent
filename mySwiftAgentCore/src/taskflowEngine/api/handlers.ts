@@ -9,6 +9,7 @@ import type { WorkflowRegistry } from '../registry/WorkflowRegistry.js';
 import type { TaskFlowEngine } from '../TaskFlowEngine.js';
 import type { SchemaValidator } from '../validator/SchemaValidator.js';
 import type { LangfuseTracer } from '../tracer/LangfuseTracer.js';
+import type { SecretManager } from '../../shared/context/SecretManager.js';
 
 /**
  * Handler dependencies
@@ -18,6 +19,7 @@ export interface HandlerDependencies {
   executor: TaskFlowEngine;
   validator: SchemaValidator;
   tracer?: LangfuseTracer;
+  secretManager?: SecretManager;
 }
 
 /**
@@ -69,9 +71,23 @@ export function createExecuteHandler(deps: HandlerDependencies) {
         traceId = deps.tracer.startWorkflowTrace(workflow.id, workflow.name);
       }
 
+      // Get secrets from SecretManager if available
+      let secrets: Record<string, string> = {};
+      if (deps.secretManager) {
+        // Get commonly needed secrets for workflow execution
+        const secretKeys = ['OPENAI_API_KEY', 'LLM_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY'];
+        for (const key of secretKeys) {
+          const value = await deps.secretManager.get(key);
+          if (value) {
+            secrets[key] = value;
+          }
+        }
+      }
+
       // Execute workflow
       const result = await deps.executor.execute(workflow, {
         inputs,
+        secrets,
       });
 
       // End trace
