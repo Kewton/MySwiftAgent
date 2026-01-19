@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "test_results": {
+    "total": 295,
+    "passed": 295,
+    "failed": 0,
+    "skipped": 0
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "capability_id存在チェック",
+      "status": "passed",
+      "details": "CapabilityValidator.test.ts (11 tests) - 参照されているcapability_idが存在するか検証"
+    },
+    {
+      "id": "AC-2",
+      "description": "出力フィールド名チェック ($steps.xxx.yyy)",
+      "status": "passed",
+      "details": "StepReferenceValidator.test.ts (13 tests) - 出力スキーマに存在するか検証、修正提案を生成"
+    },
+    {
+      "id": "AC-3",
+      "description": "テンプレート構文チェック",
+      "status": "passed",
+      "details": "TemplateSyntaxValidator.test.ts (18 tests) - {{expression}}と$.steps.xxxの使い分けを検証"
+    },
+    {
+      "id": "AC-4",
+      "description": "スキーマ一致チェック",
+      "status": "passed",
+      "details": "WorkflowCapabilityValidator.test.ts, ResponseSchemaValidator.test.ts - 前後ステップの型整合性検証"
+    },
+    {
+      "id": "AC-5",
+      "description": "循環参照検出",
+      "status": "passed",
+      "details": "CircularReferenceValidator.test.ts (17 tests) - DFSアルゴリズムで循環参照を検出"
+    },
+    {
+      "id": "AC-6",
+      "description": "修正提案の生成",
+      "status": "passed",
+      "details": "SuggestionHelper.test.ts (23 tests) - Levenshtein距離を使用した修正提案、closestMatch、availableOptions"
+    },
+    {
+      "id": "AC-7",
+      "description": "デバッグモード（ログ出力）",
+      "status": "passed",
+      "details": "DebugValidationObserver.test.ts (19 tests) - パフォーマンスメトリクス収集、バリデーター実行ログ"
+    },
+    {
+      "id": "AC-8",
+      "description": "パフォーマンス目標",
+      "status": "passed",
+      "details": "validation-pipeline.test.ts - 全バリデーター実行時間がベンチマーク内"
+    }
+  ],
+  "integration_status": {
+    "validation_pipeline_updated": true,
+    "component_integrity_validator_added": true,
+    "validators_count": 10,
+    "new_validators": [
+      "StepReferenceValidator",
+      "TemplateSyntaxValidator",
+      "CircularReferenceValidator",
+      "ComponentIntegrityValidator"
+    ]
+  },
+  "design_patterns_verified": {
+    "composite_pattern": "ComponentIntegrityValidator aggregates 3 sub-validators",
+    "singleton_pattern": "RegexPatternCache for regex caching",
+    "observer_pattern": "DebugValidationObserver for debug mode",
+    "shared_cache": "SharedValidationCache for performance optimization"
+  },
+  "errors": [],
+  "timestamp": "2026-01-20T07:35:00Z"
+}

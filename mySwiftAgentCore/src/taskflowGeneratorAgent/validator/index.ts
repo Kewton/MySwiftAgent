@@ -5,6 +5,7 @@
  * Issue #374: WorkflowCapabilityValidator for capability-aware validation
  * Issue #375: OutputMappingValidator and NodeConfigValidator
  * Issue #380: ResponseSchemaValidator for capability response schema validation
+ * Issue #381: ComponentIntegrityValidator for component integrity checking
  */
 
 export * from './ValidationPipeline.js';
@@ -21,3 +22,11 @@ export * from './validators/ResponseSchemaValidator.js';
 
 // Issue #374: Capability-aware validation
 export * from './WorkflowCapabilityValidator.js';
+
+// Issue #381: Component integrity validation
+export * from './ComponentIntegrityValidator.js';
+export * from './validators/StepReferenceValidator.js';
+export * from './validators/TemplateSyntaxValidator.js';
+export * from './validators/CircularReferenceValidator.js';
+export * from './utils/index.js';
+export * from './observers/index.js';

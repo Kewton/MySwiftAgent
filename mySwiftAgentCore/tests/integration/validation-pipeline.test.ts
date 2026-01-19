@@ -52,15 +52,15 @@ describe('ValidationPipeline Integration', () => {
             id: 'get_weather',
             type: 'api_rest',
             config: { capability_id: 'api_weather' },
-            params: { location: '$input.location' },
+            params: { location: '$.input.location' },
           },
           {
             id: 'format_output',
             type: 'transform',
             config: {
               mapping: {
-                temp: '$.get_weather.temperature',
-                desc: '$.get_weather.description',
+                temp: '$steps.get_weather.temperature',
+                desc: '$steps.get_weather.description',
               },
             },
             params: {},

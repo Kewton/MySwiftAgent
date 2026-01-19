@@ -28,3 +28,6 @@ export * from './metrics.js';
 
 // Issue #378: Registration Types
 export * from './registration.js';
+
+// Issue #381: Validation Types for component integrity checking
+export * from './validation.js';

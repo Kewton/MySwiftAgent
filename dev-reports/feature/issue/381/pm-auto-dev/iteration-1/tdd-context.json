@@ -1,0 +1,73 @@
+{
+  "issue_number": 381,
+  "iteration": 1,
+  "project_path": "mySwiftAgentCore",
+  "language": "typescript",
+  "test_framework": "vitest",
+  "context_files": {
+    "design_policy": "dev-reports/feature/issue/381/design-policy.md",
+    "work_plan": "dev-reports/feature/issue/381/work-plan.md",
+    "acceptance_plan": "dev-reports/feature/issue/381/acceptance-plan.md"
+  },
+  "implementation_tasks": [
+    {
+      "task_id": "T1.1",
+      "description": "RegexPatternCache - 正規表現キャッシュ (Singleton/Flyweight)",
+      "file_path": "src/taskflowGeneratorAgent/validator/utils/RegexPatternCache.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/utils/RegexPatternCache.test.ts"
+    },
+    {
+      "task_id": "T1.2",
+      "description": "SuggestionHelper - Levenshtein距離計算と修正提案",
+      "file_path": "src/taskflowGeneratorAgent/validator/utils/SuggestionHelper.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/utils/SuggestionHelper.test.ts"
+    },
+    {
+      "task_id": "T1.3",
+      "description": "validation.ts - 型定義拡張",
+      "file_path": "src/taskflowGeneratorAgent/types/validation.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/types/validation.test.ts"
+    },
+    {
+      "task_id": "T2.1",
+      "description": "StepReferenceValidator - ステップ参照バリデータ",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/StepReferenceValidator.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/validators/StepReferenceValidator.test.ts"
+    },
+    {
+      "task_id": "T2.2",
+      "description": "TemplateSyntaxValidator - テンプレート構文バリデータ",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/TemplateSyntaxValidator.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/validators/TemplateSyntaxValidator.test.ts"
+    },
+    {
+      "task_id": "T2.3",
+      "description": "CircularReferenceValidator - 循環参照検出バリデータ",
+      "file_path": "src/taskflowGeneratorAgent/validator/validators/CircularReferenceValidator.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/validators/CircularReferenceValidator.test.ts"
+    },
+    {
+      "task_id": "T3.1",
+      "description": "ComponentIntegrityValidator - 統合バリデータ",
+      "file_path": "src/taskflowGeneratorAgent/validator/ComponentIntegrityValidator.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/ComponentIntegrityValidator.test.ts"
+    },
+    {
+      "task_id": "T3.2",
+      "description": "DebugValidationObserver - デバッグモード用オブザーバー",
+      "file_path": "src/taskflowGeneratorAgent/validator/observers/DebugValidationObserver.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/observers/DebugValidationObserver.test.ts"
+    },
+    {
+      "task_id": "T4.1",
+      "description": "ValidationPipeline統合 - ComponentIntegrityValidatorを追加",
+      "file_path": "src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "test_path": "tests/unit/taskflowGeneratorAgent/validator/ValidationPipeline.test.ts"
+    }
+  ],
+  "quality_requirements": {
+    "coverage_target": 90,
+    "must_pass_lint": true,
+    "must_pass_type_check": true
+  }
+}

@@ -4,6 +4,7 @@
  * Issue #364: Validation pipeline with multiple validators
  * Issue #375: Added OutputMappingValidator and NodeConfigValidator
  * Issue #380: Added ResponseSchemaValidator for capability response schema validation
+ * Issue #381: Added ComponentIntegrityValidator for component integrity checking
  */
 
 import type {
@@ -27,6 +28,8 @@ import { NodeConfigValidator } from './validators/NodeConfigValidator.js';
 import { WorkflowCapabilityValidator } from './WorkflowCapabilityValidator.js';
 // Issue #380: ResponseSchemaValidator for capability response schema validation
 import { ResponseSchemaValidator } from './validators/ResponseSchemaValidator.js';
+// Issue #381: ComponentIntegrityValidator for component integrity checking
+import { ComponentIntegrityValidator } from './ComponentIntegrityValidator.js';
 
 /**
  * Validation Context - Additional info for validators
@@ -124,12 +127,14 @@ export class ValidationPipeline {
    * Issue #374: Added WorkflowCapabilityValidator for enhanced capability validation
    * Issue #375: Added OutputMappingValidator and NodeConfigValidator
    * Issue #380: Added ResponseSchemaValidator for capability response schema validation
+   * Issue #381: Added ComponentIntegrityValidator for component integrity checking
    */
   private createDefaultValidators(): Validator[] {
     // Use real validators (Issue #364 integration fix)
     // Issue #374: Added WorkflowCapabilityValidator for enhanced parameter validation
     // Issue #375: Added OutputMappingValidator and NodeConfigValidator
     // Issue #380: Added ResponseSchemaValidator for capability response schema validation
+    // Issue #381: Added ComponentIntegrityValidator for component integrity
     return [
       new SchemaValidator(),
       new DependencyValidator(),
@@ -140,6 +145,7 @@ export class ValidationPipeline {
       new NodeConfigValidator(), // Issue #375: Node config validation
       new WorkflowCapabilityValidator(), // Issue #374: Enhanced capability validation
       new ResponseSchemaValidator(), // Issue #380: Response schema validation
+      new ComponentIntegrityValidator(), // Issue #381: Component integrity validation
     ];
   }
 }
