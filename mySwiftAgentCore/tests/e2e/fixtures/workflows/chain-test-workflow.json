@@ -1,0 +1,74 @@
+{
+  "id": "chain-test-workflow",
+  "name": "E2E Chain Test Workflow",
+  "version": "1.0.0",
+  "description": "3-step chain workflow for E2E testing: task_001 -> task_002 -> task_003",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": { "type": "string" }
+    },
+    "required": ["query"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "summary": { "type": "string" },
+      "original_query": { "type": "string" }
+    }
+  },
+  "steps": [
+    {
+      "id": "task_001",
+      "name": "Mock Search",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "search_results": "mock_results",
+          "query": "$.input.query"
+        }
+      },
+      "params": {
+        "mock_results": [
+          { "title": "Result 1", "content": "Content from result 1" },
+          { "title": "Result 2", "content": "Content from result 2" }
+        ]
+      }
+    },
+    {
+      "id": "task_002",
+      "name": "Mock LLM Summary",
+      "type": "llm",
+      "config": {
+        "prompt": "Summarize the following search results for query '{{input.query}}': {{steps.task_001.search_results}}",
+        "model": "gpt-4o-mini",
+        "max_tokens": 500,
+        "temperature": 0.7
+      },
+      "params": {},
+      "dependsOn": ["task_001"]
+    },
+    {
+      "id": "task_003",
+      "name": "Format Output",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "summary": "$.steps.task_002.content",
+          "original_query": "$.input.query",
+          "search_count": "result_count"
+        }
+      },
+      "params": {
+        "result_count": 2
+      },
+      "dependsOn": ["task_002"]
+    }
+  ],
+  "outputMapping": {
+    "summary": "$steps.task_003.summary",
+    "original_query": "$steps.task_003.original_query",
+    "search_count": "$steps.task_003.search_count"
+  },
+  "variables": {}
+}

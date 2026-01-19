@@ -1,0 +1,88 @@
+{
+  "id": "parallel-test-workflow",
+  "name": "E2E Parallel Test Workflow",
+  "version": "1.0.0",
+  "description": "Parallel execution workflow for E2E testing",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "search_query": { "type": "string" },
+      "category": { "type": "string" }
+    },
+    "required": ["search_query"]
+  },
+  "outputSchema": {
+    "type": "object"
+  },
+  "steps": [
+    {
+      "id": "search_step",
+      "name": "Search Data",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "results": "mock_results",
+          "query": "$.input.search_query"
+        }
+      },
+      "params": {
+        "mock_results": [
+          { "id": 1, "title": "Article 1" },
+          { "id": 2, "title": "Article 2" }
+        ]
+      }
+    },
+    {
+      "id": "parallel_task_a",
+      "name": "Process A",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "processed_a": "task_a_output",
+          "source": "source_a"
+        }
+      },
+      "params": {
+        "task_a_output": "Processed by task A",
+        "source_a": "parallel_a"
+      },
+      "dependsOn": ["search_step"]
+    },
+    {
+      "id": "parallel_task_b",
+      "name": "Process B",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "processed_b": "task_b_output",
+          "source": "source_b"
+        }
+      },
+      "params": {
+        "task_b_output": "Processed by task B",
+        "source_b": "parallel_b"
+      },
+      "dependsOn": ["search_step"]
+    },
+    {
+      "id": "merge_step",
+      "name": "Merge Results",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "combined_a": "$.steps.parallel_task_a.processed_a",
+          "combined_b": "$.steps.parallel_task_b.processed_b",
+          "original_query": "$.input.search_query"
+        }
+      },
+      "params": {},
+      "dependsOn": ["parallel_task_a", "parallel_task_b"]
+    }
+  ],
+  "outputMapping": {
+    "result_a": "$steps.parallel_task_a.processed_a",
+    "result_b": "$steps.parallel_task_b.processed_b",
+    "merged": "$steps.merge_step"
+  },
+  "variables": {}
+}

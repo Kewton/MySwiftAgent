@@ -1,0 +1,79 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "mySwiftAgentCore",
+  "e2e_test_results": {
+    "test_file": "tests/e2e/test_workflow_chain.test.ts",
+    "total": 12,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 249,
+    "output": "12 passed in 249ms"
+  },
+  "structure_verification": {
+    "directories": {
+      "tests/e2e": true,
+      "tests/e2e/mocks": true,
+      "tests/e2e/utils": true,
+      "tests/e2e/fixtures/workflows": true
+    },
+    "files": {
+      "tests/e2e/test_workflow_chain.test.ts": true,
+      "tests/e2e/setup.ts": true,
+      "tests/e2e/README.md": true,
+      "tests/e2e/mocks/handlers.ts": true,
+      "tests/e2e/mocks/server.ts": true,
+      "tests/e2e/utils/client.ts": true,
+      "tests/e2e/utils/assertions.ts": true,
+      "tests/e2e/fixtures/workflows/chain-test-workflow.json": true,
+      "tests/e2e/fixtures/workflows/parallel-test-workflow.json": true,
+      "tests/e2e/fixtures/workflows/error-test-workflow.json": true,
+      "vitest.e2e.config.ts": true,
+      ".github/workflows/e2e-test.yml": true
+    }
+  },
+  "acceptance_criteria_status": [
+    {"criterion": "AC-1: E2Eテストファイルの作成", "verified": true, "verification_method": "tests/e2e/test_workflow_chain.test.ts existence and execution"},
+    {"criterion": "AC-2: 3ステップチェーンのテストシナリオ", "verified": true, "verification_method": "test_task_chain_success test case"},
+    {"criterion": "AC-3: stepResultsの引き渡し", "verified": true, "verification_method": "test_step_results_passed_correctly test case"},
+    {"criterion": "AC-4: テンプレート変数の展開", "verified": true, "verification_method": "test_template_variable_expansion_* test cases"},
+    {"criterion": "AC-5: シークレット注入", "verified": true, "verification_method": "test_secrets_injection test case"},
+    {"criterion": "AC-6: CI自動実行", "verified": true, "verification_method": ".github/workflows/e2e-test.yml existence"},
+    {"criterion": "AC-7: LLM APIコスト抑制", "verified": true, "verification_method": "test_msw_mock_intercepts_llm_calls test case"}
+  ],
+  "design_policy_status": [
+    {"policy": "DP-1: 5層アーキテクチャ", "verified": true, "verification_method": "Directory structure: tests/e2e/{fixtures,mocks,utils}"},
+    {"policy": "DP-2: Vitest + MSW", "verified": true, "verification_method": "vitest.e2e.config.ts and mocks/server.ts"},
+    {"policy": "DP-3: JSONワークフロー形式", "verified": true, "verification_method": "fixtures/workflows/*.json files"},
+    {"policy": "DP-4: 既存エンドポイント使用", "verified": true, "verification_method": "E2E tests use TaskFlowEngine integration"}
+  ],
+  "dead_code_verification": [
+    {"feature": "chain-test-workflow.json", "verified": true, "method": "Used in test_workflow_chain.test.ts"},
+    {"feature": "parallel-test-workflow.json", "verified": true, "method": "Used in parallel execution tests"},
+    {"feature": "error-test-workflow.json", "verified": true, "method": "Used in error handling tests"},
+    {"feature": "handlers.ts", "verified": true, "method": "Imported by server.ts"},
+    {"feature": "server.ts", "verified": true, "method": "Used in setup.ts"},
+    {"feature": "client.ts", "verified": true, "method": "Used in test_workflow_chain.test.ts"},
+    {"feature": "assertions.ts", "verified": true, "method": "Used in test_workflow_chain.test.ts"}
+  ],
+  "test_cases_verified": [
+    {"tc": "TC-001", "name": "E2Eテストディレクトリ構造確認", "status": "passed"},
+    {"tc": "TC-002", "name": "基本的な3ステップチェーン実行", "status": "passed"},
+    {"tc": "TC-003", "name": "stepResults引き渡し検証", "status": "passed"},
+    {"tc": "TC-004", "name": "テンプレート変数展開検証($steps形式)", "status": "passed"},
+    {"tc": "TC-005", "name": "テンプレート変数展開検証($input形式)", "status": "passed"},
+    {"tc": "TC-006", "name": "シークレット注入検証", "status": "passed"},
+    {"tc": "TC-007", "name": "MSWモック動作確認", "status": "passed"},
+    {"tc": "TC-008", "name": "E2Eテスト全体実行", "status": "passed"},
+    {"tc": "TC-009", "name": "並列実行ワークフロー", "status": "passed"},
+    {"tc": "TC-010", "name": "エラーハンドリング", "status": "passed"},
+    {"tc": "TC-011", "name": "CI設定ファイル確認", "status": "passed"}
+  ],
+  "evidence_files": [
+    "mySwiftAgentCore/tests/e2e/test_workflow_chain.test.ts",
+    "mySwiftAgentCore/vitest.e2e.config.ts",
+    ".github/workflows/e2e-test.yml"
+  ]
+}

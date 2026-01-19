@@ -1,0 +1,69 @@
+{
+  "id": "error-test-workflow",
+  "name": "E2E Error Test Workflow",
+  "version": "1.0.0",
+  "description": "Error handling workflow for E2E testing",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "should_fail": { "type": "boolean" },
+      "fail_step": { "type": "string" }
+    },
+    "required": []
+  },
+  "outputSchema": {
+    "type": "object"
+  },
+  "steps": [
+    {
+      "id": "init_step",
+      "name": "Initialize",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "initialized": "init_value",
+          "fail_flag": "$.input.should_fail"
+        }
+      },
+      "params": {
+        "init_value": true
+      }
+    },
+    {
+      "id": "error_step",
+      "name": "Potential Error Step",
+      "type": "api_rest",
+      "config": {
+        "url": "http://mock-error-service/api/test",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "action": "test",
+          "should_fail": "$input.should_fail"
+        }
+      },
+      "dependsOn": ["init_step"]
+    },
+    {
+      "id": "final_step",
+      "name": "Finalize",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "completed": "complete_value",
+          "error_result": "$.steps.error_step"
+        }
+      },
+      "params": {
+        "complete_value": true
+      },
+      "dependsOn": ["error_step"]
+    }
+  ],
+  "outputMapping": {
+    "status": "$steps.final_step.completed",
+    "error_result": "$steps.error_step"
+  },
+  "variables": {}
+}

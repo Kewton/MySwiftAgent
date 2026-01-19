@@ -1,0 +1,97 @@
+{
+  "issue_number": 379,
+  "issue_title": "test(taskflowEngine): ワークフローチェーンのE2E結合テスト追加",
+  "target_project": "mySwiftAgentCore",
+  "iteration": 1,
+  "design_policy_path": "dev-reports/feature/issue/379/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/379/work-plan.md",
+  "acceptance_plan_path": "dev-reports/feature/issue/379/acceptance-plan.md",
+  "output_path": "dev-reports/feature/issue/379/pm-auto-dev/iteration-1/tdd-result.json",
+  "tasks": [
+    {
+      "task_id": "T1.1",
+      "description": "E2Eテスト基盤構築",
+      "details": [
+        "tests/e2e/ ディレクトリ作成",
+        "tests/e2e/utils/client.ts - APIクライアント実装",
+        "tests/e2e/utils/assertions.ts - カスタムアサーション実装",
+        "Vitestの設定ファイル更新（E2Eテスト用）"
+      ]
+    },
+    {
+      "task_id": "T1.2",
+      "description": "MSWモックハンドラー実装",
+      "details": [
+        "tests/e2e/mocks/handlers.ts - LLM API モック",
+        "tests/e2e/mocks/handlers.ts - 外部API モック",
+        "tests/e2e/mocks/server.ts - モックサーバー設定"
+      ]
+    },
+    {
+      "task_id": "T1.3",
+      "description": "テストワークフロー定義",
+      "details": [
+        "tests/e2e/fixtures/workflows/chain-test-workflow.json - 3ステップチェーン",
+        "tests/e2e/fixtures/workflows/parallel-test-workflow.json - 並列実行",
+        "tests/e2e/fixtures/workflows/error-test-workflow.json - エラーテスト"
+      ]
+    },
+    {
+      "task_id": "T1.4",
+      "description": "基本E2Eテスト実装",
+      "details": [
+        "tests/e2e/test_workflow_chain.test.ts - メインテストファイル",
+        "test_task_chain_success - ハッピーパステスト",
+        "test_step_results_passed_correctly - stepResults検証",
+        "test_template_variable_expansion_steps_format - $steps形式展開",
+        "test_template_variable_expansion_input_format - $input形式展開"
+      ]
+    },
+    {
+      "task_id": "T2.1",
+      "description": "単体テスト追加",
+      "details": [
+        "tests/unit/e2e/mocks/handlers.test.ts - モックハンドラーのテスト",
+        "tests/unit/e2e/utils/client.test.ts - APIクライアントのテスト",
+        "tests/unit/e2e/utils/assertions.test.ts - アサーションのテスト"
+      ]
+    },
+    {
+      "task_id": "T2.2",
+      "description": "E2Eテスト拡張",
+      "details": [
+        "test_secrets_injection - シークレット注入テスト",
+        "test_msw_mock_intercepts_llm_calls - MSWモック動作テスト",
+        "test_parallel_workflow_execution - 並列実行テスト",
+        "test_error_handling_propagation - エラーハンドリングテスト"
+      ]
+    },
+    {
+      "task_id": "T4.1",
+      "description": "ドキュメント作成",
+      "details": [
+        "tests/e2e/README.md - E2Eテスト実行ガイド"
+      ]
+    },
+    {
+      "task_id": "T4.2",
+      "description": "CI/CD統合",
+      "details": [
+        ".github/workflows/e2e-test.yml - GitHub Actions設定"
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "AC-1: E2Eテストファイルの作成",
+    "AC-2: 3ステップチェーンのテストシナリオ",
+    "AC-3: stepResultsの引き渡し",
+    "AC-4: テンプレート変数の展開",
+    "AC-5: シークレット注入",
+    "AC-6: CI自動実行",
+    "AC-7: LLM APIコスト抑制"
+  ],
+  "test_commands": {
+    "unit": "npm test -- --grep e2e",
+    "e2e": "npm run test:e2e"
+  }
+}
