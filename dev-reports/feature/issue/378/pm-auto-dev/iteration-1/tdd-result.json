@@ -1,0 +1,38 @@
+{
+  "status": "success",
+  "coverage": 100,
+  "unit_tests": {
+    "total": 1373,
+    "passed": 1373,
+    "failed": 0
+  },
+  "static_analysis": {
+    "typescript_errors": 0
+  },
+  "files_modified": [
+    "src/taskflowGeneratorAgent/types/registration.ts",
+    "src/taskflowGeneratorAgent/types/index.ts",
+    "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+    "src/taskflowEngine/loader/WorkflowReloader.ts",
+    "src/api/routes/taskflow-reload.ts",
+    "tests/unit/taskflowGeneratorAgent/generator/WorkflowRegistrar.test.ts",
+    "tests/unit/taskflowEngine/loader/WorkflowReloader.test.ts"
+  ],
+  "integration_verified": {
+    "RegistrationStatus": {
+      "defined_in": "src/taskflowGeneratorAgent/types/registration.ts",
+      "used_in": [
+        "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+        "src/taskflowEngine/loader/WorkflowReloader.ts"
+      ]
+    },
+    "determineStatus": {
+      "defined_in": "src/taskflowGeneratorAgent/types/registration.ts",
+      "called_from": [
+        "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts:520",
+        "src/taskflowEngine/loader/WorkflowReloader.ts:124",
+        "src/taskflowEngine/loader/WorkflowReloader.ts:170"
+      ]
+    }
+  }
+}

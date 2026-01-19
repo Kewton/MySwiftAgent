@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "mySwiftAgentCore",
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_378_acceptance.py",
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "output": "6 passed in 0.10s"
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'mySwiftAgentCore' does not require Playwright testing"
+  },
+  "acceptance_criteria_status": [
+    {"criterion": "AC-1: ストレージの責務を明確化", "verified": true, "verification_method": "TC-008"},
+    {"criterion": "AC-2: 優先順位ルールを定義", "verified": true, "verification_method": "TC-008"},
+    {"criterion": "AC-3: reload API実行時の動作保証", "verified": true, "verification_method": "TC-007, TC-010"},
+    {"criterion": "AC-4: 部分成功モデルの実装", "verified": true, "verification_method": "TC-009, TC-005, TC-006"}
+  ],
+  "design_policy_status": [
+    {"policy": "DP-1: 3-state statusモデル", "verified": true, "verification_method": "TC-005, TC-006, TC-009"},
+    {"policy": "DP-2: 後方互換性", "verified": true, "verification_method": "TC-007"},
+    {"policy": "DP-3: Config優先読み込み", "verified": true, "verification_method": "TC-008"}
+  ],
+  "dead_code_verification": [
+    {"feature": "RegistrationStatus", "verified": true, "method": "TC-005"},
+    {"feature": "determineStatus", "verified": true, "method": "TC-006"}
+  ],
+  "evidence_files": [
+    "tests/acceptance/test_issue_378_acceptance.py"
+  ]
+}

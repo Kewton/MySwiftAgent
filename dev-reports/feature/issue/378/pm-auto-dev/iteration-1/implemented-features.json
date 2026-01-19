@@ -1,0 +1,164 @@
+{
+  "issue_number": 378,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "RegistrationStatus",
+      "type": "type",
+      "file_path": "src/taskflowGeneratorAgent/types/registration.ts",
+      "line_number": 21,
+      "description": "3-state registration status: 'success' | 'partial_success' | 'failed'",
+      "expected_callers": ["WorkflowRegistrar", "WorkflowReloader"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts, src/taskflowEngine/loader/WorkflowReloader.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "DetailedRegistrationResult",
+      "type": "interface",
+      "file_path": "src/taskflowGeneratorAgent/types/registration.ts",
+      "line_number": 30,
+      "description": "Detailed result for single workflow registration with memoryRegistered and storagePersisted flags",
+      "expected_callers": ["WorkflowRegistrar.registerDetailed"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "BatchRegistrationSummary",
+      "type": "interface",
+      "file_path": "src/taskflowGeneratorAgent/types/registration.ts",
+      "line_number": 65,
+      "description": "Aggregated status for batch workflow registrations",
+      "expected_callers": ["WorkflowRegistrar.registerBatchDetailed"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "determineStatus",
+      "type": "function",
+      "file_path": "src/taskflowGeneratorAgent/types/registration.ts",
+      "line_number": 100,
+      "description": "Helper function to determine status from succeeded/failed/total counts",
+      "expected_callers": ["WorkflowRegistrar", "WorkflowReloader"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts, src/taskflowEngine/loader/WorkflowReloader.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "registerDetailed",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line_number": 390,
+      "description": "Register workflow with detailed result including status field",
+      "expected_callers": ["registerBatchDetailed", "API handlers (future)"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "registerBatchDetailed",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line_number": 492,
+      "description": "Register multiple workflows with aggregated status",
+      "expected_callers": ["API handlers (future)"],
+      "expected_call_location": "Future API integration"
+    },
+    {
+      "feature_id": "F7",
+      "name": "loadFromConfigDirectory",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line_number": 110,
+      "description": "Load workflows from config/taskflow/projects/ with priority",
+      "expected_callers": ["initialize"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F8",
+      "name": "loadFromGeneratedStorage",
+      "type": "method",
+      "file_path": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "line_number": 171,
+      "description": "Load workflows from generated/ without overwriting config-loaded ones",
+      "expected_callers": ["initialize"],
+      "expected_call_location": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts"
+    },
+    {
+      "feature_id": "F9",
+      "name": "ProjectReloadResult.status",
+      "type": "property",
+      "file_path": "src/taskflowEngine/loader/WorkflowReloader.ts",
+      "line_number": 28,
+      "description": "Status field in ProjectReloadResult for partial success model",
+      "expected_callers": ["reloadProject", "API routes"],
+      "expected_call_location": "src/taskflowEngine/loader/WorkflowReloader.ts, src/api/routes/taskflow-reload.ts"
+    },
+    {
+      "feature_id": "F10",
+      "name": "FullReloadResult.status",
+      "type": "property",
+      "file_path": "src/taskflowEngine/loader/WorkflowReloader.ts",
+      "line_number": 48,
+      "description": "Status field in FullReloadResult for partial success model",
+      "expected_callers": ["reloadAll", "API routes"],
+      "expected_call_location": "src/taskflowEngine/loader/WorkflowReloader.ts, src/api/routes/taskflow-reload.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["RegistrationStatusSchema validation"],
+      "integration_tests": ["WorkflowRegistrar/WorkflowReloader status tests"],
+      "acceptance_tests": ["TC-005"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["determineStatus tests"],
+      "integration_tests": ["reloadProject/reloadAll status determination"],
+      "acceptance_tests": ["TC-006"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["registerDetailed - status: success/partial_success/failed"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": [],
+      "integration_tests": ["initialize loads from config"],
+      "acceptance_tests": ["TC-003"]
+    },
+    {
+      "feature_id": "F9",
+      "unit_tests": ["reloadProject - status tests"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001", "TC-002"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "src/taskflowGeneratorAgent/types/index.ts",
+      "integration_type": "export",
+      "integration_method": "export * from './registration.js'"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "src/taskflowEngine/loader/WorkflowReloader.ts",
+      "integration_type": "import_and_call",
+      "integration_method": "import { determineStatus } from '...'; const status = determineStatus(succeeded, failed, total)"
+    },
+    {
+      "feature_id": "F7",
+      "integration_file": "src/taskflowGeneratorAgent/generator/WorkflowRegistrar.ts",
+      "integration_type": "method_call",
+      "integration_method": "Called from initialize()"
+    },
+    {
+      "feature_id": "F9",
+      "integration_file": "src/api/routes/taskflow-reload.ts",
+      "integration_type": "api_response",
+      "integration_method": "return c.json({ status: result.status, ... })"
+    }
+  ]
+}
