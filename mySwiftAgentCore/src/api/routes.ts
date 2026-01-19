@@ -30,6 +30,9 @@ import {
   createURLResolver,
 } from '../capabilityManagement/index.js';
 import { createCapabilityExecutor } from '../taskflowEngine/nodes/CapabilityExecutor.js';
+// Issue #377: SecretAnalyzer integration
+import { createSecretAnalyzer } from '../taskflowEngine/analyzer/SecretAnalyzer.js';
+import { createDefaultNodeRegistry } from '../taskflowEngine/nodes/index.js';
 
 /**
  * API configuration
@@ -151,11 +154,16 @@ async function createTaskFlowEngineDependenciesWithRegistry(
   // Create schema validator
   const validator = createSchemaValidator();
 
+  // Issue #377: Create SecretAnalyzer with NodeRegistry
+  const nodeRegistry = createDefaultNodeRegistry();
+  const secretAnalyzer = createSecretAnalyzer(nodeRegistry);
+
   return {
     registry,
     executor,
     validator,
     secretManager,
+    secretAnalyzer,
   };
 }
 

@@ -128,6 +128,15 @@ export class RetryStrategy {
   }
 
   /**
+   * Get maximum attempts
+   *
+   * Issue #374: Helper method for feedback loop integration
+   */
+  getMaxAttempts(): number {
+    return this.config.maxAttempts;
+  }
+
+  /**
    * Delay for specified milliseconds
    */
   private delay(ms: number): Promise<void> {

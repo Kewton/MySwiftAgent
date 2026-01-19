@@ -19,7 +19,7 @@ export interface ParallelExecutionConfig {
   workflowMaxConcurrency: number;
   /** Node type specific limits */
   nodeTypeLimits: Record<NodeType, number>;
-  /** Queue waiting timeout in ms */
+  /** Queue waiting timeout in ms (0 = disabled, use capability-specific timeout) */
   queueTimeoutMs: number;
 }
 
@@ -46,6 +46,11 @@ export interface ParallelBlockResult<T> {
 
 /**
  * Default configuration
+ *
+ * Note: queueTimeoutMs is set to 0 (disabled) by default.
+ * Timeout is handled by capability-specific settings in CapabilityExecutor.
+ * This ensures long-running capabilities (e.g., google_search with 180s timeout)
+ * are not prematurely terminated.
  */
 const DEFAULT_CONFIG: ParallelExecutionConfig = {
   globalMaxConcurrency: 50,
@@ -58,7 +63,7 @@ const DEFAULT_CONFIG: ParallelExecutionConfig = {
     parallel: 10,
     action: 50,
   },
-  queueTimeoutMs: 60000,
+  queueTimeoutMs: 0,  // Disabled: use capability-specific timeout
 };
 
 /**
@@ -237,8 +242,16 @@ export class ParallelExecutionManager {
 
   /**
    * Execute with timeout
+   *
+   * Note: When queueTimeoutMs is 0, timeout is disabled.
+   * This allows capability-specific timeouts (in CapabilityExecutor) to take precedence.
    */
   private async executeWithTimeout<T>(task: () => Promise<T>): Promise<T> {
+    // If timeout is disabled (0), execute task directly without timeout
+    if (this.config.queueTimeoutMs === 0) {
+      return task();
+    }
+
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Task execution timeout'));

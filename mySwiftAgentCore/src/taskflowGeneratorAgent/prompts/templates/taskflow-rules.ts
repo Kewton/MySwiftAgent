@@ -61,10 +61,17 @@ Params:
 - Any dynamic values using variable references
 
 ### 2. transform
-Data transformation step using JavaScript expressions.
+Data transformation step using template or mapping.
 
-Config:
-- \`expression\`: JavaScript expression for transformation
+**IMPORTANT**: Use either \`template\` OR \`mapping\` in config. DO NOT use \`expression\`.
+
+Config (use ONE of the following):
+- \`template\`: Handlebars-like template string for transformation. Use \`{{path}}\` for variable interpolation.
+  Example: \`"{\\"result\\": \\"{{input.value}}\\"}"\`
+- \`mapping\`: Key-value mapping from output fields to input paths using JSONPath expressions.
+  Example: \`{ "output_field": "$.input.value" }\`
+
+**WARNING**: \`expression\` is NOT supported for security reasons. Workflows using \`expression\` will fail validation.
 
 Params:
 - Input data references using \`$input\` or \`$steps\`
@@ -83,13 +90,14 @@ Params:
 LLM (Large Language Model) call step.
 
 Config:
-- \`model\`: Model identifier
-- \`temperature\`: Generation temperature (0.0-2.0)
-- \`max_tokens\`: Maximum tokens to generate
+- \`prompt\`: User prompt template with variable interpolation (REQUIRED). Use \`{{path}}\` for variable references.
+- \`model\`: Model identifier (optional, e.g., "gpt-4o-mini")
+- \`temperature\`: Generation temperature 0.0-2.0 (optional, default: 0.7)
+- \`max_tokens\`: Maximum tokens to generate (optional, default: 4096)
+- \`system_prompt\`: System prompt for context setting (optional)
 
 Params:
-- \`prompt\`: User prompt
-- \`system\`: System prompt (optional)
+- Input parameters for variable substitution in prompt
 
 ### 5. parallel
 Parallel execution of multiple sub-steps.
@@ -129,7 +137,7 @@ Use the following patterns for variable references:
 
 ## Common Patterns
 
-### API Call with Transform
+### API Call with Transform (using template)
 \`\`\`json
 {
   "steps": [
@@ -142,8 +150,27 @@ Use the following patterns for variable references:
     {
       "id": "transform_response",
       "type": "transform",
-      "config": { "expression": "({ result: data.items.map(i => i.name) })" },
-      "params": { "data": "$steps.fetch_data" }
+      "config": { "template": "{\\"result\\": \\"{{steps.fetch_data.data}}\\"}" },
+      "params": {}
+    }
+  ]
+}
+\`\`\`
+
+### Transform with Mapping
+\`\`\`json
+{
+  "steps": [
+    {
+      "id": "map_data",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "result": "$.steps.previous_step.output",
+          "count": "$.steps.previous_step.count"
+        }
+      },
+      "params": {}
     }
   ]
 }
@@ -156,11 +183,13 @@ Use the following patterns for variable references:
     {
       "id": "generate_summary",
       "type": "llm",
-      "config": { "model": "claude-3-5-sonnet-20241022", "temperature": 0.7 },
-      "params": {
-        "system": "You are a helpful assistant.",
-        "prompt": "Summarize: $input.text"
-      }
+      "config": {
+        "prompt": "Summarize the following text: {{input.text}}",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "system_prompt": "You are a helpful assistant."
+      },
+      "params": {}
     }
   ]
 }

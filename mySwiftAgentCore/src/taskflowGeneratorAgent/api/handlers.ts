@@ -2,6 +2,7 @@
  * API Handlers - Request handlers for generator API
  *
  * Issue #364: REST API handlers
+ * Issue #374: Capability Enrichment Layer for complete parameter information
  */
 
 import type { Context } from 'hono';
@@ -14,11 +15,15 @@ import { ErrorHandler } from '../recovery/ErrorHandler.js';
 import { createLogger } from '../../utils/logger/Logger.js';
 import type { LLMClient } from '../llm/LLMClient.js';
 import type { WorkflowRegistry } from '../../taskflowEngine/registry/WorkflowRegistry.js';
+import type { CapabilityRegistry } from '../../capabilityManagement/registry/CapabilityRegistry.js';
+import type { CapabilityExtended } from '../../shared/types/capability.types.js';
 import {
   BatchGenerationRequestSchema,
   type BatchGenerationRequest,
   type BatchGenerationResponse,
   type GenerationStatusResponse,
+  type Capability,
+  type CapabilityForPrompt,
 } from '../types/generator.js';
 
 /**
@@ -39,6 +44,73 @@ export interface HandlerDependencies {
    * This allows initialize() to be called once at server startup.
    */
   registrar?: WorkflowRegistrar;
+  /**
+   * Issue #374: Optional CapabilityRegistry for capability enrichment
+   * If provided, capabilities from requests will be enriched with full
+   * parameter definitions from YAML files.
+   */
+  capabilityRegistry?: CapabilityRegistry;
+}
+
+/**
+ * Issue #374: Enrich capabilities with full parameter definitions
+ *
+ * This function takes the minimal capabilities from the API request and
+ * enriches them with complete parameter definitions from the CapabilityRegistry.
+ * This ensures that:
+ * - PromptBuilder has complete capability specifications for LLM prompts
+ * - WorkflowCapabilityValidator can validate required parameters
+ *
+ * @param capabilities - Capabilities from API request (may lack parameters)
+ * @param projectId - Project ID to look up capabilities
+ * @param registry - CapabilityRegistry with full YAML definitions
+ * @returns Enriched capabilities with complete parameter information
+ */
+function enrichCapabilities(
+  capabilities: Capability[],
+  projectId: string,
+  registry: CapabilityRegistry | undefined
+): CapabilityForPrompt[] {
+  if (!registry) {
+    // No registry available, return capabilities as-is
+    return capabilities as CapabilityForPrompt[];
+  }
+
+  return capabilities.map((cap) => {
+    const fullDef: CapabilityExtended | undefined = registry.getCapability(projectId, cap.id);
+
+    if (fullDef) {
+      // Enrich with full definition from registry
+      // Issue #374: Map capability examples to CapabilityForPrompt format
+      // The YAML examples use taskflow_step field directly
+      const mappedExamples = fullDef.examples?.map((ex) => {
+        // Try taskflow_step first (current YAML format), then fall back to input for backward compatibility
+        const step = (ex as unknown as Record<string, unknown>).taskflow_step ?? ex.input;
+        return {
+          description: ex.description,
+          taskflow_step: step as {
+            id: string;
+            type: string;
+            config: Record<string, unknown>;
+            params: Record<string, unknown>;
+          } | undefined,
+        };
+      });
+
+      return {
+        ...cap,
+        parameters: fullDef.parameters ?? cap.parameters,
+        examples: mappedExamples,
+        responseSchema: fullDef.returnType
+          ? { type: fullDef.returnType }
+          : undefined,
+        metadata: fullDef.metadata as CapabilityForPrompt['metadata'],
+      } as CapabilityForPrompt;
+    }
+
+    // Capability not found in registry, return as-is
+    return cap as CapabilityForPrompt;
+  });
 }
 
 /**
@@ -109,8 +181,30 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
         failed_tasks: 0,
       });
 
-      // Process batch
-      const batchResult = await batchProcessor.processBatch(request);
+      // Issue #374: Enrich capabilities with full parameter definitions from registry
+      const enrichedCapabilities = enrichCapabilities(
+        request.capabilities,
+        request.project_id,
+        deps.capabilityRegistry
+      );
+
+      // Log enrichment results for debugging
+      const enrichedCount = enrichedCapabilities.filter(
+        (c) => c.parameters && c.parameters.length > 0
+      ).length;
+      logger.info('Capabilities enriched', {
+        projectId: request.project_id,
+        totalCapabilities: request.capabilities.length,
+        enrichedCount,
+        registryAvailable: !!deps.capabilityRegistry,
+      });
+
+      // Process batch with enriched capabilities
+      const enrichedRequest: BatchGenerationRequest = {
+        ...request,
+        capabilities: enrichedCapabilities as Capability[],
+      };
+      const batchResult = await batchProcessor.processBatch(enrichedRequest);
 
       // Issue #368: Register successful workflows using WorkflowRegistrar
       // Issue #370: Include file_path in response for persistence verification

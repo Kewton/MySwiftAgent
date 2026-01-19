@@ -16,10 +16,10 @@ parameters:
     type: number
     required: false
     description: 各クエリの検索結果件数
-    defaultValue: 10
+    defaultValue: 3
     validation:
       min: 1
-      max: 100
+      max: 3
 returnType: object
 responseSchema:
   search_results:
@@ -80,7 +80,7 @@ examples:
           queries:
             - "$input.query1"
             - "$input.query2"
-          num: 5
+          num: 3  # IMPORTANT: Maximum is 3, must not exceed this limit
     output_mapping:
       all_results: "$steps.multi_search.search_results"
 metadata:

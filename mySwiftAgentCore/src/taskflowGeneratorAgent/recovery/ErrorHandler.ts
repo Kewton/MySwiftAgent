@@ -2,6 +2,7 @@
  * ErrorHandler - Error handling and recovery strategy
  *
  * Issue #364: Structured error handling with recovery suggestions
+ * Issue #374: Added WorkflowCapabilityError support
  */
 
 import {
@@ -15,6 +16,7 @@ import {
   LLMValidationError,
   WorkflowValidationError,
 } from '../llm/LLMClient.js';
+import { WorkflowCapabilityError } from '../types/errors.js';
 
 /**
  * Error Context - Additional information about the error
@@ -77,10 +79,12 @@ export class ErrorHandler {
       return ErrorType.LLM_ERROR;
     }
 
+    // Issue #374: Added WorkflowCapabilityError to validation errors
     if (
       error instanceof LLMParseError ||
       error instanceof LLMValidationError ||
-      error instanceof WorkflowValidationError
+      error instanceof WorkflowValidationError ||
+      error instanceof WorkflowCapabilityError
     ) {
       return ErrorType.VALIDATION_ERROR;
     }
@@ -113,10 +117,12 @@ export class ErrorHandler {
       return true;
     }
 
+    // Issue #374: Added WorkflowCapabilityError to recoverable errors
     if (
       error instanceof LLMParseError ||
       error instanceof LLMValidationError ||
-      error instanceof WorkflowValidationError
+      error instanceof WorkflowValidationError ||
+      error instanceof WorkflowCapabilityError
     ) {
       return true;
     }
@@ -149,10 +155,12 @@ export class ErrorHandler {
       return RecoveryStrategy.RETRY_CURRENT;
     }
 
+    // Issue #374: Added WorkflowCapabilityError to retry with feedback
     if (
       error instanceof LLMParseError ||
       error instanceof LLMValidationError ||
-      error instanceof WorkflowValidationError
+      error instanceof WorkflowValidationError ||
+      error instanceof WorkflowCapabilityError
     ) {
       return RecoveryStrategy.RETRY_WITH_FEEDBACK;
     }
@@ -200,6 +208,14 @@ export class ErrorHandler {
       // Serialize workflow for debugging (truncated)
       const workflowStr = JSON.stringify(error.workflow);
       details['workflow'] = workflowStr.substring(0, 500);
+    }
+
+    // Issue #374: Extract details from WorkflowCapabilityError
+    if (error instanceof WorkflowCapabilityError) {
+      details['validationErrors'] = error.validationResult.errors;
+      details['validationWarnings'] = error.validationResult.warnings;
+      details['attempt'] = error.attempt;
+      details['rawContent'] = error.rawContent.substring(0, 500);
     }
 
     return details;
