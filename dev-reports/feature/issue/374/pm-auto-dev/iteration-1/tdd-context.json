@@ -1,0 +1,282 @@
+{
+  "issue_number": 374,
+  "issue_title": "feat(mySwiftAgentCore): Capability Prompt強化 + Validation強化 + フィードバックループ実装",
+  "target_project": "mySwiftAgentCore",
+  "acceptance_criteria": [
+    "AC-1: PromptBuilderが完全なCapability仕様をLLMに渡す",
+    "AC-2: WorkflowCapabilityValidatorが必須パラメータ・型・制約を検証する",
+    "AC-3: 検証失敗時にLLMValidationErrorが生成される",
+    "AC-4: フィードバック付きプロンプトでLLMが再生成を試みる",
+    "AC-5: 最大リトライ回数（3回）まで自動修正を試みる",
+    "AC-6: E2Eテスト（Test 4）が成功する",
+    "AC-7: HTTP 422エラーが解消される"
+  ],
+  "implementation_tasks": [
+    "Phase 1: 型定義の拡張（CapabilityForPrompt, LLMValidationError, GenerationMetrics等）",
+    "Phase 2: PromptBuilder拡張（formatCapabilities, buildFeedbackPrompt, selectRelevantCapabilities）",
+    "Phase 3: WorkflowCapabilityValidator実装（必須/型/制約検証）",
+    "Phase 4: フィードバックループ実装（WorkflowGenerator統合）",
+    "Phase 5: API統合（routes.ts修正、セキュリティフィルタリング）",
+    "Phase 6: テスト実装（単体/結合/受入テスト）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1.1",
+      "description": "CapabilityForPrompt型の定義",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.1.2",
+      "description": "CapabilityParameter拡張",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.1.3",
+      "description": "CapabilityTaskFlowExample型定義",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.1.4",
+      "description": "LLMValidationErrorクラス実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/types/errors.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2.1",
+      "description": "GenerationMetrics型定義",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/types/metrics.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2.2",
+      "description": "AttemptMetrics型定義",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/types/metrics.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3.1",
+      "description": "プロンプトサイズ制限定数",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3.2",
+      "description": "フィードバックループ定数",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.1.1",
+      "description": "formatCapabilities()オーバーホール",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.1.1", "1.1.2", "1.1.3"]
+    },
+    {
+      "task_id": "2.1.2",
+      "description": "formatSingleCapability()実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.1.1"]
+    },
+    {
+      "task_id": "2.1.3",
+      "description": "formatParameter()実装",
+      "estimated_hours": 1.5,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.1.2"]
+    },
+    {
+      "task_id": "2.2.1",
+      "description": "buildFeedbackPrompt()実装",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.1.4", "2.1.1"]
+    },
+    {
+      "task_id": "2.2.2",
+      "description": "extractProblemCapabilities()実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.1.1"]
+    },
+    {
+      "task_id": "2.3.1",
+      "description": "selectRelevantCapabilities()実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.3.1"]
+    },
+    {
+      "task_id": "2.3.2",
+      "description": "スコアリング関数実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.1.1",
+      "description": "WorkflowCapabilityValidator基本実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "3.1.2",
+      "description": "validateRequiredParams()実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"],
+      "dependencies": ["3.1.1"]
+    },
+    {
+      "task_id": "3.1.3",
+      "description": "validateParamTypes()実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"],
+      "dependencies": ["3.1.1"]
+    },
+    {
+      "task_id": "3.1.4",
+      "description": "validateParamConstraints()実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"],
+      "dependencies": ["3.1.1"]
+    },
+    {
+      "task_id": "3.2.1",
+      "description": "warnUnknownParams()実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"],
+      "dependencies": ["3.1.1"]
+    },
+    {
+      "task_id": "3.2.2",
+      "description": "動的参照スキップ処理",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"],
+      "dependencies": ["3.1.1"]
+    },
+    {
+      "task_id": "4.1.1",
+      "description": "フィードバックループロジック実装",
+      "estimated_hours": 3,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts"],
+      "dependencies": ["1.1.4", "2.2.1", "3.1.1"]
+    },
+    {
+      "task_id": "4.1.2",
+      "description": "ErrorHandler統合",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts"],
+      "dependencies": ["1.1.4"]
+    },
+    {
+      "task_id": "4.2.1",
+      "description": "GenerationMetricsCollector実装",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts"],
+      "dependencies": ["1.2.1", "1.2.2"]
+    },
+    {
+      "task_id": "4.2.2",
+      "description": "MetricsAggregator実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts"],
+      "dependencies": ["1.2.1"]
+    },
+    {
+      "task_id": "5.1.1",
+      "description": "CapabilityExtended取得処理",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts"],
+      "dependencies": ["1.1.1"]
+    },
+    {
+      "task_id": "5.1.2",
+      "description": "セキュリティフィルタリング",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts"],
+      "dependencies": ["1.1.1"]
+    },
+    {
+      "task_id": "5.1.3",
+      "description": "Validation統合",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts"],
+      "dependencies": ["3.1.1"]
+    },
+    {
+      "task_id": "5.2.1",
+      "description": "metricsフィールド追加",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts"],
+      "dependencies": ["1.2.1", "4.2.1"]
+    },
+    {
+      "task_id": "6.1.1",
+      "description": "PromptBuilderテスト",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"],
+      "dependencies": ["2.1.1", "2.2.1", "2.3.1"]
+    },
+    {
+      "task_id": "6.1.2",
+      "description": "Validatorテスト",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.test.ts"],
+      "dependencies": ["3.1.1", "3.1.2", "3.1.3", "3.1.4", "3.2.1"]
+    },
+    {
+      "task_id": "6.2.1",
+      "description": "フィードバックループテスト",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/feedbackLoop.test.ts"],
+      "dependencies": ["4.1.1"]
+    },
+    {
+      "task_id": "6.3.1",
+      "description": "E2E受入テストファイル作成",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/tests/acceptance/test_issue_374_acceptance.py"],
+      "dependencies": ["5.1.1", "5.1.2", "5.1.3", "5.2.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts (CapabilityForPrompt, CapabilityTaskFlowExample)",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/types/errors.ts (LLMValidationError)",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/types/metrics.ts (GenerationMetrics, AttemptMetrics)",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts (MAX_CAPABILITIES_PER_PROMPT等)",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts (formatCapabilities, buildFeedbackPrompt, selectRelevantCapabilities)",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts (フィードバックループ統合)",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.test.ts",
+    "mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/feedbackLoop.test.ts",
+    "mySwiftAgentCore/tests/acceptance/test_issue_374_acceptance.py"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全パス",
+    "L3受入テスト全パス",
+    "CI/CDグリーン（GitHub Actions）",
+    "静的解析エラーゼロ（ESLint/TypeScript）",
+    "コードレビュー承認",
+    "HTTP 422エラーが解消",
+    "E2Eテスト（Test 4）が成功"
+  ],
+  "target_coverage": 90
+}

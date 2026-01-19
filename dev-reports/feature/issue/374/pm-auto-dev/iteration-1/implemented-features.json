@@ -1,0 +1,210 @@
+{
+  "issue_number": 374,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "CapabilityForPrompt",
+      "type": "type",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts",
+      "line_number": null,
+      "description": "拡張Capability型（examples, responseSchema, metadata含む）",
+      "expected_callers": ["PromptBuilder.formatCapabilitiesEnhanced"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "WorkflowCapabilityError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/errors.ts",
+      "line_number": null,
+      "description": "Capability検証エラークラス（フィードバックループ用）",
+      "expected_callers": ["WorkflowCapabilityValidator", "WorkflowGenerator"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "GenerationMetrics",
+      "type": "type",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/metrics.ts",
+      "line_number": null,
+      "description": "生成メトリクス型（成功率、リトライ回数等）",
+      "expected_callers": ["GenerationMetricsCollector", "MetricsAggregator"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "MAX_CAPABILITIES_PER_PROMPT",
+      "type": "constant",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts",
+      "line_number": 13,
+      "description": "プロンプトサイズ制限定数（50）",
+      "expected_callers": ["PromptBuilder.selectRelevantCapabilities"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "MAX_RETRY_COUNT",
+      "type": "constant",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts",
+      "line_number": 24,
+      "description": "最大リトライ回数定数（3）",
+      "expected_callers": ["WorkflowGenerator", "PromptBuilder.buildFeedbackPrompt"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "formatCapabilitiesEnhanced",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line_number": 226,
+      "description": "拡張Capabilityフォーマットメソッド（validation制約、responseSchema含む）",
+      "expected_callers": ["PromptBuilder.build", "buildFeedbackPrompt"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"
+    },
+    {
+      "feature_id": "F7",
+      "name": "buildFeedbackPrompt",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line_number": 329,
+      "description": "フィードバックプロンプト構築メソッド（エラー情報含む）",
+      "expected_callers": ["WorkflowGenerator (フィードバックループ時)"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts"
+    },
+    {
+      "feature_id": "F8",
+      "name": "selectRelevantCapabilities",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line_number": 399,
+      "description": "関連Capability選択メソッド（キーワードマッチング、スコアリング）",
+      "expected_callers": ["PromptBuilder.build", "routes.ts"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts"
+    },
+    {
+      "feature_id": "F9",
+      "name": "WorkflowCapabilityValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts",
+      "line_number": 29,
+      "description": "Capability検証クラス（必須パラメータ、型、制約検証）",
+      "expected_callers": ["ValidationPipeline", "routes.ts"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts"
+    },
+    {
+      "feature_id": "F10",
+      "name": "GenerationMetricsCollector",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+      "line_number": 41,
+      "description": "生成メトリクス収集クラス",
+      "expected_callers": ["WorkflowGenerator", "routes.ts"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts"
+    },
+    {
+      "feature_id": "F11",
+      "name": "MetricsAggregator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+      "line_number": 106,
+      "description": "メトリクス集計クラス",
+      "expected_callers": ["routes.ts (統計情報表示時)"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/routes.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["types/generator.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001", "TC-002"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["types/errors.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-009", "TC-010"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["types/metrics.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-021", "TC-022"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["constants.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-020"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["constants.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-013", "TC-014"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["prompts/PromptBuilder.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001", "TC-002"]
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": ["prompts/PromptBuilder.test.ts"],
+      "integration_tests": ["feedbackLoop.test.ts"],
+      "acceptance_tests": ["TC-011", "TC-012", "TC-017"]
+    },
+    {
+      "feature_id": "F8",
+      "unit_tests": ["prompts/PromptBuilder.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-020"]
+    },
+    {
+      "feature_id": "F9",
+      "unit_tests": ["validator/WorkflowCapabilityValidator.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003", "TC-004", "TC-005", "TC-006", "TC-007", "TC-008"]
+    },
+    {
+      "feature_id": "F10",
+      "unit_tests": ["generator/MetricsCollector.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-021", "TC-026"]
+    },
+    {
+      "feature_id": "F11",
+      "unit_tests": ["generator/MetricsCollector.test.ts"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-022"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F6",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "integration_type": "method_call",
+      "integration_method": "this.formatCapabilitiesEnhanced(capabilities)"
+    },
+    {
+      "feature_id": "F7",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "integration_type": "method_export",
+      "integration_method": "public buildFeedbackPrompt()"
+    },
+    {
+      "feature_id": "F9",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/index.ts",
+      "integration_type": "export",
+      "integration_method": "export * from './WorkflowCapabilityValidator.js'"
+    },
+    {
+      "feature_id": "F10",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/index.ts",
+      "integration_type": "export",
+      "integration_method": "export * from './MetricsCollector.js'"
+    }
+  ]
+}

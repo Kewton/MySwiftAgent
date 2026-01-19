@@ -1,0 +1,539 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-18T00:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "CapabilityForPrompt",
+      "type": "type",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/generator.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Type definition found at line 338"
+        },
+        "is_used": {
+          "passed": true,
+          "evidence": "Used in PromptBuilder.formatCapabilitiesEnhanced signature and WorkflowCapabilityValidator"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in PromptBuilder.ts, WorkflowCapabilityValidator.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/types/generator.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found for this type"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "PARTIAL_INTEGRATION",
+      "failure_reason": "Type is defined and used in method signatures, but the methods using it (formatCapabilitiesEnhanced, buildFeedbackPrompt) are not called in production flow"
+    },
+    {
+      "feature_id": "F2",
+      "name": "WorkflowCapabilityError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/errors.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Class definition found at line 21"
+        },
+        "is_instantiated": {
+          "passed": false,
+          "evidence": "No 'new WorkflowCapabilityError' or 'throw new WorkflowCapabilityError' found in codebase"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in PromptBuilder.ts and exported from types/index.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/types/errors.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined and imported but never instantiated or thrown in production code"
+    },
+    {
+      "feature_id": "F3",
+      "name": "GenerationMetrics",
+      "type": "type",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/metrics.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Type definition found at line 30"
+        },
+        "is_used": {
+          "passed": true,
+          "evidence": "Used in MetricsCollector.finalize() return type and MetricsAggregator.record() parameter"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in MetricsCollector.ts"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/types/metrics.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "PARTIAL_INTEGRATION",
+      "failure_reason": "Type is defined and used in method signatures, but the classes using it (GenerationMetricsCollector, MetricsAggregator) are not instantiated in production flow"
+    },
+    {
+      "feature_id": "F4",
+      "name": "MAX_CAPABILITIES_PER_PROMPT",
+      "type": "constant",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Constant definition found at line 13"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in PromptBuilder.ts line 16"
+        },
+        "is_used": {
+          "passed": false,
+          "evidence": "Used in PromptBuilder.selectRelevantCapabilities default parameter, but selectRelevantCapabilities is never called"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/constants.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Constant is defined and imported but only used in a method (selectRelevantCapabilities) that is never called"
+    },
+    {
+      "feature_id": "F5",
+      "name": "MAX_RETRY_COUNT",
+      "type": "constant",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Constant definition found at line 24"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "No import found in any file"
+        },
+        "is_used": {
+          "passed": false,
+          "evidence": "Not referenced anywhere in the codebase"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/constants.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Constant is defined but never imported or used anywhere in the codebase"
+    },
+    {
+      "feature_id": "F6",
+      "name": "formatCapabilitiesEnhanced",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Method definition found at line 226"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called within PromptBuilder.buildFeedbackPrompt at lines 367 and 372"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Method is defined and called by buildFeedbackPrompt, but buildFeedbackPrompt itself is never called in production flow"
+    },
+    {
+      "feature_id": "F7",
+      "name": "buildFeedbackPrompt",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Method definition found at line 329"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "No .buildFeedbackPrompt( call found in codebase outside of definition"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Public method, accessible via PromptBuilder instance"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found in feedbackLoop.test.ts or similar"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Method is defined but never called anywhere in WorkflowGenerator or other production code"
+    },
+    {
+      "feature_id": "F8",
+      "name": "selectRelevantCapabilities",
+      "type": "method",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Method definition found at line 399"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "No .selectRelevantCapabilities( call found in codebase outside of definition"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Public method, accessible via PromptBuilder instance"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Method is defined but never called anywhere in production code or routes"
+    },
+    {
+      "feature_id": "F9",
+      "name": "WorkflowCapabilityValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Class definition found at line 29"
+        },
+        "is_instantiated": {
+          "passed": false,
+          "evidence": "No 'new WorkflowCapabilityValidator' or 'createWorkflowCapabilityValidator()' call found in production code"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from validator/index.ts line 16"
+        },
+        "is_integrated": {
+          "passed": false,
+          "evidence": "NOT added to ValidationPipeline.createDefaultValidators() - only SchemaValidator, DependencyValidator, VariableValidator, CapabilityValidator, SecurityValidator are included"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined and exported but never instantiated or added to ValidationPipeline"
+    },
+    {
+      "feature_id": "F10",
+      "name": "GenerationMetricsCollector",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Class definition found at line 41"
+        },
+        "is_instantiated": {
+          "passed": false,
+          "evidence": "No 'new GenerationMetricsCollector' or 'createMetricsCollector()' call found in production code"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from generator/index.ts line 13"
+        },
+        "is_integrated": {
+          "passed": false,
+          "evidence": "Not used in WorkflowGenerator or any production workflow"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/MetricsCollector.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined and exported but never instantiated or used in production workflow"
+    },
+    {
+      "feature_id": "F11",
+      "name": "MetricsAggregator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Class definition found at line 106"
+        },
+        "is_instantiated": {
+          "passed": false,
+          "evidence": "No 'new MetricsAggregator' or 'createMetricsAggregator()' call found in production code"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from generator/index.ts line 13"
+        },
+        "is_integrated": {
+          "passed": false,
+          "evidence": "Not used in routes.ts or any production code"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/MetricsCollector.test.ts"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "No integration test found"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue 374"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Class is defined and exported but never instantiated or used in production code"
+    }
+  ],
+  "summary": {
+    "total_features": 11,
+    "passed": 0,
+    "dead_code": 8,
+    "partial_integration": 2,
+    "missing_tests": 11,
+    "not_found": 0
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F2",
+      "name": "WorkflowCapabilityError",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/types/errors.ts",
+      "line": 21,
+      "issue": "Class defined but never instantiated",
+      "recommended_caller": "WorkflowCapabilityValidator.validate or WorkflowGenerator.generateSingle",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts:75"
+    },
+    {
+      "feature_id": "F4",
+      "name": "MAX_CAPABILITIES_PER_PROMPT",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts",
+      "line": 13,
+      "issue": "Constant used only in uncalled method selectRelevantCapabilities",
+      "recommended_caller": "PromptBuilder.buildPrompt or buildSystemPrompt",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts:38"
+    },
+    {
+      "feature_id": "F5",
+      "name": "MAX_RETRY_COUNT",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/constants.ts",
+      "line": 24,
+      "issue": "Constant never imported or used",
+      "recommended_caller": "WorkflowGenerator constructor or RetryStrategy",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts:66"
+    },
+    {
+      "feature_id": "F7",
+      "name": "buildFeedbackPrompt",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line": 329,
+      "issue": "Method never called in production",
+      "recommended_caller": "WorkflowGenerator retry loop on validation failure",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts:117"
+    },
+    {
+      "feature_id": "F8",
+      "name": "selectRelevantCapabilities",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line": 399,
+      "issue": "Method never called in production",
+      "recommended_caller": "PromptBuilder.buildPrompt before formatCapabilities",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts:61"
+    },
+    {
+      "feature_id": "F9",
+      "name": "WorkflowCapabilityValidator",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts",
+      "line": 29,
+      "issue": "Class never instantiated, not in ValidationPipeline",
+      "recommended_caller": "ValidationPipeline.createDefaultValidators",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts:116"
+    },
+    {
+      "feature_id": "F10",
+      "name": "GenerationMetricsCollector",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+      "line": 41,
+      "issue": "Class never instantiated in production",
+      "recommended_caller": "WorkflowGenerator.generateWithMetadata",
+      "recommended_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts:142"
+    },
+    {
+      "feature_id": "F11",
+      "name": "MetricsAggregator",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/MetricsCollector.ts",
+      "line": 106,
+      "issue": "Class never instantiated in production",
+      "recommended_caller": "routes.ts or API handler for metrics endpoint",
+      "recommended_location": "N/A - routes.ts not found"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F9",
+      "action": "Add WorkflowCapabilityValidator to ValidationPipeline.createDefaultValidators()",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "line": 116,
+      "code_snippet": "import { WorkflowCapabilityValidator } from './WorkflowCapabilityValidator.js';\n\nprivate createDefaultValidators(): Validator[] {\n  return [\n    new SchemaValidator(),\n    new DependencyValidator(),\n    new VariableValidator(),\n    new CapabilityValidator(),\n    new WorkflowCapabilityValidator(), // ADD THIS\n    new SecurityValidator(),\n  ];\n}"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F7",
+      "action": "Integrate buildFeedbackPrompt in WorkflowGenerator retry loop",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "line": 117,
+      "code_snippet": "if (!validationResult.isValid) {\n  const capabilityErrors = validationResult.errors?.filter(e => 'capability' in e);\n  if (capabilityErrors && capabilityErrors.length > 0) {\n    // Build feedback prompt with enhanced capability info\n    const feedbackPrompt = this.promptBuilder.buildFeedbackPrompt(\n      prompt.user,\n      new WorkflowCapabilityError('Capability validation failed', workflow, validationResult, JSON.stringify(workflow)),\n      capabilities as CapabilityForPrompt[]\n    );\n    // Retry with feedback prompt\n    // ...\n  }\n  throw new WorkflowValidationError(...);\n}"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "F8",
+      "action": "Use selectRelevantCapabilities in buildSystemPrompt to limit prompt size",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line": 61,
+      "code_snippet": "buildSystemPrompt(capabilities: Capability[], taskDescription?: string): string {\n  const availableCapabilities = capabilities.filter((c) => c.status === 'available');\n  \n  if (availableCapabilities.length === 0) {\n    return DEFAULT_SYSTEM_PROMPT;\n  }\n\n  // Select relevant capabilities to reduce prompt size\n  const relevantCapabilities = taskDescription\n    ? this.selectRelevantCapabilities(availableCapabilities as CapabilityForPrompt[], taskDescription)\n    : availableCapabilities;\n\n  const capabilitiesSection = this.formatCapabilities(relevantCapabilities as Capability[]);\n  return buildSystemPromptTemplate(capabilitiesSection);\n}"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "F10",
+      "action": "Add GenerationMetricsCollector to WorkflowGenerator.generateWithMetadata",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "line": 142,
+      "code_snippet": "async generateWithMetadata(...): Promise<GenerationResult> {\n  const metricsCollector = createMetricsCollector();\n  metricsCollector.startGeneration();\n  \n  return this.retryStrategy.execute(async (attempt) => {\n    metricsCollector.recordAttempt();\n    // ... generation logic ...\n    if (validationResult.isValid) {\n      metricsCollector.recordSuccess();\n    } else {\n      metricsCollector.recordError(new Error('Validation failed'));\n    }\n    // ...\n    const metrics = metricsCollector.finalize();\n    return { workflow, validationResult, llmMetadata, metrics };\n  });\n}"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "F5",
+      "action": "Use MAX_RETRY_COUNT in WorkflowGenerator constructor",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "line": 66,
+      "code_snippet": "import { MAX_RETRY_COUNT } from '../constants.js';\n\nconstructor(config: WorkflowGeneratorConfig) {\n  // ...\n  this.retryStrategy = new RetryStrategy({\n    maxAttempts: config.maxRetries ?? MAX_RETRY_COUNT,\n    initialDelayMs: config.retryDelayMs ?? 1000,\n    maxDelayMs: 10000,\n    backoffFactor: 2,\n  });\n  // ...\n}"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "ALL",
+      "action": "Create acceptance test file",
+      "file": "mySwiftAgentCore/tests/acceptance/test_issue_374_acceptance.py",
+      "line": 1,
+      "code_snippet": "# Create comprehensive acceptance test that:\n# 1. Tests feedback loop with buildFeedbackPrompt on validation failure\n# 2. Tests WorkflowCapabilityValidator integration in pipeline\n# 3. Tests metrics collection during workflow generation\n# 4. Tests selectRelevantCapabilities with large capability sets\n# 5. Verifies MAX_CAPABILITIES_PER_PROMPT and MAX_RETRY_COUNT usage"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "ALL",
+      "action": "Create integration tests for feedback loop",
+      "file": "mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/feedbackLoop.test.ts",
+      "line": 1,
+      "code_snippet": "// Create integration test that verifies:\n// - buildFeedbackPrompt is called when WorkflowCapabilityValidator fails\n// - formatCapabilitiesEnhanced is used in feedback prompt\n// - WorkflowCapabilityError is thrown and caught\n// - Retry mechanism uses feedback prompt"
+    }
+  ],
+  "missing_integration_tests": [
+    "feedbackLoop.test.ts - Test buildFeedbackPrompt in retry flow",
+    "capabilitySelection.test.ts - Test selectRelevantCapabilities with real capabilities",
+    "validatorPipeline.test.ts - Test WorkflowCapabilityValidator in pipeline",
+    "metricsCollection.test.ts - Test GenerationMetricsCollector in generation flow"
+  ],
+  "missing_acceptance_test": {
+    "file": "mySwiftAgentCore/tests/acceptance/test_issue_374_acceptance.py",
+    "required": true,
+    "reason": "Issue #374 requires E2E verification of feedback loop, capability validation, and metrics collection"
+  }
+}

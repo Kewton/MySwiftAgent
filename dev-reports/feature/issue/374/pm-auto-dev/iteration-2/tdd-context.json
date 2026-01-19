@@ -1,0 +1,108 @@
+{
+  "issue_number": 374,
+  "iteration": 2,
+  "retry_reason": "Phase 2.7でデッドコード検出（統合率 27%）",
+  "dead_code_fixes": [
+    {
+      "feature_id": "F5",
+      "feature": "MAX_RETRY_COUNT",
+      "action": "WorkflowGeneratorコンストラクタでインポート・使用",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "expected_integration": "import { MAX_RETRY_COUNT } from '../constants.js'"
+    },
+    {
+      "feature_id": "F9",
+      "feature": "WorkflowCapabilityValidator",
+      "action": "ValidationPipeline.createDefaultValidatorsに追加",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "expected_integration": "new WorkflowCapabilityValidator(capabilities)"
+    },
+    {
+      "feature_id": "F7",
+      "feature": "buildFeedbackPrompt",
+      "action": "WorkflowGenerator.generateSingleでフィードバックループ実装",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "expected_integration": "フィードバックループでvalidation失敗時にbuildFeedbackPrompt呼び出し"
+    },
+    {
+      "feature_id": "F8",
+      "feature": "selectRelevantCapabilities",
+      "action": "PromptBuilder.buildSystemPromptまたはroutes.tsで呼び出し",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "expected_integration": "this.selectRelevantCapabilities(capabilities, task)"
+    },
+    {
+      "feature_id": "F10",
+      "feature": "GenerationMetricsCollector",
+      "action": "WorkflowGenerator.generateWithMetadataでインスタンス化",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "expected_integration": "const metricsCollector = createMetricsCollector()"
+    },
+    {
+      "feature_id": "F2",
+      "feature": "WorkflowCapabilityError",
+      "action": "WorkflowCapabilityValidatorで検証失敗時にthrow",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts",
+      "expected_integration": "throw new WorkflowCapabilityError(details)"
+    }
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T2.1",
+      "description": "ValidationPipeline にWorkflowCapabilityValidatorを統合",
+      "type": "integration",
+      "target_file": "ValidationPipeline.ts",
+      "integration_point": "createDefaultValidators メソッド内"
+    },
+    {
+      "id": "T2.2",
+      "description": "WorkflowGenerator にフィードバックループを実装",
+      "type": "integration",
+      "target_file": "WorkflowGenerator.ts",
+      "integration_point": "generateSingle/generateWithMetadata メソッド内"
+    },
+    {
+      "id": "T2.3",
+      "description": "PromptBuilder.buildSystemPrompt でselectRelevantCapabilitiesを呼び出し",
+      "type": "integration",
+      "target_file": "PromptBuilder.ts",
+      "integration_point": "buildSystemPrompt メソッド内"
+    },
+    {
+      "id": "T2.4",
+      "description": "WorkflowGenerator でGenerationMetricsCollectorを使用",
+      "type": "integration",
+      "target_file": "WorkflowGenerator.ts",
+      "integration_point": "generateWithMetadata メソッド内"
+    },
+    {
+      "id": "T2.5",
+      "description": "WorkflowCapabilityValidator でWorkflowCapabilityErrorをthrow",
+      "type": "integration",
+      "target_file": "WorkflowCapabilityValidator.ts",
+      "integration_point": "validate メソッド内（失敗時）"
+    },
+    {
+      "id": "T2.6",
+      "description": "結合テスト作成（フィードバックループ、メトリクス収集）",
+      "type": "test",
+      "target_file": "tests/integration/taskflowGeneratorAgent/feedbackLoop.test.ts",
+      "integration_point": "フィードバックループ動作確認"
+    }
+  ],
+  "already_completed": [
+    "CapabilityForPrompt 型の実装",
+    "WorkflowCapabilityError クラスの定義",
+    "GenerationMetrics 型の実装",
+    "MAX_CAPABILITIES_PER_PROMPT 定数の定義",
+    "MAX_RETRY_COUNT 定数の定義",
+    "formatCapabilitiesEnhanced メソッドの実装",
+    "buildFeedbackPrompt メソッドの実装",
+    "selectRelevantCapabilities メソッドの実装",
+    "WorkflowCapabilityValidator クラスの実装",
+    "GenerationMetricsCollector クラスの実装",
+    "MetricsAggregator クラスの実装",
+    "全単体テストの作成"
+  ],
+  "target_coverage": 90
+}

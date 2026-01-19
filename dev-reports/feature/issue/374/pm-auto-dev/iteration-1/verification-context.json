@@ -1,0 +1,67 @@
+{
+  "verification_phase": "implementation_verification",
+  "issue_number": 374,
+  "iteration": 1,
+  "input_file": "dev-reports/feature/issue/374/pm-auto-dev/iteration-1/implemented-features.json",
+  "output_files": [
+    "dev-reports/feature/issue/374/pm-auto-dev/iteration-1/implementation-verification-result.json",
+    "dev-reports/feature/issue/374/pm-auto-dev/iteration-1/verification-summary.md"
+  ],
+  "verification_method": "grep_based_usage_detection",
+  "tools_used": [
+    "Grep - search for function calls, imports, instantiations",
+    "Read - inspect source files for integration points",
+    "Glob - locate test files"
+  ],
+  "critical_findings": {
+    "dead_code_count": 8,
+    "partial_integration_count": 2,
+    "total_features_verified": 11,
+    "integration_test_count": 0,
+    "acceptance_test_exists": false
+  },
+  "blocking_issues": [
+    {
+      "issue": "WorkflowCapabilityValidator not added to ValidationPipeline",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "line": 116,
+      "severity": "critical"
+    },
+    {
+      "issue": "buildFeedbackPrompt never called in WorkflowGenerator retry logic",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "line": 117,
+      "severity": "critical"
+    },
+    {
+      "issue": "GenerationMetricsCollector never instantiated",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+      "line": 142,
+      "severity": "high"
+    },
+    {
+      "issue": "selectRelevantCapabilities never called",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+      "line": 61,
+      "severity": "high"
+    },
+    {
+      "issue": "No acceptance test file",
+      "file": "mySwiftAgentCore/tests/acceptance/test_issue_374_acceptance.py",
+      "severity": "critical"
+    }
+  ],
+  "next_action": "re_run_tdd_phase",
+  "recommended_tdd_tasks": [
+    "Task 1: Integrate WorkflowCapabilityValidator into ValidationPipeline.createDefaultValidators()",
+    "Task 2: Implement feedback loop in WorkflowGenerator - catch WorkflowCapabilityError and call buildFeedbackPrompt",
+    "Task 3: Add GenerationMetricsCollector to WorkflowGenerator.generateWithMetadata()",
+    "Task 4: Call selectRelevantCapabilities in PromptBuilder.buildSystemPrompt when capabilities exceed MAX_CAPABILITIES_PER_PROMPT",
+    "Task 5: Import and use MAX_RETRY_COUNT in WorkflowGenerator constructor",
+    "Task 6: Create integration test: feedbackLoop.test.ts",
+    "Task 7: Create integration test: capabilitySelection.test.ts",
+    "Task 8: Create integration test: validatorPipeline.test.ts",
+    "Task 9: Create integration test: metricsCollection.test.ts",
+    "Task 10: Create acceptance test: test_issue_374_acceptance.py"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "status": "success",
+  "coverage": 90,
+  "unit_tests": {
+    "total": 1243,
+    "passed": 1243,
+    "failed": 0
+  },
+  "integration_tests": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0
+  },
+  "static_analysis": {
+    "typescript_errors": 0,
+    "lint_errors": 0
+  },
+  "executed_tasks": [
+    "T2.1",
+    "T2.2",
+    "T2.3",
+    "T2.4",
+    "T2.5",
+    "T2.6"
+  ],
+  "skipped_tasks": [],
+  "files_modified": [
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/mySwiftAgentCore/src/taskflowGeneratorAgent/generator/WorkflowGenerator.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/mySwiftAgentCore/src/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/mySwiftAgentCore/src/taskflowGeneratorAgent/recovery/RetryStrategy.ts",
+    "/Users/maenokota/share/work/github_kewton/MySwiftAgent/mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/feedbackLoop.test.ts"
+  ],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": true,
+    "exports_added": true
+  },
+  "integration_summary": {
+    "F5_MAX_RETRY_COUNT": {
+      "status": "integrated",
+      "usage": "WorkflowGenerator.generateSingle/generateWithMetadata uses Math.min(retryStrategy.getMaxAttempts(), MAX_RETRY_COUNT)",
+      "file": "WorkflowGenerator.ts:121,289"
+    },
+    "F9_WorkflowCapabilityValidator": {
+      "status": "integrated",
+      "usage": "Added to ValidationPipeline.createDefaultValidators() as the 6th validator",
+      "file": "ValidationPipeline.ts:128"
+    },
+    "F7_buildFeedbackPrompt": {
+      "status": "integrated",
+      "usage": "Called in WorkflowGenerator.buildFeedbackForRetry() when error is WorkflowCapabilityError",
+      "file": "WorkflowGenerator.ts:231-235"
+    },
+    "F8_selectRelevantCapabilities": {
+      "status": "integrated",
+      "usage": "Called in PromptBuilder.buildPrompt() to filter capabilities before building system prompt",
+      "file": "PromptBuilder.ts:44-48"
+    },
+    "F10_GenerationMetricsCollector": {
+      "status": "integrated",
+      "usage": "Used in WorkflowGenerator.generateWithMetadata() to track generation metrics",
+      "file": "WorkflowGenerator.ts:277-278,337-350"
+    },
+    "F2_WorkflowCapabilityError": {
+      "status": "integrated",
+      "usage": "Thrown by WorkflowCapabilityValidator.validateOrThrow() and WorkflowGenerator on validation failures",
+      "file": "WorkflowCapabilityValidator.ts:72, WorkflowGenerator.ts:171,356"
+    }
+  },
+  "commits": [],
+  "message": "Issue #374 Iteration 2: Successfully integrated all dead code features. WorkflowCapabilityValidator added to ValidationPipeline. WorkflowGenerator now uses MAX_RETRY_COUNT, buildFeedbackPrompt, and GenerationMetricsCollector. PromptBuilder.buildPrompt now uses selectRelevantCapabilities. WorkflowCapabilityValidator.validateOrThrow throws WorkflowCapabilityError. All 1243 unit tests and 12 integration tests pass."
+}

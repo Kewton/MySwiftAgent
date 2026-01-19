@@ -1,0 +1,86 @@
+{
+  "issue_number": 374,
+  "feature_summary": "Capability Prompt強化 + Validation強化 + フィードバックループ実装",
+  "acceptance_criteria": [
+    "AC-1: PromptBuilderが完全なCapability仕様をLLMに渡す",
+    "AC-2: WorkflowCapabilityValidatorが必須パラメータ・型・制約を検証する",
+    "AC-3: 検証失敗時に WorkflowCapabilityError が生成される",
+    "AC-4: フィードバック付きプロンプトでLLMが再生成を試みる",
+    "AC-5: 最大リトライ回数（3回）まで自動修正を試みる",
+    "AC-6: E2Eテスト（Test 4）が成功する",
+    "AC-7: HTTP 422エラーが解消される"
+  ],
+  "labels": ["feature"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": ["mySwiftAgentCore"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "acceptance-plan.md",
+    "health_checks": [
+      {"service": "mySwiftAgentCore", "url": "http://localhost:8006/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "単体テスト実行",
+        "command": "cd mySwiftAgentCore && npm run test -- --coverage",
+        "expected_exit_code": 0,
+        "expected_coverage": 90
+      },
+      {
+        "name": "結合テスト実行",
+        "command": "cd mySwiftAgentCore && npm run test:integration",
+        "expected_exit_code": 0
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_374_acceptance.py",
+  "vitest_test_files": [
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/types/errors.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/types/metrics.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/constants.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/validator/WorkflowCapabilityValidator.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/generator/MetricsCollector.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts",
+    "mySwiftAgentCore/tests/integration/taskflowGeneratorAgent/feedbackLoop.test.ts"
+  ],
+  "test_item_summary": {
+    "unit_tests": {
+      "TC-001": "formatCapabilities() が拡張フィールドを含む",
+      "TC-002": "パラメータの詳細情報が出力される",
+      "TC-003": "必須パラメータ欠落の検出",
+      "TC-004": "パラメータ型不一致の検出",
+      "TC-005": "パラメータ制約違反の検出（min/max）",
+      "TC-006": "パラメータ制約違反の検出（enum）",
+      "TC-007": "未知パラメータの警告",
+      "TC-008": "動的参照（$input, $steps）はスキップされる",
+      "TC-009": "WorkflowCapabilityError の生成",
+      "TC-010": "toFeedbackSummary() の出力",
+      "TC-011": "buildFeedbackPrompt() の構築",
+      "TC-012": "フィードバックループの動作（モック）",
+      "TC-013": "最大リトライ到達時のエラー",
+      "TC-014": "リトライ回数のカウント",
+      "TC-019": "_internal フィールド除外の検証",
+      "TC-020": "プロンプトサイズ制限の検証",
+      "TC-021": "メトリクス収集の検証"
+    },
+    "integration_tests": {
+      "TC-012-INT": "ValidationPipeline + WorkflowCapabilityValidator 統合",
+      "TC-017-INT": "WorkflowGenerator フィードバックループ統合"
+    },
+    "acceptance_tests": {
+      "TC-015": "E2E - google_search ワークフロー生成",
+      "TC-016": "E2E - gmail_send ワークフロー生成",
+      "TC-017": "E2E - バリデーション失敗時のリトライ動作",
+      "TC-018": "E2E - 生成されたワークフローの実行",
+      "TC-022": "APIレスポンスにmetricsが含まれる"
+    },
+    "dead_code_verification": {
+      "TC-023": "WorkflowCapabilityValidator の統合確認",
+      "TC-024": "buildFeedbackPrompt() の呼び出し確認",
+      "TC-025": "selectRelevantCapabilities() の呼び出し確認",
+      "TC-026": "GenerationMetricsCollector の使用確認"
+    }
+  }
+}

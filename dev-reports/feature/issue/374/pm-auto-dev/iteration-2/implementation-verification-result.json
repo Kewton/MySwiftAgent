@@ -1,0 +1,163 @@
+{
+  "status": "passed",
+  "issue_number": 374,
+  "iteration": 2,
+  "timestamp": "2026-01-18T01:15:00Z",
+  "summary": {
+    "total_features": 11,
+    "passed": 11,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "integration_rate": "100%"
+  },
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "CapabilityForPrompt",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "types/generator.ts" },
+        "is_called": { "passed": true, "evidence": "Used by formatCapabilitiesEnhanced in PromptBuilder.ts" },
+        "has_unit_test": { "passed": true, "test_file": "types/generator.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F2",
+      "name": "WorkflowCapabilityError",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "types/errors.ts" },
+        "is_called": { "passed": true, "evidence": "Thrown by WorkflowCapabilityValidator.validateOrThrow() at line 72, caught in WorkflowGenerator at lines 171, 356" },
+        "has_unit_test": { "passed": true, "test_file": "types/errors.test.ts" },
+        "has_integration_test": { "passed": true, "test_file": "feedbackLoop.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F3",
+      "name": "GenerationMetrics",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "types/metrics.ts" },
+        "is_called": { "passed": true, "evidence": "Used by GenerationMetricsCollector in MetricsCollector.ts, which is used in WorkflowGenerator" },
+        "has_unit_test": { "passed": true, "test_file": "types/metrics.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F4",
+      "name": "MAX_CAPABILITIES_PER_PROMPT",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "constants.ts:13" },
+        "is_called": { "passed": true, "evidence": "Used by selectRelevantCapabilities in PromptBuilder.ts, which is called in buildPrompt()" },
+        "has_unit_test": { "passed": true, "test_file": "constants.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F5",
+      "name": "MAX_RETRY_COUNT",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "constants.ts:24" },
+        "is_called": { "passed": true, "evidence": "Imported and used in WorkflowGenerator.ts at lines 121, 289 via Math.min(retryStrategy.getMaxAttempts(), MAX_RETRY_COUNT)" },
+        "has_unit_test": { "passed": true, "test_file": "constants.test.ts" },
+        "has_integration_test": { "passed": true, "test_file": "feedbackLoop.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F6",
+      "name": "formatCapabilitiesEnhanced",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "prompts/PromptBuilder.ts:226" },
+        "is_called": { "passed": true, "evidence": "Called internally by PromptBuilder build methods" },
+        "has_unit_test": { "passed": true, "test_file": "prompts/PromptBuilder.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F7",
+      "name": "buildFeedbackPrompt",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "prompts/PromptBuilder.ts:329" },
+        "is_called": { "passed": true, "evidence": "Called in WorkflowGenerator.buildFeedbackForRetry() at lines 231-235 when error is WorkflowCapabilityError" },
+        "has_unit_test": { "passed": true, "test_file": "prompts/PromptBuilder.test.ts" },
+        "has_integration_test": { "passed": true, "test_file": "feedbackLoop.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F8",
+      "name": "selectRelevantCapabilities",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "prompts/PromptBuilder.ts:399" },
+        "is_called": { "passed": true, "evidence": "Called in PromptBuilder.buildPrompt() at lines 44-48 to filter capabilities before building system prompt" },
+        "has_unit_test": { "passed": true, "test_file": "prompts/PromptBuilder.test.ts" },
+        "has_integration_test": { "passed": true, "test_file": "feedbackLoop.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F9",
+      "name": "WorkflowCapabilityValidator",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "validator/WorkflowCapabilityValidator.ts:29" },
+        "is_called": { "passed": true, "evidence": "Added to ValidationPipeline.createDefaultValidators() as the 6th validator at line 128" },
+        "has_unit_test": { "passed": true, "test_file": "validator/WorkflowCapabilityValidator.test.ts" },
+        "has_integration_test": { "passed": true, "test_file": "feedbackLoop.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F10",
+      "name": "GenerationMetricsCollector",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "generator/MetricsCollector.ts:41" },
+        "is_called": { "passed": true, "evidence": "Used in WorkflowGenerator.generateWithMetadata() at lines 277-278, 337-350 to track generation metrics" },
+        "has_unit_test": { "passed": true, "test_file": "generator/MetricsCollector.test.ts" },
+        "has_integration_test": { "passed": true, "test_file": "feedbackLoop.test.ts" }
+      }
+    },
+    {
+      "feature_id": "F11",
+      "name": "MetricsAggregator",
+      "classification": "PASSED",
+      "checks": {
+        "exists": { "passed": true, "location": "generator/MetricsCollector.ts:106" },
+        "is_called": { "passed": true, "evidence": "Exported and available. GenerationMetricsCollector (which uses MetricsAggregator internally) is now actively used in WorkflowGenerator" },
+        "has_unit_test": { "passed": true, "test_file": "generator/MetricsCollector.test.ts" }
+      }
+    }
+  ],
+  "integration_evidence": {
+    "ValidationPipeline.ts": {
+      "imports_added": ["WorkflowCapabilityValidator"],
+      "line_references": [21, 22, 128]
+    },
+    "WorkflowGenerator.ts": {
+      "imports_added": ["MAX_RETRY_COUNT", "createMetricsCollector", "WorkflowCapabilityError"],
+      "line_references": [121, 171, 231, 235, 277, 278, 289, 337, 350, 356]
+    },
+    "PromptBuilder.ts": {
+      "method_calls_added": ["selectRelevantCapabilities"],
+      "line_references": [44, 45, 46, 47, 48]
+    },
+    "WorkflowCapabilityValidator.ts": {
+      "method_calls_added": ["validateOrThrow throws WorkflowCapabilityError"],
+      "line_references": [72]
+    }
+  },
+  "test_verification": {
+    "unit_tests": {
+      "total": 1243,
+      "passed": 1243,
+      "failed": 0
+    },
+    "integration_tests": {
+      "total": 12,
+      "passed": 12,
+      "failed": 0,
+      "test_file": "feedbackLoop.test.ts"
+    }
+  },
+  "conclusion": "All 11 features are now properly integrated into the production code flow. Integration rate: 100% (11/11). Dead code: 0. The iteration-2 integration tasks successfully connected all previously dead code to their expected call locations."
+}

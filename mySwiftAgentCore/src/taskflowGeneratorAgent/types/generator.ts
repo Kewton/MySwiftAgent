@@ -81,13 +81,29 @@ export const TaskGenerationRequestSchema = z.object({
 export type TaskGenerationRequest = z.infer<typeof TaskGenerationRequestSchema>;
 
 /**
+ * Parameter Validation Schema - Constraints for parameter values
+ * Issue #374: Extended validation for capability parameters
+ */
+export const ParameterValidationSchema = z.object({
+  min: z.number().optional(),
+  max: z.number().optional(),
+  pattern: z.string().optional(),
+  enum: z.array(z.unknown()).optional(),
+});
+
+export type ParameterValidation = z.infer<typeof ParameterValidationSchema>;
+
+/**
  * Capability Parameter - Parameter definition for capabilities
+ * Issue #374: Extended with defaultValue and validation constraints
  */
 export const CapabilityParameterSchema = z.object({
   name: z.string(),
   type: z.string(),
   required: z.boolean().optional(),
   description: z.string().optional(),
+  defaultValue: z.unknown().optional(),
+  validation: ParameterValidationSchema.optional(),
 });
 
 export type CapabilityParameter = z.infer<typeof CapabilityParameterSchema>;
@@ -238,3 +254,85 @@ export const ErrorResponseSchema = z.object({
 });
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+
+// ==================================================
+// Issue #374: Enhanced Capability Types for Prompts
+// ==================================================
+
+/**
+ * TaskFlow Step Example - Example step for capability documentation
+ */
+export interface TaskFlowStepExample {
+  id: string;
+  type: string;
+  config: Record<string, unknown>;
+  params: Record<string, unknown>;
+}
+
+/**
+ * Capability Example for Prompt - Example with TaskFlow step
+ */
+export interface CapabilityPromptExample {
+  description: string;
+  taskflow_step: TaskFlowStepExample;
+}
+
+/**
+ * Response Schema - Schema definition for API responses
+ */
+export interface ResponseSchema {
+  type: string;
+  properties?: Record<string, { type: string; description?: string }>;
+  items?: { type: string };
+}
+
+/**
+ * Capability Metadata - Additional metadata for capabilities
+ */
+export interface CapabilityMetadata {
+  use_cases?: string[];
+  tags?: string[];
+  [key: string]: unknown;
+}
+
+/**
+ * CapabilityForPrompt - Extended capability type for prompt generation
+ *
+ * Issue #374: This type extends Capability with:
+ * - Examples with TaskFlow step format
+ * - Response schema for output documentation
+ * - Rich metadata including use_cases
+ *
+ * Used by PromptBuilder to create context-rich prompts
+ */
+export const CapabilityForPromptSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  category: z.string(),
+  status: z.enum(['available', 'unavailable', 'deprecated']),
+  parameters: z.array(CapabilityParameterSchema).optional(),
+  examples: z.array(z.object({
+    description: z.string(),
+    taskflow_step: z.object({
+      id: z.string(),
+      type: z.string(),
+      config: z.record(z.unknown()),
+      params: z.record(z.unknown()),
+    }),
+  })).optional(),
+  responseSchema: z.object({
+    type: z.string(),
+    properties: z.record(z.object({
+      type: z.string(),
+      description: z.string().optional(),
+    })).optional(),
+    items: z.object({ type: z.string() }).optional(),
+  }).optional(),
+  metadata: z.object({
+    use_cases: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
+  }).passthrough().optional(),
+});
+
+export type CapabilityForPrompt = z.infer<typeof CapabilityForPromptSchema>;

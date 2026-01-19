@@ -293,3 +293,541 @@ describe('PromptBuilder - capability_id rules (Issue #373)', () => {
     expect(prompt).toContain('Never use both');
   });
 });
+
+/**
+ * Issue #374: Enhanced Capability formatting tests
+ */
+describe('PromptBuilder - Enhanced Capability Formatting (Issue #374)', () => {
+  let builder: PromptBuilder;
+
+  beforeEach(() => {
+    builder = new PromptBuilder();
+  });
+
+  describe('formatCapabilitiesEnhanced', () => {
+    it('should format capabilities with validation constraints', () => {
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'google_search',
+          name: 'Google Search',
+          description: 'Web search capability',
+          category: 'api',
+          status: 'available',
+          parameters: [
+            {
+              name: 'queries',
+              type: 'array',
+              required: true,
+              description: 'Search queries',
+            },
+            {
+              name: 'num',
+              type: 'number',
+              required: false,
+              description: 'Number of results',
+              defaultValue: 10,
+              validation: { min: 1, max: 100 },
+            },
+          ],
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('google_search');
+      expect(formatted).toContain('queries');
+      expect(formatted).toContain('array');
+      expect(formatted).toContain('required');
+      expect(formatted).toContain('num');
+      expect(formatted).toContain('default');
+      expect(formatted).toContain('min');
+      expect(formatted).toContain('max');
+    });
+
+    it('should include response schema when available', () => {
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'test_api',
+          name: 'Test API',
+          category: 'api',
+          status: 'available',
+          responseSchema: {
+            type: 'object',
+            properties: {
+              results: { type: 'array' },
+              count: { type: 'number' },
+            },
+          },
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('Response Schema');
+      expect(formatted).toContain('results');
+      expect(formatted).toContain('count');
+    });
+
+    it('should include TaskFlow examples when available', () => {
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'google_search',
+          name: 'Google Search',
+          category: 'api',
+          status: 'available',
+          examples: [
+            {
+              description: 'Basic search example',
+              taskflow_step: {
+                id: 'search_step',
+                type: 'api_rest',
+                config: {
+                  capability_id: 'google_search',
+                  method: 'POST',
+                },
+                params: {
+                  body: {
+                    queries: ['search term'],
+                    num: 3,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('TaskFlow');
+      expect(formatted).toContain('Example');
+      expect(formatted).toContain('search_step');
+      expect(formatted).toContain('capability_id');
+    });
+
+    it('should include use cases from metadata', () => {
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'google_search',
+          name: 'Google Search',
+          category: 'api',
+          status: 'available',
+          metadata: {
+            use_cases: [
+              'Keyword search',
+              'Multiple query search',
+              'Limited result search',
+            ],
+          },
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('Use Cases');
+      expect(formatted).toContain('Keyword search');
+      expect(formatted).toContain('Multiple query search');
+    });
+
+    it('should include enum constraints', () => {
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'email_api',
+          name: 'Email API',
+          category: 'api',
+          status: 'available',
+          parameters: [
+            {
+              name: 'priority',
+              type: 'string',
+              required: false,
+              validation: { enum: ['low', 'normal', 'high'] },
+            },
+          ],
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('enum');
+      expect(formatted).toContain('low');
+      expect(formatted).toContain('normal');
+      expect(formatted).toContain('high');
+    });
+  });
+
+  describe('buildFeedbackPrompt', () => {
+    it('should build feedback prompt with error details', () => {
+      const originalPrompt = 'Generate a workflow for searching';
+      const error = new WorkflowCapabilityError(
+        'Validation failed',
+        {
+          isValid: false,
+          errors: [
+            {
+              code: 'MISSING_REQUIRED_PARAM',
+              message: "Required parameter 'queries' is missing",
+              path: 'steps[0].params.body',
+            },
+          ],
+        },
+        '{"workflow_name": "test"}',
+        1
+      );
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'google_search',
+          name: 'Google Search',
+          category: 'api',
+          status: 'available',
+          parameters: [
+            { name: 'queries', type: 'array', required: true },
+          ],
+        },
+      ];
+
+      const feedbackPrompt = builder.buildFeedbackPrompt(
+        originalPrompt,
+        error,
+        capabilities
+      );
+
+      expect(feedbackPrompt).toContain('MISSING_REQUIRED_PARAM');
+      expect(feedbackPrompt).toContain('queries');
+      expect(feedbackPrompt).toContain('attempt 1');
+      expect(feedbackPrompt).toContain('Google Search');
+    });
+
+    it('should include original requirements', () => {
+      const originalPrompt = 'Generate a workflow for user analysis';
+      const error = new WorkflowCapabilityError(
+        'Validation failed',
+        { isValid: false, errors: [] },
+        '{}',
+        2
+      );
+
+      const feedbackPrompt = builder.buildFeedbackPrompt(
+        originalPrompt,
+        error,
+        []
+      );
+
+      expect(feedbackPrompt).toContain('user analysis');
+    });
+
+    it('should include raw content from previous attempt', () => {
+      const rawContent = '{"workflow_name": "invalid_workflow", "steps": []}';
+      const error = new WorkflowCapabilityError(
+        'Validation failed',
+        { isValid: false, errors: [] },
+        rawContent,
+        1
+      );
+
+      const feedbackPrompt = builder.buildFeedbackPrompt(
+        'original',
+        error,
+        []
+      );
+
+      expect(feedbackPrompt).toContain('invalid_workflow');
+    });
+
+    it('should extract and show problem capabilities', () => {
+      const error = new WorkflowCapabilityError(
+        'Validation failed',
+        {
+          isValid: false,
+          errors: [
+            {
+              code: 'MISSING_REQUIRED_PARAM',
+              message: 'Missing parameter',
+              path: 'steps[0]',
+            },
+          ],
+        },
+        '{}',
+        1
+      );
+
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'google_search',
+          name: 'Google Search',
+          category: 'api',
+          status: 'available',
+        },
+        {
+          id: 'email_api',
+          name: 'Email API',
+          category: 'api',
+          status: 'available',
+        },
+      ];
+
+      // If capability is specified in error, it should be highlighted
+      const errorWithCapability = new WorkflowCapabilityError(
+        'Validation failed',
+        {
+          isValid: false,
+          errors: [
+            {
+              code: 'MISSING_REQUIRED_PARAM',
+              message: 'Missing parameter',
+              path: 'steps[0]',
+              capability: 'google_search',
+            } as any,
+          ],
+        },
+        '{}',
+        1
+      );
+
+      const feedbackPrompt = builder.buildFeedbackPrompt(
+        'original',
+        errorWithCapability,
+        capabilities
+      );
+
+      // Should focus on the problem capability
+      expect(feedbackPrompt).toContain('Google Search');
+    });
+  });
+
+  describe('selectRelevantCapabilities', () => {
+    it('should return all capabilities when under limit', () => {
+      const task: TaskGenerationRequest = {
+        task_id: 'task_001',
+        name: 'Search Task',
+        description: 'Search for information',
+        interface: { input: {}, output: {} },
+      };
+
+      const capabilities: CapabilityForPrompt[] = [
+        { id: 'api_1', name: 'API 1', category: 'api', status: 'available' },
+        { id: 'api_2', name: 'API 2', category: 'api', status: 'available' },
+      ];
+
+      const selected = builder.selectRelevantCapabilities(task, capabilities, 50);
+
+      expect(selected).toHaveLength(2);
+    });
+
+    it('should limit capabilities to maxCount', () => {
+      const task: TaskGenerationRequest = {
+        task_id: 'task_001',
+        name: 'Task',
+        description: 'Description',
+        interface: { input: {}, output: {} },
+      };
+
+      const capabilities: CapabilityForPrompt[] = [];
+      for (let i = 0; i < 100; i++) {
+        capabilities.push({
+          id: `api_${i}`,
+          name: `API ${i}`,
+          category: 'api',
+          status: 'available',
+        });
+      }
+
+      const selected = builder.selectRelevantCapabilities(task, capabilities, 50);
+
+      expect(selected).toHaveLength(50);
+    });
+
+    it('should prioritize capabilities matching task name', () => {
+      const task: TaskGenerationRequest = {
+        task_id: 'task_001',
+        name: 'Google Search Task',
+        description: 'Search the web',
+        interface: { input: {}, output: {} },
+      };
+
+      const capabilities: CapabilityForPrompt[] = [
+        { id: 'email_api', name: 'Email API', category: 'api', status: 'available' },
+        { id: 'google_search', name: 'Google Search', category: 'api', status: 'available' },
+        { id: 'weather_api', name: 'Weather API', category: 'api', status: 'available' },
+      ];
+
+      const selected = builder.selectRelevantCapabilities(task, capabilities, 2);
+
+      // Google Search should be first due to name match
+      expect(selected[0].id).toBe('google_search');
+    });
+
+    it('should consider use_cases in scoring', () => {
+      const task: TaskGenerationRequest = {
+        task_id: 'task_001',
+        name: 'Email Task',
+        description: 'Send an email notification',
+        interface: { input: {}, output: {} },
+      };
+
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'api_1',
+          name: 'Generic API',
+          category: 'api',
+          status: 'available',
+        },
+        {
+          id: 'notification_api',
+          name: 'Notification API',
+          category: 'api',
+          status: 'available',
+          metadata: {
+            use_cases: ['Send email notification', 'Push notifications'],
+          },
+        },
+      ];
+
+      const selected = builder.selectRelevantCapabilities(task, capabilities, 1);
+
+      expect(selected[0].id).toBe('notification_api');
+    });
+  });
+
+  describe('extractKeywords', () => {
+    it('should extract meaningful keywords', () => {
+      const text = 'Search for user information and generate report';
+
+      const keywords = builder.extractKeywords(text);
+
+      expect(keywords).toContain('search');
+      expect(keywords).toContain('user');
+      expect(keywords).toContain('information');
+      expect(keywords).toContain('generate');
+      expect(keywords).toContain('report');
+      // Should not include stop words
+      expect(keywords).not.toContain('for');
+      expect(keywords).not.toContain('and');
+    });
+
+    it('should handle hyphens and underscores', () => {
+      const text = 'user-data analysis_report generation';
+
+      const keywords = builder.extractKeywords(text);
+
+      expect(keywords).toContain('user');
+      expect(keywords).toContain('data');
+      expect(keywords).toContain('analysis');
+      expect(keywords).toContain('report');
+      expect(keywords).toContain('generation');
+    });
+
+    it('should filter short words', () => {
+      const text = 'a the of or and to be do go';
+
+      const keywords = builder.extractKeywords(text);
+
+      expect(keywords).toHaveLength(0);
+    });
+
+    it('should return unique keywords', () => {
+      const text = 'search search search user user';
+
+      const keywords = builder.extractKeywords(text);
+      const uniqueCount = new Set(keywords).size;
+
+      expect(keywords.length).toBe(uniqueCount);
+    });
+  });
+
+  describe('calculateRelevanceScore', () => {
+    it('should give highest score to name matches', () => {
+      const capability: CapabilityForPrompt = {
+        id: 'google_search',
+        name: 'Google Search',
+        description: 'Search the web',
+        category: 'api',
+        status: 'available',
+      };
+
+      const keywords = ['google', 'search'];
+      const score = builder.calculateRelevanceScore(capability, keywords);
+
+      // Name matches should give significant score
+      expect(score).toBeGreaterThan(15);
+    });
+
+    it('should consider description matches', () => {
+      const capability: CapabilityForPrompt = {
+        id: 'web_api',
+        name: 'Web API',
+        description: 'Search the web for information',
+        category: 'api',
+        status: 'available',
+      };
+
+      const keywords = ['search', 'information'];
+      const score = builder.calculateRelevanceScore(capability, keywords);
+
+      expect(score).toBeGreaterThan(5);
+    });
+
+    it('should give bonus to frequent categories', () => {
+      const llmCapability: CapabilityForPrompt = {
+        id: 'llm_1',
+        name: 'LLM API',
+        description: 'Language model',
+        category: 'llm',
+        status: 'available',
+      };
+
+      const customCapability: CapabilityForPrompt = {
+        id: 'custom_1',
+        name: 'Custom API',
+        description: 'Custom functionality',
+        category: 'custom',
+        status: 'available',
+      };
+
+      const keywords = ['api'];
+      const llmScore = builder.calculateRelevanceScore(llmCapability, keywords);
+      const customScore = builder.calculateRelevanceScore(customCapability, keywords);
+
+      // LLM category should get bonus
+      expect(llmScore).toBeGreaterThan(customScore);
+    });
+
+    it('should consider use_cases', () => {
+      const capability: CapabilityForPrompt = {
+        id: 'email_api',
+        name: 'Email API',
+        description: 'Send emails',
+        category: 'api',
+        status: 'available',
+        metadata: {
+          use_cases: ['Send notification email', 'Bulk email sending'],
+        },
+      };
+
+      const keywords = ['notification'];
+      const score = builder.calculateRelevanceScore(capability, keywords);
+
+      expect(score).toBeGreaterThan(0);
+    });
+
+    it('should return 0 for no matches', () => {
+      const capability: CapabilityForPrompt = {
+        id: 'weather_api',
+        name: 'Weather API',
+        description: 'Get weather information',
+        category: 'utility',
+        status: 'available',
+      };
+
+      const keywords = ['email', 'notification'];
+      const score = builder.calculateRelevanceScore(capability, keywords);
+
+      // Only category bonus if any
+      expect(score).toBeLessThanOrEqual(2);
+    });
+  });
+});
+
+// Import CapabilityForPrompt type for tests
+import type { CapabilityForPrompt } from '../../../../src/taskflowGeneratorAgent/types/generator.js';
+import { WorkflowCapabilityError } from '../../../../src/taskflowGeneratorAgent/types/errors.js';
