@@ -1,0 +1,97 @@
+{
+  "issue_number": 380,
+  "iteration": 1,
+  "acceptance_criteria": [
+    "AC-1: 全CapabilityにresponseSchemaを追加",
+    "AC-2: 出力フィールド名を正確に定義",
+    "AC-3: Capabilityカタログを生成するスクリプトを作成",
+    "AC-4: カタログをJSON/YAML形式でエクスポート可能にする",
+    "AC-5: AIプロンプトに注入できる形式で出力"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "T1.1",
+      "description": "型定義とインターフェース設計（catalog.ts）",
+      "files": ["src/capabilities/types/catalog.ts"],
+      "estimated_hours": 2
+    },
+    {
+      "task_id": "T1.2",
+      "description": "CapabilityCatalogGenerator実装",
+      "files": ["src/capabilities/catalog/CapabilityCatalogGenerator.ts", "src/capabilities/catalog/index.ts"],
+      "estimated_hours": 4
+    },
+    {
+      "task_id": "T1.3",
+      "description": "ResponseSchemaValidator実装（ajv使用）",
+      "files": ["src/taskflowGeneratorAgent/validator/validators/ResponseSchemaValidator.ts"],
+      "estimated_hours": 3
+    },
+    {
+      "task_id": "T1.4",
+      "description": "CLIコマンドとスクリプト作成",
+      "files": ["scripts/generate-catalog.ts"],
+      "estimated_hours": 2
+    },
+    {
+      "task_id": "T1.5",
+      "description": "responseSchema補完作業",
+      "files": ["config/capabilities/default_project/*.yaml"],
+      "estimated_hours": 1
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "型定義とインターフェース設計",
+      "estimated_hours": 2,
+      "deliverables": ["src/capabilities/types/catalog.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "CapabilityCatalogGenerator実装",
+      "estimated_hours": 4,
+      "deliverables": ["src/capabilities/catalog/CapabilityCatalogGenerator.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "ResponseSchemaValidator実装",
+      "estimated_hours": 3,
+      "deliverables": ["src/taskflowGeneratorAgent/validator/validators/ResponseSchemaValidator.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "CLIコマンドとスクリプト作成",
+      "estimated_hours": 2,
+      "deliverables": ["scripts/generate-catalog.ts"],
+      "dependencies": ["1.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "src/capabilities/types/catalog.ts",
+    "src/capabilities/catalog/CapabilityCatalogGenerator.ts",
+    "src/capabilities/catalog/index.ts",
+    "src/taskflowGeneratorAgent/validator/validators/ResponseSchemaValidator.ts",
+    "scripts/generate-catalog.ts",
+    "tests/unit/capabilities/catalog/CapabilityCatalogGenerator.test.ts",
+    "tests/unit/capabilities/catalog/SchemaValidator.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "TypeScriptエラー0件",
+    "ESLintエラー0件"
+  ],
+  "target_coverage": 90,
+  "target_project": "mySwiftAgentCore",
+  "language": "TypeScript",
+  "design_notes": [
+    "responseSchemaで用語統一",
+    "JSON Schema Draft-07準拠",
+    "ajvライブラリ使用（ajv-formats含む）",
+    "3形式出力：JSON, YAML, Markdown"
+  ]
+}

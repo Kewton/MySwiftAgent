@@ -1,0 +1,469 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-01-19T16:02:57.667Z",
+  "capabilities": [
+    {
+      "id": "direct_llm",
+      "name": "Direct LLM",
+      "description": "直接LLM呼び出し（システムプロンプト指定可能）- カスタムシステムプロンプトでLLM実行、複数モデル対応（GPT, Gemini, Ollama）",
+      "version": "1.0.0",
+      "category": "ai_agent",
+      "status": "available",
+      "parameters": [
+        {
+          "name": "user_input",
+          "type": "string",
+          "required": true,
+          "description": "ユーザー入力メッセージ"
+        },
+        {
+          "name": "system_prompt",
+          "type": "string",
+          "required": false,
+          "description": "システムプロンプト"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": false,
+          "description": "使用するLLMモデル",
+          "defaultValue": "gpt-4o-mini",
+          "validation": {
+            "enum": [
+              "gpt-4o-mini",
+              "gpt-4o",
+              "gemini-1.5-flash",
+              "gemini-1.5-pro",
+              "ollama/llama3"
+            ]
+          }
+        }
+      ],
+      "returnType": "object",
+      "responseSchema": {
+        "result": {
+          "type": "string",
+          "description": "LLMからの応答"
+        }
+      },
+      "tags": [
+        "ai",
+        "llm",
+        "gpt",
+        "gemini",
+        "ollama"
+      ],
+      "examples": [
+        {
+          "description": "GPT-4o-miniでテキスト生成（TaskFlow）",
+          "taskflow_step": {
+            "id": "llm_call",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "direct_llm",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "user_input": "$input.prompt",
+                "model": "gpt-4o-mini"
+              }
+            }
+          },
+          "output_mapping": {
+            "response": "$steps.llm_call.result"
+          }
+        },
+        {
+          "description": "カスタムシステムプロンプトで実行（TaskFlow）",
+          "taskflow_step": {
+            "id": "custom_llm",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "direct_llm",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "user_input": "$input.question",
+                "system_prompt": "$input.system_prompt",
+                "model": "gemini-1.5-flash"
+              }
+            }
+          },
+          "output_mapping": {
+            "answer": "$steps.custom_llm.result"
+          }
+        }
+      ],
+      "metadata": {
+        "author": "MySwiftAgent Team",
+        "created": "2024-01-15",
+        "use_cases": [
+          "カスタムシステムプロンプトでLLM実行",
+          "複数モデル対応（GPT, Gemini, Ollama）"
+        ],
+        "models": [
+          "gpt-4o-mini（デフォルト）",
+          "gpt-4o",
+          "gemini-1.5-flash",
+          "gemini-1.5-pro",
+          "ollama/llama3"
+        ]
+      }
+    },
+    {
+      "id": "gmail_send",
+      "name": "Gmail送信",
+      "description": "メール送信（高速・Direct API）- 宛先、件名、本文を指定してメール送信、HTML形式メール対応",
+      "version": "1.0.0",
+      "category": "utility",
+      "status": "available",
+      "parameters": [
+        {
+          "name": "to",
+          "type": "string",
+          "required": true,
+          "description": "宛先メールアドレス"
+        },
+        {
+          "name": "subject",
+          "type": "string",
+          "required": true,
+          "description": "件名"
+        },
+        {
+          "name": "body",
+          "type": "string",
+          "required": true,
+          "description": "メール本文（プレーンテキスト）"
+        },
+        {
+          "name": "html_body",
+          "type": "string",
+          "required": false,
+          "description": "HTML本文（html_bodyを指定した場合、bodyより優先される）"
+        },
+        {
+          "name": "project",
+          "type": "string",
+          "required": false,
+          "description": "MyVaultプロジェクト名（認証情報取得用）"
+        }
+      ],
+      "returnType": "object",
+      "responseSchema": {
+        "result": {
+          "type": "string",
+          "description": "送信結果メッセージ"
+        },
+        "message_id": {
+          "type": "string",
+          "description": "送信されたメールのID"
+        }
+      },
+      "tags": [
+        "email",
+        "gmail",
+        "send",
+        "utility"
+      ],
+      "examples": [
+        {
+          "description": "プレーンテキストメール送信（TaskFlow）",
+          "taskflow_step": {
+            "id": "send_email",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "gmail_send",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "to": "$input.recipient",
+                "subject": "$input.subject",
+                "body": "$input.message"
+              }
+            }
+          },
+          "output_mapping": {
+            "result": "$steps.send_email.result",
+            "message_id": "$steps.send_email.message_id"
+          }
+        },
+        {
+          "description": "HTMLメール送信（TaskFlow）",
+          "taskflow_step": {
+            "id": "send_html_email",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "gmail_send",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "to": "$input.recipient",
+                "subject": "$input.subject",
+                "body": "$input.plain_text",
+                "html_body": "$input.html_content"
+              }
+            }
+          },
+          "output_mapping": {
+            "result": "$steps.send_html_email.result",
+            "message_id": "$steps.send_html_email.message_id"
+          }
+        }
+      ],
+      "metadata": {
+        "author": "MySwiftAgent Team",
+        "created": "2024-01-15",
+        "performance": "3-5秒で完了",
+        "use_cases": [
+          "宛先、件名、本文を指定してメール送信",
+          "HTML形式メール対応"
+        ]
+      }
+    },
+    {
+      "id": "google_search",
+      "name": "Google検索",
+      "description": "Web検索（Serper API使用）- LLMによるナレッジ抽出を含むため処理時間が長い。キーワード検索、複数クエリ一括検索対応",
+      "version": "1.0.0",
+      "category": "search",
+      "status": "available",
+      "parameters": [
+        {
+          "name": "queries",
+          "type": "array",
+          "required": true,
+          "description": "検索クエリのリスト"
+        },
+        {
+          "name": "num",
+          "type": "number",
+          "required": false,
+          "description": "各クエリの検索結果件数",
+          "defaultValue": 3,
+          "validation": {
+            "min": 1,
+            "max": 3
+          }
+        }
+      ],
+      "returnType": "object",
+      "responseSchema": {
+        "search_results": {
+          "type": "array",
+          "description": "検索結果のリスト（クエリごとに1つのオブジェクト）",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "検索結果のタイトル"
+              },
+              "link": {
+                "type": "string",
+                "description": "検索結果のURL"
+              },
+              "knowledge": {
+                "type": "string",
+                "description": "LLMが抽出したナレッジ情報"
+              },
+              "original_query": {
+                "type": "string",
+                "description": "元の検索クエリ"
+              }
+            }
+          }
+        },
+        "search_results_count": {
+          "type": "integer",
+          "description": "検索結果の件数"
+        },
+        "status": {
+          "type": "string",
+          "description": "ステータス（通常 'ok'）"
+        }
+      },
+      "tags": [
+        "search",
+        "web",
+        "google",
+        "serper",
+        "knowledge-extraction"
+      ],
+      "examples": [
+        {
+          "description": "単一クエリ検索（TaskFlow）",
+          "taskflow_step": {
+            "id": "google_search",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "google_search",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "queries": [
+                  "$input.search_query"
+                ],
+                "num": 3
+              }
+            }
+          },
+          "output_mapping": {
+            "search_results": "$steps.google_search.search_results",
+            "results_count": "$steps.google_search.search_results_count"
+          }
+        },
+        {
+          "description": "複数クエリ一括検索（TaskFlow）",
+          "taskflow_step": {
+            "id": "multi_search",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "google_search",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "queries": [
+                  "$input.query1",
+                  "$input.query2"
+                ],
+                "num": 3
+              }
+            }
+          },
+          "output_mapping": {
+            "all_results": "$steps.multi_search.search_results"
+          }
+        }
+      ],
+      "metadata": {
+        "author": "MySwiftAgent Team",
+        "created": "2024-01-15",
+        "recommended_timeout": 180,
+        "implementation": "Serper API経由でGoogle検索 + LLMナレッジ抽出",
+        "performance_note": "各検索結果に対してLLMでナレッジ抽出を行うため、num=3で約2分程度かかる場合がある",
+        "use_cases": [
+          "キーワード検索",
+          "複数クエリ一括検索（queries配列）",
+          "検索結果件数指定（num）"
+        ],
+        "workflow_usage_example": "# TaskFlow形式でのワークフロー使用例:\n{\n  \"workflow_name\": \"search_workflow\",\n  \"steps\": [\n    {\n      \"id\": \"search\",\n      \"type\": \"api_rest\",\n      \"config\": { \"capability_id\": \"google_search\", \"method\": \"POST\" },\n      \"params\": { \"body\": { \"queries\": [\"$input.query\"], \"num\": 3 } }\n    }\n  ],\n  \"output\": {\n    \"results\": \"$steps.search.search_results\",\n    \"count\": \"$steps.search.search_results_count\"\n  }\n}\n# 結果参照パターン:\n# - 検索結果配列: $steps.search.search_results\n# - 結果件数: $steps.search.search_results_count\n# - 最初の結果のタイトル: $steps.search.search_results[0].title\n"
+      }
+    },
+    {
+      "id": "json_output_agent",
+      "name": "JSON Output Agent",
+      "description": "構造化JSON出力専用エージェント - 自然言語→JSON変換、常にJSON形式で返却、force_json不要（常にJSON）",
+      "version": "1.0.0",
+      "category": "ai_agent",
+      "status": "available",
+      "parameters": [
+        {
+          "name": "user_input",
+          "type": "string",
+          "required": true,
+          "description": "ユーザー入力（自然言語またはJSON変換対象テキスト）"
+        },
+        {
+          "name": "system_prompt",
+          "type": "string",
+          "required": false,
+          "description": "システムプロンプト（JSON構造を指定）"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": false,
+          "description": "使用するLLMモデル",
+          "defaultValue": "gemini-2.5-flash"
+        }
+      ],
+      "returnType": "object",
+      "responseSchema": {
+        "result": {
+          "type": "object",
+          "description": "JSON形式の構造化出力"
+        }
+      },
+      "tags": [
+        "ai",
+        "agent",
+        "json",
+        "structured-output"
+      ],
+      "examples": [
+        {
+          "description": "自然言語からJSONに変換（TaskFlow）",
+          "taskflow_step": {
+            "id": "json_convert",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "json_output_agent",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "user_input": "$input.text",
+                "system_prompt": "入力をJSON形式に変換してください。{name, age, occupation}の形式で出力してください。"
+              }
+            }
+          },
+          "output_mapping": {
+            "json_result": "$steps.json_convert.result"
+          }
+        },
+        {
+          "description": "テキスト解析してJSON出力（TaskFlow）",
+          "taskflow_step": {
+            "id": "text_analysis",
+            "type": "api_rest",
+            "config": {
+              "capability_id": "json_output_agent",
+              "method": "POST"
+            },
+            "params": {
+              "body": {
+                "user_input": "$input.text",
+                "system_prompt": "$input.schema_instruction"
+              }
+            }
+          },
+          "output_mapping": {
+            "structured_data": "$steps.text_analysis.result"
+          }
+        }
+      ],
+      "metadata": {
+        "author": "MySwiftAgent Team",
+        "created": "2024-01-15",
+        "recommended_timeout": 90,
+        "use_cases": [
+          "自然言語→JSON変換",
+          "常にJSON形式で返却",
+          "force_json不要（常にJSON）"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "byCategory": {
+      "ai_agent": 2,
+      "utility": 1,
+      "search": 1
+    },
+    "byStatus": {
+      "available": 4,
+      "unavailable": 0,
+      "deprecated": 0
+    },
+    "withResponseSchema": 4,
+    "withoutResponseSchema": 0
+  }
+}

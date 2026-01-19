@@ -1,0 +1,70 @@
+{
+  "status": "success",
+  "coverage": 91.17,
+  "unit_tests": {
+    "total": 62,
+    "passed": 62,
+    "failed": 0
+  },
+  "static_analysis": {
+    "typescript_errors": 0,
+    "eslint_errors": 0,
+    "eslint_warnings": 3
+  },
+  "files_modified": [
+    "mySwiftAgentCore/src/capabilities/types/catalog.ts",
+    "mySwiftAgentCore/src/capabilities/catalog/CapabilityCatalogGenerator.ts",
+    "mySwiftAgentCore/src/capabilities/catalog/index.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/ResponseSchemaValidator.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/index.ts",
+    "mySwiftAgentCore/scripts/generate-catalog.ts",
+    "mySwiftAgentCore/package.json",
+    "mySwiftAgentCore/tests/unit/capabilities/catalog/catalog.types.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilities/catalog/CapabilityCatalogGenerator.test.ts",
+    "mySwiftAgentCore/tests/unit/capabilities/catalog/ResponseSchemaValidator.test.ts",
+    "mySwiftAgentCore/config/capabilities/catalog/capabilities-catalog.json",
+    "mySwiftAgentCore/config/capabilities/catalog/capabilities-catalog.yaml",
+    "mySwiftAgentCore/config/capabilities/catalog/capabilities-catalog.md"
+  ],
+  "executed_tasks": [
+    "T1.1",
+    "T1.2",
+    "T1.3",
+    "T1.4"
+  ],
+  "skipped_tasks": [
+    {
+      "task_id": "T1.5",
+      "reason": "既存のCapabilityファイルには既にresponseSchemaが定義済みで補完不要"
+    }
+  ],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": true,
+    "exports_added": true
+  },
+  "deliverables": {
+    "type_definitions": "mySwiftAgentCore/src/capabilities/types/catalog.ts",
+    "catalog_generator": "mySwiftAgentCore/src/capabilities/catalog/CapabilityCatalogGenerator.ts",
+    "response_schema_validator": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/ResponseSchemaValidator.ts",
+    "cli_script": "mySwiftAgentCore/scripts/generate-catalog.ts",
+    "generated_catalog": {
+      "json": "mySwiftAgentCore/config/capabilities/catalog/capabilities-catalog.json",
+      "yaml": "mySwiftAgentCore/config/capabilities/catalog/capabilities-catalog.yaml",
+      "markdown": "mySwiftAgentCore/config/capabilities/catalog/capabilities-catalog.md"
+    }
+  },
+  "summary": {
+    "capabilities_total": 4,
+    "with_response_schema": 4,
+    "without_response_schema": 0,
+    "by_category": {
+      "ai_agent": 2,
+      "utility": 1,
+      "search": 1
+    }
+  },
+  "commits": [],
+  "message": "TDD実装完了。Issue #380 - Capability出力スキーマの正確な定義とカタログ整備。カバレッジ91.17%達成（目標90%）。全62テスト成功。TypeScriptエラー0件。ESLintエラー0件。"
+}

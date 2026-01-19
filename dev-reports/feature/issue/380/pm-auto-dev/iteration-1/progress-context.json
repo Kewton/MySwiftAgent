@@ -1,0 +1,38 @@
+{
+  "issue_number": 380,
+  "iteration": 1,
+  "timestamp": "2026-01-20T01:10:00Z",
+  "phases_completed": [
+    "Phase 0: 初期設定",
+    "Phase 1: Issue情報収集",
+    "Phase 1.5-A: 受入テスト計画立案",
+    "Phase 1.5-B: 受入テスト計画レビュー",
+    "Phase 2: TDD実装",
+    "Phase 2.5: TDD結果検証",
+    "Phase 2.6: 実装機能一覧生成",
+    "Phase 2.7: 実装検証（デッドコード検出）",
+    "Phase 3: 受入テスト実行",
+    "Phase 3.5: 受入テストファイル検証",
+    "Phase 3.6: 受入テスト結果妥当性確認",
+    "Phase 4: リファクタリング（スキップ）"
+  ],
+  "context_files": {
+    "tdd_result": "dev-reports/feature/issue/380/pm-auto-dev/iteration-1/tdd-result.json",
+    "acceptance_result": "dev-reports/feature/issue/380/pm-auto-dev/iteration-1/acceptance-result.json",
+    "implemented_features": "dev-reports/feature/issue/380/pm-auto-dev/iteration-1/implemented-features.json",
+    "acceptance_plan": "dev-reports/feature/issue/380/acceptance-plan.md",
+    "design_policy": "dev-reports/feature/issue/380/design-policy.md",
+    "work_plan": "dev-reports/feature/issue/380/work-plan.md"
+  },
+  "summary": {
+    "tdd_status": "success",
+    "coverage": 91.17,
+    "tests_passed": 62,
+    "tests_failed": 0,
+    "acceptance_status": "passed",
+    "acceptance_passed": 11,
+    "acceptance_skipped": 2,
+    "acceptance_failed": 0,
+    "dead_code_detected": false
+  }
+}

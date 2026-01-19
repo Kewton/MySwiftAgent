@@ -1,0 +1,29 @@
+{
+  "issue_number": 380,
+  "iteration": 1,
+  "acceptance_plan_path": "dev-reports/feature/issue/380/acceptance-plan.md",
+  "tdd_result_path": "dev-reports/feature/issue/380/pm-auto-dev/iteration-1/tdd-result.json",
+  "implemented_features_path": "dev-reports/feature/issue/380/pm-auto-dev/iteration-1/implemented-features.json",
+  "target_project": "mySwiftAgentCore",
+  "acceptance_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_380_acceptance.py",
+  "test_cases": [
+    "TC-001: カタログ生成コマンド実行",
+    "TC-002: JSON形式カタログの妥当性検証",
+    "TC-003: YAML形式カタログの妥当性検証",
+    "TC-004: ResponseSchemaValidator動作確認",
+    "TC-005: google_search Capabilityの出力スキーマ検証",
+    "TC-006: direct_llm Capabilityの出力スキーマ検証",
+    "TC-007: AIプロンプト注入形式の検証",
+    "TC-008: カタログバージョンとタイムスタンプ",
+    "TC-009: Markdown形式カタログの可読性",
+    "TC-010: 不正スキーマ検出テスト"
+  ],
+  "required_services": [
+    {"name": "mySwiftAgentCore", "url": "http://localhost:8006", "health_endpoint": "/health"},
+    {"name": "expertAgent", "url": "http://localhost:8004", "health_endpoint": "/health"},
+    {"name": "myVault", "url": "http://localhost:8003", "health_endpoint": "/health"}
+  ],
+  "environment": {
+    "NODE_ENV": "development"
+  }
+}

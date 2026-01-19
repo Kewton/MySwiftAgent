@@ -1,0 +1,21 @@
+{
+  "issue_number": 380,
+  "issue_title": "feat(taskflowGenerator): Capability出力スキーマの正確な定義とカタログ整備",
+  "acceptance_criteria": [
+    "AC-1: 全CapabilityにresponseSchemaを追加",
+    "AC-2: 出力フィールド名を正確に定義",
+    "AC-3: Capabilityカタログを生成するスクリプトを作成",
+    "AC-4: カタログをJSON/YAML形式でエクスポート可能にする",
+    "AC-5: AIプロンプトに注入できる形式で出力"
+  ],
+  "technical_requirements": [
+    "responseSchema形式のスキーマ定義",
+    "ajvによるJSON Schema Draft-07準拠のバリデーション",
+    "CapabilityCatalogGeneratorクラスの実装",
+    "CLIコマンド（npm run generate:catalog）の追加"
+  ],
+  "target_project": "mySwiftAgentCore",
+  "design_policy_path": "dev-reports/feature/issue/380/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/380/work-plan.md",
+  "phase": "pre-tdd"
+}

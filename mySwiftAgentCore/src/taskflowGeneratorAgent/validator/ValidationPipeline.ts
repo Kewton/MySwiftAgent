@@ -2,6 +2,8 @@
  * ValidationPipeline - Multi-stage validation for generated workflows
  *
  * Issue #364: Validation pipeline with multiple validators
+ * Issue #375: Added OutputMappingValidator and NodeConfigValidator
+ * Issue #380: Added ResponseSchemaValidator for capability response schema validation
  */
 
 import type {
@@ -18,6 +20,13 @@ import { DependencyValidator } from './validators/DependencyValidator.js';
 import { VariableValidator } from './validators/VariableValidator.js';
 import { CapabilityValidator } from './validators/CapabilityValidator.js';
 import { SecurityValidator } from './validators/SecurityValidator.js';
+// Issue #375: OutputMappingValidator and NodeConfigValidator
+import { OutputMappingValidator } from './validators/OutputMappingValidator.js';
+import { NodeConfigValidator } from './validators/NodeConfigValidator.js';
+// Issue #374: WorkflowCapabilityValidator for enhanced capability validation
+import { WorkflowCapabilityValidator } from './WorkflowCapabilityValidator.js';
+// Issue #380: ResponseSchemaValidator for capability response schema validation
+import { ResponseSchemaValidator } from './validators/ResponseSchemaValidator.js';
 
 /**
  * Validation Context - Additional info for validators
@@ -111,15 +120,26 @@ export class ValidationPipeline {
 
   /**
    * Create default validators
+   *
+   * Issue #374: Added WorkflowCapabilityValidator for enhanced capability validation
+   * Issue #375: Added OutputMappingValidator and NodeConfigValidator
+   * Issue #380: Added ResponseSchemaValidator for capability response schema validation
    */
   private createDefaultValidators(): Validator[] {
     // Use real validators (Issue #364 integration fix)
+    // Issue #374: Added WorkflowCapabilityValidator for enhanced parameter validation
+    // Issue #375: Added OutputMappingValidator and NodeConfigValidator
+    // Issue #380: Added ResponseSchemaValidator for capability response schema validation
     return [
       new SchemaValidator(),
       new DependencyValidator(),
       new VariableValidator(),
       new CapabilityValidator(),
       new SecurityValidator(),
+      new OutputMappingValidator(), // Issue #375: Output mapping validation
+      new NodeConfigValidator(), // Issue #375: Node config validation
+      new WorkflowCapabilityValidator(), // Issue #374: Enhanced capability validation
+      new ResponseSchemaValidator(), // Issue #380: Response schema validation
     ];
   }
 }
