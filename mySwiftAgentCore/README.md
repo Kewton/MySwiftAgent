@@ -89,6 +89,12 @@ npm run lint
 
 ## Architecture
 
+### Documentation
+
+For detailed specifications, see:
+
+- **[NodeExecutionContext Design Specification](../docs/design/node-execution-context.md)** - Complete guide for node developers on using execution context, template syntax, and implementation patterns.
+
 ### Context Management
 
 The Context Manager follows the Facade + Dependency Injection pattern:
