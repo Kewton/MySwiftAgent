@@ -2,6 +2,7 @@
  * BaseNode - Node executor interface and base types
  *
  * Issue #363: Defines the NodeExecutor interface and registry
+ * Issue #377: Added optional requiredSecrets property and getRequiredSecrets method
  */
 
 import type { NodeType } from '../types/TaskFlowDefinition.js';
@@ -73,9 +74,20 @@ export type ValidationResult = NodeValidationResult;
  * Each node type implements this interface to provide:
  * - execute: Run the node logic
  * - validate: Validate node configuration
+ * - requiredSecrets: (optional) Static list of required secrets
+ * - getRequiredSecrets: (optional) Dynamic secret requirements based on config
+ *
+ * Issue #377: Added optional requiredSecrets and getRequiredSecrets for unified secrets injection
  */
 export interface NodeExecutor {
   readonly type: NodeType | string;
+
+  /**
+   * Issue #377: Static list of secret keys required by this node type
+   *
+   * Used for nodes with fixed secret requirements (e.g., LlmNode always needs API keys)
+   */
+  readonly requiredSecrets?: readonly string[];
 
   /**
    * Execute the node
@@ -98,6 +110,16 @@ export interface NodeExecutor {
    * @returns Validation result
    */
   validate(config: NodeConfig): NodeValidationResult;
+
+  /**
+   * Issue #377: Get dynamic secret requirements based on node configuration
+   *
+   * Used for nodes where secret requirements depend on config (e.g., ApiRestNode with auth)
+   *
+   * @param config - Node configuration
+   * @returns Promise resolving to array of required secret keys
+   */
+  getRequiredSecrets?(config: NodeConfig): Promise<string[]>;
 }
 
 /**

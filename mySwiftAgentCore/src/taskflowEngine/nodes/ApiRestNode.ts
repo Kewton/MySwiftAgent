@@ -3,6 +3,7 @@
  *
  * Issue #363: Executes HTTP requests
  * Issue #372: Extended with capability_id support for URL resolution
+ * Issue #377: Added getRequiredSecrets for dynamic secrets injection
  */
 
 import type {
@@ -52,9 +53,30 @@ export interface ApiRestNodeConfig {
  * - Request body
  * - Authentication (Bearer, Basic, API Key)
  * - capability_id for URL resolution (Issue #372)
+ * - Dynamic secret requirements based on auth config (Issue #377)
  */
 export class ApiRestNodeExecutor implements NodeExecutor {
   readonly type = 'api_rest' as const;
+
+  /**
+   * Issue #377: Get dynamic secret requirements based on node configuration
+   *
+   * Returns the secret key(s) needed based on the auth configuration.
+   *
+   * @param config - Node configuration
+   * @returns Promise resolving to array of required secret keys
+   */
+  async getRequiredSecrets(config: NodeConfig): Promise<string[]> {
+    const nodeConfig = config.config as ApiRestNodeConfig;
+    const secrets: string[] = [];
+
+    // Check for auth configuration
+    if (nodeConfig.auth?.secret_key) {
+      secrets.push(nodeConfig.auth.secret_key);
+    }
+
+    return secrets;
+  }
 
   /**
    * Execute HTTP request

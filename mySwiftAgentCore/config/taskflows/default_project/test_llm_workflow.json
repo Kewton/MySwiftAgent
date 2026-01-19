@@ -1,0 +1,42 @@
+{
+  "id": "test_llm_workflow",
+  "name": "test_llm_workflow",
+  "version": "1.0.0",
+  "description": "TC-001, TC-005: LlmNodeを使用してSecrets注入をテストするワークフロー",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "description": "ユーザー入力プロンプト"
+      }
+    },
+    "required": ["prompt"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "response": {
+        "type": "string",
+        "description": "LLMからの応答"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "llm_call",
+      "name": "LLM Call",
+      "type": "llm",
+      "config": {
+        "model": "gpt-4o-mini",
+        "systemPrompt": "You are a helpful assistant. Respond briefly."
+      },
+      "params": {
+        "prompt": "$input.prompt"
+      }
+    }
+  ],
+  "outputMapping": {
+    "response": "$steps.llm_call.result"
+  }
+}

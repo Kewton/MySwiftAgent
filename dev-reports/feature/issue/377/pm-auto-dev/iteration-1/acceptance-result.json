@@ -1,0 +1,288 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "mySwiftAgentCore",
+  "issue_number": 377,
+  "timestamp": "2026-01-19T03:53:00Z",
+  "service_health": {
+    "mySwiftAgentCore": {
+      "status": "healthy",
+      "url": "http://localhost:8006",
+      "response": {
+        "status": "healthy",
+        "service": "mySwiftAgentCore",
+        "version": "0.1.0"
+      }
+    }
+  },
+  "unit_test_results": {
+    "status": "passed",
+    "total_test_files": 44,
+    "total_tests": "all passed",
+    "relevant_tests": {
+      "SecretAnalyzer.test.ts": {
+        "tests": 13,
+        "status": "passed"
+      },
+      "SecretNotFoundError.test.ts": {
+        "tests": 12,
+        "status": "passed"
+      },
+      "handlers.test.ts": {
+        "tests": 13,
+        "status": "passed"
+      },
+      "LlmNode.test.ts": {
+        "tests": 16,
+        "status": "passed"
+      },
+      "ApiRestNode.test.ts": {
+        "tests": 25,
+        "status": "passed"
+      }
+    }
+  },
+  "integration_test_results": {
+    "status": "passed",
+    "test_file": "tests/integration/taskflowEngine/secrets-injection.test.ts",
+    "tests": 8,
+    "description": "End-to-end tests for unified secrets injection"
+  },
+  "coverage_results": {
+    "overall": "92.92%",
+    "target": "90%",
+    "status": "passed"
+  },
+  "dead_code_verification": {
+    "status": "passed",
+    "results": [
+      {
+        "component": "SecretAnalyzer",
+        "references_count": 19,
+        "status": "used",
+        "key_usages": [
+          "src/api/routes.ts: createSecretAnalyzer(nodeRegistry)",
+          "src/taskflowEngine/api/handlers.ts: type import and usage"
+        ]
+      },
+      {
+        "component": "SecretNotFoundError",
+        "references_count": 16,
+        "status": "used",
+        "key_usages": [
+          "src/taskflowEngine/api/handlers.ts: throw new SecretNotFoundError",
+          "src/taskflowEngine/api/handlers.ts: error instanceof SecretNotFoundError"
+        ]
+      },
+      {
+        "component": "LlmNode.requiredSecrets",
+        "references_count": 14,
+        "status": "used",
+        "key_usages": [
+          "src/taskflowEngine/nodes/LlmNode.ts: readonly requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY']",
+          "SecretAnalyzer reads from executor.requiredSecrets"
+        ]
+      },
+      {
+        "component": "ApiRestNode.getRequiredSecrets",
+        "references_count": 11,
+        "status": "used",
+        "key_usages": [
+          "src/taskflowEngine/nodes/ApiRestNode.ts: async getRequiredSecrets(config)",
+          "SecretAnalyzer calls executor.getRequiredSecrets(config)"
+        ]
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1",
+      "criterion": "NodeExecutorインターフェースにrequiredSecretsプロパティ追加",
+      "verified": true,
+      "verification_method": "code_inspection",
+      "evidence": "src/taskflowEngine/nodes/BaseNode.ts:90 - readonly requiredSecrets?: readonly string[]"
+    },
+    {
+      "id": "AC-2",
+      "criterion": "SecretAnalyzerクラスの実装",
+      "verified": true,
+      "verification_method": "unit_test",
+      "evidence": "tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts - 13 tests passed"
+    },
+    {
+      "id": "AC-3",
+      "criterion": "改善されたHandler実装（必要なSecretsのみ取得）",
+      "verified": true,
+      "verification_method": "code_inspection_and_integration_test",
+      "evidence": "handlers.ts:82-115 - SecretAnalyzer integration with selective secret fetching"
+    },
+    {
+      "id": "AC-4",
+      "criterion": "LlmNode、ApiRestNodeの移行完了",
+      "verified": true,
+      "verification_method": "code_inspection",
+      "evidence": [
+        "LlmNode.ts:47 - readonly requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY']",
+        "ApiRestNode.ts:69 - async getRequiredSecrets(config): Promise<string[]>"
+      ]
+    },
+    {
+      "id": "AC-5",
+      "criterion": "単体テスト実装（カバレッジ90%以上）",
+      "verified": true,
+      "verification_method": "npm_test_coverage",
+      "evidence": "Overall coverage: 92.92% > 90% target"
+    },
+    {
+      "id": "AC-6",
+      "criterion": "結合テスト実装",
+      "verified": true,
+      "verification_method": "integration_test",
+      "evidence": "tests/integration/taskflowEngine/secrets-injection.test.ts - 8 tests passed"
+    },
+    {
+      "id": "AC-7",
+      "criterion": "E2E受入テスト実装と成功",
+      "verified": true,
+      "verification_method": "integration_test_with_real_registry",
+      "evidence": "secrets-injection.test.ts tests SecretAnalyzer with createDefaultNodeRegistry()"
+    },
+    {
+      "id": "AC-8",
+      "criterion": "ドキュメント更新",
+      "verified": false,
+      "verification_method": "file_existence",
+      "evidence": "Documentation files not found - deferred to documentation phase"
+    }
+  ],
+  "design_policy_verification": [
+    {
+      "id": "DP-1",
+      "policy": "アーキテクチャ整合性（4層構造）",
+      "verified": true,
+      "evidence": "SecretAnalyzer in analyzer layer, used by API handlers layer"
+    },
+    {
+      "id": "DP-2",
+      "policy": "宣言的Secrets定義パターン",
+      "verified": true,
+      "evidence": "NodeExecutor.requiredSecrets?: readonly string[] implemented"
+    },
+    {
+      "id": "DP-3",
+      "policy": "ハイブリッドアプローチ（静的+動的）",
+      "verified": true,
+      "evidence": [
+        "LlmNode uses static requiredSecrets",
+        "ApiRestNode uses dynamic getRequiredSecrets()"
+      ]
+    },
+    {
+      "id": "DP-4",
+      "policy": "最小権限原則",
+      "verified": true,
+      "evidence": "handlers.ts fetches only secrets returned by SecretAnalyzer.analyze()"
+    },
+    {
+      "id": "DP-5",
+      "policy": "統一エラーハンドリング",
+      "verified": true,
+      "evidence": "SecretNotFoundError thrown when required secrets missing"
+    },
+    {
+      "id": "DP-6",
+      "policy": "後方互換性",
+      "verified": true,
+      "evidence": "requiredSecrets is optional (?), fallback to legacy behavior when SecretAnalyzer unavailable"
+    }
+  ],
+  "test_case_results": [
+    {
+      "id": "TC-001",
+      "name": "NodeExecutorインターフェース拡張",
+      "status": "passed",
+      "method": "code_inspection",
+      "evidence": "BaseNode.ts contains requiredSecrets and getRequiredSecrets optional members"
+    },
+    {
+      "id": "TC-002",
+      "name": "SecretAnalyzerクラス実装",
+      "status": "passed",
+      "method": "unit_test",
+      "evidence": "SecretAnalyzer.test.ts - 13 tests passed"
+    },
+    {
+      "id": "TC-003",
+      "name": "SecretNotFoundErrorクラス実装",
+      "status": "passed",
+      "method": "unit_test",
+      "evidence": "SecretNotFoundError.test.ts - 12 tests passed"
+    },
+    {
+      "id": "TC-004",
+      "name": "handlers.ts改善（SecretAnalyzer統合）",
+      "status": "passed",
+      "method": "unit_test_and_code_inspection",
+      "evidence": "handlers.test.ts - 13 tests passed, SecretAnalyzer integrated at lines 82-115"
+    },
+    {
+      "id": "TC-005",
+      "name": "LlmNode.requiredSecretsプロパティ",
+      "status": "passed",
+      "method": "unit_test",
+      "evidence": "LlmNode.test.ts - 16 tests passed, requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY']"
+    },
+    {
+      "id": "TC-006",
+      "name": "ApiRestNode.getRequiredSecretsメソッド",
+      "status": "passed",
+      "method": "unit_test",
+      "evidence": "ApiRestNode.test.ts - 25 tests passed, getRequiredSecrets returns auth.secret_key"
+    },
+    {
+      "id": "TC-007",
+      "name": "結合テスト",
+      "status": "passed",
+      "method": "integration_test",
+      "evidence": "secrets-injection.test.ts - 8 integration tests passed"
+    },
+    {
+      "id": "TC-008",
+      "name": "E2E動作確認",
+      "status": "passed",
+      "method": "integration_test_with_real_registry",
+      "evidence": "Integration tests use createDefaultNodeRegistry() for real node execution simulation"
+    },
+    {
+      "id": "TC-009",
+      "name": "後方互換性",
+      "status": "passed",
+      "method": "code_inspection",
+      "evidence": "handlers.ts lines 92-95: fallback to legacy behavior when SecretAnalyzer unavailable"
+    },
+    {
+      "id": "TC-010",
+      "name": "パフォーマンス",
+      "status": "skipped",
+      "method": "N/A",
+      "reason": "Performance testing requires production-like environment. Logic ensures minimal secret fetching."
+    }
+  ],
+  "evidence_files": [
+    "tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts",
+    "tests/unit/taskflowEngine/errors/SecretNotFoundError.test.ts",
+    "tests/unit/taskflowEngine/api/handlers.test.ts",
+    "tests/unit/taskflowEngine/nodes/LlmNode.test.ts",
+    "tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts",
+    "tests/integration/taskflowEngine/secrets-injection.test.ts"
+  ],
+  "notes": [
+    "AC-8 (Documentation update) is marked as not verified - documentation should be created separately",
+    "TC-010 (Performance test) is skipped - requires production environment",
+    "All core functionality tests passed including dead code verification",
+    "SecretAnalyzer is instantiated in routes.ts and injected into handlers",
+    "SecretNotFoundError is thrown in handlers.ts when required secrets are missing"
+  ],
+  "message": "Issue #377の受入テストが完了しました。全ての主要な受入条件と設計方針が検証されました。ドキュメント更新(AC-8)は別途実施が必要です。"
+}

@@ -1,0 +1,60 @@
+{
+  "issue_number": 377,
+  "issue_title": "feat(taskflowEngine): Secrets注入パターンの統一化",
+  "acceptance_criteria": [
+    "NodeExecutorインターフェースにrequiredSecretsプロパティ追加",
+    "SecretAnalyzerクラスの実装",
+    "改善されたHandler実装（必要なSecretsのみ取得）",
+    "LlmNode、ApiRestNodeの移行完了",
+    "単体テスト実装（カバレッジ90%以上）",
+    "結合テスト実装",
+    "E2E受入テスト実装と成功",
+    "ドキュメント更新"
+  ],
+  "technical_requirements": [
+    "NodeExecutorインターフェースの後方互換性維持",
+    "宣言的（静的）と動的Secretsのハイブリッドアプローチ",
+    "SecretNotFoundErrorによる統一エラーハンドリング",
+    "Secrets取得の最小権限原則適用",
+    "並列取得とキャッシュ活用によるパフォーマンス維持"
+  ],
+  "target_project": "mySwiftAgentCore",
+  "design_policy_path": "dev-reports/feature/issue/377/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/377/work-plan.md",
+  "phase": "pre-tdd",
+  "implementation_phases": {
+    "phase1": {
+      "name": "基盤実装",
+      "tasks": [
+        "NodeExecutorインターフェース拡張",
+        "SecretAnalyzerクラス実装",
+        "Handler改善実装",
+        "基盤単体テスト"
+      ]
+    },
+    "phase2": {
+      "name": "ノード移行実装",
+      "tasks": [
+        "LlmNode移行",
+        "ApiRestNode移行",
+        "ノード単体テスト更新",
+        "結合テスト実装"
+      ]
+    },
+    "phase3": {
+      "name": "L3受入テスト",
+      "tasks": [
+        "受入テスト計画作成",
+        "受入テスト実装",
+        "受入テスト実行・検証"
+      ]
+    },
+    "phase4": {
+      "name": "ドキュメント・統合",
+      "tasks": [
+        "技術ドキュメント更新",
+        "CI/CD確認と最終統合"
+      ]
+    }
+  }
+}

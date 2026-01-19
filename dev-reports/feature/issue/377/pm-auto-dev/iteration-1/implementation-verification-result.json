@@ -1,0 +1,412 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-19T00:00:00Z",
+  "issue_number": 377,
+  "iteration": 1,
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "SecretAnalyzer",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 64",
+          "file_line": "export class SecretAnalyzer"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in handlers.ts at line 88",
+          "grep_result": "const requirements = await deps.secretAnalyzer.analyze(workflow);"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in handlers.ts at line 14",
+          "grep_result": "import type { SecretAnalyzer } from '../analyzer/SecretAnalyzer.js';"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported via analyzer/index.ts and taskflowEngine/index.ts",
+          "grep_result": "export * from './SecretAnalyzer.js';"
+        },
+        "is_instantiated": {
+          "passed": false,
+          "evidence": "NOT instantiated in production code. Only found in tests.",
+          "grep_result": "No instance creation found in src/api/routes.ts where TaskFlowHandlerDependencies is created"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts",
+          "evidence": "Integration test verifies analyze() method with real NodeRegistry"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue #377"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "SecretAnalyzer class is defined and called in handlers.ts, but is NEVER INSTANTIATED in production code. The secretAnalyzer property in HandlerDependencies is optional and is never populated when creating TaskFlowHandlerDependencies in src/api/routes.ts:154-159."
+    },
+    {
+      "feature_id": "F2",
+      "name": "SecretNotFoundError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 21",
+          "file_line": "export class SecretNotFoundError extends Error"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "NEVER thrown in production code",
+          "grep_result": "No 'throw new SecretNotFoundError' found in src/**/*.ts"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "Only imported in test files, not in production code",
+          "grep_result": "Only found in tests/integration/taskflowEngine/secrets-injection.test.ts"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported via errors/index.ts and taskflowEngine/index.ts",
+          "grep_result": "export * from './SecretNotFoundError.js';"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/errors/SecretNotFoundError.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts",
+          "evidence": "Tests error creation and serialization, but NOT actual throwing in production flow"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found for Issue #377"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "SecretNotFoundError class is defined but NEVER thrown in production code. No 'throw new SecretNotFoundError' statement found anywhere in src/. The handlers.ts file should throw this error when secrets are missing."
+    },
+    {
+      "feature_id": "F3",
+      "name": "NodeExecutor.requiredSecrets",
+      "type": "interface_property",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 90",
+          "file_line": "readonly requiredSecrets?: readonly string[];"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Accessed in SecretAnalyzer.getStaticSecrets() at line 124",
+          "grep_result": "return [...executor.requiredSecrets];"
+        },
+        "is_implemented": {
+          "passed": true,
+          "evidence": "Implemented by LlmNode at line 47",
+          "grep_result": "readonly requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY'] as const;"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/LlmNode.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts",
+          "evidence": "Tests LlmNode.requiredSecrets via SecretAnalyzer"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Interface property exists and is implemented, but SecretAnalyzer (which reads this property) is never instantiated in production code. Therefore, this property is never actually read during production workflow execution."
+    },
+    {
+      "feature_id": "F4",
+      "name": "NodeExecutor.getRequiredSecrets",
+      "type": "interface_method",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 122",
+          "file_line": "getRequiredSecrets?(config: NodeConfig): Promise<string[]>;"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called in SecretAnalyzer.getDynamicSecrets() at line 138",
+          "grep_result": "return await executor.getRequiredSecrets(config);"
+        },
+        "is_implemented": {
+          "passed": true,
+          "evidence": "Implemented by ApiRestNode at line 69",
+          "grep_result": "async getRequiredSecrets(config: NodeConfig): Promise<string[]>"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts",
+          "evidence": "Tests ApiRestNode.getRequiredSecrets via SecretAnalyzer"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Interface method exists and is implemented, but SecretAnalyzer (which calls this method) is never instantiated in production code. Therefore, this method is never actually called during production workflow execution."
+    },
+    {
+      "feature_id": "F5",
+      "name": "LlmNode.requiredSecrets",
+      "type": "class_property",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 47",
+          "file_line": "readonly requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY'] as const;"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Accessed by SecretAnalyzer via NodeRegistry",
+          "grep_result": "SecretAnalyzer.getStaticSecrets() reads executor.requiredSecrets"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "LlmNodeExecutor is exported via nodes/index.ts",
+          "grep_result": "Part of LlmNodeExecutor class"
+        },
+        "is_registered": {
+          "passed": true,
+          "evidence": "Registered in NodeRegistry as 'llm' type",
+          "assumption": "Based on integration test using createDefaultNodeRegistry()"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/LlmNode.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts",
+          "evidence": "Verifies LlmNode.requiredSecrets is collected by SecretAnalyzer"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Property is defined and tested, but SecretAnalyzer (which reads this property) is never instantiated in production code. Therefore, this property is never actually used during production workflow execution."
+    },
+    {
+      "feature_id": "F6",
+      "name": "ApiRestNode.getRequiredSecrets",
+      "type": "class_method",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 69",
+          "file_line": "async getRequiredSecrets(config: NodeConfig): Promise<string[]>"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called by SecretAnalyzer via NodeRegistry",
+          "grep_result": "SecretAnalyzer.getDynamicSecrets() calls executor.getRequiredSecrets()"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "ApiRestNodeExecutor is exported via nodes/index.ts",
+          "grep_result": "Part of ApiRestNodeExecutor class"
+        },
+        "is_registered": {
+          "passed": true,
+          "evidence": "Registered in NodeRegistry as 'api_rest' type",
+          "assumption": "Based on integration test using createDefaultNodeRegistry()"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts",
+          "evidence": "Verifies ApiRestNode.getRequiredSecrets is called by SecretAnalyzer"
+        },
+        "has_acceptance_test": {
+          "passed": false,
+          "evidence": "No acceptance test file found"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Method is defined and tested, but SecretAnalyzer (which calls this method) is never instantiated in production code. Therefore, this method is never actually called during production workflow execution."
+    }
+  ],
+  "summary": {
+    "total_features": 6,
+    "passed": 0,
+    "dead_code": 6,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F1",
+      "name": "SecretAnalyzer",
+      "file": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "line": 64,
+      "issue": "NEVER INSTANTIATED in production code",
+      "recommended_caller": "createTaskFlowEngineDependenciesWithRegistry",
+      "recommended_location": "mySwiftAgentCore/src/api/routes.ts:154"
+    },
+    {
+      "feature_id": "F2",
+      "name": "SecretNotFoundError",
+      "file": "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts",
+      "line": 21,
+      "issue": "NEVER THROWN in production code",
+      "recommended_caller": "createExecuteHandler",
+      "recommended_location": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts:96-101"
+    },
+    {
+      "feature_id": "F3",
+      "name": "NodeExecutor.requiredSecrets",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "line": 90,
+      "issue": "NEVER READ in production (SecretAnalyzer not instantiated)",
+      "recommended_caller": "SecretAnalyzer.getStaticSecrets",
+      "recommended_location": "Requires F1 fix first"
+    },
+    {
+      "feature_id": "F4",
+      "name": "NodeExecutor.getRequiredSecrets",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "line": 122,
+      "issue": "NEVER CALLED in production (SecretAnalyzer not instantiated)",
+      "recommended_caller": "SecretAnalyzer.getDynamicSecrets",
+      "recommended_location": "Requires F1 fix first"
+    },
+    {
+      "feature_id": "F5",
+      "name": "LlmNode.requiredSecrets",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts",
+      "line": 47,
+      "issue": "NEVER READ in production (SecretAnalyzer not instantiated)",
+      "recommended_caller": "SecretAnalyzer.getStaticSecrets",
+      "recommended_location": "Requires F1 fix first"
+    },
+    {
+      "feature_id": "F6",
+      "name": "ApiRestNode.getRequiredSecrets",
+      "file": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "line": 69,
+      "issue": "NEVER CALLED in production (SecretAnalyzer not instantiated)",
+      "recommended_caller": "SecretAnalyzer.getDynamicSecrets",
+      "recommended_location": "Requires F1 fix first"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F1",
+      "action": "Instantiate SecretAnalyzer in createTaskFlowEngineDependenciesWithRegistry",
+      "file": "mySwiftAgentCore/src/api/routes.ts",
+      "line_before": 153,
+      "code_snippet": "// Import: import { createSecretAnalyzer } from '../taskflowEngine/analyzer/SecretAnalyzer.js';\n// Import: import { createDefaultNodeRegistry } from '../taskflowEngine/nodes/index.js';\n\n// After line 152 (after validator creation):\nconst nodeRegistry = createDefaultNodeRegistry();\nconst secretAnalyzer = createSecretAnalyzer(nodeRegistry);\n\n// In return statement (line 154-159), add:\nreturn {\n  registry,\n  executor,\n  validator,\n  secretManager,\n  secretAnalyzer, // ADD THIS LINE\n};"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F2",
+      "action": "Throw SecretNotFoundError when required secrets are missing",
+      "file": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+      "line_after": 101,
+      "code_snippet": "// After secret fetching loop (after line 101), add validation:\nconst missingSecrets: string[] = [];\nfor (const key of secretKeys) {\n  if (!secrets[key]) {\n    missingSecrets.push(key);\n  }\n}\n\nif (missingSecrets.length > 0) {\n  throw new SecretNotFoundError(missingSecrets[0], {\n    workflowId: workflow.id,\n    nodeType: 'workflow',\n  });\n}"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F2",
+      "action": "Import SecretNotFoundError in handlers.ts",
+      "file": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+      "line_after": 14,
+      "code_snippet": "import { SecretNotFoundError } from '../errors/SecretNotFoundError.js';"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "ALL",
+      "action": "Create acceptance test for Issue #377",
+      "file": "mySwiftAgentCore/tests/acceptance/test_issue_377_acceptance.py",
+      "description": "Create E2E acceptance test that verifies:\n1. SecretAnalyzer is used to fetch only required secrets\n2. SecretNotFoundError is thrown when secrets are missing\n3. Workflow execution uses the dynamically fetched secrets\n4. LlmNode and ApiRestNode secrets are correctly collected"
+    }
+  ],
+  "integration_verification": {
+    "status": "failed",
+    "issues": [
+      "SecretAnalyzer is OPTIONAL in HandlerDependencies and is NEVER populated",
+      "handlers.ts has code path 'if (deps.secretAnalyzer)' which will ALWAYS be false",
+      "All workflows currently use hardcoded secret keys ['OPENAI_API_KEY', 'LLM_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY']",
+      "Dynamic secret requirements (ApiRestNode.getRequiredSecrets) are NEVER executed",
+      "Static secret requirements (LlmNode.requiredSecrets) are NEVER read",
+      "SecretNotFoundError is NEVER thrown, even when secrets are missing"
+    ],
+    "evidence": {
+      "handlers_code_path": "Line 87-92 in handlers.ts shows optional secretAnalyzer with fallback",
+      "dependencies_creation": "Line 154-159 in routes.ts does NOT create secretAnalyzer",
+      "no_throw_statement": "grep 'throw new SecretNotFoundError' returns no results in src/"
+    }
+  },
+  "test_coverage_analysis": {
+    "unit_tests": {
+      "status": "passed",
+      "coverage": "All features have unit tests",
+      "files": [
+        "mySwiftAgentCore/tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts",
+        "mySwiftAgentCore/tests/unit/taskflowEngine/errors/SecretNotFoundError.test.ts",
+        "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/LlmNode.test.ts",
+        "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts"
+      ]
+    },
+    "integration_tests": {
+      "status": "passed",
+      "coverage": "All features tested in integration context",
+      "files": [
+        "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts"
+      ],
+      "issue": "Tests verify integration between components but do NOT verify production instantiation"
+    },
+    "acceptance_tests": {
+      "status": "failed",
+      "coverage": "NO acceptance tests exist",
+      "expected_file": "mySwiftAgentCore/tests/acceptance/test_issue_377_acceptance.py",
+      "issue": "No E2E test verifies actual API behavior with real workflow execution"
+    }
+  },
+  "root_cause_analysis": {
+    "primary_issue": "SecretAnalyzer is designed but NOT WIRED into production code",
+    "secondary_issues": [
+      "HandlerDependencies.secretAnalyzer is optional (?:) allowing it to be undefined",
+      "No validation step to ensure secretAnalyzer is provided",
+      "Error handling (SecretNotFoundError) is defined but never thrown",
+      "Acceptance test missing to catch this during TDD phase"
+    ],
+    "impact": "HIGH - All Issue #377 functionality is effectively UNUSED. Workflows still use hardcoded secret list instead of dynamic analysis.",
+    "compliance_with_issue_requirements": false,
+    "issue_requirement": "Issue #377 requires unified secrets injection pattern with dynamic secret requirements analysis",
+    "actual_behavior": "Hardcoded secret keys are still used (legacy behavior)"
+  }
+}

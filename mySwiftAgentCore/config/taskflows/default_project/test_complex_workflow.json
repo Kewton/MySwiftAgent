@@ -1,0 +1,57 @@
+{
+  "id": "test_complex_workflow",
+  "name": "test_complex_workflow",
+  "version": "1.0.0",
+  "description": "TC-008: LlmNode + ApiRestNodeを含む複合ワークフロー",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "検索クエリ"
+      }
+    },
+    "required": ["query"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "要約結果"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "llm_analyze",
+      "name": "Analyze Query",
+      "type": "llm",
+      "config": {
+        "model": "gpt-4o-mini",
+        "systemPrompt": "You are a helpful assistant. Briefly explain the query."
+      },
+      "params": {
+        "prompt": "$input.query"
+      }
+    },
+    {
+      "id": "api_search",
+      "name": "API Search",
+      "type": "api_rest",
+      "config": {
+        "capability_id": "google_search",
+        "method": "POST"
+      },
+      "params": {
+        "body": {
+          "query": "$input.query"
+        }
+      },
+      "dependsOn": ["llm_analyze"]
+    }
+  ],
+  "outputMapping": {
+    "summary": "$steps.llm_analyze.result"
+  }
+}

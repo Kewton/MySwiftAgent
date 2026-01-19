@@ -2,6 +2,7 @@
  * LlmNode Unit Tests
  *
  * Issue #363: LLM API integration node
+ * Issue #377: Added tests for requiredSecrets property
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -35,6 +36,30 @@ describe('LlmNodeExecutor', () => {
   describe('type', () => {
     it('should have type llm', () => {
       expect(executor.type).toBe('llm');
+    });
+  });
+
+  /**
+   * Issue #377: Tests for static requiredSecrets property
+   */
+  describe('requiredSecrets (Issue #377)', () => {
+    it('should have requiredSecrets property', () => {
+      expect(executor.requiredSecrets).toBeDefined();
+      expect(Array.isArray(executor.requiredSecrets)).toBe(true);
+    });
+
+    it('should include OPENAI_API_KEY in requiredSecrets', () => {
+      expect(executor.requiredSecrets).toContain('OPENAI_API_KEY');
+    });
+
+    it('should include LLM_API_KEY in requiredSecrets', () => {
+      expect(executor.requiredSecrets).toContain('LLM_API_KEY');
+    });
+
+    it('should be a readonly array', () => {
+      // TypeScript enforces this at compile time, but we can verify the values are stable
+      const secrets = executor.requiredSecrets;
+      expect(secrets.length).toBe(2);
     });
   });
 

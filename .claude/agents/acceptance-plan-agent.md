@@ -32,6 +32,46 @@ Issue要件と設計方針に基づいて、ユーザー視点の意味のある
 
 ---
 
+## E2Eテスト環境（必須）
+
+**重要**: E2Eテストは以下の環境で実行すること。
+
+### 起動コマンド
+
+```bash
+# 1. 既存サービスを停止
+./scripts/dev-hybrid.sh stop --local-only
+
+# 2. ローカルモードでサービスを起動
+./scripts/dev-hybrid.sh start --local-only
+```
+
+### 環境構成
+
+| サービス | 起動方法 | 説明 |
+|---------|---------|------|
+| mySwiftAgentCore | ローカル直接起動 | localhost:8006 |
+| expertAgent | ローカル直接起動 | localhost:8004 |
+| myVault | Docker コンテナ | localhost:8003 |
+
+### シークレット・設定情報
+
+**E2Eテストで使用するシークレットは、コンテナ起動のmyVaultのdefault_projectから取得**します。
+
+- OPENAI_API_KEY: myVault (default_project)
+- LLM_API_KEY: myVault (default_project)
+- ANTHROPIC_API_KEY: myVault (default_project)
+- その他APIキー: myVault (default_project)
+
+myVaultへのシークレット登録が必要な場合:
+```bash
+curl -X POST http://localhost:8003/api/v1/secrets \
+  -H "Content-Type: application/json" \
+  -d '{"project": "default_project", "key": "OPENAI_API_KEY", "value": "sk-xxx"}'
+```
+
+---
+
 ## Execution
 
 **Read and execute the core prompt**:

@@ -260,24 +260,53 @@ cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/implement
 ### 必須サービス
 | サービス | URL | ヘルスチェック |
 |---------|-----|--------------|
-| expertAgent | http://localhost:8104 | GET /health |
-| myVault | http://localhost:8103 | GET /health |
-| graphAiServer | http://localhost:8105 | GET /health |
+| mySwiftAgentCore | http://localhost:8006 | GET /health |
+| expertAgent | http://localhost:8004 | GET /health |
+| myVault | http://localhost:8003 | GET /health |
+| graphAiServer | http://localhost:8005 | GET /health |
 
-### 起動コマンド
+### 起動コマンド（E2Eテスト用 - 必須）
+
+**重要**: E2Eテストは以下の環境で実行すること。
+
 ```bash
-# 推奨: ハイブリッドモード
-./scripts/dev-hybrid.sh
+# 1. 既存サービスを停止
+./scripts/dev-hybrid.sh stop --local-only
 
-# または: Docker全環境
-make dev-all
+# 2. ローカルモードでサービスを起動
+./scripts/dev-hybrid.sh start --local-only
+```
+
+これにより:
+- mySwiftAgentCore, expertAgent: ローカル直接起動
+- myVault: Dockerコンテナで起動（default_projectを使用）
+
+### シークレット・設定情報
+
+**E2Eテストで使用するシークレットは、コンテナ起動のmyVaultのdefault_projectから取得**します。
+
+| 項目 | 取得元 |
+|------|--------|
+| OPENAI_API_KEY | myVault (default_project) |
+| LLM_API_KEY | myVault (default_project) |
+| ANTHROPIC_API_KEY | myVault (default_project) |
+| その他APIキー | myVault (default_project) |
+
+myVaultへのシークレット登録（事前設定が必要な場合）:
+```bash
+# myVaultにシークレットを登録
+curl -X POST http://localhost:8003/api/v1/secrets \
+  -H "Content-Type: application/json" \
+  -d '{"project": "default_project", "key": "OPENAI_API_KEY", "value": "sk-xxx"}'
 ```
 
 ### 環境変数
 | 変数名 | 説明 | 必須 |
 |--------|------|------|
-| OPENAI_API_KEY | OpenAI APIキー | ✅ |
-| ANTHROPIC_API_KEY | Anthropic APIキー | ✅ |
+| MYVAULT_ENABLED | MyVault有効化フラグ | ✅ (true) |
+| MYVAULT_BASE_URL | MyVault URL | ✅ (http://localhost:8003) |
+| MYVAULT_SERVICE_NAME | サービス名 | ✅ |
+| MYVAULT_SERVICE_TOKEN | サービストークン | ✅ |
 
 ### テストデータ
 - [必要なテストデータの説明]

@@ -2,6 +2,7 @@
  * TaskFlow API Handlers
  *
  * Issue #363: REST API request handlers
+ * Issue #377: Improved to use SecretAnalyzer for selective secret fetching
  */
 
 import type { Context } from 'hono';
@@ -10,9 +11,14 @@ import type { TaskFlowEngine } from '../TaskFlowEngine.js';
 import type { SchemaValidator } from '../validator/SchemaValidator.js';
 import type { LangfuseTracer } from '../tracer/LangfuseTracer.js';
 import type { SecretManager } from '../../shared/context/SecretManager.js';
+import type { SecretAnalyzer } from '../analyzer/SecretAnalyzer.js';
+// Issue #377: SecretNotFoundError for unified error handling
+import { SecretNotFoundError } from '../errors/SecretNotFoundError.js';
 
 /**
  * Handler dependencies
+ *
+ * Issue #377: Added optional secretAnalyzer for dynamic secret requirements
  */
 export interface HandlerDependencies {
   registry: WorkflowRegistry;
@@ -20,6 +26,8 @@ export interface HandlerDependencies {
   validator: SchemaValidator;
   tracer?: LangfuseTracer;
   secretManager?: SecretManager;
+  /** Issue #377: SecretAnalyzer for analyzing workflow secret requirements */
+  secretAnalyzer?: SecretAnalyzer;
 }
 
 /**
@@ -71,15 +79,38 @@ export function createExecuteHandler(deps: HandlerDependencies) {
         traceId = deps.tracer.startWorkflowTrace(workflow.id, workflow.name);
       }
 
-      // Get secrets from SecretManager if available
-      let secrets: Record<string, string> = {};
+      // Issue #377: Get secrets from SecretManager using SecretAnalyzer
+      // This fetches only the secrets required by the workflow instead of hardcoded keys
+      const secrets: Record<string, string> = {};
       if (deps.secretManager) {
-        // Get commonly needed secrets for workflow execution
-        const secretKeys = ['OPENAI_API_KEY', 'LLM_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY'];
+        let secretKeys: string[] = [];
+
+        // If SecretAnalyzer is available, analyze workflow to get required secrets
+        if (deps.secretAnalyzer) {
+          const requirements = await deps.secretAnalyzer.analyze(workflow);
+          secretKeys = requirements.requiredSecrets;
+        } else {
+          // Fallback: Get commonly needed secrets for workflow execution (legacy behavior)
+          secretKeys = ['OPENAI_API_KEY', 'LLM_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY'];
+        }
+
+        // Fetch only the required secrets
         for (const key of secretKeys) {
           const value = await deps.secretManager.get(key);
           if (value) {
             secrets[key] = value;
+          }
+        }
+
+        // Issue #377: Validate that all required secrets were found
+        // Only validate when using SecretAnalyzer (dynamic requirements)
+        if (deps.secretAnalyzer && secretKeys.length > 0) {
+          const missingSecrets = secretKeys.filter((key) => !secrets[key]);
+          const firstMissing = missingSecrets[0];
+          if (firstMissing !== undefined) {
+            throw new SecretNotFoundError(firstMissing, {
+              workflowId: workflow.id,
+            });
           }
         }
       }
@@ -108,6 +139,17 @@ export function createExecuteHandler(deps: HandlerDependencies) {
         durationMs: result.durationMs,
       });
     } catch (error) {
+      // Issue #377: Handle SecretNotFoundError with specific response
+      if (error instanceof SecretNotFoundError) {
+        return c.json(
+          {
+            error: 'Secret not found',
+            code: error.code,
+            details: error.toJSON(),
+          },
+          400
+        );
+      }
       const message = error instanceof Error ? error.message : 'Unknown error';
       return c.json({ error: message }, 500);
     }

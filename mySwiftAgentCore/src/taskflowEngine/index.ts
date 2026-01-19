@@ -2,6 +2,7 @@
  * TaskFlow Engine - Main entry point
  *
  * Issue #363: TaskFlow execution engine for mySwiftAgentCore
+ * Issue #377: Added SecretAnalyzer and SecretNotFoundError
  *
  * This module provides:
  * - Type definitions (TaskFlowDefinition, InternalWorkflowDefinition)
@@ -15,6 +16,8 @@
  * - Langfuse tracing integration
  * - REST API handlers
  * - TypeScript SDK client
+ * - Analyzer for workflow secret requirements (Issue #377)
+ * - Errors for secret handling (Issue #377)
  *
  * @module taskflowEngine
  */
@@ -39,6 +42,12 @@ export * from './sandbox/index.js';
 
 // Nodes
 export * from './nodes/index.js';
+
+// Analyzer (Issue #377)
+export * from './analyzer/index.js';
+
+// Errors (Issue #377)
+export * from './errors/index.js';
 
 // Executor
 export * from './executor/index.js';

@@ -2,6 +2,7 @@
  * API Handlers Unit Tests
  *
  * Issue #363: REST API handlers for TaskFlow
+ * Issue #377: Added tests for SecretAnalyzer integration
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -150,6 +151,121 @@ describe('createExecuteHandler', () => {
       }),
       400
     );
+  });
+
+  /**
+   * Issue #377: Tests for SecretAnalyzer integration
+   */
+  describe('SecretAnalyzer integration (Issue #377)', () => {
+    it('should use SecretAnalyzer when available', async () => {
+      const mockSecretManager = {
+        get: vi.fn().mockImplementation((key: string) => {
+          const secrets: Record<string, string> = {
+            OPENAI_API_KEY: 'sk-openai-key',
+            LLM_API_KEY: 'sk-llm-key',
+          };
+          return Promise.resolve(secrets[key]);
+        }),
+      };
+
+      const mockSecretAnalyzer = {
+        analyze: vi.fn().mockResolvedValue({
+          workflowId: 'wf_test',
+          requiredSecrets: ['OPENAI_API_KEY', 'LLM_API_KEY'],
+          byStep: { llm_step: ['OPENAI_API_KEY', 'LLM_API_KEY'] },
+        }),
+      };
+
+      const depsWithAnalyzer: HandlerDependencies = {
+        ...deps,
+        secretManager: mockSecretManager as any,
+        secretAnalyzer: mockSecretAnalyzer as any,
+      };
+
+      const handler = createExecuteHandler(depsWithAnalyzer);
+      const ctx = createMockContext({
+        project: 'test_project',
+        workflow: 'test_workflow',
+        inputs: { key: 'value' },
+      });
+
+      await handler(ctx as any);
+
+      // Verify SecretAnalyzer was called
+      expect(mockSecretAnalyzer.analyze).toHaveBeenCalledWith(mockWorkflow);
+
+      // Verify only required secrets were fetched
+      expect(mockSecretManager.get).toHaveBeenCalledWith('OPENAI_API_KEY');
+      expect(mockSecretManager.get).toHaveBeenCalledWith('LLM_API_KEY');
+      expect(mockSecretManager.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fall back to hardcoded keys when SecretAnalyzer not available', async () => {
+      const mockSecretManager = {
+        get: vi.fn().mockResolvedValue('secret-value'),
+      };
+
+      const depsWithSecretManager: HandlerDependencies = {
+        ...deps,
+        secretManager: mockSecretManager as any,
+        // No secretAnalyzer
+      };
+
+      const handler = createExecuteHandler(depsWithSecretManager);
+      const ctx = createMockContext({
+        project: 'test_project',
+        workflow: 'test_workflow',
+        inputs: { key: 'value' },
+      });
+
+      await handler(ctx as any);
+
+      // Verify fallback keys were fetched
+      expect(mockSecretManager.get).toHaveBeenCalledWith('OPENAI_API_KEY');
+      expect(mockSecretManager.get).toHaveBeenCalledWith('LLM_API_KEY');
+      expect(mockSecretManager.get).toHaveBeenCalledWith('ANTHROPIC_API_KEY');
+      expect(mockSecretManager.get).toHaveBeenCalledWith('GOOGLE_API_KEY');
+      expect(mockSecretManager.get).toHaveBeenCalledTimes(4);
+    });
+
+    it('should pass secrets to executor', async () => {
+      const mockSecretManager = {
+        get: vi.fn().mockImplementation((key: string) => {
+          return Promise.resolve(key === 'OPENAI_API_KEY' ? 'sk-openai-key' : undefined);
+        }),
+      };
+
+      const mockSecretAnalyzer = {
+        analyze: vi.fn().mockResolvedValue({
+          workflowId: 'wf_test',
+          requiredSecrets: ['OPENAI_API_KEY'],
+          byStep: {},
+        }),
+      };
+
+      const depsWithAnalyzer: HandlerDependencies = {
+        ...deps,
+        secretManager: mockSecretManager as any,
+        secretAnalyzer: mockSecretAnalyzer as any,
+      };
+
+      const handler = createExecuteHandler(depsWithAnalyzer);
+      const ctx = createMockContext({
+        project: 'test_project',
+        workflow: 'test_workflow',
+        inputs: { key: 'value' },
+      });
+
+      await handler(ctx as any);
+
+      // Verify executor was called with secrets
+      expect(depsWithAnalyzer.executor.execute).toHaveBeenCalledWith(
+        mockWorkflow,
+        expect.objectContaining({
+          secrets: { OPENAI_API_KEY: 'sk-openai-key' },
+        })
+      );
+    });
   });
 });
 

@@ -2,6 +2,7 @@
  * LlmNode - LLM API executor
  *
  * Issue #363: Executes LLM API calls
+ * Issue #377: Added requiredSecrets for unified secrets injection
  */
 
 import type {
@@ -31,9 +32,19 @@ interface LlmConfig {
  * - Multiple LLM providers
  * - Prompt templating
  * - Configurable parameters
+ *
+ * Issue #377: Static requiredSecrets for unified secrets injection
  */
 export class LlmNodeExecutor implements NodeExecutor {
   readonly type = 'llm' as const;
+
+  /**
+   * Issue #377: Static list of required secrets
+   *
+   * LLM nodes require API keys for LLM providers.
+   * The executor will try OPENAI_API_KEY first, falling back to LLM_API_KEY.
+   */
+  readonly requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY'] as const;
 
   /**
    * Execute LLM request

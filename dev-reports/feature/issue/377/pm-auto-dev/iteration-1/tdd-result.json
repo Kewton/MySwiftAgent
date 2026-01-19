@@ -1,0 +1,81 @@
+{
+  "status": "success",
+  "issue_number": 377,
+  "coverage": {
+    "SecretAnalyzer.ts": 100,
+    "SecretNotFoundError.ts": 100,
+    "overall_new_code": 100
+  },
+  "unit_tests": {
+    "total": 87,
+    "passed": 87,
+    "failed": 0,
+    "files": [
+      "tests/unit/taskflowEngine/errors/SecretNotFoundError.test.ts (12 tests)",
+      "tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts (13 tests)",
+      "tests/unit/taskflowEngine/nodes/LlmNode.test.ts (16 tests)",
+      "tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts (25 tests)",
+      "tests/unit/taskflowEngine/api/handlers.test.ts (13 tests)",
+      "tests/integration/taskflowEngine/secrets-injection.test.ts (8 tests)"
+    ]
+  },
+  "integration_tests": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "static_analysis": {
+    "typescript_errors": 0,
+    "eslint_errors": 0,
+    "eslint_warnings": 4
+  },
+  "files_modified": [
+    "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+    "mySwiftAgentCore/src/taskflowEngine/index.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/LlmNode.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/api/handlers.test.ts"
+  ],
+  "files_created": [
+    "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+    "mySwiftAgentCore/src/taskflowEngine/analyzer/index.ts",
+    "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts",
+    "mySwiftAgentCore/src/taskflowEngine/errors/index.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/errors/SecretNotFoundError.test.ts",
+    "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts"
+  ],
+  "executed_tasks": [
+    "1.1 - NodeExecutorインターフェース拡張 (BaseNode.ts)",
+    "1.2 - SecretAnalyzerクラス実装",
+    "1.3 - SecretNotFoundErrorクラス実装",
+    "1.4 - handlers.tsの改善（SecretAnalyzer統合）",
+    "2.1 - LlmNodeにrequiredSecretsプロパティ追加",
+    "2.2 - ApiRestNodeにgetRequiredSecretsメソッド追加",
+    "2.3 - 単体テスト作成（SecretAnalyzer、handlers、各ノード）",
+    "2.4 - 結合テスト作成（secrets-injection.test.ts）"
+  ],
+  "skipped_tasks": [],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "exports_added": true,
+    "tests_verify_integration": true
+  },
+  "implementation_summary": {
+    "description": "Unified Secrets injection pattern for taskflowEngine",
+    "features": [
+      "NodeExecutor interface extended with optional requiredSecrets property",
+      "NodeExecutor interface extended with optional getRequiredSecrets method",
+      "SecretAnalyzer class that analyzes workflows to collect all required secrets",
+      "SecretNotFoundError class for unified error handling with context",
+      "LlmNode now has static requiredSecrets: ['OPENAI_API_KEY', 'LLM_API_KEY']",
+      "ApiRestNode now has dynamic getRequiredSecrets(config) method",
+      "handlers.ts uses SecretAnalyzer when available, falls back to hardcoded keys"
+    ],
+    "backward_compatible": true
+  },
+  "message": "TDD implementation completed successfully. All 87 tests pass with 100% coverage on new code. NodeExecutor interface extended with requiredSecrets and getRequiredSecrets for unified secrets injection pattern."
+}

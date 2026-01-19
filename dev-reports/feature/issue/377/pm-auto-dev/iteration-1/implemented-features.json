@@ -1,0 +1,188 @@
+{
+  "issue_number": 377,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "SecretAnalyzer",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "line_number": 1,
+      "description": "ワークフローを解析して必要なSecretsを収集するクラス",
+      "expected_callers": ["handlers.ts createWorkflowHandler"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "SecretNotFoundError",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts",
+      "line_number": 1,
+      "description": "Secretsが見つからない場合の統一エラークラス（context付き）",
+      "expected_callers": ["handlers.ts"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "NodeExecutor.requiredSecrets",
+      "type": "interface_property",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "line_number": 90,
+      "description": "NodeExecutorインターフェースの静的Secretsプロパティ",
+      "expected_callers": ["SecretAnalyzer.analyze"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "NodeExecutor.getRequiredSecrets",
+      "type": "interface_method",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "line_number": 93,
+      "description": "NodeExecutorインターフェースの動的Secrets取得メソッド",
+      "expected_callers": ["SecretAnalyzer.analyze"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "LlmNode.requiredSecrets",
+      "type": "class_property",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts",
+      "line_number": 47,
+      "description": "LlmNodeの静的Secrets定義 ['OPENAI_API_KEY', 'LLM_API_KEY']",
+      "expected_callers": ["SecretAnalyzer.analyze"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "ApiRestNode.getRequiredSecrets",
+      "type": "class_method",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "line_number": 0,
+      "description": "ApiRestNodeの動的Secrets取得メソッド（config.authベース）",
+      "expected_callers": ["SecretAnalyzer.analyze"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "SecretAnalyzer.test.ts"
+      ],
+      "integration_tests": [
+        "secrets-injection.test.ts"
+      ],
+      "acceptance_tests": [
+        "test_issue_377_acceptance.py"
+      ]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "SecretNotFoundError.test.ts"
+      ],
+      "integration_tests": [
+        "secrets-injection.test.ts"
+      ],
+      "acceptance_tests": [
+        "test_issue_377_acceptance.py"
+      ]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "BaseNode.test.ts (if exists)"
+      ],
+      "integration_tests": [
+        "secrets-injection.test.ts"
+      ],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [
+        "SecretAnalyzer.test.ts"
+      ],
+      "integration_tests": [
+        "secrets-injection.test.ts"
+      ],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": [
+        "LlmNode.test.ts"
+      ],
+      "integration_tests": [
+        "secrets-injection.test.ts"
+      ],
+      "acceptance_tests": [
+        "test_issue_377_acceptance.py"
+      ]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": [
+        "ApiRestNode.test.ts"
+      ],
+      "integration_tests": [
+        "secrets-injection.test.ts"
+      ],
+      "acceptance_tests": [
+        "test_issue_377_acceptance.py"
+      ]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+      "integration_type": "dependency_injection",
+      "integration_method": "deps.secretAnalyzer?.analyze(workflow)"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+      "integration_type": "error_throw",
+      "integration_method": "throw new SecretNotFoundError()"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "integration_type": "property_read",
+      "integration_method": "executor.requiredSecrets"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "integration_type": "method_call",
+      "integration_method": "await executor.getRequiredSecrets(step)"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "integration_type": "property_read",
+      "integration_method": "Accessed via NodeRegistry when node type is 'llm'"
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "integration_type": "method_call",
+      "integration_method": "Accessed via NodeRegistry when node type is 'api_rest'"
+    }
+  ],
+  "exports_added": [
+    {
+      "file": "mySwiftAgentCore/src/taskflowEngine/analyzer/index.ts",
+      "exports": ["SecretAnalyzer", "WorkflowSecretRequirements"]
+    },
+    {
+      "file": "mySwiftAgentCore/src/taskflowEngine/errors/index.ts",
+      "exports": ["SecretNotFoundError"]
+    },
+    {
+      "file": "mySwiftAgentCore/src/taskflowEngine/index.ts",
+      "exports": ["SecretAnalyzer", "SecretNotFoundError (re-export)"]
+    }
+  ]
+}

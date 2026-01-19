@@ -88,6 +88,7 @@ TodoWriteツールで作業計画を作成してください：
 - [ ] Phase 2.7: 実装検証【必須】（デッドコード検出）
 - [ ] Phase 3: 受入テスト実行【必須】
 - [ ] Phase 3.5: 受入テストファイル検証【必須】
+- [ ] Phase 3.6: 受入テスト結果妥当性確認【必須】
 - [ ] Phase 4: リファクタリング
 - [ ] Phase 5: 進捗報告
 - [ ] Phase 5.5: 品質チェック【必須】（pre-push-check-all.sh）
@@ -1653,8 +1654,199 @@ fi
 
 検証がすべてパスしたら：
 
-1. TodoWriteでPhase 3を`completed`に、Phase 4を`in_progress`に設定
-2. Phase 4（リファクタリング）へ進む
+1. TodoWriteでPhase 3.5を`completed`に、Phase 3.6を`in_progress`に設定
+2. Phase 3.6（受入テスト結果妥当性確認）へ進む
+
+---
+
+### Phase 3.6: 受入テスト結果妥当性確認【必須】
+
+**重要**: 受入テスト結果が、事前に立案した受入テスト計画の全項目をカバーしているか検証します。
+受入テスト計画に記載されたテストケース（TC-XXX）が全て実行・検証されているかを確認することで、
+計画漏れや実装漏れを防ぎます。
+
+#### 3.6-1. 受入テスト計画の読み込み
+
+```bash
+# 受入テスト計画を確認
+cat dev-reports/feature/issue/{issue_number}/acceptance-plan.md
+```
+
+以下の項目を抽出：
+- **受入条件（AC-1〜AC-N）**: Issue本文の受入条件
+- **設計方針検証（DP-1〜DP-N）**: 設計方針の検証項目
+- **デッドコード検証（F-1〜F-N）**: 実装機能の統合検証
+- **テストケース（TC-001〜TC-NNN）**: E2Eテスト項目
+
+#### 3.6-2. 受入テスト結果との突合
+
+受入テスト結果ファイルを確認し、計画との突合を行います：
+
+```bash
+# 受入テスト結果を確認
+cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-result.json | jq '.pytest_results'
+
+# 受入テストファイルの内容を確認
+cat tests/acceptance/test_issue_{issue_number}_acceptance.py
+```
+
+**突合マトリクス作成**:
+
+```markdown
+## 受入テスト計画 vs 実装 突合結果
+
+### 受入条件（AC）カバレッジ
+| AC | 計画での検証方法 | 実際の検証方法 | 判定 |
+|----|----------------|---------------|------|
+| AC-1 | {計画の方法} | {実際の方法} | ✅/⚠️/❌ |
+| AC-2 | {計画の方法} | {実際の方法} | ✅/⚠️/❌ |
+
+### テストケース（TC）実装状況
+| TC | 計画の内容 | 実装状況 | 判定 |
+|----|----------|---------|------|
+| TC-001 | {計画のテスト内容} | {実装有無} | ✅/❌ |
+| TC-002 | {計画のテスト内容} | {実装有無} | ✅/❌ |
+
+### 設計方針検証（DP）状況
+| DP | 検証項目 | 検証状況 | 判定 |
+|----|---------|---------|------|
+| DP-1 | {検証項目} | {検証有無} | ✅/❌ |
+
+### デッドコード検証（F）状況
+| F | 機能 | 検証状況 | 判定 |
+|---|------|---------|------|
+| F-1 | {機能名} | {検証有無} | ✅/❌ |
+```
+
+#### 3.6-3. ギャップの特定
+
+計画と実装の間にギャップがある場合、以下を特定：
+
+```markdown
+## ギャップ分析
+
+### 未実装のテストケース
+| TC | 内容 | 重要度 | 対応必要性 |
+|----|------|--------|----------|
+| TC-003 | {内容} | 高/中/低 | 必須/推奨/任意 |
+
+### 検証方法の不一致
+| 項目 | 計画での方法 | 実際の方法 | 問題点 |
+|------|------------|----------|--------|
+| AC-3 | E2E API呼び出し | ファイル検査のみ | E2E検証不足 |
+```
+
+#### 3.6-4. 判定基準
+
+| 条件 | 判定 | 次のアクション |
+|------|------|--------------|
+| 全TC実装 & 全AC検証 & 全DP検証 | ✅ 合格 | Phase 4へ進む |
+| TCカバレッジ >= 80% | ⚠️ 条件付き合格 | 不足分を記録してPhase 4へ |
+| TCカバレッジ < 80% | ❌ 不合格 | **Phase 3.6-5（ギャップ解消）へ** |
+| E2Eテストが静的検査のみ | ❌ 不合格 | **E2Eテスト追加が必要** |
+
+**重要**: 計画で「E2E API呼び出し」や「curl実行」が指定されているテストケースについて、
+実際の実装が「ファイル存在確認」や「コード内容検索」のみの場合は**不合格**とします。
+
+#### 3.6-5. ギャップ解消（不合格時）
+
+不合格の場合、以下のプロセスでギャップを解消します：
+
+##### Step 1: 不足テストケースの実装
+
+```bash
+# 受入テストファイルに不足テストケースを追加
+# tests/acceptance/test_issue_{issue_number}_acceptance.py を編集
+```
+
+不足しているTC-XXXに対応するテストメソッドを追加：
+
+```python
+def test_tc_XXX_{テスト名}(self) -> None:
+    """TC-XXX: {テスト概要}"""
+    # 計画書に記載された手順を実装
+    # 1. {手順1}
+    # 2. {手順2}
+
+    # E2Eテスト（実際のAPI呼び出し）
+    response = requests.post(
+        f"{self.SERVICE_URL}/api/v1/endpoint",
+        json={"param": "value"}
+    )
+
+    assert response.status_code == 200
+    # 計画書に記載された期待結果を検証
+```
+
+##### Step 2: E2Eテストの追加
+
+静的検査のみだったテストをE2Eテストに置き換え：
+
+```python
+# Before（静的検査のみ - 不十分）
+def test_ac3_handler_uses_secret_analyzer(self) -> None:
+    content = Path("handlers.ts").read_text()
+    assert "secretAnalyzer" in content  # ❌ コード検査のみ
+
+# After（E2Eテスト - 適切）
+def test_ac3_handler_uses_secret_analyzer(self) -> None:
+    """AC-3: SecretAnalyzerがハンドラーで使用されている"""
+    # 実際のワークフロー実行でSecretAnalyzerが動作することを確認
+    response = requests.post(
+        f"{self.SERVICE_URL}/api/v1/workflows/execute",
+        json={
+            "project": "default_project",
+            "workflow": "test_llm_workflow",
+            "inputs": {"prompt": "test"}
+        }
+    )
+    # SecretAnalyzerが必要なシークレットを取得してLlmNodeが動作
+    assert response.status_code == 200
+    assert response.json()["status"] in ["completed", "success"]
+```
+
+##### Step 3: 再テスト実行
+
+```bash
+# 追加したテストを実行
+cd {project_root}
+uv run pytest tests/acceptance/test_issue_{issue_number}_acceptance.py -v -s
+```
+
+##### Step 4: Phase 3.6-2 に戻る
+
+再度突合を行い、全てのギャップが解消されたことを確認します。
+
+#### 3.6-6. 検証完了
+
+全ての突合が合格したら：
+
+1. 突合結果をファイルに保存
+   ```bash
+   # 突合結果を保存
+   cat > dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-{N}/acceptance-validation-result.json << 'EOF'
+   {
+     "status": "passed",
+     "acceptance_plan_coverage": {
+       "ac_total": 8,
+       "ac_verified": 8,
+       "tc_total": 10,
+       "tc_implemented": 10,
+       "dp_total": 6,
+       "dp_verified": 6,
+       "f_total": 5,
+       "f_verified": 5
+     },
+     "gaps": [],
+     "e2e_test_count": 10,
+     "static_test_count": 2
+   }
+   EOF
+   ```
+
+2. TodoWriteでPhase 3.6を`completed`に、Phase 4を`in_progress`に設定
+
+3. Phase 4（リファクタリング）へ進む
 
 ---
 

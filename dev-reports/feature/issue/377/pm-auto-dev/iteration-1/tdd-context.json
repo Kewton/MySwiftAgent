@@ -1,0 +1,143 @@
+{
+  "issue_number": 377,
+  "issue_title": "feat(taskflowEngine): Secrets注入パターンの統一化",
+  "acceptance_criteria": [
+    "NodeExecutorインターフェースにrequiredSecretsプロパティ追加",
+    "SecretAnalyzerクラスの実装",
+    "改善されたHandler実装（必要なSecretsのみ取得）",
+    "LlmNode、ApiRestNodeの移行完了",
+    "単体テスト実装（カバレッジ90%以上）",
+    "結合テスト実装",
+    "E2E受入テスト実装と成功",
+    "ドキュメント更新"
+  ],
+  "implementation_tasks": [
+    "NodeExecutorインターフェースにrequiredSecretsプロパティ追加（BaseNode.ts）",
+    "WorkflowSecretRequirements型定義の作成",
+    "SecretAnalyzerクラスの実装（analyzer/SecretAnalyzer.ts）",
+    "SecretNotFoundErrorクラスの実装（errors/SecretNotFoundError.ts）",
+    "handlers.tsの改善（SecretAnalyzer統合、必要なSecretsのみ取得）",
+    "LlmNodeにrequiredSecretsプロパティ追加",
+    "ApiRestNodeにgetRequiredSecretsメソッド追加",
+    "単体テスト作成（SecretAnalyzer、handlers、各ノード）",
+    "結合テスト作成（secrets-injection.test.ts）"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "NodeExecutorインターフェース拡張",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "SecretAnalyzerクラス実装",
+      "estimated_hours": 3,
+      "deliverables": ["mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "Handler改善実装",
+      "estimated_hours": 2,
+      "deliverables": [
+        "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+        "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts"
+      ],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "基盤単体テスト",
+      "estimated_hours": 2,
+      "deliverables": [
+        "mySwiftAgentCore/tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts",
+        "mySwiftAgentCore/tests/unit/taskflowEngine/api/handlers.test.ts"
+      ],
+      "dependencies": ["1.3"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "LlmNode移行",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts"],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "ApiRestNode移行",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts"],
+      "dependencies": ["1.4"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "ノード単体テスト更新",
+      "estimated_hours": 2,
+      "deliverables": [
+        "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/LlmNode.test.ts",
+        "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts"
+      ],
+      "dependencies": ["2.1", "2.2"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "結合テスト実装",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts"],
+      "dependencies": ["2.3"]
+    }
+  ],
+  "deliverables_checklist": [
+    "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+    "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+    "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts",
+    "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/analyzer/SecretAnalyzer.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/LlmNode.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowEngine/nodes/ApiRestNode.test.ts",
+    "mySwiftAgentCore/tests/integration/taskflowEngine/secrets-injection.test.ts"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "NodeExecutorインターフェースにrequiredSecretsが追加されている",
+    "SecretAnalyzerが実装され、ワークフロー要件を正しく分析できる",
+    "Handlerが改善され、必要なSecretsのみを取得する",
+    "LlmNodeとApiRestNodeが新パターンに移行完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全パス",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "existing_files_to_modify": {
+    "BaseNode.ts": {
+      "path": "mySwiftAgentCore/src/taskflowEngine/nodes/BaseNode.ts",
+      "changes": "NodeExecutorインターフェースにrequiredSecretsプロパティを追加"
+    },
+    "handlers.ts": {
+      "path": "mySwiftAgentCore/src/taskflowEngine/api/handlers.ts",
+      "changes": "SecretAnalyzer統合、ハードコーディングされた4キー取得を動的解析に置き換え"
+    },
+    "LlmNode.ts": {
+      "path": "mySwiftAgentCore/src/taskflowEngine/nodes/LlmNode.ts",
+      "changes": "requiredSecretsプロパティを追加"
+    },
+    "ApiRestNode.ts": {
+      "path": "mySwiftAgentCore/src/taskflowEngine/nodes/ApiRestNode.ts",
+      "changes": "getRequiredSecretsメソッドを追加"
+    }
+  },
+  "new_files_to_create": [
+    {
+      "path": "mySwiftAgentCore/src/taskflowEngine/analyzer/SecretAnalyzer.ts",
+      "description": "ワークフロー解析してSecrets要件を抽出するクラス"
+    },
+    {
+      "path": "mySwiftAgentCore/src/taskflowEngine/errors/SecretNotFoundError.ts",
+      "description": "Secretsが見つからない場合の統一エラークラス"
+    }
+  ]
+}

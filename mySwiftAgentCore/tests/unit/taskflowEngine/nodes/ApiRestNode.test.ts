@@ -3,6 +3,7 @@
  *
  * Issue #363: REST API node executor
  * Issue #372: Extended with capability_id support
+ * Issue #377: Added tests for getRequiredSecrets method
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -35,6 +36,85 @@ describe('ApiRestNodeExecutor', () => {
   describe('type', () => {
     it('should have type api_rest', () => {
       expect(executor.type).toBe('api_rest');
+    });
+  });
+
+  /**
+   * Issue #377: Tests for getRequiredSecrets method
+   */
+  describe('getRequiredSecrets (Issue #377)', () => {
+    it('should have getRequiredSecrets method', () => {
+      expect(executor.getRequiredSecrets).toBeDefined();
+      expect(typeof executor.getRequiredSecrets).toBe('function');
+    });
+
+    it('should return empty array when no auth configured', async () => {
+      const config: NodeConfig = {
+        nodeId: 'api_1',
+        type: 'api_rest',
+        config: {
+          url: 'https://api.example.com',
+          method: 'GET',
+        },
+      };
+
+      const secrets = await executor.getRequiredSecrets(config);
+      expect(secrets).toEqual([]);
+    });
+
+    it('should return secret_key when bearer auth configured', async () => {
+      const config: NodeConfig = {
+        nodeId: 'api_1',
+        type: 'api_rest',
+        config: {
+          url: 'https://api.example.com',
+          method: 'GET',
+          auth: {
+            type: 'bearer',
+            secret_key: 'MY_API_TOKEN',
+          },
+        },
+      };
+
+      const secrets = await executor.getRequiredSecrets(config);
+      expect(secrets).toEqual(['MY_API_TOKEN']);
+    });
+
+    it('should return secret_key when api_key auth configured', async () => {
+      const config: NodeConfig = {
+        nodeId: 'api_1',
+        type: 'api_rest',
+        config: {
+          url: 'https://api.example.com',
+          method: 'GET',
+          auth: {
+            type: 'api_key',
+            secret_key: 'CUSTOM_API_KEY',
+            header_name: 'X-API-Key',
+          },
+        },
+      };
+
+      const secrets = await executor.getRequiredSecrets(config);
+      expect(secrets).toEqual(['CUSTOM_API_KEY']);
+    });
+
+    it('should return secret_key when basic auth configured', async () => {
+      const config: NodeConfig = {
+        nodeId: 'api_1',
+        type: 'api_rest',
+        config: {
+          url: 'https://api.example.com',
+          method: 'GET',
+          auth: {
+            type: 'basic',
+            secret_key: 'BASIC_AUTH_TOKEN',
+          },
+        },
+      };
+
+      const secrets = await executor.getRequiredSecrets(config);
+      expect(secrets).toEqual(['BASIC_AUTH_TOKEN']);
     });
   });
 
