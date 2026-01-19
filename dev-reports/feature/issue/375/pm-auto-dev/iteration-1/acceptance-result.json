@@ -1,0 +1,258 @@
+{
+  "status": "failed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "mySwiftAgentCore",
+  "service_health": {
+    "mySwiftAgentCore": {
+      "status": "healthy",
+      "url": "http://localhost:8006",
+      "response": {"status": "healthy", "service": "mySwiftAgentCore", "version": "0.1.0"}
+    },
+    "myVault": {
+      "status": "not_running",
+      "url": "http://localhost:8103",
+      "error": "Connection refused"
+    },
+    "expertAgent": {
+      "status": "healthy",
+      "url": "http://localhost:8104"
+    },
+    "graphAiServer": {
+      "status": "not_running",
+      "url": "http://localhost:8105",
+      "error": "Connection refused"
+    }
+  },
+  "pytest_results": {
+    "test_file": "mySwiftAgentCore/tests/acceptance/test_issue_375_acceptance.py",
+    "total": 8,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 8,
+    "skip_reason": "myVault is not running. Run: ./scripts/dev-hybrid.sh or make dev-all",
+    "output": "All 8 tests skipped due to missing myVault service dependency"
+  },
+  "vitest_results": {
+    "description": "Unit/Integration tests using vitest (TypeScript)",
+    "test_suites": [
+      {
+        "name": "workflow-reload.test.ts",
+        "total": 13,
+        "passed": 13,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "name": "NodeConfigValidator.test.ts",
+        "total": 23,
+        "passed": 23,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "name": "OutputMappingValidator.test.ts",
+        "total": 8,
+        "passed": 8,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "name": "ValidationPipeline.test.ts",
+        "total": 10,
+        "passed": 10,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "name": "CapabilityValidator.test.ts",
+        "total": 11,
+        "passed": 11,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "name": "WorkflowCapabilityValidator.test.ts",
+        "total": 15,
+        "passed": 15,
+        "failed": 0,
+        "status": "passed"
+      }
+    ],
+    "total_tests": 80,
+    "total_passed": 80,
+    "total_failed": 0
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'mySwiftAgentCore' does not require Playwright testing"
+  },
+  "code_integration_verification": {
+    "description": "Code analysis to verify acceptance criteria implementation",
+    "AC-1_capability_id_validation": {
+      "status": "verified",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/CapabilityValidator.ts",
+      "integration": "ValidationPipeline.ts imports and uses CapabilityValidator",
+      "evidence": [
+        "CapabilityValidator class exists with validate() method",
+        "Checks capability_id existence against capabilityMap",
+        "Returns CAPABILITY_NOT_FOUND error for unknown capabilities",
+        "Returns CAPABILITY_UNAVAILABLE error for unavailable capabilities",
+        "ValidationPipeline includes CapabilityValidator in default validators (line 132)"
+      ]
+    },
+    "AC-2_output_mapping_validation": {
+      "status": "verified",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.ts",
+      "integration": "ValidationPipeline.ts imports and uses OutputMappingValidator",
+      "evidence": [
+        "OutputMappingValidator class exists with validate() method",
+        "Validates output mapping against output_schema",
+        "Returns OUTPUT_MAPPING_EXTRA_FIELD, OUTPUT_MAPPING_MISSING_REQUIRED errors",
+        "Validates step output references against capability responseSchema",
+        "ValidationPipeline includes OutputMappingValidator in default validators (line 134)"
+      ]
+    },
+    "AC-3_node_config_validation": {
+      "status": "verified",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+      "integration": "ValidationPipeline.ts imports and uses NodeConfigValidator",
+      "yaml_config": "mySwiftAgentCore/config/node_types_spec.yaml",
+      "evidence": [
+        "NodeConfigValidator class exists with validate() method",
+        "Loads node type specs from config/node_types_spec.yaml",
+        "TransformNode spec: oneOfRequired [template, mapping], unsupportedConfig [expression]",
+        "Returns TRANSFORM_MISSING_CONFIG error when neither template nor mapping provided",
+        "Returns TRANSFORM_UNSUPPORTED_CONFIG error when expression is used",
+        "ValidationPipeline includes NodeConfigValidator in default validators (line 135)"
+      ]
+    },
+    "AC-4_workflow_reload_endpoint": {
+      "status": "partially_verified",
+      "file": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts",
+      "integration": "routes.ts imports and mounts reload routes at /api/v1/taskflow/reload",
+      "evidence": [
+        "createTaskFlowReloadRoutes function exists",
+        "POST /reload handler implemented with project/file_path options",
+        "WorkflowReloader integration with reloadWorkflow, reloadProject, reloadAll methods",
+        "routes.ts mounts at line 262: app.route('/api/v1/taskflow', reloadRoutes)"
+      ],
+      "issue": "Running mySwiftAgentCore service doesn't expose reload endpoint (404 returned). Service restart required.",
+      "api_test_result": {
+        "endpoint": "POST /api/v1/taskflow/reload",
+        "expected_status": 200,
+        "actual_status": 404,
+        "reason": "Service needs to be restarted to load new code changes"
+      }
+    },
+    "AC-5_e2e_test": {
+      "status": "not_verified",
+      "reason": "Full E2E test requires all services running (myVault, graphAiServer)",
+      "evidence": [
+        "E2E test script exists at mySwiftAgentCore/e2etest/e2e-test-script.sh",
+        "Test marked as skip in pytest due to service dependencies"
+      ]
+    }
+  },
+  "l3_test_plan_results": {
+    "source": "acceptance-plan.md",
+    "test_commands": [
+      {
+        "name": "TC-001: capability_id validation",
+        "status": "code_verified",
+        "reason": "CapabilityValidator integrated in ValidationPipeline, unit tests pass"
+      },
+      {
+        "name": "TC-002: output mapping validation",
+        "status": "code_verified",
+        "reason": "OutputMappingValidator integrated in ValidationPipeline, unit tests pass"
+      },
+      {
+        "name": "TC-003: workflow reload",
+        "status": "code_verified_api_not_exposed",
+        "reason": "Code implemented but running service returns 404 - needs restart"
+      },
+      {
+        "name": "TC-004: E2E test script",
+        "status": "not_executed",
+        "reason": "Requires full service stack (myVault, graphAiServer)"
+      },
+      {
+        "name": "TC-006: TransformNode config error",
+        "status": "code_verified",
+        "reason": "NodeConfigValidator validates TransformNode config, unit tests pass"
+      }
+    ]
+  },
+  "acceptance_criteria_status": [
+    {
+      "criterion": "AC-1: capability_id existence validation - CapabilityValidator in ValidationPipeline",
+      "verified": true,
+      "verification_method": "code_analysis + vitest",
+      "evidence": "CapabilityValidator.ts implemented, ValidationPipeline includes it, 11 unit tests pass"
+    },
+    {
+      "criterion": "AC-2: output mapping and responseSchema consistency check - OutputMappingValidator in ValidationPipeline",
+      "verified": true,
+      "verification_method": "code_analysis + vitest",
+      "evidence": "OutputMappingValidator.ts implemented, ValidationPipeline includes it, 8 unit tests pass"
+    },
+    {
+      "criterion": "AC-3: node type specification in prompts - NodeConfigValidator validates TransformNode config",
+      "verified": true,
+      "verification_method": "code_analysis + vitest + yaml_config",
+      "evidence": "NodeConfigValidator.ts implemented, node_types_spec.yaml exists, 23 unit tests pass"
+    },
+    {
+      "criterion": "AC-4: workflow reload endpoint - POST /api/v1/taskflow/reload exists",
+      "verified": false,
+      "verification_method": "code_analysis + api_test",
+      "evidence": "Code implemented in taskflow-reload.ts and routes.ts, but running service returns 404. Service restart required.",
+      "action_required": "Restart mySwiftAgentCore service to expose new endpoint"
+    },
+    {
+      "criterion": "AC-5: E2E test success - e2e-test-script.sh executes successfully",
+      "verified": false,
+      "verification_method": "requires_manual_execution",
+      "evidence": "E2E test requires full service stack. myVault and graphAiServer not running."
+    }
+  ],
+  "evidence_files": [
+    "mySwiftAgentCore/tests/acceptance/test_issue_375_acceptance.py",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/CapabilityValidator.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+    "mySwiftAgentCore/config/node_types_spec.yaml",
+    "mySwiftAgentCore/src/api/routes/taskflow-reload.ts",
+    "mySwiftAgentCore/src/api/routes.ts",
+    "mySwiftAgentCore/tests/integration/workflow-reload.test.ts"
+  ],
+  "error": "L3 acceptance tests could not be fully executed due to missing service dependencies",
+  "failures": [
+    {
+      "criterion": "AC-4",
+      "reason": "Reload endpoint returns 404 - service restart required",
+      "severity": "medium"
+    },
+    {
+      "criterion": "AC-5",
+      "reason": "E2E tests cannot run without myVault and graphAiServer",
+      "severity": "high"
+    }
+  ],
+  "suggested_fixes": [
+    "Restart mySwiftAgentCore service to expose /api/v1/taskflow/reload endpoint",
+    "Start myVault service: docker compose up -d myvault",
+    "Start graphAiServer service: ./scripts/dev-hybrid.sh start --local-only",
+    "Re-run acceptance tests after all services are running"
+  ],
+  "summary": {
+    "code_implementation": "Complete - All validators implemented and integrated",
+    "unit_tests": "Passed - 80/80 vitest tests pass",
+    "integration_tests": "Passed - 13/13 workflow-reload tests pass",
+    "api_verification": "Partial - Reload endpoint not exposed in running service",
+    "e2e_verification": "Not executed - Missing service dependencies"
+  },
+  "message": "Issue #375 implementation is code-complete but L3 acceptance tests could not fully verify due to: (1) mySwiftAgentCore service needs restart to expose reload endpoint, (2) myVault and graphAiServer services not running for E2E tests. Unit and integration tests (vitest) all pass."
+}

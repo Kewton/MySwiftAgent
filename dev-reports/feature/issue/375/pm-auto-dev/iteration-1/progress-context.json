@@ -1,0 +1,76 @@
+{
+  "issue_number": 375,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 92.5,
+      "unit_tests_passed": 1311,
+      "unit_tests_failed": 0,
+      "iterations_used": 2,
+      "dead_code_detected": 2,
+      "dead_code_resolved": 2
+    },
+    "acceptance": {
+      "status": "partial",
+      "pytest_tests": 8,
+      "pytest_skipped": 8,
+      "pytest_skip_reason": "Services not running",
+      "vitest_passed": 80,
+      "vitest_failed": 0,
+      "code_verification": "complete",
+      "api_verification": "pending_service_restart"
+    },
+    "refactor": {
+      "status": "success",
+      "eslint_errors_fixed": 4,
+      "coverage_maintained": true
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "OutputMappingValidator実装", "estimated_hours": 4, "status": "completed"},
+      {"task_id": "1.2", "description": "CapabilityValidator拡張", "estimated_hours": 2, "status": "completed"},
+      {"task_id": "1.3", "description": "NodeConfigValidator実装", "estimated_hours": 3, "status": "completed"},
+      {"task_id": "1.4", "description": "ValidationPipeline統合", "estimated_hours": 3, "status": "completed"},
+      {"task_id": "2.1", "description": "FileSystemWatcher実装", "estimated_hours": 3, "status": "completed"},
+      {"task_id": "2.2", "description": "WorkflowReloader実装", "estimated_hours": 3, "status": "completed"},
+      {"task_id": "2.3", "description": "リロードAPI実装", "estimated_hours": 2, "status": "completed"},
+      {"task_id": "3.1", "description": "単体テスト作成", "estimated_hours": 1.5, "status": "completed"},
+      {"task_id": "3.2", "description": "結合テスト作成", "estimated_hours": 1.5, "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "src/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.ts", "created": true},
+      {"file": "src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts", "created": true},
+      {"file": "src/taskflowEngine/watcher/FileSystemWatcher.ts", "created": true},
+      {"file": "src/taskflowEngine/loader/WorkflowReloader.ts", "created": true},
+      {"file": "src/api/routes/taskflow-reload.ts", "created": true},
+      {"file": "config/node_types_spec.yaml", "created": true},
+      {"file": "tests/unit/validator/OutputMappingValidator.test.ts", "created": true},
+      {"file": "tests/unit/validator/NodeConfigValidator.test.ts", "created": true},
+      {"file": "tests/unit/watcher/FileSystemWatcher.test.ts", "created": true},
+      {"file": "tests/integration/validation-pipeline.test.ts", "created": true},
+      {"file": "tests/integration/workflow-reload.test.ts", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "すべての実装タスクが完了", "verified": true},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": true, "actual": "92.5%"},
+      {"criterion": "CI/CDグリーン", "verified": true},
+      {"criterion": "E2Eテストスクリプトが成功", "verified": false, "reason": "サービス起動後に確認必要"},
+      {"criterion": "task_001-003が成功", "verified": false, "reason": "サービス起動後に確認必要"}
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 24,
+      "actual": "N/A (automated execution)",
+      "variance": "N/A"
+    }
+  },
+  "acceptance_criteria_summary": {
+    "AC-1": {"status": "verified", "method": "code_analysis + vitest"},
+    "AC-2": {"status": "verified", "method": "code_analysis + vitest"},
+    "AC-3": {"status": "verified", "method": "code_analysis + vitest + yaml_config"},
+    "AC-4": {"status": "partial", "method": "code_analysis", "note": "Service restart required"},
+    "AC-5": {"status": "not_verified", "method": "requires_manual_execution"}
+  }
+}

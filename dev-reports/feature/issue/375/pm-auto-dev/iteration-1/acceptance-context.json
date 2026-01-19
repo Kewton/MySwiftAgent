@@ -1,0 +1,62 @@
+{
+  "issue_number": 375,
+  "feature_summary": "mySwiftAgentCore: ワークフロー生成・実行のバリデーション強化",
+  "acceptance_criteria": [
+    "AC-1: capability_id存在バリデーション - ワークフロー生成後、全ステップのcapability_idがCapabilityRegistryに存在することを検証する",
+    "AC-2: 出力マッピングとresponseSchemaの整合性チェック - output mappingのフィールド参照がresponseSchemaと一致することを検証する",
+    "AC-3: ノードタイプ仕様のプロンプト追加 - TransformNodeの仕様（template/mappingが必須、expressionは未対応）をプロンプトに含める",
+    "AC-4: ワークフローリロード機能 - POST /api/v1/taskflow/reload エンドポイントを追加する",
+    "AC-5: E2Eテスト成功 - e2e-test-script.shが成功し、task_001-003が正しく実行される"
+  ],
+  "labels": ["feature", "mySwiftAgentCore"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": ["mySwiftAgentCore", "myVault", "valkey", "postgres", "langfuse"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "mySwiftAgentCore", "url": "http://localhost:8006/health"},
+      {"service": "myVault", "url": "http://localhost:8103/health"},
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "graphAiServer", "url": "http://localhost:8105/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "TC-001: capability_id検証テスト",
+        "command": "curl -s -X POST http://localhost:8104/api/v1/workflow/generate -H 'Content-Type: application/json' -d '{\"user_request\": \"invalid_capabilityを使用してワークフロー生成\", \"projectId\": \"default_project\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["validationErrors", "UNKNOWN_CAPABILITY"]
+      },
+      {
+        "name": "TC-002: 出力マッピング検証テスト",
+        "command": "curl -s -X POST http://localhost:8006/api/v1/taskflow/validate -H 'Content-Type: application/json' -d '{\"projectId\": \"default_project\", \"workflow\": {\"workflow_name\": \"test_mapping\", \"steps\": [{\"id\": \"step1\", \"type\": \"api_rest\", \"config\": {\"capability_id\": \"gmail_send\"}}], \"output\": {\"messageId\": \"$steps.step1.message_id\"}}}'",
+        "expected_status": 200,
+        "expected_response_contains": ["warnings", "CASE_MISMATCH"]
+      },
+      {
+        "name": "TC-003: ワークフローリロード機能テスト",
+        "command": "curl -s -X POST http://localhost:8006/api/v1/taskflow/reload -H 'Content-Type: application/json' -d '{\"project\": \"default_project\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["success", "true"]
+      },
+      {
+        "name": "TC-004: E2Eテストスクリプト実行",
+        "command": "./mySwiftAgentCore/e2etest/e2e-test-script.sh",
+        "expected_status": 0,
+        "expected_response_contains": ["PASS"]
+      },
+      {
+        "name": "TC-006: TransformNode設定エラーテスト",
+        "command": "curl -s -X POST http://localhost:8006/api/v1/taskflow/execute -H 'Content-Type: application/json' -d '{\"project\": \"default_project\", \"workflow\": \"test_transform\", \"inputs\": {\"data\": \"test\"}, \"_workflow\": {\"steps\": [{\"id\": \"transform1\", \"type\": \"transform\", \"config\": {\"expression\": \"data.toUpperCase()\"}}]}}'",
+        "expected_status": 400,
+        "expected_response_contains": ["INVALID_NODE_CONFIG", "template", "mapping"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"},
+      {"name": "Valkey", "command": "docker exec myswiftagent-valkey redis-cli PING"}
+    ]
+  },
+  "pytest_test_file": "mySwiftAgentCore/tests/acceptance/test_issue_375_acceptance.py"
+}

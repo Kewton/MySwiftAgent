@@ -1,0 +1,24 @@
+{
+  "issue_number": 375,
+  "refactor_targets": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+    "mySwiftAgentCore/src/taskflowEngine/watcher/FileSystemWatcher.ts",
+    "mySwiftAgentCore/src/taskflowEngine/loader/WorkflowReloader.ts",
+    "mySwiftAgentCore/src/api/routes/taskflow-reload.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 92.5,
+    "complexity_score": "moderate"
+  },
+  "design_patterns_to_apply": [
+    "Strategy Pattern (Validators)",
+    "Observer Pattern (FileSystemWatcher)",
+    "Factory Pattern (WorkflowReloader)"
+  ],
+  "improvement_goals": [
+    "カバレッジを維持（92%以上）",
+    "重複コードの削除",
+    "エラーメッセージの一貫性確保"
+  ]
+}

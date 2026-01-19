@@ -1,0 +1,219 @@
+# Node Types Specification
+# Issue #375: Defines configuration requirements for each node type
+#
+# This file is used by:
+# - NodeConfigValidator for validation
+# - LLM prompts for workflow generation
+# - Documentation generation
+
+node_types:
+  transform:
+    description: |
+      Data transformation node that converts input data to output format.
+      Uses either template-based or mapping-based transformation.
+    supported_config:
+      template:
+        type: string
+        description: |
+          Handlebars-like template string for transformation.
+          Use {{path}} for variable interpolation.
+        example: '{"result": "{{input.value}}"}'
+      mapping:
+        type: object
+        description: |
+          Key-value mapping from output fields to input paths.
+          Keys are output field names, values are JSONPath expressions.
+        example:
+          output_field: $.input.value
+    unsupported_config:
+      - expression  # JavaScript expressions are NOT supported for security
+    validation_rules:
+      - rule: oneOf
+        fields: [template, mapping]
+        message: Either template or mapping is required
+    examples:
+      - description: Template-based transformation
+        config:
+          template: '{"formatted": "Value: {{input.value}}"}'
+      - description: Mapping-based transformation
+        config:
+          mapping:
+            result: $.steps.previous.output
+            count: $.steps.previous.count
+
+  api_rest:
+    description: |
+      REST API call node that invokes external APIs.
+      Can use either capability_id (recommended) or direct URL.
+    supported_config:
+      capability_id:
+        type: string
+        description: |
+          Reference to a registered capability.
+          Preferred method as it provides additional validation.
+        example: api_weather
+      url:
+        type: string
+        description: Direct URL for API call (use capability_id instead when possible)
+      method:
+        type: string
+        enum: [GET, POST, PUT, DELETE, PATCH]
+        default: GET
+      headers:
+        type: object
+        description: HTTP headers for the request
+      body:
+        type: object
+        description: Request body (for POST, PUT, PATCH)
+    validation_rules:
+      - rule: oneOf
+        fields: [capability_id, url]
+        message: Either capability_id or url is required
+    examples:
+      - description: Using capability
+        config:
+          capability_id: api_weather
+      - description: Direct URL
+        config:
+          url: https://api.example.com/data
+          method: GET
+
+  llm:
+    description: |
+      LLM invocation node for AI-powered text generation.
+      Requires a prompt template.
+    supported_config:
+      prompt:
+        type: string
+        required: true
+        description: |
+          Prompt template with variable interpolation.
+          Use {{path}} for variable references.
+      model:
+        type: string
+        description: Model identifier (e.g., claude-sonnet-4-20250514)
+      temperature:
+        type: number
+        min: 0
+        max: 2
+        default: 0.7
+      max_tokens:
+        type: number
+        default: 4096
+      system_prompt:
+        type: string
+        description: System prompt for context setting
+    validation_rules:
+      - rule: required
+        fields: [prompt]
+        message: prompt is required for llm nodes
+    examples:
+      - description: Basic LLM call
+        config:
+          prompt: "Summarize the following text: {{input.text}}"
+      - description: With system prompt
+        config:
+          prompt: "{{input.query}}"
+          system_prompt: You are a helpful assistant.
+          model: claude-sonnet-4-20250514
+
+  code_js:
+    description: |
+      JavaScript code execution node.
+      Runs in a sandboxed environment with limited capabilities.
+    supported_config:
+      code:
+        type: string
+        required: true
+        description: |
+          JavaScript code to execute.
+          Has access to 'input' variable containing params.
+          Must return a value.
+      timeout:
+        type: number
+        default: 5000
+        description: Execution timeout in milliseconds
+      sandbox:
+        type: boolean
+        default: true
+        description: Whether to run in sandboxed environment
+    validation_rules:
+      - rule: required
+        fields: [code]
+        message: code is required for code_js nodes
+    security_notes:
+      - Code runs in a sandboxed environment
+      - No file system access
+      - No network access
+      - Limited global objects
+    examples:
+      - description: Simple transformation
+        config:
+          code: |
+            return input.value * 2;
+      - description: Complex logic
+        config:
+          code: |
+            const data = input.items.filter(i => i.active);
+            return { count: data.length, items: data };
+
+  parallel:
+    description: |
+      Parallel execution node that runs multiple branches concurrently.
+    supported_config:
+      branches:
+        type: array
+        required: true
+        items:
+          type: string
+        description: List of step IDs to execute in parallel
+      maxConcurrency:
+        type: number
+        description: Maximum number of concurrent executions
+      failFast:
+        type: boolean
+        default: false
+        description: Stop all branches on first failure
+    validation_rules:
+      - rule: required
+        fields: [branches]
+        message: branches is required for parallel nodes
+      - rule: notEmpty
+        fields: [branches]
+        message: branches array must not be empty
+    examples:
+      - description: Basic parallel execution
+        config:
+          branches: [branch1, branch2, branch3]
+      - description: With concurrency limit
+        config:
+          branches: [task1, task2, task3, task4]
+          maxConcurrency: 2
+
+  action:
+    description: |
+      Action execution node for side effects like notifications.
+    supported_config:
+      action_type:
+        type: string
+        required: true
+        description: Type of action to perform
+        enum: [notify, log, webhook, email]
+      action_params:
+        type: object
+        description: Parameters specific to the action type
+      async:
+        type: boolean
+        default: false
+        description: Whether to execute asynchronously
+    validation_rules:
+      - rule: required
+        fields: [action_type]
+        message: action_type is required for action nodes
+    examples:
+      - description: Notification action
+        config:
+          action_type: notify
+          action_params:
+            channel: slack
+            message: "{{steps.previous.result}}"

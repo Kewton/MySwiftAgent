@@ -1,0 +1,77 @@
+{
+  "issue_number": 375,
+  "iteration": 2,
+  "retry_reason": "Phase 2.7 でデッドコード検出（統合率 66.7%）",
+  "dead_code_fixes": [
+    {
+      "feature_id": "F5",
+      "feature": "createTaskFlowReloadApi",
+      "action": "Integrate reload API routes into main API router at src/api/routes.ts",
+      "file": "mySwiftAgentCore/src/api/routes.ts",
+      "expected_integration": "Mount createTaskFlowReloadApi in createApiRoutes function"
+    },
+    {
+      "feature_id": "F6",
+      "feature": "node_types_spec.yaml",
+      "action": "Load YAML file in NodeConfigValidator instead of hardcoded constants",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+      "expected_integration": "Load node_types_spec.yaml and use as source of truth for NODE_TYPE_SPECS"
+    }
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T2.1",
+      "description": "Integrate createTaskFlowReloadApi into main API routes",
+      "type": "integration",
+      "target_file": "mySwiftAgentCore/src/api/routes.ts",
+      "integration_point": "createApiRoutes function after taskFlowRoutes setup",
+      "details": [
+        "Import createTaskFlowReloadApi from './routes/taskflow-reload.js'",
+        "Import createWorkflowReloader from '../taskflowEngine/loader/WorkflowReloader.js'",
+        "Create WorkflowReloader instance with WorkflowLoader and WorkflowRegistry",
+        "Mount reload API routes at /api/v1/taskflow/reload"
+      ]
+    },
+    {
+      "id": "T2.2",
+      "description": "Update NodeConfigValidator to load node_types_spec.yaml",
+      "type": "integration",
+      "target_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+      "integration_point": "Replace hardcoded NODE_TYPE_SPECS with YAML loading",
+      "details": [
+        "Add yaml package import",
+        "Load config/node_types_spec.yaml at module initialization",
+        "Parse YAML content and use as NODE_TYPE_SPECS source",
+        "Add fallback to hardcoded specs if YAML loading fails"
+      ]
+    },
+    {
+      "id": "T2.3",
+      "description": "Add integration tests for reload API endpoint",
+      "type": "test",
+      "target_file": "mySwiftAgentCore/tests/integration/workflow-reload.test.ts",
+      "details": [
+        "Test that reload API is accessible via HTTP",
+        "Test POST /api/v1/taskflow/reload endpoint",
+        "Test reload of single workflow",
+        "Test reload of entire project"
+      ]
+    }
+  ],
+  "already_completed": [
+    "OutputMappingValidator class implementation",
+    "NodeConfigValidator class implementation (logic)",
+    "FileSystemWatcher class implementation",
+    "WorkflowReloader class implementation",
+    "createTaskFlowReloadApi function implementation",
+    "node_types_spec.yaml file creation",
+    "Unit tests for validators",
+    "Integration tests for ValidationPipeline"
+  ],
+  "target_coverage": 90,
+  "deliverables_checklist": [
+    "src/api/routes.ts (updated with reload routes)",
+    "src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts (updated to load YAML)",
+    "tests/integration/workflow-reload.test.ts (updated with API tests)"
+  ]
+}

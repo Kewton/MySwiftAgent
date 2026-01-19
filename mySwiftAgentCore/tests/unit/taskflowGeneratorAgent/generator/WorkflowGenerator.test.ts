@@ -18,6 +18,7 @@ import type {
 } from '../../../../src/taskflowGeneratorAgent/types/generator.js';
 
 // Mock LLM Client
+// Issue #375: Updated to include valid transform config (template or mapping required)
 const createMockLLMClient = (response?: string): LLMClient => {
   const defaultResponse = JSON.stringify({
     workflow_name: 'test_workflow_task_001',
@@ -28,7 +29,9 @@ const createMockLLMClient = (response?: string): LLMClient => {
       {
         id: 'step_1',
         type: 'transform',
-        config: {},
+        config: {
+          mapping: { data: '$.input' }, // Issue #375: Must have template or mapping
+        },
         params: { data: '$input' },
       },
     ],
@@ -130,6 +133,7 @@ describe('WorkflowGenerator', () => {
 
     it('should retry on failure', async () => {
       const failingClient = createMockLLMClient();
+      // Issue #375: Updated to include valid transform config (template or mapping required)
       (failingClient.generateStructured as ReturnType<typeof vi.fn>)
         .mockRejectedValueOnce(new Error('First fail'))
         .mockRejectedValueOnce(new Error('Second fail'))
@@ -138,7 +142,7 @@ describe('WorkflowGenerator', () => {
             workflow_name: 'test_workflow',
             input_schema: { type: 'object' },
             output_schema: { type: 'object' },
-            steps: [{ id: 'step_1', type: 'transform', config: {}, params: {} }],
+            steps: [{ id: 'step_1', type: 'transform', config: { mapping: { result: '$.input' } }, params: {} }],
             output: {},
           })),
           raw: { content: '{}', model: 'test', usage: { promptTokens: 0, completionTokens: 0 }, latencyMs: 0 },

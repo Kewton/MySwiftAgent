@@ -1,0 +1,325 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-18T10:30:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "OutputMappingValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 37"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Instantiated in ValidationPipeline.createDefaultValidators() at line 134",
+          "grep_result": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts:134:      new OutputMappingValidator()"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in ValidationPipeline.ts at line 23"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from validator/index.ts at line 16"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/validation-pipeline.test.ts"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "NodeConfigValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 73"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Instantiated in ValidationPipeline.createDefaultValidators() at line 135",
+          "grep_result": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts:135:      new NodeConfigValidator()"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported in ValidationPipeline.ts at line 24"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from validator/index.ts at line 17"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/validation-pipeline.test.ts"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F3",
+      "name": "FileSystemWatcher",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/watcher/FileSystemWatcher.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 48"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Designed to be called by WorkflowReloader or API consumers. Exports available through watcher/index.ts"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Not directly imported (library pattern - consumers import from watcher/index.ts)"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from watcher/index.ts at line 8"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowEngine/watcher/FileSystemWatcher.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/workflow-reload.test.ts"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F4",
+      "name": "WorkflowReloader",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/loader/WorkflowReloader.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 46"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Referenced in taskflow-reload.ts API handler. Expected to be called by API endpoint.",
+          "grep_result": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts:8:import type { WorkflowReloader }"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Imported as type in taskflow-reload.ts at line 8"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from loader/index.ts at line 9"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/taskflowEngine/loader/WorkflowReloader.test.ts"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/workflow-reload.test.ts"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F5",
+      "name": "createTaskFlowReloadApi",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 115"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Not called in main API routes. Not integrated into src/api/routes.ts or src/index.ts",
+          "grep_result": "No usage found outside the definition file"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "Not imported in any main application file"
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported from taskflow-reload.ts but not re-exported through index files"
+        },
+        "has_unit_test": {
+          "passed": false,
+          "test_file": "No specific unit test file found"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/workflow-reload.test.ts (tests handler logic but not API integration)"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "API route handler exists but is not integrated into main application. Not mounted in src/api/routes.ts createApiRoutes() function."
+    },
+    {
+      "feature_id": "F6",
+      "name": "node_types_spec.yaml",
+      "type": "config",
+      "file_path": "mySwiftAgentCore/config/node_types_spec.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 1"
+        },
+        "is_referenced": {
+          "passed": false,
+          "evidence": "No code references found. File exists but is not loaded or used anywhere.",
+          "grep_result": "No references to 'node_types_spec.yaml' in src/"
+        },
+        "used_by_validator": {
+          "passed": false,
+          "evidence": "NodeConfigValidator uses hardcoded NODE_TYPE_SPECS constant instead of loading from YAML"
+        },
+        "used_by_prompts": {
+          "passed": false,
+          "evidence": "No prompt generation code references this file"
+        },
+        "has_unit_test": {
+          "passed": false,
+          "test_file": "No test loads or validates this YAML file"
+        },
+        "has_integration_test": {
+          "passed": false
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Configuration file exists but is never loaded or referenced by any code. NodeConfigValidator uses hardcoded specs instead of reading from this file."
+    }
+  ],
+  "summary": {
+    "total_features": 6,
+    "passed": 4,
+    "dead_code": 2,
+    "missing_tests": 0,
+    "not_found": 0
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F5",
+      "name": "createTaskFlowReloadApi",
+      "file": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts",
+      "line": 115,
+      "issue": "API endpoint not integrated into main application",
+      "recommended_caller": "createApiRoutes",
+      "recommended_location": "mySwiftAgentCore/src/api/routes.ts:256"
+    },
+    {
+      "feature_id": "F6",
+      "name": "node_types_spec.yaml",
+      "file": "mySwiftAgentCore/config/node_types_spec.yaml",
+      "line": 1,
+      "issue": "Configuration file never loaded by code",
+      "recommended_caller": "NodeConfigValidator or PromptBuilder",
+      "recommended_location": "Load in NodeConfigValidator constructor or make it part of prompt generation system"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F5",
+      "action": "Integrate createTaskFlowReloadApi into main API routes",
+      "file": "mySwiftAgentCore/src/api/routes.ts",
+      "line": 245,
+      "code_snippet": "// After line 245 (after taskFlowRoutes setup):\n\n// Issue #375: Workflow reload routes\nimport { createTaskFlowReloadApi } from './routes/taskflow-reload.js';\nimport { createWorkflowReloader } from '../taskflowEngine/loader/WorkflowReloader.js';\n\n// Create WorkflowReloader with loader and registry\nconst workflowLoader = /* obtain from somewhere */;\nconst reloader = createWorkflowReloader(workflowLoader, generatorDeps.registry);\n\nconst reloadApi = createTaskFlowReloadApi({ reloader });\napp.route('/', reloadApi);",
+      "notes": "Need to create WorkflowLoader instance and pass it to WorkflowReloader. Then mount the reload API routes."
+    },
+    {
+      "priority": "P1",
+      "feature_id": "F6",
+      "action": "Load node_types_spec.yaml in NodeConfigValidator or remove file",
+      "file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+      "line": 34,
+      "code_snippet": "// Option 1: Load YAML file\nimport fs from 'fs';\nimport yaml from 'yaml';\nimport path from 'path';\n\nconst specPath = path.resolve(process.cwd(), 'config/node_types_spec.yaml');\nconst specContent = fs.readFileSync(specPath, 'utf8');\nconst loadedSpec = yaml.parse(specContent);\nconst NODE_TYPE_SPECS: Record<NodeType, NodeTypeSpec> = loadedSpec.node_types;\n\n// Option 2: Delete the YAML file since specs are hardcoded in NodeConfigValidator.ts",
+      "notes": "Either integrate the YAML file as the source of truth for node type specs, or remove it if hardcoded specs are preferred."
+    },
+    {
+      "priority": "P2",
+      "feature_id": "F5",
+      "action": "Add unit test for reload API route handler",
+      "file": "mySwiftAgentCore/tests/unit/api/routes/taskflow-reload.test.ts",
+      "line": 1,
+      "code_snippet": "// Create test file:\n// tests/unit/api/routes/taskflow-reload.test.ts\n\nimport { describe, it, expect, vi } from 'vitest';\nimport { createTaskFlowReloadApi, createReloadHandler } from '../../../../src/api/routes/taskflow-reload.js';\n\ndescribe('TaskFlow Reload API', () => {\n  it('should mount reload endpoint', async () => {\n    const mockReloader = { /* mock methods */ };\n    const app = createTaskFlowReloadApi({ reloader: mockReloader });\n    // Test API mounting and endpoint behavior\n  });\n});",
+      "notes": "Add unit tests for the reload API handler and routing logic."
+    }
+  ],
+  "integration_gaps": [
+    {
+      "gap_id": "G1",
+      "description": "Reload API not accessible via HTTP",
+      "impact": "High - Feature F5 (workflow hot reload) cannot be used by clients",
+      "affected_features": ["F5"],
+      "resolution": "Mount reload routes in main API router at src/api/routes.ts"
+    },
+    {
+      "gap_id": "G2",
+      "description": "node_types_spec.yaml not used as source of truth",
+      "impact": "Medium - Inconsistency between documented spec (YAML) and actual validation (hardcoded)",
+      "affected_features": ["F6"],
+      "resolution": "Either load YAML in NodeConfigValidator or remove YAML file and document that specs are code-defined"
+    },
+    {
+      "gap_id": "G3",
+      "description": "WorkflowLoader not created in API setup",
+      "impact": "High - Cannot instantiate WorkflowReloader without WorkflowLoader",
+      "affected_features": ["F5"],
+      "resolution": "Create WorkflowLoader instance in createApiRoutes() and pass to WorkflowReloader factory"
+    }
+  ],
+  "next_steps": [
+    {
+      "step": 1,
+      "action": "Create WorkflowLoader instance in api/routes.ts",
+      "responsible": "TDD Agent",
+      "estimated_effort": "Small"
+    },
+    {
+      "step": 2,
+      "action": "Integrate createTaskFlowReloadApi into main routes",
+      "responsible": "TDD Agent",
+      "estimated_effort": "Small"
+    },
+    {
+      "step": 3,
+      "action": "Decide on node_types_spec.yaml fate: integrate or delete",
+      "responsible": "Architecture Review",
+      "estimated_effort": "Small"
+    },
+    {
+      "step": 4,
+      "action": "Add unit test for reload API handler",
+      "responsible": "TDD Agent",
+      "estimated_effort": "Small"
+    },
+    {
+      "step": 5,
+      "action": "Run acceptance tests to verify end-to-end reload functionality",
+      "responsible": "Acceptance Test Agent",
+      "estimated_effort": "Medium"
+    }
+  ]
+}

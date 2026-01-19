@@ -1,0 +1,136 @@
+{
+  "issue_number": 375,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "OutputMappingValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/OutputMappingValidator.ts",
+      "line_number": 37,
+      "description": "Validates output mapping references against output_schema and responseSchema",
+      "expected_callers": ["ValidationPipeline.createDefaultValidators"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts"
+    },
+    {
+      "feature_id": "F2",
+      "name": "NodeConfigValidator",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/validators/NodeConfigValidator.ts",
+      "line_number": 73,
+      "description": "Validates node configuration based on node type specifications (TransformNode: template/mapping required, expression unsupported)",
+      "expected_callers": ["ValidationPipeline.createDefaultValidators"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts"
+    },
+    {
+      "feature_id": "F3",
+      "name": "FileSystemWatcher",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/watcher/FileSystemWatcher.ts",
+      "line_number": 48,
+      "description": "File system watching with debouncing for workflow hot reload",
+      "expected_callers": ["WorkflowReloader", "TaskFlowEngine"],
+      "expected_call_location": "mySwiftAgentCore/src/taskflowEngine/loader/WorkflowReloader.ts"
+    },
+    {
+      "feature_id": "F4",
+      "name": "WorkflowReloader",
+      "type": "class",
+      "file_path": "mySwiftAgentCore/src/taskflowEngine/loader/WorkflowReloader.ts",
+      "line_number": 46,
+      "description": "Workflow hot reload functionality with project/single workflow reload",
+      "expected_callers": ["createReloadHandler"],
+      "expected_call_location": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts"
+    },
+    {
+      "feature_id": "F5",
+      "name": "createTaskFlowReloadApi",
+      "type": "function",
+      "file_path": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts",
+      "line_number": 115,
+      "description": "Creates POST /api/v1/taskflow/reload API endpoint",
+      "expected_callers": ["Hono app setup"],
+      "expected_call_location": "mySwiftAgentCore/src/index.ts or server.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "node_types_spec.yaml",
+      "type": "config",
+      "file_path": "mySwiftAgentCore/config/node_types_spec.yaml",
+      "line_number": 1,
+      "description": "Node type specifications for validation and LLM prompt generation (TransformNode: template/mapping required)",
+      "expected_callers": ["LLM prompt builder", "NodeConfigValidator"],
+      "expected_call_location": "Prompt generation for workflow creation"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["OutputMappingValidator.test.ts"],
+      "integration_tests": ["validation-pipeline.test.ts"],
+      "acceptance_tests": ["TC-002: Output mapping validation test"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["NodeConfigValidator.test.ts"],
+      "integration_tests": ["validation-pipeline.test.ts"],
+      "acceptance_tests": ["TC-006: TransformNode configuration error test"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["FileSystemWatcher.test.ts"],
+      "integration_tests": ["workflow-reload.test.ts"],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["WorkflowReloader.test.ts"],
+      "integration_tests": ["workflow-reload.test.ts"],
+      "acceptance_tests": ["TC-003: Workflow reload function test"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": [],
+      "integration_tests": ["workflow-reload.test.ts"],
+      "acceptance_tests": ["TC-003: Workflow reload function test"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": [],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-006: TransformNode config error test (prompt)"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "integration_type": "pipeline_validator",
+      "integration_method": "new OutputMappingValidator() in createDefaultValidators()"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "mySwiftAgentCore/src/taskflowGeneratorAgent/validator/ValidationPipeline.ts",
+      "integration_type": "pipeline_validator",
+      "integration_method": "new NodeConfigValidator() in createDefaultValidators()"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/watcher/index.ts",
+      "integration_type": "export",
+      "integration_method": "export { FileSystemWatcher, createFileSystemWatcher } from './FileSystemWatcher.js'"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "mySwiftAgentCore/src/taskflowEngine/loader/index.ts",
+      "integration_type": "export",
+      "integration_method": "export * from './WorkflowReloader.js'"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "mySwiftAgentCore/src/api/routes/taskflow-reload.ts",
+      "integration_type": "api_route",
+      "integration_method": "app.route('/api/v1/taskflow', createTaskFlowReloadRoutes(deps))"
+    }
+  ]
+}
