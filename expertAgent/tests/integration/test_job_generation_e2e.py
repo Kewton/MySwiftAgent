@@ -649,7 +649,7 @@ class TestValidatorIntegration:
         # Inject mock client
         orchestrator._workflow_generator_client = mock_client
 
-        result = await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
+        await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
 
         # Verify mySwiftAgentCore API was called
         mock_client.generate_workflows.assert_called_once()
