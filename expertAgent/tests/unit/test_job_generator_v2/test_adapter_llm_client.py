@@ -4,8 +4,9 @@ Issue #361: Tests for LLM client injection into orchestrator.
 Task T1.5-new, T1.6-new, T1.7-new
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorAdapter
 
@@ -89,7 +90,7 @@ class TestLLMClientInvokesStructuredLLM:
             new_callable=AsyncMock,
             return_value=mock_result,
         ) as mock_invoke:
-            result = await llm_client(
+            await llm_client(
                 system_prompt="You are helpful.",
                 user_prompt="Say hello.",
                 response_model=MockResponse,
