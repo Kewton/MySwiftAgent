@@ -9,13 +9,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from aiagent.langgraph.jobGeneratorV2.context import ContextBuilder
-from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
+from aiagent.langgraph.jobGeneratorV2.orchestrator_old import JobGenerationOrchestrator
 from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType
 from aiagent.langgraph.jobGeneratorV2.recovery import (
     ErrorRecoveryManager,
     ErrorRecoveryStrategy,
 )
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     Phase,
     PhaseStatus,
     RegistrationOutput,

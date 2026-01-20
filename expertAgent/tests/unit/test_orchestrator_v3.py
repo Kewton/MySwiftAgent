@@ -168,10 +168,13 @@ class TestOrchestratorV3ErrorRecovery:
 
 
 class TestOrchestratorV3ParallelExecution:
-    """Test parallel execution in Phase 3."""
+    """Test parallel execution in Phase 3.
 
-    def test_uses_parallel_executor(self):
-        """Orchestrator should use parallel_executor for Phase 3."""
+    Issue #361: Changed from local parallel_executor to mySwiftAgentCore API.
+    """
+
+    def test_uses_workflow_generator_client(self):
+        """Orchestrator should use WorkflowGeneratorClient for Phase 3."""
         import inspect
 
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
@@ -180,10 +183,11 @@ class TestOrchestratorV3ParallelExecution:
 
         source = inspect.getsource(JobGenerationOrchestratorV3)
 
-        # Should import and use parallel_workflow_generation
+        # Should use WorkflowGeneratorClient for mySwiftAgentCore API calls
         assert (
-            "parallel_workflow_generation" in source or "parallel_executor" in source
-        ), "Orchestrator should use parallel_executor module"
+            "WorkflowGeneratorClient" in source
+            or "_workflow_generator_client" in source
+        ), "Orchestrator should use WorkflowGeneratorClient for Phase 3"
 
 
 class TestOrchestratorV3Request:
