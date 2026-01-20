@@ -4,10 +4,10 @@ This test verifies that the V2 Job Generator returns task_breakdown
 and interface_definitions in the response.
 """
 
-from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
+from aiagent.langgraph.jobGeneratorV2.adapter_old import JobGeneratorV2Adapter
+from aiagent.langgraph.jobGeneratorV2.orchestrator_old import JobGenerationOrchestrator
 from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-from aiagent.langgraph.jobGeneratorV2.types import (
+from aiagent.langgraph.jobGeneratorV2.types_old import (
     InterfaceDesignOutput,
     InterfaceSchema,
     JobGenerationResult,

@@ -66,11 +66,11 @@ class TestJobGeneratorV2Integration:
 
     def test_orchestrator_phase_order(self):
         """Orchestrator should execute phases in correct order."""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_old import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         recovery_manager = ErrorRecoveryManager()
         orchestrator = JobGenerationOrchestrator(recovery_manager=recovery_manager)
@@ -86,11 +86,11 @@ class TestJobGeneratorV2Integration:
     @pytest.mark.asyncio
     async def test_full_workflow_with_mocked_services(self):
         """Test full workflow execution with mocked external services."""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_old import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-        from aiagent.langgraph.jobGeneratorV2.types import (
+        from aiagent.langgraph.jobGeneratorV2.types_old import (
             InterfaceSchema,
             JobGenerationRequest,
             Phase,
@@ -155,7 +155,7 @@ class TestJobGeneratorV2Integration:
 
         # WorkflowGen mock - Issue #342 V2 Fix: Returns WorkflowGenOutput per task
         # The orchestrator calls workflow.execute() for each task and wraps results
-        from aiagent.langgraph.jobGeneratorV2.types import WorkflowGenOutput
+        from aiagent.langgraph.jobGeneratorV2.types_old import WorkflowGenOutput
 
         task_workflow_output = WorkflowGenOutput(
             status=PhaseStatus.SUCCESS,
@@ -208,12 +208,12 @@ class TestErrorRecoveryIntegration:
     async def test_retry_on_transient_error(self):
         """Orchestrator should retry on transient errors."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_old import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-        from aiagent.langgraph.jobGeneratorV2.types import (
+        from aiagent.langgraph.jobGeneratorV2.types_old import (
             Phase,
             PhaseStatus,
         )
@@ -259,12 +259,12 @@ class TestErrorRecoveryIntegration:
     async def test_retry_limit_prevents_infinite_loop(self):
         """Retry limit should prevent infinite loops."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_old import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         recovery_manager = ErrorRecoveryManager()
         orchestrator = JobGenerationOrchestrator(recovery_manager=recovery_manager)
@@ -306,12 +306,12 @@ class TestErrorRecoveryIntegration:
     async def test_fatal_error_no_retry(self):
         """Fatal errors should not trigger retry."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+        from aiagent.langgraph.jobGeneratorV2.orchestrator_old import (
             JobGenerationOrchestrator,
         )
         from aiagent.langgraph.jobGeneratorV2.protocols import ErrorType, WorkflowError
         from aiagent.langgraph.jobGeneratorV2.recovery import ErrorRecoveryManager
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         recovery_manager = ErrorRecoveryManager()
         orchestrator = JobGenerationOrchestrator(recovery_manager=recovery_manager)
@@ -354,8 +354,8 @@ class TestAdapterIntegration:
 
     def test_adapter_creates_orchestrator(self):
         """Adapter should create orchestrator with all workflows."""
-        from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.adapter_old import JobGeneratorV2Adapter
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         adapter = JobGeneratorV2Adapter(max_retry=5)
 
@@ -370,8 +370,8 @@ class TestAdapterIntegration:
     @pytest.mark.asyncio
     async def test_adapter_converts_result_success(self):
         """Adapter should convert successful result to response."""
-        from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-        from aiagent.langgraph.jobGeneratorV2.types import JobGenerationResult
+        from aiagent.langgraph.jobGeneratorV2.adapter_old import JobGeneratorV2Adapter
+        from aiagent.langgraph.jobGeneratorV2.types_old import JobGenerationResult
 
         adapter = JobGeneratorV2Adapter(max_retry=5)
 
@@ -395,8 +395,8 @@ class TestAdapterIntegration:
     @pytest.mark.asyncio
     async def test_adapter_converts_result_failure(self):
         """Adapter should convert failed result to response."""
-        from aiagent.langgraph.jobGeneratorV2.adapter import JobGeneratorV2Adapter
-        from aiagent.langgraph.jobGeneratorV2.types import JobGenerationResult
+        from aiagent.langgraph.jobGeneratorV2.adapter_old import JobGeneratorV2Adapter
+        from aiagent.langgraph.jobGeneratorV2.types_old import JobGenerationResult
 
         adapter = JobGeneratorV2Adapter(max_retry=5)
 
@@ -451,7 +451,7 @@ class TestContextManagement:
     def test_context_tracks_per_phase_retries(self):
         """Context should track retries per phase separately."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job",
@@ -476,7 +476,7 @@ class TestContextManagement:
     def test_context_respects_per_phase_limits(self):
         """Context should respect per-phase retry limits."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job",
@@ -499,7 +499,7 @@ class TestContextManagement:
     def test_context_respects_total_limits(self):
         """Context should respect total retry limits."""
         from aiagent.langgraph.jobGeneratorV2.context import ExecutionContext
-        from aiagent.langgraph.jobGeneratorV2.types import Phase
+        from aiagent.langgraph.jobGeneratorV2.types_old import Phase
 
         context = ExecutionContext(
             job_id="test-job",
