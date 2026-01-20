@@ -466,7 +466,14 @@ class TestJobGenerationE2EParallel:
 
 
 class TestValidatorIntegration:
-    """Tests verifying validator integration in orchestrator (DC-1, DC-2)."""
+    """Tests verifying validator integration in orchestrator (DC-1, DC-2).
+
+    DC-1: TaskDependencyValidator is called locally in _execute_job_analysis
+    DC-2: ValidationPipelineV3 is called in mySwiftAgentCore (not locally)
+
+    Note: Issue #361 changed the architecture to delegate WORKFLOW_GEN to
+    mySwiftAgentCore API. ValidationPipelineV3 tests are now in mySwiftAgentCore.
+    """
 
     @pytest.mark.asyncio
     async def test_task_dependency_validator_called_in_job_analysis(self):
@@ -520,7 +527,7 @@ class TestValidatorIntegration:
 
         # Mock analyze_job to return circular deps
         with patch(
-            "aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3.analyze_job",
+            "aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer.analyze_job",
             mock_analyze_with_circular,
         ):
             request = JobGenerationRequestV3(
@@ -588,7 +595,7 @@ class TestValidatorIntegration:
             )
 
         with patch(
-            "aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer_v3.analyze_job",
+            "aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer.analyze_job",
             mock_analyze_valid,
         ):
             request = JobGenerationRequestV3(
@@ -601,16 +608,17 @@ class TestValidatorIntegration:
             assert len(result.tasks) == 2
 
     @pytest.mark.asyncio
-    async def test_validation_pipeline_called_in_workflow_gen(self):
-        """DC-2: Verify ValidationPipelineV3 is called in _execute_workflow_gen."""
+    async def test_workflow_gen_calls_myswiftagent_core(self):
+        """DC-2: Verify _execute_workflow_gen calls mySwiftAgentCore API.
+
+        Issue #361: Workflow generation is delegated to mySwiftAgentCore.
+        ValidationPipelineV3 is called within mySwiftAgentCore, not locally.
+        """
         from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import (
             ErrorRecoveryManager,
         )
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
-        )
-        from aiagent.langgraph.jobGeneratorV2.validators.pipeline import (
-            ValidationPipelineV3,
         )
 
         orchestrator = JobGenerationOrchestratorV3(
@@ -622,38 +630,45 @@ class TestValidatorIntegration:
         ]
         interfaces = {}
 
-        # Track if ValidationPipelineV3.validate was called
-        validation_calls = []
-        original_validate = ValidationPipelineV3.validate
+        # Mock the WorkflowGeneratorClient
+        mock_client = AsyncMock()
+        mock_response = AsyncMock()
+        mock_response.results = [
+            AsyncMock(
+                task_id="task_001",
+                status="success",
+                workflow_yaml="nodes: {}",
+                validation_errors=[],
+            )
+        ]
+        mock_response.summary = AsyncMock(
+            total=1, succeeded=1, failed=0, overall_status="success"
+        )
+        mock_client.generate_workflows = AsyncMock(return_value=mock_response)
 
-        def mock_validate(self, workflow, workflow_id=""):
-            validation_calls.append({"workflow_id": workflow_id, "workflow": workflow})
-            return original_validate(self, workflow, workflow_id)
+        # Inject mock client
+        orchestrator._workflow_generator_client = mock_client
 
-        with patch.object(ValidationPipelineV3, "validate", mock_validate):
-            await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
+        result = await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
 
-        # Verify ValidationPipelineV3.validate was called for successful workflow
-        assert len(validation_calls) > 0
-        assert validation_calls[0]["workflow_id"] == "task_001"
+        # Verify mySwiftAgentCore API was called
+        mock_client.generate_workflows.assert_called_once()
+        call_kwargs = mock_client.generate_workflows.call_args[1]
+        assert len(call_kwargs["tasks"]) == 1
+        assert call_kwargs["tasks"][0].task_id == "task_001"
 
     @pytest.mark.asyncio
-    async def test_validation_pipeline_logs_errors_but_continues(self):
-        """DC-2: Verify ValidationPipelineV3 logs errors but doesn't fail the flow."""
+    async def test_workflow_gen_handles_myswiftagent_core_failure(self):
+        """DC-2: Verify _execute_workflow_gen handles mySwiftAgentCore failures.
 
+        Issue #361: When mySwiftAgentCore API fails, orchestrator should
+        return a failed ParallelExecutionResult.
+        """
         from aiagent.langgraph.jobGeneratorV2.error_recovery_v3 import (
             ErrorRecoveryManager,
         )
         from aiagent.langgraph.jobGeneratorV2.orchestrator_v3 import (
             JobGenerationOrchestratorV3,
-        )
-        from aiagent.langgraph.jobGeneratorV2.validators import (
-            ValidationError,
-            ValidationErrorCode,
-            ValidationResult,
-        )
-        from aiagent.langgraph.jobGeneratorV2.validators.pipeline import (
-            ValidationPipelineV3,
         )
 
         orchestrator = JobGenerationOrchestratorV3(
@@ -665,32 +680,20 @@ class TestValidatorIntegration:
         ]
         interfaces = {}
 
-        # Mock ValidationPipelineV3.validate to return errors
-        def mock_validate_with_errors(self, workflow, workflow_id=""):
-            return ValidationResult.failure(
-                [
-                    ValidationError(
-                        code=ValidationErrorCode.VALIDATION_FAILED,
-                        message="Test validation error",
-                        location="test",
-                    )
-                ]
-            )
+        # Mock the WorkflowGeneratorClient to raise an exception
+        mock_client = AsyncMock()
+        mock_client.generate_workflows = AsyncMock(
+            side_effect=Exception("mySwiftAgentCore connection failed")
+        )
 
-        with patch.object(ValidationPipelineV3, "validate", mock_validate_with_errors):
-            with patch(
-                "aiagent.langgraph.jobGeneratorV2.orchestrator_v3.logger"
-            ) as mock_logger:
-                result = await orchestrator._execute_workflow_gen(
-                    task_identifiers, interfaces
-                )
-                # Check warning was logged
-                mock_logger.warning.assert_called()
-                call_args = str(mock_logger.warning.call_args)
-                assert (
-                    "validation issues" in call_args.lower() or "Workflow" in call_args
-                )
+        # Inject mock client
+        orchestrator._workflow_generator_client = mock_client
 
-        # Result should still be returned (not failed)
+        result = await orchestrator._execute_workflow_gen(task_identifiers, interfaces)
+
+        # Verify failure is handled gracefully
         assert result is not None
-        assert len(result.successful_tasks) == 1
+        assert len(result.failed_tasks) == 1
+        assert result.failed_tasks[0].task_id == "task_001"
+        assert result.failed_tasks[0].success is False
+        assert "connection failed" in str(result.failed_tasks[0].error.message)
