@@ -15,11 +15,17 @@ Constraints:
 """
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, Field
 
+from ...clients.types.workflow_generator import (
+    TaskInterface,
+    TaskRequest,
+)
+from ...clients.workflow_generator_client import WorkflowGeneratorClient
 from .error_recovery import ErrorRecoveryManager
 from .nodes.job_analyzer import (
     AnalyzedTask,
@@ -27,12 +33,7 @@ from .nodes.job_analyzer import (
     JobAnalysisInput,
     JobAnalysisResponse,
 )
-from .parallel_executor import (
-    ParallelExecutionErrorAggregator,
-    parallel_workflow_generation,
-)
 from .types import ParallelExecutionResult, Phase, UnifiedTaskIdentifier
-from .validators.pipeline import ValidationPipeline
 from .validators.task_dependency import TaskDependencyValidator
 
 logger = logging.getLogger(__name__)
@@ -85,11 +86,25 @@ class JobGenerationOrchestrator:
         error_recovery_manager: ErrorRecoveryManager | None = None,
         llm_client: Any | None = None,
         jobqueue_client: Any | None = None,
+        workflow_generator_client: WorkflowGeneratorClient | None = None,
+        myswiftagent_core_url: str | None = None,
     ):
-        """Initialize orchestrator."""
+        """Initialize orchestrator.
+
+        Args:
+            error_recovery_manager: Error recovery manager instance
+            llm_client: LLM client for analysis
+            jobqueue_client: Jobqueue client for registration
+            workflow_generator_client: Client for mySwiftAgentCore API
+            myswiftagent_core_url: URL for mySwiftAgentCore (default from env)
+        """
         self._error_recovery_manager = error_recovery_manager or ErrorRecoveryManager()
         self._llm_client = llm_client
         self._jobqueue_client = jobqueue_client
+        self._myswiftagent_core_url = myswiftagent_core_url or os.getenv(
+            "MYSWIFTAGENT_CORE_URL", "http://localhost:8006"
+        )
+        self._workflow_generator_client = workflow_generator_client
 
     def get_phase_order(self) -> list[Phase]:
         """Get phase execution order."""
@@ -232,46 +247,154 @@ class JobGenerationOrchestrator:
         self,
         task_identifiers: list[UnifiedTaskIdentifier],
         interfaces: dict[str, InterfaceDefinition],
+        project_id: str = "default_project",
+        trace_id: str | None = None,
+        parent_span_id: str | None = None,
     ) -> ParallelExecutionResult:
-        """Execute Phase 3: WORKFLOW_GEN (parallel)."""
-        logger.info("Phase 3: WORKFLOW_GEN with %d tasks", len(task_identifiers))
+        """Execute Phase 3: WORKFLOW_GEN via mySwiftAgentCore.
 
-        async def generate_single_workflow(
-            task: UnifiedTaskIdentifier,
-        ) -> dict[str, Any]:
-            """Generate workflow for a single task."""
+        Issue #361: Uses WorkflowGeneratorClient to call mySwiftAgentCore API.
+
+        Args:
+            task_identifiers: List of task identifiers
+            interfaces: Interface definitions by task_id
+            project_id: Project ID for mySwiftAgentCore
+            trace_id: Langfuse trace ID for propagation
+            parent_span_id: Parent span ID for trace continuity
+
+        Returns:
+            ParallelExecutionResult with workflow generation results
+        """
+        logger.info("Phase 3: WORKFLOW_GEN with %d tasks via mySwiftAgentCore",
+                    len(task_identifiers))
+
+        # Build TaskRequest list for mySwiftAgentCore API
+        task_requests: list[TaskRequest] = []
+        for task in task_identifiers:
             interface = interfaces.get(task.task_id)
-            return {
-                "workflow_name": f"workflow_{task.task_id}",
-                "task_id": task.task_id,
-                "task_master_id": task.task_master_id,
-                "interface": interface.model_dump() if interface else None,
-            }
+            task_interface = TaskInterface(
+                input=interface.input_schema if interface else {},
+                output=interface.output_schema if interface else {},
+            )
+            task_request = TaskRequest(
+                task_id=task.task_id,
+                name=f"Task {task.task_id}",
+                description=f"Workflow for task {task.task_id}",
+                interface=task_interface,
+            )
+            task_requests.append(task_request)
 
-        result = await parallel_workflow_generation(
-            tasks=task_identifiers,
-            generate_func=generate_single_workflow,
-            max_concurrent=5,
-            timeout_per_task=60.0,
-        )
+        # Use injected client or create new one
+        client = self._workflow_generator_client
+        should_close = False
+        if client is None:
+            base_url = self._myswiftagent_core_url or "http://localhost:8006"
+            client = WorkflowGeneratorClient(
+                base_url=base_url,
+                timeout=180.0,  # 3 minutes for batch generation
+            )
+            should_close = True
 
-        # Handle aggregation
-        aggregator = ParallelExecutionErrorAggregator(self._error_recovery_manager)
-        decision = aggregator.aggregate_and_decide(result)
-        if decision.overall_status == "all_failed":
-            logger.error("All workflow generations failed: %s", decision.error_summary)
-        # Validate generated workflows (DC-2: ValidationPipeline integration)
-        pipeline = ValidationPipeline(fail_fast=False)
-        for tr in result.successful_tasks:
-            if tr.success and tr.workflow:
-                val_res = pipeline.validate(tr.workflow, workflow_id=tr.task_id)
-                if not val_res.is_valid:
-                    logger.warning(
-                        "Workflow %s validation issues: %s",
-                        tr.task_id,
-                        [e.message for e in val_res.errors],
+        try:
+            async with client if should_close else _NoOpContextManager(client) as c:
+                response = await c.generate_workflows(
+                    tasks=task_requests,
+                    capabilities=[],  # Capabilities loaded from mySwiftAgentCore config
+                    project_id=project_id,
+                    trace_id=trace_id,
+                    parent_span_id=parent_span_id,
+                )
+
+                # Convert BatchWorkflowGenerationResponse to ParallelExecutionResult
+                return self._convert_to_parallel_result(
+                    response, task_identifiers
+                )
+        except Exception as e:
+            logger.error("mySwiftAgentCore workflow generation failed: %s", e)
+            # Return failed result
+            from .types import ErrorType, TaskExecutionError, TaskResult
+
+            error_obj = TaskExecutionError(
+                error_type=ErrorType.API,
+                message=str(e),
+                recoverable=False,
+            )
+            return ParallelExecutionResult(
+                successful_tasks=[],
+                failed_tasks=[
+                    TaskResult(
+                        task_id=task.task_id,
+                        success=False,
+                        error=error_obj,
                     )
-        return result
+                    for task in task_identifiers
+                ],
+                total_execution_time_ms=0.0,
+            )
+
+    def _convert_to_parallel_result(
+        self,
+        response: Any,
+        task_identifiers: list[UnifiedTaskIdentifier],
+    ) -> ParallelExecutionResult:
+        """Convert BatchWorkflowGenerationResponse to ParallelExecutionResult."""
+        from .types import ErrorType, TaskExecutionError, TaskResult
+
+        successful_tasks: list[TaskResult] = []
+        failed_tasks: list[TaskResult] = []
+
+        for task in task_identifiers:
+            workflow_result = response.workflows.get(task.task_id)
+            if workflow_result and workflow_result.status.value == "success":
+                successful_tasks.append(TaskResult(
+                    task_id=task.task_id,
+                    success=True,
+                    workflow={
+                        "workflow_name": workflow_result.workflow_name,
+                        "task_id": task.task_id,
+                        "task_master_id": task.task_master_id,
+                    },
+                ))
+            else:
+                error_msg = workflow_result.error if workflow_result else "Unknown error"
+                error_obj = TaskExecutionError(
+                    error_type=ErrorType.API,
+                    message=str(error_msg),
+                    recoverable=True,
+                )
+                failed_tasks.append(TaskResult(
+                    task_id=task.task_id,
+                    success=False,
+                    error=error_obj,
+                ))
+
+        # Add any failed_tasks from response
+        if response.failed_tasks:
+            for ft in response.failed_tasks:
+                # Check if already added
+                if not any(t.task_id == ft.task_id for t in failed_tasks):
+                    error_obj = TaskExecutionError(
+                        error_type=ErrorType.API,
+                        message=f"{ft.error_type}: {ft.message}",
+                        recoverable=True,
+                    )
+                    failed_tasks.append(TaskResult(
+                        task_id=ft.task_id,
+                        success=False,
+                        error=error_obj,
+                    ))
+
+        # Handle recovery suggestion
+        if response.recovery_suggestion:
+            logger.warning(
+                "mySwiftAgentCore suggests: %s", response.recovery_suggestion.value
+            )
+
+        return ParallelExecutionResult(
+            successful_tasks=successful_tasks,
+            failed_tasks=failed_tasks,
+            total_execution_time_ms=0.0,  # Not tracked in batch response
+        )
 
     def _build_result(
         self,
@@ -301,6 +424,19 @@ class JobGenerationOrchestrator:
             interfaces=analysis.interfaces,
             error=workflow_result.get_error_summary() if not success else None,
         )
+
+
+class _NoOpContextManager:
+    """No-op context manager for when client is already provided."""
+
+    def __init__(self, client: WorkflowGeneratorClient):
+        self._client = client
+
+    async def __aenter__(self) -> WorkflowGeneratorClient:
+        return self._client
+
+    async def __aexit__(self, *args: Any) -> None:
+        pass
 
 
 __all__ = [

@@ -328,7 +328,7 @@ async def _create_job_in_background_v2(
         langfuse_handler: Optional Langfuse CallbackHandler for tracing
     """
     from aiagent.langgraph.jobGeneratorV2 import (
-        JobGeneratorV2Adapter,
+        JobGeneratorAdapter,
         JobStateProgressReporter,
     )
 
@@ -345,8 +345,9 @@ async def _create_job_in_background_v2(
             job_state_manager=job_state_manager,
         )
 
-        # Create V2 adapter with progress reporter
-        adapter = JobGeneratorV2Adapter(
+        # Create 3-phase adapter with progress reporter
+        # Issue #361: Use new JobGeneratorAdapter with WorkflowGeneratorClient
+        adapter = JobGeneratorAdapter(
             max_retry=max_retry,
             langfuse_handler=langfuse_handler,
             progress_reporter=progress_reporter,

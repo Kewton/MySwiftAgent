@@ -1,0 +1,195 @@
+{
+  "issue_number": 361,
+  "issue_title": "feat(expertAgent): mySwiftAgentCore連携実装と旧WORKFLOW_GENコード削除",
+  "target_project": "expertAgent",
+  "acceptance_criteria": [
+    "AC-1: WorkflowGeneratorClientが実装されている",
+    "AC-2: WorkflowGeneratorClientの単体テストが実装されている（カバレッジ90%以上）",
+    "AC-3: jobGeneratorV2がmySwiftAgentCore APIを呼び出してワークフローを生成する",
+    "AC-4: trace_idがmySwiftAgentCoreに正しく伝播される",
+    "AC-5: エラー時のrecovery_suggestion処理が実装されている",
+    "AC-6: workflows/workflow_gen/、types_old.py等が削除されている",
+    "AC-7: types_old.pyへの依存が全て解消されている",
+    "AC-8: pre-push-check-all.sh に合格する"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "T1.1",
+      "description": "HTTPクライアント抽象化層実装（IHttpClient, HttpxClientAdapter, IMetricsCollector, CircuitBreaker）",
+      "estimated_hours": 4,
+      "deliverables": [
+        "expertAgent/aiagent/clients/interfaces/http_client.py",
+        "expertAgent/aiagent/clients/interfaces/metrics.py",
+        "expertAgent/aiagent/clients/interfaces/circuit_breaker.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "T1.2",
+      "description": "型定義とデータモデル（BatchStatus, WorkflowStatus, TaskRequest, BatchWorkflowGenerationResponse等）",
+      "estimated_hours": 3,
+      "deliverables": [
+        "expertAgent/aiagent/clients/types/workflow_generator.py"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "T1.3",
+      "description": "WorkflowGeneratorClient本体実装",
+      "estimated_hours": 5,
+      "deliverables": [
+        "expertAgent/aiagent/clients/workflow_generator_client.py"
+      ],
+      "dependencies": ["T1.1", "T1.2"]
+    },
+    {
+      "task_id": "T1.4",
+      "description": "orchestrator.py修正（WORKFLOW_GEN phaseでWorkflowGeneratorClientを使用）",
+      "estimated_hours": 3,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+      ],
+      "dependencies": ["T1.3"]
+    },
+    {
+      "task_id": "T1.5",
+      "description": "Langfuseトレース連携実装",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+      ],
+      "dependencies": ["T1.4"]
+    },
+    {
+      "task_id": "T1.6",
+      "description": "単体テスト作成",
+      "estimated_hours": 6,
+      "deliverables": [
+        "expertAgent/tests/unit/test_clients/test_workflow_generator_client.py",
+        "expertAgent/tests/unit/test_clients/test_interfaces/"
+      ],
+      "dependencies": ["T1.3"]
+    },
+    {
+      "task_id": "T2.1",
+      "description": "types_old.py依存解消",
+      "estimated_hours": 3,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/context.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/progress.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/protocols.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/recovery.py"
+      ],
+      "dependencies": ["T1.6"]
+    },
+    {
+      "task_id": "T2.2",
+      "description": "workflow_gen削除",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "deletion_targets": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/"
+      ],
+      "dependencies": ["T2.1"]
+    },
+    {
+      "task_id": "T2.3",
+      "description": "旧ファイル削除（orchestrator_old.py, adapter_old.py, types_old.py）",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "deletion_targets": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_old.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_old.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/types_old.py"
+      ],
+      "dependencies": ["T2.1"]
+    },
+    {
+      "task_id": "T2.4",
+      "description": "v3エイリアスファイル削除",
+      "estimated_hours": 1,
+      "deliverables": [],
+      "deletion_targets": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator_v3.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter_v3.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/types_v3.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery_v3.py"
+      ],
+      "dependencies": ["T2.3"]
+    },
+    {
+      "task_id": "T2.5",
+      "description": "テストコード整理",
+      "estimated_hours": 2,
+      "deliverables": [],
+      "deletion_targets": [
+        "tests/unit/test_job_generator_v2/test_workflow_gen*",
+        "tests/unit/test_job_generator_v2/test_yaml_generator*"
+      ],
+      "dependencies": ["T2.4"]
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "Phase1",
+      "description": "連携実装（実装・単体テスト）",
+      "estimated_hours": 23,
+      "subtasks": ["T1.1", "T1.2", "T1.3", "T1.4", "T1.5", "T1.6"]
+    },
+    {
+      "task_id": "Phase2",
+      "description": "結合テスト",
+      "estimated_hours": 6,
+      "subtasks": []
+    },
+    {
+      "task_id": "Phase3",
+      "description": "L3受入テスト",
+      "estimated_hours": 5,
+      "subtasks": []
+    },
+    {
+      "task_id": "Phase4",
+      "description": "旧コード削除",
+      "estimated_hours": 7,
+      "subtasks": ["T2.1", "T2.2", "T2.3", "T2.4", "T2.5"]
+    },
+    {
+      "task_id": "Phase5",
+      "description": "ドキュメント更新",
+      "estimated_hours": 2,
+      "subtasks": []
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/clients/interfaces/http_client.py",
+    "expertAgent/aiagent/clients/interfaces/metrics.py",
+    "expertAgent/aiagent/clients/interfaces/circuit_breaker.py",
+    "expertAgent/aiagent/clients/types/workflow_generator.py",
+    "expertAgent/aiagent/clients/workflow_generator_client.py",
+    "expertAgent/tests/unit/test_clients/test_workflow_generator_client.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全パス",
+    "L3受入テスト全パス",
+    "CI/CDグリーン",
+    "pre-push-check-all.sh 合格",
+    "ドキュメント更新完了",
+    "旧コード完全削除"
+  ],
+  "target_coverage": 90,
+  "design_policy": {
+    "architecture": "3-phase: JOB_ANALYSIS → REGISTRATION → WORKFLOW_GEN",
+    "api_endpoint": "POST /api/v1/generator/workflow/batch",
+    "patterns": [
+      "Repository Pattern for WorkflowGeneratorClient",
+      "Context Manager Pattern for HTTP client",
+      "Protocol for IHttpClient abstraction",
+      "Circuit Breaker for fault tolerance"
+    ],
+    "status_model": "BatchStatus enum: success | partial_success | failed"
+  }
+}
