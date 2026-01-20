@@ -1,0 +1,23 @@
+{
+  "issue_number": 382,
+  "issue_title": "feat(taskflowGenerator): AIプロンプトへのCapability情報の自動注入",
+  "acceptance_criteria": [
+    "AC-1: 初回プロンプトにvalidation制約（min/max/enum/pattern）が含まれる",
+    "AC-2: 初回プロンプトにresponseSchemaが含まれる（存在する場合）",
+    "AC-3: buildSystemPromptWithCapabilities()がformatCapabilitiesEnhanced()を使用する",
+    "AC-4: 型安全な変換（toCapabilitiesForPrompt）が実装されている",
+    "AC-5: 既存のAPIに破壊的変更がない（後方互換性）",
+    "AC-6: 単体テストカバレッジ90%以上",
+    "AC-7: TypeScriptコンパイルエラーゼロ"
+  ],
+  "technical_requirements": [
+    "型ガード関数（isCapabilityForPrompt）の実装",
+    "型変換関数（toCapabilitiesForPrompt）の実装",
+    "PromptBuilder.buildSystemPromptWithCapabilities()の修正",
+    "単体テストの追加"
+  ],
+  "target_project": "mySwiftAgentCore",
+  "design_policy_path": "dev-reports/feature/issue/382/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/382/work-plan.md",
+  "phase": "pre-tdd"
+}

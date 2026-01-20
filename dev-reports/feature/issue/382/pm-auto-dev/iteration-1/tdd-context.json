@@ -1,0 +1,52 @@
+{
+  "issue_number": 382,
+  "acceptance_criteria": [
+    "AC-1: 初回プロンプトにvalidation制約（min/max/enum/pattern）が含まれる",
+    "AC-2: 初回プロンプトにresponseSchemaが含まれる（存在する場合）",
+    "AC-3: buildSystemPromptWithCapabilities()がformatCapabilitiesEnhanced()を使用する",
+    "AC-4: 型安全な変換（toCapabilitiesForPrompt）が実装されている",
+    "AC-5: 既存のAPIに破壊的変更がない（後方互換性）",
+    "AC-6: 単体テストカバレッジ90%以上",
+    "AC-7: TypeScriptコンパイルエラーゼロ"
+  ],
+  "implementation_tasks": [
+    "T1.1: isCapabilityForPrompt() 型ガード関数の実装",
+    "T1.2: toCapabilitiesForPrompt() 変換関数の実装",
+    "T1.3: buildSystemPromptWithCapabilities() メソッドの修正",
+    "T1.4: 単体テストの追加"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "T1.1",
+      "description": "型ガード関数実装",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": []
+    },
+    {
+      "task_id": "T1.2",
+      "description": "PromptBuilder修正",
+      "estimated_hours": 0.5,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["T1.1"]
+    },
+    {
+      "task_id": "T1.3",
+      "description": "単体テスト追加",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"],
+      "dependencies": ["T1.1", "T1.2"]
+    }
+  ],
+  "deliverables_checklist": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+  ],
+  "definition_of_done": [
+    "型ガード関数実装・テスト完了",
+    "PromptBuilder修正完了",
+    "単体テストカバレッジ90%以上",
+    "TypeScriptコンパイルエラーゼロ"
+  ],
+  "target_coverage": 90
+}

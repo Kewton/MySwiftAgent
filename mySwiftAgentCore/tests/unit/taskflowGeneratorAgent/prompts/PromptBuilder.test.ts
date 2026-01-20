@@ -831,3 +831,276 @@ describe('PromptBuilder - Enhanced Capability Formatting (Issue #374)', () => {
 // Import CapabilityForPrompt type for tests
 import type { CapabilityForPrompt } from '../../../../src/taskflowGeneratorAgent/types/generator.js';
 import { WorkflowCapabilityError } from '../../../../src/taskflowGeneratorAgent/types/errors.js';
+import {
+  isCapabilityForPrompt,
+  toCapabilitiesForPrompt,
+} from '../../../../src/taskflowGeneratorAgent/prompts/PromptBuilder.js';
+
+/**
+ * Issue #382: Type Guard Functions Tests
+ *
+ * Tests for type-safe conversion from Capability to CapabilityForPrompt
+ */
+describe('Issue #382: Type Guard Functions', () => {
+  describe('isCapabilityForPrompt', () => {
+    it('TC-001: should return true for capability with responseSchema', () => {
+      const capability: Capability = {
+        id: 'test_api',
+        name: 'Test API',
+        category: 'api',
+        status: 'available',
+      };
+      // Add responseSchema to make it CapabilityForPrompt
+      const capWithSchema = {
+        ...capability,
+        responseSchema: {
+          type: 'object',
+          properties: { result: { type: 'string' } },
+        },
+      } as CapabilityForPrompt;
+
+      expect(isCapabilityForPrompt(capWithSchema as Capability)).toBe(true);
+    });
+
+    it('TC-002: should return true for capability with validation constraints', () => {
+      const capability: Capability = {
+        id: 'test_api',
+        name: 'Test API',
+        category: 'api',
+        status: 'available',
+        parameters: [
+          {
+            name: 'count',
+            type: 'number',
+            required: false,
+            validation: { min: 1, max: 100 },
+          },
+        ],
+      };
+
+      expect(isCapabilityForPrompt(capability)).toBe(true);
+    });
+
+    it('TC-003: should return false for basic capability without enhanced fields', () => {
+      const capability: Capability = {
+        id: 'basic_api',
+        name: 'Basic API',
+        category: 'api',
+        status: 'available',
+        parameters: [
+          { name: 'input', type: 'string', required: true },
+        ],
+      };
+
+      expect(isCapabilityForPrompt(capability)).toBe(false);
+    });
+
+    it('TC-003b: should return false for capability with no parameters', () => {
+      const capability: Capability = {
+        id: 'no_params_api',
+        name: 'No Params API',
+        category: 'api',
+        status: 'available',
+      };
+
+      expect(isCapabilityForPrompt(capability)).toBe(false);
+    });
+
+    it('TC-003c: should return false for capability with empty parameters array', () => {
+      const capability: Capability = {
+        id: 'empty_params_api',
+        name: 'Empty Params API',
+        category: 'api',
+        status: 'available',
+        parameters: [],
+      };
+
+      expect(isCapabilityForPrompt(capability)).toBe(false);
+    });
+  });
+
+  describe('toCapabilitiesForPrompt', () => {
+    it('TC-004: should convert Capability array to CapabilityForPrompt array', () => {
+      const capabilities: Capability[] = [
+        {
+          id: 'basic_api',
+          name: 'Basic API',
+          category: 'api',
+          status: 'available',
+        },
+        {
+          id: 'enhanced_api',
+          name: 'Enhanced API',
+          category: 'api',
+          status: 'available',
+          parameters: [
+            {
+              name: 'num',
+              type: 'number',
+              required: false,
+              validation: { min: 1, max: 10 },
+            },
+          ],
+        },
+      ];
+
+      const result = toCapabilitiesForPrompt(capabilities);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('basic_api');
+      expect(result[1].id).toBe('enhanced_api');
+      // All items should be assignable to CapabilityForPrompt
+      result.forEach((cap) => {
+        expect(cap).toHaveProperty('id');
+        expect(cap).toHaveProperty('name');
+        expect(cap).toHaveProperty('category');
+        expect(cap).toHaveProperty('status');
+      });
+    });
+
+    it('TC-004b: should preserve enhanced fields during conversion', () => {
+      const capabilities: Capability[] = [
+        {
+          id: 'with_schema',
+          name: 'With Schema',
+          category: 'api',
+          status: 'available',
+        } as Capability,
+      ];
+      // Add responseSchema after creation
+      (capabilities[0] as Record<string, unknown>).responseSchema = {
+        type: 'object',
+        properties: { data: { type: 'string' } },
+      };
+
+      const result = toCapabilitiesForPrompt(capabilities);
+
+      expect(result[0]).toHaveProperty('responseSchema');
+    });
+
+    it('TC-004c: should handle empty array', () => {
+      const result = toCapabilitiesForPrompt([]);
+
+      expect(result).toHaveLength(0);
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+});
+
+/**
+ * Issue #382: buildSystemPromptWithCapabilities Tests
+ *
+ * Tests that buildSystemPrompt uses formatCapabilitiesEnhanced
+ */
+describe('Issue #382: buildSystemPromptWithCapabilities modification', () => {
+  let builder: PromptBuilder;
+
+  beforeEach(() => {
+    builder = new PromptBuilder();
+  });
+
+  it('TC-005: should include validation constraints in system prompt (via formatCapabilitiesEnhanced)', () => {
+    const capabilities: Capability[] = [
+      {
+        id: 'google_search',
+        name: 'Google Search',
+        description: 'Search the web',
+        category: 'api',
+        status: 'available',
+        parameters: [
+          {
+            name: 'num',
+            type: 'number',
+            required: false,
+            description: 'Number of results',
+            defaultValue: 10,
+            validation: { min: 1, max: 100 },
+          },
+          {
+            name: 'safe',
+            type: 'string',
+            required: false,
+            validation: { enum: ['off', 'medium', 'high'] },
+          },
+        ],
+      },
+    ];
+
+    const prompt = builder.buildSystemPrompt(capabilities);
+
+    // Should include validation constraints from formatCapabilitiesEnhanced
+    expect(prompt).toContain('min');
+    expect(prompt).toContain('max');
+    expect(prompt).toContain('enum');
+    expect(prompt).toContain('default');
+  });
+
+  it('TC-006: should include responseSchema in system prompt (via formatCapabilitiesEnhanced)', () => {
+    // Create a capability with responseSchema
+    const capabilityWithSchema: CapabilityForPrompt = {
+      id: 'api_with_schema',
+      name: 'API with Schema',
+      category: 'api',
+      status: 'available',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          results: { type: 'array' },
+          total: { type: 'number' },
+        },
+      },
+    };
+
+    const prompt = builder.buildSystemPrompt([capabilityWithSchema as Capability]);
+
+    // Should include Response Schema section from formatCapabilitiesEnhanced
+    expect(prompt).toContain('Response Schema');
+    expect(prompt).toContain('results');
+    expect(prompt).toContain('total');
+  });
+
+  it('TC-007: should maintain backward compatibility with basic capabilities', () => {
+    const basicCapabilities: Capability[] = [
+      {
+        id: 'simple_api',
+        name: 'Simple API',
+        description: 'A simple API',
+        category: 'api',
+        status: 'available',
+        parameters: [
+          { name: 'input', type: 'string', required: true, description: 'Input value' },
+        ],
+      },
+    ];
+
+    const prompt = builder.buildSystemPrompt(basicCapabilities);
+
+    // Should still include basic capability info
+    expect(prompt).toContain('Simple API');
+    expect(prompt).toContain('simple_api');
+    expect(prompt).toContain('input');
+    expect(prompt).toContain('required');
+    // Should not throw errors
+  });
+
+  it('TC-008: should include use cases in system prompt when available', () => {
+    const capabilityWithUseCases: CapabilityForPrompt = {
+      id: 'search_api',
+      name: 'Search API',
+      category: 'api',
+      status: 'available',
+      metadata: {
+        use_cases: [
+          'Web search queries',
+          'Document retrieval',
+        ],
+      },
+    };
+
+    const prompt = builder.buildSystemPrompt([capabilityWithUseCases as Capability]);
+
+    expect(prompt).toContain('Use Cases');
+    expect(prompt).toContain('Web search queries');
+    expect(prompt).toContain('Document retrieval');
+  });
+});

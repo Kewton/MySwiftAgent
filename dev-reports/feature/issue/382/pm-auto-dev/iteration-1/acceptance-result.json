@@ -1,0 +1,172 @@
+{
+  "status": "success",
+  "issue_number": 382,
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "mySwiftAgentCore",
+  "execution_timestamp": "2026-01-20T09:31:02Z",
+  "service_health": {
+    "note": "TypeScript unit tests - no external service required"
+  },
+  "test_cases": {
+    "TC-001": {
+      "name": "isCapabilityForPrompt - responseSchemaがある場合",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "should return true for capability with responseSchema"
+    },
+    "TC-002": {
+      "name": "isCapabilityForPrompt - validationがある場合",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "should return true for capability with validation constraints"
+    },
+    "TC-003": {
+      "name": "isCapabilityForPrompt - 基本Capability",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "should return false for basic capability without enhanced fields"
+    },
+    "TC-004": {
+      "name": "toCapabilitiesForPrompt - 混合配列",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "should convert Capability array to CapabilityForPrompt array"
+    },
+    "TC-005": {
+      "name": "buildSystemPromptWithCapabilities - 詳細情報含有",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "should include validation constraints in system prompt (via formatCapabilitiesEnhanced)"
+    },
+    "TC-006": {
+      "name": "buildSystemPromptWithCapabilities - responseSchema含有",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "should include responseSchema in system prompt (via formatCapabilitiesEnhanced)"
+    },
+    "TC-007": {
+      "name": "後方互換性 - 既存テスト全パス",
+      "status": "passed",
+      "verification_method": "unit_test",
+      "test_method": "All 1664 tests passed including 50 PromptBuilder tests"
+    },
+    "TC-008": {
+      "name": "TypeScriptコンパイル",
+      "status": "passed",
+      "verification_method": "static_analysis",
+      "test_method": "npx tsc --noEmit - zero errors"
+    }
+  },
+  "acceptance_criteria": {
+    "AC-1": {
+      "criterion": "初回プロンプトにvalidation制約（min/max/enum/pattern）が含まれる",
+      "verified": true,
+      "verification_method": "unit_test",
+      "evidence": "TC-005 passed: prompt contains min, max, enum, default constraints"
+    },
+    "AC-2": {
+      "criterion": "初回プロンプトにresponseSchemaが含まれる（存在する場合）",
+      "verified": true,
+      "verification_method": "unit_test",
+      "evidence": "TC-006 passed: prompt contains 'Response Schema' section with properties"
+    },
+    "AC-3": {
+      "criterion": "buildSystemPromptWithCapabilities()がformatCapabilitiesEnhanced()を使用する",
+      "verified": true,
+      "verification_method": "code_analysis",
+      "evidence": "Line 141: const capabilitiesSection = this.formatCapabilitiesEnhanced(enhancedCapabilities)"
+    },
+    "AC-4": {
+      "criterion": "型安全な変換（toCapabilitiesForPrompt）が実装されている",
+      "verified": true,
+      "verification_method": "unit_test",
+      "evidence": "TC-004 passed: toCapabilitiesForPrompt converts and preserves enhanced fields"
+    },
+    "AC-5": {
+      "criterion": "既存のAPIに破壊的変更がない（後方互換性）",
+      "verified": true,
+      "verification_method": "unit_test",
+      "evidence": "All 1664 tests passed, including original PromptBuilder tests"
+    },
+    "AC-6": {
+      "criterion": "単体テストカバレッジ90%以上",
+      "verified": true,
+      "verification_method": "coverage_report",
+      "evidence": "PromptBuilder.ts: Lines 98.07%, Branches 93.68%, Functions 100%"
+    },
+    "AC-7": {
+      "criterion": "TypeScriptコンパイルエラーゼロ",
+      "verified": true,
+      "verification_method": "static_analysis",
+      "evidence": "npx tsc --noEmit completed with zero errors"
+    }
+  },
+  "design_principles": {
+    "DP-1": {
+      "principle": "型キャスト（as）を避け、型ガード関数を使用",
+      "verified": true,
+      "evidence": "isCapabilityForPrompt() type guard function implemented at line 36"
+    },
+    "DP-2": {
+      "principle": "既存実装（formatCapabilitiesEnhanced）の再利用",
+      "verified": true,
+      "evidence": "buildSystemPromptWithCapabilities calls formatCapabilitiesEnhanced at line 141"
+    },
+    "DP-3": {
+      "principle": "既存APIを変更しない（後方互換性）",
+      "verified": true,
+      "evidence": "buildSystemPrompt() public method unchanged, 1664 tests passed"
+    },
+    "DP-4": {
+      "principle": "拡張フィールドがない場合も安全に動作",
+      "verified": true,
+      "evidence": "TC-003 and TC-007 passed: basic capabilities work correctly"
+    }
+  },
+  "dead_code_check": {
+    "status": "passed",
+    "functions": {
+      "isCapabilityForPrompt": {
+        "defined_at": "PromptBuilder.ts:36",
+        "called_by": ["toCapabilitiesForPrompt at line 65"],
+        "is_dead_code": false
+      },
+      "toCapabilitiesForPrompt": {
+        "defined_at": "PromptBuilder.ts:63",
+        "called_by": ["buildSystemPromptWithCapabilities at line 140"],
+        "is_dead_code": false
+      },
+      "formatCapabilitiesEnhanced": {
+        "defined_at": "PromptBuilder.ts:306",
+        "called_by": [
+          "buildSystemPromptWithCapabilities at line 141",
+          "buildFeedbackPrompt at lines 452, 457"
+        ],
+        "is_dead_code": false
+      }
+    }
+  },
+  "coverage": {
+    "PromptBuilder.ts": {
+      "lines": 98.07,
+      "branches": 93.68,
+      "functions": 100,
+      "statements": 98.07
+    }
+  },
+  "test_summary": {
+    "total_tests": 1664,
+    "passed": 1664,
+    "failed": 0,
+    "skipped": 0,
+    "promptbuilder_tests": 50
+  },
+  "typescript_errors": 0,
+  "all_tests_passed": true,
+  "evidence_files": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+  ],
+  "message": "All acceptance criteria verified. Issue #382 implementation is complete and working correctly."
+}

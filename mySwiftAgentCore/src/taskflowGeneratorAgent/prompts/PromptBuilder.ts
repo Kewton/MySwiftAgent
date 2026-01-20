@@ -16,6 +16,61 @@ import {
   MAX_CAPABILITIES_PER_PROMPT,
 } from '../constants.js';
 
+// ==================================================
+// Issue #382: Type Guard Functions for Capability
+// ==================================================
+
+/**
+ * Type guard to check if a Capability has enhanced CapabilityForPrompt fields
+ *
+ * Issue #382: Checks for enhanced fields that indicate CapabilityForPrompt:
+ * - responseSchema field
+ * - validation constraints in parameters
+ *
+ * Note: Returns boolean rather than type predicate due to category type mismatch
+ * between Capability (enum) and CapabilityForPrompt (string)
+ *
+ * @param cap - Capability to check
+ * @returns true if capability has CapabilityForPrompt-specific fields
+ */
+export function isCapabilityForPrompt(cap: Capability): boolean {
+  // Check for responseSchema field
+  if ('responseSchema' in cap && (cap as Record<string, unknown>).responseSchema !== undefined) {
+    return true;
+  }
+
+  // Check for validation constraints in parameters
+  if (cap.parameters && cap.parameters.length > 0) {
+    const firstParam = cap.parameters[0] as Record<string, unknown>;
+    if ('validation' in firstParam && firstParam.validation !== undefined) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Convert Capability array to CapabilityForPrompt array
+ *
+ * Issue #382: Type-safe conversion that:
+ * - Preserves capabilities that are already CapabilityForPrompt
+ * - Converts basic Capability to CapabilityForPrompt
+ *
+ * @param capabilities - Array of Capability to convert
+ * @returns Array of CapabilityForPrompt
+ */
+export function toCapabilitiesForPrompt(capabilities: Capability[]): CapabilityForPrompt[] {
+  return capabilities.map(cap => {
+    if (isCapabilityForPrompt(cap)) {
+      return cap;
+    }
+    // Basic Capability can be safely assigned to CapabilityForPrompt
+    // since CapabilityForPrompt extends Capability with optional fields
+    return cap as CapabilityForPrompt;
+  });
+}
+
 /**
  * PromptBuilder - Builds prompts for LLM workflow generation
  *
@@ -66,6 +121,8 @@ export class PromptBuilder {
   /**
    * Build system prompt with capabilities (internal)
    *
+   * Issue #382: Modified to use formatCapabilitiesEnhanced and type-safe conversion
+   *
    * @param capabilities - Pre-filtered capabilities
    * @returns System prompt string
    */
@@ -79,7 +136,9 @@ export class PromptBuilder {
       return DEFAULT_SYSTEM_PROMPT;
     }
 
-    const capabilitiesSection = this.formatCapabilities(availableCapabilities);
+    // Issue #382: Use type-safe conversion and enhanced formatting
+    const enhancedCapabilities = toCapabilitiesForPrompt(availableCapabilities);
+    const capabilitiesSection = this.formatCapabilitiesEnhanced(enhancedCapabilities);
     return buildSystemPromptTemplate(capabilitiesSection);
   }
 

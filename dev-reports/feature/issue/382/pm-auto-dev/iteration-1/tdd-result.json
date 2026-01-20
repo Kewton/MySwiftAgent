@@ -1,0 +1,93 @@
+{
+  "status": "success",
+  "issue_number": 382,
+  "coverage": 98.07,
+  "unit_tests": {
+    "total": 1664,
+    "passed": 1664,
+    "failed": 0,
+    "new_tests_added": 12
+  },
+  "static_analysis": {
+    "typescript_errors": 0,
+    "eslint_errors": 0,
+    "eslint_warnings": 3
+  },
+  "executed_tasks": [
+    "T1.1",
+    "T1.2",
+    "T1.3",
+    "T1.4"
+  ],
+  "skipped_tasks": [],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": false,
+    "exports_added": true
+  },
+  "files_modified": [
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+  ],
+  "implementation_summary": {
+    "T1.1": {
+      "description": "isCapabilityForPrompt() type guard function implemented",
+      "location": "PromptBuilder.ts:36-51",
+      "details": "Checks for responseSchema field and validation constraints in parameters"
+    },
+    "T1.2": {
+      "description": "toCapabilitiesForPrompt() conversion function implemented",
+      "location": "PromptBuilder.ts:63-72",
+      "details": "Type-safe conversion from Capability[] to CapabilityForPrompt[]"
+    },
+    "T1.3": {
+      "description": "buildSystemPromptWithCapabilities() modified to use formatCapabilitiesEnhanced",
+      "location": "PromptBuilder.ts:129-143",
+      "details": "Now uses toCapabilitiesForPrompt() and formatCapabilitiesEnhanced() for enhanced capability formatting"
+    },
+    "T1.4": {
+      "description": "Unit tests added for Issue #382",
+      "location": "PromptBuilder.test.ts:839-1106",
+      "details": "12 new tests covering type guards (TC-001~TC-003c), conversion function (TC-004~TC-004c), and buildSystemPromptWithCapabilities (TC-005~TC-008)"
+    }
+  },
+  "acceptance_criteria_verification": {
+    "AC-1": {
+      "status": "verified",
+      "description": "Initial prompt includes validation constraints (min/max/enum/pattern)",
+      "evidence": "TC-005 test verifies min/max/enum/default are included in system prompt"
+    },
+    "AC-2": {
+      "status": "verified",
+      "description": "Initial prompt includes responseSchema when present",
+      "evidence": "TC-006 test verifies Response Schema section is included"
+    },
+    "AC-3": {
+      "status": "verified",
+      "description": "buildSystemPromptWithCapabilities() uses formatCapabilitiesEnhanced()",
+      "evidence": "PromptBuilder.ts:141 calls this.formatCapabilitiesEnhanced()"
+    },
+    "AC-4": {
+      "status": "verified",
+      "description": "Type-safe conversion (toCapabilitiesForPrompt) is implemented",
+      "evidence": "Function exported from PromptBuilder.ts and tested in TC-004"
+    },
+    "AC-5": {
+      "status": "verified",
+      "description": "No breaking changes to existing API",
+      "evidence": "TC-007 tests backward compatibility with basic capabilities"
+    },
+    "AC-6": {
+      "status": "verified",
+      "description": "Unit test coverage 90%+",
+      "evidence": "PromptBuilder.ts coverage: 98.07%"
+    },
+    "AC-7": {
+      "status": "verified",
+      "description": "TypeScript compile errors: 0",
+      "evidence": "npm run type-check passed with no errors"
+    }
+  },
+  "commits": [],
+  "message": "Issue #382 TDD implementation complete. All 12 new tests pass. PromptBuilder coverage: 98.07%. TypeScript errors: 0. Capability information (validation constraints, responseSchema, use cases) is now automatically injected into AI prompts via formatCapabilitiesEnhanced()."
+}
