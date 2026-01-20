@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -49,26 +48,16 @@ from aiagent.clients.interfaces.http_client import (
 )
 from aiagent.clients.interfaces.metrics import (
     IMetricsCollector,
-    NoOpMetricsCollector,
 )
 from aiagent.clients.types.workflow_generator import (
     BatchStatus,
-    BatchWorkflowGenerationResponse,
-    FailedTask,
-    GenerationOptions,
     RecoverySuggestion,
     TaskInterface,
     TaskRequest,
-    WorkflowResult,
-    WorkflowStatus,
 )
 from aiagent.clients.workflow_generator_client import (
     WorkflowGeneratorClient,
-    WorkflowGeneratorError,
-    WorkflowGeneratorHTTPError,
-    WorkflowGeneratorTimeoutError,
 )
-
 
 # === Helper Functions ===
 
