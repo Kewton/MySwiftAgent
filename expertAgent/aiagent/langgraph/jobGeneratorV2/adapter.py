@@ -11,13 +11,14 @@ This adapter:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from core.config import settings
 
 # Re-export from adapter_old for backward compatibility
 from .adapter_old import JobGeneratorV2Adapter
 from .error_recovery import ErrorRecoveryManager
+from .llm_utils import invoke_structured_llm
 from .nodes.job_analyzer import AnalyzedTask, InterfaceDefinition
 from .orchestrator import (
     JobGenerationOrchestrator,
@@ -70,10 +71,41 @@ class JobGeneratorAdapter:
         self._recovery_manager = ErrorRecoveryManager(max_total_retries=max_retry)
         self._orchestrator = self._create_orchestrator()
 
+    def _create_llm_client(self) -> Callable[..., Any]:
+        """Create LLM client callable using existing invoke_structured_llm.
+
+        Supports Claude/GPT/Gemini based on model_name setting.
+
+        Returns:
+            Callable that accepts (system_prompt, user_prompt, response_model)
+            and returns the structured response.
+        """
+        async def llm_client(
+            system_prompt: str,
+            user_prompt: str,
+            response_model: type,
+        ) -> Any:
+            # Build callbacks for Langfuse tracing
+            callbacks = [self._langfuse_handler] if self._langfuse_handler else None
+
+            # Use existing invoke_structured_llm (supports Claude/GPT/Gemini)
+            result: Any = await invoke_structured_llm(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=response_model,
+                model_name=self._model_name,
+                callbacks=callbacks,
+            )
+
+            return result.result  # StructuredCallResult.result
+
+        return llm_client
+
     def _create_orchestrator(self) -> JobGenerationOrchestrator:
         """Create and configure the 3-phase orchestrator."""
         return JobGenerationOrchestrator(
             error_recovery_manager=self._recovery_manager,
+            llm_client=self._create_llm_client(),
         )
 
     async def generate(
