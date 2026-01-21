@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 from ...clients.types.workflow_generator import (
+    RecoverySuggestion,
     TaskInterface,
     TaskRequest,
 )
@@ -40,7 +41,12 @@ from .nodes.job_analyzer import (
     JobAnalysisInput,
     JobAnalysisResponse,
 )
-from .types import ParallelExecutionResult, Phase, UnifiedTaskIdentifier
+from .types import (
+    ParallelExecutionResult,
+    Phase,
+    RecoveryStrategy,
+    UnifiedTaskIdentifier,
+)
 from .validators.task_dependency import TaskDependencyValidator
 from .workflows.registration.master_manager import MasterManagerSubWorkflow
 
@@ -48,6 +54,13 @@ if TYPE_CHECKING:
     from .context import ExecutionContext
 
 logger = logging.getLogger(__name__)
+
+
+# Issue #387: Mapping from RecoverySuggestion to RecoveryStrategy
+SUGGESTION_TO_STRATEGY: dict[RecoverySuggestion, RecoveryStrategy] = {
+    RecoverySuggestion.ROLLBACK_TO_ANALYSIS: RecoveryStrategy.ROLLBACK_TO_ANALYSIS,
+    RecoverySuggestion.RELAXATION: RecoveryStrategy.RELAXATION,
+}
 
 
 class OrchestratorError(Exception):
@@ -366,6 +379,62 @@ class JobGenerationOrchestrator:
             "task_id_to_master_id": task_id_to_master_id,
         }
 
+    async def _handle_recovery_suggestion(
+        self,
+        suggestion: RecoverySuggestion | None,
+        execution_result: ParallelExecutionResult,
+        context: "ExecutionContext",
+    ) -> ParallelExecutionResult | None:
+        """Handle recovery suggestion from mySwiftAgentCore.
+
+        Issue #387: Convert RecoverySuggestion to RecoveryStrategy and
+        use ErrorRecoveryManager for recovery logic.
+
+        Args:
+            suggestion: Recovery suggestion from mySwiftAgentCore (may be None)
+            execution_result: Current execution result
+            context: Execution context for recovery
+
+        Returns:
+            Modified ParallelExecutionResult if recovery was performed, None otherwise
+        """
+        if suggestion is None:
+            return None
+
+        # Convert RecoverySuggestion to RecoveryStrategy
+        strategy = SUGGESTION_TO_STRATEGY.get(suggestion, RecoveryStrategy.FAIL_FAST)
+
+        logger.info(
+            "Issue #387: Converting %s to %s",
+            suggestion.value,
+            strategy.value,
+        )
+
+        # Create PhaseError for ErrorRecoveryManager
+        from .types import ErrorType, PhaseError
+
+        error_summary = execution_result.get_error_summary()
+        phase_error = PhaseError(
+            phase="WORKFLOW_GEN",
+            error_type=ErrorType.API,
+            message=f"mySwiftAgentCore recovery suggestion: {suggestion.value}",
+            details={"suggestion": suggestion.value, "error_summary": error_summary},
+            recoverable=(strategy != RecoveryStrategy.FAIL_FAST),
+        )
+
+        # Use ErrorRecoveryManager for recovery decision
+        recovery_action = self._error_recovery_manager.handle_error(phase_error)
+
+        logger.info(
+            "Issue #387: ErrorRecoveryManager returned strategy=%s, feedback=%s",
+            recovery_action.strategy.value,
+            recovery_action.feedback[:50] if recovery_action.feedback else None,
+        )
+
+        # For now, we log the recovery action but don't modify the result
+        # Future: Implement actual recovery logic based on strategy
+        return None
+
     def _build_task_identifiers(
         self,
         tasks: list[AnalyzedTask],
@@ -560,16 +629,16 @@ class JobGenerationOrchestrator:
                         )
                     )
 
-        # Handle recovery suggestion
-        if response.recovery_suggestion:
-            logger.warning(
-                "mySwiftAgentCore suggests: %s", response.recovery_suggestion.value
-            )
+        # Issue #387: Handle recovery suggestion
+        recovery_suggestion = response.recovery_suggestion
+        if recovery_suggestion:
+            logger.warning("mySwiftAgentCore suggests: %s", recovery_suggestion.value)
 
         return ParallelExecutionResult(
             successful_tasks=successful_tasks,
             failed_tasks=failed_tasks,
             total_execution_time_ms=0.0,  # Not tracked in batch response
+            recovery_suggestion=recovery_suggestion,  # Issue #387: Pass suggestion
         )
 
     def _build_result(
@@ -620,4 +689,5 @@ __all__ = [
     "JobGenerationRequest",
     "JobGenerationResult",
     "OrchestratorError",
+    "SUGGESTION_TO_STRATEGY",  # Issue #387
 ]

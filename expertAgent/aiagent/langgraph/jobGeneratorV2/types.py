@@ -14,7 +14,10 @@ This module defines the core types for the refactored architecture:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from ...clients.types.workflow_generator import RecoverySuggestion
 
 # Re-export types from types_old for backward compatibility
 from .types_old import (
@@ -193,11 +196,13 @@ class ParallelExecutionResult:
         successful_tasks: List of tasks that succeeded
         failed_tasks: List of tasks that failed
         total_execution_time_ms: Total execution time
+        recovery_suggestion: Recovery suggestion from mySwiftAgentCore (Issue #387)
     """
 
     successful_tasks: list[TaskResult] = field(default_factory=list)
     failed_tasks: list[TaskResult] = field(default_factory=list)
     total_execution_time_ms: float = 0.0
+    recovery_suggestion: Optional["RecoverySuggestion"] = None
 
     @property
     def all_succeeded(self) -> bool:
