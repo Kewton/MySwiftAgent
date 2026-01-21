@@ -1,0 +1,106 @@
+{
+  "issue_number": 386,
+  "issue_title": "【P1】Phase 2統合: master_manager + BodyTemplateValidator + trace_id伝播",
+  "acceptance_criteria": [
+    "AC-1: jobqueue APIで実際にJobMaster/TaskMasterが作成される",
+    "AC-2: task_master_idが実際のDBレコードIDになる",
+    "AC-3: 登録失敗時は適切なエラー処理（Fail-Fast）",
+    "AC-4: インターフェース定義がBodyTemplateValidator経由で検証される",
+    "AC-5: 無効なインターフェースで適切なエラーが発生",
+    "AC-6: run_workflow()がtrace_id, parent_span_idを受け取る",
+    "AC-7: Phase 3のgenerate_workflows()にtrace_idが渡される",
+    "AC-8: Phase 1, 2, 3すべてのログにtrace_idが出力される"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T1.1",
+      "description": "orchestrator._execute_registrationをMasterManagerSubWorkflow呼び出しに変更",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "expected_changes": [
+        "import MasterManagerSubWorkflow from workflows.registration.master_manager",
+        "_execute_registration内でMasterManagerSubWorkflow.create_mastersを呼び出す",
+        "戻り値をtask_id_to_master_idマッピングに変換"
+      ]
+    },
+    {
+      "id": "T1.2",
+      "description": "run_workflowにtrace_id, parent_span_idパラメータを追加",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "expected_changes": [
+        "run_workflowの引数にtrace_id: str | None = None, parent_span_id: str | None = Noneを追加",
+        "_execute_workflow_genにtrace_id, parent_span_idを渡す"
+      ]
+    },
+    {
+      "id": "T1.3",
+      "description": "adapter.pyでtrace_idをrun_workflowに渡す",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "expected_changes": [
+        "generateメソッド内でrun_workflowにtrace_idを渡す",
+        "LangfuseServiceからtrace_idを取得"
+      ]
+    },
+    {
+      "id": "T1.4",
+      "description": "ExecutionContext経由でJobqueueClient取得",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "expected_changes": [
+        "ExecutionContextをインスタンス変数として保持",
+        "_execute_registrationでcontextを使用"
+      ]
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "orchestrator.py の更新",
+      "estimated_hours": 1.5,
+      "deliverables": ["orchestrator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "context連携の実装",
+      "estimated_hours": 1,
+      "deliverables": ["orchestrator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "trace_id伝播の実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["orchestrator.py", "adapter.py"],
+      "dependencies": ["1.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py - _execute_registration実装",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py - run_workflowパラメータ追加",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py - trace_id伝播",
+    "expertAgent/tests/unit/test_orchestrator_issue386.py - 単体テスト"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー（Ruff/MyPy）0件",
+    "Phase 2で実際のMasterManagerSubWorkflow呼び出しが行われる",
+    "trace_idがrun_workflow→_execute_workflow_genに伝播する"
+  ],
+  "target_coverage": 90,
+  "design_constraints": [
+    "Unified ID Pattern: task_idを全フェーズで一貫使用",
+    "Fail-Fast Pattern: エラー時は即座にOrchestratorErrorをraise",
+    "Dependency Injection: ExecutionContext経由で依存性注入",
+    "orchestratorのコードサイズ: 300行以内を維持"
+  ],
+  "related_files": {
+    "orchestrator": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "adapter": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+    "master_manager": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "body_template_validator": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+  }
+}

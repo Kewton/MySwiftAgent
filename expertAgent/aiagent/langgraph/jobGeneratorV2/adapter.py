@@ -80,6 +80,7 @@ class JobGeneratorAdapter:
             Callable that accepts (system_prompt, user_prompt, response_model)
             and returns the structured response.
         """
+
         async def llm_client(
             system_prompt: str,
             user_prompt: str,
@@ -118,6 +119,8 @@ class JobGeneratorAdapter:
     ) -> "JobGeneratorResponse":
         """Generate job using 3-phase architecture.
 
+        Issue #386: Passes trace_id to run_workflow for observability propagation.
+
         Args:
             user_requirement: Natural language requirement
             project_id: Project ID for the job
@@ -146,14 +149,17 @@ class JobGeneratorAdapter:
             engine=effective_engine,
         )
 
-        # Run workflow
+        # Issue #386: Extract trace_id from langfuse_handler BEFORE run_workflow
+        langfuse_trace_id = LangfuseService.extract_trace_id(self._langfuse_handler)
+
+        # Run workflow with trace_id propagation (AC-6)
         import uuid
 
         actual_job_id = job_id or str(uuid.uuid4())
-        result = await self._orchestrator.run_workflow(request)
-
-        # Extract trace ID
-        langfuse_trace_id = LangfuseService.extract_trace_id(self._langfuse_handler)
+        result = await self._orchestrator.run_workflow(
+            request,
+            trace_id=langfuse_trace_id,
+        )
 
         # Convert to response
         return self._convert_result(result, actual_job_id, langfuse_trace_id)
