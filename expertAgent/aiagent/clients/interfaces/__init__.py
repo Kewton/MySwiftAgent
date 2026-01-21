@@ -1,6 +1,7 @@
 """Interface definitions for HTTP client abstractions.
 
 Issue #361: Protocol-based abstractions for testability and extensibility.
+Issue #388: Added schema converter for interface format transformation.
 """
 
 from .circuit_breaker import (
@@ -15,6 +16,12 @@ from .metrics import (
     LoggingMetricsCollector,
     NoOpMetricsCollector,
     RequestMetrics,
+)
+from .schema_converter import (
+    JsonSchema,
+    SimpleMapping,
+    json_schema_to_simple_mapping,
+    simple_mapping_to_json_schema,
 )
 
 __all__ = [
@@ -32,4 +39,9 @@ __all__ = [
     "LoggingMetricsCollector",
     "NoOpMetricsCollector",
     "RequestMetrics",
+    # Schema Converter
+    "JsonSchema",
+    "SimpleMapping",
+    "json_schema_to_simple_mapping",
+    "simple_mapping_to_json_schema",
 ]

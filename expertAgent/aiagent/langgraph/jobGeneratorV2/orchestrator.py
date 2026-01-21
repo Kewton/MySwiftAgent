@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from ...clients.interfaces.schema_converter import json_schema_to_simple_mapping
 from ...clients.types.workflow_generator import (
     RecoverySuggestion,
     TaskInterface,
@@ -505,9 +506,16 @@ class JobGenerationOrchestrator:
         task_requests: list[TaskRequest] = []
         for task in task_identifiers:
             interface = interfaces.get(task.task_id)
+            # Convert full JSON Schema to simple {field: type} mapping
+            # mySwiftAgentCore expects {"email": "string"}, not full JSON Schema
+            # Issue #388: Use centralized schema converter
             task_interface = TaskInterface(
-                input=interface.input_schema if interface else {},
-                output=interface.output_schema if interface else {},
+                input=json_schema_to_simple_mapping(
+                    interface.input_schema if interface else {}
+                ),
+                output=json_schema_to_simple_mapping(
+                    interface.output_schema if interface else {}
+                ),
             )
             task_request = TaskRequest(
                 task_id=task.task_id,
@@ -588,11 +596,25 @@ class JobGenerationOrchestrator:
         """Convert BatchWorkflowGenerationResponse to ParallelExecutionResult."""
         from .types import ErrorType, TaskExecutionError, TaskResult
 
+        # DEBUG: Log response details
+        logger.info(
+            "DEBUG _convert_to_parallel_result: response.workflows keys=%s, task_ids=%s",
+            list(response.workflows.keys()) if response.workflows else "None",
+            [t.task_id for t in task_identifiers],
+        )
+
         successful_tasks: list[TaskResult] = []
         failed_tasks: list[TaskResult] = []
 
         for task in task_identifiers:
             workflow_result = response.workflows.get(task.task_id)
+            # DEBUG: Log each workflow result
+            logger.info(
+                "DEBUG: task_id=%s, workflow_result=%s, status=%s",
+                task.task_id,
+                workflow_result is not None,
+                workflow_result.status.value if workflow_result else "None",
+            )
             if workflow_result and workflow_result.status.value == "success":
                 successful_tasks.append(
                     TaskResult(

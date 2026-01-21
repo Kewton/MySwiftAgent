@@ -424,6 +424,7 @@ class TestCreateJobInBackground:
         await _create_job_in_background(
             job_id="test-job-id",
             user_requirement="Test requirement",
+            project_id="default_project",
             max_retry=5,
         )
 
@@ -463,6 +464,7 @@ class TestCreateJobInBackground:
         await _create_job_in_background(
             job_id="test-job-id",
             user_requirement="Test requirement",
+            project_id="default_project",
             max_retry=5,
         )
 
