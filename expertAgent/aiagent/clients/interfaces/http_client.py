@@ -43,6 +43,9 @@ class IHttpClient(Protocol):
             async def post(self, url, json, headers=None, timeout=None):
                 return HttpResponse(status_code=200, json_data={}, ...)
 
+            async def get(self, url, headers=None, timeout=None):
+                return HttpResponse(status_code=200, json_data={}, ...)
+
             async def close(self):
                 pass
 
@@ -61,6 +64,24 @@ class IHttpClient(Protocol):
         Args:
             url: Request URL (relative to base_url)
             json: Request body as JSON-serializable dict
+            headers: Additional headers
+            timeout: Request timeout in seconds
+
+        Returns:
+            HttpResponse with status, data, headers, and timing
+        """
+        ...
+
+    async def get(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> HttpResponse:
+        """Send GET request.
+
+        Args:
+            url: Request URL (relative to base_url)
             headers: Additional headers
             timeout: Request timeout in seconds
 
@@ -126,6 +147,43 @@ class HttpxClientAdapter:
         response = await self._client.post(
             url,
             json=json,
+            headers=headers,
+            timeout=timeout or self._timeout,
+        )
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+        return HttpResponse(
+            status_code=response.status_code,
+            json_data=response.json(),
+            headers=dict(response.headers),
+            elapsed_ms=elapsed_ms,
+        )
+
+    async def get(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> HttpResponse:
+        """Send GET request.
+
+        Args:
+            url: Request URL (relative to base_url)
+            headers: Additional headers
+            timeout: Override default timeout
+
+        Returns:
+            HttpResponse with response data
+
+        Raises:
+            httpx.TimeoutException: On timeout
+            httpx.HTTPStatusError: On HTTP error status
+        """
+        start_time = time.perf_counter()
+
+        response = await self._client.get(
+            url,
             headers=headers,
             timeout=timeout or self._timeout,
         )

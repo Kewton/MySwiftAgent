@@ -1,0 +1,93 @@
+{
+  "issue_number": 385,
+  "issue_title": "【P0】Capability取得・渡し + 空タスク検証の実装",
+  "acceptance_criteria": [
+    "capabilities に実際のcapabilityリストが渡される",
+    "capability取得失敗時は明示的エラー",
+    "0タスク時は OrchestratorError が発生",
+    "単体テストカバレッジ90%以上",
+    "結合テストで実際のcapabilityが渡されることを検証"
+  ],
+  "implementation_tasks": [
+    "Task 1.1: WorkflowGeneratorClientへCapability取得機能追加 - fetch_capabilities()メソッド実装、エラーハンドリング、レスポンス型定義",
+    "Task 1.2: Orchestratorへの統合 - _execute_workflow_gen()修正、capability取得・渡し、エラーハンドリング",
+    "Task 1.3: 空タスク検証実装 - _validate_task_count()メソッド追加、_execute_job_analysis()に検証処理追加",
+    "Task 1.4: ログサニタイザー実装 - log_sanitizer.py作成、sanitize_capability_for_log()、create_capability_log_summary()",
+    "Task 2.1: WorkflowGeneratorClient単体テスト - fetch_capabilities()テスト",
+    "Task 2.2: Orchestrator単体テスト - 空タスク検証テスト、capability統合テスト",
+    "Task 2.3: ログサニタイザー単体テスト"
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "WorkflowGeneratorClientへCapability取得機能追加",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/aiagent/clients/workflow_generator_client.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "Orchestratorへの統合",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "空タスク検証実装",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.4",
+      "description": "ログサニタイザー実装",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/aiagent/clients/utils/log_sanitizer.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "2.1",
+      "description": "WorkflowGeneratorClient単体テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_clients/test_workflow_generator_client.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "Orchestrator単体テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_langgraph/test_jobGeneratorV2/test_orchestrator.py"],
+      "dependencies": ["1.2", "1.3"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "ログサニタイザー単体テスト",
+      "estimated_hours": 1,
+      "deliverables": ["expertAgent/tests/unit/test_clients/test_log_sanitizer.py"],
+      "dependencies": ["1.4"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/clients/workflow_generator_client.py - fetch_capabilities()追加",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py - capability取得・検証追加",
+    "expertAgent/aiagent/clients/utils/log_sanitizer.py - 新規作成",
+    "expertAgent/tests/unit/test_clients/test_workflow_generator_client.py - 単体テスト追加",
+    "expertAgent/tests/unit/test_langgraph/test_jobGeneratorV2/test_orchestrator.py - 単体テスト追加",
+    "expertAgent/tests/unit/test_clients/test_log_sanitizer.py - 新規作成"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上達成",
+    "静的解析エラーゼロ（Ruff、MyPy）"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent",
+  "design_policy_summary": {
+    "capability_source": "mySwiftAgentCore Capability API (GET /api/v1/capabilities?project={project_id})",
+    "client_method": "WorkflowGeneratorClient.fetch_capabilities(project_id)",
+    "orchestrator_integration": "_execute_workflow_gen()でcapability取得し、generate_workflows()に渡す",
+    "empty_task_validation": "Guard Clause Pattern - _validate_task_count()メソッド",
+    "log_security": "log_sanitizer.pyで_internal, secret_key等を除外"
+  }
+}

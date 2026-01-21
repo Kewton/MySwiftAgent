@@ -241,7 +241,9 @@ class TestBatchWorkflowGenerationResponse:
         )
 
         assert response.status == BatchStatus.PARTIAL_SUCCESS
-        assert response.success is True  # partial_success is still "success" for success flag
+        assert (
+            response.success is True
+        )  # partial_success is still "success" for success flag
         assert response.total_tasks == 2
         assert response.succeeded_tasks == 1
         assert response.failed_task_count == 1
@@ -668,7 +670,9 @@ class TestWorkflowGeneratorClient:
     @pytest.mark.asyncio
     async def test_context_manager_creates_client(self):
         """Test async context manager creates HTTP client."""
-        with patch("aiagent.clients.workflow_generator_client.HttpxClientAdapter") as mock_adapter:
+        with patch(
+            "aiagent.clients.workflow_generator_client.HttpxClientAdapter"
+        ) as mock_adapter:
             mock_instance = AsyncMock()
             mock_adapter.return_value = mock_instance
 
@@ -860,7 +864,9 @@ class TestWorkflowGeneratorClient:
 
             assert response.status == BatchStatus.FAILED
             assert response.success is False
-            assert response.recovery_suggestion == RecoverySuggestion.ROLLBACK_TO_ANALYSIS
+            assert (
+                response.recovery_suggestion == RecoverySuggestion.ROLLBACK_TO_ANALYSIS
+            )
 
     @pytest.mark.asyncio
     async def test_generate_workflows_http_error(self, mock_http_client):
@@ -1035,3 +1041,213 @@ class TestWorkflowGeneratorClientBuildRequest:
             assert request_body["project_id"] == "test_project"
             assert "options" in request_body
             assert request_body["options"]["max_concurrency"] == 5
+
+
+class TestWorkflowGeneratorClientFetchCapabilities:
+    """Tests for fetch_capabilities method (Issue #385).
+
+    Task 2.1: WorkflowGeneratorClient single tests for fetch_capabilities.
+    """
+
+    @pytest.fixture
+    def mock_http_client(self):
+        """Create a mock HTTP client."""
+        mock = AsyncMock(spec=IHttpClient)
+        return mock
+
+    @pytest.mark.asyncio
+    async def test_fetch_capabilities_success(self, mock_http_client):
+        """Test successful capability fetch."""
+        from aiagent.clients.workflow_generator_client import (
+            WorkflowGeneratorClient,
+        )
+
+        # Setup mock response
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data={
+                "capabilities": [
+                    {"name": "fetchAgent", "endpoint": "/api/fetch"},
+                    {"name": "searchAgent", "endpoint": "/api/search"},
+                ],
+            },
+            headers={"Content-Type": "application/json"},
+            elapsed_ms=50.0,
+        )
+        mock_http_client.get.return_value = mock_response
+
+        async with WorkflowGeneratorClient(
+            base_url="http://localhost:8006",
+            http_client=mock_http_client,
+        ) as client:
+            capabilities = await client.fetch_capabilities("test_project")
+
+            assert len(capabilities) == 2
+            assert capabilities[0]["name"] == "fetchAgent"
+            assert capabilities[1]["name"] == "searchAgent"
+
+            # Verify the correct URL was called
+            call_args = mock_http_client.get.call_args
+            assert "project=test_project" in call_args.kwargs.get(
+                "url", ""
+            ) or "project=test_project" in str(call_args)
+
+    @pytest.mark.asyncio
+    async def test_fetch_capabilities_timeout(self, mock_http_client):
+        """Test fetch_capabilities handles timeout."""
+        import httpx
+
+        from aiagent.clients.workflow_generator_client import (
+            CapabilityFetchError,
+            WorkflowGeneratorClient,
+        )
+
+        mock_http_client.get.side_effect = httpx.TimeoutException(
+            message="Request timed out"
+        )
+
+        async with WorkflowGeneratorClient(
+            base_url="http://localhost:8006",
+            http_client=mock_http_client,
+            timeout=10.0,
+        ) as client:
+            with pytest.raises(CapabilityFetchError) as exc_info:
+                await client.fetch_capabilities("test_project")
+
+            assert "timeout" in str(exc_info.value).lower()
+
+    @pytest.mark.asyncio
+    async def test_fetch_capabilities_connection_error(self, mock_http_client):
+        """Test fetch_capabilities handles connection error."""
+        import httpx
+
+        from aiagent.clients.workflow_generator_client import (
+            CapabilityFetchError,
+            WorkflowGeneratorClient,
+        )
+
+        mock_http_client.get.side_effect = httpx.ConnectError(
+            message="Connection refused"
+        )
+
+        async with WorkflowGeneratorClient(
+            base_url="http://localhost:8006",
+            http_client=mock_http_client,
+        ) as client:
+            with pytest.raises(CapabilityFetchError) as exc_info:
+                await client.fetch_capabilities("test_project")
+
+            assert (
+                "connection" in str(exc_info.value).lower()
+                or "connect" in str(exc_info.value).lower()
+            )
+
+    @pytest.mark.asyncio
+    async def test_fetch_capabilities_http_error(self, mock_http_client):
+        """Test fetch_capabilities handles HTTP errors."""
+        from aiagent.clients.workflow_generator_client import (
+            CapabilityFetchError,
+            WorkflowGeneratorClient,
+        )
+
+        mock_response = HttpResponse(
+            status_code=500,
+            json_data={"error": "Internal Server Error"},
+            headers={},
+            elapsed_ms=50.0,
+        )
+        mock_http_client.get.return_value = mock_response
+
+        async with WorkflowGeneratorClient(
+            base_url="http://localhost:8006",
+            http_client=mock_http_client,
+        ) as client:
+            with pytest.raises(CapabilityFetchError) as exc_info:
+                await client.fetch_capabilities("test_project")
+
+            assert (
+                "500" in str(exc_info.value) or "error" in str(exc_info.value).lower()
+            )
+
+    @pytest.mark.asyncio
+    async def test_fetch_capabilities_empty_response(self, mock_http_client):
+        """Test fetch_capabilities handles empty capabilities list."""
+        from aiagent.clients.workflow_generator_client import WorkflowGeneratorClient
+
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data={"capabilities": []},
+            headers={},
+            elapsed_ms=50.0,
+        )
+        mock_http_client.get.return_value = mock_response
+
+        async with WorkflowGeneratorClient(
+            base_url="http://localhost:8006",
+            http_client=mock_http_client,
+        ) as client:
+            capabilities = await client.fetch_capabilities("test_project")
+
+            assert capabilities == []
+
+    @pytest.mark.asyncio
+    async def test_fetch_capabilities_uses_correct_endpoint(self, mock_http_client):
+        """Test fetch_capabilities calls correct API endpoint."""
+        from aiagent.clients.workflow_generator_client import WorkflowGeneratorClient
+
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data={"capabilities": []},
+            headers={},
+            elapsed_ms=50.0,
+        )
+        mock_http_client.get.return_value = mock_response
+
+        async with WorkflowGeneratorClient(
+            base_url="http://localhost:8006",
+            http_client=mock_http_client,
+        ) as client:
+            await client.fetch_capabilities("my_project")
+
+            # Verify GET request was made to correct endpoint
+            mock_http_client.get.assert_called_once()
+            call_args = mock_http_client.get.call_args
+            url = call_args.kwargs.get("url", "")
+            assert "/api/v1/capabilities" in url
+            assert "project=my_project" in url
+
+
+class TestCapabilityFetchError:
+    """Tests for CapabilityFetchError exception class."""
+
+    def test_capability_fetch_error_exists(self):
+        """Test CapabilityFetchError is importable."""
+        from aiagent.clients.workflow_generator_client import CapabilityFetchError
+
+        assert CapabilityFetchError is not None
+
+    def test_capability_fetch_error_is_exception(self):
+        """Test CapabilityFetchError inherits from WorkflowGeneratorError."""
+        from aiagent.clients.workflow_generator_client import (
+            CapabilityFetchError,
+            WorkflowGeneratorError,
+        )
+
+        assert issubclass(CapabilityFetchError, WorkflowGeneratorError)
+
+    def test_capability_fetch_error_message(self):
+        """Test CapabilityFetchError can be created with message."""
+        from aiagent.clients.workflow_generator_client import CapabilityFetchError
+
+        error = CapabilityFetchError("Failed to fetch capabilities")
+        assert "Failed to fetch capabilities" in str(error)
+
+    def test_capability_fetch_error_with_project_id(self):
+        """Test CapabilityFetchError stores project_id."""
+        from aiagent.clients.workflow_generator_client import CapabilityFetchError
+
+        error = CapabilityFetchError(
+            "Failed to fetch",
+            project_id="test_project",
+        )
+        assert error.project_id == "test_project"

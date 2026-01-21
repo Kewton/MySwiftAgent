@@ -1,0 +1,146 @@
+{
+  "issue_number": 385,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "fetch_capabilities",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/clients/workflow_generator_client.py",
+      "line_number": 205,
+      "description": "mySwiftAgentCoreからcapabilityを取得するメソッド",
+      "expected_callers": ["_execute_workflow_gen"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_validate_task_count",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 130,
+      "description": "タスク数0の場合にOrchestratorErrorを発生させる検証メソッド",
+      "expected_callers": ["_execute_job_analysis"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "sanitize_capability_for_log",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/clients/utils/log_sanitizer.py",
+      "line_number": 43,
+      "description": "単一のcapabilityからセンシティブ情報を除外",
+      "expected_callers": ["sanitize_capabilities_for_log"],
+      "expected_call_location": "expertAgent/aiagent/clients/utils/log_sanitizer.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "sanitize_capabilities_for_log",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/clients/utils/log_sanitizer.py",
+      "line_number": 69,
+      "description": "複数のcapabilityからセンシティブ情報を除外",
+      "expected_callers": ["orchestrator log calls"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "create_capability_log_summary",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/clients/utils/log_sanitizer.py",
+      "line_number": 92,
+      "description": "ログ出力用のcapabilityサマリを生成",
+      "expected_callers": ["_execute_workflow_gen"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "CapabilityFetchError",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/clients/workflow_generator_client.py",
+      "line_number": 36,
+      "description": "Capability取得エラー用の例外クラス",
+      "expected_callers": ["fetch_capabilities"],
+      "expected_call_location": "expertAgent/aiagent/clients/workflow_generator_client.py"
+    },
+    {
+      "feature_id": "F7",
+      "name": "SENSITIVE_KEYS",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/clients/utils/log_sanitizer.py",
+      "line_number": 22,
+      "description": "ログから除外すべきセンシティブなキーのセット",
+      "expected_callers": ["sanitize_capability_for_log"],
+      "expected_call_location": "expertAgent/aiagent/clients/utils/log_sanitizer.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_fetch_capabilities_*"],
+      "integration_tests": ["test_execute_workflow_gen_with_capabilities"],
+      "acceptance_tests": ["TC-001", "TC-002"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_validate_task_count_*"],
+      "integration_tests": ["test_orchestrator_empty_task_validation"],
+      "acceptance_tests": ["TC-004", "TC-005"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_sanitize_capability_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-006"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_sanitize_capabilities_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-006"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_create_capability_log_summary_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-006"]
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": ["test_fetch_capabilities_*_error"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003"]
+    },
+    {
+      "feature_id": "F7",
+      "unit_tests": ["test_sanitize_capability_removes_*"],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-006"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "method_call",
+      "integration_method": "await c.fetch_capabilities(project_id)"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "method_call",
+      "integration_method": "self._validate_task_count(result.tasks)"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "function_call",
+      "integration_method": "create_capability_log_summary(capabilities)"
+    },
+    {
+      "feature_id": "F6",
+      "integration_file": "expertAgent/aiagent/clients/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .workflow_generator_client import CapabilityFetchError"
+    }
+  ]
+}

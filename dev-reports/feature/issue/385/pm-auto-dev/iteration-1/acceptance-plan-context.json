@@ -1,0 +1,21 @@
+{
+  "issue_number": 385,
+  "issue_title": "【P0】Capability取得・渡し + 空タスク検証の実装",
+  "acceptance_criteria": [
+    "capabilities に実際のcapabilityリストが渡される",
+    "capability取得失敗時は明示的エラー",
+    "0タスク時は OrchestratorError が発生",
+    "単体テストカバレッジ90%以上",
+    "結合テストで実際のcapabilityが渡されることを検証"
+  ],
+  "technical_requirements": [
+    "WorkflowGeneratorClientにfetch_capabilities()メソッド追加",
+    "orchestrator.pyの_execute_workflow_gen()でcapability取得・渡し",
+    "_validate_task_count()メソッドで空タスク検証",
+    "log_sanitizer.pyでログマスキング"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/385/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/385/work-plan.md",
+  "phase": "pre-tdd"
+}

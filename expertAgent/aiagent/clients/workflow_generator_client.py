@@ -99,6 +99,20 @@ class WorkflowGeneratorValidationError(WorkflowGeneratorError):
     pass
 
 
+class CapabilityFetchError(WorkflowGeneratorError):
+    """Error when fetching capabilities from mySwiftAgentCore.
+
+    Issue #385: Explicit error for capability fetch failures.
+
+    Attributes:
+        project_id: The project ID that failed to fetch capabilities for
+    """
+
+    def __init__(self, message: str, project_id: str | None = None):
+        super().__init__(message)
+        self.project_id = project_id
+
+
 class WorkflowGeneratorClient:
     """Client for mySwiftAgentCore workflow generation API.
 
@@ -187,6 +201,65 @@ class WorkflowGeneratorClient:
         """
         if self._own_client and self._http_client:
             await self._http_client.close()
+
+    async def fetch_capabilities(
+        self,
+        project_id: str,
+    ) -> list[dict[str, Any]]:
+        """Fetch available capabilities for a project.
+
+        Issue #385: Fetch capabilities from mySwiftAgentCore API.
+
+        Args:
+            project_id: Project ID to fetch capabilities for
+
+        Returns:
+            List of capability dictionaries
+
+        Raises:
+            CapabilityFetchError: On fetch failure (timeout, connection, HTTP error)
+        """
+        url = f"/api/v1/capabilities?project={project_id}"
+
+        try:
+            if self._http_client is None:
+                raise CapabilityFetchError(
+                    "HTTP client not initialized",
+                    project_id=project_id,
+                )
+
+            response = await self._http_client.get(url=url)
+
+            # Check HTTP status
+            if response.status_code >= 400:
+                raise CapabilityFetchError(
+                    f"HTTP {response.status_code} error fetching capabilities",
+                    project_id=project_id,
+                )
+
+            # Parse response
+            capabilities: list[dict[str, Any]] = response.json_data.get(
+                "capabilities", []
+            )
+            return capabilities
+
+        except httpx.TimeoutException as e:
+            raise CapabilityFetchError(
+                f"Timeout fetching capabilities for project {project_id}",
+                project_id=project_id,
+            ) from e
+
+        except httpx.ConnectError as e:
+            raise CapabilityFetchError(
+                f"Connection error fetching capabilities for project {project_id}",
+                project_id=project_id,
+            ) from e
+
+        except httpx.NetworkError as e:
+            raise CapabilityFetchError(
+                f"Network error fetching capabilities for project {project_id}",
+                project_id=project_id,
+            ) from e
 
     async def generate_workflows(
         self,
@@ -308,9 +381,7 @@ class WorkflowGeneratorClient:
                 "workflow_generator_timeout_total",
                 {"url": url},
             )
-            raise WorkflowGeneratorTimeoutError(
-                url, int(self.timeout * 1000)
-            ) from e
+            raise WorkflowGeneratorTimeoutError(url, int(self.timeout * 1000)) from e
 
         except httpx.HTTPStatusError as e:
             raise WorkflowGeneratorHTTPError(
@@ -439,10 +510,11 @@ class WorkflowGeneratorClient:
 
 # Re-export for convenient imports
 __all__ = [
+    "CapabilityFetchError",
+    "CircuitBreakerOpenError",
     "WorkflowGeneratorClient",
     "WorkflowGeneratorError",
     "WorkflowGeneratorHTTPError",
     "WorkflowGeneratorTimeoutError",
     "WorkflowGeneratorValidationError",
-    "CircuitBreakerOpenError",
 ]

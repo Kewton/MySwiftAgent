@@ -1,0 +1,52 @@
+{
+  "issue_number": 385,
+  "iteration": 1,
+  "acceptance_plan_path": "dev-reports/feature/issue/385/acceptance-plan.md",
+  "acceptance_test_file": "expertAgent/tests/acceptance/test_issue_385_acceptance.py",
+  "test_execution_command": "uv run pytest expertAgent/tests/acceptance/test_issue_385_acceptance.py -v -s",
+  "services_required": [
+    {
+      "name": "mySwiftAgentCore",
+      "url": "http://localhost:8006",
+      "health_endpoint": "/health"
+    },
+    {
+      "name": "expertAgent",
+      "url": "http://localhost:8004",
+      "health_endpoint": "/health"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "capabilities に実際のcapabilityリストが渡される",
+      "test_cases": ["TC-001", "TC-002", "TC-007"]
+    },
+    {
+      "id": "AC-2",
+      "description": "capability取得失敗時は明示的エラー",
+      "test_cases": ["TC-003"]
+    },
+    {
+      "id": "AC-3",
+      "description": "0タスク時は OrchestratorError が発生",
+      "test_cases": ["TC-004", "TC-005"]
+    },
+    {
+      "id": "AC-4",
+      "description": "単体テストカバレッジ90%以上",
+      "test_cases": [],
+      "note": "TDD実装フェーズで検証済み"
+    },
+    {
+      "id": "AC-5",
+      "description": "結合テストで実際のcapabilityが渡されることを検証",
+      "test_cases": ["TC-002", "TC-007"]
+    }
+  ],
+  "notes": [
+    "受入テストはL3（ローカル環境）で実行",
+    "サービスが起動していない場合はpytest.skipでスキップされる",
+    "LLMの応答により結果が変動する可能性がある（TC-005等）"
+  ]
+}
