@@ -275,13 +275,27 @@ export class PromptBuilder {
 
   /**
    * Generate workflow name from task
+   *
+   * Issue #392: Fixed duplicate workflow name issue (task_task_001_task_001)
+   * - Detects when task.name is in task_xxx format and avoids duplication
+   * - Falls back to task_id only when name is not meaningful
    */
   private generateWorkflowName(task: TaskGenerationRequest): string {
-    // Convert task name to snake_case and append task_id
+    // Convert task name to snake_case
     const baseName = task.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
+
+    // Issue #392: Avoid duplication when baseName equals or contains task_id
+    if (baseName === task.task_id || baseName.includes(task.task_id)) {
+      return task.task_id;
+    }
+
+    // Issue #392: Fallback for empty or generic names
+    if (!baseName || baseName === 'task') {
+      return task.task_id;
+    }
 
     return `${baseName}_${task.task_id}`;
   }

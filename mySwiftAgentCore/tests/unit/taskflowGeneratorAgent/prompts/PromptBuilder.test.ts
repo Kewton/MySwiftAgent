@@ -1104,3 +1104,102 @@ describe('Issue #382: buildSystemPromptWithCapabilities modification', () => {
     expect(prompt).toContain('Document retrieval');
   });
 });
+
+/**
+ * Issue #392: Test cases for workflow name generation edge cases
+ * Ensures workflow names are not duplicated (e.g., task_task_001_task_001)
+ */
+describe('Issue #392: Workflow name generation edge cases', () => {
+  let builder: PromptBuilder;
+
+  beforeEach(() => {
+    builder = new PromptBuilder();
+  });
+
+  it('should not duplicate task_id in workflow name when task name equals task_id', () => {
+    const task: TaskGenerationRequest = {
+      task_id: 'task_001',
+      name: 'task_001',  // Same as task_id
+      description: 'Test task',
+      interface: { input: {}, output: {} },
+    };
+
+    const prompt = builder.buildUserPrompt(task);
+
+    // Should use task_id only, not task_001_task_001
+    expect(prompt).toContain('workflow_name: "task_001"');
+    expect(prompt).not.toContain('task_001_task_001');
+  });
+
+  it('should not duplicate task_id in workflow name when task name contains task_id', () => {
+    const task: TaskGenerationRequest = {
+      task_id: 'task_001',
+      name: 'Task_001 Search',  // Contains task_id
+      description: 'Test task',
+      interface: { input: {}, output: {} },
+    };
+
+    const prompt = builder.buildUserPrompt(task);
+
+    // Should use task_id only
+    expect(prompt).toContain('workflow_name: "task_001"');
+    expect(prompt).not.toContain('task_001_search_task_001');
+  });
+
+  it('should generate proper workflow name when task name is meaningful', () => {
+    const task: TaskGenerationRequest = {
+      task_id: 'task_001',
+      name: 'Gmail Search',
+      description: 'Search emails',
+      interface: { input: {}, output: {} },
+    };
+
+    const prompt = builder.buildUserPrompt(task);
+
+    // Should generate gmail_search_task_001
+    expect(prompt).toContain('workflow_name: "gmail_search_task_001"');
+  });
+
+  it('should fallback to task_id when task name is empty', () => {
+    const task: TaskGenerationRequest = {
+      task_id: 'task_001',
+      name: '',
+      description: 'Test task',
+      interface: { input: {}, output: {} },
+    };
+
+    const prompt = builder.buildUserPrompt(task);
+
+    // Should use task_id only
+    expect(prompt).toContain('workflow_name: "task_001"');
+  });
+
+  it('should fallback to task_id when task name is generic "task"', () => {
+    const task: TaskGenerationRequest = {
+      task_id: 'task_001',
+      name: 'Task',
+      description: 'Test task',
+      interface: { input: {}, output: {} },
+    };
+
+    const prompt = builder.buildUserPrompt(task);
+
+    // Should use task_id only, not task_task_001
+    expect(prompt).toContain('workflow_name: "task_001"');
+    expect(prompt).not.toContain('task_task_001');
+  });
+
+  it('should handle Japanese task names correctly', () => {
+    const task: TaskGenerationRequest = {
+      task_id: 'task_001',
+      name: 'Gmail検索',
+      description: 'メールを検索',
+      interface: { input: {}, output: {} },
+    };
+
+    const prompt = builder.buildUserPrompt(task);
+
+    // Japanese characters are stripped, only 'gmail' remains
+    expect(prompt).toContain('workflow_name: "gmail_task_001"');
+  });
+});
