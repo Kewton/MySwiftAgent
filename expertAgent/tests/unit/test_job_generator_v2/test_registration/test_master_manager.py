@@ -166,7 +166,10 @@ class TestMasterManagerCreateMasters:
                 task_id="task_001",
                 input_schema={
                     "type": "object",
-                    "properties": {"query": {"type": "string"}},
+                    "properties": {
+                        "query": {"type": "string"},
+                        "project": {"type": "string"},  # Issue #391: Required for body_template validation
+                    },
                 },
                 output_schema={
                     "type": "object",
@@ -177,7 +180,10 @@ class TestMasterManagerCreateMasters:
                 task_id="task_002",
                 input_schema={
                     "type": "object",
-                    "properties": {"emails": {"type": "array"}},
+                    "properties": {
+                        "emails": {"type": "array"},
+                        "project": {"type": "string"},  # Issue #391: Required for body_template validation
+                    },
                 },
                 output_schema={
                     "type": "object",
