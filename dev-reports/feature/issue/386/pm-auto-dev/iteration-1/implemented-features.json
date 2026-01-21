@@ -1,0 +1,108 @@
+{
+  "issue_number": 386,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "_execute_registration",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 288,
+      "description": "Phase 2 REGISTRATION実行メソッド - MasterManagerSubWorkflow.create_mastersを呼び出す",
+      "expected_callers": ["run_workflow"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py:185"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_create_execution_context",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 222,
+      "description": "ExecutionContext作成メソッド - DI用",
+      "expected_callers": ["run_workflow"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py:179"
+    },
+    {
+      "feature_id": "F3",
+      "name": "run_workflow (trace_id param)",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 157,
+      "description": "run_workflowにtrace_id, parent_span_idパラメータ追加",
+      "expected_callers": ["JobGeneratorAdapter.generate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py:161"
+    },
+    {
+      "feature_id": "F4",
+      "name": "MasterManagerSubWorkflow import",
+      "type": "import",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 45,
+      "description": "MasterManagerSubWorkflowのインポート",
+      "expected_callers": ["_execute_registration"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py:335"
+    },
+    {
+      "feature_id": "F5",
+      "name": "trace_id propagation in adapter",
+      "type": "code_change",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "line_number": 153,
+      "description": "adapter.pyでtrace_idを抽出してrun_workflowに渡す",
+      "expected_callers": ["generate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py:161"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_execute_registration_calls_master_manager", "test_execute_registration_maps_task_ids_correctly", "test_execute_registration_raises_on_failure"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_tc_001_phase2_master_registration_success"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_create_execution_context"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_run_workflow_accepts_trace_id", "test_trace_id_passed_to_execute_workflow_gen"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_tc_002_trace_id_propagation"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [],
+      "integration_tests": [],
+      "acceptance_tests": ["test_tc_005_master_manager_integration"]
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": ["test_adapter_passes_trace_id_to_run_workflow"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_tc_002_trace_id_propagation"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "method_call",
+      "integration_method": "Called from run_workflow at line 185"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "import",
+      "integration_method": "from .workflows.registration.master_manager import MasterManagerSubWorkflow"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "integration_type": "method_call",
+      "integration_method": "run_workflow called with trace_id parameter at line 161"
+    }
+  ]
+}

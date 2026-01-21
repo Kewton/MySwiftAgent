@@ -1,0 +1,46 @@
+{
+  "issue_number": 386,
+  "feature_summary": "Phase 2統合: master_manager + BodyTemplateValidator + trace_id伝播",
+  "acceptance_criteria": [
+    "AC-1: jobqueue APIで実際にJobMaster/TaskMasterが作成される",
+    "AC-2: task_master_idが実際のDBレコードIDになる",
+    "AC-3: 登録失敗時は適切なエラー処理（Fail-Fast）",
+    "AC-4: インターフェース定義がBodyTemplateValidator経由で検証される",
+    "AC-5: 無効なインターフェースで適切なエラーが発生",
+    "AC-6: run_workflow()がtrace_id, parent_span_idを受け取る",
+    "AC-7: Phase 3のgenerate_workflows()にtrace_idが渡される",
+    "AC-8: Phase 1, 2, 3すべてのログにtrace_idが出力される"
+  ],
+  "labels": ["enhancement", "cross-layer"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "jobqueue", "mySwiftAgentCore"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8104/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "jobqueue", "url": "http://localhost:8101/health"},
+      {"service": "mySwiftAgentCore", "url": "http://localhost:8006/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "TC-001: 正常系 - Phase 2でマスター登録が成功",
+        "command": "curl -s -X POST http://localhost:8104/v1/job-generator -H 'Content-Type: application/json' -H 'X-Trace-Id: test-trace-386-001' -d '{\"user_requirement\": \"毎日朝9時にGmailをチェックしてSlackに通知\", \"project_id\": \"test_project_386\", \"max_tasks\": 3}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_master_id", "task_breakdown"]
+      },
+      {
+        "name": "TC-002: 正常系 - trace_id伝播確認",
+        "command": "curl -s -X POST http://localhost:8104/v1/job-generator -H 'Content-Type: application/json' -H 'X-Trace-Id: test-trace-386-002' -d '{\"user_requirement\": \"trace_idテスト\", \"project_id\": \"test_project_386\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_master_id"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health"}
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_386_acceptance.py"
+}
