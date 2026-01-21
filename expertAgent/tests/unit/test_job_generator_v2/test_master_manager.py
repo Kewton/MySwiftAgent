@@ -103,32 +103,48 @@ class TestBuildBodyTemplateTaskFlow:
     """
 
     def test_build_body_template_task_0_taskflow(self) -> None:
-        """Task 0 body_template (TaskFlow) should use inputs, workflow_name, project."""
+        """Task 0 body_template (TaskFlow) should use inputs, workflow, project.
+
+        Issue #390: Changed from workflow_name to workflow for mySwiftAgentCore API.
+        Issue #391: Changed from {{job.project}} to {{job.body.project}}.
+        """
         manager = MasterManagerSubWorkflow(engine="taskflow")
         body_template = manager._build_body_template(order=0)
 
         # TaskFlow uses different keys
-        assert body_template["workflow_name"] == "__PENDING__"
+        # Issue #390: mySwiftAgentCore expects "workflow" field (not "workflow_name")
+        # Issue #391: project uses {{job.body.project}} (Job model has no project attr)
+        assert body_template["workflow"] == "__PENDING__"
         assert body_template["inputs"] == "{{job.body}}"
-        assert body_template["project"] == "{{job.project}}"
+        assert body_template["project"] == "{{job.body.project}}"
         assert len(body_template) == 3
 
     def test_build_body_template_task_1_taskflow(self) -> None:
-        """Task 1 body_template (TaskFlow) should use previous task output as inputs."""
+        """Task 1 body_template (TaskFlow) should use previous task output as inputs.
+
+        Issue #390: Changed from workflow_name to workflow for mySwiftAgentCore API.
+        Issue #391: Changed from {{job.project}} to {{job.body.project}}.
+        """
         manager = MasterManagerSubWorkflow(engine="taskflow")
         body_template = manager._build_body_template(order=1)
 
-        assert body_template["workflow_name"] == "__PENDING__"
+        # Issue #390: mySwiftAgentCore expects "workflow" field (not "workflow_name")
+        # Issue #391: project uses {{job.body.project}} (Job model has no project attr)
+        assert body_template["workflow"] == "__PENDING__"
         assert body_template["inputs"] == "{{tasks[0].output_data}}"
-        assert body_template["project"] == "{{job.project}}"
+        assert body_template["project"] == "{{job.body.project}}"
 
     def test_build_body_template_structure_taskflow(self) -> None:
-        """Body template (TaskFlow) should always have workflow_name, inputs, project keys."""
+        """Body template (TaskFlow) should always have workflow, inputs, project keys.
+
+        Issue #390: Changed from workflow_name to workflow for mySwiftAgentCore API.
+        """
         manager = MasterManagerSubWorkflow(engine="taskflow")
 
         for order in range(5):
             body_template = manager._build_body_template(order=order)
-            assert "workflow_name" in body_template
+            # Issue #390: mySwiftAgentCore expects "workflow" field (not "workflow_name")
+            assert "workflow" in body_template
             assert "inputs" in body_template
             assert "project" in body_template
             assert len(body_template) == 3

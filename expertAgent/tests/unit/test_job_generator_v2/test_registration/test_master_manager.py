@@ -373,6 +373,8 @@ class TestMasterManagerBodyTemplate:
         """First task (TaskFlow) should use inputs for workflow execution.
 
         Issue #350: TaskFlow V2 body_template format.
+        Issue #390: Changed from workflow_name to workflow for mySwiftAgentCore API.
+        Issue #391: Changed from {{job.project}} to {{job.body.project}}.
         """
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
@@ -381,13 +383,18 @@ class TestMasterManagerBodyTemplate:
         manager = MasterManagerSubWorkflow(engine="taskflow")
         template = manager._build_body_template(order=0)
 
-        # Issue #350: TaskFlow uses inputs, workflow_name, project
-        assert template["workflow_name"] == "__PENDING__"
+        # Issue #390: mySwiftAgentCore expects "workflow" field (not "workflow_name")
+        # Issue #391: project uses {{job.body.project}} (Job model has no project attr)
+        assert template["workflow"] == "__PENDING__"
         assert template["inputs"] == "{{job.body}}"
-        assert template["project"] == "{{job.project}}"
+        assert template["project"] == "{{job.body.project}}"
 
     def test_subsequent_task_body_template_taskflow(self):
-        """Subsequent tasks (TaskFlow) should use previous task output as inputs."""
+        """Subsequent tasks (TaskFlow) should use previous task output as inputs.
+
+        Issue #390: Changed from workflow_name to workflow for mySwiftAgentCore API.
+        Issue #391: Changed from {{job.project}} to {{job.body.project}}.
+        """
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
         )
@@ -395,9 +402,11 @@ class TestMasterManagerBodyTemplate:
         manager = MasterManagerSubWorkflow(engine="taskflow")
         template = manager._build_body_template(order=1)
 
-        assert template["workflow_name"] == "__PENDING__"
+        # Issue #390: mySwiftAgentCore expects "workflow" field (not "workflow_name")
+        # Issue #391: project uses {{job.body.project}} (Job model has no project attr)
+        assert template["workflow"] == "__PENDING__"
         assert template["inputs"] == "{{tasks[0].output_data}}"
-        assert template["project"] == "{{job.project}}"
+        assert template["project"] == "{{job.body.project}}"
 
     # Legacy test name aliases for backward compatibility
     def test_first_task_body_template(self):

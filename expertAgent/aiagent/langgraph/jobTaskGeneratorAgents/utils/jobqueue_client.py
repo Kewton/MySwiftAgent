@@ -323,6 +323,7 @@ class JobqueueClient:
         url: str,
         timeout_sec: int = 120,
         created_by: str = "job_task_generator",
+        body: dict[str, Any] | None = None,
     ) -> dict:
         """Create new JobMaster.
 
@@ -333,21 +334,27 @@ class JobqueueClient:
             url: Workflow entry point URL
             timeout_sec: Timeout in seconds
             created_by: Creator identifier
+            body: Default request body (Issue #391: includes project)
 
         Returns:
             Created JobMaster
         """
+        payload: dict[str, Any] = {
+            "name": name,
+            "description": description,
+            "method": method,
+            "url": url,
+            "timeout_sec": timeout_sec,
+            "created_by": created_by,
+        }
+        # Issue #391: Include body if provided
+        if body is not None:
+            payload["body"] = body
+
         return await self._request(
             "POST",
             "/api/v1/job-masters",
-            json={
-                "name": name,
-                "description": description,
-                "method": method,
-                "url": url,
-                "timeout_sec": timeout_sec,
-                "created_by": created_by,
-            },
+            json=payload,
         )
 
     async def list_job_masters(

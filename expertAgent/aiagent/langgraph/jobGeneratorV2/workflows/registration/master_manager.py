@@ -142,6 +142,7 @@ class MasterManagerSubWorkflow:
     def __init__(
         self,
         graphai_server_url: str = "http://localhost:8005",
+        myswiftagentcore_url: str = "http://localhost:8006",
         default_timeout_sec: int = 60,
         jobqueue_client: JobqueueClient | None = None,
         engine: str = "taskflow",
@@ -150,11 +151,13 @@ class MasterManagerSubWorkflow:
 
         Args:
             graphai_server_url: Base URL for GraphAI server
+            myswiftagentcore_url: Base URL for mySwiftAgentCore (Issue #390)
             default_timeout_sec: Default timeout for tasks
             jobqueue_client: Optional pre-configured jobqueue client
             engine: Workflow engine type ('graphai' or 'taskflow')
         """
         self._graphai_server_url = graphai_server_url
+        self._myswiftagentcore_url = myswiftagentcore_url
         self._default_timeout_sec = default_timeout_sec
         self._jobqueue_client = jobqueue_client
         self._engine = engine
@@ -171,12 +174,14 @@ class MasterManagerSubWorkflow:
         """Get the task URL based on engine type.
 
         Issue #350: Different engines use different endpoints.
+        Issue #390: TaskFlow uses mySwiftAgentCore for execution.
 
         Returns:
             Task execution URL
         """
         if self._engine == "taskflow":
-            return f"{self._graphai_server_url}/api/v2/workflows"
+            # Issue #390: Use mySwiftAgentCore for TaskFlow execution
+            return f"{self._myswiftagentcore_url}/api/v1/taskflow/execute"
         else:
             return f"{self._graphai_server_url}/api/v1/myagent"
 
@@ -184,12 +189,14 @@ class MasterManagerSubWorkflow:
         """Get the job URL based on engine type.
 
         Issue #350: Different engines use different endpoints.
+        Issue #390: TaskFlow uses mySwiftAgentCore for execution.
 
         Returns:
             Job execution URL
         """
         if self._engine == "taskflow":
-            return f"{self._graphai_server_url}/api/v2/workflows"
+            # Issue #390: Use mySwiftAgentCore for TaskFlow execution
+            return f"{self._myswiftagentcore_url}/api/v1/taskflow/execute"
         else:
             return f"{self._graphai_server_url}/api/v1/myagent"
 
@@ -389,9 +396,11 @@ class MasterManagerSubWorkflow:
         logger.info("Created %d task masters", len(task_masters))
 
         # Step 3: Create JobMaster
+        # Issue #391: Pass project_id to include in JobMaster.body
         job_master = await self._create_job_master(
             user_requirement=context.user_requirement,
             context=context,
+            project_id=project_id,
         )
         logger.info("Created job master: %s", job_master.id)
 
@@ -420,15 +429,16 @@ class MasterManagerSubWorkflow:
 
         Issue #342 Phase 1: Fix body_template double nesting.
         Issue #350: Engine-aware body_template for TaskFlow V2.
+        Issue #391: Use {{job.body.project}} instead of {{job.project}}.
 
         For GraphAI engine:
         - user_input references {{job.body.user_input}} directly
         - job_params references {{job.body}} for static parameters
 
         For TaskFlow engine:
-        - workflow_name: placeholder (updated after workflow generation)
+        - workflow: placeholder (updated after workflow generation)
         - inputs: {{job.body}} for workflow inputs
-        - project: {{job.project}} for secrets resolution
+        - project: {{job.body.project}} for secrets resolution
 
         Args:
             order: Task execution order (0-indexed)
@@ -438,19 +448,21 @@ class MasterManagerSubWorkflow:
         """
         if self._engine == "taskflow":
             # Issue #350: TaskFlow V2 body_template format
-            # workflow_name will be set to placeholder - updated after workflow generation
+            # Issue #390: Use "workflow" field name (mySwiftAgentCore API expects "workflow")
+            # Issue #391: Use {{job.body.project}} (Job model has no project attribute)
+            # workflow will be set to placeholder - updated after workflow generation
             if order == 0:
                 return {
-                    "workflow_name": "__PENDING__",  # Updated by workflow_gen phase
+                    "workflow": "__PENDING__",  # Updated by workflow_gen phase
                     "inputs": "{{job.body}}",  # Pass entire body as inputs object
-                    "project": "{{job.project}}",  # For secrets resolution
+                    "project": "{{job.body.project}}",  # Issue #391: From job.body
                 }
             else:
                 # Subsequent tasks receive previous task's output as inputs
                 return {
-                    "workflow_name": "__PENDING__",
+                    "workflow": "__PENDING__",
                     "inputs": f"{{{{tasks[{order - 1}].output_data}}}}",
-                    "project": "{{job.project}}",
+                    "project": "{{job.body.project}}",  # Issue #391: From job.body
                 }
         else:
             # GraphAI (legacy) body_template format
@@ -607,16 +619,31 @@ class MasterManagerSubWorkflow:
         self,
         user_requirement: str,
         context: "ExecutionContext",
+        project_id: str,
     ) -> JobMasterInfo:
         """Create a JobMaster via jobqueue API.
+
+        Issue #391: Added project_id parameter to set body.project.
 
         Args:
             user_requirement: Original user requirement
             context: Execution context
+            project_id: Project ID for secrets resolution
 
         Returns:
             Created JobMasterInfo
+
+        Raises:
+            WorkflowError: If master creation fails or project_id is invalid
         """
+        # Issue #391: Input validation - project_id is required
+        if not project_id or not project_id.strip():
+            raise WorkflowError(
+                "project_id is required for JobMaster creation",
+                ErrorType.VALIDATION,
+                Phase.REGISTRATION,
+            )
+
         client = self._get_jobqueue_client(context)
 
         job_name = f"Job: {user_requirement[:50]}"
@@ -625,9 +652,17 @@ class MasterManagerSubWorkflow:
         job_url = self._get_job_url()
         job_timeout_sec = 300
 
+        # Issue #391: Initialize body with project
+        body: dict[str, Any] = {"project": project_id.strip()}
+
         logger.info(
-            "Creating JobMaster via API: %s",
+            "Creating JobMaster via API: %s (project: %s)",
             job_name,
+            project_id,
+        )
+        logger.debug(
+            "JobMaster body: %s",
+            body,
         )
 
         try:
@@ -638,13 +673,15 @@ class MasterManagerSubWorkflow:
                 url=job_url,
                 timeout_sec=job_timeout_sec,
                 created_by="job_generator_v2",
+                body=body,  # Issue #391: Include project in body
             )
 
             job_master_id = result["id"]
             logger.info(
-                "Created JobMaster: %s -> %s",
+                "Created JobMaster: %s -> %s (body.project: %s)",
                 job_name,
                 job_master_id,
+                project_id,
             )
 
             return JobMasterInfo(
