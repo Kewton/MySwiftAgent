@@ -173,6 +173,7 @@ class JobGenerationOrchestrator:
         """Execute the complete 3-phase workflow.
 
         Issue #386: Added trace_id and parent_span_id for observability propagation.
+        Issue #387: Added recovery_suggestion handling after workflow execution.
 
         Args:
             request: Job generation request
@@ -217,6 +218,16 @@ class JobGenerationOrchestrator:
                 trace_id=trace_id,
                 parent_span_id=parent_span_id,
             )
+
+            # Issue #387: Handle recovery suggestion if present
+            if workflow_result.recovery_suggestion:
+                recovery_result = await self._handle_recovery_suggestion(
+                    suggestion=workflow_result.recovery_suggestion,
+                    execution_result=workflow_result,
+                    context=context,
+                )
+                if recovery_result:
+                    workflow_result = recovery_result
 
             # Build final result
             return self._build_result(

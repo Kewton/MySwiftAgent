@@ -1,0 +1,92 @@
+{
+  "issue_number": 387,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "recovery_suggestion",
+      "type": "field",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 205,
+      "description": "ParallelExecutionResultのrecovery_suggestionフィールド",
+      "expected_callers": ["_convert_to_parallel_result"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "SUGGESTION_TO_STRATEGY",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 60,
+      "description": "RecoverySuggestionからRecoveryStrategyへのマッピング定数",
+      "expected_callers": ["_handle_recovery_suggestion"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py:405"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_handle_recovery_suggestion",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 382,
+      "description": "recovery_suggestionを処理するメソッド",
+      "expected_callers": ["_execute_workflow_gen"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_parallel_execution_result_has_recovery_suggestion_field"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_tc_005_parallel_execution_result_field"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_suggestion_to_strategy_exists",
+        "test_suggestion_to_strategy_rollback_to_analysis",
+        "test_suggestion_to_strategy_relaxation",
+        "test_suggestion_to_strategy_default"
+      ],
+      "integration_tests": [
+        "test_suggestion_to_strategy_converts_rollback",
+        "test_suggestion_to_strategy_converts_relaxation",
+        "test_suggestion_to_strategy_consistency_with_error_recovery_manager"
+      ],
+      "acceptance_tests": ["test_tc_001_conversion_rollback_to_analysis", "test_tc_002_conversion_relaxation"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "test_handle_recovery_suggestion_rollback",
+        "test_handle_recovery_suggestion_relaxation",
+        "test_handle_recovery_suggestion_null"
+      ],
+      "integration_tests": [
+        "test_orchestrator_calls_handle_recovery_suggestion",
+        "test_orchestrator_skips_handle_when_no_suggestion"
+      ],
+      "acceptance_tests": ["test_tc_003_null_recovery_suggestion", "test_tc_004_error_recovery_manager_integration"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "field_usage",
+      "integration_method": "_convert_to_parallel_result sets recovery_suggestion"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "constant_usage",
+      "integration_method": "SUGGESTION_TO_STRATEGY.get(suggestion, RecoveryStrategy.FAIL_FAST)"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "method_call",
+      "integration_method": "await self._handle_recovery_suggestion(...)"
+    }
+  ]
+}

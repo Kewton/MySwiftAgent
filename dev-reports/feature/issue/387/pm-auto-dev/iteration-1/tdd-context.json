@@ -1,0 +1,65 @@
+{
+  "issue_number": 387,
+  "issue_title": "【P2】recovery_suggestion処理の実装",
+  "target_project": "expertAgent",
+  "acceptance_criteria": [
+    "ROLLBACK_TO_ANALYSISでRecoveryStrategy.ROLLBACK_TO_ANALYSISに変換される",
+    "RELAXATIONでRecoveryStrategy.RELAXATIONに変換される",
+    "ErrorRecoveryManagerと整合性のある動作",
+    "単体テストカバレッジ90%以上",
+    "recovery_suggestionがnullでも正常動作"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T1",
+      "description": "ParallelExecutionResultにrecovery_suggestionフィールドを追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "type": "field_addition"
+    },
+    {
+      "id": "T2",
+      "description": "SUGGESTION_TO_STRATEGYマッピング定数を定義",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "type": "constant_definition"
+    },
+    {
+      "id": "T3",
+      "description": "_handle_recovery_suggestionメソッドを実装",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "type": "method_implementation"
+    },
+    {
+      "id": "T4",
+      "description": "_convert_to_parallel_resultでrecovery_suggestionを設定",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "type": "method_modification"
+    },
+    {
+      "id": "T5",
+      "description": "_execute_workflow_genでrecovery_suggestion処理を呼び出し",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "type": "integration"
+    }
+  ],
+  "existing_code_references": {
+    "RecoverySuggestion": "expertAgent/aiagent/clients/types/workflow_generator.py:48",
+    "RecoveryStrategy": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py:74",
+    "ParallelExecutionResult": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py:186",
+    "ErrorRecoveryManager": "expertAgent/aiagent/langgraph/jobGeneratorV2/error_recovery.py:229",
+    "current_warning_log": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py:564-567"
+  },
+  "design_decisions": {
+    "mapping": {
+      "RecoverySuggestion.ROLLBACK_TO_ANALYSIS": "RecoveryStrategy.ROLLBACK_TO_ANALYSIS",
+      "RecoverySuggestion.RELAXATION": "RecoveryStrategy.RELAXATION",
+      "default": "RecoveryStrategy.FAIL_FAST"
+    },
+    "field_type": "RecoverySuggestion | None = None",
+    "external_api_exposure": false
+  },
+  "test_files": {
+    "unit": "expertAgent/tests/unit/test_issue387_recovery_suggestion.py",
+    "integration": "expertAgent/tests/integration/test_issue387_integration.py"
+  },
+  "target_coverage": 90
+}

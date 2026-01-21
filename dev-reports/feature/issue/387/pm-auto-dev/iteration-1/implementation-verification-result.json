@@ -1,0 +1,87 @@
+{
+  "status": "success",
+  "verification_timestamp": "2026-01-21T00:00:00Z",
+  "issue_number": 387,
+  "iteration": 1,
+  "initial_verification": {
+    "status": "failed",
+    "dead_code_detected": true,
+    "description": "_handle_recovery_suggestion was defined but never called"
+  },
+  "fix_applied": {
+    "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "method": "run_workflow",
+    "change": "Added call to _handle_recovery_suggestion after Phase 3 (WORKFLOW_GEN)",
+    "line_range": "219-232",
+    "commit_expected": true
+  },
+  "test_fix_applied": {
+    "file": "expertAgent/tests/integration/test_issue387_integration.py",
+    "method": "test_run_workflow_calls_handle_recovery_suggestion",
+    "change": "Added new integration test that verifies _handle_recovery_suggestion is actually called",
+    "assertion": "assert handle_called, '_handle_recovery_suggestion should be called when suggestion exists'"
+  },
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "recovery_suggestion",
+      "type": "field",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "line_number": 205,
+      "classification": "PASSED",
+      "evidence": {
+        "exists": "Found at line 205: recovery_suggestion: Optional[\"RecoverySuggestion\"] = None",
+        "is_used": "Field is set in _convert_to_parallel_result and checked in run_workflow",
+        "has_tests": true
+      }
+    },
+    {
+      "feature_id": "F2",
+      "name": "SUGGESTION_TO_STRATEGY",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 60,
+      "classification": "PASSED",
+      "evidence": {
+        "exists": "Found at line 60",
+        "is_used": "Used in _handle_recovery_suggestion at line 405",
+        "is_exported": "Exported in __all__ at line 692",
+        "has_tests": true
+      }
+    },
+    {
+      "feature_id": "F3",
+      "name": "_handle_recovery_suggestion",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 382,
+      "classification": "PASSED",
+      "evidence": {
+        "exists": "Found at line 382",
+        "is_called": "Called from run_workflow (line 224) when workflow_result.recovery_suggestion is present",
+        "has_unit_tests": true,
+        "has_integration_tests": true,
+        "integration_test_validates_call": "test_run_workflow_calls_handle_recovery_suggestion asserts handle_called"
+      }
+    }
+  ],
+  "summary": {
+    "total_features": 3,
+    "passed": 3,
+    "dead_code": 0,
+    "missing_tests": 0
+  },
+  "test_results": {
+    "unit_tests": {
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    "integration_tests": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    }
+  },
+  "verification_details": "Initial verification detected _handle_recovery_suggestion as dead code (defined but never called). Fix applied: Added call in run_workflow after Phase 3. New integration test added to verify the call happens. All 18 tests pass."
+}
