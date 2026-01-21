@@ -1251,3 +1251,126 @@ class TestCapabilityFetchError:
             project_id="test_project",
         )
         assert error.project_id == "test_project"
+
+
+class TestParseResponseStatusInference:
+    """Tests for _parse_response status inference from registered field.
+
+    Fix: mySwiftAgentCore returns "registered" field instead of "status".
+    The client now infers status from "registered" when "status" is not present.
+    """
+
+    @pytest.fixture
+    def client(self):
+        """Create a WorkflowGeneratorClient for testing."""
+        return WorkflowGeneratorClient(base_url="http://localhost:8006")
+
+    def test_infers_success_from_registered_true(self, client):
+        """Test status is inferred as SUCCESS when registered=true."""
+        from aiagent.clients.interfaces.http_client import HttpResponse
+
+        # Response from mySwiftAgentCore (no status field, only registered)
+        response_data = {
+            "success": True,
+            "workflows": {
+                "task_001": {
+                    "workflow_name": "test_workflow",
+                    "registered": True,
+                    "workflow_id": "wf_123",
+                    "file_path": "generated/workflows/test.json",
+                }
+            },
+            "failed_tasks": [],
+        }
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data=response_data,
+            headers={},
+            elapsed_ms=100.0,
+        )
+
+        result = client._parse_response(mock_response)
+
+        assert result.workflows["task_001"].status == WorkflowStatus.SUCCESS
+
+    def test_infers_failed_from_registered_false(self, client):
+        """Test status is inferred as FAILED when registered=false."""
+        from aiagent.clients.interfaces.http_client import HttpResponse
+
+        response_data = {
+            "success": False,
+            "workflows": {
+                "task_001": {
+                    "workflow_name": "test_workflow",
+                    "registered": False,
+                }
+            },
+            "failed_tasks": [],
+        }
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data=response_data,
+            headers={},
+            elapsed_ms=100.0,
+        )
+
+        result = client._parse_response(mock_response)
+
+        assert result.workflows["task_001"].status == WorkflowStatus.FAILED
+
+    def test_explicit_status_takes_precedence(self, client):
+        """Test explicit status field takes precedence over registered."""
+        from aiagent.clients.interfaces.http_client import HttpResponse
+
+        response_data = {
+            "success": True,
+            "workflows": {
+                "task_001": {
+                    "workflow_name": "test_workflow",
+                    "status": "success",
+                    "registered": False,  # Should be ignored
+                }
+            },
+            "failed_tasks": [],
+        }
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data=response_data,
+            headers={},
+            elapsed_ms=100.0,
+        )
+
+        result = client._parse_response(mock_response)
+
+        # Explicit status takes precedence
+        assert result.workflows["task_001"].status == WorkflowStatus.SUCCESS
+
+    def test_multiple_workflows_with_mixed_status(self, client):
+        """Test multiple workflows with different registered values."""
+        from aiagent.clients.interfaces.http_client import HttpResponse
+
+        response_data = {
+            "success": True,
+            "workflows": {
+                "task_001": {
+                    "workflow_name": "success_workflow",
+                    "registered": True,
+                },
+                "task_002": {
+                    "workflow_name": "failed_workflow",
+                    "registered": False,
+                },
+            },
+            "failed_tasks": [],
+        }
+        mock_response = HttpResponse(
+            status_code=200,
+            json_data=response_data,
+            headers={},
+            elapsed_ms=100.0,
+        )
+
+        result = client._parse_response(mock_response)
+
+        assert result.workflows["task_001"].status == WorkflowStatus.SUCCESS
+        assert result.workflows["task_002"].status == WorkflowStatus.FAILED

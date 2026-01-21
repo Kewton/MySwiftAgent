@@ -467,12 +467,21 @@ class WorkflowGeneratorClient:
             status = BatchStatus.FAILED
 
         # Parse workflows
+        # Fix: mySwiftAgentCore returns "registered" field instead of "status"
+        # Infer status from "registered" when "status" is not present
         workflows: dict[str, WorkflowResult] = {}
         for task_id, wf_data in data.get("workflows", {}).items():
             if isinstance(wf_data, dict):
+                # Check for explicit status field first, then infer from registered
+                if "status" in wf_data:
+                    wf_status = WorkflowStatus(wf_data["status"])
+                elif wf_data.get("registered", False):
+                    wf_status = WorkflowStatus.SUCCESS
+                else:
+                    wf_status = WorkflowStatus.FAILED
                 workflows[task_id] = WorkflowResult(
                     workflow_name=wf_data.get("workflow_name", ""),
-                    status=WorkflowStatus(wf_data.get("status", "failed")),
+                    status=wf_status,
                     error=wf_data.get("error"),
                 )
 
