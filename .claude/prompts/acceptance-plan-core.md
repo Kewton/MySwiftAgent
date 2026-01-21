@@ -373,6 +373,65 @@ curl -X POST http://localhost:8003/api/v1/secrets \
   - [ ] テスト対象のフォーマットに適した検証手法が使用されている
 ```
 
+### Step 5.7: サービス間データフロー検証（Issue #385追加）
+
+**重要**: 外部APIに渡すパラメータが適切に取得・設定されているか確認。
+
+```markdown
+## サービス間データフロー検証
+
+### DF-1: データフロー完全性
+外部サービスに渡すデータの取得元が明確であることを確認：
+
+| 送信元 | データ項目 | 送信先 | 取得方法 | 検証状態 |
+|--------|-----------|--------|---------|---------|
+| expertAgent | capabilities | mySwiftAgentCore | CapabilityRegistry API | ✅/❌/??? |
+| expertAgent | trace_id | mySwiftAgentCore | Langfuse context | ✅/❌/??? |
+| | | | | |
+
+**検証方法**:
+```bash
+# パラメータの取得・設定箇所を確認
+grep -rn "capabilities\s*=" --include="*.py"
+grep -rn "trace_id\s*=" --include="*.py"
+```
+
+### DF-2: 空配列/null検証【禁止パターン検出】
+テストデータが「空」「null」を正常ケースとして扱っていないか確認：
+
+| 検出パターン | テストファイル | 問題 |
+|------------|--------------|------|
+| capabilities=[] | tests/xxx.py | ❌ 本番では空でない |
+| trace_id=None | tests/xxx.py | ⚠️ 要確認 |
+
+**チェック方法**:
+```bash
+# テストファイルでの空配列/null使用を検出
+grep -rn "capabilities.*=.*\[\]" tests/
+grep -rn "\"capabilities\".*:.*\[\]" tests/
+grep -rn "trace_id.*=.*None" tests/
+```
+
+**禁止**: テストで空配列/nullを正常ケースとして使用することは禁止。
+本番で値が必須の場合、テストでも実際の値を使用すること。
+
+### DF-3: サービス連携の全データ項目テスト
+サービス間連携で渡されるすべてのデータ項目がテストされているか確認：
+
+| サービス連携 | 必須データ項目 | テスト有無 |
+|-------------|--------------|----------|
+| expertAgent→mySwiftAgentCore | capabilities | ✅/❌ |
+| expertAgent→mySwiftAgentCore | trace_id | ✅/❌ |
+| expertAgent→mySwiftAgentCore | parent_span_id | ✅/❌ |
+
+### DF-4: テスト項目必須化
+以下のテスト項目を必ず含めること：
+
+- [ ] **DF-TC-1**: 実際のcapabilityデータがAPIに渡されることを検証
+- [ ] **DF-TC-2**: trace_idが正しく伝播されることを検証
+- [ ] **DF-TC-3**: 空配列/nullが渡された場合のエラー処理を検証
+```
+
 ### Step 5.6: E2E統合テスト計画（Issue #359追加）
 
 **Job Generation機能のE2Eテスト**:

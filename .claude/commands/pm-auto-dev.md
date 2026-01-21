@@ -837,10 +837,11 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/implemented-fea
 
 ---
 
-### Phase 2.7: 実装検証【必須】（Issue #338教訓）
+### Phase 2.7: 実装検証【必須】（Issue #338教訓、Issue #385強化）
 
 **重要**: 実装した機能が実際にコードベースに統合されているかを検証します。
 **デッドコード（定義されているが呼び出されていない関数）を検出します。**
+**空パラメータ（常に空配列/nullで渡されるパラメータ）を検出します。**（Issue #385追加）
 
 #### 2.7-1. 実装検証サブエージェント呼び出し
 
@@ -857,8 +858,10 @@ Please verify:
 2. Each constant is actually USED (not just defined)
 3. Each prompt rule is actually INCLUDED in prompts
 4. Integration tests exist that verify actual usage
+5. Parameters are NOT always passed as empty array/null (Issue #385)
 
 CRITICAL: Detect DEAD CODE - functions that exist but are never called.
+CRITICAL: Detect EMPTY PARAMETERS - parameters always passed as [] or None.
 ```
 
 #### 2.7-2. 結果確認
@@ -936,6 +939,52 @@ TodoWriteでPhase 2.7を`completed`に、Phase 3を`in_progress`に設定。
 ```
 
 → **Phase 2.8（デッドコード解消イテレーション）へ進む【必須】**
+
+##### ケース3: 空パラメータ検出 (`status: "failed"`)（Issue #385追加）
+
+```json
+{
+  "status": "failed",
+  "summary": {
+    "total_features": 3,
+    "passed": 2,
+    "dead_code": 0,
+    "empty_parameters": 2,
+    "integration_rate": "66%"
+  },
+  "empty_parameter_list": [
+    {
+      "parameter": "capabilities",
+      "file": "orchestrator.py",
+      "line": 302,
+      "pattern": "capabilities=[]",
+      "expected_value": "List of capability definitions",
+      "recommended_fix": "Fetch capabilities from CapabilityRegistry API"
+    },
+    {
+      "parameter": "trace_id",
+      "file": "orchestrator.py",
+      "line": 153,
+      "pattern": "trace_id not passed",
+      "expected_value": "Langfuse trace ID",
+      "recommended_fix": "Pass trace_id from run_workflow to _execute_workflow_gen"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "PARAM1",
+      "action": "Replace capabilities=[] with actual capability fetch",
+      "file": "orchestrator.py",
+      "line": 302
+    }
+  ]
+}
+```
+
+→ **Phase 2.8（空パラメータ解消イテレーション）へ進む【必須】**
+
+**空パラメータは機能が動作しない重大な問題です。デッドコードと同様に解消が必須です。**
 
 **重要: 統合率ゲート（Issue #353教訓）**
 

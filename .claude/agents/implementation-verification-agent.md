@@ -82,6 +82,30 @@ find {project_path}/tests/integration -name "*{feature_name}*"
 grep -n "{function_name}" {project_path}/tests/integration/*.py
 ```
 
+### Step 2.4: Parameter Value Verification（Issue #385追加）
+
+**重要**: パラメータが常に空配列/nullで渡されていないか確認。
+
+```bash
+# Check 1: 空配列パターンを検出
+grep -rn "capabilities=\[\]" {project_path}/ --include="*.py"
+grep -rn "capabilities:\s*\[\]" {project_path}/ --include="*.py"
+
+# Check 2: None渡しパターンを検出
+grep -rn "trace_id=None" {project_path}/ --include="*.py" | grep -v "def\|:|Optional"
+
+# Check 3: パラメータ取得処理の有無を確認
+grep -rn "fetch_capabilities\|get_capabilities\|load_capabilities" {project_path}/ --include="*.py"
+```
+
+**検出すべきパターン**:
+
+| パターン | 例 | 問題 | 検出方法 |
+|---------|-----|------|---------|
+| 常に空配列 | `capabilities=[]` | 実データが渡されない | grep |
+| 常にNone | `trace_id=None` | 伝播されない | grep |
+| 取得処理なし | 取得関数が存在しない | データ取得が未実装 | grep |
+
 ### Step 3: Classify Results
 
 For each feature, classify as:
@@ -92,6 +116,7 @@ For each feature, classify as:
 | **DEAD_CODE** | Function exists but NOT called |
 | **MISSING_TESTS** | Function exists and called but no integration test |
 | **NOT_FOUND** | Function does not exist |
+| **EMPTY_PARAMETER** | Parameter always passed as empty array/null（Issue #385追加） |
 
 ### Step 4: Generate Result File
 
@@ -139,7 +164,8 @@ Create the result file using Write tool:
     "passed": 1,
     "dead_code": 2,
     "missing_tests": 0,
-    "not_found": 0
+    "not_found": 0,
+    "empty_parameters": 2
   },
   "dead_code_list": [
     {
@@ -151,6 +177,24 @@ Create the result file using Write tool:
       "recommended_location": "jobqueue/app/core/worker.py:223"
     }
   ],
+  "empty_parameter_list": [
+    {
+      "parameter": "capabilities",
+      "file": "orchestrator.py",
+      "line": 302,
+      "pattern": "capabilities=[]",
+      "expected_value": "List of capability definitions",
+      "recommended_fix": "Fetch capabilities from CapabilityRegistry API"
+    },
+    {
+      "parameter": "trace_id",
+      "file": "orchestrator.py",
+      "line": 153,
+      "pattern": "trace_id not passed",
+      "expected_value": "Langfuse trace ID",
+      "recommended_fix": "Pass trace_id from run_workflow to _execute_workflow_gen"
+    }
+  ],
   "recommended_actions": [
     {
       "priority": "P0",
@@ -159,6 +203,14 @@ Create the result file using Write tool:
       "file": "jobqueue/app/core/worker.py",
       "line": 223,
       "code_snippet": "task.output_data = _transform_to_interface(extracted, output_interface)"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "PARAM1",
+      "action": "Replace capabilities=[] with actual capability fetch",
+      "file": "orchestrator.py",
+      "line": 302,
+      "code_snippet": "capabilities = await self._fetch_capabilities(project_id)"
     }
   ]
 }
