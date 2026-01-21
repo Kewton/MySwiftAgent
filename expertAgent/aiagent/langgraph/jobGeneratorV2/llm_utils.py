@@ -445,6 +445,7 @@ async def invoke_structured_llm(
                 model=actual_model,
                 temperature=temperature,
                 google_api_key=google_api_key,
+                max_output_tokens=16384,  # Issue #385: Prevent truncation
             )
         elif actual_model.startswith("claude"):
             from langchain_anthropic import ChatAnthropic
@@ -463,6 +464,7 @@ async def invoke_structured_llm(
                 model_name=actual_model,
                 temperature=temperature,
                 api_key=SecretStr(anthropic_api_key),
+                max_tokens=16384,  # Issue #385: Prevent truncation
             )
         elif actual_model.startswith("gpt"):
             from langchain_openai import ChatOpenAI
@@ -481,6 +483,7 @@ async def invoke_structured_llm(
                 model=actual_model,
                 temperature=temperature,
                 api_key=SecretStr(openai_api_key),
+                max_tokens=16384,  # Issue #385: Prevent truncation
             )
         else:
             from langchain_anthropic import ChatAnthropic
@@ -499,6 +502,7 @@ async def invoke_structured_llm(
                 model_name=actual_model,
                 temperature=temperature,
                 api_key=SecretStr(anthropic_api_key),
+                max_tokens=16384,  # Issue #385: Prevent truncation
             )
 
         # Use include_raw=True to get both structured output and raw text
