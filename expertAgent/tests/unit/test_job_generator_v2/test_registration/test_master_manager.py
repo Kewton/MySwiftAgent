@@ -160,13 +160,20 @@ class TestMasterManagerCreateMasters:
 
     @pytest.fixture
     def sample_interfaces(self) -> dict[str, InterfaceSchema]:
-        """Create sample interfaces for testing."""
+        """Create sample interfaces for testing.
+
+        Note: input_schema must include 'project' field as it's required by
+        body_template validation (Issue #391).
+        """
         return {
             "task_001": InterfaceSchema(
                 task_id="task_001",
                 input_schema={
                     "type": "object",
-                    "properties": {"query": {"type": "string"}},
+                    "properties": {
+                        "query": {"type": "string"},
+                        "project": {"type": "string"},
+                    },
                 },
                 output_schema={
                     "type": "object",
@@ -177,7 +184,10 @@ class TestMasterManagerCreateMasters:
                 task_id="task_002",
                 input_schema={
                     "type": "object",
-                    "properties": {"emails": {"type": "array"}},
+                    "properties": {
+                        "emails": {"type": "array"},
+                        "project": {"type": "string"},
+                    },
                 },
                 output_schema={
                     "type": "object",

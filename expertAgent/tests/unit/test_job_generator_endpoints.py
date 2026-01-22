@@ -421,10 +421,10 @@ class TestCreateJobInBackground:
         mock_state_manager.set_task_breakdown_async = AsyncMock()
 
         # Execute
+        # Note: project_id parameter was removed from _create_job_in_background
         await _create_job_in_background(
             job_id="test-job-id",
             user_requirement="Test requirement",
-            project_id="default_project",
             max_retry=5,
         )
 
@@ -461,10 +461,10 @@ class TestCreateJobInBackground:
         mock_state_manager.set_task_breakdown_async = AsyncMock()
 
         # Execute
+        # Note: project_id parameter was removed from _create_job_in_background
         await _create_job_in_background(
             job_id="test-job-id",
             user_requirement="Test requirement",
-            project_id="default_project",
             max_retry=5,
         )
 
