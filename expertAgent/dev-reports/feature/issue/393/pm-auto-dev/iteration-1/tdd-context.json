@@ -1,0 +1,91 @@
+{
+  "issue_number": 393,
+  "acceptance_criteria": [
+    "update_task_master_body_template_taskflow 関数が registration/task_master_utils.py に移動されている",
+    "全ての import パスが新しい場所を参照している",
+    "後方互換性の re-export が workflow_gen/workflow_registrar.py に実装されている（DeprecationWarning 付き）",
+    "全テスト（単体・結合）がパスする",
+    "静的解析エラーがない"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T1.1",
+      "description": "registration/task_master_utils.py を新規作成し、関数を移動",
+      "type": "new_file",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/task_master_utils.py"
+    },
+    {
+      "id": "T1.2",
+      "description": "registration/__init__.py に新関数をエクスポート追加",
+      "type": "update_file",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/__init__.py"
+    },
+    {
+      "id": "T1.3",
+      "description": "workflow_gen/workflow.py の import パスを更新",
+      "type": "update_file",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py"
+    },
+    {
+      "id": "T1.4",
+      "description": "workflow_gen/workflow_registrar.py に後方互換性の re-export 追加",
+      "type": "update_file",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow_registrar.py"
+    },
+    {
+      "id": "T1.5",
+      "description": "テストファイルの import パスを更新",
+      "type": "update_file",
+      "target_files": [
+        "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+        "expertAgent/tests/integration/test_issue390_integration.py"
+      ]
+    },
+    {
+      "id": "T2.1",
+      "description": "後方互換性テストを追加",
+      "type": "new_test",
+      "target_file": "expertAgent/tests/unit/test_job_generator_v2/test_issue393_backward_compatibility.py"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "新規ファイル作成（task_master_utils.py）",
+      "estimated_minutes": 15,
+      "deliverables": ["registration/task_master_utils.py"]
+    },
+    {
+      "task_id": "1.2",
+      "description": "既存ファイル更新（import パス変更）",
+      "estimated_minutes": 30,
+      "deliverables": ["workflow.py", "workflow_registrar.py", "__init__.py"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "テストファイル更新",
+      "estimated_minutes": 15,
+      "deliverables": ["test files"]
+    }
+  ],
+  "deliverables_checklist": [
+    "registration/task_master_utils.py",
+    "registration/__init__.py (updated)",
+    "workflow_gen/workflow.py (updated)",
+    "workflow_gen/workflow_registrar.py (updated)",
+    "tests/unit/test_issue393_backward_compatibility.py"
+  ],
+  "definition_of_done": [
+    "関数が新しい場所に移動されている",
+    "全インポートパスが更新されている",
+    "後方互換性が DeprecationWarning 付きで動作",
+    "全テストがパス",
+    "静的解析エラーなし"
+  ],
+  "target_coverage": 90,
+  "source_reference": {
+    "original_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow_registrar.py",
+    "original_function": "update_task_master_body_template_taskflow",
+    "line_number": 219
+  }
+}

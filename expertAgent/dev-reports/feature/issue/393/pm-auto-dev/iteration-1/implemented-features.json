@@ -1,0 +1,60 @@
+{
+  "issue_number": 393,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "update_task_master_body_template_taskflow",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/task_master_utils.py",
+      "line_number": 20,
+      "description": "TaskMaster body_template 更新関数（workflow_gen から移動）",
+      "expected_callers": ["workflow.py - WorkflowGenWorkflow"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py:487"
+    },
+    {
+      "feature_id": "F2",
+      "name": "__getattr__ (backward compatibility)",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow_registrar.py",
+      "line_number": 409,
+      "description": "後方互換性のための動的属性アクセスハンドラ（DeprecationWarning 付き）",
+      "expected_callers": ["レガシーコード（旧パスでのインポート）"],
+      "expected_call_location": "旧パスからのインポート時に自動呼び出し"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_issue393_backward_compatibility.py::TestNewImportPath::*"
+      ],
+      "integration_tests": [
+        "Function is called via workflow.py when WorkflowGenWorkflow executes"
+      ],
+      "acceptance_tests": ["Static verification via grep"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_issue393_backward_compatibility.py::TestBackwardCompatibility::*"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["Verify DeprecationWarning is emitted"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .task_master_utils import update_task_master_body_template_taskflow"
+    },
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/workflow.py",
+      "integration_type": "import",
+      "integration_method": "from ..registration.task_master_utils import update_task_master_body_template_taskflow"
+    }
+  ]
+}

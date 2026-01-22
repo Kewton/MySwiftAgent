@@ -75,10 +75,12 @@ class TestIssue390OrchestratorIntegration:
         update_calls = []
 
         async def mock_update(task_master_id: str, workflow_name: str) -> bool:
-            update_calls.append({
-                "task_master_id": task_master_id,
-                "workflow_name": workflow_name,
-            })
+            update_calls.append(
+                {
+                    "task_master_id": task_master_id,
+                    "workflow_name": workflow_name,
+                }
+            )
             return True
 
         with patch(
@@ -189,10 +191,12 @@ class TestIssue390OrchestratorIntegration:
         update_calls = []
 
         async def mock_update(task_master_id: str, workflow_name: str) -> bool:
-            update_calls.append({
-                "task_master_id": task_master_id,
-                "workflow_name": workflow_name,
-            })
+            update_calls.append(
+                {
+                    "task_master_id": task_master_id,
+                    "workflow_name": workflow_name,
+                }
+            )
             return True
 
         with patch(

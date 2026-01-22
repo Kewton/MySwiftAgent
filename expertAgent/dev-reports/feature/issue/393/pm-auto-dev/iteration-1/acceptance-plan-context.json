@@ -1,0 +1,24 @@
+{
+  "issue_number": 393,
+  "issue_title": "Tech Debt: Issue #361 Phase 2 未完了 - workflow_gen ディレクトリの削除",
+  "acceptance_criteria": [
+    "update_task_master_body_template_taskflow 関数が registration/task_master_utils.py に移動されている",
+    "全ての import パスが新しい場所を参照している",
+    "後方互換性の re-export が workflow_gen/workflow_registrar.py に実装されている（DeprecationWarning 付き）",
+    "全テスト（単体・結合）がパスする",
+    "静的解析エラーがない"
+  ],
+  "technical_requirements": [
+    "registration/task_master_utils.py を新規作成",
+    "workflow_gen/workflow.py の import パスを更新",
+    "テストファイルの import パスを更新",
+    "JOBQUEUE_API_URL は settings モジュールから取得"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "expertAgent/dev-reports/feature/issue/393/design-policy.md",
+  "work_plan_path": "expertAgent/dev-reports/feature/issue/393/work-plan.md",
+  "phase": "pre-tdd",
+  "issue_type": "internal_refactoring",
+  "labels": ["enhancement"],
+  "notes": "これはリファクタリングのみのIssueであり、機能変更はありません。受入テストは既存テストのパスと静的解析で検証します。"
+}

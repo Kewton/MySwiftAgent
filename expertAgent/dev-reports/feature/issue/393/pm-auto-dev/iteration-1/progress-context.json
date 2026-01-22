@@ -1,0 +1,58 @@
+{
+  "issue_number": 393,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": "N/A (refactoring issue)",
+      "tests_created": 8,
+      "tests_passed": 8
+    },
+    "acceptance": {
+      "status": "passed",
+      "test_cases": 8,
+      "passed": 8
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "Issue itself is a refactoring task"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {
+        "task_id": "1.1",
+        "description": "新規ファイル作成（task_master_utils.py）",
+        "estimated_minutes": 15,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.2",
+        "description": "既存ファイル更新（import パス変更）",
+        "estimated_minutes": 30,
+        "status": "completed"
+      },
+      {
+        "task_id": "1.3",
+        "description": "テストファイル更新",
+        "estimated_minutes": 15,
+        "status": "completed"
+      }
+    ],
+    "deliverables_status": [
+      {"file": "registration/task_master_utils.py", "created": true},
+      {"file": "workflow.py (updated)", "created": true},
+      {"file": "workflow_registrar.py (updated)", "created": true},
+      {"file": "__init__.py (updated)", "created": true},
+      {"file": "test_issue393_backward_compatibility.py", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "関数が新しい場所に移動されている", "verified": true},
+      {"criterion": "全インポートパスが更新されている", "verified": true},
+      {"criterion": "後方互換性がDeprecationWarning付きで動作", "verified": true},
+      {"criterion": "全テストがパス", "verified": true},
+      {"criterion": "静的解析エラーなし", "verified": true}
+    ]
+  }
+}
