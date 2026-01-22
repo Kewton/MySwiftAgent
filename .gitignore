@@ -405,24 +405,56 @@ docs/build/
 # Security & Sensitive Files
 # ===================================================================
 
-# API keys and secrets (patterns)
-*secret*
-*private*
-*key*
-*token*
-*credential*
-*password*
+# Secret/credential configuration files (specific patterns)
+# Note: Broad patterns like *secret* were removed because they
+# incorrectly excluded source code files (e.g., SecretAnalyzer.ts)
+*.secret
+*.secret.*
+*.secrets
+secrets.json
+secrets.yaml
+secrets.yml
+secrets.env
+.secrets
+.secrets/
 
-# Exceptions for test files
-!**/tests/**/test_*secret*
-!**/tests/**/test_*key*
-!**/tests/**/test_*token*
+# Private key files
+*.private
+*.private.*
+id_rsa
+id_ed25519
+id_ecdsa
 
-# Exception for myvault_secrets.yaml (contains secret key NAMES, not VALUES)
-!**/myvault_secrets.yaml
+# API key files
+api_key.json
+api_keys.json
+apikey.json
+apikeys.json
+.api_key
+.api_keys
 
-# Exception for SecretManager.ts (secret management code, not actual secrets)
-!**/SecretManager.ts
+# Token files
+*.token
+*.tokens
+token.json
+tokens.json
+auth_token.json
+refresh_token.json
+
+# Credential files
+credentials.json
+credentials.yaml
+credentials.yml
+*.credentials
+
+# Password files
+*.password
+*.passwords
+password.txt
+passwords.txt
+
+# Environment files with secrets (already covered by .env* pattern above)
+# .env.local, .env.production, etc.
 
 # Certificate files
 *.pem
