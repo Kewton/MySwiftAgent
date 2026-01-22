@@ -6,6 +6,7 @@ This package contains the RegistrationWorkflow and its sub-workflows:
 - JobRegistrarSubWorkflow: Registers Job and JobQueue entries
 
 Issue #342 Phase D.1: Registration workflow implementation.
+Issue #393: Added update_task_master_body_template_taskflow from task_master_utils.
 """
 
 from aiagent.langgraph.jobGeneratorV2.workflows.registration.job_registrar import (
@@ -13,6 +14,9 @@ from aiagent.langgraph.jobGeneratorV2.workflows.registration.job_registrar impor
 )
 from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
     MasterManagerSubWorkflow,
+)
+from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
+    update_task_master_body_template_taskflow,
 )
 from aiagent.langgraph.jobGeneratorV2.workflows.registration.workflow import (
     RegistrationWorkflow,
@@ -22,4 +26,5 @@ __all__ = [
     "RegistrationWorkflow",
     "MasterManagerSubWorkflow",
     "JobRegistrarSubWorkflow",
+    "update_task_master_body_template_taskflow",
 ]

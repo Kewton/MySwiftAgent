@@ -36,12 +36,14 @@ from aiagent.langgraph.jobGeneratorV2.types_old import (
     WorkflowGenOutput,
 )
 
+from ..registration.task_master_utils import (
+    update_task_master_body_template_taskflow,
+)
 from .engine_strategy import EngineType, WorkflowGeneratorStrategy, create_strategy
 from .test_runner import TestRunnerSubWorkflow
 from .workflow_registrar import (
     register_and_update_task_masters,
     register_taskflow_workflow,
-    update_task_master_body_template_taskflow,
 )
 from .yaml_generator import YamlGeneratorSubWorkflow
 

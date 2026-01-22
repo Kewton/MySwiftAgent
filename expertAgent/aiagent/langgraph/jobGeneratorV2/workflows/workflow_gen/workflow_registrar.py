@@ -17,11 +17,16 @@ TaskFlow V2 workflows use a different body_template structure:
 Issue #355: Added TaskFlowAdapter for JSON string to object conversion.
 ExpertAgent/LLM may output JSON strings for dict fields (input_schema, output_schema, etc.)
 but GraphAiServer expects objects. TaskFlowAdapter converts these before registration.
+
+Issue #393: update_task_master_body_template_taskflow has been relocated to
+registration/task_master_utils.py. The function is re-exported here for
+backward compatibility with a DeprecationWarning.
 """
 
 from __future__ import annotations
 
 import logging
+import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -216,72 +221,6 @@ async def register_taskflow_workflow(
         return WorkflowRegistrationResult(success=False, error=error_msg)
 
 
-async def update_task_master_body_template_taskflow(
-    task_master_id: str,
-    workflow_name: str,
-) -> bool:
-    """Update TaskMaster body_template for TaskFlow V2 workflow execution.
-
-    Issue #350: TaskFlow V2 uses different body_template structure:
-    - workflow_name: Name of registered workflow
-    - inputs: Maps user_input to TaskFlow inputs format
-    - project: Project for secrets resolution
-
-    Args:
-        task_master_id: TaskMaster ID to update
-        workflow_name: Name of the registered TaskFlow workflow
-
-    Returns:
-        True if update succeeded, False otherwise
-    """
-    try:
-        # Import here to avoid circular dependency
-        from aiagent.langgraph.jobTaskGeneratorAgents.utils.jobqueue_client import (
-            JobqueueClient,
-        )
-
-        client = JobqueueClient(base_url=JOBQUEUE_API_URL)
-
-        # Fetch existing TaskMaster to preserve job_params
-        existing_task_master = await client.get_task_master(task_master_id)
-        existing_body_template = existing_task_master.get("body_template", {}) or {}
-        existing_job_params = existing_body_template.get("job_params", "{{job.body}}")
-
-        # Build TaskFlow V2 body_template
-        # TaskFlow API expects: workflow_name, inputs (object), project
-        # Issue #350: inputs must be an object, not a string.
-        # Pass entire job.body as inputs object - workflow will read user_input from it
-        body_template = {
-            "workflow_name": workflow_name,
-            "inputs": "{{job.body}}",  # Pass entire body as inputs object
-            "project": "{{job.project}}",  # Pass project for secrets
-            "job_params": existing_job_params,  # Preserve for compatibility
-        }
-
-        await client.update_task_master(
-            master_id=task_master_id,
-            body_template=body_template,
-            updated_by="job_generator_v2",
-            change_reason="Set workflow_name for TaskFlow V2 execution",
-        )
-
-        logger.info(
-            "Updated TaskMaster %s body_template for TaskFlow V2: workflow_name=%s",
-            task_master_id,
-            workflow_name,
-        )
-        return True
-
-    except Exception as e:
-        logger.error(
-            "Failed to update TaskMaster %s body_template for TaskFlow V2: %s",
-            task_master_id,
-            e,
-            exc_info=True,
-        )
-        return False
-
-
 async def update_task_master_body_template(
     task_master_id: str,
     model_name: str,
@@ -460,3 +399,44 @@ async def register_and_update_task_masters(
         "updated_task_masters": updated_task_masters,
         "failed_task_masters": failed_task_masters,
     }
+
+
+# Issue #393: Backward compatibility re-export using __getattr__
+# The function has been relocated to registration/task_master_utils.py
+# This approach emits DeprecationWarning only when the specific name is accessed
+
+
+def __getattr__(name: str):
+    """Lazy attribute access for backward compatibility.
+
+    Issue #393: This emits a DeprecationWarning when
+    update_task_master_body_template_taskflow is accessed from this module,
+    while allowing other imports to work without warnings.
+    """
+    if name == "update_task_master_body_template_taskflow":
+        warnings.warn(
+            "Importing update_task_master_body_template_taskflow from "
+            "workflow_gen.workflow_registrar is deprecated. "
+            "Use registration.task_master_utils instead. "
+            "(Issue #393)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
+            update_task_master_body_template_taskflow,
+        )
+
+        return update_task_master_body_template_taskflow
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+__all__ = [
+    "WorkflowRegistrationResult",
+    "register_workflow_to_graphai",
+    "register_taskflow_workflow",
+    "update_task_master_body_template",
+    "register_and_update_task_masters",
+    # Deprecated - for backward compatibility only (Issue #393)
+    # Provided via __getattr__ for lazy import with DeprecationWarning
+    "update_task_master_body_template_taskflow",  # noqa: F822
+]
