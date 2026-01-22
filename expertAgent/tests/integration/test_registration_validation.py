@@ -53,7 +53,11 @@ class TestRegistrationBodyTemplateValidation:
 
     @pytest.fixture
     def sample_interfaces(self) -> dict:
-        """Create sample interface schemas."""
+        """Create sample interface schemas.
+
+        Note: input_schema must include 'project' field as it's required by
+        body_template validation (Issue #391).
+        """
         from aiagent.langgraph.jobGeneratorV2.types import InterfaceSchema
 
         return {
@@ -64,6 +68,7 @@ class TestRegistrationBodyTemplateValidation:
                     "properties": {
                         "user_input": {"type": "string"},
                         "api_key": {"type": "string"},
+                        "project": {"type": "string"},
                     },
                 },
                 output_schema={
@@ -79,6 +84,7 @@ class TestRegistrationBodyTemplateValidation:
                     "type": "object",
                     "properties": {
                         "data": {"type": "array"},
+                        "project": {"type": "string"},
                     },
                 },
                 output_schema={
