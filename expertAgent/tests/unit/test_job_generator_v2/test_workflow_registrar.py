@@ -2,6 +2,11 @@
 
 Issue #342: Tests for workflow registration to GraphAiServer and
 TaskMaster body_template updates with model_name.
+
+Note: TestRegisterAndUpdateTaskMasters tests require careful mocking because
+register_and_update_task_masters calls register_workflow_to_graphai and
+update_task_master_body_template from the same module. The mocking is done
+via module-level import replacement to ensure isolation.
 """
 
 from __future__ import annotations
@@ -10,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar as workflow_registrar_module
 from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
     WorkflowRegistrationResult,
     register_and_update_task_masters,
@@ -147,7 +153,13 @@ class TestUpdateTaskMasterBodyTemplate:
 
 
 class TestRegisterAndUpdateTaskMasters:
-    """Tests for register_and_update_task_masters function."""
+    """Tests for register_and_update_task_masters function.
+
+    Note: These tests use module-level patching via monkeypatch to ensure
+    proper isolation when running with the full test suite. The standard
+    unittest.mock.patch approach can fail due to module caching issues
+    when other tests import the workflow_registrar module first.
+    """
 
     @pytest.mark.asyncio
     async def test_empty_task_master_ids(self) -> None:
@@ -162,28 +174,34 @@ class TestRegisterAndUpdateTaskMasters:
         assert "No task_master_ids" in result.get("error", "")
 
     @pytest.mark.asyncio
-    async def test_successful_registration_and_updates(self) -> None:
+    async def test_successful_registration_and_updates(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test successful workflow registration and TaskMaster updates."""
-        with (
-            patch(
-                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.register_workflow_to_graphai"
-            ) as mock_register,
-            patch(
-                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.update_task_master_body_template"
-            ) as mock_update,
-        ):
-            mock_register.return_value = WorkflowRegistrationResult(
+
+        async def mock_register(*args, **kwargs):
+            return WorkflowRegistrationResult(
                 success=True,
                 workflow_path="taskmaster/tm_001/workflow_jm_abc",
                 model_name="taskmaster/tm_001/workflow_jm_abc",
             )
-            mock_update.return_value = True
 
-            result = await register_and_update_task_masters(
-                task_master_ids=["tm_001", "tm_002", "tm_003"],
-                workflow_name="workflow_jm_abc",
-                yaml_content="version: 0.6\nnodes: {}",
-            )
+        async def mock_update(*args, **kwargs):
+            return True
+
+        # Use monkeypatch for reliable module-level patching
+        monkeypatch.setattr(
+            workflow_registrar_module, "register_workflow_to_graphai", mock_register
+        )
+        monkeypatch.setattr(
+            workflow_registrar_module, "update_task_master_body_template", mock_update
+        )
+
+        result = await register_and_update_task_masters(
+            task_master_ids=["tm_001", "tm_002", "tm_003"],
+            workflow_name="workflow_jm_abc",
+            yaml_content="version: 0.6\nnodes: {}",
+        )
 
         assert result["success"] is True
         assert result["model_name"] == "taskmaster/tm_001/workflow_jm_abc"
@@ -191,29 +209,39 @@ class TestRegisterAndUpdateTaskMasters:
         assert len(result["failed_task_masters"]) == 0
 
     @pytest.mark.asyncio
-    async def test_partial_update_success(self) -> None:
+    async def test_partial_update_success(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test partial success when some TaskMaster updates fail."""
-        with (
-            patch(
-                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.register_workflow_to_graphai"
-            ) as mock_register,
-            patch(
-                "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.update_task_master_body_template"
-            ) as mock_update,
-        ):
-            mock_register.return_value = WorkflowRegistrationResult(
+
+        async def mock_register(*args, **kwargs):
+            return WorkflowRegistrationResult(
                 success=True,
                 workflow_path="taskmaster/tm_001/workflow_jm_abc",
                 model_name="taskmaster/tm_001/workflow_jm_abc",
             )
-            # First two succeed, third fails
-            mock_update.side_effect = [True, True, False]
 
-            result = await register_and_update_task_masters(
-                task_master_ids=["tm_001", "tm_002", "tm_003"],
-                workflow_name="workflow_jm_abc",
-                yaml_content="version: 0.6\nnodes: {}",
-            )
+        call_count = 0
+
+        async def mock_update(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            # First two succeed, third fails
+            return call_count <= 2
+
+        # Use monkeypatch for reliable module-level patching
+        monkeypatch.setattr(
+            workflow_registrar_module, "register_workflow_to_graphai", mock_register
+        )
+        monkeypatch.setattr(
+            workflow_registrar_module, "update_task_master_body_template", mock_update
+        )
+
+        result = await register_and_update_task_masters(
+            task_master_ids=["tm_001", "tm_002", "tm_003"],
+            workflow_name="workflow_jm_abc",
+            yaml_content="version: 0.6\nnodes: {}",
+        )
 
         # Issue #360: Partial success is now considered failure (all must succeed)
         # Changed from: success=True when at least one succeeds
@@ -224,21 +252,25 @@ class TestRegisterAndUpdateTaskMasters:
         assert "tm_003" in result["failed_task_masters"]
 
     @pytest.mark.asyncio
-    async def test_registration_failure(self) -> None:
+    async def test_registration_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test failure when GraphAiServer registration fails."""
-        with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar.register_workflow_to_graphai"
-        ) as mock_register:
-            mock_register.return_value = WorkflowRegistrationResult(
+
+        async def mock_register(*args, **kwargs):
+            return WorkflowRegistrationResult(
                 success=False,
                 error="GraphAiServer unavailable",
             )
 
-            result = await register_and_update_task_masters(
-                task_master_ids=["tm_001", "tm_002"],
-                workflow_name="workflow_jm_abc",
-                yaml_content="version: 0.6\nnodes: {}",
-            )
+        # Use monkeypatch for reliable module-level patching
+        monkeypatch.setattr(
+            workflow_registrar_module, "register_workflow_to_graphai", mock_register
+        )
+
+        result = await register_and_update_task_masters(
+            task_master_ids=["tm_001", "tm_002"],
+            workflow_name="workflow_jm_abc",
+            yaml_content="version: 0.6\nnodes: {}",
+        )
 
         assert result["success"] is False
         assert "GraphAiServer unavailable" in result.get("error", "")
