@@ -388,3 +388,305 @@ class TestValidationErrorTypes:
         )
 
         assert any(e.error_type == "INVALID_INDEX" for e in result.errors)
+
+
+class TestSystemInjectedFields:
+    """Test Issue #395: System-injected fields validation exclusion."""
+
+    def test_system_injected_fields_constant_exists(self) -> None:
+        """SYSTEM_INJECTED_FIELDS constant exists and contains 'project'."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            SYSTEM_INJECTED_FIELDS,
+        )
+
+        assert SYSTEM_INJECTED_FIELDS is not None
+        assert "project" in SYSTEM_INJECTED_FIELDS
+
+    def test_system_injected_fields_is_immutable(self) -> None:
+        """SYSTEM_INJECTED_FIELDS is a frozenset and immutable."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            SYSTEM_INJECTED_FIELDS,
+        )
+
+        assert isinstance(SYSTEM_INJECTED_FIELDS, frozenset)
+        # Attempting to add should raise AttributeError
+        import pytest
+
+        with pytest.raises(AttributeError):
+            SYSTEM_INJECTED_FIELDS.add("new_field")  # type: ignore[attr-defined]
+
+    def test_project_field_validation_skipped(self) -> None:
+        """project field (system-injected) is skipped from validation."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "project": "{{job.body.project}}",
+            "user_input": "{{job.body.user_input}}",
+        }
+        # input_schema does NOT have 'project' - it's system-injected
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "user_input": {"type": "string"},
+            },
+        }
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        # Should be valid - 'project' is skipped, 'user_input' exists
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+        assert not any("project" in e.message for e in result.errors)
+
+    def test_user_field_validation_continues_when_missing(self) -> None:
+        """Non-system fields continue to be validated and report errors."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "project": "{{job.body.project}}",
+            "missing_field": "{{job.body.nonexistent}}",
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {},
+        }
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        # Should fail - 'nonexistent' is not in schema and not a system field
+        assert not result.is_valid
+        assert any("nonexistent" in e.message for e in result.errors)
+        # But 'project' should NOT be in errors
+        assert not any("project" in e.message for e in result.errors)
+
+    def test_user_field_validation_passes_when_exists(self) -> None:
+        """User fields pass validation when they exist in input_schema."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "project": "{{job.body.project}}",
+            "user_input": "{{job.body.user_input}}",
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "user_input": {"type": "string"},
+            },
+        }
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid
+
+    def test_mixed_system_and_user_fields(self) -> None:
+        """Mixed system and user fields: system skipped, user validated."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "project": "{{job.body.project}}",  # system-injected, skip
+            "user_input": "{{job.body.user_input}}",  # exists in schema
+            "missing": "{{job.body.missing_user_field}}",  # not in schema
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "user_input": {"type": "string"},
+            },
+        }
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        # Should fail for missing_user_field only
+        assert not result.is_valid
+        assert len(result.errors) == 1
+        assert "missing_user_field" in result.errors[0].message
+        assert "project" not in result.errors[0].message
+
+    def test_graphai_strategy_also_skips_system_fields(self) -> None:
+        """GraphAI strategy also skips system-injected fields."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "project": "{{job.body.project}}",
+            "user_input": "{{job.body.user_input}}",
+        }
+        input_schema = {
+            "type": "object",
+            "properties": {
+                "user_input": {"type": "string"},
+            },
+        }
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+
+class TestGraphAIValidationStrategy:
+    """Test GraphAIValidationStrategy for complete coverage."""
+
+    def test_graphai_task_reference_invalid_index(self) -> None:
+        """GraphAI strategy reports error for invalid task index."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "inputs": "{{tasks[5].output_data}}",
+        }
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema={},
+            task_count=2,
+            task_output_schemas=[{}, {}],
+        )
+
+        assert not result.is_valid
+        assert any(e.error_type == "INVALID_INDEX" for e in result.errors)
+
+    def test_graphai_task_reference_valid(self) -> None:
+        """GraphAI strategy validates valid task reference."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "inputs": "{{tasks[0].output_data}}",
+        }
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema={},
+            task_count=1,
+            task_output_schemas=[{"type": "object", "properties": {"result": {}}}],
+        )
+
+        assert result.is_valid
+
+    def test_graphai_task_reference_missing_field(self) -> None:
+        """GraphAI strategy reports error for missing field in task output."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "result": "{{tasks[0].output_data.nonexistent_field}}",
+        }
+        task_output_schemas = [
+            {"type": "object", "properties": {"result": {"type": "string"}}},
+        ]
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema={},
+            task_count=1,
+            task_output_schemas=task_output_schemas,
+        )
+
+        assert not result.is_valid
+        assert any("nonexistent_field" in e.message for e in result.errors)
+
+    def test_graphai_job_body_missing_field(self) -> None:
+        """GraphAI strategy reports error for missing field in job.body."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "field": "{{job.body.missing_field}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert not result.is_valid
+        assert any("missing_field" in e.message for e in result.errors)
+
+    def test_graphai_job_body_entire_body(self) -> None:
+        """GraphAI strategy accepts {{job.body}} (entire body) reference."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "job_params": "{{job.body}}",
+        }
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema={"type": "object", "properties": {}},
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid

@@ -29,6 +29,16 @@ from .template_variable_extractor import (
 
 logger = logging.getLogger(__name__)
 
+# Issue #395: System-injected fields that should be excluded from validation
+# These fields are automatically injected by the system during JobMaster creation
+# and are not part of user input. They should not be validated against the task's
+# input_schema as they are managed separately by the system.
+SYSTEM_INJECTED_FIELDS: frozenset[str] = frozenset(
+    {
+        "project",  # Issue #391: Used for secrets resolution, injected in JobMaster.body
+    }
+)
+
 
 @dataclass
 class BodyTemplateValidationError:
@@ -156,6 +166,15 @@ class TaskFlowValidationStrategy:
         # Extract field path from job.body.field
         if reference.startswith("job.body."):
             field_path = reference[9:]  # Remove "job.body."
+
+            # Issue #395: Skip validation for system-injected fields
+            if field_path in SYSTEM_INJECTED_FIELDS:
+                logger.debug(
+                    "Skipping validation for system-injected field: %s",
+                    field_path,
+                )
+                return errors
+
             if not field_in_schema(field_path, input_schema):
                 errors.append(
                     BodyTemplateValidationError(
@@ -233,6 +252,15 @@ class GraphAIValidationStrategy:
         # Extract field path from job.body.field
         if reference.startswith("job.body."):
             field_path = reference[9:]  # Remove "job.body."
+
+            # Issue #395: Skip validation for system-injected fields
+            if field_path in SYSTEM_INJECTED_FIELDS:
+                logger.debug(
+                    "Skipping validation for system-injected field: %s",
+                    field_path,
+                )
+                return errors
+
             if not field_in_schema(field_path, input_schema):
                 errors.append(
                     BodyTemplateValidationError(
@@ -417,4 +445,5 @@ __all__ = [
     "ValidationStrategy",
     "TaskFlowValidationStrategy",
     "GraphAIValidationStrategy",
+    "SYSTEM_INJECTED_FIELDS",
 ]
