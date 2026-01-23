@@ -105,20 +105,37 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	await syncLangfuseTraceIds(recentJobs);
 
 	// Issue #305: Include workflows (JSON) for per-task trace links
+	// Issue #396: Include taskBreakdown and interfaceDefinitions for display after completion
 	const recentJobVersions = recentJobs.map((jv) => ({
 		id: jv.id,
 		versionLabel: jv.versionLabel,
 		status: jv.status,
 		externalTraceId: jv.externalTraceId,
 		workflows: jv.workflows, // JSON string containing workflow_statuses with trace IDs
+		taskBreakdown: jv.taskBreakdown, // Issue #396: JSON string for task display
+		interfaceDefinitions: jv.interfaceDefinitions, // Issue #396: JSON string for interface display
 		generatedAt: jv.generatedAt?.toISOString() ?? null,
 		createdAt: jv.createdAt.toISOString()
 	}));
 
+	// Issue #396: Find latest successful job for initial display
+	const latestSuccessJob = recentJobs.find((jv) => jv.status === 'success');
+	const latestSuccessJobData = latestSuccessJob
+		? {
+				id: latestSuccessJob.id,
+				versionLabel: latestSuccessJob.versionLabel,
+				taskBreakdown: latestSuccessJob.taskBreakdown,
+				workflows: latestSuccessJob.workflows,
+				interfaceDefinitions: latestSuccessJob.interfaceDefinitions,
+				generatedAt: latestSuccessJob.generatedAt?.toISOString() ?? null
+			}
+		: null;
+
 	return {
 		activeRequirementVersion,
 		currentGeneratingJob,
-		recentJobVersions
+		recentJobVersions,
+		latestSuccessJob: latestSuccessJobData // Issue #396: For initial display
 	};
 };
 

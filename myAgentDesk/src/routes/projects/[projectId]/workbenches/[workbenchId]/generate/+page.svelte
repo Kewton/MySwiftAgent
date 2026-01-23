@@ -76,6 +76,31 @@
 		}
 	});
 
+	// Issue #396: Initialize lastGenerationResult from latest successful job
+	$effect(() => {
+		if (!isGenerating && !lastGenerationResult && data.latestSuccessJob) {
+			const latestJob = data.latestSuccessJob;
+			// Parse JSON strings from DB
+			const parsedTaskBreakdown: TaskBreakdownItem[] = latestJob.taskBreakdown
+				? JSON.parse(latestJob.taskBreakdown)
+				: [];
+			const parsedWorkflows: WorkflowStatusItem[] = latestJob.workflows
+				? JSON.parse(latestJob.workflows)
+				: [];
+
+			lastGenerationResult = {
+				phase: 'complete',
+				progress: 100,
+				taskBreakdown: parsedTaskBreakdown,
+				workflowStatuses: parsedWorkflows,
+				langfuseTraceId: null,
+				versionLabel: latestJob.versionLabel,
+				completedAt: latestJob.generatedAt ? new Date(latestJob.generatedAt) : null,
+				hasFailures: parsedWorkflows.some((ws) => ws.status === 'failed')
+			};
+		}
+	});
+
 	// Derived states
 	let canGenerate = $derived(
 		data.activeRequirementVersion !== null && !isGenerating && !data.currentGeneratingJob
