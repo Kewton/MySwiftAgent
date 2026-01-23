@@ -115,7 +115,8 @@ export const CapabilitySchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  category: z.enum(['api', 'llm', 'transform', 'utility']),
+  // Issue #396: Extended category enum to match actual capability categories
+  category: z.enum(['api', 'llm', 'transform', 'utility', 'search', 'ai_agent']),
   status: z.enum(['available', 'unavailable', 'deprecated']),
   parameters: z.array(CapabilityParameterSchema).optional(),
 });

@@ -155,7 +155,7 @@ export class WorkflowGenerator {
         if (this.validateBeforeReturn) {
           const context: ValidationContext = {
             capabilities,
-            projectId: projectId ?? 'default',
+            projectId: projectId ?? 'default_project',
           };
 
           const validationResult = await this.validationPipeline.validate(
@@ -323,7 +323,7 @@ export class WorkflowGenerator {
         // Validate
         const context: ValidationContext = {
           capabilities,
-          projectId: projectId ?? 'default',
+          projectId: projectId ?? 'default_project',
         };
 
         const validationResult = await this.validationPipeline.validate(

@@ -74,7 +74,7 @@ export class WorkflowRegistrar {
     this.registry = config.registry;
     this.storage = config.storage;
     this.logger = config.logger ?? createLogger({ name: 'WorkflowRegistrar' });
-    this.defaultProject = config.defaultProject ?? 'default';
+    this.defaultProject = config.defaultProject ?? 'default_project';
     this.configDir = config.configDir ?? DEFAULT_CONFIG_DIR;
   }
 

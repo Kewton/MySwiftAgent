@@ -200,7 +200,7 @@ class JobGeneratorV2Adapter:
     async def generate(
         self,
         user_requirement: str,
-        project_id: str = "default",
+        project_id: str = "default_project",
         max_tasks: int = 10,
         job_id: str | None = None,
         engine: str | None = None,

@@ -22,13 +22,10 @@ The workflow must be a valid JSON object with the following structure:
   "workflow_name": "string (required, snake_case)",
   "description": "string (optional)",
   "input_schema": {
-    "type": "object",
-    "properties": { ... },
-    "required": [ ... ]
+    "field_name": "type_string"
   },
   "output_schema": {
-    "type": "object",
-    "properties": { ... }
+    "field_name": "type_string"
   },
   "steps": [
     {
@@ -40,25 +37,53 @@ The workflow must be a valid JSON object with the following structure:
     }
   ],
   "output": {
-    "result_key": "$steps.step_id.output_key"
+    "result_key": "\${step_id.output.output_key}"
   }
 }
 \`\`\`
+
+**IMPORTANT Schema Format:**
+- \`input_schema\` and \`output_schema\` use SIMPLE type mapping: \`{"field_name": "type"}\`
+- Valid types: "string", "number", "boolean", "array", "object"
+- Do NOT use JSON Schema format (no "type": "object", "properties", "required")
+- Example: \`{"query": "string", "num_results": "number"}\`
 
 ## Step Types
 
 ### 1. api_rest
 REST API call step for external service integration.
 
-Config:
-- \`method\`: HTTP method (GET, POST, PUT, DELETE, PATCH)
-- \`url\`: API endpoint URL (can use variables)
-- \`headers\`: Request headers object
-- \`timeout\`: Request timeout in milliseconds
+**CRITICAL: \`url\` is REQUIRED for api_rest steps. Never use \`capability_id\`.**
+
+Config (REQUIRED fields):
+- \`method\`: HTTP method (GET, POST, PUT, DELETE, PATCH) - REQUIRED
+- \`url\`: Full API endpoint URL - REQUIRED (e.g., "http://localhost:8004/v1/utility/google_search")
+- \`headers\`: Request headers object (default: {"Content-Type": "application/json"})
+- \`body\`: Request body for POST/PUT/PATCH - include directly in config
+- \`timeout_ms\`: Request timeout in milliseconds (default: 30000)
+
+**Common Capability URLs:**
+- google_search: http://localhost:8004/v1/utility/google_search (POST)
+- gmail_send: http://localhost:8004/v1/utility/gmail_send (POST)
+
+Example:
+\`\`\`json
+{
+  "id": "search_step",
+  "type": "api_rest",
+  "config": {
+    "method": "POST",
+    "url": "http://localhost:8004/v1/utility/google_search",
+    "headers": {"Content-Type": "application/json"},
+    "body": {"queries": ["\${inputs.query}"], "num": 3},
+    "timeout_ms": 30000
+  },
+  "params": {}
+}
+\`\`\`
 
 Params:
-- \`body\`: Request body (for POST/PUT/PATCH)
-- Any dynamic values using variable references
+- Usually empty \`{}\` - put request body in \`config.body\` instead
 
 ### 2. transform
 Data transformation step using template or mapping.
@@ -123,9 +148,14 @@ Params:
 
 Use the following patterns for variable references:
 
-- \`$input.field_name\`: Reference workflow input
-- \`$steps.step_id.field_name\`: Reference output from previous step
-- \`$env.VARIABLE_NAME\`: Reference environment variable (use sparingly)
+- \`\${inputs.field_name}\`: Reference workflow input
+- \`\${step_id.output.field_name}\`: Reference output from previous step (use the step's id, not "steps")
+- \`\${secrets.VARIABLE_NAME}\`: Reference secret from MyVault (for API keys etc.)
+
+**IMPORTANT Variable Syntax:**
+- Always use \`\${...}\` syntax with curly braces
+- For inputs: \`\${inputs.query}\`, NOT \`$input.query\`
+- For step outputs: \`\${search_step.output.results}\`, NOT \`$steps.search_step.results\`
 
 ## Best Practices
 
@@ -144,13 +174,13 @@ Use the following patterns for variable references:
     {
       "id": "fetch_data",
       "type": "api_rest",
-      "config": { "method": "GET", "url": "https://api.example.com/data/$input.id" },
+      "config": { "method": "GET", "url": "https://api.example.com/data/\${inputs.id}" },
       "params": {}
     },
     {
       "id": "transform_response",
       "type": "transform",
-      "config": { "template": "{\\"result\\": \\"{{steps.fetch_data.data}}\\"}" },
+      "config": { "template": "{\\"result\\": \\"\${fetch_data.output.data}\\"}" },
       "params": {}
     }
   ]
@@ -166,8 +196,8 @@ Use the following patterns for variable references:
       "type": "transform",
       "config": {
         "mapping": {
-          "result": "$.steps.previous_step.output",
-          "count": "$.steps.previous_step.count"
+          "result": "\${previous_step.output.result}",
+          "count": "\${previous_step.output.count}"
         }
       },
       "params": {}
@@ -199,19 +229,20 @@ Use the following patterns for variable references:
 
 When making API calls, distinguish between:
 
-### Internal Capability (use capability_id)
-For registered capabilities, use \`capability_id\` instead of \`url\`:
+### Internal Capability (use capability URL)
+For registered capabilities, construct the URL using the capability's endpoint:
 \`\`\`json
 {
   "id": "search_google",
   "type": "api_rest",
   "config": {
-    "capability_id": "google_search",
-    "method": "POST"
+    "method": "POST",
+    "url": "http://localhost:8004/v1/utility/google_search",
+    "headers": { "Content-Type": "application/json" },
+    "body": { "queries": ["\${inputs.search_term}"], "num": 3 },
+    "timeout_ms": 30000
   },
-  "params": {
-    "body": { "query": "$input.search_term" }
-  }
+  "params": {}
 }
 \`\`\`
 
@@ -230,14 +261,16 @@ For external APIs with full URLs:
 \`\`\`
 
 **Important Rules:**
-- Use \`capability_id\` when referencing a registered capability
-- Use \`url\` only for external APIs with full URLs
-- Never use both \`capability_id\` and \`url\` in the same step
-- Prefer \`capability_id\` when the capability is available
+- ALWAYS use \`url\` field for api_rest steps - it is REQUIRED
+- NEVER use \`capability_id\` - it is not supported
+- For internal capabilities, use their full URL (e.g., http://localhost:8004/v1/utility/google_search)
+- For external APIs, use HTTPS URLs
+- Put request body in \`config.body\`, not in \`params\`
 `;
 
 /**
  * JSON Schema for TaskFlow validation
+ * Issue #396: Updated to match graphAiServer expected format (simple type mapping)
  */
 export const TASKFLOW_JSON_SCHEMA = {
   $schema: 'http://json-schema.org/draft-07/schema#',
@@ -251,29 +284,26 @@ export const TASKFLOW_JSON_SCHEMA = {
     description: {
       type: 'string',
     },
+    // Issue #396: Simple type mapping format {field: "type"}
     input_schema: {
       type: 'object',
-      required: ['type'],
-      properties: {
-        type: { type: 'string' },
-        properties: { type: 'object' },
-        required: { type: 'array', items: { type: 'string' } },
+      additionalProperties: {
+        type: 'string',
+        enum: ['string', 'number', 'boolean', 'array', 'object', 'null'],
       },
     },
     output_schema: {
       type: 'object',
-      required: ['type'],
-      properties: {
-        type: { type: 'string' },
-        properties: { type: 'object' },
-        required: { type: 'array', items: { type: 'string' } },
+      additionalProperties: {
+        type: 'string',
+        enum: ['string', 'number', 'boolean', 'array', 'object', 'null'],
       },
     },
     steps: {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'type', 'config', 'params'],
+        required: ['id', 'type', 'config'],
         properties: {
           id: { type: 'string' },
           type: {

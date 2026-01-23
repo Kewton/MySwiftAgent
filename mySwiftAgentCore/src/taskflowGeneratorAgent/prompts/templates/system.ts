@@ -18,7 +18,7 @@ export function buildSystemPromptTemplate(capabilitiesSection: string): string {
 ## Available Capabilities
 
 The following capabilities are available for use in your workflow.
-Use these capability IDs when creating api_rest steps.
+**IMPORTANT**: Use the full URL endpoint (not capability_id) when creating api_rest steps.
 
 ${capabilitiesSection}
 
@@ -26,10 +26,12 @@ ${capabilitiesSection}
 
 1. Analyze the task requirements carefully
 2. Design a workflow that accomplishes the task
-3. Use available capabilities where appropriate
-4. Ensure all variable references are valid
-5. Output ONLY the JSON workflow definition
-6. Do not include any explanation or markdown formatting around the JSON
+3. For api_rest steps, ALWAYS use full URL (e.g., http://localhost:8004/v1/utility/google_search)
+4. NEVER use capability_id - it is not supported
+5. Put request body directly in config.body, not in params
+6. Ensure all variable references use \${...} syntax
+7. Output ONLY the JSON workflow definition
+8. Do not include any explanation or markdown formatting around the JSON
 `;
 }
 

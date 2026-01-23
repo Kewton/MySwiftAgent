@@ -2,6 +2,7 @@
  * TaskFlowDefinition - graphAiServer compatible type definitions
  *
  * Issue #363: External TaskFlow definition types
+ * Issue #396: Updated to match graphAiServer's expected format (simple type mapping)
  * These types are compatible with graphAiServer workflow definitions.
  */
 
@@ -14,28 +15,17 @@ export const NodeTypes = ['api_rest', 'code_js', 'transform', 'parallel', 'llm',
 export type NodeType = (typeof NodeTypes)[number];
 
 /**
- * IO Schema property type
+ * Simple type values for IO schema
+ * Issue #396: graphAiServer uses simple type mapping {field: "type"}
  */
-export interface IOSchemaProperty {
-  type: string;
-  description?: string;
-  items?: IOSchemaProperty;
-  properties?: Record<string, IOSchemaProperty>;
-  required?: string[];
-  enum?: string[];
-  default?: unknown;
-}
+export const SimpleTypes = ['string', 'number', 'boolean', 'array', 'object', 'null'] as const;
+export type SimpleType = (typeof SimpleTypes)[number];
 
 /**
- * IO Schema type definition
+ * IO Schema type definition (graphAiServer format)
+ * Issue #396: Simple mapping of field names to type strings
  */
-export interface IOSchemaType {
-  type: string;
-  properties?: Record<string, IOSchemaProperty>;
-  required?: string[];
-  items?: IOSchemaProperty;
-  description?: string;
-}
+export type IOSchemaType = Record<string, SimpleType>;
 
 /**
  * TaskFlow step definition (graphAiServer format)
@@ -45,7 +35,7 @@ export interface TaskFlowStep {
   type: NodeType;
   description?: string;
   config: Record<string, unknown>;
-  params: Record<string, unknown>;
+  params?: Record<string, unknown>;
 }
 
 /**
@@ -62,32 +52,24 @@ export interface TaskFlowDefinition {
 
 // Zod Schemas for validation
 
-export const IOSchemaPropertySchema: z.ZodType<IOSchemaProperty> = z.lazy(() =>
-  z.object({
-    type: z.string(),
-    description: z.string().optional(),
-    items: IOSchemaPropertySchema.optional(),
-    properties: z.record(IOSchemaPropertySchema).optional(),
-    required: z.array(z.string()).optional(),
-    enum: z.array(z.string()).optional(),
-    default: z.unknown().optional(),
-  })
-);
+/**
+ * Simple type schema for IO schema values
+ * Issue #396: graphAiServer uses simple type strings
+ */
+export const SimpleTypeSchema = z.enum(SimpleTypes);
 
-export const IOSchemaTypeSchema = z.object({
-  type: z.string(),
-  properties: z.record(IOSchemaPropertySchema).optional(),
-  required: z.array(z.string()).optional(),
-  items: IOSchemaPropertySchema.optional(),
-  description: z.string().optional(),
-});
+/**
+ * IO Schema - maps field names to simple type strings
+ * Issue #396: graphAiServer format {field: "type"}
+ */
+export const IOSchemaTypeSchema = z.record(z.string(), SimpleTypeSchema);
 
 export const TaskFlowStepSchema = z.object({
   id: z.string(),
   type: z.enum(NodeTypes),
   description: z.string().optional(),
   config: z.record(z.unknown()),
-  params: z.record(z.unknown()),
+  params: z.record(z.unknown()).optional().default({}),
 });
 
 export const TaskFlowDefinitionSchema = z.object({

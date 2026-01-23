@@ -334,6 +334,9 @@ export class PromptBuilder {
         }
 
         sections.push(`- **Category**: ${cap.category}`);
+        // Issue #396: Add endpoint URL so LLM can construct the full URL
+        const endpointUrl = `http://localhost:8004/v1/utility/${cap.id}`;
+        sections.push(`- **Endpoint URL**: \`${endpointUrl}\` (POST)`);
 
         // Parameters with validation constraints
         if (cap.parameters && cap.parameters.length > 0) {

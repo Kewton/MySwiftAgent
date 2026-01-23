@@ -78,7 +78,7 @@ class JobGenerationRequest(BaseModel):
     """Request for 3-phase job generation."""
 
     user_requirement: str = Field(description="Natural language requirement")
-    project_id: str = Field(default="default", description="Project ID")
+    project_id: str = Field(default="default_project", description="Project ID")
     max_tasks: int = Field(default=10, description="Maximum tasks")
     engine: str = Field(default="taskflow", description="Workflow engine")
 
