@@ -311,9 +311,37 @@ class JobCreationStateManager:
                 ]
             if "task_breakdown" in result and result["task_breakdown"]:
                 status.task_breakdown = [
-                    TaskBreakdownItem(**tb) if isinstance(tb, dict) else tb
+                    self._convert_to_task_breakdown_item(tb)
                     for tb in result["task_breakdown"]
                 ]
+
+    def _convert_to_task_breakdown_item(
+        self, data: dict[str, Any] | TaskBreakdownItem
+    ) -> TaskBreakdownItem:
+        """Convert dict to TaskBreakdownItem, handling field name differences.
+
+        Issue #396: The adapter produces 'recommended_api' (singular) but
+        TaskBreakdownItem expects 'recommended_apis' (plural, as list).
+
+        Args:
+            data: Either a dict or already a TaskBreakdownItem
+
+        Returns:
+            TaskBreakdownItem instance
+        """
+        if isinstance(data, TaskBreakdownItem):
+            return data
+
+        # Convert recommended_api (singular) to recommended_apis (plural list)
+        if "recommended_api" in data and "recommended_apis" not in data:
+            api = data.pop("recommended_api")
+            data["recommended_apis"] = [api] if api else []
+
+        # Remove extra fields that TaskBreakdownItem doesn't accept
+        allowed_fields = {"task_id", "name", "description", "recommended_apis"}
+        filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
+
+        return TaskBreakdownItem(**filtered_data)
 
     def _update_status_failed(
         self, status: JobCreationStatus, error_message: str
