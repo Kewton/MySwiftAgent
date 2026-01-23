@@ -460,11 +460,26 @@ class WorkflowGeneratorClient:
         data = response.json_data
 
         # Parse status
-        status_str = data.get("status", "failed")
-        try:
-            status = BatchStatus(status_str)
-        except ValueError:
-            status = BatchStatus.FAILED
+        # Issue #396: Infer status from success field when status is not present
+        # mySwiftAgentCore returns "success" (boolean), not "status" (string)
+        status_str = data.get("status")
+        if status_str:
+            try:
+                status = BatchStatus(status_str)
+            except ValueError:
+                status = BatchStatus.FAILED
+        else:
+            # Infer status from success field and counts
+            success = data.get("success", False)
+            failed_count = len(data.get("failed_tasks", []))
+            workflow_count = len(data.get("workflows", {}))
+
+            if success and failed_count == 0 and workflow_count > 0:
+                status = BatchStatus.SUCCESS
+            elif workflow_count > 0 and failed_count > 0:
+                status = BatchStatus.PARTIAL_SUCCESS
+            else:
+                status = BatchStatus.FAILED
 
         # Parse workflows
         # Fix: mySwiftAgentCore returns "registered" field instead of "status"

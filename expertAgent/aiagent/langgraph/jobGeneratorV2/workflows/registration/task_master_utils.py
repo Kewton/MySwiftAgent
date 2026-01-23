@@ -62,8 +62,17 @@ async def update_task_master_body_template_taskflow(
         existing_job_params = existing_body_template.get("job_params", "{{job.body}}")
 
         # Issue #390: Get existing inputs and project to preserve task chaining
-        existing_inputs = existing_body_template.get("inputs", "{{job.body}}")
-        existing_project = existing_body_template.get("project", "{{job.project}}")
+        # Issue #396: Use {{job.body.project}} instead of {{job.project}}
+        # TemplateResolver only supports {{job.body}} and {{job.body.field}} patterns
+        # Issue #396: Use existing user_input field as the basis for inputs
+        # For task 1: user_input = "{{job.body.user_input}}"
+        # For task N: user_input = "{{tasks[N-1].output_data}}"
+        # This preserves task chaining by using previous task's output
+        existing_user_input = existing_body_template.get("user_input")
+        existing_inputs = existing_body_template.get(
+            "inputs", existing_user_input or "{{job.body.user_input}}"
+        )
+        existing_project = existing_body_template.get("project", "{{job.body.project}}")
 
         # Build TaskFlow V2 body_template
         # Issue #390: Use 'workflow' field instead of 'workflow_name'

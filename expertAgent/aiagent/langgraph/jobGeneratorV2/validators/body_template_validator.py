@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 SYSTEM_INJECTED_FIELDS: frozenset[str] = frozenset(
     {
         "project",  # Issue #391: Used for secrets resolution, injected in JobMaster.body
+        "user_input",  # Issue #396: User input object passed from job.body
     }
 )
 

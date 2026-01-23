@@ -452,9 +452,13 @@ class MasterManagerSubWorkflow:
             # Issue #391: Use {{job.body.project}} (Job model has no project attribute)
             # workflow will be set to placeholder - updated after workflow generation
             if order == 0:
+                # Issue #396: Use user_input instead of entire body for inputs
+                # mySwiftAgentCore expects inputs to match workflow's input_schema
+                # job.body = {"project": "...", "user_input": {"keyword": "...", ...}}
+                # workflow expects inputs = {"keyword": "...", ...}
                 return {
                     "workflow": "__PENDING__",  # Updated by workflow_gen phase
-                    "inputs": "{{job.body}}",  # Pass entire body as inputs object
+                    "inputs": "{{job.body.user_input}}",  # Issue #396: User input data
                     "project": "{{job.body.project}}",  # Issue #391: From job.body
                 }
             else:
