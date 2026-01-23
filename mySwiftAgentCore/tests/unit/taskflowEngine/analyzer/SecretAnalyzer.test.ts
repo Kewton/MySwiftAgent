@@ -14,9 +14,10 @@ import type { InternalWorkflowDefinition } from '../../../../src/taskflowEngine/
 import type { NodeRegistry } from '../../../../src/taskflowEngine/nodes/BaseNode.js';
 
 // Create mock node executors
+// Issue #396: LLM_API_KEY is now optional fallback, only OPENAI_API_KEY is required
 const createMockLlmExecutor = () => ({
   type: 'llm' as const,
-  requiredSecrets: ['OPENAI_API_KEY', 'LLM_API_KEY'] as readonly string[],
+  requiredSecrets: ['OPENAI_API_KEY'] as readonly string[],
   execute: vi.fn(),
   validate: vi.fn().mockReturnValue({ valid: true, errors: [] }),
 });
@@ -275,7 +276,8 @@ describe('SecretAnalyzer', () => {
   describe('getStaticSecrets', () => {
     it('should return static secrets from executor with requiredSecrets property', () => {
       const secrets = analyzer.getStaticSecrets(mockLlmExecutor);
-      expect(secrets).toEqual(['OPENAI_API_KEY', 'LLM_API_KEY']);
+      // Issue #396: Only OPENAI_API_KEY is required now
+      expect(secrets).toEqual(['OPENAI_API_KEY']);
     });
 
     it('should return empty array for executor without requiredSecrets', () => {

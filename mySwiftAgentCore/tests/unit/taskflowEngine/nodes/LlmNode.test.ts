@@ -42,7 +42,7 @@ describe('LlmNodeExecutor', () => {
   /**
    * Issue #377: Tests for static requiredSecrets property
    */
-  describe('requiredSecrets (Issue #377)', () => {
+  describe('requiredSecrets (Issue #377, Issue #396)', () => {
     it('should have requiredSecrets property', () => {
       expect(executor.requiredSecrets).toBeDefined();
       expect(Array.isArray(executor.requiredSecrets)).toBe(true);
@@ -52,14 +52,16 @@ describe('LlmNodeExecutor', () => {
       expect(executor.requiredSecrets).toContain('OPENAI_API_KEY');
     });
 
-    it('should include LLM_API_KEY in requiredSecrets', () => {
-      expect(executor.requiredSecrets).toContain('LLM_API_KEY');
+    it('should NOT include LLM_API_KEY in requiredSecrets (Issue #396: optional fallback)', () => {
+      // LLM_API_KEY is now an optional fallback, not a required secret
+      expect(executor.requiredSecrets).not.toContain('LLM_API_KEY');
     });
 
-    it('should be a readonly array', () => {
-      // TypeScript enforces this at compile time, but we can verify the values are stable
+    it('should be a readonly array with only OPENAI_API_KEY', () => {
+      // Issue #396: Only OPENAI_API_KEY is required, LLM_API_KEY is optional fallback
       const secrets = executor.requiredSecrets;
-      expect(secrets.length).toBe(2);
+      expect(secrets.length).toBe(1);
+      expect(secrets[0]).toBe('OPENAI_API_KEY');
     });
   });
 
