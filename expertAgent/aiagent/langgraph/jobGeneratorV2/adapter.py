@@ -197,7 +197,8 @@ class JobGeneratorAdapter:
                 "dependencies": task.dependencies,
                 "priority": task.priority,
                 "task_type": task.task_type,
-                "recommended_api": task.recommended_api,
+                # Issue #396: Output as recommended_apis (plural list) for TaskBreakdownItem compatibility
+                "recommended_apis": [task.recommended_api] if task.recommended_api else [],
             }
             for task in sorted_tasks
         ]

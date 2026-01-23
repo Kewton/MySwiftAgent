@@ -320,8 +320,10 @@ class JobCreationStateManager:
     ) -> TaskBreakdownItem:
         """Convert dict to TaskBreakdownItem, handling field name differences.
 
-        Issue #396: The adapter produces 'recommended_api' (singular) but
-        TaskBreakdownItem expects 'recommended_apis' (plural, as list).
+        Issue #396: Backward compatibility layer for legacy data.
+        Root cause fixed in adapter.py (now outputs recommended_apis directly).
+        This method handles both old format (recommended_api) and new format
+        (recommended_apis) for backward compatibility with cached data.
 
         Args:
             data: Either a dict or already a TaskBreakdownItem

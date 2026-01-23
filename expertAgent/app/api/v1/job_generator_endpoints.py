@@ -546,6 +546,9 @@ def _build_response_from_state(
 
             error_message = "\n".join(feedback_parts)
 
+    # Issue #396: Extract workflow_statuses for V1 architecture consistency
+    workflow_statuses = state.get("workflow_statuses")
+
     return JobGeneratorResponse(
         status=status,
         job_id=job_id,
@@ -561,6 +564,7 @@ def _build_response_from_state(
         error_message=error_message,
         langfuse_trace_id=langfuse_trace_id,  # Issue #278
         job_body_parameters=job_body_parameters,  # Issue #321
+        workflow_statuses=workflow_statuses,  # Issue #396
     )
 
 
