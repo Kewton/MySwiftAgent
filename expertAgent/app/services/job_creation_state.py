@@ -287,6 +287,9 @@ class JobCreationStateManager:
     ) -> None:
         """Update status to completed (mutates in place).
 
+        Issue #396: Also extract workflow_statuses and task_breakdown from result
+        to make them available as top-level fields in the status response.
+
         Args:
             status: Status to update
             job_master_id: Optional job master ID
@@ -297,6 +300,20 @@ class JobCreationStateManager:
         status.end_time = datetime.now()
         status.job_master_id = job_master_id
         status.result = result
+
+        # Issue #396: Extract workflow_statuses and task_breakdown from result
+        # This makes them available as top-level fields in the status response
+        if result:
+            if "workflow_statuses" in result and result["workflow_statuses"]:
+                status.workflow_statuses = [
+                    WorkflowStatusItem(**ws) if isinstance(ws, dict) else ws
+                    for ws in result["workflow_statuses"]
+                ]
+            if "task_breakdown" in result and result["task_breakdown"]:
+                status.task_breakdown = [
+                    TaskBreakdownItem(**tb) if isinstance(tb, dict) else tb
+                    for tb in result["task_breakdown"]
+                ]
 
     def _update_status_failed(
         self, status: JobCreationStatus, error_message: str

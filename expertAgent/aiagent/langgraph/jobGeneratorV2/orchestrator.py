@@ -26,6 +26,8 @@ from pydantic import BaseModel, Field
 
 from ...clients.interfaces.schema_converter import json_schema_to_simple_mapping
 from ...clients.types.workflow_generator import (
+    BatchStatus,
+    BatchWorkflowGenerationResponse,
     RecoverySuggestion,
     TaskInterface,
     TaskRequest,
@@ -560,6 +562,10 @@ class JobGenerationOrchestrator:
                     parent_span_id=parent_span_id,
                 )
 
+                # Issue #396: Update TaskMasters with workflow names after generation
+                if response.status != BatchStatus.FAILED:
+                    await self._update_task_masters_workflow(response, task_identifiers)
+
                 # Convert BatchWorkflowGenerationResponse to ParallelExecutionResult
                 return self._convert_to_parallel_result(response, task_identifiers)
         except OrchestratorError:
@@ -587,6 +593,76 @@ class JobGenerationOrchestrator:
                 ],
                 total_execution_time_ms=0.0,
             )
+
+    async def _update_task_masters_workflow(
+        self,
+        response: BatchWorkflowGenerationResponse,
+        task_identifiers: list[UnifiedTaskIdentifier],
+    ) -> None:
+        """Update TaskMasters with generated workflow names.
+
+        Issue #396: Implementation of missing Phase 3b step.
+        Issue #360: Strict all-or-nothing update requirement.
+
+        After Phase 3 completes workflow generation, this method updates each
+        TaskMaster's body_template.workflow field from '__PENDING__' to the
+        actual workflow name.
+
+        Args:
+            response: BatchWorkflowGenerationResponse from mySwiftAgentCore
+            task_identifiers: List of task identifiers with task_master_ids
+
+        Raises:
+            OrchestratorError: If any TaskMaster fails to update (all-or-nothing)
+        """
+        # Import locally to avoid circular dependency
+        from .workflows.registration.task_master_utils import (
+            update_task_master_body_template_taskflow,
+        )
+
+        updated_count = 0
+        errors: list[str] = []
+
+        for task in task_identifiers:
+            if not task.task_master_id:
+                continue
+
+            workflow = response.workflows.get(task.task_id)
+            if not workflow:
+                continue
+
+            # Skip failed workflows
+            if workflow.status.value != "success":
+                continue
+
+            try:
+                success = await update_task_master_body_template_taskflow(
+                    task_master_id=task.task_master_id,
+                    workflow_name=workflow.workflow_name,
+                )
+                if success:
+                    updated_count += 1
+                    logger.debug(
+                        "Updated TaskMaster %s with workflow %s",
+                        task.task_master_id,
+                        workflow.workflow_name,
+                    )
+                else:
+                    errors.append(f"Failed to update TaskMaster {task.task_master_id}")
+            except Exception as e:
+                errors.append(f"Error updating TaskMaster {task.task_master_id}: {e}")
+
+        # All-or-nothing check (Issue #360)
+        if errors:
+            raise OrchestratorError(
+                f"Failed to update all TaskMasters: {errors}",
+                phase=Phase.WORKFLOW_GEN,
+            )
+
+        logger.info(
+            "Successfully updated %d TaskMasters with workflow names",
+            updated_count,
+        )
 
     def _convert_to_parallel_result(
         self,
