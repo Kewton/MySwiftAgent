@@ -78,6 +78,8 @@ export interface JobGenerationResult {
 	interface_definitions: Record<string, unknown> | null;
 	error_message: string | null;
 	langfuse_trace_id: string | null;
+	/** Issue #396: Workflow generation statuses */
+	workflow_statuses: WorkflowStatusItem[] | null;
 }
 
 /**

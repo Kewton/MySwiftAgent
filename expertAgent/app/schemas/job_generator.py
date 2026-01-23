@@ -135,6 +135,12 @@ class JobGeneratorResponse(BaseModel):
         examples=["trace-abc123-def456"],
     )
 
+    # Issue #396: Workflow generation statuses for UI display
+    workflow_statuses: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Workflow generation status for each task",
+    )
+
     # Issue #321: Extracted job body parameters from user requirements
     job_body_parameters: list[JobBodyParameter] = Field(
         default_factory=list,

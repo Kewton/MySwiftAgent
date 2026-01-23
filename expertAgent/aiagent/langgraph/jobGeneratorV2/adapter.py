@@ -223,6 +223,45 @@ class JobGeneratorAdapter:
             for task_id, interface in interfaces.items()
         }
 
+    def _build_workflow_statuses(
+        self,
+        result: JobGenerationResult,
+    ) -> list[dict[str, Any]] | None:
+        """Build workflow_statuses from JobGenerationResult.
+
+        Issue #396: Build workflow statuses for UI display.
+
+        Args:
+            result: 3-phase result containing tasks and workflows
+
+        Returns:
+            List of workflow status dicts for API response
+        """
+        if not result.tasks:
+            return None
+
+        workflow_statuses = []
+        for task in result.tasks:
+            workflow = result.workflows.get(task.task_id)
+            if workflow:
+                # Successful workflow
+                workflow_statuses.append({
+                    "task_id": task.task_id,
+                    "task_name": task.name,
+                    "status": "success",
+                    "workflow_name": workflow.get("workflow_name", task.task_id),
+                })
+            else:
+                # Failed or pending workflow
+                workflow_statuses.append({
+                    "task_id": task.task_id,
+                    "task_name": task.name,
+                    "status": "failed",
+                    "error_message": f"Workflow not generated for {task.task_id}",
+                })
+
+        return workflow_statuses if workflow_statuses else None
+
     def _convert_result(
         self,
         result: JobGenerationResult,
@@ -240,6 +279,9 @@ class JobGeneratorAdapter:
             JobGeneratorResponse for API
         """
         from app.schemas.job_generator import JobGeneratorResponse
+
+        # Issue #396: Build workflow_statuses from result
+        workflow_statuses = self._build_workflow_statuses(result)
 
         if result.success:
             task_breakdown = (
@@ -265,6 +307,7 @@ class JobGeneratorAdapter:
                 validation_errors=[],
                 error_message=None,
                 langfuse_trace_id=langfuse_trace_id,
+                workflow_statuses=workflow_statuses,  # Issue #396
             )
         else:
             return JobGeneratorResponse(
@@ -281,6 +324,7 @@ class JobGeneratorAdapter:
                 validation_errors=[],
                 error_message=result.error,
                 langfuse_trace_id=langfuse_trace_id,
+                workflow_statuses=workflow_statuses,  # Issue #396
             )
 
 

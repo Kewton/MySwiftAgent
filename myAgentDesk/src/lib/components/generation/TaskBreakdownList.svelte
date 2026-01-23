@@ -53,7 +53,7 @@
 						{/if}
 					</div>
 					<p class="task-description">{task.description}</p>
-					{#if task.recommended_apis.length > 0}
+					{#if task.recommended_apis?.length > 0}
 						<div class="task-apis">
 							{#each task.recommended_apis as api}
 								<span class="api-tag">{api}</span>

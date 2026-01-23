@@ -69,12 +69,17 @@ export const GET: RequestHandler = async ({ params }) => {
 					// Internal job generation failed
 					// Issue #305: Save workflow_statuses for trace links
 					// Issue #310: Save taskBreakdown even on failure (for debugging)
+					// Issue #396: Also try to get workflow_statuses from result object as fallback
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'failed',
 						errorMessage: result?.error_message || 'Job generation failed',
 						externalTraceId: langfuseTraceId ?? undefined,
 						externalJobMasterId: result?.job_master_id ?? undefined,
-						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined,
+						workflows: workflowStatuses
+							? JSON.stringify(workflowStatuses)
+							: result?.workflow_statuses
+								? JSON.stringify(result.workflow_statuses)
+								: undefined,
 						taskBreakdown: taskBreakdownFromApi
 							? JSON.stringify(taskBreakdownFromApi)
 							: result?.task_breakdown
@@ -91,12 +96,17 @@ export const GET: RequestHandler = async ({ params }) => {
 					// Job completed successfully
 					// Issue #305: Save workflow_statuses for trace links
 					// Issue #310: Save taskBreakdown and interfaceDefinitions to DB
+					// Issue #396: Also try to get workflow_statuses from result object as fallback
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'success',
 						externalJobMasterId:
 							result?.job_master_id ?? apiResult.value.job_master_id ?? undefined,
 						externalTraceId: langfuseTraceId ?? undefined,
-						workflows: workflowStatuses ? JSON.stringify(workflowStatuses) : undefined,
+						workflows: workflowStatuses
+							? JSON.stringify(workflowStatuses)
+							: result?.workflow_statuses
+								? JSON.stringify(result.workflow_statuses)
+								: undefined,
 						taskBreakdown: taskBreakdownFromApi
 							? JSON.stringify(taskBreakdownFromApi)
 							: result?.task_breakdown

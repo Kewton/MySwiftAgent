@@ -129,7 +129,8 @@ const mockJobStatus: JobStatusResponse = {
 		task_breakdown: mockTaskBreakdown,
 		interface_definitions: mockInterfaceDefinitions,
 		error_message: null,
-		langfuse_trace_id: 'mock-langfuse-trace-id'
+		langfuse_trace_id: 'mock-langfuse-trace-id',
+		workflow_statuses: mockWorkflowStatuses // Issue #396
 	}
 };
 

@@ -372,10 +372,17 @@ async def _create_job_in_background_v2(
 
         # Update job state based on response
         if response.status == "success":
+            # Issue #396: response already contains workflow_statuses from adapter
+            result_dict = response.model_dump()
+            if response.workflow_statuses:
+                logger.info(f"[BG:{job_id}] Found {len(response.workflow_statuses)} workflow_statuses in response")
+            else:
+                logger.warning(f"[BG:{job_id}] No workflow_statuses in response")
+
             await job_state_manager.mark_completed_async(
                 job_id=job_id,
                 job_master_id=response.job_master_id,
-                result=response.model_dump(),
+                result=result_dict,
             )
             logger.info(f"[BG:{job_id}] Job creation completed successfully (V2)")
         else:
