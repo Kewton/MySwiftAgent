@@ -1,0 +1,21 @@
+{
+  "issue_number": 396,
+  "iteration": 1,
+  "tdd_result_path": "dev-reports/feature/issue/396/pm-auto-dev/iteration-1/tdd-result.json",
+  "implemented_features_path": "dev-reports/feature/issue/396/pm-auto-dev/iteration-1/implemented-features.json",
+  "acceptance_result_path": "dev-reports/feature/issue/396/pm-auto-dev/iteration-1/acceptance-result.json",
+  "refactoring_scope": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+  ],
+  "refactoring_goals": [
+    "SOLID原則の適用確認",
+    "DRYの確認（重複コードがないか）",
+    "KISSの確認（過度に複雑でないか）",
+    "コードの可読性改善（必要な場合）"
+  ],
+  "constraints": [
+    "既存テストを壊さない",
+    "外部インターフェースを変更しない",
+    "パフォーマンスを低下させない"
+  ]
+}

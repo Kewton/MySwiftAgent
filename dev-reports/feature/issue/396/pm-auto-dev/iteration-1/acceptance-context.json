@@ -1,0 +1,37 @@
+{
+  "issue_number": 396,
+  "feature_summary": "Phase 3完了後のTaskMaster workflow更新機能の実装",
+  "acceptance_criteria": [
+    "Job Generate後、TaskMasterのbody_template.workflowが実際のワークフロー名で更新される",
+    "Job Runが正常に実行される（__PENDING__エラーが発生しない）",
+    "test_orchestrator_issue390.pyの全テストがパス",
+    "test_issue390_integration.pyの全テストがパス",
+    "E2Eテスト成功（実際のジョブ生成→実行フロー）"
+  ],
+  "labels": ["bug"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "jobqueue", "mySwiftAgentCore"],
+  "external_dependencies": ["LLM API"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/api/v1/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "TaskMaster workflow確認",
+        "command": "curl -s 'http://localhost:8001/api/v1/task-masters?job_master_id=JOB_ID' | jq '.[] | {id, body_template}'",
+        "expected_status": 200,
+        "expected_response_contains": ["workflow"]
+      }
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_396_acceptance.py",
+  "existing_test_files": [
+    "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+    "expertAgent/tests/integration/test_issue390_integration.py"
+  ]
+}

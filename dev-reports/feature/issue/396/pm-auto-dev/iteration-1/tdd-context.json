@@ -1,0 +1,94 @@
+{
+  "issue_number": 396,
+  "issue_title": "Bug: orchestrator.py - Phase 3完了後のTaskMaster workflow更新が未実装（Issue #390 問題#4）",
+  "acceptance_criteria": [
+    "Job Generate後、TaskMasterのbody_template.workflowが実際のワークフロー名で更新される",
+    "Job Runが正常に実行される（__PENDING__エラーが発生しない）",
+    "test_orchestrator_issue390.pyの全テストがパス",
+    "test_issue390_integration.pyの全テストがパス",
+    "E2Eテスト成功（実際のジョブ生成→実行フロー）"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T1.1",
+      "description": "_update_task_masters_workflow メソッドを orchestrator.py に追加",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "details": "BatchWorkflowGenerationResponse と UnifiedTaskIdentifier リストを受け取り、各TaskMasterを更新するメソッド。ローカルインポートパターンで循環参照を回避。All-or-Nothingでエラー時は全体失敗。"
+    },
+    {
+      "id": "T1.2",
+      "description": "_execute_workflow_gen メソッドに統合",
+      "type": "integration",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "details": "Phase 3完了後、response.status != BatchStatus.FAILED の場合に _update_task_masters_workflow を呼び出し"
+    },
+    {
+      "id": "T2.1",
+      "description": "既存単体テストのskipマーク解除",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/test_orchestrator.py",
+      "details": "test_update_task_masters_* 関連テストのskipマークを解除"
+    },
+    {
+      "id": "T2.2",
+      "description": "既存結合テストのskipマーク解除",
+      "type": "test",
+      "target_file": "expertAgent/tests/integration/jobGeneratorV2/test_orchestrator_integration.py",
+      "details": "test_orchestrator_calls_update_after_workflow_gen 等のskipマークを解除"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "_update_task_masters_workflow メソッド実装",
+      "estimated_hours": 0.75,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "_execute_workflow_gen への統合",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テストskip解除",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/tests/unit/langgraph/jobGeneratorV2/test_orchestrator.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "結合テストskip解除",
+      "estimated_hours": 0.5,
+      "deliverables": ["expertAgent/tests/integration/jobGeneratorV2/test_orchestrator_integration.py"],
+      "dependencies": ["2.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py - _update_task_masters_workflow メソッド追加",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py - _execute_workflow_gen 統合",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/test_orchestrator.py - skipマーク解除",
+    "expertAgent/tests/integration/jobGeneratorV2/test_orchestrator_integration.py - skipマーク解除"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラーゼロ（Ruff/MyPy）",
+    "全テストパス"
+  ],
+  "target_coverage": 90,
+  "design_patterns": {
+    "all_or_nothing": "Issue #360 - 一つでも更新失敗したら全体失敗",
+    "local_import": "循環参照回避のためメソッド内でインポート",
+    "fail_fast": "エラー時は即座にOrchestratorError"
+  },
+  "existing_utility": {
+    "function": "update_task_master_body_template_taskflow",
+    "location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/task_master_utils.py",
+    "usage": "各TaskMasterのworkflowフィールドを更新"
+  }
+}

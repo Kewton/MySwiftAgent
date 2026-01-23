@@ -1,0 +1,28 @@
+{
+  "issue_number": 396,
+  "issue_title": "Bug: orchestrator.py - Phase 3完了後のTaskMaster workflow更新が未実装（Issue #390 問題#4）",
+  "acceptance_criteria": [
+    "Job Generate後、TaskMasterのbody_template.workflowが実際のワークフロー名で更新される",
+    "Job Runが正常に実行される（__PENDING__エラーが発生しない）",
+    "test_orchestrator_issue390.pyの全テストがパス",
+    "test_issue390_integration.pyの全テストがパス",
+    "E2Eテスト成功（実際のジョブ生成→実行フロー）"
+  ],
+  "technical_requirements": [
+    "orchestrator.pyに_update_task_masters_workflow()メソッドを追加",
+    "_run_workflow_gen_phase()の成功後に呼び出し",
+    "既存のupdate_task_master_body_template_taskflow()を使用",
+    "All-or-Nothing更新パターン（Issue #360準拠）",
+    "ローカルインポートによる循環参照回避"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/396/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/396/work-plan.md",
+  "phase": "pre-tdd",
+  "related_issues": [390, 360],
+  "prepared_resources": {
+    "unit_tests": "tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+    "integration_tests": "tests/integration/test_issue390_integration.py",
+    "utility_function": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/task_master_utils.py:update_task_master_body_template_taskflow"
+  }
+}

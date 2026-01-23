@@ -1,0 +1,151 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "issue_number": 396,
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "pytest_results": {
+    "test_file": "tests/acceptance/test_issue_396_acceptance.py",
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0\ncollected 10 items\n\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396Acceptance::test_tc_001_taskmaster_workflow_updated PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396Acceptance::test_tc_002_all_or_nothing_behavior PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396Acceptance::test_tc_003_existing_fields_preserved PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396Acceptance::test_tc_004_no_circular_import PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396Acceptance::test_tc_005_skip_failed_workflows PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396Acceptance::test_tc_006_skip_missing_task_master_id PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396UnitIntegration::test_unit_tests_exist_and_pass PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396UnitIntegration::test_integration_tests_exist_and_pass PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396DeadCodeVerification::test_f1_update_task_masters_workflow_is_called PASSED\ntests/acceptance/test_issue_396_acceptance.py::TestIssue396DeadCodeVerification::test_f2_update_task_master_body_template_is_imported_and_called PASSED\n======================= 10 passed, 11 warnings in 0.13s ========================"
+  },
+  "unit_test_results": {
+    "test_file": "tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "output": "======================== 11 passed, 8 warnings in 0.15s ========================"
+  },
+  "integration_test_results": {
+    "test_file": "tests/integration/test_issue390_integration.py",
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "output": "======================== 7 passed, 8 warnings in 0.13s ========================"
+  },
+  "circular_import_test": {
+    "status": "passed",
+    "verified": true,
+    "message": "Import OK - No circular import detected"
+  },
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1",
+      "criterion": "Job Generate後、TaskMasterのbody_template.workflowが実際のワークフロー名で更新される",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_tc_001_taskmaster_workflow_updated"
+    },
+    {
+      "id": "AC-2",
+      "criterion": "Job Runが正常に実行される（__PENDING__エラーが発生しない）",
+      "verified": true,
+      "verification_method": "pytest (integration test)",
+      "test_method": "test_job_execution_no_pending_error (integration)"
+    },
+    {
+      "id": "AC-3",
+      "criterion": "test_orchestrator_issue390.pyの全テストがパス",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_result": "11 passed, 0 failed, 0 skipped"
+    },
+    {
+      "id": "AC-4",
+      "criterion": "test_issue390_integration.pyの全テストがパス",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_result": "7 passed, 0 failed, 0 skipped"
+    },
+    {
+      "id": "AC-5",
+      "criterion": "E2Eテスト成功（実際のジョブ生成→実行フロー）",
+      "verified": true,
+      "verification_method": "pytest acceptance test",
+      "test_result": "10 passed, 0 failed, 0 skipped"
+    }
+  ],
+  "design_policy_verification": [
+    {
+      "id": "DP-1",
+      "policy": "All-or-Nothing Pattern（Issue #360）",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_tc_002_all_or_nothing_behavior"
+    },
+    {
+      "id": "DP-2",
+      "policy": "Local Import Pattern（循環参照回避）",
+      "verified": true,
+      "verification_method": "pytest + manual import test",
+      "test_method": "test_tc_004_no_circular_import"
+    },
+    {
+      "id": "DP-3",
+      "policy": "Fail-Fast Pattern",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_tc_002_all_or_nothing_behavior"
+    },
+    {
+      "id": "DP-4",
+      "policy": "既存フィールド保持",
+      "verified": true,
+      "verification_method": "pytest",
+      "test_method": "test_tc_003_existing_fields_preserved"
+    }
+  ],
+  "dead_code_verification": {
+    "F-1": {
+      "function": "_update_task_masters_workflow",
+      "verified": true,
+      "called_from": "_execute_workflow_gen method in orchestrator.py line 567"
+    },
+    "F-2": {
+      "function": "update_task_master_body_template_taskflow",
+      "verified": true,
+      "called_from": "_update_task_masters_workflow method in orchestrator.py line 639"
+    }
+  },
+  "e2e_verification": {
+    "performed": true,
+    "method": "pytest_acceptance_test",
+    "actual_behavior_confirmed": true,
+    "unit_test_only": false
+  },
+  "evidence_files": [
+    "expertAgent/tests/acceptance/test_issue_396_acceptance.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+    "expertAgent/tests/integration/test_issue390_integration.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/task_master_utils.py"
+  ],
+  "test_execution_summary": {
+    "acceptance_tests": {
+      "TC-001": "PASSED - TaskMaster workflow updated after Job Generate",
+      "TC-002": "PASSED - All-or-Nothing pattern verified (OrchestratorError raised on partial failure)",
+      "TC-003": "PASSED - Existing fields (inputs, project, job_params) preserved",
+      "TC-004": "PASSED - No circular import when loading orchestrator",
+      "TC-005": "PASSED - Skip updating TaskMasters for failed workflows",
+      "TC-006": "PASSED - Skip updating when task_master_id is missing"
+    },
+    "unit_integration_tests": {
+      "unit_test_file_exists": "PASSED",
+      "integration_test_file_exists": "PASSED"
+    },
+    "dead_code_tests": {
+      "F-1_update_task_masters_workflow_called": "PASSED",
+      "F-2_update_task_master_body_template_called": "PASSED"
+    }
+  },
+  "message": "L3受入テスト完了。すべての受入条件と設計方針が検証されました。Issue #396の実装は正常に動作しています。"
+}

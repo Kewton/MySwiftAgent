@@ -1,0 +1,62 @@
+{
+  "status": "success",
+  "issue_number": 396,
+  "coverage": 90,
+  "unit_tests": {
+    "total": 27,
+    "passed": 27,
+    "failed": 0
+  },
+  "static_analysis": {
+    "ruff_errors": 0,
+    "mypy_errors": 0
+  },
+  "files_modified": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+    "expertAgent/tests/integration/test_issue390_integration.py",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/test_orchestrator_issue385.py"
+  ],
+  "executed_tasks": [
+    "T1.1",
+    "T1.2",
+    "T2.1",
+    "T2.2"
+  ],
+  "skipped_tasks": [],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": true,
+    "exports_added": true
+  },
+  "implementation_details": {
+    "T1.1": {
+      "description": "_update_task_masters_workflow method added to orchestrator.py",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "method_signature": "async def _update_task_masters_workflow(self, response: BatchWorkflowGenerationResponse, task_identifiers: list[UnifiedTaskIdentifier]) -> None",
+      "features": [
+        "Issue #396: Implementation of missing Phase 3b step",
+        "Issue #360: Strict all-or-nothing update requirement",
+        "Local import pattern to avoid circular dependency",
+        "Proper error handling with OrchestratorError"
+      ]
+    },
+    "T1.2": {
+      "description": "_execute_workflow_gen now calls _update_task_masters_workflow after workflow generation",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_point": "After response = await c.generate_workflows(...), if response.status != BatchStatus.FAILED"
+    },
+    "T2.1": {
+      "description": "Unit tests updated to remove skip markers and match new implementation signature",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+      "tests_count": 11
+    },
+    "T2.2": {
+      "description": "Integration tests updated to remove skip markers and match new implementation signature",
+      "file": "expertAgent/tests/integration/test_issue390_integration.py",
+      "tests_count": 7
+    }
+  },
+  "commits": [],
+  "message": "TDD implementation complete for Issue #396. Added _update_task_masters_workflow method to orchestrator.py that updates TaskMasters with generated workflow names after Phase 3 completes. All 27 tests pass with Ruff and MyPy showing no errors."
+}

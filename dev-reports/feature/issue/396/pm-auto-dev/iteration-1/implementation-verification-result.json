@@ -1,0 +1,182 @@
+{
+  "status": "passed_with_warnings",
+  "verification_timestamp": "2026-01-23T12:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "_update_task_masters_workflow",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 597",
+          "grep_result": "async def _update_task_masters_workflow("
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called at line 567 in _execute_workflow_gen",
+          "grep_result": "await self._update_task_masters_workflow(response, task_identifiers)"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Method is part of JobGenerationOrchestrator class, no import needed"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+          "evidence": "8 comprehensive unit tests covering success, failure, edge cases"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/integration/test_issue390_integration.py",
+          "evidence": "6 integration tests verify actual orchestrator flow and task_master_utils integration"
+        },
+        "parameters_not_empty": {
+          "passed": true,
+          "evidence": "Parameters 'response' and 'task_identifiers' are properly populated objects",
+          "details": "response is BatchWorkflowGenerationResponse from workflow generation, task_identifiers is list from Phase 1/2"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "_execute_workflow_gen integration",
+      "type": "integration",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Integration code found at lines 565-567"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "_execute_workflow_gen is called by run_workflow during Phase 3",
+          "grep_result": "Conditional call: if response.status != BatchStatus.FAILED"
+        },
+        "conditional_logic": {
+          "passed": true,
+          "evidence": "Correctly skips update when workflow generation fails",
+          "code_snippet": "if response.status != BatchStatus.FAILED:\n    await self._update_task_masters_workflow(response, task_identifiers)"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/test_orchestrator_issue385.py",
+          "evidence": "Unit test verifies _execute_workflow_gen calls _update_task_masters_workflow"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/integration/test_issue390_integration.py",
+          "evidence": "test_orchestrator_calls_update_after_workflow_gen verifies integration flow"
+        },
+        "parameters_not_empty": {
+          "passed": true,
+          "evidence": "Both parameters are derived from actual workflow generation results"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    }
+  ],
+  "summary": {
+    "total_features": 2,
+    "passed": 2,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0,
+    "empty_parameters": 0,
+    "warnings": 1
+  },
+  "warnings": [
+    {
+      "severity": "MEDIUM",
+      "feature_id": "F1",
+      "warning_type": "MISSING_DEDICATED_ACCEPTANCE_TEST",
+      "message": "No dedicated acceptance test found for Issue #396",
+      "details": "Integration tests exist for Issue #390 which cover the same functionality, but no test file named test_issue_396_*.py was found. Issue #390 tests were updated to match Issue #396 implementation signature.",
+      "recommendation": "Consider creating test_issue_396_acceptance.py for explicit E2E verification, or document that Issue #390 acceptance tests cover this functionality."
+    }
+  ],
+  "dead_code_list": [],
+  "empty_parameter_list": [],
+  "recommended_actions": [
+    {
+      "priority": "P2",
+      "feature_id": "F1",
+      "action": "Create dedicated acceptance test for Issue #396",
+      "file": "expertAgent/tests/acceptance/test_issue_396_acceptance.py",
+      "rationale": "While integration tests exist, a dedicated E2E acceptance test would provide explicit verification of the complete flow",
+      "code_snippet": "# E2E test that:\n# 1. Creates a job with multiple tasks\n# 2. Verifies TaskMasters start with __PENDING__\n# 3. Runs job generation through all phases\n# 4. Verifies TaskMasters are updated with actual workflow names\n# 5. Executes the job to verify no __PENDING__ errors"
+    }
+  ],
+  "dependency_verification": {
+    "update_task_master_body_template_taskflow": {
+      "exists": true,
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/task_master_utils.py",
+      "line": 27,
+      "is_used": true,
+      "usage_pattern": "Local import inside _update_task_masters_workflow to avoid circular dependency",
+      "verification": "Function exists and is called correctly with task_master_id and workflow_name parameters"
+    }
+  },
+  "integration_verification": {
+    "phase_3_workflow": {
+      "verified": true,
+      "flow": [
+        "1. run_workflow calls _execute_workflow_gen for Phase 3",
+        "2. _execute_workflow_gen calls mySwiftAgentCore API to generate workflows",
+        "3. If response.status != FAILED, calls _update_task_masters_workflow",
+        "4. _update_task_masters_workflow iterates through task_identifiers",
+        "5. For each successful workflow, calls update_task_master_body_template_taskflow",
+        "6. All-or-nothing: If any update fails, raises OrchestratorError"
+      ],
+      "evidence": "Integration verified through code inspection and integration tests"
+    }
+  },
+  "test_coverage_summary": {
+    "unit_tests": {
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_orchestrator_issue390.py",
+      "test_count": 8,
+      "coverage": [
+        "Success case with multiple TaskMasters",
+        "No workflows in response",
+        "No task_identifiers",
+        "Skip missing task_master_id",
+        "Skip missing workflow",
+        "Skip failed workflows",
+        "Partial failure raises error (all-or-nothing)",
+        "Exception handling"
+      ]
+    },
+    "integration_tests": {
+      "file": "expertAgent/tests/integration/test_issue390_integration.py",
+      "test_count": 6,
+      "coverage": [
+        "Orchestrator calls update after workflow gen",
+        "Workflow registrar builds correct body_template",
+        "Multiple tasks update in sequence",
+        "Task chaining inputs preserved",
+        "Partial failure raises OrchestratorError",
+        "End-to-end flow verifies __PENDING__ replacement"
+      ]
+    },
+    "acceptance_tests": {
+      "file": null,
+      "test_count": 0,
+      "note": "No dedicated Issue #396 acceptance test. Issue #390 tests cover the functionality."
+    }
+  },
+  "verification_notes": [
+    "Issue #396 implementation is fully integrated and tested",
+    "All functions are actually called (no dead code detected)",
+    "Parameters are properly populated (no empty array/null issues)",
+    "Unit and integration tests are comprehensive",
+    "Only missing item is a dedicated acceptance test file for Issue #396",
+    "Issue #390 integration tests were updated to match Issue #396 implementation",
+    "The implementation follows all-or-nothing pattern as required by Issue #360",
+    "Circular dependency is properly avoided using local imports",
+    "The integration is production-ready and follows best practices"
+  ]
+}
