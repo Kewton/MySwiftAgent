@@ -3,10 +3,13 @@
  *
  * Issue #375: Provides workflow reloading capabilities
  * Issue #378: Added status field for partial success model
+ * Issue #396: Added support for generated workflow storage
  */
 
 import type { WorkflowLoader } from './WorkflowLoader.js';
 import type { WorkflowRegistry } from '../registry/WorkflowRegistry.js';
+import type { WorkflowStorage } from '../../taskflowGeneratorAgent/storage/WorkflowStorage.js';
+import { TaskFlowDefinitionAdapter } from '../adapter/TaskFlowDefinitionAdapter.js';
 import { type RegistrationStatus, determineStatus } from '../../taskflowGeneratorAgent/types/registration.js';
 
 /**
@@ -60,16 +63,19 @@ export interface FullReloadResult {
  * - Reload all workflows for a project
  * - Reload all projects
  * - Track reload timestamps
+ * - Issue #396: Load from both config and generated directories
  */
 export class WorkflowReloader {
   private readonly loader: WorkflowLoader;
   private readonly registry: WorkflowRegistry;
   private readonly reloadTimestamps: Map<string, Date>;
+  private readonly generatedStorage?: WorkflowStorage;
 
-  constructor(loader: WorkflowLoader, registry: WorkflowRegistry) {
+  constructor(loader: WorkflowLoader, registry: WorkflowRegistry, generatedStorage?: WorkflowStorage) {
     this.loader = loader;
     this.registry = registry;
     this.reloadTimestamps = new Map();
+    this.generatedStorage = generatedStorage;
   }
 
   /**
@@ -147,6 +153,7 @@ export class WorkflowReloader {
    * Reload all projects
    *
    * Issue #378: Returns status field with proper partial success handling
+   * Issue #396: Also loads from generated storage if available
    */
   async reloadAll(): Promise<FullReloadResult> {
     // Clear registry before full reload
@@ -155,11 +162,20 @@ export class WorkflowReloader {
     const projectResults: ProjectReloadResult[] = [];
 
     try {
-      const projects = await this.loader.listProjects();
+      // Step 1: Load from config directory (via WorkflowLoader)
+      const configProjects = await this.loader.listProjects();
 
-      for (const projectId of projects) {
+      for (const projectId of configProjects) {
         const result = await this.reloadProject(projectId);
         projectResults.push(result);
+      }
+
+      // Step 2: Load from generated storage (Issue #396)
+      if (this.generatedStorage) {
+        const generatedResult = await this.loadFromGeneratedStorage();
+        if (generatedResult) {
+          projectResults.push(generatedResult);
+        }
       }
 
       // Calculate aggregate status from project results
@@ -184,6 +200,60 @@ export class WorkflowReloader {
   }
 
   /**
+   * Load workflows from generated storage
+   *
+   * Issue #396: Loads workflows from generated/workflows directory
+   */
+  private async loadFromGeneratedStorage(): Promise<ProjectReloadResult | null> {
+    if (!this.generatedStorage) {
+      return null;
+    }
+
+    try {
+      const projects = await this.generatedStorage.getAllProjects();
+      let totalReloaded = 0;
+      let totalFailed = 0;
+      const workflowNames: string[] = [];
+      const errors: string[] = [];
+
+      for (const projectId of projects) {
+        const workflows = await this.generatedStorage.loadAll(projectId);
+
+        for (const [, workflow] of Object.entries(workflows)) {
+          try {
+            const internalWorkflow = TaskFlowDefinitionAdapter.toInternal(workflow);
+            this.registry.registerForProject(projectId, internalWorkflow);
+            workflowNames.push(workflow.workflow_name);
+            totalReloaded++;
+          } catch (e) {
+            totalFailed++;
+            errors.push(`${projectId}/${workflow.workflow_name}: ${e instanceof Error ? e.message : 'Unknown error'}`);
+          }
+        }
+      }
+
+      const status = determineStatus(totalReloaded, totalFailed, totalReloaded + totalFailed);
+
+      return {
+        status,
+        success: status !== 'failed',
+        reloadedCount: totalReloaded,
+        failedCount: totalFailed,
+        workflowNames,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    } catch (e) {
+      return {
+        status: 'failed',
+        success: false,
+        reloadedCount: 0,
+        failedCount: 1,
+        errors: [e instanceof Error ? e.message : 'Failed to load from generated storage'],
+      };
+    }
+  }
+
+  /**
    * Get last reload timestamp for a project
    */
   getLastReloadTime(projectId: string): Date | undefined {
@@ -193,10 +263,13 @@ export class WorkflowReloader {
 
 /**
  * Factory function
+ *
+ * Issue #396: Added optional generatedStorage parameter
  */
 export function createWorkflowReloader(
   loader: WorkflowLoader,
-  registry: WorkflowRegistry
+  registry: WorkflowRegistry,
+  generatedStorage?: WorkflowStorage
 ): WorkflowReloader {
-  return new WorkflowReloader(loader, registry);
+  return new WorkflowReloader(loader, registry, generatedStorage);
 }

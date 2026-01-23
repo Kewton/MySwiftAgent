@@ -50,6 +50,11 @@ export interface HandlerDependencies {
    * parameter definitions from YAML files.
    */
   capabilityRegistry?: CapabilityRegistry;
+  /**
+   * Issue #396: Optional WorkflowStorage for reload API
+   * If provided, reload API can load from generated workflows directory.
+   */
+  storage?: WorkflowStorage;
 }
 
 /**

@@ -44,6 +44,10 @@ export class WorkflowRegistry {
   /**
    * Register a workflow for a specific project
    *
+   * Issue #396: Remove existing workflow with same name before registering.
+   * This prevents duplicate workflows when workflows are regenerated with
+   * different IDs but the same name.
+   *
    * @param projectId - The project identifier
    * @param workflow - The workflow definition to register
    */
@@ -58,6 +62,15 @@ export class WorkflowRegistry {
         updatedAt: new Date(),
       };
       this.projects.set(projectId, project);
+    }
+
+    // Issue #396: Remove any existing workflow with the same name
+    // This prevents duplicate workflows when regenerating
+    for (const [existingId, existingWorkflow] of project.workflows) {
+      if (existingWorkflow.name === workflow.name) {
+        project.workflows.delete(existingId);
+        break;
+      }
     }
 
     project.workflows.set(workflow.id, workflow);

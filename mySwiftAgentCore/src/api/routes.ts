@@ -23,11 +23,14 @@ import { createTaskFlowReloadRoutes, type ReloadHandlerDependencies } from './ro
 import { createWorkflowReloader } from '../taskflowEngine/loader/WorkflowReloader.js';
 import { createWorkflowLoader } from '../taskflowEngine/loader/WorkflowLoader.js';
 // Issue #372: CapabilityExecutor integration imports
+// Issue #365: Capability API routes integration
 import {
   createCapabilityRegistry,
   createCapabilityLoader,
   createEndpointConfigManager,
   createURLResolver,
+  createCapabilityRoutes,
+  createSanitizer,
 } from '../capabilityManagement/index.js';
 import { createCapabilityExecutor } from '../taskflowEngine/nodes/CapabilityExecutor.js';
 // Issue #377: SecretAnalyzer integration
@@ -116,6 +119,8 @@ async function createGeneratorDependencies(
     registrar,
     // Issue #374: Include capabilityRegistry for capability enrichment
     capabilityRegistry,
+    // Issue #396: Include storage for reload API
+    storage,
   };
 }
 
@@ -267,23 +272,29 @@ export async function createApiRoutes(config: ApiConfig): Promise<Hono> {
   app.route('/api/v1/taskflow', taskFlowRoutes);
 
   // Issue #375: TaskFlow Reload API routes
-  // Create WorkflowLoader with same base path as generator storage
+  // Issue #396: Load from both config and generated directories
+  // Create WorkflowLoader for config directory
   const workflowsBasePath = path.resolve(process.cwd(), 'config', 'taskflow', 'projects');
   const workflowLoader = createWorkflowLoader({ basePath: workflowsBasePath });
-  const workflowReloader = createWorkflowReloader(workflowLoader, generatorDeps.registry);
+  // Pass generatedStorage from generatorDeps to also load generated workflows on reload
+  const workflowReloader = createWorkflowReloader(
+    workflowLoader,
+    generatorDeps.registry,
+    generatorDeps.storage
+  );
 
   const reloadDeps: ReloadHandlerDependencies = { reloader: workflowReloader };
   const reloadRoutes = createTaskFlowReloadRoutes(reloadDeps);
   app.route('/api/v1/taskflow', reloadRoutes);
 
-  // Capabilities routes (stub)
-  app.get('/api/v1/capabilities', (c) => {
-    return c.json({
-      service: 'Capability Management',
-      status: 'stub',
-      message: 'Capability Management API is not yet implemented',
-    });
+  // Issue #365: Capabilities API routes (full implementation)
+  // Create sanitizer for removing internal fields from responses
+  const sanitizer = createSanitizer();
+  const capabilityRoutes = createCapabilityRoutes({
+    registry: capabilityRegistry,
+    sanitizer,
   });
+  app.route('/', capabilityRoutes);
 
   return app;
 }
