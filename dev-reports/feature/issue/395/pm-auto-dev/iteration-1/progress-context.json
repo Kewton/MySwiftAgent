@@ -1,0 +1,85 @@
+{
+  "issue_number": 395,
+  "issue_title": "fix(jobGeneratorV2): BodyTemplateValidator がシステム注入フィールド (project) を誤って検証する",
+  "iteration": 1,
+  "target_project": "expertAgent",
+  "phase_results": {
+    "phase_1_5_a": {
+      "name": "受入テスト計画立案",
+      "status": "completed",
+      "output": "dev-reports/feature/issue/395/acceptance-plan.md"
+    },
+    "phase_1_5_b": {
+      "name": "受入テスト計画レビュー",
+      "status": "completed",
+      "result": "APPROVED"
+    },
+    "phase_2": {
+      "name": "TDD実装",
+      "status": "completed",
+      "output": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/tdd-result.json",
+      "summary": {
+        "unit_tests": { "total": 27, "passed": 27, "failed": 0 },
+        "coverage": "90%",
+        "static_analysis": { "ruff_errors": 0, "mypy_errors": 0 }
+      }
+    },
+    "phase_2_5": {
+      "name": "TDD結果検証",
+      "status": "completed",
+      "verified_items": [
+        "SYSTEM_INJECTED_FIELDS constant at line 36",
+        "Skip logic at lines 171 (TaskFlow) and 257 (GraphAI)",
+        "All 27 unit tests pass"
+      ]
+    },
+    "phase_2_6": {
+      "name": "実装機能一覧生成",
+      "status": "completed",
+      "output": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/implemented-features.json",
+      "features_count": 3
+    },
+    "phase_2_7": {
+      "name": "実装検証（デッドコード検出）",
+      "status": "completed",
+      "output": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/implementation-verification-result.json",
+      "result": "PASSED",
+      "dead_code_count": 0
+    },
+    "phase_3": {
+      "name": "受入テスト実行",
+      "status": "completed",
+      "output": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/acceptance-result.json",
+      "summary": {
+        "total": 10,
+        "passed": 9,
+        "failed": 0,
+        "skipped": 1
+      }
+    },
+    "phase_4": {
+      "name": "リファクタリング",
+      "status": "skipped",
+      "reason": "コードは既にクリーンでSOLID原則に従っている。リファクタリング不要。"
+    }
+  },
+  "acceptance_criteria_status": {
+    "AC-1": { "description": "ホワイトリスト定数 SYSTEM_INJECTED_FIELDS が定義されている", "status": "verified" },
+    "AC-2": { "description": "project フィールドが検証から除外される", "status": "verified" },
+    "AC-3": { "description": "ユーザー入力フィールド（user_input 等）は引き続き検証される", "status": "verified" },
+    "AC-4": { "description": "単体テストカバレッジ 90% 以上", "status": "verified" },
+    "AC-5": { "description": "E2E でジョブ生成が成功する", "status": "verified_by_implementation" }
+  },
+  "files_modified": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+    "expertAgent/tests/acceptance/test_issue_395_acceptance.py"
+  ],
+  "commits": [
+    "4170d8b: fix(jobGeneratorV2): exclude system-injected fields from BodyTemplateValidator"
+  ],
+  "next_steps": [
+    "品質チェック（pre-push-check-all.sh）の実行",
+    "PRの作成（必要に応じて）"
+  ]
+}

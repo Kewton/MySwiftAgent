@@ -1,0 +1,26 @@
+{
+  "issue_number": 395,
+  "issue_title": "fix(jobGeneratorV2): BodyTemplateValidator がシステム注入フィールド (project) を誤って検証する",
+  "acceptance_criteria": [
+    "ホワイトリスト定数 SYSTEM_INJECTED_FIELDS が定義されている",
+    "project フィールドが検証から除外される",
+    "ユーザー入力フィールド（user_input 等）は引き続き検証される",
+    "単体テストカバレッジ 90% 以上",
+    "E2E でジョブ生成が成功する"
+  ],
+  "technical_requirements": [
+    "SYSTEM_INJECTED_FIELDS: frozenset[str] = frozenset({\"project\"}) 定義",
+    "TaskFlowValidationStrategy.validate_job_body_reference() の修正",
+    "システム注入フィールドの場合は検証をスキップ"
+  ],
+  "target_project": "expertAgent",
+  "design_policy_path": "dev-reports/feature/issue/395/design-policy.md",
+  "work_plan_path": null,
+  "phase": "pre-tdd",
+  "related_issues": ["#358", "#391"],
+  "affected_files": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+    "expertAgent/tests/integration/test_registration_validation.py"
+  ]
+}

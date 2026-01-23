@@ -1,0 +1,206 @@
+{
+  "status": "passed",
+  "verification_timestamp": "2026-01-23T10:30:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "SYSTEM_INJECTED_FIELDS",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 36,
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 36: SYSTEM_INJECTED_FIELDS: frozenset[str] = frozenset({'project'})"
+        },
+        "is_used": {
+          "passed": true,
+          "evidence": "Used at line 171 (TaskFlowValidationStrategy) and line 257 (GraphAIValidationStrategy)",
+          "usage_locations": [
+            "body_template_validator.py:171: if field_path in SYSTEM_INJECTED_FIELDS:",
+            "body_template_validator.py:257: if field_path in SYSTEM_INJECTED_FIELDS:"
+          ]
+        },
+        "is_exported": {
+          "passed": true,
+          "evidence": "Exported in __all__ at line 448"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+          "test_methods": [
+            "test_system_injected_fields_constant_exists (line 396)",
+            "test_system_injected_fields_is_immutable (line 405)"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Integration tests verify BodyTemplateValidator usage in test_registration_validation.py"
+        },
+        "empty_parameter_check": {
+          "passed": true,
+          "evidence": "SYSTEM_INJECTED_FIELDS is defined with actual value frozenset({'project'}), not empty"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "system_field_skip_logic_taskflow",
+      "type": "condition_branch",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 171,
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 171-176: if field_path in SYSTEM_INJECTED_FIELDS: logger.debug(...) return errors"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called via BodyTemplateValidator.validate() -> _validate_job_body_references() -> TaskFlowValidationStrategy.validate_job_body_reference()",
+          "call_chain": [
+            "master_manager.py:351: validation_result = self._body_template_validator.validate(...)",
+            "body_template_validator.py:372: errors.extend(self._validate_job_body_references(extracted, input_schema))",
+            "body_template_validator.py:405: errors.extend(self._strategy.validate_job_body_reference(ref, input_schema))",
+            "body_template_validator.py:171: if field_path in SYSTEM_INJECTED_FIELDS:"
+          ]
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+          "test_methods": [
+            "test_project_field_validation_skipped (line 418)",
+            "test_mixed_system_and_user_fields (line 510)"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Integration tests in test_registration_validation.py verify BodyTemplateValidator is used in MasterManagerSubWorkflow"
+        },
+        "empty_parameter_check": {
+          "passed": true,
+          "evidence": "No empty parameter patterns detected"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F3",
+      "name": "system_field_skip_logic_graphai",
+      "type": "condition_branch",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 257,
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 257-262: if field_path in SYSTEM_INJECTED_FIELDS: logger.debug(...) return errors"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called via BodyTemplateValidator.validate() -> _validate_job_body_references() -> GraphAIValidationStrategy.validate_job_body_reference()",
+          "call_chain": [
+            "master_manager.py:351: validation_result = self._body_template_validator.validate(...)",
+            "body_template_validator.py:372: errors.extend(self._validate_job_body_references(extracted, input_schema))",
+            "body_template_validator.py:405: errors.extend(self._strategy.validate_job_body_reference(ref, input_schema))",
+            "body_template_validator.py:257: if field_path in SYSTEM_INJECTED_FIELDS:"
+          ]
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+          "test_methods": [
+            "test_graphai_strategy_also_skips_system_fields (line 544)"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Integration tests in test_registration_validation.py verify BodyTemplateValidator is used with both TaskFlow and GraphAI strategies"
+        },
+        "empty_parameter_check": {
+          "passed": true,
+          "evidence": "No empty parameter patterns detected"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    }
+  ],
+  "summary": {
+    "total_features": 3,
+    "passed": 3,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0,
+    "empty_parameters": 0
+  },
+  "dead_code_list": [],
+  "empty_parameter_list": [],
+  "recommended_actions": [
+    {
+      "priority": "P2",
+      "feature_id": "ALL",
+      "action": "Consider adding acceptance test for Issue #395",
+      "file": "expertAgent/tests/acceptance/",
+      "reason": "No test_issue_395_acceptance.py file found. While unit and integration tests exist, acceptance test would provide E2E verification.",
+      "code_snippet": "# Create test_issue_395_acceptance.py to verify system field handling in real workflow"
+    }
+  ],
+  "integration_verification": {
+    "validator_instantiated": {
+      "passed": true,
+      "location": "master_manager.py:171",
+      "evidence": "self._body_template_validator = BodyTemplateValidator(strategy=strategy)"
+    },
+    "validator_called": {
+      "passed": true,
+      "location": "master_manager.py:351",
+      "evidence": "validation_result = self._body_template_validator.validate(...)"
+    },
+    "strategy_pattern_used": {
+      "passed": true,
+      "evidence": "TaskFlowValidationStrategy and GraphAIValidationStrategy both implement validate_job_body_reference() with SYSTEM_INJECTED_FIELDS check"
+    },
+    "error_handling": {
+      "passed": true,
+      "location": "master_manager.py:357-366",
+      "evidence": "WorkflowError raised when validation fails with clear error messages"
+    }
+  },
+  "test_coverage_summary": {
+    "unit_tests": {
+      "total": 5,
+      "passed": 5,
+      "tests": [
+        "test_system_injected_fields_constant_exists",
+        "test_system_injected_fields_is_immutable",
+        "test_project_field_validation_skipped",
+        "test_mixed_system_and_user_fields",
+        "test_graphai_strategy_also_skips_system_fields"
+      ]
+    },
+    "integration_tests": {
+      "total": 1,
+      "passed": 1,
+      "file": "test_registration_validation.py",
+      "verifies": "BodyTemplateValidator integration with MasterManagerSubWorkflow"
+    },
+    "acceptance_tests": {
+      "total": 0,
+      "note": "No dedicated acceptance test file for Issue #395, but functionality is covered by unit and integration tests"
+    }
+  },
+  "verification_conclusion": "All implemented features are properly integrated into the codebase. No dead code detected. All features have proper unit tests and integration tests verify the actual usage in the workflow. SYSTEM_INJECTED_FIELDS constant is correctly used in both validation strategies to skip validation for system-injected fields like 'project'. The implementation follows the strategy pattern and is properly integrated into MasterManagerSubWorkflow.",
+  "issues_detected": [],
+  "verification_notes": [
+    "SYSTEM_INJECTED_FIELDS is defined as frozenset({'project'}) and is immutable",
+    "Both TaskFlowValidationStrategy and GraphAIValidationStrategy use SYSTEM_INJECTED_FIELDS correctly",
+    "BodyTemplateValidator is instantiated with engine-specific strategy in master_manager.py",
+    "Validation is called at line 351 in master_manager.py during workflow registration",
+    "No empty parameter patterns detected (Issue #385 check passed)",
+    "Integration tests exist in test_registration_validation.py",
+    "Unit test coverage is comprehensive with 5 tests covering all features",
+    "Optional: Consider adding acceptance test for complete E2E verification"
+  ]
+}

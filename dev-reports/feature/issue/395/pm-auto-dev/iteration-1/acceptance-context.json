@@ -1,0 +1,84 @@
+{
+  "issue_number": 395,
+  "issue_title": "fix(jobGeneratorV2): BodyTemplateValidator がシステム注入フィールド (project) を誤って検証する",
+  "iteration": 1,
+  "acceptance_plan_path": "dev-reports/feature/issue/395/acceptance-plan.md",
+  "implemented_features_path": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/implemented-features.json",
+  "implementation_verification_path": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/implementation-verification-result.json",
+  "target_project": "expertAgent",
+  "acceptance_criteria": [
+    "ホワイトリスト定数 SYSTEM_INJECTED_FIELDS が定義されている",
+    "project フィールドが検証から除外される",
+    "ユーザー入力フィールド（user_input 等）は引き続き検証される",
+    "単体テストカバレッジ 90% 以上",
+    "E2E でジョブ生成が成功する"
+  ],
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "name": "SYSTEM_INJECTED_FIELDS 定数の存在確認",
+      "type": "unit",
+      "pytest_method": "test_tc_001_system_injected_fields_constant_exists"
+    },
+    {
+      "id": "TC-002",
+      "name": "SYSTEM_INJECTED_FIELDS の不変性検証",
+      "type": "unit",
+      "pytest_method": "test_tc_002_system_injected_fields_immutability"
+    },
+    {
+      "id": "TC-003",
+      "name": "project フィールドの検証スキップ",
+      "type": "unit",
+      "pytest_method": "test_tc_003_project_field_validation_skipped"
+    },
+    {
+      "id": "TC-004",
+      "name": "ユーザーフィールドの検証継続（存在しない場合）",
+      "type": "unit",
+      "pytest_method": "test_tc_004_user_field_validation_error"
+    },
+    {
+      "id": "TC-005",
+      "name": "ユーザーフィールドの検証継続（存在する場合）",
+      "type": "unit",
+      "pytest_method": "test_tc_005_user_field_validation_success"
+    },
+    {
+      "id": "TC-006",
+      "name": "混在テスト（システムフィールド + ユーザーフィールド）",
+      "type": "unit",
+      "pytest_method": "test_tc_006_mixed_system_and_user_fields"
+    },
+    {
+      "id": "TC-007",
+      "name": "E2E ジョブ生成成功テスト",
+      "type": "e2e",
+      "pytest_method": "test_tc_007_e2e_job_generation_success"
+    },
+    {
+      "id": "TC-008",
+      "name": "カバレッジ確認",
+      "type": "coverage",
+      "pytest_method": null
+    }
+  ],
+  "service_requirements": {
+    "required_services": ["expertAgent", "myVault", "mySwiftAgentCore"],
+    "health_check_urls": {
+      "expertAgent": "http://localhost:8004/health",
+      "myVault": "http://localhost:8003/health",
+      "mySwiftAgentCore": "http://localhost:8006/health"
+    },
+    "startup_command": "./scripts/dev-hybrid.sh start --local-only"
+  },
+  "test_file_paths": {
+    "unit_tests": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+    "integration_tests": "expertAgent/tests/integration/test_registration_validation.py",
+    "acceptance_tests": "expertAgent/tests/acceptance/test_issue_395_acceptance.py"
+  },
+  "expected_outputs": {
+    "acceptance_result": "dev-reports/feature/issue/395/pm-auto-dev/iteration-1/acceptance-result.json",
+    "acceptance_test_file": "expertAgent/tests/acceptance/test_issue_395_acceptance.py"
+  }
+}

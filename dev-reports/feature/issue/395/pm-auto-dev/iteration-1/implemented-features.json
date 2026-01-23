@@ -1,0 +1,86 @@
+{
+  "issue_number": 395,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "SYSTEM_INJECTED_FIELDS",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 36,
+      "description": "System-injected fields that should be excluded from validation (frozenset containing 'project')",
+      "expected_callers": ["TaskFlowValidationStrategy.validate_job_body_reference", "GraphAIValidationStrategy.validate_job_body_reference"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "system_field_skip_logic_taskflow",
+      "type": "condition_branch",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 171,
+      "description": "Skip validation for system-injected fields in TaskFlowValidationStrategy",
+      "expected_callers": ["BodyTemplateValidator.validate via _validate_job_body_references"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "system_field_skip_logic_graphai",
+      "type": "condition_branch",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 257,
+      "description": "Skip validation for system-injected fields in GraphAIValidationStrategy",
+      "expected_callers": ["BodyTemplateValidator.validate via _validate_job_body_references"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_system_injected_fields_constant_exists",
+        "test_system_injected_fields_is_immutable"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-001", "TC-002"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_project_field_validation_skipped",
+        "test_user_field_validation_continues_when_missing",
+        "test_user_field_validation_passes_when_exists",
+        "test_mixed_system_and_user_fields"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": ["TC-003", "TC-004", "TC-005", "TC-006"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "test_graphai_strategy_also_skips_system_fields"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_type": "export",
+      "integration_method": "__all__.append('SYSTEM_INJECTED_FIELDS')"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_type": "method_modification",
+      "integration_method": "TaskFlowValidationStrategy.validate_job_body_reference() uses SYSTEM_INJECTED_FIELDS"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_type": "method_modification",
+      "integration_method": "GraphAIValidationStrategy.validate_job_body_reference() uses SYSTEM_INJECTED_FIELDS"
+    }
+  ]
+}

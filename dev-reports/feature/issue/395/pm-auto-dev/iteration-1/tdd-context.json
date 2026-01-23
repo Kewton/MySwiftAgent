@@ -1,0 +1,70 @@
+{
+  "issue_number": 395,
+  "issue_title": "fix(jobGeneratorV2): BodyTemplateValidator がシステム注入フィールド (project) を誤って検証する",
+  "acceptance_criteria": [
+    "ホワイトリスト定数 SYSTEM_INJECTED_FIELDS が定義されている",
+    "project フィールドが検証から除外される",
+    "ユーザー入力フィールド（user_input 等）は引き続き検証される",
+    "単体テストカバレッジ 90% 以上",
+    "E2E でジョブ生成が成功する"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "SYSTEM_INJECTED_FIELDS 定数を body_template_validator.py のファイルトップに追加",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "task_id": "1.2",
+      "description": "TaskFlowValidationStrategy.validate_job_body_reference() にシステムフィールド判定を追加",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "task_id": "1.3",
+      "description": "システムフィールドスキップ時のデバッグログ出力追加",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "task_id": "2.1",
+      "description": "SYSTEM_INJECTED_FIELDS 定数の存在・内容テスト追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+    },
+    {
+      "task_id": "2.2",
+      "description": "frozenset 不変性テスト追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+    },
+    {
+      "task_id": "2.3",
+      "description": "project フィールド検証スキップテスト追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+    },
+    {
+      "task_id": "2.4",
+      "description": "ユーザーフィールド検証継続テスト追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+    },
+    {
+      "task_id": "2.5",
+      "description": "混在テスト（システム + ユーザーフィールド）追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+    }
+  ],
+  "target_coverage": 90,
+  "target_files": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+  ],
+  "design_reference": {
+    "constant_pattern": "# Issue #395: System-injected fields that should be excluded from validation\nSYSTEM_INJECTED_FIELDS: frozenset[str] = frozenset({\n    \"project\",  # Issue #391: Used for secrets resolution, injected in JobMaster.body\n})",
+    "skip_logic": "if field_path in SYSTEM_INJECTED_FIELDS:\n    logger.debug(\"Skipping validation for system-injected field: %s\", field_path)\n    return errors"
+  }
+}
