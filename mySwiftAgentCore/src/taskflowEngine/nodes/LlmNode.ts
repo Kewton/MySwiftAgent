@@ -42,9 +42,10 @@ export class LlmNodeExecutor implements NodeExecutor {
    * Issue #377: Static list of required secrets
    *
    * LLM nodes require API keys for LLM providers.
-   * The executor will try OPENAI_API_KEY first, falling back to LLM_API_KEY.
+   * Only OPENAI_API_KEY is required - LLM_API_KEY is an optional fallback
+   * that is checked at execution time (see execute method).
    */
-  readonly requiredSecrets = ['OPENAI_API_KEY', 'LLM_API_KEY'] as const;
+  readonly requiredSecrets = ['OPENAI_API_KEY'] as const;
 
   /**
    * Execute LLM request
