@@ -1,0 +1,61 @@
+{
+  "workflow_name": "task_005",
+  "description": "Workflow for task task_005",
+  "input_schema": {
+    "recipient_email": "string",
+    "summary": "string",
+    "keyword": "string"
+  },
+  "output_schema": {
+    "recipient_email": "string",
+    "subject": "string",
+    "body": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_email_content",
+      "type": "llm",
+      "config": {
+        "prompt": "Based on the summary: {{input.summary}} and keyword: {{input.keyword}}, generate an email subject and body. The subject should be concise and relevant. The body should be professional and informative.",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "system_prompt": "You are a professional email writer. Generate appropriate email subject and body content based on the provided summary and keyword."
+      },
+      "params": {}
+    },
+    {
+      "id": "extract_email_parts",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "http://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${generate_email_content.content}",
+          "system_prompt": "Extract the email subject and body from the provided text. Return a JSON object with 'subject' and 'body' fields."
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "format_output",
+      "type": "transform",
+      "config": {
+        "mapping": {
+          "recipient_email": "input.recipient_email",
+          "subject": "steps.extract_email_parts.subject",
+          "body": "steps.extract_email_parts.body"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "recipient_email": "${format_output.recipient_email}",
+    "subject": "${format_output.subject}",
+    "body": "${format_output.body}"
+  }
+}

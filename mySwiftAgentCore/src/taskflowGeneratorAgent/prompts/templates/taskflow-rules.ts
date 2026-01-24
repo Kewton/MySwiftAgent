@@ -68,11 +68,13 @@ Config (REQUIRED fields):
 
 **Common Capability URLs:**
 - google_search: http://localhost:8004/v1/utility/google_search (POST)
-- gmail_send: http://localhost:8004/v1/utility/gmail_send (POST)
+- gmail_send: http://localhost:8004/v1/utility/gmail/send (POST)
+- json_output_agent: http://localhost:8004/v1/aiagent/utility/jsonoutput (POST)
 
 **API Response Field Names (IMPORTANT for transform mapping):**
 - google_search returns: \`search_results\` (array of {title, link, knowledge, original_query})
 - gmail_send returns: \`message_id\`, \`status\`
+- json_output_agent returns: structured JSON based on system_prompt specification
 
 Example:
 \`\`\`json
@@ -166,7 +168,8 @@ Use dot notation WITHOUT \`\${}\` brackets:
 ### For api_rest steps (in config.body):
 Use \`\${}\` syntax:
 - \`\${inputs.field_name}\`: Reference workflow input
-- \`\${step_id.output.field_name}\`: Reference output from previous step
+- \`\${step_id.field_name}\`: Reference output from previous step (NO ".output" in path)
+  - **IMPORTANT (Issue #396)**: stepResults stores the output object directly, so use \`\${step_id.field}\` NOT \`\${step_id.output.field}\`
 
 ### For secrets:
 - \`\${secrets.VARIABLE_NAME}\`: Reference secret from MyVault (for API keys etc.)
@@ -198,12 +201,13 @@ Use \`\${}\` syntax:
     {
       "id": "transform_response",
       "type": "transform",
-      "config": { "template": "{\\"result\\": \\"\${fetch_data.output.data}\\"}" },
+      "config": { "template": "{\\"result\\": \\"\${fetch_data.data}\\"}" },
       "params": {}
     }
   ]
 }
 \`\`\`
+**Note (Issue #396)**: Use \`\${fetch_data.data}\` NOT \`\${fetch_data.output.data}\`. The stepResults stores output directly.
 
 ### Transform with Mapping
 \`\`\`json
