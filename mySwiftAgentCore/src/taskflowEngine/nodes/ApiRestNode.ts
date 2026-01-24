@@ -41,6 +41,10 @@ export interface ApiRestNodeConfig {
   headers?: Record<string, string>;
   /** Authentication configuration */
   auth?: AuthConfig;
+  /** Request body (with variable interpolation support) */
+  body?: unknown;
+  /** Request timeout in milliseconds */
+  timeout_ms?: number;
 }
 
 /**
@@ -153,7 +157,7 @@ export class ApiRestNodeExecutor implements NodeExecutor {
     context: NodeExecutionContext
   ): Promise<NodeResult> {
     try {
-      const { url, method = 'GET', headers = {}, auth } = nodeConfig;
+      const { url, method = 'GET', headers = {}, auth, body: configBody } = nodeConfig;
 
       // URL should be defined at this point (checked in execute)
       if (!url) {
@@ -188,8 +192,12 @@ export class ApiRestNodeExecutor implements NodeExecutor {
       };
 
       // Add body for non-GET methods
-      if (method !== 'GET' && method !== 'HEAD' && params.body) {
-        options.body = JSON.stringify(params.body);
+      // Priority: config.body > params.body
+      const rawBody = configBody ?? params.body;
+      if (method !== 'GET' && method !== 'HEAD' && rawBody) {
+        // Resolve variable references in body
+        const resolvedBody = this.resolveVariables(rawBody, context);
+        options.body = JSON.stringify(resolvedBody);
         requestHeaders['Content-Type'] ??= 'application/json';
       }
 
@@ -277,6 +285,105 @@ export class ApiRestNodeExecutor implements NodeExecutor {
       const value = params[key];
       return value !== undefined ? String(value) : match;
     });
+  }
+
+  /**
+   * Resolve variable references in body
+   *
+   * Supports:
+   * - ${inputs.field} - workflow input variables
+   * - ${step_id.field} - step output variables
+   */
+  private resolveVariables(value: unknown, context: NodeExecutionContext): unknown {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    // Handle arrays
+    if (Array.isArray(value)) {
+      return value.map((item) => this.resolveVariables(item, context));
+    }
+
+    // Handle objects
+    if (typeof value === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value)) {
+        result[key] = this.resolveVariables(val, context);
+      }
+      return result;
+    }
+
+    // Handle strings with variable references
+    if (typeof value === 'string') {
+      // Check for ${...} pattern
+      const match = value.match(/^\$\{(.+)\}$/);
+      if (match) {
+        const path = match[1]!;
+        return this.resolvePath(path, context);
+      }
+    }
+
+    return value;
+  }
+
+  /**
+   * Resolve a variable path
+   *
+   * Paths:
+   * - inputs.field - workflow input
+   * - step_id.field - step output
+   */
+  private resolvePath(path: string, context: NodeExecutionContext): unknown {
+    const parts = path.split('.');
+    if (parts.length === 0) {
+      return undefined;
+    }
+
+    const root = parts[0]!;
+    const rest = parts.slice(1);
+
+    let value: unknown;
+
+    if (root === 'inputs') {
+      // Access workflow inputs from context.variables['input']
+      value = context.variables['input'] as Record<string, unknown> | undefined;
+    } else if (root === 'steps') {
+      // Access step results: steps.step_id.field
+      if (rest.length === 0) {
+        return undefined;
+      }
+      const stepId = rest[0]!;
+      value = context.stepResults[stepId];
+      // Navigate the remaining path after stepId
+      for (let i = 1; i < rest.length; i++) {
+        if (value === null || value === undefined) {
+          return undefined;
+        }
+        if (typeof value === 'object') {
+          value = (value as Record<string, unknown>)[rest[i]!];
+        } else {
+          return undefined;
+        }
+      }
+      return value;
+    } else {
+      // Try direct step result access: step_id.field
+      value = context.stepResults[root];
+    }
+
+    // Navigate nested path
+    for (const part of rest) {
+      if (value === null || value === undefined) {
+        return undefined;
+      }
+      if (typeof value === 'object') {
+        value = (value as Record<string, unknown>)[part];
+      } else {
+        return undefined;
+      }
+    }
+
+    return value;
   }
 
   /**

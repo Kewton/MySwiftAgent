@@ -37,10 +37,14 @@ The workflow must be a valid JSON object with the following structure:
     }
   ],
   "output": {
-    "result_key": "\${step_id.output.output_key}"
+    "result_key": "\${step_id.field_name}"
   }
 }
 \`\`\`
+
+**IMPORTANT Output Mapping Syntax:**
+- Use \`\${step_id.field_name}\` to reference step outputs (NO ".output" in path)
+- Example: \`"\${transform_step.keyword}"\` NOT \`"\${transform_step.output.keyword}"\`
 
 **IMPORTANT Schema Format:**
 - \`input_schema\` and \`output_schema\` use SIMPLE type mapping: \`{"field_name": "type"}\`
@@ -65,6 +69,10 @@ Config (REQUIRED fields):
 **Common Capability URLs:**
 - google_search: http://localhost:8004/v1/utility/google_search (POST)
 - gmail_send: http://localhost:8004/v1/utility/gmail_send (POST)
+
+**API Response Field Names (IMPORTANT for transform mapping):**
+- google_search returns: \`search_results\` (array of {title, link, knowledge, original_query})
+- gmail_send returns: \`message_id\`, \`status\`
 
 Example:
 \`\`\`json
@@ -93,13 +101,15 @@ Data transformation step using template or mapping.
 Config (use ONE of the following):
 - \`template\`: Handlebars-like template string for transformation. Use \`{{path}}\` for variable interpolation.
   Example: \`"{\\"result\\": \\"{{input.value}}\\"}"\`
-- \`mapping\`: Key-value mapping from output fields to input paths using JSONPath expressions.
-  Example: \`{ "output_field": "$.input.value" }\`
+- \`mapping\`: Key-value mapping from output fields to input paths using **dot notation**.
+  - For input fields: \`"input.field_name"\` (singular "input")
+  - For step outputs: \`"steps.step_id.field_name"\` (with "steps." prefix)
+  Example: \`{ "keyword": "input.keyword", "results": "steps.search_step.search_results" }\`
 
 **WARNING**: \`expression\` is NOT supported for security reasons. Workflows using \`expression\` will fail validation.
 
 Params:
-- Input data references using \`$input\` or \`$steps\`
+- Usually empty \`{}\` for transform steps
 
 ### 3. code_js
 Custom JavaScript code execution in sandboxed environment.
@@ -146,16 +156,24 @@ Params:
 
 ## Variable References
 
-Use the following patterns for variable references:
+**IMPORTANT: Different syntax for different step types!**
 
+### For transform steps (mapping mode):
+Use dot notation WITHOUT \`\${}\` brackets:
+- \`input.field_name\`: Reference workflow input (singular "input", not "inputs")
+- \`steps.step_id.field_name\`: Reference output from previous step (use "steps." prefix)
+
+### For api_rest steps (in config.body):
+Use \`\${}\` syntax:
 - \`\${inputs.field_name}\`: Reference workflow input
-- \`\${step_id.output.field_name}\`: Reference output from previous step (use the step's id, not "steps")
+- \`\${step_id.output.field_name}\`: Reference output from previous step
+
+### For secrets:
 - \`\${secrets.VARIABLE_NAME}\`: Reference secret from MyVault (for API keys etc.)
 
-**IMPORTANT Variable Syntax:**
-- Always use \`\${...}\` syntax with curly braces
-- For inputs: \`\${inputs.query}\`, NOT \`$input.query\`
-- For step outputs: \`\${search_step.output.results}\`, NOT \`$steps.search_step.results\`
+**CRITICAL Transform Mapping Syntax:**
+- For inputs: \`input.query\` (singular, no brackets)
+- For step outputs: \`steps.search_step.results\` (with "steps." prefix)
 
 ## Best Practices
 
@@ -196,8 +214,8 @@ Use the following patterns for variable references:
       "type": "transform",
       "config": {
         "mapping": {
-          "result": "\${previous_step.output.result}",
-          "count": "\${previous_step.output.count}"
+          "result": "steps.previous_step.result",
+          "count": "steps.previous_step.count"
         }
       },
       "params": {}
@@ -205,6 +223,8 @@ Use the following patterns for variable references:
   ]
 }
 \`\`\`
+
+**IMPORTANT**: In transform mapping, use \`steps.step_id.field\` (no .output), NOT \`\${step_id.output.field}\`
 
 ### LLM Processing
 \`\`\`json
@@ -245,6 +265,7 @@ For registered capabilities, construct the URL using the capability's endpoint:
   "params": {}
 }
 \`\`\`
+**google_search response**: Returns \`search_results\` array. Use \`steps.search_google.search_results\` in transform mapping.
 
 ### External API (use url)
 For external APIs with full URLs:
