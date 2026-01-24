@@ -563,8 +563,20 @@ class JobGenerationOrchestrator:
                 )
 
                 # Issue #396: Update TaskMasters with workflow names after generation
+                # Issue #398: Log decision point for TaskMaster update
                 if response.status != BatchStatus.FAILED:
+                    logger.info(
+                        "[Issue #398] Proceeding to update TaskMasters: "
+                        "response.status=%s (not FAILED)",
+                        response.status.value,
+                    )
                     await self._update_task_masters_workflow(response, task_identifiers)
+                else:
+                    logger.warning(
+                        "[Issue #398] Skipping TaskMaster update: "
+                        "response.status=%s (FAILED)",
+                        response.status.value,
+                    )
 
                 # Convert BatchWorkflowGenerationResponse to ParallelExecutionResult
                 return self._convert_to_parallel_result(response, task_identifiers)
@@ -603,6 +615,7 @@ class JobGenerationOrchestrator:
 
         Issue #396: Implementation of missing Phase 3b step.
         Issue #360: Strict all-or-nothing update requirement.
+        Issue #398: Enhanced logging for debugging and verification.
 
         After Phase 3 completes workflow generation, this method updates each
         TaskMaster's body_template.workflow field from '__PENDING__' to the
@@ -620,37 +633,114 @@ class JobGenerationOrchestrator:
             update_task_master_body_template_taskflow,
         )
 
+        # Issue #398: Log method invocation with context
+        logger.info(
+            "[Issue #398] _update_task_masters_workflow called: "
+            "task_count=%d, workflow_count=%d, response_status=%s",
+            len(task_identifiers),
+            len(response.workflows) if response.workflows else 0,
+            response.status.value if response.status else "None",
+        )
+
+        # Issue #398: Log workflow details for debugging
+        if response.workflows:
+            for task_id, wf in response.workflows.items():
+                logger.info(
+                    "[Issue #398] Workflow detail: task_id=%s, workflow_name=%s, "
+                    "status=%s, registered=%s",
+                    task_id,
+                    wf.workflow_name,
+                    wf.status.value if wf.status else "None",
+                    getattr(wf, "registered", "N/A"),
+                )
+
         updated_count = 0
+        skipped_no_master_id = 0
+        skipped_no_workflow = 0
+        skipped_failed_status = 0
         errors: list[str] = []
 
         for task in task_identifiers:
             if not task.task_master_id:
+                # Issue #398: Log skip reason
+                logger.warning(
+                    "[Issue #398] Skipping task %s: task_master_id is None",
+                    task.task_id,
+                )
+                skipped_no_master_id += 1
                 continue
 
             workflow = response.workflows.get(task.task_id)
             if not workflow:
+                # Issue #398: Log skip reason
+                logger.warning(
+                    "[Issue #398] Skipping task %s: workflow not found in response. "
+                    "Available workflow keys: %s",
+                    task.task_id,
+                    list(response.workflows.keys()) if response.workflows else "None",
+                )
+                skipped_no_workflow += 1
                 continue
 
             # Skip failed workflows
             if workflow.status.value != "success":
+                # Issue #398: Log skip reason
+                logger.warning(
+                    "[Issue #398] Skipping task %s: workflow status is '%s', not 'success'. "
+                    "workflow_name=%s, error=%s",
+                    task.task_id,
+                    workflow.status.value,
+                    workflow.workflow_name,
+                    workflow.error or "None",
+                )
+                skipped_failed_status += 1
                 continue
 
             try:
+                logger.info(
+                    "[Issue #398] Updating TaskMaster: task_master_id=%s, workflow_name=%s",
+                    task.task_master_id,
+                    workflow.workflow_name,
+                )
                 success = await update_task_master_body_template_taskflow(
                     task_master_id=task.task_master_id,
                     workflow_name=workflow.workflow_name,
                 )
                 if success:
                     updated_count += 1
-                    logger.debug(
-                        "Updated TaskMaster %s with workflow %s",
+                    logger.info(
+                        "[Issue #398] Successfully updated TaskMaster %s with workflow %s",
                         task.task_master_id,
                         workflow.workflow_name,
                     )
                 else:
+                    # Issue #398: Log update failure
+                    logger.error(
+                        "[Issue #398] Failed to update TaskMaster %s: "
+                        "update_task_master_body_template_taskflow returned False",
+                        task.task_master_id,
+                    )
                     errors.append(f"Failed to update TaskMaster {task.task_master_id}")
             except Exception as e:
+                # Issue #398: Log exception details
+                logger.exception(
+                    "[Issue #398] Exception while updating TaskMaster %s: %s",
+                    task.task_master_id,
+                    e,
+                )
                 errors.append(f"Error updating TaskMaster {task.task_master_id}: {e}")
+
+        # Issue #398: Log summary
+        logger.info(
+            "[Issue #398] TaskMaster update summary: "
+            "updated=%d, skipped_no_master_id=%d, skipped_no_workflow=%d, "
+            "skipped_failed_status=%d, errors=%d",
+            updated_count,
+            skipped_no_master_id,
+            skipped_no_workflow,
+            skipped_failed_status,
+            len(errors),
+        )
 
         # All-or-nothing check (Issue #360)
         if errors:
