@@ -46,8 +46,8 @@
       "config": {
         "mapping": {
           "recipient_email": "input.recipient_email",
-          "subject": "steps.extract_email_parts.subject",
-          "body": "steps.extract_email_parts.body"
+          "subject": "steps.extract_email_parts.result.subject",
+          "body": "steps.extract_email_parts.result.body"
         }
       },
       "params": {}
