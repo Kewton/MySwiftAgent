@@ -661,3 +661,415 @@ class TestMasterManagerTopologicalSort:
             )
 
         assert "circular dependency" in str(exc_info.value).lower()
+
+
+class TestFindFieldSource:
+    """Issue #403: Test _find_field_source method for multi-dependency field resolution."""
+
+    @pytest.fixture
+    def multi_dep_interfaces(self) -> dict[str, InterfaceSchema]:
+        """Create interfaces for multi-dependency testing.
+
+        Scenario: task_006 depends on task_001 and task_005
+        - task_001 outputs: keyword
+        - task_005 outputs: summary, recipient_email
+        """
+        return {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+            ),
+            "task_005": InterfaceSchema(
+                task_id="task_005",
+                input_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "array"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "summary": {"type": "string"},
+                        "recipient_email": {"type": "string"},
+                    },
+                },
+            ),
+            "task_006": InterfaceSchema(
+                task_id="task_006",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},
+                        "summary": {"type": "string"},
+                        "recipient_email": {"type": "string"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                },
+            ),
+        }
+
+    def test_find_field_source_single_dependency(
+        self, multi_dep_interfaces: dict[str, InterfaceSchema]
+    ):
+        """AC-8: _find_field_source finds field from single dependency.
+
+        Issue #403: When field exists in only one dependency, return that task.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # task_order_map: task_id -> order in execution
+        task_order_map = {"task_001": 0, "task_005": 4, "task_006": 5}
+
+        result = manager._find_field_source(
+            field="keyword",
+            dependencies=["task_001"],
+            interfaces=multi_dep_interfaces,
+            task_order_map=task_order_map,
+        )
+
+        assert result == "task_001"
+
+    def test_find_field_source_multiple_deps_first_match(
+        self, multi_dep_interfaces: dict[str, InterfaceSchema]
+    ):
+        """AC-8: _find_field_source returns first matching task in dependencies order.
+
+        Issue #403: When multiple dependencies have the field, prefer dependencies order.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        task_order_map = {"task_001": 0, "task_005": 4, "task_006": 5}
+
+        # summary is in task_005's output
+        result = manager._find_field_source(
+            field="summary",
+            dependencies=["task_001", "task_005"],  # task_005 has summary
+            interfaces=multi_dep_interfaces,
+            task_order_map=task_order_map,
+        )
+
+        assert result == "task_005"
+
+    def test_find_field_source_field_not_found(
+        self, multi_dep_interfaces: dict[str, InterfaceSchema]
+    ):
+        """AC-8: _find_field_source returns None when field not in any dependency.
+
+        Issue #403: When field doesn't exist in any dependency, return None.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        task_order_map = {"task_001": 0, "task_005": 4, "task_006": 5}
+
+        result = manager._find_field_source(
+            field="nonexistent_field",
+            dependencies=["task_001", "task_005"],
+            interfaces=multi_dep_interfaces,
+            task_order_map=task_order_map,
+        )
+
+        assert result is None
+
+
+class TestBuildBodyTemplateMultiDependency:
+    """Issue #403: Test _build_body_template with interfaceDefinitions for multi-dependency."""
+
+    @pytest.fixture
+    def multi_dep_task(self) -> TaskDefinition:
+        """Create task with multiple dependencies (task_006 scenario)."""
+        return TaskDefinition(
+            id="task_006",
+            name="Send Email Report",
+            description="Send email with keyword and summary",
+            task_type="email_send",
+            recommended_api="/api/email/send",
+            priority=6,
+            dependencies=["task_001", "task_005"],
+        )
+
+    @pytest.fixture
+    def multi_dep_interfaces(self) -> dict[str, InterfaceSchema]:
+        """Create interfaces for multi-dependency testing."""
+        return {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+            ),
+            "task_005": InterfaceSchema(
+                task_id="task_005",
+                input_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "array"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "summary": {"type": "string"},
+                        "recipient_email": {"type": "string"},
+                    },
+                },
+            ),
+            "task_006": InterfaceSchema(
+                task_id="task_006",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},
+                        "summary": {"type": "string"},
+                        "recipient_email": {"type": "string"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                },
+            ),
+        }
+
+    def test_build_body_template_multi_dependency_aggregation(
+        self,
+        multi_dep_task: TaskDefinition,
+        multi_dep_interfaces: dict[str, InterfaceSchema],
+    ):
+        """AC-3, AC-4: _build_body_template aggregates fields from multiple dependencies.
+
+        Issue #403: task_006 needs keyword from task_001 and summary/recipient_email from task_005.
+        Expected body_template.inputs:
+        {
+            "keyword": "{{tasks[0].output_data.keyword}}",
+            "summary": "{{tasks[4].output_data.summary}}",
+            "recipient_email": "{{tasks[4].output_data.recipient_email}}"
+        }
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        task_order_map = {"task_001": 0, "task_005": 4, "task_006": 5}
+
+        template = manager._build_body_template(
+            order=5,
+            task=multi_dep_task,
+            interfaces=multi_dep_interfaces,
+            task_order_map=task_order_map,
+        )
+
+        # Verify structure
+        assert "workflow" in template
+        assert "inputs" in template
+        assert "project" in template
+
+        # Verify inputs is a dict (not a string like {{tasks[N].output_data}})
+        assert isinstance(template["inputs"], dict)
+
+        # Verify field mappings
+        inputs = template["inputs"]
+        assert inputs["keyword"] == "{{tasks[0].output_data.keyword}}"
+        assert inputs["summary"] == "{{tasks[4].output_data.summary}}"
+        assert inputs["recipient_email"] == "{{tasks[4].output_data.recipient_email}}"
+
+    def test_build_body_template_backward_compatibility(self):
+        """AC-5, AC-7: _build_body_template maintains backward compatibility.
+
+        Issue #403: When interfaces are not provided, use legacy behavior.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # Call without optional parameters (backward compatible)
+        template = manager._build_body_template(order=1)
+
+        # Should use legacy format: inputs as string reference
+        assert template["workflow"] == "__PENDING__"
+        assert template["inputs"] == "{{tasks[0].output_data}}"
+        assert template["project"] == "{{job.body.project}}"
+
+    def test_build_body_template_first_task_with_interfaces(
+        self, multi_dep_interfaces: dict[str, InterfaceSchema]
+    ):
+        """AC-5: First task still uses user_input even with interfaces.
+
+        Issue #403: First task (order=0) should use {{job.body.user_input}}.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        first_task = TaskDefinition(
+            id="task_001",
+            name="First Task",
+            description="First task",
+            task_type="fetch",
+            recommended_api="/api/fetch",
+            priority=1,
+            dependencies=[],  # No dependencies
+        )
+        task_order_map = {"task_001": 0}
+
+        template = manager._build_body_template(
+            order=0,
+            task=first_task,
+            interfaces=multi_dep_interfaces,
+            task_order_map=task_order_map,
+        )
+
+        # First task should still use user_input
+        assert template["inputs"] == "{{job.body.user_input}}"
+
+    def test_build_body_template_fallback_with_warning_log(
+        self, multi_dep_interfaces: dict[str, InterfaceSchema], caplog
+    ):
+        """AC-6: Fields not found in dependencies fallback to user_input with warning.
+
+        Issue #403: If a required field is not in any dependency's output,
+        fallback to {{job.body.user_input.field_name}} and log a warning.
+        """
+        import logging
+
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        # Create task requiring a field that doesn't exist in dependencies
+        task = TaskDefinition(
+            id="task_006",
+            name="Send Email",
+            description="Send email",
+            task_type="email_send",
+            recommended_api="/api/email/send",
+            priority=6,
+            dependencies=["task_001"],  # task_001 only outputs 'keyword'
+        )
+
+        # task_006 needs 'missing_field' which is not in task_001's output
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={"type": "object"},
+                output_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+            ),
+            "task_006": InterfaceSchema(
+                task_id="task_006",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},
+                        "missing_field": {"type": "string"},  # Not in task_001 output
+                    },
+                },
+                output_schema={"type": "object"},
+            ),
+        }
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        task_order_map = {"task_001": 0, "task_006": 5}
+
+        with caplog.at_level(logging.WARNING):
+            template = manager._build_body_template(
+                order=5,
+                task=task,
+                interfaces=interfaces,
+                task_order_map=task_order_map,
+            )
+
+        # Verify fallback
+        inputs = template["inputs"]
+        assert inputs["keyword"] == "{{tasks[0].output_data.keyword}}"
+        assert inputs["missing_field"] == "{{job.body.user_input.missing_field}}"
+
+        # Verify warning was logged
+        assert any(
+            "missing_field" in record.message.lower()
+            and "fallback" in record.message.lower()
+            for record in caplog.records
+        )
+
+    def test_build_body_template_single_dependency_task(
+        self, multi_dep_interfaces: dict[str, InterfaceSchema]
+    ):
+        """AC-5: Single dependency task uses dict format with field mappings.
+
+        Issue #403: Even single dependency tasks should use the new dict format
+        when interfaces are provided.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        # task_005 depends only on one task
+        task = TaskDefinition(
+            id="task_005",
+            name="Process Data",
+            description="Process data",
+            task_type="transform",
+            recommended_api="/api/transform",
+            priority=5,
+            dependencies=["task_001"],
+        )
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={"type": "object"},
+                output_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+            ),
+            "task_005": InterfaceSchema(
+                task_id="task_005",
+                input_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+                output_schema={"type": "object"},
+            ),
+        }
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+        task_order_map = {"task_001": 0, "task_005": 4}
+
+        template = manager._build_body_template(
+            order=4,
+            task=task,
+            interfaces=interfaces,
+            task_order_map=task_order_map,
+        )
+
+        # With interfaces, should use dict format
+        assert isinstance(template["inputs"], dict)
+        assert template["inputs"]["keyword"] == "{{tasks[0].output_data.keyword}}"

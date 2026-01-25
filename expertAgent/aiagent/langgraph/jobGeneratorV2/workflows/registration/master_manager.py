@@ -14,6 +14,10 @@ Issue #342: Now uses actual jobqueue API calls instead of placeholders.
 Issue #402: Changed task sorting from priority-based to dependency-based
 topological sort using Kahn's algorithm.
 
+Issue #403: Extended _build_body_template to support multi-dependency field aggregation.
+- Added _find_field_source method for field-to-task resolution
+- body_template.inputs now supports dict format with field-level references
+
 Key design decisions:
 - Uses ExecutionContext for API access (dependency injection)
 - Uses JobqueueClient for actual API calls to jobqueue service
@@ -325,6 +329,11 @@ class MasterManagerSubWorkflow:
 
         logger.info("Created %d interface masters", len(interface_masters))
 
+        # Issue #403: Build task_order_map for multi-dependency body_template generation
+        task_order_map: dict[str, int] = {
+            task.id: order for order, task in enumerate(sorted_tasks)
+        }
+
         # Step 2: Create TaskMasters with interface chaining
         task_masters: list[TaskMasterInfo] = []
         prev_output_interface_id: str | None = None
@@ -345,7 +354,13 @@ class MasterManagerSubWorkflow:
             output_interface_id = mapping["output_id"]
 
             # Build body template for task chaining
-            body_template = self._build_body_template(order)
+            # Issue #403: Pass task, interfaces, and task_order_map for multi-dependency support
+            body_template = self._build_body_template(
+                order=order,
+                task=task,
+                interfaces=interfaces,
+                task_order_map=task_order_map,
+            )
 
             # Issue #358: Validate body_template before creating TaskMaster
             if task.id in interfaces:
@@ -432,12 +447,57 @@ class MasterManagerSubWorkflow:
             job_master_task_ids=job_master_task_ids,
         )
 
-    def _build_body_template(self, order: int) -> dict[str, Any]:
+    def _find_field_source(
+        self,
+        field: str,
+        dependencies: list[str],
+        interfaces: dict[str, InterfaceSchema],
+        task_order_map: dict[str, int],
+    ) -> str | None:
+        """Find the source task for a required field.
+
+        Issue #403: Determine which dependency task outputs the requested field.
+        Uses dependencies list order for priority when multiple tasks output same field.
+
+        Args:
+            field: Field name to find
+            dependencies: List of dependency task IDs (in order of priority)
+            interfaces: Interface schemas for all tasks
+            task_order_map: Mapping from task_id to execution order
+
+        Returns:
+            Task ID that outputs the field, or None if not found
+        """
+        for dep_task_id in dependencies:
+            if dep_task_id not in interfaces:
+                continue
+
+            output_schema = interfaces[dep_task_id].output_schema
+            properties = output_schema.get("properties", {})
+
+            if field in properties:
+                logger.debug(
+                    "Issue #403: Field '%s' found in task '%s' output",
+                    field,
+                    dep_task_id,
+                )
+                return dep_task_id
+
+        return None
+
+    def _build_body_template(
+        self,
+        order: int,
+        task: TaskDefinition | None = None,
+        interfaces: dict[str, InterfaceSchema] | None = None,
+        task_order_map: dict[str, int] | None = None,
+    ) -> dict[str, Any]:
         """Build body template for task chaining.
 
         Issue #342 Phase 1: Fix body_template double nesting.
         Issue #350: Engine-aware body_template for TaskFlow V2.
         Issue #391: Use {{job.body.project}} instead of {{job.project}}.
+        Issue #403: Support multi-dependency field aggregation.
 
         For GraphAI engine:
         - user_input references {{job.body.user_input}} directly
@@ -445,11 +505,14 @@ class MasterManagerSubWorkflow:
 
         For TaskFlow engine:
         - workflow: placeholder (updated after workflow generation)
-        - inputs: {{job.body}} for workflow inputs
+        - inputs: {{job.body}} for workflow inputs OR dict of field references
         - project: {{job.body.project}} for secrets resolution
 
         Args:
             order: Task execution order (0-indexed)
+            task: Optional TaskDefinition for interface-aware template generation
+            interfaces: Optional interface schemas for field resolution
+            task_order_map: Optional mapping from task_id to execution order
 
         Returns:
             Body template dict
@@ -469,13 +532,28 @@ class MasterManagerSubWorkflow:
                     "inputs": "{{job.body.user_input}}",  # Issue #396: User input data
                     "project": "{{job.body.project}}",  # Issue #391: From job.body
                 }
-            else:
-                # Subsequent tasks receive previous task's output as inputs
-                return {
-                    "workflow": "__PENDING__",
-                    "inputs": f"{{{{tasks[{order - 1}].output_data}}}}",
-                    "project": "{{job.body.project}}",  # Issue #391: From job.body
-                }
+
+            # Issue #403: Check if we have interface info for multi-dependency support
+            if (
+                task is not None
+                and interfaces is not None
+                and task_order_map is not None
+                and task.dependencies
+                and task.id in interfaces
+            ):
+                # Build field-level inputs dict
+                return self._build_multi_dependency_template(
+                    task=task,
+                    interfaces=interfaces,
+                    task_order_map=task_order_map,
+                )
+
+            # Legacy behavior: subsequent tasks receive previous task's output
+            return {
+                "workflow": "__PENDING__",
+                "inputs": f"{{{{tasks[{order - 1}].output_data}}}}",
+                "project": "{{job.body.project}}",  # Issue #391: From job.body
+            }
         else:
             # GraphAI (legacy) body_template format
             if order == 0:
@@ -492,6 +570,70 @@ class MasterManagerSubWorkflow:
                     "user_input": f"{{{{tasks[{order - 1}].output_data}}}}",
                     "job_params": "{{job.body}}",
                 }
+
+    def _build_multi_dependency_template(
+        self,
+        task: TaskDefinition,
+        interfaces: dict[str, InterfaceSchema],
+        task_order_map: dict[str, int],
+    ) -> dict[str, Any]:
+        """Build body template with multi-dependency field aggregation.
+
+        Issue #403: Creates inputs dict where each field references its source task.
+
+        Args:
+            task: Task definition with dependencies
+            interfaces: Interface schemas for all tasks
+            task_order_map: Mapping from task_id to execution order
+
+        Returns:
+            Body template with field-level input references
+        """
+        input_schema = interfaces[task.id].input_schema
+        required_fields = list(input_schema.get("properties", {}).keys())
+
+        # Issue #403: System fields that are handled separately (not part of inputs)
+        system_fields = {"project"}
+
+        inputs: dict[str, str] = {}
+
+        for field_name in required_fields:
+            # Skip system-injected fields
+            if field_name in system_fields:
+                logger.debug(
+                    "Issue #403: Skipping system field '%s' in inputs for task '%s'",
+                    field_name,
+                    task.id,
+                )
+                continue
+
+            source_task_id = self._find_field_source(
+                field=field_name,
+                dependencies=task.dependencies,
+                interfaces=interfaces,
+                task_order_map=task_order_map,
+            )
+
+            if source_task_id is not None:
+                source_order = task_order_map[source_task_id]
+                inputs[field_name] = (
+                    f"{{{{tasks[{source_order}].output_data.{field_name}}}}}"
+                )
+            else:
+                # Fallback to user_input
+                logger.warning(
+                    "Issue #403: Field '%s' not found in dependencies for task '%s', "
+                    "fallback to user_input",
+                    field_name,
+                    task.id,
+                )
+                inputs[field_name] = f"{{{{job.body.user_input.{field_name}}}}}"
+
+        return {
+            "workflow": "__PENDING__",
+            "inputs": inputs,
+            "project": "{{job.body.project}}",
+        }
 
     async def _create_interface_master(
         self,

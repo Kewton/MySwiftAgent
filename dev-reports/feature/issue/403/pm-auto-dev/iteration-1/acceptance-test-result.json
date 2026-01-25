@@ -1,0 +1,118 @@
+{
+  "issue_number": 403,
+  "iteration": 1,
+  "test_file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+  "execution_timestamp": "2026-01-25T12:30:00Z",
+  "test_results": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "status": "success"
+  },
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "name": "test_tc001_find_field_source_single_dependency",
+      "status": "passed",
+      "acceptance_criteria": ["AC-2", "AC-8"],
+      "description": "単一依存でフィールドを正しく解決できる"
+    },
+    {
+      "id": "TC-002",
+      "name": "test_tc002_find_field_source_multiple_deps_first_match",
+      "status": "passed",
+      "acceptance_criteria": ["AC-2", "AC-8"],
+      "description": "複数依存で依存順序優先で解決できる"
+    },
+    {
+      "id": "TC-003",
+      "name": "test_tc003_find_field_source_field_not_found",
+      "status": "passed",
+      "acceptance_criteria": ["AC-6", "AC-8"],
+      "description": "フィールドが見つからない場合Noneを返却"
+    },
+    {
+      "id": "TC-004",
+      "name": "test_tc004_build_body_template_multi_dependency_aggregation",
+      "status": "passed",
+      "acceptance_criteria": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-9"],
+      "description": "複数タスクからデータを集約するbody_templateを生成"
+    },
+    {
+      "id": "TC-005",
+      "name": "test_tc005_build_body_template_backward_compatibility",
+      "status": "passed",
+      "acceptance_criteria": ["AC-5", "AC-7"],
+      "description": "後方互換性 - オプション引数省略時に従来動作を維持"
+    },
+    {
+      "id": "TC-006",
+      "name": "test_tc006_build_body_template_fallback_with_user_input",
+      "status": "passed",
+      "acceptance_criteria": ["AC-6"],
+      "description": "フィールド未発見時のuser_inputフォールバック"
+    },
+    {
+      "id": "TC-007",
+      "name": "test_tc007_e2e_multi_dependency_workflow_registration",
+      "status": "passed",
+      "acceptance_criteria": ["AC-10"],
+      "description": "E2E結合テスト - 複数依存ワークフロー登録シミュレーション"
+    },
+    {
+      "id": "TC-008",
+      "name": "test_tc008_single_dependency_task_still_works",
+      "status": "passed",
+      "acceptance_criteria": ["AC-5"],
+      "description": "単一依存タスクでの後方互換性"
+    },
+    {
+      "id": "EDGE-001",
+      "name": "test_first_task_uses_user_input",
+      "status": "passed",
+      "acceptance_criteria": [],
+      "description": "最初のタスク（order=0）はuser_inputを使用する"
+    },
+    {
+      "id": "EDGE-002",
+      "name": "test_interfaces_not_provided_falls_back_to_legacy",
+      "status": "passed",
+      "acceptance_criteria": ["AC-7"],
+      "description": "interfacesが提供されない場合、従来の動作にフォールバック"
+    },
+    {
+      "id": "EDGE-003",
+      "name": "test_task_not_in_interfaces_falls_back_to_legacy",
+      "status": "passed",
+      "acceptance_criteria": ["AC-7"],
+      "description": "タスクがinterfacesに存在しない場合、従来の動作にフォールバック"
+    },
+    {
+      "id": "EDGE-004",
+      "name": "test_empty_input_schema_produces_empty_inputs",
+      "status": "passed",
+      "acceptance_criteria": [],
+      "description": "入力スキーマが空の場合、空のinputsを返す"
+    }
+  ],
+  "acceptance_criteria_coverage": {
+    "AC-1": ["TC-004"],
+    "AC-2": ["TC-001", "TC-002", "TC-004"],
+    "AC-3": ["TC-004"],
+    "AC-4": ["TC-004"],
+    "AC-5": ["TC-005", "TC-008"],
+    "AC-6": ["TC-003", "TC-006"],
+    "AC-7": ["TC-005", "EDGE-002", "EDGE-003"],
+    "AC-8": ["TC-001", "TC-002", "TC-003"],
+    "AC-9": ["TC-004"],
+    "AC-10": ["TC-007"]
+  },
+  "all_criteria_covered": true,
+  "notes": [
+    "All 12 acceptance tests pass",
+    "All 10 acceptance criteria (AC-1 to AC-10) have test coverage",
+    "Edge cases for fallback behaviors are properly tested",
+    "Test file properly follows pytest conventions with @pytest.mark.acceptance marker"
+  ]
+}

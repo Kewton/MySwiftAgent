@@ -1,0 +1,107 @@
+{
+  "issue_number": 403,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "_find_field_source",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 450,
+      "description": "依存タスクから指定フィールドを出力するタスクを探索するメソッド。dependenciesリストの順序で優先度を決定。",
+      "expected_callers": ["_build_multi_dependency_template"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_build_multi_dependency_template",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 574,
+      "description": "複数依存タスク用のbody_templateを生成するメソッド。各フィールドの取得元タスクを_find_field_sourceで決定。",
+      "expected_callers": ["_build_body_template"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_build_body_template (extended)",
+      "type": "method_extension",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 493,
+      "description": "オプション引数（task, interfaces, task_order_map）を追加し、複数依存サポートを拡張。",
+      "expected_callers": ["create_masters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "task_order_map construction",
+      "type": "code_block",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 332,
+      "description": "create_mastersメソッド内でtask_order_mapを構築し、_build_body_templateに渡す。",
+      "expected_callers": ["create_masters workflow"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_find_field_source_single_dependency",
+        "test_find_field_source_multiple_deps_first_match",
+        "test_find_field_source_field_not_found"
+      ],
+      "integration_tests": ["test_multi_dependency_workflow_registration"],
+      "acceptance_tests": ["test_issue_403_acceptance_multi_dependency"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_build_body_template_multi_dependency_aggregation"
+      ],
+      "integration_tests": ["test_multi_dependency_body_template_generation"],
+      "acceptance_tests": ["test_issue_403_acceptance_body_template_format"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "test_build_body_template_backward_compatibility",
+        "test_build_body_template_fallback_with_warning_log"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [],
+      "integration_tests": ["test_create_masters_with_task_order_map"],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "Called by _build_multi_dependency_template at line 610"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "Called by _build_body_template at line 545"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "Called by create_masters at line 358"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "code_block",
+      "integration_method": "Constructed in create_masters at line 333, passed to _build_body_template at line 362"
+    }
+  ]
+}

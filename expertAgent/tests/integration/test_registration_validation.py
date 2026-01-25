@@ -298,3 +298,301 @@ class TestValidationErrorMessages:
         error_messages = [e.message for e in result.errors]
         # Should mention the invalid index and valid range
         assert any("10" in msg or "index" in msg.lower() for msg in error_messages)
+
+
+class TestMultiDependencyWorkflowRegistration:
+    """Issue #403: Integration tests for multi-dependency workflow registration."""
+
+    @pytest.fixture
+    def multi_dep_tasks(self) -> list:
+        """Create tasks with multiple dependencies (task_006 scenario)."""
+        from aiagent.langgraph.jobGeneratorV2.types import TaskDefinition
+
+        return [
+            TaskDefinition(
+                id="task_001",
+                name="search_keywords",
+                description="Search for keywords",
+                task_type="search",
+                recommended_api="/api/search",
+                priority=1,
+                dependencies=[],
+            ),
+            TaskDefinition(
+                id="task_005",
+                name="summarize_results",
+                description="Summarize search results",
+                task_type="summarize",
+                recommended_api="/api/summarize",
+                priority=5,
+                dependencies=["task_001"],
+            ),
+            TaskDefinition(
+                id="task_006",
+                name="send_email_report",
+                description="Send email with keyword and summary",
+                task_type="email_send",
+                recommended_api="/api/email/send",
+                priority=6,
+                dependencies=["task_001", "task_005"],
+            ),
+        ]
+
+    @pytest.fixture
+    def multi_dep_interfaces(self) -> dict:
+        """Create interfaces for multi-dependency testing."""
+        from aiagent.langgraph.jobGeneratorV2.types import InterfaceSchema
+
+        return {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+            ),
+            "task_005": InterfaceSchema(
+                task_id="task_005",
+                input_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "summary": {"type": "string"},
+                        "recipient_email": {"type": "string"},
+                    },
+                },
+            ),
+            "task_006": InterfaceSchema(
+                task_id="task_006",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},
+                        "summary": {"type": "string"},
+                        "recipient_email": {"type": "string"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                },
+            ),
+        }
+
+    @pytest.fixture
+    def mock_context(self) -> MagicMock:
+        """Create mock execution context."""
+        context = MagicMock()
+        context.job_id = "test_multi_dep_job"
+        context.user_requirement = "Multi-dependency workflow test"
+        context.storage = MagicMock()
+        context.storage.jobqueue_client = None
+        return context
+
+    @pytest.mark.asyncio
+    async def test_multi_dependency_workflow_registration(
+        self,
+        mock_context: MagicMock,
+        multi_dep_tasks: list,
+        multi_dep_interfaces: dict,
+    ) -> None:
+        """AC-10: Multi-dependency workflow registration E2E test.
+
+        Issue #403: Verify that task_006 with dependencies on task_001 and task_005
+        generates correct body_template with field-level references.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        # Mock jobqueue client to capture body_template
+        mock_client = AsyncMock()
+        captured_body_templates = []
+
+        async def capture_task_master(**kwargs):
+            captured_body_templates.append(kwargs.get("body_template"))
+            return {"id": f"tm_{len(captured_body_templates)}"}
+
+        mock_client.create_interface_master.return_value = {"id": "im_test"}
+        mock_client.create_task_master.side_effect = capture_task_master
+        mock_client.create_job_master.return_value = {"id": "jm_test"}
+        mock_client.add_task_to_workflow.return_value = {"id": "jmt_test"}
+
+        manager = MasterManagerSubWorkflow(
+            engine="taskflow",
+            jobqueue_client=mock_client,
+        )
+
+        result = await manager.create_masters(
+            tasks=multi_dep_tasks,
+            interfaces=multi_dep_interfaces,
+            project_id="test_project",
+            context=mock_context,
+        )
+
+        # Verify all task masters created
+        assert len(result.task_masters) == 3
+
+        # Verify task_006's body_template (should be the last one)
+        task_006_template = captured_body_templates[2]
+
+        # Verify inputs is a dict with field-level references
+        assert isinstance(task_006_template["inputs"], dict)
+
+        # Expected format: keyword from task_001 (order 0), summary/recipient from task_005 (order 1)
+        inputs = task_006_template["inputs"]
+        assert inputs["keyword"] == "{{tasks[0].output_data.keyword}}"
+        assert inputs["summary"] == "{{tasks[1].output_data.summary}}"
+        assert inputs["recipient_email"] == "{{tasks[1].output_data.recipient_email}}"
+
+        # Verify project is still at top level
+        assert task_006_template["project"] == "{{job.body.project}}"
+
+    @pytest.mark.asyncio
+    async def test_single_dependency_still_works(
+        self,
+        mock_context: MagicMock,
+        multi_dep_interfaces: dict,
+    ) -> None:
+        """AC-5: Single dependency tasks still work correctly.
+
+        Issue #403: Verify that task_005 (single dependency on task_001)
+        generates correct body_template.
+        """
+        from aiagent.langgraph.jobGeneratorV2.types import TaskDefinition
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        # Create simple two-task workflow
+        tasks = [
+            TaskDefinition(
+                id="task_001",
+                name="search_keywords",
+                description="Search for keywords",
+                task_type="search",
+                recommended_api="/api/search",
+                priority=1,
+                dependencies=[],
+            ),
+            TaskDefinition(
+                id="task_005",
+                name="summarize_results",
+                description="Summarize search results",
+                task_type="summarize",
+                recommended_api="/api/summarize",
+                priority=5,
+                dependencies=["task_001"],
+            ),
+        ]
+
+        # Mock jobqueue client
+        mock_client = AsyncMock()
+        captured_body_templates = []
+
+        async def capture_task_master(**kwargs):
+            captured_body_templates.append(kwargs.get("body_template"))
+            return {"id": f"tm_{len(captured_body_templates)}"}
+
+        mock_client.create_interface_master.return_value = {"id": "im_test"}
+        mock_client.create_task_master.side_effect = capture_task_master
+        mock_client.create_job_master.return_value = {"id": "jm_test"}
+        mock_client.add_task_to_workflow.return_value = {"id": "jmt_test"}
+
+        manager = MasterManagerSubWorkflow(
+            engine="taskflow",
+            jobqueue_client=mock_client,
+        )
+
+        await manager.create_masters(
+            tasks=tasks,
+            interfaces=multi_dep_interfaces,
+            project_id="test_project",
+            context=mock_context,
+        )
+
+        # Verify task_005's body_template
+        task_005_template = captured_body_templates[1]
+
+        # Single dependency should also use dict format
+        assert isinstance(task_005_template["inputs"], dict)
+        assert (
+            task_005_template["inputs"]["keyword"] == "{{tasks[0].output_data.keyword}}"
+        )
+
+    def test_fallback_to_user_input_for_missing_field(self) -> None:
+        """AC-6: Fields not found in dependencies fallback to user_input.
+
+        Issue #403: Verify that missing fields fallback to job.body.user_input.
+        This test directly tests _build_multi_dependency_template without going
+        through create_masters (which would trigger body_template validation).
+        """
+        from aiagent.langgraph.jobGeneratorV2.types import (
+            InterfaceSchema,
+            TaskDefinition,
+        )
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        # Create task requiring field not in dependency output
+        task = TaskDefinition(
+            id="task_002",
+            name="process_data",
+            description="Process data with extra field",
+            task_type="process",
+            recommended_api="/api/process",
+            priority=2,
+            dependencies=["task_001"],
+        )
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "array"}},  # Only outputs 'data'
+                },
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "data": {"type": "array"},
+                        "extra_param": {"type": "string"},  # Not in task_001 output
+                    },
+                },
+                output_schema={"type": "object"},
+            ),
+        }
+
+        task_order_map = {"task_001": 0, "task_002": 1}
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # Directly test _build_multi_dependency_template
+        template = manager._build_multi_dependency_template(
+            task=task,
+            interfaces=interfaces,
+            task_order_map=task_order_map,
+        )
+
+        inputs = template["inputs"]
+
+        # data should come from task_001
+        assert inputs["data"] == "{{tasks[0].output_data.data}}"
+
+        # extra_param should fallback to user_input
+        assert inputs["extra_param"] == "{{job.body.user_input.extra_param}}"

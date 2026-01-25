@@ -1,0 +1,38 @@
+{
+  "issue_number": 403,
+  "feature_summary": "body_template生成でinterfaceDefinitionsを考慮した複数タスクからのデータ集約",
+  "acceptance_criteria": [
+    "AC-1: interfaceDefinitionsの入力要件を解析して必要なフィールドを特定する",
+    "AC-2: 各フィールドの取得元タスクをdependenciesから決定する",
+    "AC-3: 複数タスクからのデータを集約するbody_templateを生成する",
+    "AC-4: task_006のbody_templateが{keyword, summary, recipient_email}を正しく参照する",
+    "AC-5: 既存の単一依存タスクでも正しく動作する（後方互換性）",
+    "AC-6: 依存タスクの出力にフィールドが存在しない場合、user_inputからフォールバック取得する",
+    "AC-7: interfacesが存在しないタスクの場合、従来の動作にフォールバックする",
+    "AC-8: 単体テスト - _find_field_sourceの正常系・異常系テスト",
+    "AC-9: 単体テスト - _build_body_templateの複数依存タスクテスト",
+    "AC-10: 結合テスト - 複数依存を持つワークフローのE2E登録テスト"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "jobqueue", "myVault"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "正常系テスト - 複数依存ワークフロー生成",
+        "command": "curl -s -X POST http://localhost:8004/v2/jobs/generate -H 'Content-Type: application/json' -d '{\"input\": \"キーワード検索してメール詳細を取得し、要約を作成してメールを送信する\", \"engine\": \"taskflow\", \"project\": \"default_project\"}'",
+        "expected_status": 200,
+        "expected_response_contains": ["job_id"]
+      }
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py"
+}

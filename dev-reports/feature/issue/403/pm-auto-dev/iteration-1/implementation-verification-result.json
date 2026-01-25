@@ -1,0 +1,255 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-25T12:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "_find_field_source",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 450",
+          "grep_result": "def _find_field_source(self, field: str, dependencies: list[str], interfaces: dict[str, InterfaceSchema], task_order_map: dict[str, int]) -> str | None:"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called by _build_multi_dependency_template at line 610",
+          "grep_result": "610:            source_task_id = self._find_field_source("
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Private method, used within same class",
+          "note": "Private method (_find_field_source) - not expected to be imported externally"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+          "test_names": [
+            "test_find_field_source_single_dependency",
+            "test_find_field_source_multiple_deps_first_match",
+            "test_find_field_source_field_not_found"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/integration/test_registration_validation.py",
+          "test_name": "test_multi_dependency_workflow_registration",
+          "evidence": "Integration test verifies multi-dependency workflow creates correct body_template with field-level references"
+        }
+      },
+      "classification": "PASSED",
+      "integration_rate": "100%"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_build_multi_dependency_template",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 574",
+          "grep_result": "def _build_multi_dependency_template(self, task: TaskDefinition, interfaces: dict[str, InterfaceSchema], task_order_map: dict[str, int]) -> dict[str, Any]:"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called by _build_body_template at line 545",
+          "grep_result": "545:                return self._build_multi_dependency_template("
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Private method, used within same class",
+          "note": "Private method (_build_multi_dependency_template) - not expected to be imported externally"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+          "test_names": [
+            "test_build_body_template_multi_dependency_aggregation",
+            "test_build_body_template_fallback_with_warning_log"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/integration/test_registration_validation.py",
+          "test_name": "test_multi_dependency_workflow_registration",
+          "evidence": "Integration test captures body_template and verifies field-level references for multi-dependency task"
+        }
+      },
+      "classification": "PASSED",
+      "integration_rate": "100%"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_build_body_template (extended)",
+      "type": "method_extension",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Method signature extended with optional parameters at line 488",
+          "grep_result": "def _build_body_template(self, order: int, task: TaskDefinition | None = None, interfaces: dict[str, InterfaceSchema] | None = None, task_order_map: dict[str, int] | None = None) -> dict[str, Any]:"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called by create_masters at line 358 with all new parameters",
+          "grep_result": "358:            body_template = self._build_body_template(\n359:                order=order,\n360:                task=task,\n361:                interfaces=interfaces,\n362:                task_order_map=task_order_map,"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Private method, used within same class",
+          "note": "Private method (_build_body_template) - not expected to be imported externally"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+          "test_names": [
+            "test_build_body_template_backward_compatibility",
+            "test_build_body_template_multi_dependency_aggregation",
+            "test_build_body_template_first_task_with_interfaces",
+            "test_build_body_template_single_dependency_task"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/integration/test_registration_validation.py",
+          "test_name": "test_multi_dependency_workflow_registration",
+          "evidence": "Integration test verifies extended _build_body_template is called with new parameters during workflow registration"
+        }
+      },
+      "classification": "PASSED",
+      "integration_rate": "100%"
+    },
+    {
+      "feature_id": "F4",
+      "name": "task_order_map construction",
+      "type": "code_block",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Constructed in create_masters at lines 332-335",
+          "grep_result": "332:        # Issue #403: Build task_order_map for multi-dependency body_template generation\n333:        task_order_map: dict[str, int] = {\n334:            task.id: order for order, task in enumerate(sorted_tasks)\n335:        }"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used and passed to _build_body_template at line 362",
+          "grep_result": "362:                task_order_map=task_order_map,"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Variable constructed and used within create_masters method",
+          "note": "Local variable - not expected to be imported"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+          "test_names": [
+            "test_find_field_source_single_dependency (uses task_order_map)",
+            "test_build_body_template_multi_dependency_aggregation (uses task_order_map)"
+          ]
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "expertAgent/tests/integration/test_registration_validation.py",
+          "test_name": "test_multi_dependency_workflow_registration",
+          "evidence": "Integration test verifies task_order_map is used to generate correct field references"
+        }
+      },
+      "classification": "PASSED",
+      "integration_rate": "100%"
+    }
+  ],
+  "summary": {
+    "total_features": 4,
+    "passed": 4,
+    "dead_code": 0,
+    "missing_tests": 0,
+    "not_found": 0,
+    "empty_parameters": 0,
+    "missing_acceptance_tests": 4
+  },
+  "dead_code_list": [],
+  "empty_parameter_list": [],
+  "missing_acceptance_test_list": [
+    {
+      "feature_id": "F1",
+      "name": "_find_field_source",
+      "issue": "No acceptance test file found for Issue #403",
+      "expected_file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+      "severity": "P1",
+      "reason": "Acceptance test required per CLAUDE.md rules (Issue #333 教訓)"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_build_multi_dependency_template",
+      "issue": "No acceptance test file found for Issue #403",
+      "expected_file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+      "severity": "P1",
+      "reason": "Acceptance test required per CLAUDE.md rules (Issue #333 教訓)"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_build_body_template (extended)",
+      "issue": "No acceptance test file found for Issue #403",
+      "expected_file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+      "severity": "P1",
+      "reason": "Acceptance test required per CLAUDE.md rules (Issue #333 教訓)"
+    },
+    {
+      "feature_id": "F4",
+      "name": "task_order_map construction",
+      "issue": "No acceptance test file found for Issue #403",
+      "expected_file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+      "severity": "P1",
+      "reason": "Acceptance test required per CLAUDE.md rules (Issue #333 教訓)"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "action": "Create acceptance test file for Issue #403",
+      "file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+      "description": "Create E2E acceptance test that verifies multi-dependency workflow registration and execution with actual API calls",
+      "acceptance_criteria": [
+        "AC-1: task_order_mapがcreate_masters内で正しく構築される",
+        "AC-2: _build_body_templateがtask, interfaces, task_order_mapを受け取る",
+        "AC-3: 複数依存タスクのbody_template.inputsがdict形式になる",
+        "AC-4: 各フィールドが正しいtasks[N].output_data.field形式で参照される",
+        "AC-5: 単一依存タスクでも後方互換性を保つ",
+        "AC-6: 依存タスクに存在しないフィールドはjob.body.user_inputにフォールバック",
+        "AC-7: 依存なしタスクは引き続きjob.body.user_inputを使用",
+        "AC-8: _find_field_sourceがdependencies順序でフィールドソースを決定",
+        "AC-9: システムフィールド（project）はinputsに含めない",
+        "AC-10: 実際のAPI呼び出しでワークフロー全体が正しく動作する"
+      ],
+      "test_scenario": "Create job with task_001 (outputs keyword) → task_005 (outputs summary/recipient_email) → task_006 (depends on both). Verify task_006's body_template references correct fields from both tasks.",
+      "verification_method": "Call /v1/jobs API with multi-dependency workflow definition and verify returned body_template structure"
+    }
+  ],
+  "notes": [
+    "All implemented features (F1-F4) are fully integrated and called in production code",
+    "No dead code detected - all methods are actively used",
+    "Integration rate: 100% (4/4 features integrated)",
+    "Unit test coverage: Comprehensive (13+ test methods)",
+    "Integration test coverage: Complete (test_registration_validation.py)",
+    "CRITICAL ISSUE: No acceptance test file exists (test_issue_403_acceptance.py)",
+    "Per CLAUDE.md Issue #333 教訓: Acceptance test is REQUIRED before Issue completion",
+    "Integration tests use mocked jobqueue client - acceptance test must use real API",
+    "Recommendation: Create acceptance test that calls actual job generation API and verifies multi-dependency field aggregation in E2E scenario"
+  ],
+  "conclusion": {
+    "integration_status": "PASSED",
+    "test_status": "FAILED",
+    "overall_status": "FAILED",
+    "reason": "Missing required acceptance test file (CLAUDE.md compliance issue)",
+    "next_steps": [
+      "1. Create test_issue_403_acceptance.py with E2E API call test",
+      "2. Verify AC-1 through AC-10 with real API calls",
+      "3. Ensure test passes with actual services running (./scripts/dev-hybrid.sh)",
+      "4. Re-run verification after acceptance test is created"
+    ]
+  }
+}
