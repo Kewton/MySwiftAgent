@@ -2,11 +2,18 @@
 
 This module provides the master creation node that creates TaskMasters,
 JobMaster, and critically, JobMasterTask associations to link tasks to the workflow.
+
+Issue #402: Changed task sorting from priority-based to dependency-based
+topological sort using Kahn's algorithm.
 """
 
 import logging
 from typing import Any
 
+from aiagent.langgraph.jobGeneratorV2.protocols import WorkflowError
+from aiagent.langgraph.jobGeneratorV2.utils.topological_sort import (
+    topological_sort_task_dicts,
+)
 from core.config import settings
 
 from ..state import JobTaskGeneratorState
@@ -70,11 +77,19 @@ async def master_creation_node(
         # Step 1: Create TaskMasters with interface chaining
         task_masters: dict[str, dict[str, Any]] = {}
 
-        # Sort tasks by priority to establish execution order
-        sorted_tasks = sorted(task_breakdown, key=lambda t: t.get("priority", 5))
-        logger.info(
-            f"Sorted {len(sorted_tasks)} tasks by priority for interface chaining"
-        )
+        # Issue #402: Sort tasks by dependencies using topological sort
+        # Within same dependency level, tasks are sub-sorted by priority
+        try:
+            sorted_tasks = topological_sort_task_dicts(task_breakdown)
+            logger.info(
+                f"Sorted {len(sorted_tasks)} tasks by dependencies for interface chaining"
+            )
+        except WorkflowError as e:
+            logger.error(f"Task sorting failed: {e}")
+            return {
+                **state,
+                "error_message": f"Task sorting failed: {e}",
+            }
 
         # Initialize prev_output_interface_id for chaining
         prev_output_interface_id: str | None = None

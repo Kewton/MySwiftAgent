@@ -1,0 +1,128 @@
+{
+  "issue_number": 402,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "topological_sort_tasks",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+      "line_number": 75,
+      "description": "Main function to sort TaskDefinition list by dependencies using Kahn's algorithm",
+      "expected_callers": ["MasterManagerSubWorkflow.create_masters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py:274"
+    },
+    {
+      "feature_id": "F2",
+      "name": "topological_sort_task_dicts",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+      "line_number": 295,
+      "description": "Sort dict-based tasks by dependencies (legacy support)",
+      "expected_callers": ["master_creation_node"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py:83"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_build_dependency_graph",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+      "line_number": 172,
+      "description": "Build adjacency list and in-degree map from task definitions",
+      "expected_callers": ["topological_sort_tasks"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py:135"
+    },
+    {
+      "feature_id": "F4",
+      "name": "_topological_sort_with_priority",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+      "line_number": 226,
+      "description": "Run Kahn's algorithm with priority as tiebreaker",
+      "expected_callers": ["topological_sort_tasks"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py:138"
+    },
+    {
+      "feature_id": "F5",
+      "name": "_validate_dependencies",
+      "type": "function",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+      "line_number": 152,
+      "description": "Validate that all dependencies reference existing tasks",
+      "expected_callers": ["topological_sort_tasks"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py:132"
+    },
+    {
+      "feature_id": "F6",
+      "name": "_TaskDictWrapper",
+      "type": "class",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+      "line_number": 40,
+      "description": "Wrapper to make dict-based tasks compatible with topological sort",
+      "expected_callers": ["topological_sort_task_dicts"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py:334"
+    },
+    {
+      "feature_id": "F7",
+      "name": "master_manager.py modification",
+      "type": "code_modification",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 274,
+      "description": "Replace priority-based sort with topological_sort_tasks",
+      "expected_callers": ["create_masters method"],
+      "expected_call_location": "N/A - this is the integration point"
+    },
+    {
+      "feature_id": "F8",
+      "name": "master_creation.py modification",
+      "type": "code_modification",
+      "file_path": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py",
+      "line_number": 83,
+      "description": "Replace priority-based sort with topological_sort_task_dicts",
+      "expected_callers": ["master_creation_node"],
+      "expected_call_location": "N/A - this is the integration point"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_topological_sort.py::TestTopologicalSortTasks::*"
+      ],
+      "integration_tests": [
+        "test_master_manager.py::TestMasterManagerSubWorkflowTopologicalSort::*"
+      ],
+      "acceptance_tests": [
+        "test_issue_402_acceptance.py::TestIssue402Acceptance::*"
+      ]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_topological_sort.py::TestTopologicalSortTaskDicts::*"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "function_call",
+      "integration_method": "sorted_tasks = topological_sort_tasks(tasks)"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py",
+      "integration_type": "function_call",
+      "integration_method": "sorted_tasks = topological_sort_task_dicts(task_breakdown)"
+    },
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/__init__.py",
+      "integration_type": "export",
+      "integration_method": "from .topological_sort import topological_sort_tasks, topological_sort_task_dicts"
+    }
+  ]
+}

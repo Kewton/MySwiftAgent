@@ -11,10 +11,14 @@ without importing from the old code.
 
 Issue #342: Now uses actual jobqueue API calls instead of placeholders.
 
+Issue #402: Changed task sorting from priority-based to dependency-based
+topological sort using Kahn's algorithm.
+
 Key design decisions:
 - Uses ExecutionContext for API access (dependency injection)
 - Uses JobqueueClient for actual API calls to jobqueue service
 - All external API calls create real resources in jobqueue
+- Uses topological sort for dependency-respecting execution order
 """
 
 from __future__ import annotations
@@ -31,6 +35,9 @@ from aiagent.langgraph.jobGeneratorV2.types_old import (
     InterfaceSchema,
     Phase,
     TaskDefinition,
+)
+from aiagent.langgraph.jobGeneratorV2.utils.topological_sort import (
+    topological_sort_tasks,
 )
 from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
     BodyTemplateValidator,
@@ -262,8 +269,9 @@ class MasterManagerSubWorkflow:
                 Phase.REGISTRATION,
             )
 
-        # Sort tasks by priority for execution order
-        sorted_tasks = sorted(tasks, key=lambda t: t.priority)
+        # Issue #402: Sort tasks by dependencies using topological sort
+        # Within same dependency level, tasks are sub-sorted by priority
+        sorted_tasks = topological_sort_tasks(tasks)
 
         # Step 1: Create InterfaceMasters
         interface_masters: list[InterfaceMasterInfo] = []

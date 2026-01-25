@@ -1,0 +1,133 @@
+{
+  "issue_number": 402,
+  "issue_title": "feat(expertAgent): タスク登録時のソート順をpriorityから依存関係ベースのトポロジカルソートに変更",
+  "acceptance_criteria": [
+    "AC-1: `dependencies`フィールドに基づいてタスクがトポロジカルソートされる",
+    "AC-2: 循環依存がある場合は`WorkflowError`を返す",
+    "AC-3: 既存のE2Eテストが引き続きパスする",
+    "AC-4: 同一依存レベル内では`priority`フィールドでサブソートする（実装必須）",
+    "AC-5: 空の依存関係リスト（`dependencies=[]`）の場合は`priority`順を適用する",
+    "AC-6: 単体テストで循環依存検出をカバーする"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "1.1",
+      "description": "utils/topological_sort.py の実装",
+      "subtasks": [
+        "utils/ ディレクトリ作成",
+        "topological_sort_tasks() 関数の実装",
+        "_build_dependency_graph() の実装",
+        "_topological_sort_with_priority() の実装",
+        "エラーハンドリングの実装（WorkflowError）"
+      ]
+    },
+    {
+      "id": "1.2",
+      "description": "単体テスト作成",
+      "subtasks": [
+        "test_topological_sort.py の作成",
+        "基本機能テスト（線形、分岐、独立タスク）",
+        "循環依存検出テスト",
+        "優先度サブソートテスト",
+        "エッジケーステスト"
+      ]
+    },
+    {
+      "id": "2.1",
+      "description": "master_manager.py 修正",
+      "subtasks": [
+        "create_masters メソッドのソート処理を特定",
+        "topological_sort_tasks への置き換え",
+        "import文の追加",
+        "エラーハンドリングの追加"
+      ]
+    },
+    {
+      "id": "2.2",
+      "description": "結合テスト作成",
+      "subtasks": [
+        "test_master_manager.py への結合テスト追加",
+        "依存関係付きタスクのマスター登録テスト",
+        "循環依存時のエラーハンドリングテスト"
+      ]
+    },
+    {
+      "id": "3.1",
+      "description": "master_creation.py 修正",
+      "subtasks": [
+        "sorted_tasks 処理の特定",
+        "topological_sort_tasks への置き換え（dict→TaskDefinition変換）",
+        "レガシーシステムとの互換性確認"
+      ]
+    },
+    {
+      "id": "3.2",
+      "description": "レガシー用結合テスト",
+      "subtasks": [
+        "test_master_creation_node.py へのテスト追加",
+        "依存関係処理の検証",
+        "後方互換性の確認"
+      ]
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "utils/topological_sort.py の実装",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "単体テスト作成",
+      "estimated_hours": 3,
+      "deliverables": ["expertAgent/tests/unit/test_topological_sort.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "master_manager.py 修正",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "結合テスト作成",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/test_job_generator_v2/test_master_manager.py"],
+      "dependencies": ["2.1"]
+    },
+    {
+      "task_id": "3.1",
+      "description": "master_creation.py 修正",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "3.2",
+      "description": "レガシー用結合テスト",
+      "estimated_hours": 1.5,
+      "deliverables": ["expertAgent/tests/unit/test_master_creation_node.py"],
+      "dependencies": ["3.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py",
+    "expertAgent/tests/unit/test_topological_sort.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py (修正)",
+    "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py (修正)",
+    "expertAgent/tests/acceptance/test_issue_402_acceptance.py"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全パス",
+    "L3受入テスト全パス",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent"
+}

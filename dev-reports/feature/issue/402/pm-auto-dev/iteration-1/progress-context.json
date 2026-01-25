@@ -1,0 +1,51 @@
+{
+  "issue_number": 402,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 97.33,
+      "unit_tests_passed": 52,
+      "unit_tests_failed": 0
+    },
+    "acceptance": {
+      "status": "passed",
+      "tests_passed": 7,
+      "tests_failed": 0
+    },
+    "refactor": {
+      "status": "skipped",
+      "reason": "TDD implementation already high quality"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "utils/topological_sort.py の実装", "status": "completed"},
+      {"task_id": "1.2", "description": "単体テスト作成", "status": "completed"},
+      {"task_id": "2.1", "description": "master_manager.py 修正", "status": "completed"},
+      {"task_id": "2.2", "description": "結合テスト作成", "status": "completed"},
+      {"task_id": "3.1", "description": "master_creation.py 修正", "status": "completed"},
+      {"task_id": "3.2", "description": "レガシー用結合テスト", "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py", "created": true},
+      {"file": "expertAgent/tests/unit/test_topological_sort.py", "created": true},
+      {"file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py", "modified": true},
+      {"file": "expertAgent/aiagent/langgraph/jobTaskGeneratorAgents/nodes/master_creation.py", "modified": true},
+      {"file": "expertAgent/tests/acceptance/test_issue_402_acceptance.py", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "すべてのタスクが完了", "verified": true},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": true, "actual": "97.33%"},
+      {"criterion": "結合テスト全パス", "verified": true},
+      {"criterion": "L3受入テスト全パス", "verified": true},
+      {"criterion": "CI/CDグリーン", "verified": "pending_phase_5.5"}
+    ],
+    "estimated_vs_actual_hours": {
+      "estimated": 16,
+      "actual": "TBD",
+      "variance": "TBD"
+    }
+  }
+}

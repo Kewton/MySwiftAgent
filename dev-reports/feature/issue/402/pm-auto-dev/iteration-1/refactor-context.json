@@ -1,0 +1,17 @@
+{
+  "issue_number": 402,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 97.33,
+    "complexity_score": "Low - Kahn's algorithm is straightforward"
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "既にSOLID原則に従っている",
+    "コードは十分にシンプル",
+    "大幅なリファクタリングは不要"
+  ],
+  "notes": "TDD実装により、コードは既に高品質で構造化されている。大規模なリファクタリングは不要。"
+}

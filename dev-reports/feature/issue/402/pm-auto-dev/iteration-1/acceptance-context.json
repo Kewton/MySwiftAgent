@@ -1,0 +1,48 @@
+{
+  "issue_number": 402,
+  "feature_summary": "タスク登録時のソート順をpriorityから依存関係ベースのトポロジカルソートに変更",
+  "acceptance_criteria": [
+    "AC-1: `dependencies`フィールドに基づいてタスクがトポロジカルソートされる",
+    "AC-2: 循環依存がある場合は`WorkflowError`を返す",
+    "AC-3: 既存のE2Eテストが引き続きパスする",
+    "AC-4: 同一依存レベル内では`priority`フィールドでサブソートする（実装必須）",
+    "AC-5: 空の依存関係リスト（`dependencies=[]`）の場合は`priority`順を適用する",
+    "AC-6: 単体テストで循環依存検出をカバーする"
+  ],
+  "labels": ["enhancement", "project: expertAgent"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault", "jobqueue"],
+  "external_dependencies": ["LLM API (optional for E2E)"],
+  "l3_test_plan": {
+    "source": "acceptance-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"},
+      {"service": "jobqueue", "url": "http://localhost:8001/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "Issue #402 再現テスト（単体テスト）",
+        "command": "uv run pytest expertAgent/tests/unit/test_topological_sort.py -v",
+        "expected_status": "PASSED",
+        "expected_result": "All topological sort tests pass"
+      },
+      {
+        "name": "結合テスト",
+        "command": "uv run pytest expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py -v -k 'topological'",
+        "expected_status": "PASSED",
+        "expected_result": "All integration tests pass"
+      },
+      {
+        "name": "受入テスト（test_issue_402_acceptance.py）",
+        "command": "uv run pytest expertAgent/tests/acceptance/test_issue_402_acceptance.py -v",
+        "expected_status": "PASSED",
+        "expected_result": "All acceptance criteria verified"
+      }
+    ],
+    "external_service_checks": []
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_402_acceptance.py",
+  "playwright_test_file": null
+}

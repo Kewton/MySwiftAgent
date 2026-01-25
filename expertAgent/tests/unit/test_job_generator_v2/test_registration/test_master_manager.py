@@ -1,6 +1,7 @@
 """Unit tests for MasterManagerSubWorkflow.
 
 Issue #342 Phase D.3: Tests for master creation sub-workflow.
+Issue #402: Tests for topological sort integration.
 
 Note: Tests in TestMasterManagerCreateMasters require external services (myVault, graphAiServer)
 and are skipped in CI. Run locally with `./scripts/dev-hybrid.sh` for full test coverage.
@@ -385,6 +386,7 @@ class TestMasterManagerBodyTemplate:
         Issue #350: TaskFlow V2 body_template format.
         Issue #390: Changed from workflow_name to workflow for mySwiftAgentCore API.
         Issue #391: Changed from {{job.project}} to {{job.body.project}}.
+        Issue #396: Changed from {{job.body}} to {{job.body.user_input}} for inputs.
         """
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
@@ -395,8 +397,9 @@ class TestMasterManagerBodyTemplate:
 
         # Issue #390: mySwiftAgentCore expects "workflow" field (not "workflow_name")
         # Issue #391: project uses {{job.body.project}} (Job model has no project attr)
+        # Issue #396: inputs uses {{job.body.user_input}} (not entire body)
         assert template["workflow"] == "__PENDING__"
-        assert template["inputs"] == "{{job.body}}"
+        assert template["inputs"] == "{{job.body.user_input}}"
         assert template["project"] == "{{job.body.project}}"
 
     def test_subsequent_task_body_template_taskflow(self):
@@ -457,3 +460,204 @@ class TestMasterManagerInitialization:
         )
         assert manager._graphai_server_url == "http://custom:8000"
         assert manager._default_timeout_sec == 120
+
+
+class TestMasterManagerTopologicalSort:
+    """Issue #402: Test topological sort integration in MasterManagerSubWorkflow."""
+
+    def test_topological_sort_import(self):
+        """topological_sort_tasks should be imported in master_manager."""
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration import (
+            master_manager,
+        )
+
+        # Verify the import exists
+        assert hasattr(master_manager, "topological_sort_tasks")
+
+    @pytest.fixture
+    def dependency_tasks(self) -> list[TaskDefinition]:
+        """Create tasks with dependencies for topological sort testing."""
+        return [
+            TaskDefinition(
+                id="task_003",
+                name="Final Task",
+                description="Depends on task_001 and task_002",
+                task_type="send",
+                recommended_api="/api/send",
+                priority=1,  # Highest priority but depends on others
+                dependencies=["task_001", "task_002"],
+            ),
+            TaskDefinition(
+                id="task_001",
+                name="First Task",
+                description="No dependencies",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=3,
+                dependencies=[],
+            ),
+            TaskDefinition(
+                id="task_002",
+                name="Second Task",
+                description="Depends on first",
+                task_type="transform",
+                recommended_api="/api/transform",
+                priority=2,
+                dependencies=["task_001"],
+            ),
+        ]
+
+    @pytest.fixture
+    def dependency_interfaces(self) -> dict[str, InterfaceSchema]:
+        """Create interfaces for dependency testing."""
+        return {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "array"}},
+                },
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "array"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"result": {"type": "string"}},
+                },
+            ),
+            "task_003": InterfaceSchema(
+                task_id="task_003",
+                input_schema={
+                    "type": "object",
+                    "properties": {"result": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                },
+            ),
+        }
+
+    @requires_external_services
+    @pytest.mark.asyncio
+    async def test_topological_sort_respects_dependencies(
+        self,
+        dependency_tasks: list[TaskDefinition],
+        dependency_interfaces: dict[str, InterfaceSchema],
+    ):
+        """AC-1: Tasks should be sorted by dependencies, not priority.
+
+        Issue #402: Verify that topological sort orders tasks correctly.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        mock_context = ExecutionContext(
+            job_id="test-topo-sort",
+            user_requirement="Test topological sort",
+            max_phase_retries=3,
+            max_total_retries=5,
+        )
+
+        manager = MasterManagerSubWorkflow()
+        result = await manager.create_masters(
+            tasks=dependency_tasks,
+            interfaces=dependency_interfaces,
+            project_id="test-project",
+            context=mock_context,
+        )
+
+        # Verify order respects dependencies
+        orders = {tm.task_id: tm.order for tm in result.task_masters}
+
+        # task_001 must come before task_002 and task_003
+        assert orders["task_001"] < orders["task_002"]
+        assert orders["task_001"] < orders["task_003"]
+
+        # task_002 must come before task_003
+        assert orders["task_002"] < orders["task_003"]
+
+    @pytest.mark.asyncio
+    async def test_circular_dependency_raises_error(self):
+        """AC-2: Circular dependencies should raise WorkflowError.
+
+        Issue #402: Verify that circular dependencies are detected.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        circular_tasks = [
+            TaskDefinition(
+                id="task_001",
+                name="Task 1",
+                description="Depends on task_003",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=1,
+                dependencies=["task_003"],
+            ),
+            TaskDefinition(
+                id="task_002",
+                name="Task 2",
+                description="Depends on task_001",
+                task_type="transform",
+                recommended_api="/api/transform",
+                priority=2,
+                dependencies=["task_001"],
+            ),
+            TaskDefinition(
+                id="task_003",
+                name="Task 3",
+                description="Depends on task_002",
+                task_type="send",
+                recommended_api="/api/send",
+                priority=3,
+                dependencies=["task_002"],
+            ),
+        ]
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+            ),
+            "task_003": InterfaceSchema(
+                task_id="task_003",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+            ),
+        }
+
+        mock_context = ExecutionContext(
+            job_id="test-circular",
+            user_requirement="Test circular dependency",
+            max_phase_retries=3,
+            max_total_retries=5,
+        )
+
+        manager = MasterManagerSubWorkflow()
+        with pytest.raises(WorkflowError) as exc_info:
+            await manager.create_masters(
+                tasks=circular_tasks,
+                interfaces=interfaces,
+                project_id="test-project",
+                context=mock_context,
+            )
+
+        assert "circular dependency" in str(exc_info.value).lower()
