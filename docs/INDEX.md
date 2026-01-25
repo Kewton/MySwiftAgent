@@ -41,6 +41,7 @@
 | [ドキュメントルール](./development/documentation-rules.md) | 作業ドキュメント管理 |
 | [ロギングポリシー](./development/logging-policy.md) | ログ出力の規約 |
 | [テストガイド](./development/testing-guide.md) | テスト戦略と受入テスト |
+| [クロスサービスE2Eテスト](../scripts/e2e/cross-service/README.md) | サービス間横断E2Eテスト |
 | [アジャイルワークフロー](./development/agile-workflow.md) | アジャイル開発プロセス詳細 |
 | [開発ガイド](./development/development-guide.md) | 開発環境・手順の詳細 |
 
