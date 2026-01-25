@@ -8,9 +8,7 @@ This test module contains:
 
 from __future__ import annotations
 
-import json
-from typing import Any, TYPE_CHECKING
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -61,13 +59,13 @@ class TestWorkflowGenerationWithDerivedFields:
                     "properties": {
                         "query": {"type": "string"},
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 output_schema={
                     "type": "object",
                     "properties": {
                         "results": {"type": "array"},
-                    }
+                    },
                 },
                 description="Search task with email",
                 derived_fields={
@@ -115,12 +113,7 @@ class TestWorkflowGenerationWithDerivedFields:
         generator = TaskFlowLLMGenerator()
 
         # Setup: 3-task chain with passthrough requirement
-        task_definitions = [
-            {"name": "Search", "description": "Search Gmail", "task_type": "fetch"},
-            {"name": "Summarize", "description": "Summarize results", "task_type": "transform"},
-            {"name": "Send Email", "description": "Send email", "task_type": "send"},
-        ]
-
+        # task_definitions would be: Search -> Summarize -> Send Email
         interfaces: dict[str, Any] = {
             "task_001": {
                 "input_schema": {
@@ -128,13 +121,13 @@ class TestWorkflowGenerationWithDerivedFields:
                     "properties": {
                         "query": {"type": "string"},
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {
                     "type": "object",
                     "properties": {
                         "results": {"type": "array"},
-                    }
+                    },
                 },
                 "derived_fields": {
                     "email_subject": {
@@ -149,13 +142,13 @@ class TestWorkflowGenerationWithDerivedFields:
                     "properties": {
                         "results": {"type": "array"},
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {
                     "type": "object",
                     "properties": {
                         "summary": {"type": "string"},
-                    }
+                    },
                 },
                 "derived_fields": {},
             },
@@ -165,13 +158,13 @@ class TestWorkflowGenerationWithDerivedFields:
                     "properties": {
                         "summary": {"type": "string"},
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {
                     "type": "object",
                     "properties": {
                         "sent": {"type": "boolean"},
-                    }
+                    },
                 },
                 "derived_fields": {},
             },

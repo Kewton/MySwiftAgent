@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 
 class TestAdapterConvertInterfaces:
     """Tests for adapter._convert_interfaces() derived_fields support.
@@ -33,8 +31,14 @@ class TestAdapterConvertInterfaces:
 
         interfaces = {
             "task_001": InterfaceDefinition(
-                input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"results": {"type": "array"}},
+                },
                 description="Search task",
                 derived_fields={
                     "email_subject": {
@@ -50,7 +54,10 @@ class TestAdapterConvertInterfaces:
         assert "task_001" in result
         assert "derived_fields" in result["task_001"]
         assert "email_subject" in result["task_001"]["derived_fields"]
-        assert result["task_001"]["derived_fields"]["email_subject"]["template"] == "Search results: {query}"
+        assert (
+            result["task_001"]["derived_fields"]["email_subject"]["template"]
+            == "Search results: {query}"
+        )
 
     def test_ut_002_convert_interfaces_empty_derived_fields(self) -> None:
         """UT-002: derived_fieldsが空の場合、空のdictが保持される."""
@@ -109,7 +116,9 @@ class TestAdapterConvertInterfaces:
 
         assert len(result) == 2
         assert result["task_001"]["derived_fields"]["field_a"]["type"] == "string"
-        assert result["task_002"]["derived_fields"]["field_b"]["template"] == "B: {value}"
+        assert (
+            result["task_002"]["derived_fields"]["field_b"]["template"] == "B: {value}"
+        )
         assert result["task_002"]["derived_fields"]["field_c"]["type"] == "number"
 
 
@@ -129,7 +138,11 @@ class TestBuildUserPromptDerivedFields:
         generator = TaskFlowLLMGenerator()
 
         task_definitions = [
-            {"name": "Search Task", "description": "Search for emails", "task_type": "fetch"}
+            {
+                "name": "Search Task",
+                "description": "Search for emails",
+                "task_type": "fetch",
+            }
         ]
         interfaces = {
             "task_001": {
@@ -164,7 +177,11 @@ class TestBuildUserPromptDerivedFields:
         generator = TaskFlowLLMGenerator()
 
         task_definitions = [
-            {"name": "Simple Task", "description": "A simple task", "task_type": "transform"}
+            {
+                "name": "Simple Task",
+                "description": "A simple task",
+                "task_type": "transform",
+            }
         ]
         interfaces = {
             "task_001": {
@@ -194,7 +211,11 @@ class TestBuildUserPromptDerivedFields:
         generator = TaskFlowLLMGenerator()
 
         task_definitions = [
-            {"name": "Legacy Task", "description": "A legacy task", "task_type": "fetch"}
+            {
+                "name": "Legacy Task",
+                "description": "A legacy task",
+                "task_type": "fetch",
+            }
         ]
         interfaces = {
             "task_001": {
@@ -238,13 +259,14 @@ class TestEnhanceOutputSchemaWithPassthrough:
         current_task_id = "task_001"
         current_output_schema: dict[str, Any] = {
             "type": "object",
-            "properties": {
-                "results": {"type": "array"}
-            }
+            "properties": {"results": {"type": "array"}},
         }
         all_interfaces: dict[str, Any] = {
             "task_001": {
-                "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}},
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
                 "output_schema": current_output_schema,
             },
             "task_002": {
@@ -253,7 +275,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "results": {"type": "array"},
                         "recipient_email": {"type": "string"},  # This needs passthrough
-                    }
+                    },
                 },
                 "output_schema": {"type": "object"},
             },
@@ -287,7 +309,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
             "properties": {
                 "results": {"type": "array"},
                 "recipient_email": {"type": "string"},
-            }
+            },
         }
         all_interfaces: dict[str, Any] = {
             "task_001": {
@@ -300,7 +322,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "results": {"type": "array"},
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {},
             },
@@ -332,7 +354,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
 
         current_output_schema: dict[str, Any] = {
             "type": "object",
-            "properties": {"results": {"type": "array"}}
+            "properties": {"results": {"type": "array"}},
         }
         all_interfaces: dict[str, Any] = {
             "task_001": {
@@ -364,7 +386,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
 
         current_output_schema: dict[str, Any] = {
             "type": "object",
-            "properties": {"data": {"type": "object"}}
+            "properties": {"data": {"type": "object"}},
         }
         all_interfaces: dict[str, Any] = {
             "task_001": {
@@ -377,7 +399,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "data": {"type": "object"},
                         "email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {},
             },
@@ -387,7 +409,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "data": {"type": "object"},
                         "subject": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {},
             },
@@ -419,7 +441,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
 
         current_output_schema: dict[str, Any] = {
             "type": "object",
-            "properties": {"results": {"type": "array"}}
+            "properties": {"results": {"type": "array"}},
         }
         # task_002 has dependency on task_001 but no interface for task_002
         all_interfaces: dict[str, Any] = {
@@ -430,7 +452,9 @@ class TestEnhanceOutputSchemaWithPassthrough:
         }
         task_dependencies: dict[str, list[str]] = {
             "task_001": [],
-            "task_002": ["task_001"],  # task_002 depends on task_001 but has no interface
+            "task_002": [
+                "task_001"
+            ],  # task_002 depends on task_001 but has no interface
         }
 
         enhanced = generator._enhance_output_schema_with_passthrough(
@@ -462,7 +486,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "type": "object",
                     "properties": {
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {},
             },
@@ -508,7 +532,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "type": "object",
                     "properties": {
                         "new_field": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {},
             },
@@ -541,7 +565,7 @@ class TestEnhanceOutputSchemaWithPassthrough:
 
         current_output_schema: dict[str, Any] = {
             "type": "object",
-            "properties": {"safe_field": {"type": "string"}}
+            "properties": {"safe_field": {"type": "string"}},
         }
         # Invalid data that might cause exception
         all_interfaces: dict[str, Any] = {
@@ -590,13 +614,13 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "query": {"type": "string"},
                         "recipient_email": {"type": "string"},
-                    }
+                    },
                 },
                 "output_schema": {
                     "type": "object",
                     "properties": {
                         "results": {"type": "array"},
-                    }
+                    },
                 },
             },
             "task_002": {
@@ -605,13 +629,13 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "results": {"type": "array"},
                         "recipient_email": {"type": "string"},  # Passthrough needed
-                    }
+                    },
                 },
                 "output_schema": {
                     "type": "object",
                     "properties": {
                         "summary": {"type": "string"},
-                    }
+                    },
                 },
             },
             "task_003": {
@@ -620,13 +644,13 @@ class TestEnhanceOutputSchemaWithPassthrough:
                     "properties": {
                         "summary": {"type": "string"},
                         "recipient_email": {"type": "string"},  # Final destination
-                    }
+                    },
                 },
                 "output_schema": {
                     "type": "object",
                     "properties": {
                         "sent": {"type": "boolean"},
-                    }
+                    },
                 },
             },
         }

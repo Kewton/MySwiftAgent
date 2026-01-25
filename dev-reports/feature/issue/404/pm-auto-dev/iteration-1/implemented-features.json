@@ -1,0 +1,98 @@
+{
+  "issue_number": 404,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "_convert_interfaces (modified)",
+      "type": "method_modification",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "line_number": 210,
+      "description": "derived_fieldsをAPIレスポンスに保持するよう修正",
+      "expected_callers": ["JobGeneratorAdapter.adapt_job_response"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_build_user_prompt (modified)",
+      "type": "method_modification",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "line_number": 232,
+      "description": "derived_fieldsをLLMプロンプトに含めるよう修正",
+      "expected_callers": ["TaskFlowLLMGenerator.generate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "_apply_passthrough_enhancement",
+      "type": "new_method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "line_number": 297,
+      "description": "LLM生成後の後処理として、パススルーフィールドの拡張を適用",
+      "expected_callers": ["TaskFlowLLMGenerator.generate"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py:175"
+    },
+    {
+      "feature_id": "F4",
+      "name": "_enhance_output_schema_with_passthrough",
+      "type": "new_method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "line_number": 389,
+      "description": "後続タスクで必要なフィールドをパススルーとしてoutput_schemaに追加",
+      "expected_callers": ["TaskFlowLLMGenerator._apply_passthrough_enhancement"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py:363"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_ut_001_*", "test_ut_002_*", "test_ut_003_*"],
+      "integration_tests": ["test_it_001_*", "test_it_003_*"],
+      "acceptance_tests": ["test_ac_10_*"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_ut_004_*", "test_ut_005_*", "test_ut_006_*"],
+      "integration_tests": ["test_it_001_*"],
+      "acceptance_tests": ["test_ac_11_*"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [],
+      "integration_tests": ["test_it_001_*", "test_it_002_*"],
+      "acceptance_tests": ["test_ac_1_*", "test_ac_2_*", "test_ac_3_*"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_ut_007_*", "test_ut_008_*", "test_ut_009_*", "test_ut_010_*", "test_ut_011_*", "test_ut_012_*", "test_ut_013_*", "test_ut_014_*", "test_ut_015_*"],
+      "integration_tests": ["test_it_002_*"],
+      "acceptance_tests": ["test_ac_1_*", "test_ac_2_*", "test_ac_3_*", "test_ac_7_*", "test_ac_8_*"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "integration_type": "method_modification",
+      "integration_method": "Added 'derived_fields': interface.derived_fields to return dict"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "integration_type": "method_modification",
+      "integration_method": "Added derived_fields section to LLM prompt"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "integration_type": "method_call",
+      "integration_method": "Called from generate() at line 175"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "integration_type": "method_call",
+      "integration_method": "Called from _apply_passthrough_enhancement() at line 363"
+    }
+  ]
+}

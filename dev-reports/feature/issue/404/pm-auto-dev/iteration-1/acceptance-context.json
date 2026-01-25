@@ -1,0 +1,25 @@
+{
+  "issue_number": 404,
+  "feature_summary": "taskflowGeneratorAgentの生成ワークフローがinterfaceDefinitionsと整合しない問題",
+  "acceptance_criteria": [
+    "AC-1: 生成されるワークフローJSONのinput_schemaがinterfaceDefinitionsと一致",
+    "AC-2: 後続タスクで必要なフィールドが自動的にパススルーとしてoutput_schemaに追加される",
+    "AC-3: ユーザー入力から提供されるrecipient_emailが、必要なタスクに正しく伝播される",
+    "AC-5: 既存のワークフロー（パススルー不要なもの）の動作に影響しない",
+    "AC-6: interfacesが存在しないタスクの場合、従来の動作にフォールバックする",
+    "AC-7: 単体テスト - _enhance_output_schema_with_passthroughの正常系・異常系テスト",
+    "AC-8: 単体テスト - パススルーフィールド追加の検証テスト",
+    "AC-9: 結合テスト - 複数依存を持つワークフロー生成のE2Eテスト",
+    "AC-10: adapter._convert_interfaces()でderived_fieldsが保持される",
+    "AC-11: taskflow_generator._build_user_prompt()でderived_fieldsがプロンプトに含まれる",
+    "AC-12: 型注釈がInterfaceDefinitionに統一される",
+    "AC-13: 単体テスト - _convert_interfaces()でderived_fields保持の検証",
+    "AC-14: 単体テスト - _build_user_prompt()でderived_fields出力の検証"
+  ],
+  "labels": ["enhancement", "agent-layer"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent"],
+  "external_dependencies": [],
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_404_acceptance.py"
+}

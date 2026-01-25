@@ -1,0 +1,26 @@
+{
+  "issue_number": 404,
+  "iteration": 1,
+  "refactoring_scope": "expertAgent",
+  "target_files": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py"
+  ],
+  "focus_areas": [
+    "Code duplication removal",
+    "Method extraction for better readability",
+    "Type annotation improvements",
+    "Error handling consistency"
+  ],
+  "constraints": [
+    "Must maintain 100% backward compatibility",
+    "Must not break existing tests",
+    "Must follow SOLID principles",
+    "Must follow existing code patterns"
+  ],
+  "existing_tests": {
+    "unit_tests": "expertAgent/tests/unit/test_issue_404_unit.py",
+    "integration_tests": "expertAgent/tests/integration/test_issue_404_integration.py",
+    "acceptance_tests": "expertAgent/tests/acceptance/test_issue_404_acceptance.py"
+  }
+}
