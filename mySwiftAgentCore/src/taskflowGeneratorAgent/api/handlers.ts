@@ -3,6 +3,7 @@
  *
  * Issue #364: REST API handlers
  * Issue #374: Capability Enrichment Layer for complete parameter information
+ * Issue #399: ResponsePatternResolver integration for correct mapping paths
  */
 
 import type { Context } from 'hono';
@@ -25,6 +26,9 @@ import {
   type Capability,
   type CapabilityForPrompt,
 } from '../types/generator.js';
+// Issue #399: Import PromptBuilder and ResponsePatternResolver
+import { PromptBuilder } from '../prompts/PromptBuilder.js';
+import { ResponsePatternResolver } from '../services/ResponsePatternResolver.js';
 
 /**
  * Handler Dependencies
@@ -102,6 +106,7 @@ function enrichCapabilities(
         };
       });
 
+      // Issue #396: Include _internal for endpoint URL resolution in PromptBuilder
       return {
         ...cap,
         parameters: fullDef.parameters ?? cap.parameters,
@@ -110,6 +115,7 @@ function enrichCapabilities(
           ? { type: fullDef.returnType }
           : undefined,
         metadata: fullDef.metadata as CapabilityForPrompt['metadata'],
+        _internal: fullDef._internal,
       } as CapabilityForPrompt;
     }
 
@@ -154,7 +160,24 @@ export function createBatchGenerationHandler(deps: HandlerDependencies) {
       // Issue #370: Create Logger and WorkflowStorage for persistence
       const logger = createLogger({ name: 'generator-api' });
       const langfuse = new LangfuseIntegration(deps.langfuseConfig);
-      const generator = new WorkflowGenerator({ llmClient: deps.llmClient });
+
+      // Issue #399: Create and configure ResponsePatternResolver for correct mapping paths
+      // This ensures LLM prompts include API response pattern hints (e.g., wrapped vs direct)
+      const patternResolver = new ResponsePatternResolver();
+      await patternResolver.load();
+      const promptBuilder = new PromptBuilder();
+      promptBuilder.setPatternResolver(patternResolver);
+
+      logger.info('ResponsePatternResolver initialized', {
+        patternCount: patternResolver.getPatternCount(),
+        loaded: patternResolver.isLoaded(),
+      });
+
+      // Issue #399: Pass configured promptBuilder to WorkflowGenerator
+      const generator = new WorkflowGenerator({
+        llmClient: deps.llmClient,
+        promptBuilder,
+      });
       const batchProcessor = new BatchProcessor({ generator, logger });
       // Issue #368: Use WorkflowRegistrar to register generated workflows
       // Issue #370: Use pre-configured registrar if provided, otherwise create new one with storage

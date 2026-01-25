@@ -1,0 +1,97 @@
+{
+  "issue_number": 399,
+  "issue_title": "Enhancement: ワークフロー生成時にAPI応答スキーマを考慮する仕組みの追加",
+  "target_project": "mySwiftAgentCore",
+  "language": "typescript",
+  "acceptance_criteria": [
+    "response-patterns.yamlが作成され、jsonoutput/google_search/gmail_sendのパターンが定義されている",
+    "ResponsePatternResolverが実装され、パターン解決機能が動作する",
+    "PromptBuilder.formatCapabilitiesEnhanced()がパターン情報を含むプロンプトを生成する",
+    "jsonoutput APIを使用した新規ワークフローが正しいmappingパス（steps.{id}.result.{field}）を生成する",
+    "既存のワークフロー生成テストが全てパスする"
+  ],
+  "quality_requirements": [
+    "ResponsePatternResolverの単体テストカバレッジが90%以上",
+    "エラーハンドリング（graceful degradation）が実装されている",
+    "YAMLセキュアローダー（safeLoad）を使用している",
+    "パターン定義の検証機能が実装されている",
+    "適切なログ出力が実装されている（load完了、パターン解決、エラー）",
+    "エッジケース（YAML不正、パターン未定義）のテストがある"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "response-patterns.yaml作成",
+      "estimated_hours": 1,
+      "deliverables": ["mySwiftAgentCore/config/response-patterns.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "ResponsePatternResolver実装",
+      "estimated_hours": 3,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/services/ResponsePatternResolver.ts"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "PromptBuilder拡張",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ResponsePatternResolver単体テスト",
+      "estimated_hours": 3,
+      "deliverables": ["mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/services/ResponsePatternResolver.test.ts"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "PromptBuilder拡張テスト",
+      "estimated_hours": 2,
+      "deliverables": ["mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"],
+      "dependencies": ["1.3"]
+    }
+  ],
+  "deliverables_checklist": [
+    "mySwiftAgentCore/config/response-patterns.yaml",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/services/ResponsePatternResolver.ts",
+    "mySwiftAgentCore/src/taskflowGeneratorAgent/prompts/PromptBuilder.ts (変更)",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/services/ResponsePatternResolver.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts (追加)"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上（ResponsePatternResolver）",
+    "CI/CDグリーン（既存テスト全パス）",
+    "デッドコードなし"
+  ],
+  "target_coverage": 90,
+  "design_policy_path": "dev-reports/feature/issue/399/design-policy.md",
+  "work_plan_path": "dev-reports/feature/issue/399/work-plan.md",
+  "key_interfaces": {
+    "ResponsePattern": {
+      "apiId": "string",
+      "pattern": "wrapped | direct",
+      "wrapperField": "string (optional)",
+      "description": "string",
+      "mappingNote": "string",
+      "example": {
+        "input": "object (optional)",
+        "output": "object"
+      }
+    },
+    "ResponsePatternsConfig": {
+      "version": "string",
+      "patterns": "Record<string, ResponsePattern>"
+    }
+  },
+  "important_notes": [
+    "ID整合性: Capability定義では json_output_agent を使用（jsonoutput ではない）",
+    "js-yaml の safeLoad を使用してYAMLインジェクションを防止",
+    "graceful degradation: YAML読み込み失敗時はパターンなしで続行",
+    "PromptBuilder への ResponsePatternResolver の依存性注入"
+  ]
+}

@@ -1,0 +1,68 @@
+# Response Patterns Configuration
+# Issue #399: API response schema consideration for workflow generation
+#
+# This file defines API response patterns to help LLM generate correct
+# mapping paths in TaskFlow workflows.
+#
+# Pattern Types:
+# - wrapped: Response is wrapped in a container field (e.g., { result: {...} })
+# - direct: Response fields are at the top level (e.g., { search_results: [...] })
+#
+# Usage in PromptBuilder:
+# - ResponsePatternResolver loads this file
+# - formatCapabilitiesEnhanced() includes pattern hints in LLM prompts
+# - LLM uses hints to generate correct mapping paths
+
+version: "1.0"
+
+patterns:
+  # JSON Output Agent - AI structured output
+  # Uses 'result' wrapper for all JSON responses
+  json_output_agent:
+    pattern: wrapped
+    wrapperField: result
+    description: "LLM structured JSON output - response wrapped in 'result' field"
+    mappingNote: "Access via steps.{step_id}.result.{field}"
+    example:
+      input:
+        user_input: "Generate email with subject and body"
+        system_prompt: "Output JSON with subject and body fields"
+      output:
+        result:
+          subject: "Meeting Notice"
+          body: "Tomorrow's meeting is at 10:00 AM..."
+        type: "jsonOutput"
+
+  # Google Search - Direct response pattern
+  # Returns search results directly at top level
+  google_search:
+    pattern: direct
+    description: "Web search results returned directly at top level"
+    mappingNote: "Access via steps.{step_id}.{field}"
+    example:
+      input:
+        queries: ["TypeScript tutorial"]
+        num: 3
+      output:
+        search_results:
+          - title: "TypeScript Tutorial for Beginners"
+            link: "https://example.com/typescript"
+            knowledge: "TypeScript is a typed superset of JavaScript..."
+            original_query: "TypeScript tutorial"
+        search_results_count: 1
+        status: "ok"
+
+  # Gmail Send - Direct response pattern
+  # Returns send status directly
+  gmail_send:
+    pattern: direct
+    description: "Email send result returned directly at top level"
+    mappingNote: "Access via steps.{step_id}.{field}"
+    example:
+      input:
+        to: "user@example.com"
+        subject: "Hello"
+        body: "This is a test email"
+      output:
+        result: "Email sent successfully"
+        message_id: "17abc123def456"

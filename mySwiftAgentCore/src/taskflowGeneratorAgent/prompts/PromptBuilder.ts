@@ -3,6 +3,7 @@
  *
  * Issue #364: Prompt construction with capability injection
  * Issue #374: Enhanced capability formatting and feedback loop support
+ * Issue #399: API response pattern integration for correct mapping paths
  */
 
 import type { LLMPrompt } from '../types/llm.js';
@@ -15,6 +16,7 @@ import {
   FREQUENT_CATEGORIES,
   MAX_CAPABILITIES_PER_PROMPT,
 } from '../constants.js';
+import type { ResponsePatternResolver } from '../services/ResponsePatternResolver.js';
 
 // ==================================================
 // Issue #382: Type Guard Functions for Capability
@@ -81,8 +83,28 @@ export function toCapabilitiesForPrompt(capabilities: Capability[]): CapabilityF
  * - Issue #374: Enhanced capability formatting
  * - Issue #374: Feedback prompt for validation retries
  * - Issue #374: Intelligent capability selection
+ * - Issue #399: API response pattern integration
  */
 export class PromptBuilder {
+  private patternResolver: ResponsePatternResolver | null = null;
+
+  /**
+   * Set the response pattern resolver for enhanced capability formatting
+   *
+   * Issue #399: Optional dependency injection for response patterns
+   *
+   * @param resolver - ResponsePatternResolver instance
+   */
+  setPatternResolver(resolver: ResponsePatternResolver): void {
+    this.patternResolver = resolver;
+  }
+
+  /**
+   * Get the response pattern resolver (for testing)
+   */
+  getPatternResolver(): ResponsePatternResolver | null {
+    return this.patternResolver;
+  }
   /**
    * Build complete prompt for task generation
    *
@@ -314,6 +336,11 @@ export class PromptBuilder {
    * - TaskFlow step examples
    * - Use cases from metadata
    *
+   * Issue #399: Response pattern integration:
+   * - Adds response pattern information (wrapped/direct)
+   * - Includes mapping hints for correct path references
+   * - Shows warning for wrapped patterns
+   *
    * @param capabilities - Enhanced capabilities to format
    * @returns Formatted capabilities string
    */
@@ -334,9 +361,35 @@ export class PromptBuilder {
         }
 
         sections.push(`- **Category**: ${cap.category}`);
-        // Issue #396: Add endpoint URL so LLM can construct the full URL
-        const endpointUrl = `http://localhost:8004/v1/utility/${cap.id}`;
-        sections.push(`- **Endpoint URL**: \`${endpointUrl}\` (POST)`);
+        // Issue #396: Use _internal.endpoint from capability YAML for correct URL
+        const endpoint = capEnhanced._internal?.endpoint;
+        if (endpoint) {
+          const endpointUrl = `http://localhost:8004${endpoint}`;
+          sections.push(`- **Endpoint URL**: \`${endpointUrl}\` (POST)`);
+        } else {
+          // Fallback for capabilities without _internal.endpoint defined
+          const fallbackUrl = `http://localhost:8004/v1/utility/${cap.id}`;
+          sections.push(`- **Endpoint URL**: \`${fallbackUrl}\` (POST)`);
+        }
+
+        // Issue #399: Add response pattern information
+        if (this.patternResolver) {
+          const pattern = this.patternResolver.resolvePattern(cap.id);
+          if (pattern) {
+            const hint = this.patternResolver.getMappingHint(cap.id);
+            if (pattern.pattern === 'wrapped') {
+              sections.push(`- **Response Pattern**: ${pattern.pattern} (wrapper field: "${pattern.wrapperField}")`);
+              if (hint) {
+                sections.push(`  - ${hint}`);
+              }
+            } else {
+              sections.push(`- **Response Pattern**: ${pattern.pattern}`);
+              if (hint) {
+                sections.push(`  - ${hint}`);
+              }
+            }
+          }
+        }
 
         // Parameters with validation constraints
         if (cap.parameters && cap.parameters.length > 0) {

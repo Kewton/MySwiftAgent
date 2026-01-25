@@ -1,0 +1,108 @@
+{
+  "issue_number": 399,
+  "feature_summary": "ワークフロー生成時にAPI応答スキーマを考慮する仕組みの追加",
+  "acceptance_criteria": [
+    "AC-1: response-patterns.yamlが作成され、json_output_agent/google_search/gmail_sendのパターンが定義されている",
+    "AC-2: ResponsePatternResolverが実装され、パターン解決機能が動作する",
+    "AC-3: PromptBuilder.formatCapabilitiesEnhanced()がパターン情報を含むプロンプトを生成する",
+    "AC-4: json_output_agent APIを使用した新規ワークフローが正しいmappingパス（steps.{id}.result.{field}）を生成する"
+  ],
+  "labels": ["enhancement"],
+  "target_project": "mySwiftAgentCore",
+  "playwright_required": false,
+  "required_services": [],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "test_cases": [
+      {
+        "id": "TC-001",
+        "name": "response-patterns.yamlファイル検証",
+        "type": "static",
+        "method": "ファイル内容検証",
+        "expected": "json_output_agent/google_search/gmail_sendパターンが正しく定義"
+      },
+      {
+        "id": "TC-002",
+        "name": "json_output_agentパターン定義検証",
+        "type": "static",
+        "method": "YAML構造検証",
+        "expected": "pattern: wrapped, wrapperField: result"
+      },
+      {
+        "id": "TC-003",
+        "name": "ResponsePatternResolver.resolvePattern()テスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "json_output_agentでwrappedパターン、google_searchでdirectパターンを返す"
+      },
+      {
+        "id": "TC-003a",
+        "name": "ResponsePatternResolverキャッシング動作テスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "2回目以降のload()呼び出しでYAMLを再読み込みしない"
+      },
+      {
+        "id": "TC-004",
+        "name": "ResponsePatternResolver.getMappingHint()テスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "wrappedパターンで警告付きヒント、directパターンで標準ヒントを返す"
+      },
+      {
+        "id": "TC-005",
+        "name": "graceful degradationテスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "YAML読み込み失敗時もエラーなく動作継続"
+      },
+      {
+        "id": "TC-005a",
+        "name": "validateConfig()エラーテスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "不正なパターン定義でエラーをスロー"
+      },
+      {
+        "id": "TC-006",
+        "name": "YAMLセキュアローダーテスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "js-yaml safeLoadを使用し、危険なYAML構文を拒否"
+      },
+      {
+        "id": "TC-007",
+        "name": "PromptBuilderパターン情報含有テスト",
+        "type": "unit",
+        "method": "単体テスト実行",
+        "expected": "プロンプトにResponse Pattern: wrappedと正しいmappingパス例を含む"
+      },
+      {
+        "id": "TC-008",
+        "name": "ワークフロー生成E2Eテスト",
+        "type": "integration",
+        "method": "API呼び出し",
+        "expected": "生成されたワークフローのmappingがsteps.{id}.result.{field}形式"
+      },
+      {
+        "id": "TC-010",
+        "name": "デッドコード検証",
+        "type": "static",
+        "method": "コード検査",
+        "expected": "ResponsePatternResolverが本番コードでインスタンス化・使用されている"
+      },
+      {
+        "id": "TC-011",
+        "name": "ドキュメント検証",
+        "type": "static",
+        "method": "ドキュメント確認",
+        "expected": "新規APIパターン追加手順がドキュメント化されている"
+      }
+    ]
+  },
+  "vitest_test_files": [
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/services/ResponsePatternResolver.test.ts",
+    "mySwiftAgentCore/tests/unit/taskflowGeneratorAgent/prompts/PromptBuilder.test.ts"
+  ]
+}

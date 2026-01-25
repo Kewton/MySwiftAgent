@@ -33,6 +33,9 @@ export * from './validator/index.js';
 // Recovery
 export * from './recovery/index.js';
 
+// Services (Issue #399)
+export * from './services/index.js';
+
 // Generator
 export * from './generator/index.js';
 

@@ -276,21 +276,24 @@ describe('PromptBuilder - capability_id rules (Issue #373)', () => {
     expect(prompt).toContain('External API');
   });
 
-  it('should include example of capability_id usage', () => {
+  it('should include example of api_rest usage with url', () => {
     const capabilities: Capability[] = [];
 
     const prompt = builder.buildSystemPrompt(capabilities);
 
-    expect(prompt).toContain('"capability_id"');
+    // Issue #396: System now instructs to use url, not capability_id
+    expect(prompt).toContain('url');
     expect(prompt).toContain('api_rest');
   });
 
-  it('should include rule about not using both capability_id and url', () => {
+  it('should include rule about using url field for api_rest', () => {
     const capabilities: Capability[] = [];
 
     const prompt = builder.buildSystemPrompt(capabilities);
 
-    expect(prompt).toContain('Never use both');
+    // Issue #396: Updated to reflect new guidance - always use url, never capability_id
+    expect(prompt).toContain('NEVER use');
+    expect(prompt).toContain('capability_id');
   });
 });
 
@@ -1203,3 +1206,198 @@ describe('Issue #392: Workflow name generation edge cases', () => {
     expect(prompt).toContain('workflow_name: "gmail_task_001"');
   });
 });
+
+/**
+ * Issue #399: Response Pattern Integration Tests
+ *
+ * Tests for ResponsePatternResolver integration with PromptBuilder
+ */
+describe('Issue #399: Response Pattern Integration', () => {
+  let builder: PromptBuilder;
+
+  beforeEach(() => {
+    builder = new PromptBuilder();
+  });
+
+  describe('setPatternResolver', () => {
+    it('should set pattern resolver', () => {
+      const mockResolver = {
+        resolvePattern: vi.fn(),
+        getMappingHint: vi.fn(),
+        load: vi.fn(),
+        isLoaded: vi.fn().mockReturnValue(true),
+        getPatternCount: vi.fn().mockReturnValue(3),
+        getAllPatterns: vi.fn().mockReturnValue([]),
+      } as unknown as ResponsePatternResolver;
+
+      builder.setPatternResolver(mockResolver);
+
+      expect(builder.getPatternResolver()).toBe(mockResolver);
+    });
+  });
+
+  describe('formatCapabilitiesEnhanced with pattern resolver', () => {
+    it('should include wrapped pattern info in output', () => {
+      const mockResolver = {
+        resolvePattern: vi.fn().mockReturnValue({
+          apiId: 'json_output_agent',
+          pattern: 'wrapped',
+          wrapperField: 'result',
+          description: 'Test',
+          mappingNote: 'Test mapping',
+          example: { output: {} },
+        }),
+        getMappingHint: vi.fn().mockReturnValue(
+          'Warning: This API wraps response in "result" field. Use: steps.{step_id}.result.{field}'
+        ),
+        load: vi.fn(),
+        isLoaded: vi.fn().mockReturnValue(true),
+        getPatternCount: vi.fn().mockReturnValue(1),
+        getAllPatterns: vi.fn().mockReturnValue([]),
+      } as unknown as ResponsePatternResolver;
+
+      builder.setPatternResolver(mockResolver);
+
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'json_output_agent',
+          name: 'JSON Output Agent',
+          category: 'ai_agent',
+          status: 'available',
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('Response Pattern');
+      expect(formatted).toContain('wrapped');
+      expect(formatted).toContain('result');
+      expect(formatted).toContain('steps.{step_id}.result.{field}');
+    });
+
+    it('should include direct pattern info in output', () => {
+      const mockResolver = {
+        resolvePattern: vi.fn().mockReturnValue({
+          apiId: 'google_search',
+          pattern: 'direct',
+          description: 'Test',
+          mappingNote: 'Test mapping',
+          example: { output: {} },
+        }),
+        getMappingHint: vi.fn().mockReturnValue(
+          'Direct access: steps.{step_id}.{field}'
+        ),
+        load: vi.fn(),
+        isLoaded: vi.fn().mockReturnValue(true),
+        getPatternCount: vi.fn().mockReturnValue(1),
+        getAllPatterns: vi.fn().mockReturnValue([]),
+      } as unknown as ResponsePatternResolver;
+
+      builder.setPatternResolver(mockResolver);
+
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'google_search',
+          name: 'Google Search',
+          category: 'search',
+          status: 'available',
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      expect(formatted).toContain('Response Pattern');
+      expect(formatted).toContain('direct');
+      expect(formatted).toContain('Direct access');
+    });
+
+    it('should work without pattern resolver', () => {
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'test_api',
+          name: 'Test API',
+          category: 'api',
+          status: 'available',
+        },
+      ];
+
+      // No pattern resolver set
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      // Should still format capabilities normally
+      expect(formatted).toContain('Test API');
+      expect(formatted).toContain('test_api');
+      // Should not contain pattern info
+      expect(formatted).not.toContain('Response Pattern');
+    });
+
+    it('should handle capability without pattern definition', () => {
+      const mockResolver = {
+        resolvePattern: vi.fn().mockReturnValue(undefined),
+        getMappingHint: vi.fn().mockReturnValue(undefined),
+        load: vi.fn(),
+        isLoaded: vi.fn().mockReturnValue(true),
+        getPatternCount: vi.fn().mockReturnValue(0),
+        getAllPatterns: vi.fn().mockReturnValue([]),
+      } as unknown as ResponsePatternResolver;
+
+      builder.setPatternResolver(mockResolver);
+
+      const capabilities: CapabilityForPrompt[] = [
+        {
+          id: 'unknown_api',
+          name: 'Unknown API',
+          category: 'api',
+          status: 'available',
+        },
+      ];
+
+      const formatted = builder.formatCapabilitiesEnhanced(capabilities);
+
+      // Should format normally without pattern info
+      expect(formatted).toContain('Unknown API');
+      expect(formatted).not.toContain('Response Pattern');
+    });
+  });
+
+  describe('buildSystemPrompt with pattern resolver', () => {
+    it('should include pattern info in system prompt', () => {
+      const mockResolver = {
+        resolvePattern: vi.fn().mockReturnValue({
+          apiId: 'json_output_agent',
+          pattern: 'wrapped',
+          wrapperField: 'result',
+          description: 'Test',
+          mappingNote: 'Test',
+          example: { output: {} },
+        }),
+        getMappingHint: vi.fn().mockReturnValue(
+          'Warning: This API wraps response in "result" field. Use: steps.{step_id}.result.{field}'
+        ),
+        load: vi.fn(),
+        isLoaded: vi.fn().mockReturnValue(true),
+        getPatternCount: vi.fn().mockReturnValue(1),
+        getAllPatterns: vi.fn().mockReturnValue([]),
+      } as unknown as ResponsePatternResolver;
+
+      builder.setPatternResolver(mockResolver);
+
+      const capabilities: Capability[] = [
+        {
+          id: 'json_output_agent',
+          name: 'JSON Output Agent',
+          category: 'ai_agent',
+          status: 'available',
+        },
+      ];
+
+      const prompt = builder.buildSystemPrompt(capabilities);
+
+      expect(prompt).toContain('Response Pattern');
+      expect(prompt).toContain('wrapped');
+    });
+  });
+});
+
+// Import ResponsePatternResolver type for tests
+import type { ResponsePatternResolver } from '../../../../src/taskflowGeneratorAgent/services/ResponsePatternResolver.js';
