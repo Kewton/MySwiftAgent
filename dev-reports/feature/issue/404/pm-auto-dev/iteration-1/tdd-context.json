@@ -1,0 +1,128 @@
+{
+  "issue_number": 404,
+  "acceptance_criteria": [
+    "AC-1: 生成されるワークフローJSONのinput_schemaがinterfaceDefinitionsと一致する",
+    "AC-2: 後続タスクで必要なフィールドが自動的にパススルーとしてoutput_schemaに追加される",
+    "AC-3: ユーザー入力から提供されるrecipient_emailが、必要なタスクに正しく伝播される",
+    "AC-5: 既存のワークフロー（パススルー不要なもの）の動作に影響しない",
+    "AC-6: interfacesが存在しないタスクの場合、従来の動作にフォールバックする",
+    "AC-7: 単体テスト - _enhance_output_schema_with_passthroughの正常系・異常系テスト",
+    "AC-8: 単体テスト - パススルーフィールド追加の検証テスト",
+    "AC-9: 結合テスト - 複数依存を持つワークフロー生成のE2Eテスト",
+    "AC-10: adapter._convert_interfaces()でderived_fieldsが保持される",
+    "AC-11: taskflow_generator._build_user_prompt()でderived_fieldsがプロンプトに含まれる",
+    "AC-12: 型注釈がInterfaceDefinitionに統一される",
+    "AC-13: 単体テスト - _convert_interfaces()でderived_fields保持の検証",
+    "AC-14: 単体テスト - _build_user_prompt()でderived_fields出力の検証"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T1.1",
+      "description": "adapter._convert_interfaces()でderived_fieldsを保持",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "step": "Step 1"
+    },
+    {
+      "id": "T1.2",
+      "description": "taskflow_generator._build_user_prompt()でderived_fieldsをプロンプトに含める",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "step": "Step 2"
+    },
+    {
+      "id": "T1.3",
+      "description": "パススルーロジック（_enhance_output_schema_with_passthrough）を追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "step": "Step 3"
+    },
+    {
+      "id": "T1.4",
+      "description": "型注釈をInterfaceDefinitionに統一",
+      "files": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/test_runner.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py"
+      ],
+      "step": "Step 4"
+    },
+    {
+      "id": "T1.5",
+      "description": "_enhance_output_schema_with_passthroughをgenerate()から呼び出す統合",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+      "step": "Step 3"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "adapter修正【AC-10】",
+      "estimated_hours": 1,
+      "deliverables": ["adapter.py修正"]
+    },
+    {
+      "task_id": "1.2",
+      "description": "プロンプト拡張【AC-11】",
+      "estimated_hours": 1.5,
+      "deliverables": ["taskflow_generator.py修正（プロンプト）"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "パススルーロジック実装【AC-1,2,3】",
+      "estimated_hours": 3,
+      "deliverables": ["taskflow_generator.py修正（_enhance_output_schema_with_passthrough）"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "型注釈統一【AC-12】",
+      "estimated_hours": 1.5,
+      "deliverables": ["taskflow_generator.py", "engine_strategy.py", "test_runner.py", "yaml_generator.py型注釈更新"]
+    },
+    {
+      "task_id": "1.5",
+      "description": "generate()メソッド統合",
+      "estimated_hours": 1,
+      "deliverables": ["taskflow_generator.py修正（generate統合）"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト - adapter修正【AC-13】",
+      "estimated_hours": 1,
+      "deliverables": ["test_issue_404_unit.py（UT-001〜UT-003）"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "単体テスト - プロンプト拡張【AC-14】",
+      "estimated_hours": 1,
+      "deliverables": ["test_issue_404_unit.py（UT-004〜UT-006）"]
+    },
+    {
+      "task_id": "2.3",
+      "description": "単体テスト - パススルーロジック【AC-7,8】",
+      "estimated_hours": 1.5,
+      "deliverables": ["test_issue_404_unit.py（UT-007〜UT-015）"]
+    },
+    {
+      "task_id": "2.4",
+      "description": "結合テスト【AC-9】",
+      "estimated_hours": 0.5,
+      "deliverables": ["test_issue_404_integration.py（IT-001〜IT-003）"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/taskflow_generator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/engine_strategy.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/test_runner.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/workflow_gen/yaml_generator.py",
+    "expertAgent/tests/unit/test_issue_404_unit.py",
+    "expertAgent/tests/integration/test_issue_404_integration.py"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全パス",
+    "静的解析エラーゼロ（Ruff, MyPy）"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent"
+}

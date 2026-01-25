@@ -215,7 +215,10 @@ IMPORTANT:
         interfaces: dict[str, Any],
         examples: list[dict[str, Any]],
     ) -> str:
-        """Build user prompt with task context."""
+        """Build user prompt with task context.
+
+        Issue #404 AC-11: Now includes derived_fields in prompt when present.
+        """
         sections = []
 
         # Add task definitions
@@ -244,6 +247,17 @@ IMPORTANT:
             )
             sections.append(f"Input: {json.dumps(input_schema, ensure_ascii=False)}")
             sections.append(f"Output: {json.dumps(output_schema, ensure_ascii=False)}")
+
+            # Issue #404 AC-11: Include derived_fields in prompt if present and non-empty
+            derived_fields = (
+                interface.derived_fields
+                if hasattr(interface, "derived_fields")
+                else interface.get("derived_fields", {})
+            )
+            if derived_fields:
+                sections.append(
+                    f"Derived Fields: {json.dumps(derived_fields, ensure_ascii=False)}"
+                )
             sections.append("")
 
         # Add examples
@@ -270,6 +284,124 @@ IMPORTANT:
         sections.append("Return a valid TaskFlowWorkflow JSON object.")
 
         return "\n".join(sections)
+
+    def _enhance_output_schema_with_passthrough(
+        self,
+        current_task_id: str,
+        current_output_schema: dict[str, Any],
+        all_interfaces: dict[str, Any],
+        task_dependencies: dict[str, list[str]],
+    ) -> dict[str, Any]:
+        """Enhance output schema with passthrough fields for downstream tasks.
+
+        Issue #404 AC-1, AC-2, AC-3: Analyzes downstream task requirements and
+        automatically adds missing fields to the output schema.
+
+        This implements the "passthrough" pattern where fields like recipient_email
+        are propagated through the task chain even if the current task doesn't
+        produce them.
+
+        Args:
+            current_task_id: ID of the current task
+            current_output_schema: Current output schema to enhance
+            all_interfaces: All interface definitions keyed by task_id
+            task_dependencies: Dict mapping task_id to list of dependency task_ids
+
+        Returns:
+            Enhanced output schema with passthrough fields added.
+            On error, returns original schema (Fail-Safe design, AC-5, AC-6).
+        """
+        try:
+            # Find downstream tasks (tasks that depend on current_task_id)
+            downstream_task_ids: list[str] = []
+            for task_id, deps in task_dependencies.items():
+                if current_task_id in deps:
+                    downstream_task_ids.append(task_id)
+
+            # No downstream tasks - return original schema (AC-5)
+            if not downstream_task_ids:
+                return current_output_schema
+
+            # Collect required input fields from all downstream tasks
+            required_fields: dict[str, dict[str, Any]] = {}
+            for downstream_id in downstream_task_ids:
+                downstream_interface = all_interfaces.get(downstream_id)
+                if not downstream_interface:
+                    # Interface not found - skip this downstream task (AC-6)
+                    logger.debug(
+                        "Issue #404: No interface found for downstream task %s",
+                        downstream_id,
+                    )
+                    continue
+
+                # Get input_schema of downstream task
+                input_schema = (
+                    downstream_interface.input_schema
+                    if hasattr(downstream_interface, "input_schema")
+                    else downstream_interface.get("input_schema", {})
+                )
+
+                # Extract properties from input_schema
+                input_properties = input_schema.get("properties", {})
+                if not isinstance(input_properties, dict):
+                    # Malformed properties - skip (Fail-Safe)
+                    continue
+
+                for field_name, field_def in input_properties.items():
+                    if field_name not in required_fields:
+                        required_fields[field_name] = field_def
+
+            # Get current output properties
+            current_properties = current_output_schema.get("properties", {})
+            if not isinstance(current_properties, dict):
+                current_properties = {}
+
+            # Find missing fields that need passthrough
+            missing_fields: dict[str, dict[str, Any]] = {}
+            for field_name, field_def in required_fields.items():
+                if field_name not in current_properties:
+                    missing_fields[field_name] = field_def
+
+            # No missing fields - return original schema
+            if not missing_fields:
+                return current_output_schema
+
+            # Create enhanced schema with passthrough fields
+            enhanced_schema = dict(current_output_schema)
+            if "type" not in enhanced_schema:
+                enhanced_schema["type"] = "object"
+            if "properties" not in enhanced_schema:
+                enhanced_schema["properties"] = {}
+
+            # Deep copy properties to avoid modifying original
+            enhanced_schema["properties"] = dict(enhanced_schema.get("properties", {}))
+
+            # Add missing fields as passthrough
+            for field_name, field_def in missing_fields.items():
+                # Add passthrough field with description
+                passthrough_def = dict(field_def)
+                if "description" not in passthrough_def:
+                    passthrough_def["description"] = (
+                        "Passthrough field for downstream tasks"
+                    )
+                enhanced_schema["properties"][field_name] = passthrough_def
+                logger.info(
+                    "Issue #404: Added passthrough field '%s' to task %s output",
+                    field_name,
+                    current_task_id,
+                )
+
+            return enhanced_schema
+
+        except Exception as e:
+            # Fail-Safe: Return original schema on any error (AC-6)
+            logger.warning(
+                "Issue #404: Error enhancing output schema for task %s: %s. "
+                "Returning original schema (Fail-Safe).",
+                current_task_id,
+                e,
+            )
+            return current_output_schema
 
 
 __all__ = [

@@ -211,6 +211,8 @@ class JobGeneratorAdapter:
     ) -> dict[str, dict[str, Any]]:
         """Convert InterfaceDefinition dict to API format.
 
+        Issue #404: Now includes derived_fields for downstream task requirements.
+
         Args:
             interfaces: Dict mapping task_id to InterfaceDefinition
 
@@ -222,6 +224,7 @@ class JobGeneratorAdapter:
                 "input_schema": interface.input_schema,
                 "output_schema": interface.output_schema,
                 "description": interface.description,
+                "derived_fields": interface.derived_fields,  # Issue #404 AC-10
             }
             for task_id, interface in interfaces.items()
         }
