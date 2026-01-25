@@ -16,9 +16,8 @@
 #   - myAgentDeskでProject/Workbench作成済み
 #
 # 使用方法:
-#   ./test_full_workflow_e2e.sh
-#   ./test_full_workflow_e2e.sh --keyword "検索キーワード" --email "test@example.com"
-#   ./test_full_workflow_e2e.sh --project-id "proj_xxx" --workbench-id "wb_xxx"
+#   ./test_full_workflow_e2e.sh --project-id "proj_xxx" --workbench-id "wb_xxx" --email "test@example.com"
+#   ./test_full_workflow_e2e.sh --keyword "検索キーワード" --email "test@example.com" --project-id "proj_xxx" --workbench-id "wb_xxx"
 #
 
 set -e
@@ -44,12 +43,13 @@ MYVAULT_URL="${MYVAULT_URL:-http://localhost:8003}"
 # デフォルト値
 DEFAULT_KEYWORD="AI技術の最新動向"
 DEFAULT_EMAIL=""
-DEFAULT_PROJECT_ID=""
-DEFAULT_WORKBENCH_ID=""
+# 固定のProject/Workbench ID（myAgentDeskで事前作成済み）
+DEFAULT_PROJECT_ID="proj_mjbjua2z7y65wy"
+DEFAULT_WORKBENCH_ID="wb_1766969315404_udrhx79"
 
 # タイムアウト設定
 HEALTH_CHECK_TIMEOUT=10
-GENERATE_TIMEOUT=120
+GENERATE_TIMEOUT=180
 RUN_TIMEOUT=300
 POLL_INTERVAL=5
 
@@ -72,19 +72,19 @@ show_help() {
     echo "OPTIONS:"
     echo "  --keyword <keyword>       検索キーワード (default: ${DEFAULT_KEYWORD})"
     echo "  --email <email>           メール送信先アドレス (必須)"
-    echo "  --project-id <id>         Project ID (省略時は対話式で選択)"
-    echo "  --workbench-id <id>       Workbench ID (省略時は対話式で選択)"
+    echo "  --project-id <id>         Project ID (default: ${DEFAULT_PROJECT_ID})"
+    echo "  --workbench-id <id>       Workbench ID (default: ${DEFAULT_WORKBENCH_ID})"
     echo "  --skip-generate           Job生成をスキップ（既存JobVersionを使用）"
     echo "  --job-version-id <id>     使用するJobVersion ID (--skip-generate時に必須)"
     echo "  --no-confirm              確認プロンプトをスキップ"
     echo "  --help                    このヘルプを表示"
     echo ""
     echo "EXAMPLES:"
-    echo "  # インタラクティブモード"
-    echo "  $0"
+    echo "  # 基本的な使用方法"
+    echo "  $0 --keyword \"大谷翔平の妻\" --email \"test@example.com\""
     echo ""
-    echo "  # パラメータ指定"
-    echo "  $0 --keyword \"大谷翔平\" --email \"test@example.com\""
+    echo "  # Project/Workbench指定"
+    echo "  $0 --project-id \"proj_xxx\" --workbench-id \"wb_xxx\" --email \"test@example.com\""
     echo ""
     echo "  # 既存JobVersionを使用"
     echo "  $0 --skip-generate --job-version-id \"jv_xxx\" --email \"test@example.com\""
@@ -215,13 +215,15 @@ check_health() {
     local name="$1"
     local url="$2"
     local endpoint="${3:-/health}"
+    local accept_codes="${4:-200}"
 
     log_info "Checking ${name}..."
 
     local response
     response=$(curl -s -o /dev/null -w "%{http_code}" --max-time $HEALTH_CHECK_TIMEOUT "${url}${endpoint}" 2>/dev/null || echo "000")
 
-    if [ "$response" = "200" ]; then
+    # Check if response code is in acceptable codes
+    if [[ "$accept_codes" == *"$response"* ]]; then
         log_success "${name}: OK (${url})"
         return 0
     else
@@ -232,7 +234,8 @@ check_health() {
 
 HEALTH_FAILED=false
 
-check_health "myAgentDesk" "$MYAGENTDESK_URL" "/api/health" || HEALTH_FAILED=true
+# myAgentDeskはルートページの存在確認（200または304）
+check_health "myAgentDesk" "$MYAGENTDESK_URL" "/" "200 304" || HEALTH_FAILED=true
 check_health "expertAgent" "$EXPERTAGENT_URL" "/health" || HEALTH_FAILED=true
 check_health "mySwiftAgentCore" "$MYSWIFTAGENTCORE_URL" "/health" || HEALTH_FAILED=true
 check_health "myVault" "$MYVAULT_URL" "/health" || HEALTH_FAILED=true
@@ -246,55 +249,32 @@ fi
 log_success "All services are healthy!"
 
 # ============================================
-# Step 2: Project/Workbench取得
+# Step 2: Project/Workbench確認
 # ============================================
 
-log_step "Step 2: Get Project and Workbench"
+log_step "Step 2: Validate Project and Workbench"
 
+# デフォルト値を適用
 if [ -z "$PROJECT_ID" ]; then
-    log_info "Fetching projects from myAgentDesk..."
-
-    PROJECTS_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/projects" 2>/dev/null)
-
-    if [ -z "$PROJECTS_RESPONSE" ] || [ "$PROJECTS_RESPONSE" = "[]" ]; then
-        log_error "No projects found. Please create a project in myAgentDesk first."
-        exit 1
-    fi
-
-    echo ""
-    echo "Available projects:"
-    echo "$PROJECTS_RESPONSE" | jq -r '.[] | "  \(.id): \(.name)"'
-    echo ""
-
-    if [ "$NO_CONFIRM" = true ]; then
-        PROJECT_ID=$(echo "$PROJECTS_RESPONSE" | jq -r '.[0].id')
-        log_info "Auto-selected first project: ${PROJECT_ID}"
-    else
-        read -p "Enter Project ID: " PROJECT_ID
-    fi
+    PROJECT_ID="$DEFAULT_PROJECT_ID"
+    log_info "Using default project: ${PROJECT_ID}"
 fi
 
 if [ -z "$WORKBENCH_ID" ]; then
-    log_info "Fetching workbenches for project ${PROJECT_ID}..."
+    WORKBENCH_ID="$DEFAULT_WORKBENCH_ID"
+    log_info "Using default workbench: ${WORKBENCH_ID}"
+fi
 
-    WORKBENCHES_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/projects/${PROJECT_ID}/workbenches" 2>/dev/null)
+# Workbenchページの存在確認
+log_info "Validating workbench exists..."
+WORKBENCH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" --max-time $HEALTH_CHECK_TIMEOUT \
+    "${MYAGENTDESK_URL}/projects/${PROJECT_ID}/workbenches/${WORKBENCH_ID}" 2>/dev/null || echo "000")
 
-    if [ -z "$WORKBENCHES_RESPONSE" ] || [ "$WORKBENCHES_RESPONSE" = "[]" ]; then
-        log_error "No workbenches found. Please create a workbench in myAgentDesk first."
-        exit 1
-    fi
-
-    echo ""
-    echo "Available workbenches:"
-    echo "$WORKBENCHES_RESPONSE" | jq -r '.[] | "  \(.id): \(.name)"'
-    echo ""
-
-    if [ "$NO_CONFIRM" = true ]; then
-        WORKBENCH_ID=$(echo "$WORKBENCHES_RESPONSE" | jq -r '.[0].id')
-        log_info "Auto-selected first workbench: ${WORKBENCH_ID}"
-    else
-        read -p "Enter Workbench ID: " WORKBENCH_ID
-    fi
+if [ "$WORKBENCH_CHECK" != "200" ]; then
+    log_error "Workbench not found (HTTP ${WORKBENCH_CHECK})"
+    log_error "Please create the workbench in myAgentDesk first:"
+    log_error "  ${MYAGENTDESK_URL}/projects/${PROJECT_ID}/workbenches"
+    exit 1
 fi
 
 log_success "Project: ${PROJECT_ID}"
@@ -351,11 +331,12 @@ fi
 if [ "$SKIP_GENERATE" = false ]; then
     log_step "Step 4: Generate Job"
 
-    log_info "Triggering job generation..."
+    log_info "Triggering job generation via SvelteKit Form Action..."
 
-    # Generate APIを呼び出し
-    GENERATE_RESPONSE=$(curl -s -X POST "${MYAGENTDESK_URL}/api/projects/${PROJECT_ID}/workbenches/${WORKBENCH_ID}/generate" \
-        -H "Content-Type: application/json" \
+    # SvelteKit Form Actionsを呼び出す（?/generateJobアクション）
+    GENERATE_RESPONSE=$(curl -s -X POST \
+        "${MYAGENTDESK_URL}/projects/${PROJECT_ID}/workbenches/${WORKBENCH_ID}/generate?/generateJob" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
         --max-time $GENERATE_TIMEOUT 2>/dev/null)
 
     if [ -z "$GENERATE_RESPONSE" ]; then
@@ -363,14 +344,78 @@ if [ "$SKIP_GENERATE" = false ]; then
         exit 1
     fi
 
-    log_info "Generate response: $(echo "$GENERATE_RESPONSE" | jq -c '.')"
+    log_info "Generate response: $(echo "$GENERATE_RESPONSE" | head -c 500)"
 
-    # JobVersion IDを取得
-    JOB_VERSION_ID=$(echo "$GENERATE_RESPONSE" | jq -r '.jobVersionId // .job_version_id // .id // empty')
+    # SvelteKit Form ActionsのレスポンスからjobVersionIdを抽出
+    # SvelteKitはdevalシリアライズ形式で返す場合がある
+    # 例: {"type":"success","data":"[{\"success\":1,\"jobVersionId\":2,...},true,\"jv_xxx\",...]}
+    # 例: {"type":"failure","data":"[{\"error\":1},\"A job is already being generated...\"]"}
+
+    # エラーチェック（既に生成中のJobがある場合）
+    GENERATE_TYPE=$(echo "$GENERATE_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("type",""))' 2>/dev/null || echo "")
+
+    if [ "$GENERATE_TYPE" = "failure" ]; then
+        ERROR_MSG=$(echo "$GENERATE_RESPONSE" | python3 -c 'import json,sys,re; d=json.load(sys.stdin); m=re.search(r"already being generated", d.get("data","")); print("generating" if m else "error")' 2>/dev/null || echo "error")
+
+        if [ "$ERROR_MSG" = "generating" ]; then
+            log_warn "A job is already being generated. Waiting for existing job..."
+
+            # 生成中のJobを見つける（generateページをロードしてステータス確認）
+            for i in {1..36}; do
+                GENERATING_JOB=$(curl -s "${MYAGENTDESK_URL}/projects/${PROJECT_ID}/workbenches/${WORKBENCH_ID}/generate" 2>/dev/null | \
+                    python3 -c 'import sys,re; c=sys.stdin.read(); m=re.search(r"jv_[a-zA-Z0-9_]+", c); print(m.group(0) if m else "")' 2>/dev/null || echo "")
+
+                if [ -n "$GENERATING_JOB" ]; then
+                    JOB_STATUS=$(curl -s "${MYAGENTDESK_URL}/api/jobs/${GENERATING_JOB}/status" 2>/dev/null | \
+                        python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
+
+                    if [ "$JOB_STATUS" = "success" ] || [ "$JOB_STATUS" = "active" ]; then
+                        log_success "Found completed job: ${GENERATING_JOB}"
+                        JOB_VERSION_ID="$GENERATING_JOB"
+                        break
+                    elif [ "$JOB_STATUS" = "generating" ]; then
+                        PROGRESS=$(curl -s "${MYAGENTDESK_URL}/api/jobs/${GENERATING_JOB}/status" 2>/dev/null | \
+                            python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("progress",""))' 2>/dev/null || echo "")
+                        log_info "Waiting for existing job ${GENERATING_JOB}... (${PROGRESS}%)"
+                    fi
+                fi
+                sleep 5
+            done
+        else
+            log_error "Job generation failed: $(echo "$GENERATE_RESPONSE" | head -c 500)"
+            exit 1
+        fi
+    else
+        JOB_VERSION_ID=$(echo "$GENERATE_RESPONSE" | python3 -c '
+import json
+import sys
+import re
+
+try:
+    data = json.load(sys.stdin)
+
+    # SvelteKit deval形式の場合
+    if isinstance(data, dict) and "data" in data:
+        data_str = data["data"]
+        if isinstance(data_str, str):
+            # "jv_" で始まるIDを抽出
+            match = re.search(r"jv_[a-zA-Z0-9_]+", data_str)
+            if match:
+                print(match.group(0))
+                sys.exit(0)
+
+    # 通常のJSON形式の場合
+    if isinstance(data, dict):
+        job_version_id = data.get("jobVersionId") or data.get("id", "")
+        print(job_version_id)
+except Exception as e:
+    print("", file=sys.stderr)
+' 2>/dev/null || echo "")
+    fi
 
     if [ -z "$JOB_VERSION_ID" ]; then
         log_error "Failed to get JobVersion ID from response"
-        log_error "Response: $GENERATE_RESPONSE"
+        log_error "Response: $(echo "$GENERATE_RESPONSE" | head -c 1000)"
         exit 1
     fi
 
@@ -386,18 +431,32 @@ if [ "$SKIP_GENERATE" = false ]; then
         sleep $POLL_INTERVAL
         GENERATE_WAIT=$((GENERATE_WAIT + POLL_INTERVAL))
 
-        JOB_VERSION_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/job-versions/${JOB_VERSION_ID}" 2>/dev/null)
-        GENERATE_STATUS=$(echo "$JOB_VERSION_RESPONSE" | jq -r '.status // "unknown"')
+        # /api/jobs/{jobId}/status でステータス確認
+        JOB_STATUS_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/jobs/${JOB_VERSION_ID}/status" 2>/dev/null)
+        GENERATE_STATUS=$(echo "$JOB_STATUS_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
+        PHASE=$(echo "$JOB_STATUS_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("phase",""))' 2>/dev/null || echo "")
+        PROGRESS=$(echo "$JOB_STATUS_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("progress",""))' 2>/dev/null || echo "")
 
-        log_info "Generation status: ${GENERATE_STATUS} (${GENERATE_WAIT}s elapsed)"
+        if [ -n "$PHASE" ] && [ -n "$PROGRESS" ]; then
+            log_info "Generation status: ${GENERATE_STATUS} | Phase: ${PHASE} | Progress: ${PROGRESS}% (${GENERATE_WAIT}s elapsed)"
+        else
+            log_info "Generation status: ${GENERATE_STATUS} (${GENERATE_WAIT}s elapsed)"
+        fi
     done
 
-    if [ "$GENERATE_STATUS" != "active" ] && [ "$GENERATE_STATUS" != "ready" ] && [ "$GENERATE_STATUS" != "completed" ]; then
+    if [ "$GENERATE_STATUS" != "active" ] && [ "$GENERATE_STATUS" != "success" ] && [ "$GENERATE_STATUS" != "completed" ]; then
         log_error "Job generation failed or timed out. Status: ${GENERATE_STATUS}"
+        log_error "Last response: $(echo "$JOB_STATUS_RESPONSE" | head -c 500)"
         exit 1
     fi
 
     log_success "Job generation completed!"
+
+    # externalJobMasterIdを取得
+    EXTERNAL_JOB_MASTER_ID=$(echo "$JOB_STATUS_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("externalJobMasterId",""))' 2>/dev/null || echo "")
+    if [ -n "$EXTERNAL_JOB_MASTER_ID" ]; then
+        log_info "External Job Master ID: ${EXTERNAL_JOB_MASTER_ID}"
+    fi
 else
     log_step "Step 4: Skip Generate (Using existing JobVersion)"
 
@@ -407,6 +466,15 @@ else
     fi
 
     log_info "Using existing JobVersion: ${JOB_VERSION_ID}"
+
+    # 既存のJobVersionのステータス確認
+    JOB_STATUS_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/jobs/${JOB_VERSION_ID}/status" 2>/dev/null)
+    GENERATE_STATUS=$(echo "$JOB_STATUS_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
+
+    if [ "$GENERATE_STATUS" != "active" ] && [ "$GENERATE_STATUS" != "success" ]; then
+        log_error "JobVersion is not active/success. Status: ${GENERATE_STATUS}"
+        exit 1
+    fi
 fi
 
 # ============================================
@@ -417,19 +485,23 @@ log_step "Step 5: Create and Execute Run"
 
 log_info "Creating run with parameters..."
 
+# executionParamsをJSON形式で作成
+EXECUTION_PARAMS=$(cat <<EOF
+{"keyword": "${KEYWORD}", "email": "${EMAIL}"}
+EOF
+)
+
 # Run作成リクエスト
 RUN_REQUEST=$(cat <<EOF
 {
+    "workbenchId": "${WORKBENCH_ID}",
     "jobVersionId": "${JOB_VERSION_ID}",
-    "inputs": {
-        "keyword": "${KEYWORD}",
-        "email": "${EMAIL}"
-    }
+    "executionParams": $(echo "$EXECUTION_PARAMS" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
 }
 EOF
 )
 
-log_info "Run request: $(echo "$RUN_REQUEST" | jq -c '.')"
+log_info "Run request: $(echo "$RUN_REQUEST" | tr -d '\n' | head -c 200)"
 
 RUN_RESPONSE=$(curl -s -X POST "${MYAGENTDESK_URL}/api/runs" \
     -H "Content-Type: application/json" \
@@ -441,9 +513,9 @@ if [ -z "$RUN_RESPONSE" ]; then
     exit 1
 fi
 
-log_info "Run response: $(echo "$RUN_RESPONSE" | jq -c '.')"
+log_info "Run response: $(echo "$RUN_RESPONSE" | head -c 500)"
 
-RUN_ID=$(echo "$RUN_RESPONSE" | jq -r '.id // .runId // .run_id // empty')
+RUN_ID=$(echo "$RUN_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("id",""))' 2>/dev/null || echo "")
 
 if [ -z "$RUN_ID" ]; then
     log_error "Failed to get Run ID from response"
@@ -452,6 +524,12 @@ if [ -z "$RUN_ID" ]; then
 fi
 
 log_success "Run created: ${RUN_ID}"
+
+# externalJobIdを取得
+EXTERNAL_JOB_ID=$(echo "$RUN_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); v=d.get("externalJobId"); print(v if v else "")' 2>/dev/null || echo "")
+if [ -n "$EXTERNAL_JOB_ID" ]; then
+    log_info "External Job ID (JobQueue): ${EXTERNAL_JOB_ID}"
+fi
 
 # ============================================
 # Step 6: Wait for Run Completion
@@ -467,9 +545,44 @@ while [ "$RUN_STATUS" != "success" ] && [ "$RUN_STATUS" != "failed" ] && [ "$RUN
     RUN_WAIT=$((RUN_WAIT + POLL_INTERVAL))
 
     RUN_STATUS_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/runs/${RUN_ID}/status" 2>/dev/null)
-    RUN_STATUS=$(echo "$RUN_STATUS_RESPONSE" | jq -r '.status // "unknown"')
+    RUN_STATUS=$(echo "$RUN_STATUS_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
 
-    log_info "Run status: ${RUN_STATUS} (${RUN_WAIT}s elapsed)"
+    # タスクステータスからも判断（Run statusが更新されない場合の対策）
+    TASKS_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/runs/${RUN_ID}/tasks" 2>/dev/null)
+    TASK_STATUS_INFO=$(echo "$TASKS_RESPONSE" | python3 -c '
+import json
+import sys
+try:
+    data = json.load(sys.stdin)
+    tasks = data.get("tasks", [])
+    total = len(tasks)
+    succeeded = sum(1 for t in tasks if t.get("status") == "SUCCEEDED")
+    failed = sum(1 for t in tasks if t.get("status") == "FAILED")
+    running = sum(1 for t in tasks if t.get("status") in ["RUNNING", "PENDING", "QUEUED"])
+    print(f"{succeeded}/{total} succeeded, {failed} failed, {running} running")
+
+    # 全タスク完了の場合はステータスを判断
+    if total > 0 and running == 0:
+        if failed > 0:
+            print("COMPUTED_STATUS:failed")
+        elif succeeded == total:
+            print("COMPUTED_STATUS:success")
+except Exception as e:
+    print("unknown")
+' 2>/dev/null || echo "unknown")
+
+    # タスクベースでステータスを判断
+    if echo "$TASK_STATUS_INFO" | grep -q "COMPUTED_STATUS:success"; then
+        log_info "Run status: ${RUN_STATUS} | Tasks: ${TASK_STATUS_INFO} (${RUN_WAIT}s elapsed)"
+        RUN_STATUS="success"
+        break
+    elif echo "$TASK_STATUS_INFO" | grep -q "COMPUTED_STATUS:failed"; then
+        log_info "Run status: ${RUN_STATUS} | Tasks: ${TASK_STATUS_INFO} (${RUN_WAIT}s elapsed)"
+        RUN_STATUS="failed"
+        break
+    fi
+
+    log_info "Run status: ${RUN_STATUS} | Tasks: ${TASK_STATUS_INFO} (${RUN_WAIT}s elapsed)"
 done
 
 # ============================================
@@ -479,8 +592,8 @@ done
 log_step "Step 7: Verify Results"
 
 # 最終ステータス取得
-FINAL_RUN_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/runs/${RUN_ID}" 2>/dev/null)
-FINAL_STATUS=$(echo "$FINAL_RUN_RESPONSE" | jq -r '.status // "unknown"')
+FINAL_RUN_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/runs/${RUN_ID}/status" 2>/dev/null)
+FINAL_STATUS=$(echo "$FINAL_RUN_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
 
 # 結果をJSONファイルに保存
 cat > "$RESULT_FILE" <<EOF
@@ -493,14 +606,14 @@ cat > "$RESULT_FILE" <<EOF
         "project_id": "${PROJECT_ID}",
         "workbench_id": "${WORKBENCH_ID}",
         "job_version_id": "${JOB_VERSION_ID}",
-        "run_id": "${RUN_ID}"
+        "run_id": "${RUN_ID}",
+        "external_job_id": "${EXTERNAL_JOB_ID}"
     },
     "result": {
         "status": "${FINAL_STATUS}",
         "duration_seconds": ${RUN_WAIT},
         "success": $([ "$FINAL_STATUS" = "success" ] && echo "true" || echo "false")
-    },
-    "run_details": $(echo "$FINAL_RUN_RESPONSE" | jq '.')
+    }
 }
 EOF
 
@@ -536,7 +649,7 @@ else
     TASKS_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/runs/${RUN_ID}/tasks" 2>/dev/null)
     echo ""
     echo "Task details:"
-    echo "$TASKS_RESPONSE" | jq '.[] | {id, status, error}'
+    echo "$TASKS_RESPONSE" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(json.dumps(data, indent=2, ensure_ascii=False))' 2>/dev/null || echo "$TASKS_RESPONSE"
 
     exit 1
 fi

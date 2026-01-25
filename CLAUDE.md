@@ -36,13 +36,14 @@
 
 ### 🧪 テスト構造
 
-テストは3層構造で、実行環境が異なります：
+テストは4層構造で、実行環境が異なります：
 
 | テスト種別 | 場所 | 実行環境 | カバレッジ目標 |
 |-----------|------|---------|--------------|
 | **単体テスト** | `{project}/tests/unit/` | CI (GitHub Actions) | 90%以上 |
 | **結合テスト** | `tests/integration/` | CI (GitHub Actions) | 50%以上 |
 | **受入テスト** | `tests/acceptance/` | ローカルのみ | - |
+| **クロスサービスE2E** | `scripts/e2e/cross-service/` | ローカルのみ | - |
 
 #### 受入テスト実行方法
 
@@ -61,6 +62,26 @@ make acceptance-test-frontend
 # 全受入テスト実行
 make acceptance-test-all
 ```
+
+#### クロスサービスE2Eテスト実行方法
+
+複数サービスを横断するフルスタックE2Eテストです：
+
+```bash
+# フルワークフローE2E（Job生成→実行→メール送信）
+./scripts/e2e/cross-service/test_full_workflow_e2e.sh
+
+# パラメータ指定での実行
+./scripts/e2e/cross-service/test_full_workflow_e2e.sh \
+  --keyword "検索キーワード" \
+  --email "your-email@example.com"
+
+# 全クロスサービステスト実行
+./scripts/e2e/cross-service/run_all_tests.sh "検索キーワード" "your-email@example.com"
+```
+
+> **前提条件**: `./scripts/dev-hybrid.sh start --local-only` でサービス起動済みであること。
+> 詳細は [クロスサービスE2Eテストガイド](./scripts/e2e/cross-service/README.md) を参照してください。
 
 > **注意**: 受入テストの実行には環境変数（APIキー等）の設定が必要です。
 > 詳細は [テストガイド](./docs/development/testing-guide.md) を参照してください。
@@ -136,6 +157,7 @@ make down        # 全サービス停止
 | **文書管理** | [documentation-rules.md](./docs/development/documentation-rules.md) | 作業ドキュメント管理ルール | 🟡 中 |
 | **Issue分割** | [issue-split.md](./docs/development/issue-split.md) | Issue分割詳細ガイド、受入基準の2層構造 | 🔴 高 |
 | **ローカル開発環境** | [local-development.md](./docs/operations/local-development.md) | 起動方法比較、ポート構成、トラブルシューティング | 🟡 中 |
+| **クロスサービスE2E** | [cross-service/README.md](./scripts/e2e/cross-service/README.md) | サービス間統合E2Eテスト、フルワークフロー検証 | 🟡 中 |
 
 ---
 
@@ -148,6 +170,7 @@ make down        # 全サービス停止
 | **新プロジェクトを追加する** | [new-project-setup.md](./docs/operations/new-project-setup.md) | 🔴 必須 |
 | **TaskFlowワークフローを開発する** | [API_REFERENCE.md](./mySwiftAgentCore/docs/API_REFERENCE.md) | 🔴 必須 |
 | **GraphAI OSSワークフローを開発する** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/features/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | 🟡 条件付き |
+| **クロスサービスE2Eテストを実行する** | [cross-service/README.md](./scripts/e2e/cross-service/README.md) | 🟡 条件付き |
 | **アーキテクチャを理解する** | [overview.md](./docs/architecture/overview.md) | 🟡 推奨 |
 | **環境変数を設定する** | [environment-variables.md](./docs/reference/environment-variables.md) | 🟡 推奨 |
 | **myVault連携を実装する** | [myvault-integration.md](./docs/architecture/myvault-integration.md) | 🟡 推奨 |
@@ -186,6 +209,9 @@ make down        # 全サービス停止
 
 ### CI/CDエラーを解決する
 → [エラー防止策](./docs/development/ci-cd-prevention.md)
+
+### E2Eテストを実行する
+→ [クロスサービスE2E](./scripts/e2e/cross-service/README.md)、[テストガイド](./docs/development/testing-guide.md)
 
 ### 複数ブランチで並行作業する
 → [worktreeガイド](./docs/development/worktree-guide.md)
