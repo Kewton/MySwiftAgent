@@ -375,7 +375,9 @@ async def _create_job_in_background_v2(
             # Issue #396: response already contains workflow_statuses from adapter
             result_dict = response.model_dump()
             if response.workflow_statuses:
-                logger.info(f"[BG:{job_id}] Found {len(response.workflow_statuses)} workflow_statuses in response")
+                logger.info(
+                    f"[BG:{job_id}] Found {len(response.workflow_statuses)} workflow_statuses in response"
+                )
             else:
                 logger.warning(f"[BG:{job_id}] No workflow_statuses in response")
 

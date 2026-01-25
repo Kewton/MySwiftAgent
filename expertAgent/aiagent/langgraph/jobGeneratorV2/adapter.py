@@ -198,7 +198,9 @@ class JobGeneratorAdapter:
                 "priority": task.priority,
                 "task_type": task.task_type,
                 # Issue #396: Output as recommended_apis (plural list) for TaskBreakdownItem compatibility
-                "recommended_apis": [task.recommended_api] if task.recommended_api else [],
+                "recommended_apis": [task.recommended_api]
+                if task.recommended_api
+                else [],
             }
             for task in sorted_tasks
         ]
@@ -246,20 +248,24 @@ class JobGeneratorAdapter:
             workflow = result.workflows.get(task.task_id)
             if workflow:
                 # Successful workflow
-                workflow_statuses.append({
-                    "task_id": task.task_id,
-                    "task_name": task.name,
-                    "status": "success",
-                    "workflow_name": workflow.get("workflow_name", task.task_id),
-                })
+                workflow_statuses.append(
+                    {
+                        "task_id": task.task_id,
+                        "task_name": task.name,
+                        "status": "success",
+                        "workflow_name": workflow.get("workflow_name", task.task_id),
+                    }
+                )
             else:
                 # Failed or pending workflow
-                workflow_statuses.append({
-                    "task_id": task.task_id,
-                    "task_name": task.name,
-                    "status": "failed",
-                    "error_message": f"Workflow not generated for {task.task_id}",
-                })
+                workflow_statuses.append(
+                    {
+                        "task_id": task.task_id,
+                        "task_name": task.name,
+                        "status": "failed",
+                        "error_message": f"Workflow not generated for {task.task_id}",
+                    }
+                )
 
         return workflow_statuses if workflow_statuses else None
 

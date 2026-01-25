@@ -116,9 +116,7 @@ class ConversationStoreValkey(ConversationStore):
         # Save with TTL
         return await self._client.set(key, conversation_data, ttl=ttl)
 
-    async def get_conversation(
-        self, conversation_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a conversation from Valkey.
 
         Args:
@@ -212,9 +210,7 @@ class ConversationStoreValkey(ConversationStore):
                         cursor=cursor, match=pattern, count=100
                     )
                     for key in keys:
-                        key_str = (
-                            key.decode("utf-8") if isinstance(key, bytes) else key
-                        )
+                        key_str = key.decode("utf-8") if isinstance(key, bytes) else key
                         conv_id = key_str.replace(self.key_prefix, "")
                         all_ids.append(conv_id)
 
