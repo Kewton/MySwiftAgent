@@ -1,52 +1,63 @@
 """Integration tests for Issue #390: TaskMaster workflow field update.
 
-Tests the integration between JobGenerationOrchestrator and workflow_registrar
+Tests the integration between JobGenerationOrchestrator and task_master_utils
 to ensure TaskMaster workflow fields are properly updated after Phase 3.
+
+Issue #396: Updated tests to match new implementation signature.
 
 Run these tests with:
     cd expertAgent
     uv run pytest tests/integration/test_issue390_integration.py -v
 """
 
-from dataclasses import dataclass
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
-@dataclass
-class MockTaskResult:
-    """Mock task result for testing."""
-
-    task_id: str
-    workflow: dict[str, Any] | None = None
-
-
-@dataclass
-class MockParallelExecutionResult:
-    """Mock parallel execution result for testing."""
-
-    successful_tasks: list[MockTaskResult]
-    failed_tasks: list[MockTaskResult]
-    all_succeeded: bool = True
-
-    def get_error_summary(self) -> str | None:
-        """Return error summary for failed tasks."""
-        if not self.failed_tasks:
-            return None
-        return f"Failed tasks: {[t.task_id for t in self.failed_tasks]}"
-
-
-@pytest.mark.skip(
-    reason="Issue #390: _update_task_masters_workflow method not yet implemented in "
-    "JobGenerationOrchestrator. These tests are prepared for when the feature is implemented."
+from aiagent.clients.types.workflow_generator import (
+    BatchStatus,
+    BatchWorkflowGenerationResponse,
+    WorkflowResult,
+    WorkflowStatus,
 )
-class TestIssue390OrchestratorIntegration:
-    """Integration tests for Issue #390 orchestrator and workflow_registrar.
+from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+    JobGenerationOrchestrator,
+    OrchestratorError,
+)
+from aiagent.langgraph.jobGeneratorV2.types import UnifiedTaskIdentifier
 
-    Note: These tests are currently skipped because the _update_task_masters_workflow
-    method has not been implemented in JobGenerationOrchestrator yet.
+# Patch path for the function imported locally in _update_task_masters_workflow
+PATCH_UPDATE_TASKFLOW = (
+    "aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils"
+    ".update_task_master_body_template_taskflow"
+)
+
+
+def create_mock_response(
+    workflows: dict[str, WorkflowResult],
+    status: BatchStatus = BatchStatus.SUCCESS,
+) -> BatchWorkflowGenerationResponse:
+    """Create a mock BatchWorkflowGenerationResponse for testing."""
+    return BatchWorkflowGenerationResponse(
+        status=status,
+        success=(status != BatchStatus.FAILED),
+        workflows=workflows,
+        failed_tasks=None,
+        recovery_suggestion=None,
+        total_tasks=len(workflows),
+        succeeded_tasks=sum(
+            1 for w in workflows.values() if w.status == WorkflowStatus.SUCCESS
+        ),
+        failed_task_count=sum(
+            1 for w in workflows.values() if w.status == WorkflowStatus.FAILED
+        ),
+    )
+
+
+class TestIssue390OrchestratorIntegration:
+    """Integration tests for Issue #390 orchestrator and task_master_utils.
+
+    Issue #396: Tests updated to match new implementation signature.
     """
 
     @pytest.mark.asyncio
@@ -58,26 +69,21 @@ class TestIssue390OrchestratorIntegration:
         2. Orchestrator calls _update_task_masters_workflow
         3. Each TaskMaster's body_template.workflow is updated
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
         # Simulate Phase 3 result with successful workflow generation
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "google_search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="google_search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+        ]
 
         # Track what update_task_master_body_template_taskflow was called with
         update_calls = []
@@ -92,11 +98,10 @@ class TestIssue390OrchestratorIntegration:
             return True
 
         with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar"
-            ".update_task_master_body_template_taskflow",
+            PATCH_UPDATE_TASKFLOW,
             side_effect=mock_update,
         ):
-            await orchestrator._update_task_masters_workflow(workflow_result)
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
 
         # Verify the update was called with correct parameters
         assert len(update_calls) == 1
@@ -109,7 +114,7 @@ class TestIssue390OrchestratorIntegration:
 
         Issue #390: mySwiftAgentCore expects 'workflow' field, not 'workflow_name'.
         """
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
             update_task_master_body_template_taskflow,
         )
 
@@ -155,46 +160,37 @@ class TestIssue390OrchestratorIntegration:
         assert captured_body_template["project"] == "{{job.body.project}}"  # Issue #391
 
     @pytest.mark.asyncio
-    async def test_multiple_tasks_update_in_parallel(self):
-        """Multiple TaskMasters should be updated in parallel.
+    async def test_multiple_tasks_update_in_sequence(self):
+        """Multiple TaskMasters should be updated.
 
         When Phase 3 generates workflows for multiple tasks,
-        all TaskMasters should be updated concurrently.
+        all TaskMasters should be updated.
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
         # Multiple successful tasks
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_002",
-                    workflow={
-                        "task_master_id": "tm_002",
-                        "workflow_name": "process_workflow",
-                    },
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_003",
-                    workflow={
-                        "task_master_id": "tm_003",
-                        "workflow_name": "notify_workflow",
-                    },
+                "task_003": WorkflowResult(
+                    workflow_name="notify_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+            UnifiedTaskIdentifier(task_id="task_003", task_master_id="tm_003"),
+        ]
 
         update_calls = []
 
@@ -208,11 +204,10 @@ class TestIssue390OrchestratorIntegration:
             return True
 
         with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar"
-            ".update_task_master_body_template_taskflow",
+            PATCH_UPDATE_TASKFLOW,
             side_effect=mock_update,
         ):
-            await orchestrator._update_task_masters_workflow(workflow_result)
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
 
         # All 3 tasks should be updated
         assert len(update_calls) == 3
@@ -228,7 +223,7 @@ class TestIssue390OrchestratorIntegration:
         Issue #390: When updating body_template.workflow, the existing
         inputs field (used for task chaining) must be preserved.
         """
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
             update_task_master_body_template_taskflow,
         )
 
@@ -275,33 +270,25 @@ class TestIssue390OrchestratorIntegration:
         Issue #360: No partial success allowed. If any TaskMaster
         fails to update, the entire operation should fail.
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-            OrchestratorError,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_002",
-                    workflow={
-                        "task_master_id": "tm_002",
-                        "workflow_name": "process_workflow",
-                    },
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
 
         # First succeeds, second fails
         call_count = 0
@@ -312,15 +299,16 @@ class TestIssue390OrchestratorIntegration:
             return call_count != 2  # Fail on second call
 
         with patch(
-            "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar"
-            ".update_task_master_body_template_taskflow",
+            PATCH_UPDATE_TASKFLOW,
             side_effect=mock_update_with_failure,
         ):
             with pytest.raises(OrchestratorError) as exc_info:
-                await orchestrator._update_task_masters_workflow(workflow_result)
+                await orchestrator._update_task_masters_workflow(
+                    response, task_identifiers
+                )
 
             # Error should mention the failed task
-            assert "task_002" in str(exc_info.value)
+            assert "tm_002" in str(exc_info.value)
 
 
 class TestIssue390EndToEndFlow:
@@ -334,7 +322,7 @@ class TestIssue390EndToEndFlow:
         Before: body_template.workflow = "__PENDING__"
         After:  body_template.workflow = "actual_workflow_name"
         """
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
             update_task_master_body_template_taskflow,
         )
 
@@ -377,7 +365,7 @@ class TestIssue390EndToEndFlow:
         This test simulates what mySwiftAgentCore would receive and verifies
         the workflow field contains a valid workflow name, not __PENDING__.
         """
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
             update_task_master_body_template_taskflow,
         )
 

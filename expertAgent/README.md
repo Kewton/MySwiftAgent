@@ -1,8 +1,23 @@
 # Expert Agent Service
 
-🤖 Expert Agent Service is a Python/FastAPI microservice for MySwiftAgent that provides expert AI agent functionality using LangGraph.
+🤖 **Expert Agent Service** はMySwiftAgentのAIエージェント基盤サービスです。
+LangGraphを使用したジョブ生成・実行を担当します。
 
-## Features
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Agent層 |
+| **役割** | AIエージェント基盤・Job Generator |
+| **技術スタック** | Python + FastAPI + LangGraph |
+| **ポート** | 8004 |
+
+## ドキュメント
+
+- **[API Reference](./docs/API_REFERENCE.md)** - 全APIエンドポイント仕様
+- **[Job Generator V2](./docs/features/job_generator_v2.md)** - ジョブ生成機能
+- **[プロンプト管理](./docs/guides/prompt-management.md)** - プロンプト運用ガイド
+- **[ファイルリーダー](./docs/guides/file-reader-usage-guide.md)** - ファイル読み込み機能
+
+## 機能
 
 - ⚡ Fast and lightweight FastAPI server
 - 🧠 LangGraph-based AI agents (sample, utility, explorer, action, playwright, wikipedia, file_reader)

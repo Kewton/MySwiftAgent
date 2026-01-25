@@ -1,6 +1,19 @@
 # myAgentDesk
 
-AI Agent Desktop - MySwiftAgentのWebインターフェース
+🖥️ **myAgentDesk** はMySwiftAgentのWebインターフェースです。
+ジョブ管理、ワークフロー実行、結果確認を提供します。
+
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Frontend層 |
+| **役割** | Web UI |
+| **技術スタック** | SvelteKit + TypeScript |
+| **ポート** | 5173 |
+
+## ドキュメント
+
+- **[API Reference](./docs/API_REFERENCE.md)** - フロントエンドAPI仕様
+- **[Getting Started](./docs/guides/getting-started.md)** - 開発環境セットアップ
 
 ## 技術スタック
 

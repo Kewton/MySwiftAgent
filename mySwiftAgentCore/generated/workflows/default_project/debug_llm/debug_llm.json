@@ -1,0 +1,28 @@
+{
+  "workflow_name": "debug_llm",
+  "description": "Debug LLM output structure",
+  "input_schema": {
+    "message": "string"
+  },
+  "output_schema": {
+    "content": "string",
+    "response": "string",
+    "full_output": "object"
+  },
+  "steps": [
+    {
+      "id": "llm_test",
+      "type": "llm",
+      "config": {
+        "prompt": "Say: {{input.message}}",
+        "model": "gpt-4o-mini",
+        "system_prompt": "Repeat the user message exactly."
+      }
+    }
+  ],
+  "output": {
+    "content": "${llm_test.content}",
+    "response": "${llm_test.response}",
+    "full_output": "${llm_test}"
+  }
+}

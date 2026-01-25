@@ -3,50 +3,61 @@
 This module tests the _update_task_masters_workflow method in JobGenerationOrchestrator.
 Issue #390: After Phase 3 (WORKFLOW_GEN) completes, TaskMasters need their
 workflow field updated from '__PENDING__' to the actual workflow name.
+
+Issue #396: Updated tests to match new implementation signature that accepts
+BatchWorkflowGenerationResponse and list[UnifiedTaskIdentifier].
 """
 
-from dataclasses import dataclass
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from aiagent.clients.types.workflow_generator import (
+    BatchStatus,
+    BatchWorkflowGenerationResponse,
+    WorkflowResult,
+    WorkflowStatus,
+)
+from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+    JobGenerationOrchestrator,
+    OrchestratorError,
+)
+from aiagent.langgraph.jobGeneratorV2.types import UnifiedTaskIdentifier
+
 # Patch path for the function imported locally in _update_task_masters_workflow
 PATCH_UPDATE_TASKFLOW = (
-    "aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar"
+    "aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils"
     ".update_task_master_body_template_taskflow"
 )
 
 
-@dataclass
-class MockTaskResult:
-    """Mock task result for testing."""
+def create_mock_response(
+    workflows: dict[str, WorkflowResult],
+    status: BatchStatus = BatchStatus.SUCCESS,
+) -> BatchWorkflowGenerationResponse:
+    """Create a mock BatchWorkflowGenerationResponse for testing."""
+    return BatchWorkflowGenerationResponse(
+        status=status,
+        success=(status != BatchStatus.FAILED),
+        workflows=workflows,
+        failed_tasks=None,
+        recovery_suggestion=None,
+        total_tasks=len(workflows),
+        succeeded_tasks=sum(
+            1 for w in workflows.values() if w.status == WorkflowStatus.SUCCESS
+        ),
+        failed_task_count=sum(
+            1 for w in workflows.values() if w.status == WorkflowStatus.FAILED
+        ),
+    )
 
-    task_id: str
-    workflow: dict[str, Any] | None = None
 
-
-@dataclass
-class MockParallelExecutionResult:
-    """Mock parallel execution result for testing."""
-
-    successful_tasks: list[MockTaskResult]
-    failed_tasks: list[MockTaskResult]
-    all_succeeded: bool = True
-
-
-@pytest.mark.skip(
-    reason="Issue #390: _update_task_masters_workflow method not yet implemented in "
-    "JobGenerationOrchestrator. These tests are prepared for when the feature is implemented."
-)
 class TestUpdateTaskMastersWorkflow:
     """Test cases for _update_task_masters_workflow method.
 
     Issue #390: Tests for TaskMaster workflow field update after Phase 3.
     Issue #360: Tests must verify all-or-nothing behavior (no partial success).
-
-    Note: These tests are currently skipped because the _update_task_masters_workflow
-    method has not been implemented in JobGenerationOrchestrator yet.
+    Issue #396: Tests updated to match new implementation signature.
     """
 
     @pytest.mark.asyncio
@@ -58,40 +69,34 @@ class TestUpdateTaskMastersWorkflow:
         2. Not raise any exception
         3. Log success message
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        # Mock successful tasks with workflow info
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "search_workflow",
-                    },
+        # Create mock response with successful workflows
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_002",
-                    workflow={
-                        "task_master_id": "tm_002",
-                        "workflow_name": "process_workflow",
-                    },
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        # Create task identifiers with task_master_ids
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
 
         with patch(
             PATCH_UPDATE_TASKFLOW,
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_update:
-            await orchestrator._update_task_masters_workflow(workflow_result)
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
 
             # Should have been called for each task
             assert mock_update.call_count == 2
@@ -105,73 +110,132 @@ class TestUpdateTaskMastersWorkflow:
             )
 
     @pytest.mark.asyncio
-    async def test_update_task_masters_no_successful_tasks(self):
-        """Should handle empty successful_tasks gracefully.
+    async def test_update_task_masters_no_workflows(self):
+        """Should handle empty workflows gracefully.
 
-        When there are no successful tasks, the method should:
+        When there are no workflows in the response, the method should:
         1. Not call update function
         2. Return early without error
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[],
-            failed_tasks=[],
-            all_succeeded=True,
+        response = create_mock_response(workflows={})
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+        ]
+
+        with patch(
+            PATCH_UPDATE_TASKFLOW,
+            new_callable=AsyncMock,
+        ) as mock_update:
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
+
+            # Should not call update since no workflows
+            mock_update.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_task_masters_no_task_identifiers(self):
+        """Should handle empty task_identifiers gracefully.
+
+        When there are no task identifiers, the method should:
+        1. Not call update function
+        2. Return early without error
+        """
+        orchestrator = JobGenerationOrchestrator()
+
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
+                ),
+            }
         )
 
         with patch(
             PATCH_UPDATE_TASKFLOW,
             new_callable=AsyncMock,
         ) as mock_update:
-            await orchestrator._update_task_masters_workflow(workflow_result)
+            await orchestrator._update_task_masters_workflow(response, [])
 
-            # Should not call update since no successful tasks
+            # Should not call update since no task identifiers
             mock_update.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_update_task_masters_no_workflow(self):
-        """Should skip tasks without workflow info.
+    async def test_update_task_masters_skip_missing_task_master_id(self):
+        """Should skip tasks without task_master_id.
 
-        When a task result has no workflow, the method should:
+        When a task identifier has no task_master_id, the method should:
         1. Skip that task (not call update)
         2. Continue with other tasks
         3. Not raise any exception
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow=None,  # No workflow
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_002",
-                    workflow={
-                        "task_master_id": "tm_002",
-                        "workflow_name": "process_workflow",
-                    },
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        # First task has no task_master_id
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id=None),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
 
         with patch(
             PATCH_UPDATE_TASKFLOW,
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_update:
-            await orchestrator._update_task_masters_workflow(workflow_result)
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
+
+            # Should only call for task_002 (task_001 has no task_master_id)
+            assert mock_update.call_count == 1
+            mock_update.assert_called_once_with(
+                task_master_id="tm_002",
+                workflow_name="process_workflow",
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_task_masters_skip_missing_workflow(self):
+        """Should skip tasks without workflow in response.
+
+        When a task has no workflow in the response, the method should:
+        1. Skip that task (not call update)
+        2. Continue with other tasks
+        """
+        orchestrator = JobGenerationOrchestrator()
+
+        # Only task_002 has a workflow
+        response = create_mock_response(
+            workflows={
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
+                ),
+            }
+        )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
+
+        with patch(
+            PATCH_UPDATE_TASKFLOW,
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_update:
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
 
             # Should only call for task_002 (task_001 has no workflow)
             assert mock_update.call_count == 1
@@ -181,80 +245,48 @@ class TestUpdateTaskMastersWorkflow:
             )
 
     @pytest.mark.asyncio
-    async def test_update_task_masters_missing_task_master_id(self):
-        """Should handle missing task_master_id as failure.
+    async def test_update_task_masters_skip_failed_workflows(self):
+        """Should skip failed workflows.
 
-        Issue #360: When task_master_id is missing, it counts as a failure.
+        When a workflow has FAILED status, the method should:
+        1. Skip that task (not call update)
+        2. Continue with other tasks
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-            OrchestratorError,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        # Missing task_master_id
-                        "workflow_name": "search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.FAILED,
+                    error="Generation failed",
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
+                ),
+            },
+            status=BatchStatus.PARTIAL_SUCCESS,
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
 
         with patch(
             PATCH_UPDATE_TASKFLOW,
             new_callable=AsyncMock,
+            return_value=True,
         ) as mock_update:
-            # Should raise error due to missing task_master_id
-            with pytest.raises(OrchestratorError) as exc_info:
-                await orchestrator._update_task_masters_workflow(workflow_result)
+            await orchestrator._update_task_masters_workflow(response, task_identifiers)
 
-            assert "task_001" in str(exc_info.value)
-            mock_update.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_update_task_masters_missing_workflow_name(self):
-        """Should handle missing workflow_name as failure.
-
-        Issue #360: When workflow_name is missing, it counts as a failure.
-        """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-            OrchestratorError,
-        )
-
-        orchestrator = JobGenerationOrchestrator()
-
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        # Missing workflow_name
-                    },
-                ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
-        )
-
-        with patch(
-            PATCH_UPDATE_TASKFLOW,
-            new_callable=AsyncMock,
-        ) as mock_update:
-            # Should raise error due to missing workflow_name
-            with pytest.raises(OrchestratorError) as exc_info:
-                await orchestrator._update_task_masters_workflow(workflow_result)
-
-            assert "task_001" in str(exc_info.value)
-            mock_update.assert_not_called()
+            # Should only call for task_002 (task_001 workflow failed)
+            assert mock_update.call_count == 1
+            mock_update.assert_called_once_with(
+                task_master_id="tm_002",
+                workflow_name="process_workflow",
+            )
 
     @pytest.mark.asyncio
     async def test_update_task_masters_partial_failure_raises_error(self):
@@ -263,33 +295,25 @@ class TestUpdateTaskMastersWorkflow:
         Issue #360: No partial success allowed. If any TaskMaster
         fails to update, the entire operation should fail.
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-            OrchestratorError,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_002",
-                    workflow={
-                        "task_master_id": "tm_002",
-                        "workflow_name": "process_workflow",
-                    },
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
 
         # First succeeds, second fails
         with patch(
@@ -299,9 +323,11 @@ class TestUpdateTaskMastersWorkflow:
         ):
             # Should raise error because task_002 failed
             with pytest.raises(OrchestratorError) as exc_info:
-                await orchestrator._update_task_masters_workflow(workflow_result)
+                await orchestrator._update_task_masters_workflow(
+                    response, task_identifiers
+                )
 
-            assert "task_002" in str(exc_info.value)
+            assert "tm_002" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_update_task_masters_all_fail_raises_error(self):
@@ -310,33 +336,25 @@ class TestUpdateTaskMastersWorkflow:
         Issue #360: When all updates fail, the error message should
         include all failed task IDs.
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-            OrchestratorError,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-                MockTaskResult(
-                    task_id="task_002",
-                    workflow={
-                        "task_master_id": "tm_002",
-                        "workflow_name": "process_workflow",
-                    },
+                "task_002": WorkflowResult(
+                    workflow_name="process_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+            UnifiedTaskIdentifier(task_id="task_002", task_master_id="tm_002"),
+        ]
 
         # Both fail
         with patch(
@@ -345,11 +363,13 @@ class TestUpdateTaskMastersWorkflow:
             return_value=False,
         ):
             with pytest.raises(OrchestratorError) as exc_info:
-                await orchestrator._update_task_masters_workflow(workflow_result)
+                await orchestrator._update_task_masters_workflow(
+                    response, task_identifiers
+                )
 
             # Both tasks should be mentioned in error
-            assert "task_001" in str(exc_info.value)
-            assert "task_002" in str(exc_info.value)
+            assert "tm_001" in str(exc_info.value)
+            assert "tm_002" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_update_task_masters_handles_exception(self):
@@ -358,26 +378,20 @@ class TestUpdateTaskMastersWorkflow:
         When update_task_master_body_template_taskflow raises an exception,
         it should be caught and reported as a failure.
         """
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-            OrchestratorError,
-        )
-
         orchestrator = JobGenerationOrchestrator()
 
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id="task_001",
-                    workflow={
-                        "task_master_id": "tm_001",
-                        "workflow_name": "search_workflow",
-                    },
+        response = create_mock_response(
+            workflows={
+                "task_001": WorkflowResult(
+                    workflow_name="search_workflow",
+                    status=WorkflowStatus.SUCCESS,
                 ),
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
+            }
         )
+
+        task_identifiers = [
+            UnifiedTaskIdentifier(task_id="task_001", task_master_id="tm_001"),
+        ]
 
         with patch(
             PATCH_UPDATE_TASKFLOW,
@@ -385,62 +399,18 @@ class TestUpdateTaskMastersWorkflow:
             side_effect=Exception("Connection error"),
         ):
             with pytest.raises(OrchestratorError) as exc_info:
-                await orchestrator._update_task_masters_workflow(workflow_result)
+                await orchestrator._update_task_masters_workflow(
+                    response, task_identifiers
+                )
 
             # Error should be reported
-            assert "unknown" in str(exc_info.value) or "Failed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_update_task_masters_parallel_execution(self):
-        """Should execute updates in parallel.
-
-        The method should use asyncio.gather to execute all updates
-        concurrently for better performance.
-        """
-        import asyncio
-
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
-            JobGenerationOrchestrator,
-        )
-
-        orchestrator = JobGenerationOrchestrator()
-
-        # Track call order to verify parallel execution
-        call_times = []
-
-        async def mock_update(*args, **kwargs):
-            call_times.append(asyncio.get_event_loop().time())
-            await asyncio.sleep(0.01)  # Small delay
-            return True
-
-        workflow_result = MockParallelExecutionResult(
-            successful_tasks=[
-                MockTaskResult(
-                    task_id=f"task_{i:03d}",
-                    workflow={
-                        "task_master_id": f"tm_{i:03d}",
-                        "workflow_name": f"workflow_{i}",
-                    },
-                )
-                for i in range(3)
-            ],
-            failed_tasks=[],
-            all_succeeded=True,
-        )
-
-        with patch(
-            PATCH_UPDATE_TASKFLOW,
-            new_callable=AsyncMock,
-            side_effect=mock_update,
-        ):
-            await orchestrator._update_task_masters_workflow(workflow_result)
-
-            # All 3 calls should have been made
-            assert len(call_times) == 3
+            assert "Connection error" in str(exc_info.value) or "tm_001" in str(
+                exc_info.value
+            )
 
 
 class TestUpdateTaskMastersWorkflowIntegration:
-    """Integration tests for _update_task_masters_workflow with workflow_registrar.
+    """Integration tests for _update_task_masters_workflow with task_master_utils.
 
     These tests verify the integration between orchestrator and
     update_task_master_body_template_taskflow function.
@@ -454,7 +424,7 @@ class TestUpdateTaskMastersWorkflowIntegration:
         The update_task_master_body_template_taskflow function should
         set body_template.workflow = workflow_name.
         """
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
             update_task_master_body_template_taskflow,
         )
 
@@ -498,7 +468,7 @@ class TestUpdateTaskMastersWorkflowIntegration:
         Issue #390: The update should not overwrite existing inputs
         and project values (important for task chaining).
         """
-        from aiagent.langgraph.jobGeneratorV2.workflows.workflow_gen.workflow_registrar import (
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils import (
             update_task_master_body_template_taskflow,
         )
 

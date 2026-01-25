@@ -81,10 +81,13 @@ export class LlmNodeExecutor implements NodeExecutor {
 
       // Build user prompt from template
       // Include step results and input in template context
+      // Issue #396: Support both 'input' and 'inputs' for backward compatibility
+      const inputData = context.variables['input'] ?? {};
       const templateContext: Record<string, unknown> = {
         ...params,
         steps: context.stepResults,
-        input: context.variables['input'] ?? {},
+        input: inputData,
+        inputs: inputData, // Issue #396: Alias for workflows using {{inputs.field}}
       };
       const userPrompt = this.interpolateTemplate(prompt, templateContext);
 
@@ -143,6 +146,7 @@ export class LlmNodeExecutor implements NodeExecutor {
         success: true,
         output: {
           content,
+          response: content, // Issue #396: Alias for backward compatibility with workflows using .response
           usage: data.usage || {},
         },
         metadata: {

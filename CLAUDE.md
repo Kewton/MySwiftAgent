@@ -63,7 +63,7 @@ make acceptance-test-all
 ```
 
 > **注意**: 受入テストの実行には環境変数（APIキー等）の設定が必要です。
-> 詳細は [acceptance-testing.md](./docs/spec/acceptance-testing.md) を参照してください。
+> 詳細は [テストガイド](./docs/development/testing-guide.md) を参照してください。
 
 #### 開発ワークフロー
 1. 対策案を提示する
@@ -88,7 +88,7 @@ make acceptance-test-all
 ### 起動方法の選択フロー
 
 ```
-Agent層（ExpertAgent, GraphAiServer, myAgentDesk）を開発中？
+Agent層（mySwiftAgentCore, ExpertAgent, GraphAiServer, myAgentDesk）を開発中？
     ↓ Yes
 ./scripts/dev-hybrid.sh（Platform=Docker, Agent=ローカル）
     ↓ No
@@ -104,9 +104,11 @@ Agent層（ExpertAgent, GraphAiServer, myAgentDesk）を開発中？
 | JobQueue API | http://localhost:8001 | ジョブキュー管理 |
 | MyScheduler API | http://localhost:8002 | スケジューリング |
 | MyVault API | http://localhost:8003 | シークレット管理 |
-| ExpertAgent API | http://localhost:8004 | AIエージェント |
-| GraphAiServer API | http://localhost:8005 | ワークフロー実行 |
-| CommonUI | http://localhost:8501 | Web UI (Streamlit) |
+| ExpertAgent API | http://localhost:8004 | AIエージェント・Job Generator |
+| GraphAiServer API | http://localhost:8005 | GraphAI OSSワークフロー実行 |
+| **mySwiftAgentCore API** | **http://localhost:8006** | **メインワークフロー実行（推奨）** |
+| myAgentDesk | http://localhost:5173 | Web UI (SvelteKit) |
+| CommonUI | http://localhost:8501 | 管理UI (Streamlit) |
 | Langfuse | http://localhost:3001 | LLM Observability |
 
 ### 停止コマンド
@@ -117,7 +119,7 @@ make down        # 全サービス停止
 ./scripts/dev-start.sh stop
 ```
 
-**詳細**: [ローカル開発環境ガイド](./docs/ops/local-development.md)
+**詳細**: [ローカル開発環境ガイド](./docs/operations/local-development.md)
 
 ---
 
@@ -125,15 +127,15 @@ make down        # 全サービス停止
 
 | カテゴリ | ドキュメント | 内容 | 優先度 |
 |---------|------------|------|--------|
-| **開発フロー** | [01-development-workflow.md](./docs/claude/01-development-workflow.md) | アジャイル開発、Feature/Issue管理 | 🔴 高 |
-| **スラッシュコマンド** | [02-slash-commands.md](./docs/claude/02-slash-commands.md) | 利用可能なスラッシュコマンド一覧と使用方法 | 🔴 高 |
-| **ブランチ戦略** | [03-branch-strategy.md](./docs/claude/03-branch-strategy.md) | ブランチルール、PR戦略、リリース | 🔴 高 |
-| **品質基準** | [04-quality-standards.md](./docs/claude/04-quality-standards.md) | テスト方針、静的解析、CI/CD | 🔴 高 |
-| **並列開発** | [05-worktree-guide.md](./docs/claude/05-worktree-guide.md) | git worktree による並列開発 | 🟡 中 |
-| **エラー防止** | [06-ci-cd-prevention.md](./docs/claude/06-ci-cd-prevention.md) | GitHub Actions エラー再発防止 | 🟡 中 |
-| **文書管理** | [07-documentation-rules.md](./docs/claude/07-documentation-rules.md) | 作業ドキュメント管理ルール | 🟡 中 |
-| **Issue分割** | [08-issue-split.md](./docs/claude/08-issue-split.md) | Issue分割詳細ガイド、受入基準の2層構造 | 🔴 高 |
-| **ローカル開発環境** | [local-development.md](./docs/ops/local-development.md) | 起動方法比較、ポート構成、トラブルシューティング | 🟡 中 |
+| **開発フロー** | [workflow.md](./docs/development/workflow.md) | アジャイル開発、Feature/Issue管理 | 🔴 高 |
+| **スラッシュコマンド** | [slash-commands.md](./docs/development/slash-commands.md) | 利用可能なスラッシュコマンド一覧と使用方法 | 🔴 高 |
+| **ブランチ戦略** | [branch-strategy.md](./docs/development/branch-strategy.md) | ブランチルール、PR戦略、リリース | 🔴 高 |
+| **品質基準** | [quality-standards.md](./docs/development/quality-standards.md) | テスト方針、静的解析、CI/CD | 🔴 高 |
+| **並列開発** | [worktree-guide.md](./docs/development/worktree-guide.md) | git worktree による並列開発 | 🟡 中 |
+| **エラー防止** | [ci-cd-prevention.md](./docs/development/ci-cd-prevention.md) | GitHub Actions エラー再発防止 | 🟡 中 |
+| **文書管理** | [documentation-rules.md](./docs/development/documentation-rules.md) | 作業ドキュメント管理ルール | 🟡 中 |
+| **Issue分割** | [issue-split.md](./docs/development/issue-split.md) | Issue分割詳細ガイド、受入基準の2層構造 | 🔴 高 |
+| **ローカル開発環境** | [local-development.md](./docs/operations/local-development.md) | 起動方法比較、ポート構成、トラブルシューティング | 🟡 中 |
 
 ---
 
@@ -143,12 +145,13 @@ make down        # 全サービス停止
 
 | 状況 | 参照ドキュメント | 必須度 |
 |------|----------------|--------|
-| **新プロジェクトを追加する** | [NEW_PROJECT_SETUP.md](./docs/procedures/NEW_PROJECT_SETUP.md) | 🔴 必須 |
-| **GraphAI ワークフローを開発する** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | 🔴 必須 |
-| **アーキテクチャを理解する** | [architecture-overview.md](./docs/design/architecture-overview.md) | 🟡 推奨 |
-| **環境変数を設定する** | [environment-variables.md](./docs/design/environment-variables.md) | 🟡 推奨 |
-| **myVault連携を実装する** | [myvault-integration.md](./docs/design/myvault-integration.md) | 🟡 推奨 |
-| **デプロイメントを行う** | [deployment-guide.md](./docs/ops/deployment-guide.md) | 🟡 推奨 |
+| **新プロジェクトを追加する** | [new-project-setup.md](./docs/operations/new-project-setup.md) | 🔴 必須 |
+| **TaskFlowワークフローを開発する** | [API_REFERENCE.md](./mySwiftAgentCore/docs/API_REFERENCE.md) | 🔴 必須 |
+| **GraphAI OSSワークフローを開発する** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/features/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | 🟡 条件付き |
+| **アーキテクチャを理解する** | [overview.md](./docs/architecture/overview.md) | 🟡 推奨 |
+| **環境変数を設定する** | [environment-variables.md](./docs/reference/environment-variables.md) | 🟡 推奨 |
+| **myVault連携を実装する** | [myvault-integration.md](./docs/architecture/myvault-integration.md) | 🟡 推奨 |
+| **デプロイメントを行う** | [deployment.md](./docs/operations/deployment.md) | 🟡 推奨 |
 
 **重要**: 該当するドキュメントは作業開始前に必ず全文を読み、作業計画書 (`work-plan.md`) に参照を明記してください。
 
@@ -158,38 +161,40 @@ make down        # 全サービス停止
 
 | プロジェクト | 必須ドキュメント | 説明 |
 |-------------|----------------|------|
+| **mySwiftAgentCore** | [API_REFERENCE.md](./mySwiftAgentCore/docs/API_REFERENCE.md) | メインワークフローAPI仕様（TaskFlow生成・実行） |
+| **mySwiftAgentCore** | [taskflow-execution.md](./mySwiftAgentCore/docs/features/taskflow-execution.md) | TaskFlow実行エンジン仕様 |
 | **expertAgent** | [API_REFERENCE.md](./expertAgent/docs/API_REFERENCE.md) | 全API仕様 (Job Generator, Workflow Generator, Chat, Marp Report, Observability) |
-| **expertAgent** | [job-generation-workflow.md](./docs/spec/job-generation-workflow.md) | Job Generator仕様とLangGraphエージェント設計 |
-| **graphAiServer** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | ワークフロー生成ルール・利用可能Agent一覧 |
+| **expertAgent** | [job-generation-workflow.md](./docs/architecture/job-generation-workflow.md) | Job Generator仕様とLangGraphエージェント設計 |
+| **graphAiServer** | [GRAPHAI_WORKFLOW_GENERATION_RULES.md](./graphAiServer/docs/features/GRAPHAI_WORKFLOW_GENERATION_RULES.md) | GraphAI OSS用ワークフロー生成ルール |
 | **myAgentDesk** | [README.md](./myAgentDesk/README.md) | SvelteKitアーキテクチャ・API統合・トラブルシューティング |
-| **全サービス** | [service-dependencies.md](./docs/arch/service-dependencies.md) | サービス間依存関係・起動順序・通信フロー |
-| **全サービス** | [deployment-guide.md](./docs/ops/deployment-guide.md) | Docker Compose/Kubernetesデプロイ手順 |
-| **全サービス** | [acceptance-testing.md](./docs/spec/acceptance-testing.md) | 統一起動スクリプト・受入テスト効率化 |
+| **全サービス** | [service-dependencies.md](./docs/architecture/service-dependencies.md) | サービス間依存関係・起動順序・通信フロー |
+| **全サービス** | [deployment.md](./docs/operations/deployment.md) | Docker Compose/Kubernetesデプロイ手順 |
+| **全サービス** | [testing-guide.md](./docs/development/testing-guide.md) | 統一起動スクリプト・受入テスト効率化 |
 
 ---
 
 ## 🔍 用途別クイックリンク
 
 ### 新機能開発を始める
-→ [開発フロー](./docs/claude/01-development-workflow.md)、[スラッシュコマンド](./docs/claude/02-slash-commands.md)、[ブランチ戦略](./docs/claude/03-branch-strategy.md)
+→ [開発フロー](./docs/development/workflow.md)、[スラッシュコマンド](./docs/development/slash-commands.md)、[ブランチ戦略](./docs/development/branch-strategy.md)
 
 ### FeatureをIssueに分割する
-→ [Issue分割ガイド](./docs/claude/08-issue-split.md)、[開発フロー](./docs/claude/01-development-workflow.md)
+→ [Issue分割ガイド](./docs/development/issue-split.md)、[開発フロー](./docs/development/workflow.md)
 
 ### バグ修正を行う
-→ [ブランチ戦略](./docs/claude/03-branch-strategy.md)、[品質基準](./docs/claude/04-quality-standards.md)
+→ [ブランチ戦略](./docs/development/branch-strategy.md)、[品質基準](./docs/development/quality-standards.md)
 
 ### CI/CDエラーを解決する
-→ [エラー防止策](./docs/claude/06-ci-cd-prevention.md)
+→ [エラー防止策](./docs/development/ci-cd-prevention.md)
 
 ### 複数ブランチで並行作業する
-→ [worktreeガイド](./docs/claude/05-worktree-guide.md)
+→ [worktreeガイド](./docs/development/worktree-guide.md)
 
 ### 作業ドキュメントを作成する
-→ [ドキュメント管理](./docs/claude/07-documentation-rules.md)
+→ [ドキュメント管理](./docs/development/documentation-rules.md)
 
 ### 完成した機能をドキュメント化する
-→ [ドキュメント管理](./docs/claude/07-documentation-rules.md)、[スラッシュコマンド](./docs/claude/02-slash-commands.md)
+→ [ドキュメント管理](./docs/development/documentation-rules.md)、[スラッシュコマンド](./docs/development/slash-commands.md)
 
 ---
 
@@ -200,8 +205,8 @@ make down        # 全サービス停止
 通常開発を開始する際は、以下のファイルを事前に読み込むことを推奨します：
 
 1. **必須**: 本ファイル（CLAUDE.md）
-2. **開発時**: [開発フロー](./docs/claude/01-development-workflow.md)、[品質基準](./docs/claude/04-quality-standards.md)
-3. **新規プロジェクト時**: [NEW_PROJECT_SETUP.md](./docs/procedures/NEW_PROJECT_SETUP.md)
+2. **開発時**: [開発フロー](./docs/development/workflow.md)、[品質基準](./docs/development/quality-standards.md)
+3. **新規プロジェクト時**: [new-project-setup.md](./docs/operations/new-project-setup.md)
 
 ### パフォーマンス最適化
 
@@ -224,17 +229,148 @@ make down        # 全サービス停止
 
 ---
 
-## 📊 現在のプロジェクト一覧
+## ✅ Issue完遂チェックリスト【必須】
 
-| プロジェクト | 目的 | 技術スタック | 状態 |
+Issue完了前に以下をすべて確認すること。**1つでも未完了の場合、Issueは完了とみなさない。**
+
+### 受入条件の完全検証
+
+| チェック項目 | 確認方法 |
+|-------------|---------|
+| 全受入条件（AC-1〜AC-N）が実装されているか | Issue本文と実装を1つずつ照合 |
+| 各受入条件に対応するテストが存在するか | テストファイルで確認 |
+| 受入テストが全パスしているか | `pytest tests/acceptance/` 実行結果 |
+
+### コード品質の確認
+
+| チェック項目 | 確認コマンド |
+|-------------|-------------|
+| 静的解析エラーゼロ | `./scripts/pre-push-check-all.sh` |
+| カバレッジ90%以上 | pytest --cov 出力 |
+| デッドコードなし | Phase 2.7 実装検証結果 |
+
+### ドキュメント更新
+
+| チェック項目 | 対象 |
+|-------------|------|
+| API変更時 → API_REFERENCE.md更新 | `{project}/docs/API_REFERENCE.md` |
+| 設定変更時 → 環境変数ドキュメント更新 | `docs/reference/environment-variables.md` |
+| 新機能追加時 → README更新 | `{project}/README.md` |
+
+### 最終確認
+
+```bash
+# Issue完遂確認コマンド
+./scripts/pre-push-check-all.sh && echo "✅ 品質チェック合格"
+
+# 受入テスト実行
+uv run pytest tests/acceptance/test_issue_{番号}_*.py -v
+
+# 未対応の受入条件がないか確認
+gh issue view {番号} --json body | jq -r '.body' | grep -E "^\s*-\s*\["
+```
+
+---
+
+## 📚 ドキュメント配置ルール
+
+### 基本原則
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        docs/ (全体ドキュメント)                   │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 複数プロジェクトに関係する / プロジェクト横断的な内容          ││
+│  │ • システム全体のアーキテクチャ                                ││
+│  │ • 開発プロセス・ルール                                       ││
+│  │ • サービス間連携・依存関係                                    ││
+│  │ • 共通の運用手順                                             ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                   {project}/docs/ (プロジェクト固有)              │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ そのプロジェクトでしか使わない / 単独で完結する内容           ││
+│  │ • API仕様（API_REFERENCE.md）                               ││
+│  │ • プロジェクト固有の設計・アーキテクチャ                      ││
+│  │ • プロジェクト固有の機能仕様                                  ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 判断フローチャート
+
+```
+ドキュメントを作成する
+    │
+    ▼
+このドキュメントは単一プロジェクトでのみ使用される？
+    │
+    ├─ Yes → {project}/docs/ に配置
+    │
+    └─ No → 複数プロジェクトに関係する
+              │
+              ▼
+          プロジェクト間の連携・統合に関する内容？
+              │
+              ├─ Yes → docs/architecture/ に配置
+              │
+              └─ No → 開発プロセス・ルールに関する内容？
+                        │
+                        ├─ Yes → docs/development/ に配置
+                        │
+                        └─ No → docs/reference/ に配置
+```
+
+### 配置ルール詳細
+
+| カテゴリ | 配置場所 | 内容例 |
+|---------|---------|--------|
+| **システム全体構成** | `docs/architecture/` | overview.md, service-dependencies.md |
+| **開発プロセス** | `docs/development/` | workflow.md, quality-standards.md |
+| **運用手順** | `docs/operations/` | local-development.md, deployment.md |
+| **共通設定** | `docs/reference/` | environment-variables.md, glossary.md |
+| **プロジェクトAPI** | `{project}/docs/API_REFERENCE.md` | エンドポイント仕様 |
+| **プロジェクト機能** | `{project}/docs/features/` | 機能固有の仕様書 |
+
+---
+
+## 📊 プロジェクト構成
+
+### アーキテクチャ概要
+
+MySwiftAgentは以下の3層アーキテクチャで構成されています：
+
+| 層 | プロジェクト | 説明 |
+|----|------------|------|
+| **Platform** | myVault, jobqueue, Valkey | インフラ・データ基盤 |
+| **Agent** | expertAgent, mySwiftAgentCore, graphAiServer | AIエージェント・ワークフロー実行 |
+| **Frontend** | myAgentDesk, commonUI | ユーザーインターフェース |
+
+### プロジェクト別役割
+
+| プロジェクト | 役割 | 技術スタック | 備考 |
 |-------------|------|-------------|------|
-| `expertAgent` | AIエージェント基盤 | FastAPI + LangGraph | ✅ 開発中 |
-| `myscheduler` | ジョブスケジューリング | FastAPI + APScheduler | ✅ 本番運用中 |
-| `jobqueue` | ジョブキュー管理 | FastAPI + Redis | 🚀 準備中 |
-| `myVault` | シークレット管理 | FastAPI + SQLite | ✅ 本番運用中 |
-| `graphAiServer` | ワークフロー実行 | FastAPI + GraphAI | ✅ 開発中 |
-| `myAgentDesk` | Web UI | SvelteKit | ✅ 開発中 |
-| `commonUI` | 共通UIコンポーネント | TypeScript | ✅ 開発中 |
+| **mySwiftAgentCore** | **メインワークフロー実行エンジン** | TypeScript + TaskFlow | **基本的にこちらを使用** |
+| graphAiServer | GraphAI OSS連携用ワークフロー実行 | TypeScript + GraphAI | GraphAI OSSを使用する場合のみ |
+| expertAgent | AIエージェント基盤・Job Generator | FastAPI + LangGraph | ジョブ生成・管理 |
+| myAgentDesk | Web UI | SvelteKit | フロントエンド |
+| jobqueue | ジョブキュー管理 | FastAPI + SQLite | ジョブの永続化・実行管理 |
+| myVault | シークレット管理 | FastAPI + SQLite | APIキー等の安全な管理 |
+| myscheduler | ジョブスケジューリング | FastAPI + APScheduler | 定期実行 |
+| commonUI | 共通UIコンポーネント | Streamlit | 再利用可能なUI部品 |
+
+### mySwiftAgentCore vs graphAiServer の使い分け
+
+| 条件 | 使用するプロジェクト |
+|------|---------------------|
+| 通常のワークフロー実行 | **mySwiftAgentCore** |
+| TaskFlow形式のワークフロー | **mySwiftAgentCore** |
+| GraphAI OSS形式のワークフロー | graphAiServer |
+| 新規ワークフロー開発（デフォルト） | **mySwiftAgentCore** |
+
+**原則**: 基本的に**mySwiftAgentCore**を使用。GraphAI OSSを使用する場合に限りgraphAiServerを使用する。
 
 ---
 

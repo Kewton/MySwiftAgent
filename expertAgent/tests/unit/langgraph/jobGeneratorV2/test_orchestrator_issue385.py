@@ -150,11 +150,19 @@ class TestExecuteWorkflowGenWithCapabilities:
             ),
         }
 
-        await orchestrator._execute_workflow_gen(
-            task_identifiers,
-            interfaces,
-            project_id="test_project",
-        )
+        # Issue #396: Mock update_task_master_body_template_taskflow since
+        # _execute_workflow_gen now calls _update_task_masters_workflow
+        with patch(
+            "aiagent.langgraph.jobGeneratorV2.workflows.registration.task_master_utils"
+            ".update_task_master_body_template_taskflow",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            await orchestrator._execute_workflow_gen(
+                task_identifiers,
+                interfaces,
+                project_id="test_project",
+            )
 
         # Verify capabilities were fetched
         mock_client.fetch_capabilities.assert_called_once_with("test_project")

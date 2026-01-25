@@ -1,6 +1,21 @@
 # JobQueue
 
-FastAPI 上で **任意のHTTP API 呼び出し** をジョブとして非同期実行・永続化・監視するための軽量ジョブキュー。
+📋 **JobQueue** はジョブキュー管理サービスです。
+任意のHTTP API呼び出しをジョブとして非同期実行・永続化・監視します。
+
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Platform層 |
+| **役割** | ジョブキュー管理 |
+| **技術スタック** | Python + FastAPI + SQLite |
+| **ポート** | 8001 |
+
+## ドキュメント
+
+- **[docs/api/](./docs/api/)** - API仕様
+- **[docs/guides/](./docs/guides/)** - 使用ガイド
+
+## 機能
 
 - 🚀 **任意APIをジョブ化**：`method / url / headers / params / body / timeout` を指定して実行
 - 💾 **SQLite永続化**：シンプル導入、WALモードで高並行アクセスも対応

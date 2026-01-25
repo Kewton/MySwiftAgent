@@ -1,0 +1,27 @@
+{
+  "workflow_name": "task_004",
+  "description": "Workflow for task task_004",
+  "input_schema": {
+    "search_results": "array",
+    "keyword": "string"
+  },
+  "output_schema": {
+    "summary": "string"
+  },
+  "steps": [
+    {
+      "id": "generate_summary",
+      "type": "llm",
+      "config": {
+        "prompt": "Based on the search results for the keyword '{{inputs.keyword}}', create a comprehensive summary. Search results: {{inputs.search_results}}",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "system_prompt": "You are a helpful assistant that creates concise and informative summaries based on search results."
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "summary": "${generate_summary.content}"
+  }
+}

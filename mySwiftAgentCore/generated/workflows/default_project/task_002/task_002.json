@@ -1,0 +1,32 @@
+{
+  "workflow_name": "task_002",
+  "description": "Workflow for task task_002",
+  "input_schema": {
+    "email_prompt": "string"
+  },
+  "output_schema": {
+    "recipient_email": "string"
+  },
+  "steps": [
+    {
+      "id": "extract_email",
+      "type": "api_rest",
+      "config": {
+        "method": "POST",
+        "url": "http://localhost:8004/v1/aiagent/utility/jsonoutput",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_input": "${inputs.email_prompt}",
+          "system_prompt": "Extract the recipient email address from the given text. Return a JSON object with the field 'recipient_email' containing the email address as a string. If no email is found, return an empty string."
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "recipient_email": "${extract_email.recipient_email}"
+  }
+}

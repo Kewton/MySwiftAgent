@@ -599,3 +599,6 @@ commonUI/data/
 langfuse/.env
 langfuse/docker-compose-data/
 langfuse/data/
+
+# Archive directory
+.archive/

@@ -92,7 +92,9 @@ TodoWriteツールで作業計画を作成してください：
 - [ ] Phase 4: リファクタリング
 - [ ] Phase 5: 進捗報告
 - [ ] Phase 5.5: 品質チェック【必須】（pre-push-check-all.sh）
-- [ ] Phase 6: ドキュメンテーション【推奨】
+- [ ] Phase 6: ドキュメンテーション【必須】（/doc-register実行）
+- [ ] Phase 7: リグレッションテスト【必須】
+- [ ] Phase 8: Issue完遂チェック【必須】
 ```
 
 各フェーズ開始時に`in_progress`に、完了時に`completed`に更新してください。
@@ -2170,18 +2172,21 @@ TodoWriteでPhase 5.5を`completed`に、Phase 6を`in_progress`に設定。
 
 ---
 
-### Phase 6: ドキュメンテーション【推奨】
+### Phase 6: ドキュメンテーション【必須】（Issue #400強化）
 
 **目的**: 実装した機能のドキュメントを作成・更新します。
 
+**重要**: `/doc-register` コマンドを必ず実行し、作業ドキュメントの恒久化を行います。
+
 #### スキップ条件
 
-以下の場合はPhase 6をスキップできます：
+以下のラベルが付与されているIssueの場合のみ、Phase 6をスキップできます：
 - `internal` ラベル（内部リファクタリング）
 - `test-only` ラベル（テストコードのみの変更）
 - `ci-only` ラベル（CI/CD設定のみの変更）
+- `docs-only` ラベル（ドキュメントのみの変更）
 
-**上記以外の機能追加・変更では、ドキュメンテーションを推奨します。**
+**上記以外の機能追加・変更では、ドキュメンテーションは必須です。**
 
 #### 6-1. ドキュメンテーション対象の判定
 
@@ -2347,9 +2352,159 @@ dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/documentation-r
 }
 ```
 
-#### 6-6. 次のフェーズへ
+#### 6-6. /doc-register 自動実行【必須】（Issue #400追加）
 
-TodoWriteでPhase 6を`completed`に設定。
+作業ドキュメントを恒久ドキュメントに統合します：
+
+```
+/doc-register {issue_number}
+```
+
+**実行内容**:
+- `dev-reports/feature/issue/{issue_number}/` の作業ドキュメントを確認
+- 恒久化すべきドキュメントを `docs/` または `{project}/docs/` に移行
+- INDEX.md への参照追加
+
+#### 6-7. 次のフェーズへ
+
+TodoWriteでPhase 6を`completed`に、Phase 7を`in_progress`に設定。
+
+---
+
+### Phase 7: リグレッションテスト【必須】（Issue #400追加）
+
+**目的**: 実装した変更が既存機能を壊していないことを確認します。
+
+#### 7-1. リグレッションテスト対象の判定
+
+| プロジェクト | リグレッションテスト内容 |
+|-------------|------------------------|
+| expertAgent | 全APIエンドポイントの疎通確認 |
+| graphAiServer | 既存ワークフローの実行確認 |
+| mySwiftAgentCore | TaskFlow実行の動作確認 |
+| myAgentDesk | ジョブ生成・実行のE2E確認【重要】 |
+| jobqueue | ジョブキュー操作の動作確認 |
+
+#### 7-2. myAgentDeskリグレッションテスト【必須】（Issue #400追加）
+
+**重要**: myAgentDeskを使用するIssueの場合、以下のPlaywrightテストを実行：
+
+```bash
+cd myAgentDesk
+npm test -- --run tests/e2e/regression/job-flow.spec.ts
+```
+
+**テスト内容**:
+1. ジョブ一覧ページの表示
+2. 新規ジョブの作成
+3. ジョブの実行
+4. 実行結果の確認
+5. ジョブの削除
+
+#### 7-3. リグレッションテスト実行
+
+プロジェクトに応じて適切なテストを実行：
+
+```bash
+# Python プロジェクト
+uv run pytest tests/ -v --ignore=tests/acceptance/
+
+# TypeScript プロジェクト
+npm test
+
+# E2Eテスト
+./scripts/e2e/myswiftagentcore/e2e-test.sh
+```
+
+#### 7-4. 結果判定
+
+| 結果 | 次のアクション |
+|------|---------------|
+| 全テストパス | Phase 8へ進む |
+| テスト失敗あり | 失敗したテストを修正後、Phase 7を再実行 |
+
+TodoWriteでPhase 7を`completed`に、Phase 8を`in_progress`に設定。
+
+---
+
+### Phase 8: Issue完遂チェック【必須】（Issue #400追加）
+
+**目的**: Issueの全受入条件が満たされていることを最終確認します。
+
+#### 8-1. 受入条件の完全検証
+
+Issue本文から受入条件を抽出し、1つずつ検証：
+
+```bash
+# Issue本文から受入条件を取得
+gh issue view {issue_number} --json body | jq -r '.body' | grep -A 100 "## 受入条件"
+```
+
+**検証チェックリスト**:
+
+| 受入条件 | 実装状況 | テスト | ドキュメント |
+|---------|---------|--------|------------|
+| AC-1: {条件} | ✅/❌ | ✅/❌ | ✅/❌ |
+| AC-2: {条件} | ✅/❌ | ✅/❌ | ✅/❌ |
+| ... | | | |
+
+#### 8-2. 成果物の確認
+
+work-plan.md に記載された成果物が全て存在するか確認：
+
+```bash
+# 成果物チェック
+cat dev-reports/feature/issue/{issue_number}/work-plan.md | grep -A 20 "成果物チェックリスト"
+```
+
+#### 8-3. Definition of Done の確認
+
+| チェック項目 | 状態 |
+|-------------|------|
+| 全受入条件が実装されている | ✅/❌ |
+| 単体テストカバレッジ90%以上 | ✅/❌ |
+| 結合テストが存在する | ✅/❌ |
+| 受入テストが全パス | ✅/❌ |
+| 静的解析エラーゼロ | ✅/❌ |
+| ドキュメントが更新されている | ✅/❌ |
+| リグレッションテストが全パス | ✅/❌ |
+
+#### 8-4. 結果判定
+
+##### ケース1: 全条件達成
+
+```
+✅ Issue #{issue_number} の全受入条件が達成されました！
+
+## 完了サマリ
+- 受入条件: 5/5 達成
+- テストカバレッジ: 92.5%
+- リグレッションテスト: 全パス
+- ドキュメント: 更新済み
+```
+
+→ **全フェーズ完了**
+
+##### ケース2: 未達成項目あり
+
+```
+⚠️ Issue #{issue_number} に未達成の受入条件があります
+
+## 未達成項目
+- AC-3: {未達成の条件}
+  - 理由: {未達成の理由}
+  - 対応: {必要な対応}
+
+## 次のアクション
+1. 未達成項目を実装
+2. Phase 2（TDD実装）から再実行
+```
+
+→ **未達成項目を修正後、該当Phaseから再実行**
+
+#### 8-5. 最終完了
+
+TodoWriteでPhase 8を`completed`に設定。
 
 **全フェーズ完了後**:
 ```
@@ -2361,6 +2516,8 @@ TodoWriteでPhase 6を`completed`に設定。
 - リファクタリング: ✅ 成功
 - 品質チェック: ✅ 成功（pre-push-check-all.sh パス）
 - ドキュメント: ✅ 完了（2ファイル更新）
+- リグレッションテスト: ✅ 全パス
+- Issue完遂チェック: ✅ 全受入条件達成
 
 ## 次のステップ
 1. `git add .` でステージング
@@ -2487,7 +2644,9 @@ dev-reports/feature/issue/{issue_number}/
 - ✅ Phase 4: リファクタリング完了（または失敗時は理由報告）
 - ✅ Phase 5: 進捗レポート作成完了
 - ✅ Phase 5.5: 品質チェック成功（pre-push-check-all.sh 全パス）【必須】
-- ✅ Phase 6: ドキュメンテーション完了（または該当なしの場合はスキップ）【推奨】
+- ✅ Phase 6: ドキュメンテーション完了（/doc-register実行済み）【必須】（Issue #400強化）
+- ✅ Phase 7: リグレッションテスト成功【必須】（Issue #400追加）
+- ✅ Phase 8: Issue完遂チェック成功（全受入条件達成）【必須】（Issue #400追加）
 
 ---
 

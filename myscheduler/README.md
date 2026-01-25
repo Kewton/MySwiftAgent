@@ -1,7 +1,18 @@
 # MyScheduler
 
-🕐 **MyScheduler** は、外部REST APIを柔軟にスケジュール実行するマイクロサービスです。
-FastAPIでジョブ管理用のRESTエンドポイントを公開し、APSchedulerでcron/interval/dateの各トリガを扱い、SQLiteにジョブを永続化します。
+🕐 **MyScheduler** はジョブスケジューリングサービスです。
+外部REST APIを柔軟にスケジュール実行します。
+
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Platform層 |
+| **役割** | ジョブスケジューリング |
+| **技術スタック** | Python + FastAPI + APScheduler |
+| **ポート** | 8002 |
+
+## ドキュメント
+
+- **[API Reference](./docs/API_REFERENCE.md)** - 全APIエンドポイント仕様
 
 ## ✨ 特徴
 

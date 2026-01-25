@@ -303,6 +303,7 @@ export interface CapabilityMetadata {
  * - Examples with TaskFlow step format
  * - Response schema for output documentation
  * - Rich metadata including use_cases
+ * Issue #396: Added _internal for endpoint URL resolution
  *
  * Used by PromptBuilder to create context-rich prompts
  */
@@ -334,6 +335,12 @@ export const CapabilityForPromptSchema = z.object({
     use_cases: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
   }).passthrough().optional(),
+  // Issue #396: Internal implementation details for endpoint URL resolution
+  _internal: z.object({
+    endpoint: z.string().optional(),
+    method: z.string().optional(),
+    timeout_ms: z.number().optional(),
+  }).optional(),
 });
 
 export type CapabilityForPrompt = z.infer<typeof CapabilityForPromptSchema>;

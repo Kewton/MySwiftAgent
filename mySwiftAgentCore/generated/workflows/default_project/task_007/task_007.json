@@ -1,0 +1,50 @@
+{
+  "workflow_name": "task_007",
+  "description": "Send email workflow",
+  "input_schema": {
+    "recipient_email": "string",
+    "email_subject": "string",
+    "email_body": "string"
+  },
+  "output_schema": {
+    "status": "string",
+    "message": "string"
+  },
+  "steps": [
+    {
+      "id": "send_email",
+      "type": "api_rest",
+      "description": "Send email using Gmail capability",
+      "config": {
+        "method": "POST",
+        "url": "http://localhost:8004/v1/utility/gmail/send",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "to": "${inputs.recipient_email}",
+          "subject": "${inputs.email_subject}",
+          "body": "${inputs.email_body}"
+        },
+        "timeout_ms": 30000
+      },
+      "params": {}
+    },
+    {
+      "id": "format_response",
+      "type": "transform",
+      "description": "Format the response",
+      "config": {
+        "mapping": {
+          "status": "steps.send_email.status",
+          "message": "steps.send_email.message_id"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "status": "${format_response.status}",
+    "message": "${format_response.message}"
+  }
+}

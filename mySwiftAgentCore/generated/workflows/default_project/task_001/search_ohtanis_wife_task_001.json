@@ -1,0 +1,55 @@
+{
+  "workflow_name": "search_ohtanis_wife_task_001",
+  "description": "Search for information about Ohtani's wife",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "result": {
+        "type": "string"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "search_ohtani_wife",
+      "type": "api_rest",
+      "config": {
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "method": "GET",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "params": {
+        "q": "$input.query",
+        "key": "$env.GOOGLE_API_KEY",
+        "cx": "$env.GOOGLE_SEARCH_ENGINE_ID"
+      }
+    },
+    {
+      "id": "summarize_results",
+      "type": "llm",
+      "config": {
+        "prompt": "Based on the following search results about Ohtani's wife, provide a comprehensive summary of the information found: {{steps.search_ohtani_wife.items}}",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "system_prompt": "You are a helpful assistant that provides accurate and factual information based on search results."
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "result": "$steps.summarize_results.content"
+  }
+}

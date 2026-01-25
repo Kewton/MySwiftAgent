@@ -1,0 +1,36 @@
+{
+  "workflow_name": "test_task_test_001",
+  "description": "Test description",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "keyword": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "keyword"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "result": {
+        "type": "string"
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "process_keyword",
+      "type": "transform",
+      "config": {
+        "template": "Processed keyword: {{input.keyword}}"
+      },
+      "params": {}
+    }
+  ],
+  "output": {
+    "result": "$steps.process_keyword"
+  }
+}

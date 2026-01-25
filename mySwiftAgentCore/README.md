@@ -1,8 +1,19 @@
 # mySwiftAgentCore
 
-mySwiftAgentCore is the core TypeScript module for MySwiftAgent, providing shared components, context management, and service integration capabilities.
+🚀 **mySwiftAgentCore** はMySwiftAgentの**メインワークフロー実行エンジン**です。
+TaskFlow形式のワークフロー生成・実行を担当します。
 
-## Overview
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Agent層 |
+| **役割** | TaskFlowワークフロー実行（推奨） |
+| **技術スタック** | TypeScript + Express |
+| **ポート** | 8006 |
+
+> **Note**: ワークフロー実行は基本的にmySwiftAgentCoreを使用してください。
+> GraphAI OSS形式を使用する場合のみgraphAiServerを使用します。
+
+## 概要
 
 This module provides:
 
@@ -93,7 +104,10 @@ npm run lint
 
 For detailed specifications, see:
 
-- **[NodeExecutionContext Design Specification](../docs/design/node-execution-context.md)** - Complete guide for node developers on using execution context, template syntax, and implementation patterns.
+- **[API Reference](./docs/API_REFERENCE.md)** - 全APIエンドポイント仕様
+- **[TaskFlow実行エンジン](./docs/features/taskflow-execution.md)** - 実行エンジンの詳細仕様
+- **[ノード実行コンテキスト](./docs/internals/node-execution-context.md)** - ノード開発者向けコンテキスト仕様
+- **[TaskFlow形式仕様](../docs/reference/taskflow-format.md)** - ワークフロー定義形式
 
 ### Context Management
 

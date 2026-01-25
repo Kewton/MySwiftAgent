@@ -1,7 +1,18 @@
 # CommonUI
 
-🎨 **CommonUI** は、MySwiftAgentの共通UIコンポーネントとStreamlitアプリケーションを提供するプロジェクトです。
-JobQueueとMyScheduler向けの統一されたWeb UIを通じて、直感的なジョブ管理・スケジューリング操作を実現します。
+🎨 **CommonUI** はMySwiftAgentの共通UIコンポーネントを提供するプロジェクトです。
+Streamlitベースの管理UIを提供します。
+
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Frontend層 |
+| **役割** | 共通UIコンポーネント |
+| **技術スタック** | Python + Streamlit |
+| **ポート** | 8501 |
+
+## ドキュメント
+
+- **[docs/README.md](./docs/README.md)** - コンポーネント仕様
 
 ## ✨ 特徴
 

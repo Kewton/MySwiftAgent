@@ -1,10 +1,23 @@
 # myVault
 
-> Secure secrets management for the **MySwiftAgent** ecosystem. Currently in pre-alpha and evolving toward a production-ready vault service.
+🔐 **myVault** はMySwiftAgentのシークレット管理サービスです。
+APIキーや認証情報を安全に保管・提供します。
+
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Platform層 |
+| **役割** | シークレット管理 |
+| **技術スタック** | Python + FastAPI + SQLite |
+| **ポート** | 8003 |
+
+## ドキュメント
+
+- **[docs/](./docs/)** - 詳細ドキュメント
+- **[myVault連携ガイド](../docs/architecture/myvault-integration.md)** - 他サービスとの連携方法
 
 ---
 
-## 🧭 Project Status
+## 🧭 プロジェクト状況
 
 - **Stage:** Pre-alpha (design and groundwork in progress)
 - **Goal:** Deliver a lightweight, local-first secrets manager that can be upgraded to enterprise-grade tooling without breaking changes

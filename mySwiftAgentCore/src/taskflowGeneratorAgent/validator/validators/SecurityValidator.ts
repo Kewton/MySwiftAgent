@@ -310,8 +310,18 @@ export class SecurityValidator implements Validator {
           }
         }
 
-        // Apply general dangerous patterns in all contexts
-        this.checkPatterns(obj, path, GENERAL_DANGEROUS_PATTERNS, errors, warnings, false);
+        // Apply general dangerous patterns based on context
+        // Skip SQL-related patterns for JavaScript/code context (they don't apply to JS code)
+        if (contextType === ValidationContextType.JAVASCRIPT_SANDBOX) {
+          // Filter out SQL-related patterns for JavaScript context
+          const jsApplicablePatterns = GENERAL_DANGEROUS_PATTERNS.filter(
+            (p) => !p.code.startsWith('SQL_')
+          );
+          this.checkPatterns(obj, path, jsApplicablePatterns, errors, warnings, false);
+        } else {
+          // Apply all general dangerous patterns in other contexts
+          this.checkPatterns(obj, path, GENERAL_DANGEROUS_PATTERNS, errors, warnings, false);
+        }
 
         // Apply sensitive data patterns (warnings only)
         this.checkPatterns(obj, path, SENSITIVE_DATA_PATTERNS, errors, warnings, true);

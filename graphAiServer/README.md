@@ -1,8 +1,25 @@
 # Graph AI Server
 
-🚀 Graph AI Server is a TypeScript/Node.js microservice for MySwiftAgent that provides graph-based AI functionality using GraphAI framework.
+🚀 **Graph AI Server** はGraphAI OSSを使用したワークフロー実行サービスです。
 
-## Features
+| 項目 | 値 |
+|------|-----|
+| **レイヤー** | Agent層 |
+| **役割** | GraphAI OSS連携ワークフロー実行 |
+| **技術スタック** | TypeScript + Express + GraphAI |
+| **ポート** | 8005 |
+
+> **Note**: 通常のワークフロー実行はmySwiftAgentCoreを使用してください。
+> GraphAI OSS固有の機能が必要な場合のみgraphAiServerを使用します。
+
+## ドキュメント
+
+- **[API Endpoints](./docs/API_ENDPOINTS.md)** - 全APIエンドポイント仕様
+- **[ワークフロー生成ルール](./docs/features/GRAPHAI_WORKFLOW_GENERATION_RULES.md)** - GraphAIワークフロー生成
+- **[利用可能Agent](./docs/reference/AVAILABLE_AGENTS.md)** - 使用可能なAgent一覧
+- **[トラブルシューティング](./docs/troubleshooting/COMMON_ERRORS.md)** - よくあるエラーと解決方法
+
+## 機能
 
 - ⚡ Fast and lightweight Express server
 - 🧠 GraphAI framework integration for complex AI workflows
