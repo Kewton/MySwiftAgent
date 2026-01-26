@@ -277,6 +277,12 @@ class MasterManagerSubWorkflow:
         # Within same dependency level, tasks are sub-sorted by priority
         sorted_tasks = topological_sort_tasks(tasks)
 
+        # Issue #408: Get user_input_schema for validation
+        # The first task receives user input directly, so its input_schema
+        # reflects what the user provides. Used to validate field names.
+        user_input_schema = self._get_user_input_schema(sorted_tasks, interfaces)
+        logger.debug("Issue #408: Retrieved user_input_schema for validation")
+
         # Step 1: Create InterfaceMasters
         interface_masters: list[InterfaceMasterInfo] = []
         task_interface_mapping: dict[str, dict[str, str]] = {}
@@ -355,11 +361,13 @@ class MasterManagerSubWorkflow:
 
             # Build body template for task chaining
             # Issue #403: Pass task, interfaces, and task_order_map for multi-dependency support
+            # Issue #408: Pass user_input_schema for fallback field validation
             body_template = self._build_body_template(
                 order=order,
                 task=task,
                 interfaces=interfaces,
                 task_order_map=task_order_map,
+                user_input_schema=user_input_schema,
             )
 
             # Issue #358: Validate body_template before creating TaskMaster
@@ -371,11 +379,13 @@ class MasterManagerSubWorkflow:
                     for t in sorted_tasks[:order]
                     if t.id in interfaces
                 ]
+                # Issue #408: Pass user_input_schema for user input field validation
                 validation_result = self._body_template_validator.validate(
                     body_template=body_template,
                     input_schema=interface.input_schema,
                     task_count=order,
                     task_output_schemas=preceding_output_schemas,
+                    user_input_schema=user_input_schema,
                 )
                 if not validation_result.is_valid:
                     error_messages = "; ".join(
@@ -491,6 +501,7 @@ class MasterManagerSubWorkflow:
         task: TaskDefinition | None = None,
         interfaces: dict[str, InterfaceSchema] | None = None,
         task_order_map: dict[str, int] | None = None,
+        user_input_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Build body template for task chaining.
 
@@ -513,6 +524,8 @@ class MasterManagerSubWorkflow:
             task: Optional TaskDefinition for interface-aware template generation
             interfaces: Optional interface schemas for field resolution
             task_order_map: Optional mapping from task_id to execution order
+            user_input_schema: Optional user input schema for validating fallback
+                field references (Issue #408)
 
         Returns:
             Body template dict
@@ -542,10 +555,12 @@ class MasterManagerSubWorkflow:
                 and task.id in interfaces
             ):
                 # Build field-level inputs dict
+                # Issue #408: Pass user_input_schema for fallback field validation
                 return self._build_multi_dependency_template(
                     task=task,
                     interfaces=interfaces,
                     task_order_map=task_order_map,
+                    user_input_schema=user_input_schema,
                 )
 
             # Legacy behavior: subsequent tasks receive previous task's output
@@ -576,15 +591,20 @@ class MasterManagerSubWorkflow:
         task: TaskDefinition,
         interfaces: dict[str, InterfaceSchema],
         task_order_map: dict[str, int],
+        user_input_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Build body template with multi-dependency field aggregation.
 
         Issue #403: Creates inputs dict where each field references its source task.
+        Issue #408: Added user_input_schema for field validation on fallback.
 
         Args:
             task: Task definition with dependencies
             interfaces: Interface schemas for all tasks
             task_order_map: Mapping from task_id to execution order
+            user_input_schema: Optional user input schema for validating fallback
+                field references. When provided, logs warning if fallback field
+                does not exist in user_input_schema.
 
         Returns:
             Body template with field-level input references
@@ -594,6 +614,13 @@ class MasterManagerSubWorkflow:
 
         # Issue #403: System fields that are handled separately (not part of inputs)
         system_fields = {"project"}
+
+        # Issue #408: Get valid user input fields for validation
+        valid_user_input_fields = set()
+        if user_input_schema is not None:
+            valid_user_input_fields = set(
+                user_input_schema.get("properties", {}).keys()
+            )
 
         inputs: dict[str, str] = {}
 
@@ -627,6 +654,18 @@ class MasterManagerSubWorkflow:
                     field_name,
                     task.id,
                 )
+
+                # Issue #408: Check if fallback field exists in user_input_schema
+                if user_input_schema is not None:
+                    if field_name not in valid_user_input_fields:
+                        logger.warning(
+                            "Issue #408: Fallback field '%s' not found in "
+                            "user_input_schema. Available fields: %s. "
+                            "The LLM may have changed the field name.",
+                            field_name,
+                            sorted(valid_user_input_fields),
+                        )
+
                 inputs[field_name] = f"{{{{job.body.user_input.{field_name}}}}}"
 
         return {
@@ -634,6 +673,37 @@ class MasterManagerSubWorkflow:
             "inputs": inputs,
             "project": "{{job.body.project}}",
         }
+
+    def _get_user_input_schema(
+        self,
+        sorted_tasks: list[TaskDefinition],
+        interfaces: dict[str, InterfaceSchema],
+    ) -> dict[str, Any] | None:
+        """Get user input schema from the first task in topological order.
+
+        Issue #408: The first task receives user input directly, so its input_schema
+        reflects what the user provides. This is used to validate field names in
+        subsequent tasks.
+
+        Args:
+            sorted_tasks: Tasks sorted by topological order
+            interfaces: Interface schemas for all tasks
+
+        Returns:
+            Input schema from the first task, or None if not available
+        """
+        if not sorted_tasks:
+            return None
+
+        first_task_id = sorted_tasks[0].id
+        if first_task_id not in interfaces:
+            logger.warning(
+                "Issue #408: First task '%s' not found in interfaces",
+                first_task_id,
+            )
+            return None
+
+        return interfaces[first_task_id].input_schema
 
     async def _create_interface_master(
         self,

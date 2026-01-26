@@ -1,6 +1,7 @@
 """Body template validator for body_template integrity checking.
 
 Issue #358: Validate body_template references against schemas.
+Issue #408: Validate user_input field names against user_input_schema.
 
 This module provides:
 - BodyTemplateValidator: Main validator class
@@ -13,11 +14,14 @@ Validation checks:
 1. job.body.X references exist in input_schema
 2. tasks[N].output_data references have valid N < task_count
 3. tasks[N].output_data.field references exist in task's output_schema
+4. user_input.X field references exist in user_input_schema (Issue #408)
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -384,14 +388,20 @@ class BodyTemplateValidator:
         input_schema: dict[str, Any],
         task_count: int,
         task_output_schemas: list[dict[str, Any]],
+        user_input_schema: dict[str, Any] | None = None,
     ) -> BodyTemplateValidationResult:
         """Validate body_template against schemas.
+
+        Issue #408: Added user_input_schema parameter for user input field validation.
 
         Args:
             body_template: Body template dictionary to validate
             input_schema: Input schema for job.body validation
             task_count: Number of preceding tasks
             task_output_schemas: Output schemas for each preceding task
+            user_input_schema: Optional user input schema for validating user_input.X
+                references. When provided, validates that references to
+                job.body.user_input.X match fields in user_input_schema.
 
         Returns:
             BodyTemplateValidationResult with errors and warnings
@@ -412,6 +422,30 @@ class BodyTemplateValidator:
             self._validate_task_references(extracted, task_count, task_output_schemas)
         )
 
+        # Issue #408: Validate user_input field references
+        user_input_warnings = self._validate_user_input_fields(
+            body_template=body_template,
+            user_input_schema=user_input_schema,
+        )
+
+        # Issue #408: Check if strict validation is enabled
+        strict_validation = os.environ.get(
+            "BODY_TEMPLATE_STRICT_VALIDATION", "false"
+        ).lower() in ("true", "1", "yes")
+
+        if strict_validation:
+            # Convert warnings to errors in strict mode
+            for warning in user_input_warnings:
+                errors.append(
+                    BodyTemplateValidationError(
+                        error_type="USER_INPUT_FIELD_MISMATCH",
+                        message=warning.message,
+                        location=warning.location,
+                    )
+                )
+        else:
+            warnings.extend(user_input_warnings)
+
         # Get required job body fields
         required_fields = extracted.get_required_job_body_fields()
 
@@ -420,6 +454,65 @@ class BodyTemplateValidator:
             warnings=warnings,
             required_job_body_fields=required_fields,
         )
+
+    def _validate_user_input_fields(
+        self,
+        body_template: dict[str, Any],
+        user_input_schema: dict[str, Any] | None,
+    ) -> list[BodyTemplateValidationWarning]:
+        """Validate user_input.X field references against user_input_schema.
+
+        Issue #408: Check that references to job.body.user_input.X exist in user_input_schema.
+        This helps detect when LLM changes field names (e.g., email -> recipient_email).
+
+        Args:
+            body_template: Body template dictionary to validate
+            user_input_schema: User input schema with properties to check against.
+                If None, validation is skipped for backward compatibility.
+
+        Returns:
+            List of warnings for mismatched field names
+        """
+        warnings: list[BodyTemplateValidationWarning] = []
+
+        # Skip validation if no user_input_schema provided (backward compatibility)
+        if user_input_schema is None:
+            return warnings
+
+        # Get valid field names from user_input_schema
+        valid_fields = set(user_input_schema.get("properties", {}).keys())
+
+        # Pattern to match user_input.X references
+        # Matches: {{job.body.user_input.field_name}}
+        user_input_pattern = re.compile(
+            r"\{\{job\.body\.user_input\.([a-zA-Z_][a-zA-Z0-9_]*)\}\}"
+        )
+
+        # Convert body_template to string for pattern matching
+        template_str = str(body_template)
+
+        # Find all user_input.X references
+        matches = user_input_pattern.findall(template_str)
+
+        for field_name in matches:
+            if field_name not in valid_fields:
+                warnings.append(
+                    BodyTemplateValidationWarning(
+                        warning_type="USER_INPUT_FIELD_MISMATCH",
+                        message=f"Field '{field_name}' not found in user_input_schema. "
+                        f"Available fields: {sorted(valid_fields)}. "
+                        "The LLM may have changed the field name.",
+                        location=f"job.body.user_input.{field_name}",
+                    )
+                )
+                logger.warning(
+                    "Issue #408: User input field mismatch - '%s' not in schema. "
+                    "Available: %s",
+                    field_name,
+                    sorted(valid_fields),
+                )
+
+        return warnings
 
     def _validate_job_body_references(
         self,

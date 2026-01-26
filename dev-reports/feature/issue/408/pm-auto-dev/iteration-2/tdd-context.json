@@ -1,0 +1,86 @@
+{
+  "issue_number": 408,
+  "iteration": 2,
+  "retry_reason": "Phase 2.7 検証で デッドコード・空パラメータを検出（統合率 50%）",
+  "dead_code_fixes": [
+    {
+      "feature_id": "F2",
+      "feature": "_get_user_input_schema()",
+      "action": "_register_masters() 内で呼び出しを追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "expected_integration": "user_input_schema = self._get_user_input_schema(sorted_tasks, interfaces)"
+    },
+    {
+      "feature_id": "F3",
+      "feature": "user_input_schema parameter in validate()",
+      "action": "validate() 呼び出し時に user_input_schema を渡す",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "expected_integration": "user_input_schema=user_input_schema を引数に追加"
+    },
+    {
+      "feature_id": "F4",
+      "feature": "user_input_schema parameter in _build_multi_dependency_template()",
+      "action": "_build_multi_dependency_template() 呼び出し時に user_input_schema を渡す",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "expected_integration": "user_input_schema=user_input_schema を引数に追加"
+    }
+  ],
+  "implementation_tasks": [
+    {
+      "id": "T2.1",
+      "description": "_register_masters() で _get_user_input_schema() を呼び出す",
+      "type": "integration",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_point": "_register_masters() メソッド内、sorted_tasks取得後",
+      "code_change": "# After sorted_tasks is obtained (around line 278)\nuser_input_schema = self._get_user_input_schema(sorted_tasks, interfaces)"
+    },
+    {
+      "id": "T2.2",
+      "description": "_build_body_template() シグネチャに user_input_schema 追加",
+      "type": "signature_change",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_point": "_build_body_template() メソッド定義",
+      "code_change": "def _build_body_template(..., user_input_schema: dict[str, Any] | None = None) -> dict[str, Any]:"
+    },
+    {
+      "id": "T2.3",
+      "description": "_build_body_template() 呼び出し時に user_input_schema を渡す",
+      "type": "integration",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_point": "_register_masters() から _build_body_template() 呼び出し箇所",
+      "code_change": "body_template = self._build_body_template(..., user_input_schema=user_input_schema)"
+    },
+    {
+      "id": "T2.4",
+      "description": "validate() 呼び出し時に user_input_schema を渡す",
+      "type": "integration",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_point": "_register_masters() から validate() 呼び出し箇所",
+      "code_change": "validation_result = self._body_template_validator.validate(..., user_input_schema=user_input_schema)"
+    },
+    {
+      "id": "T2.5",
+      "description": "_build_multi_dependency_template() 呼び出し時に user_input_schema を渡す",
+      "type": "integration",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_point": "_build_body_template() から _build_multi_dependency_template() 呼び出し箇所",
+      "code_change": "return self._build_multi_dependency_template(..., user_input_schema=user_input_schema)"
+    }
+  ],
+  "already_completed": [
+    "_validate_user_input_fields() メソッドの実装",
+    "_get_user_input_schema() ヘルパーメソッドの実装",
+    "BodyTemplateValidator.validate() シグネチャ変更",
+    "_build_multi_dependency_template() シグネチャ変更",
+    "プロンプトファイルの更新",
+    "単体テストの作成（17テスト）",
+    "結合テストの作成（5テスト）"
+  ],
+  "target_coverage": 90,
+  "acceptance_criteria": [
+    "AC-2: フィールド名不整合の検出機能が実際のワークフローで動作",
+    "AC-3: Body Template検証時にuser_input_schemaが渡される",
+    "AC-4: _build_multi_dependency_templateのフォールバック時にuser_input_schemaが検証される",
+    "AC-5: 警告ログが実際のワークフローで出力される"
+  ]
+}

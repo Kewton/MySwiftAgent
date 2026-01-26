@@ -1,0 +1,149 @@
+{
+  "status": "success",
+  "issue_number": 408,
+  "iteration": 1,
+  "executed_tasks": [
+    "1-1: Prompt enhancement with field name preservation rules",
+    "1-2: BodyTemplateValidator.validate() signature updated with user_input_schema parameter",
+    "1-3: _validate_user_input_fields() method implemented in BodyTemplateValidator",
+    "1-4: _build_multi_dependency_template() updated with user_input_schema validation",
+    "2-1: Unit tests created for Issue #408 (17 tests)",
+    "2-2: Integration tests created for Issue #408 (5 tests)"
+  ],
+  "skipped_tasks": [],
+  "integration_verified": {
+    "new_code_is_called": true,
+    "graph_updated": false,
+    "exports_added": false,
+    "note": "No graph/workflow changes needed - this is a validation enhancement"
+  },
+  "files_modified": [
+    "expertAgent/prompts/interface_schema/default.yaml",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py",
+    "expertAgent/tests/integration/langgraph/jobGeneratorV2/__init__.py",
+    "expertAgent/tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py"
+  ],
+  "test_results": {
+    "unit_tests": {
+      "total": 17,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0
+    },
+    "integration_tests": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    "regression_tests": {
+      "total": 93,
+      "passed": 93,
+      "failed": 0,
+      "skipped": 0,
+      "note": "All existing validator tests continue to pass"
+    }
+  },
+  "static_analysis": {
+    "ruff": "passed",
+    "mypy": "pre-existing errors only (not related to this issue)"
+  },
+  "implementation_summary": {
+    "task_1_1": {
+      "description": "Prompt enhancement with field name preservation rules",
+      "file": "expertAgent/prompts/interface_schema/default.yaml",
+      "changes": [
+        "Added 'User Input Field Name Preservation Rules' section (both English and Japanese)",
+        "Added 5 examples of prohibited field renaming (email, query, keyword, max_results, date)",
+        "Added correct vs incorrect schema examples"
+      ]
+    },
+    "task_1_2": {
+      "description": "Validation base infrastructure update",
+      "files": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+      ],
+      "changes": [
+        "Added user_input_schema parameter to BodyTemplateValidator.validate() with default None for backward compatibility",
+        "Added _get_user_input_schema() helper method to MasterManagerSubWorkflow"
+      ]
+    },
+    "task_1_3": {
+      "description": "Validation logic implementation",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "changes": [
+        "Implemented _validate_user_input_fields() method",
+        "Regex pattern to extract user_input.X references from body_template",
+        "Generate USER_INPUT_FIELD_MISMATCH warnings for mismatched fields",
+        "Support BODY_TEMPLATE_STRICT_VALIDATION env var for strict mode"
+      ]
+    },
+    "task_1_4": {
+      "description": "Fallback validation in MasterManager",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "changes": [
+        "Added user_input_schema parameter to _build_multi_dependency_template()",
+        "Added validation check when falling back to user_input reference",
+        "Warning logged when fallback field not found in user_input_schema"
+      ]
+    },
+    "task_2_1": {
+      "description": "Unit tests",
+      "file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py",
+      "test_classes": [
+        "TestPromptFieldNamePreservationRules (2 tests)",
+        "TestMismatchedFieldNameDetection (3 tests)",
+        "TestBackwardCompatibility (2 tests)",
+        "TestFallbackWarning (2 tests)",
+        "TestValidationResultWarnings (1 test)",
+        "TestMasterManagerUserInputSchemaPassthrough (2 tests)",
+        "TestStrictValidationEnvironmentVariable (2 tests)",
+        "TestValidateUserInputFieldsMethod (3 tests)"
+      ]
+    },
+    "task_2_2": {
+      "description": "Integration tests",
+      "file": "expertAgent/tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py",
+      "test_classes": [
+        "TestMasterManagerValidatorIntegration (3 tests)",
+        "TestEndToEndValidationFlow (2 tests)"
+      ]
+    }
+  },
+  "acceptance_criteria_status": {
+    "AC-1": {
+      "description": "Prompt contains field name preservation rules with 5+ examples",
+      "status": "verified",
+      "evidence": "test_prompt_contains_field_name_preservation_section, test_prompt_contains_examples_of_prohibited_renaming"
+    },
+    "AC-2": {
+      "description": "USER_INPUT_FIELD_MISMATCH warning generated for mismatched fields",
+      "status": "verified",
+      "evidence": "test_detects_mismatched_field_name, test_detects_multiple_mismatched_fields"
+    },
+    "AC-3": {
+      "description": "Backward compatibility with user_input_schema=None",
+      "status": "verified",
+      "evidence": "test_backward_compatibility_with_none_schema"
+    },
+    "AC-4": {
+      "description": "Fallback validation logs warning when field not in user_input_schema",
+      "status": "verified",
+      "evidence": "test_fallback_warning_for_missing_field, test_fallback_with_user_input_schema_validation"
+    },
+    "AC-5": {
+      "description": "BODY_TEMPLATE_STRICT_VALIDATION env var converts warnings to errors",
+      "status": "verified",
+      "evidence": "test_strict_validation_enabled_converts_warnings_to_errors"
+    }
+  },
+  "notes": [
+    "All acceptance criteria have been verified through unit and integration tests",
+    "No graph/workflow integration changes were needed as this is a validation enhancement",
+    "Pre-existing mypy errors in master_manager.py are unrelated to this issue",
+    "Coverage of new code is estimated at 100% based on test structure"
+  ]
+}

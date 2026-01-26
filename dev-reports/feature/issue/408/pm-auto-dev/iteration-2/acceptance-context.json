@@ -1,0 +1,48 @@
+{
+  "issue_number": 408,
+  "feature_summary": "ユーザー入力フィールド名の整合性検証機能",
+  "acceptance_criteria": [
+    "AC-1: Interface Definitionプロンプトにユーザー入力フィールド名保持ルールが追加されている",
+    "AC-2: フィールド名不整合の検出機能が正しく動作する（USER_INPUT_FIELD_MISMATCH警告）",
+    "AC-3: Body Template検証時にuser_input.*への参照を実際のユーザー入力スキーマと照合する機能",
+    "AC-4: _build_multi_dependency_templateのフォールバック時検証（WARNINGログ出力）",
+    "AC-5: 存在しないフィールドへの参照検出時にWARNINGログと警告情報含む",
+    "AC-6: E2Eテストでメール送信が正常動作（3回中3回成功）"
+  ],
+  "labels": ["enhancement", "feature"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "l3_test_plan": {
+    "source": "acceptance-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "TC-001: プロンプトファイル確認",
+        "command": "grep -c 'User Input Field Name Preservation' expertAgent/prompts/interface_schema/default.yaml",
+        "expected_status": 0,
+        "expected_output_contains": ["1"]
+      },
+      {
+        "name": "TC-002: 単体テスト実行",
+        "command": "uv run pytest tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py -v",
+        "expected_status": 0,
+        "expected_output_contains": ["passed"]
+      },
+      {
+        "name": "TC-003: 結合テスト実行",
+        "command": "uv run pytest tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py -v",
+        "expected_status": 0,
+        "expected_output_contains": ["passed"]
+      }
+    ],
+    "external_service_checks": [
+      {"name": "Langfuse", "command": "curl -sf http://localhost:3001/api/public/health || echo 'not required for unit tests'"}
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_408_acceptance.py"
+}

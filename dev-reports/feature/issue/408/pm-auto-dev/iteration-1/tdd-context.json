@@ -1,0 +1,125 @@
+{
+  "issue_number": 408,
+  "issue_title": "feat(expertAgent): ユーザー入力フィールド名の整合性検証機能",
+  "acceptance_criteria": [
+    "AC-1: Interface Definitionプロンプトにユーザー入力フィールド名保持ルールが追加されている",
+    "AC-2: フィールド名不整合の検出機能が正しく動作することを確認（USER_INPUT_FIELD_MISMATCH警告）",
+    "AC-3: Body Template検証時にuser_input.*への参照を実際のユーザー入力スキーマと照合する機能が実装されている",
+    "AC-4: _build_multi_dependency_templateのフォールバック時に、user_input_schemaにフィールドが存在するか検証が行われる",
+    "AC-5: 存在しないフィールドへの参照を検出した場合、WARNINGログが出力され、生成結果のmetadataに警告情報が含まれる",
+    "AC-6: E2Eテストでメール送信が正常に動作することを確認（3回中3回成功）"
+  ],
+  "implementation_tasks": [
+    {
+      "id": "1.1",
+      "description": "プロンプト強化 - Interface Definitionプロンプトにフィールド名保持ルール追加",
+      "target_files": [
+        "expertAgent/prompts/interface_schema/default.yaml"
+      ],
+      "deliverables": ["expertAgent/prompts/interface_schema/default.yaml（更新）"]
+    },
+    {
+      "id": "1.2",
+      "description": "バリデーション基盤整備 - user_input_schema取得ロジックとシグネチャ変更",
+      "target_files": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+      ],
+      "deliverables": ["BodyTemplateValidator.validate()シグネチャ拡張", "_get_user_input_schema()ヘルパー追加"]
+    },
+    {
+      "id": "1.3",
+      "description": "検証ロジック実装 - user_input.*サブフィールド検証機能",
+      "target_files": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+      ],
+      "deliverables": ["_validate_user_input_fields()メソッド", "USER_INPUT_FIELD_MISMATCH警告"]
+    },
+    {
+      "id": "1.4",
+      "description": "フォールバック検証追加 - _build_multi_dependency_templateのフォールバック時検証",
+      "target_files": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+      ],
+      "deliverables": ["フォールバック時のフィールド存在確認", "WARNINGログ出力"]
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "プロンプト強化（フィールド名保持ルール追加）",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/prompts/interface_schema/default.yaml"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "バリデーション基盤整備（シグネチャ変更）",
+      "estimated_hours": 2,
+      "deliverables": ["body_template_validator.py", "master_manager.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.3",
+      "description": "検証ロジック実装（_validate_user_input_fields）",
+      "estimated_hours": 3,
+      "deliverables": ["body_template_validator.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "1.4",
+      "description": "フォールバック検証追加",
+      "estimated_hours": 1,
+      "deliverables": ["master_manager.py"],
+      "dependencies": ["1.2"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "単体テスト作成",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"],
+      "dependencies": ["1.1", "1.3", "1.4"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "結合テスト作成",
+      "estimated_hours": 2,
+      "deliverables": ["expertAgent/tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py"],
+      "dependencies": ["2.1"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/prompts/interface_schema/default.yaml（プロンプト更新）",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py（検証ロジック実装）",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py（user_input_schema伝播）",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py（単体テスト）",
+    "expertAgent/tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py（結合テスト）",
+    "expertAgent/tests/acceptance/test_issue_408_acceptance.py（受入テスト）"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上",
+    "結合テスト全パス",
+    "L3受入テスト全パス（E2E 3回中3回成功）",
+    "静的解析エラーゼロ（Ruff, MyPy）",
+    "CI/CDグリーン"
+  ],
+  "target_coverage": 90,
+  "test_cases": [
+    "TC-001: プロンプトにフィールド名保持ルールが存在する",
+    "TC-002: 存在しないフィールド名への参照で警告が生成される",
+    "TC-003: 正しいフィールド名への参照では警告が出ない",
+    "TC-004: user_input_schema=Noneで後方互換性を維持",
+    "TC-005: 複数の不整合フィールドを全て検出",
+    "TC-006: _build_multi_dependency_templateでフォールバック時に警告ログ",
+    "TC-007: 警告がValidationResultに含まれる",
+    "TC-008: MasterManagerがuser_input_schemaをValidatorに渡す",
+    "TC-009: 環境変数BODY_TEMPLATE_STRICT_VALIDATIONの動作"
+  ],
+  "technical_requirements": [
+    "user_input自体はスキップ、サブフィールドのみ検証（Issue #407との整合性）",
+    "task_001へのハードコード依存を排除（トポロジカルソート結果を使用）",
+    "後方互換性維持（user_input_schema=Noneでデフォルト動作）",
+    "警告とエラーの適切な使い分け（BODY_TEMPLATE_STRICT_VALIDATION環境変数）"
+  ]
+}

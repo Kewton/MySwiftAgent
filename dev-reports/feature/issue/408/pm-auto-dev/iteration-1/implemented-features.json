@@ -1,0 +1,158 @@
+{
+  "issue_number": 408,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "_validate_user_input_fields",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 458,
+      "description": "user_input.*のサブフィールドを検証し、存在しないフィールドへの参照を検出する",
+      "expected_callers": ["BodyTemplateValidator.validate()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_get_user_input_schema",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 662,
+      "description": "トポロジカルソート結果の最初のタスクからuser_input_schemaを取得するヘルパーメソッド",
+      "expected_callers": ["MasterManagerSubWorkflow._register_masters()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "user_input_schema parameter in validate()",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 386,
+      "description": "BodyTemplateValidator.validate()にuser_input_schemaパラメータを追加（後方互換性のためデフォルト値None）",
+      "expected_callers": ["MasterManagerSubWorkflow._register_masters()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "user_input_schema parameter in _build_multi_dependency_template()",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 579,
+      "description": "_build_multi_dependency_templateにuser_input_schemaパラメータを追加し、フォールバック時の検証を行う",
+      "expected_callers": ["MasterManagerSubWorkflow._register_masters()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "USER_INPUT_FIELD_MISMATCH warning_type",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "line_number": 486,
+      "description": "存在しないuser_inputフィールドへの参照を示す警告タイプ",
+      "expected_callers": ["_validate_user_input_fields()"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py"
+    },
+    {
+      "feature_id": "F6",
+      "name": "Field Name Preservation Rules in Prompt",
+      "type": "prompt_rule",
+      "file_path": "expertAgent/prompts/interface_schema/default.yaml",
+      "line_number": 194,
+      "description": "プロンプトにユーザー入力フィールド名保持ルールを追加（5つの禁止例と正しい例）",
+      "expected_callers": ["LLM via prompt"],
+      "expected_call_location": "LLM呼び出し時のInterface Definition生成"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": [
+        "test_validate_user_input_fields_method_exists",
+        "test_extracts_user_input_field_references",
+        "test_returns_empty_list_when_schema_is_none"
+      ],
+      "integration_tests": [
+        "test_validation_detects_llm_field_renaming"
+      ],
+      "acceptance_tests": ["test_issue_408_acceptance.py"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": [
+        "test_get_user_input_schema_helper_exists",
+        "test_get_user_input_schema_returns_first_task_input_schema"
+      ],
+      "integration_tests": [
+        "test_master_manager_uses_user_input_schema"
+      ],
+      "acceptance_tests": ["test_issue_408_acceptance.py"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": [
+        "test_validate_signature_has_user_input_schema_parameter",
+        "test_backward_compatibility_with_none_schema"
+      ],
+      "integration_tests": [
+        "test_body_template_validator_called_with_user_input_schema"
+      ],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": [
+        "test_fallback_warning_for_missing_field",
+        "test_fallback_with_user_input_schema_validation"
+      ],
+      "integration_tests": [
+        "test_build_multi_dependency_template_with_user_input_schema"
+      ],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F5",
+      "unit_tests": [
+        "test_detects_mismatched_field_name",
+        "test_detects_multiple_mismatched_fields",
+        "test_warning_included_in_validation_result"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F6",
+      "unit_tests": [
+        "test_prompt_contains_field_name_preservation_section",
+        "test_prompt_contains_examples_of_prohibited_renaming"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "integration_type": "method_call",
+      "integration_method": "Called from validate() method at line 426"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "Called from _register_masters() to get user_input_schema"
+    },
+    {
+      "feature_id": "F3",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "api_parameter",
+      "integration_method": "Passed to validate() from _register_masters()"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "Called from _register_masters() with user_input_schema"
+    }
+  ]
+}

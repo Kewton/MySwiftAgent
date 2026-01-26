@@ -1,0 +1,301 @@
+{
+  "status": "failed",
+  "verification_timestamp": "2026-01-26T00:00:00Z",
+  "verification_results": [
+    {
+      "feature_id": "F1",
+      "name": "_validate_user_input_fields",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 458"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Called from validate() method at line 426",
+          "grep_result": "aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py:426:        user_input_warnings = self._validate_user_input_fields("
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Method is part of BodyTemplateValidator class, no import needed"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py",
+          "evidence": "Integration test verifies actual usage in validation workflow"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F2",
+      "name": "_get_user_input_schema",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Found at line 662"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "Method exists but is NEVER called in _register_masters() or anywhere else in production code",
+          "grep_result": "Only test files call this method"
+        },
+        "is_imported": {
+          "passed": false,
+          "evidence": "Not imported in other modules, only used in tests"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "Integration tests only call the method directly in tests, not via production workflow"
+        }
+      },
+      "classification": "DEAD_CODE",
+      "failure_reason": "Method _get_user_input_schema() is defined but NEVER called in _register_masters(). The user_input_schema is never retrieved or used in production workflow."
+    },
+    {
+      "feature_id": "F3",
+      "name": "user_input_schema parameter in validate()",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Parameter added at line 391"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "validate() is called at line 374 of master_manager.py WITHOUT user_input_schema parameter",
+          "grep_result": "validation_result = self._body_template_validator.validate(\n    body_template=body_template,\n    input_schema=interface.input_schema,\n    task_count=order,\n    task_output_schemas=preceding_output_schemas,\n)\n# user_input_schema is NOT passed!"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Parameter exists in method signature"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "Integration tests call validate() with user_input_schema, but production code does NOT"
+        }
+      },
+      "classification": "EMPTY_PARAMETER",
+      "failure_reason": "Parameter user_input_schema is ALWAYS None in production because MasterManager never passes it when calling validate()"
+    },
+    {
+      "feature_id": "F4",
+      "name": "user_input_schema parameter in _build_multi_dependency_template()",
+      "type": "parameter",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Parameter added at line 579"
+        },
+        "is_called": {
+          "passed": false,
+          "evidence": "_build_multi_dependency_template() is called at line 545 WITHOUT user_input_schema parameter",
+          "grep_result": "return self._build_multi_dependency_template(\n    task=task,\n    interfaces=interfaces,\n    task_order_map=task_order_map,\n)\n# user_input_schema is NOT passed!"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "Parameter exists in method signature"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"
+        },
+        "has_integration_test": {
+          "passed": false,
+          "evidence": "Integration tests call with user_input_schema, but production code does NOT"
+        }
+      },
+      "classification": "EMPTY_PARAMETER",
+      "failure_reason": "Parameter user_input_schema is ALWAYS None in production because _build_body_template() never passes it when calling _build_multi_dependency_template()"
+    },
+    {
+      "feature_id": "F5",
+      "name": "USER_INPUT_FIELD_MISMATCH warning_type",
+      "type": "constant",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "String constant used at line 441 and line 501"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Used in _validate_user_input_fields() at line 501 and in strict validation mode at line 441",
+          "grep_result": "Found in both warning_type and error_type contexts"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "String constant, no import needed"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "test_file": "tests/integration/langgraph/jobGeneratorV2/test_issue_408_integration.py",
+          "evidence": "Integration test verifies warning_type is correctly set"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    },
+    {
+      "feature_id": "F6",
+      "name": "Field Name Preservation Rules in Prompt",
+      "type": "prompt_rule",
+      "file_path": "expertAgent/prompts/interface_schema/default.yaml",
+      "checks": {
+        "exists": {
+          "passed": true,
+          "evidence": "Rules found at line 194-224"
+        },
+        "is_called": {
+          "passed": true,
+          "evidence": "Prompt file is used during Interface Definition generation by LLM",
+          "grep_result": "Prompt contains comprehensive rules with 5 prohibited examples and correct examples"
+        },
+        "is_imported": {
+          "passed": true,
+          "evidence": "YAML prompt file is loaded by LLM pipeline"
+        },
+        "has_unit_test": {
+          "passed": true,
+          "test_file": "tests/unit/langgraph/jobGeneratorV2/validators/test_issue_408_user_input_validation.py"
+        },
+        "has_integration_test": {
+          "passed": true,
+          "evidence": "Prompt content is verified in tests"
+        }
+      },
+      "classification": "PASSED",
+      "failure_reason": null
+    }
+  ],
+  "summary": {
+    "total_features": 6,
+    "passed": 3,
+    "dead_code": 1,
+    "missing_tests": 0,
+    "not_found": 0,
+    "empty_parameters": 2
+  },
+  "dead_code_list": [
+    {
+      "feature_id": "F2",
+      "name": "_get_user_input_schema",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 662,
+      "recommended_caller": "_register_masters",
+      "recommended_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py:278",
+      "reason": "Method is never called in production workflow. Need to call this method to get user_input_schema and pass it to validate() and _build_multi_dependency_template()"
+    }
+  ],
+  "empty_parameter_list": [
+    {
+      "parameter": "user_input_schema in validate()",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 374,
+      "pattern": "validate() called without user_input_schema parameter",
+      "expected_value": "User input schema from first task (via _get_user_input_schema)",
+      "recommended_fix": "Call _get_user_input_schema(sorted_tasks, interfaces) before the loop and pass result to validate()"
+    },
+    {
+      "parameter": "user_input_schema in _build_multi_dependency_template()",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 545,
+      "pattern": "_build_multi_dependency_template() called without user_input_schema parameter",
+      "expected_value": "User input schema from first task (via _get_user_input_schema)",
+      "recommended_fix": "Pass user_input_schema to _build_multi_dependency_template() call at line 545"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "P0",
+      "feature_id": "F2",
+      "action": "Call _get_user_input_schema() in _register_masters() to retrieve user_input_schema",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 278,
+      "code_snippet": "# After topological sort at line 278, add:\nuser_input_schema = self._get_user_input_schema(sorted_tasks, interfaces)\nlogger.info(\"Issue #408: Retrieved user_input_schema for validation: %s\", user_input_schema is not None)"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F3",
+      "action": "Pass user_input_schema to validate() call",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 374,
+      "code_snippet": "validation_result = self._body_template_validator.validate(\n    body_template=body_template,\n    input_schema=interface.input_schema,\n    task_count=order,\n    task_output_schemas=preceding_output_schemas,\n    user_input_schema=user_input_schema,  # Add this line\n)"
+    },
+    {
+      "priority": "P0",
+      "feature_id": "F4",
+      "action": "Pass user_input_schema to _build_multi_dependency_template() call in _build_body_template()",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 545,
+      "code_snippet": "return self._build_multi_dependency_template(\n    task=task,\n    interfaces=interfaces,\n    task_order_map=task_order_map,\n    user_input_schema=user_input_schema,  # Add this line\n)"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "ALL",
+      "action": "Update _build_body_template() signature to accept user_input_schema parameter",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 530,
+      "code_snippet": "def _build_body_template(\n    self,\n    order: int,\n    task: TaskDefinition,\n    interfaces: dict[str, InterfaceSchema],\n    task_order_map: dict[str, int],\n    user_input_schema: dict[str, Any] | None = None,  # Add this parameter\n) -> dict[str, Any]:"
+    },
+    {
+      "priority": "P1",
+      "feature_id": "ALL",
+      "action": "Pass user_input_schema when calling _build_body_template() from _register_masters()",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line": 358,
+      "code_snippet": "body_template = self._build_body_template(\n    order=order,\n    task=task,\n    interfaces=interfaces,\n    task_order_map=task_order_map,\n    user_input_schema=user_input_schema,  # Add this line\n)"
+    }
+  ],
+  "integration_verification": {
+    "missing_integration_points": [
+      {
+        "feature_id": "F2",
+        "issue": "_get_user_input_schema() is never called in production code",
+        "impact": "user_input_schema is always None, so field validation never happens",
+        "severity": "CRITICAL"
+      },
+      {
+        "feature_id": "F3",
+        "issue": "validate() is called without user_input_schema parameter",
+        "impact": "_validate_user_input_fields() always returns empty warnings because schema is None",
+        "severity": "CRITICAL"
+      },
+      {
+        "feature_id": "F4",
+        "issue": "_build_multi_dependency_template() is called without user_input_schema parameter",
+        "impact": "Fallback field validation warnings are never generated",
+        "severity": "HIGH"
+      }
+    ]
+  },
+  "acceptance_test_status": {
+    "acceptance_test_file": null,
+    "acceptance_test_exists": false,
+    "recommendation": "Create acceptance test at: expertAgent/tests/acceptance/test_issue_408_acceptance.py"
+  },
+  "overall_assessment": "IMPLEMENTATION INCOMPLETE - Functions are defined and unit tested, but NOT integrated into production workflow. The critical integration step of calling _get_user_input_schema() and passing user_input_schema to validate() and _build_multi_dependency_template() is MISSING. This is a classic case of dead code - the features exist but are never used in actual workflow execution."
+}
