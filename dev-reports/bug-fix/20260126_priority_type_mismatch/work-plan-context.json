@@ -1,0 +1,47 @@
+{
+  "bug_id": "20260126_priority_type_mismatch",
+  "bug_description": "mock_helpers.pyのpriority型不整合によるテスト失敗",
+  "selected_actions": [
+    {
+      "action_id": "1",
+      "title": "mock_helpers.py修正",
+      "description": "priority フィールドを文字列('high'/'medium')から整数(1/5)に変更",
+      "files_to_modify": ["expertAgent/tests/utils/mock_helpers.py"],
+      "estimated_effort": "15分"
+    },
+    {
+      "action_id": "2",
+      "title": "PM Auto-Devワークフロー改善",
+      "description": "変更ファイルに依存するテストを自動検出して実行するフェーズを追加",
+      "files_to_modify": [".claude/skills/pm-auto-dev.md"],
+      "estimated_effort": "30分"
+    },
+    {
+      "action_id": "3",
+      "title": "リグレッションテスト必須化",
+      "description": "Issue完了前に全テスト実行を必須とするルールをCLAUDE.mdに追加",
+      "files_to_modify": ["CLAUDE.md"],
+      "estimated_effort": "20分"
+    },
+    {
+      "action_id": "4",
+      "title": "CI強化",
+      "description": "PRマージ前に全テストを実行するGitHub Actions設定を確認・強化",
+      "files_to_modify": [".github/workflows/ci.yml"],
+      "estimated_effort": "20分"
+    }
+  ],
+  "total_estimated_effort": "1時間25分",
+  "deliverables": [
+    "expertAgent/tests/utils/mock_helpers.py",
+    ".claude/skills/pm-auto-dev.md",
+    "CLAUDE.md",
+    ".github/workflows/ci.yml"
+  ],
+  "definition_of_done": [
+    "11件の失敗テストが全て合格",
+    "PM Auto-Devに変更影響テスト検出フェーズが追加",
+    "CLAUDE.mdにリグレッションテスト必須ルールが追加",
+    "CI設定で全テスト実行が有効"
+  ]
+}

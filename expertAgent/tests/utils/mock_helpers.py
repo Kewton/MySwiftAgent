@@ -96,13 +96,18 @@ def create_mock_task_breakdown(num_tasks: int = 3) -> list[dict[str, Any]]:
         >>> tasks = create_mock_task_breakdown(2)
         >>> assert len(tasks) == 2
         >>> assert tasks[0]["task_id"] == "task_1"
+
+    Note:
+        Bug fix (2026-01-26): Changed priority from string ("high"/"medium")
+        to integer (1/5) to match topological_sort.py's expectation.
+        Issue #402 introduced topological_sort which uses int(priority).
     """
     return [
         {
             "task_id": f"task_{i}",
             "name": f"Task {i}",  # Changed from "task_name" to "name"
             "description": f"Description for task {i}",
-            "priority": "high" if i == 1 else "medium",
+            "priority": 1 if i == 1 else 5,  # Integer: 1=high, 5=medium (default)
             "dependencies": [] if i == 1 else [f"task_{i - 1}"],
         }
         for i in range(1, num_tasks + 1)

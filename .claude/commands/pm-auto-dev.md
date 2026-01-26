@@ -86,6 +86,7 @@ TodoWriteツールで作業計画を作成してください：
 - [ ] Phase 2.5: TDD結果検証【必須】
 - [ ] Phase 2.6: 実装機能一覧の生成【必須】
 - [ ] Phase 2.7: 実装検証【必須】（デッドコード検出）
+- [ ] Phase 2.9: 変更影響テスト実行【必須】（Issue #402教訓）
 - [ ] Phase 3: 受入テスト実行【必須】
 - [ ] Phase 3.5: 受入テストファイル検証【必須】
 - [ ] Phase 3.6: 受入テスト結果妥当性確認【必須】
@@ -1125,6 +1126,110 @@ Phase 2.8 完了 → Phase 2.7 再実行 → 統合率確認
 - B: 現状のまま Phase 3 に進む（警告付き）
 - C: フォローアップ Issue を作成して部分的にマージ
 ```
+
+---
+
+### Phase 2.9: 変更影響テスト実行【必須】（Issue #402教訓）
+
+**目的**: TDD実装で変更したファイルに依存する既存テストを自動検出・実行し、意図しない破壊を早期発見します。
+
+**背景**: Issue #402で `topological_sort.py` を追加した際、依存する `mock_helpers.py` を使用する既存テスト（`test_master_creation_node.py` 等11件）が未実行のままマージされ、後に11件のテスト失敗が発生しました。
+
+#### 2.9-1. 変更ファイルの特定
+
+TDD実装で変更されたファイルを特定します：
+
+```bash
+# tdd-result.json から変更ファイルを取得
+CHANGED_FILES=$(cat dev-reports/feature/issue/{issue_number}/pm-auto-dev/iteration-1/tdd-result.json | jq -r '.files_modified[]')
+
+echo "📝 変更されたファイル:"
+echo "$CHANGED_FILES"
+```
+
+#### 2.9-2. 依存テストの自動検出
+
+変更されたファイルをimportしている、または使用しているテストファイルを検出します：
+
+```bash
+# プロジェクトディレクトリを特定
+PROJECT_DIR=$(dirname $(echo "$CHANGED_FILES" | head -1) | cut -d'/' -f1)
+
+# 変更ファイルごとに依存テストを検索
+DEPENDENT_TESTS=""
+for FILE in $CHANGED_FILES; do
+  # ファイル名（拡張子なし）を取得
+  BASENAME=$(basename "$FILE" .py)
+
+  # テストディレクトリ内で該当ファイルをimportしているテストを検索
+  IMPORTING_TESTS=$(grep -rl "from.*${BASENAME}\|import.*${BASENAME}" ${PROJECT_DIR}/tests/ 2>/dev/null || true)
+
+  if [ -n "$IMPORTING_TESTS" ]; then
+    DEPENDENT_TESTS="$DEPENDENT_TESTS $IMPORTING_TESTS"
+  fi
+done
+
+# 重複を除去
+DEPENDENT_TESTS=$(echo "$DEPENDENT_TESTS" | tr ' ' '\n' | sort -u | grep -v '^$')
+
+echo "🔍 依存テストファイル:"
+echo "$DEPENDENT_TESTS"
+```
+
+#### 2.9-3. 依存テストの実行
+
+検出した依存テストをすべて実行します：
+
+```bash
+if [ -n "$DEPENDENT_TESTS" ]; then
+  echo "🧪 依存テストを実行中..."
+  uv run pytest $DEPENDENT_TESTS -v --tb=short
+else
+  echo "⚠️ 依存テストが見つかりませんでした"
+fi
+```
+
+#### 2.9-4. 全単体テストの実行（推奨）
+
+変更影響の漏れを防ぐため、プロジェクト全体の単体テストを実行します：
+
+```bash
+echo "🧪 全単体テストを実行中..."
+uv run pytest ${PROJECT_DIR}/tests/unit/ -v --tb=short --ignore=${PROJECT_DIR}/tests/acceptance/
+```
+
+**注意**: 受入テスト（acceptance）は外部サービス依存があるため除外します。
+
+#### 2.9-5. 結果判定
+
+| 結果 | 次のアクション |
+|------|---------------|
+| 全テストパス | Phase 3（受入テスト）へ進む |
+| テスト失敗あり | 失敗テストを修正後、Phase 2.9を再実行 |
+
+**テスト失敗時の修正ガイドライン**:
+
+1. 失敗テストのエラーメッセージを確認
+2. 変更した機能と失敗テストの関連を分析
+3. 以下のいずれかを実施：
+   - 変更したコードの修正（機能の互換性維持）
+   - テストコードの修正（新仕様への適合）
+   - モック/フィクスチャの更新（テストデータの型不整合等）
+
+**典型的な失敗パターン**:
+
+| パターン | 原因 | 対処 |
+|---------|------|------|
+| `ValueError: invalid literal for int()` | 型不整合（文字列→整数等） | モックデータの型を更新 |
+| `AttributeError: 'NoneType'` | 必須フィールドの欠落 | モックデータにフィールド追加 |
+| `AssertionError: expected X but got Y` | 戻り値の形式変更 | テストの期待値を更新 |
+
+#### 2.9-6. 検証完了
+
+全テストがパスしたら：
+
+1. TodoWriteでPhase 2.9を`completed`に、Phase 3を`in_progress`に設定
+2. Phase 3（受入テスト実行）へ進む
 
 ---
 

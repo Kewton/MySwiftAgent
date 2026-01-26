@@ -1,0 +1,65 @@
+{
+  "issue_description": "test_master_creation_node.py等11件のテストがValueError: invalid literal for int() with base 10: 'high'で失敗",
+  "error_logs": [
+    "ValueError: invalid literal for int() with base 10: 'high'",
+    "File topological_sort.py, line 72, in priority: return int(self._dict.get('priority', 5))"
+  ],
+  "affected_files": [
+    "expertAgent/tests/utils/mock_helpers.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/utils/topological_sort.py"
+  ],
+  "reproduction_steps": [
+    "1. uv run pytest tests/unit/test_master_creation_node.py を実行",
+    "2. create_mock_task_breakdown()が priority='high' を返す",
+    "3. topological_sort_task_dicts()が int('high') を試みて失敗"
+  ],
+  "environment": {
+    "os": "macOS",
+    "python_version": "3.12",
+    "project": "expertAgent",
+    "branch": "develop"
+  },
+  "related_issue_number": 402,
+  "severity_hint": "high",
+  "five_whys_analysis": {
+    "problem": "11件のテストがValueErrorで失敗",
+    "why1": {
+      "question": "なぜValueErrorが発生するか？",
+      "answer": "topological_sort.pyのpriorityプロパティがint('high')を実行している"
+    },
+    "why2": {
+      "question": "なぜint('high')が呼ばれるか？",
+      "answer": "mock_helpers.pyがpriority='high'(文字列)を返すが、topological_sort.pyはint型を期待"
+    },
+    "why3": {
+      "question": "なぜ型の不整合が存在するか？",
+      "answer": "Issue #402でtopological_sort.pyが追加された際、mock_helpers.pyが更新されなかった"
+    },
+    "why4": {
+      "question": "なぜmock_helpers.pyが更新されなかったか？",
+      "answer": "Issue #402のテスト実行時にtest_master_creation_node.pyが実行されなかった"
+    },
+    "why5": {
+      "question": "なぜtest_master_creation_node.pyが実行されなかったか？",
+      "answer": "PM Auto-Devワークフローが関連テストのみを実行し、影響を受ける既存テストを検出・実行していない"
+    },
+    "root_causes": {
+      "technical": "mock_helpers.pyのpriorityフィールドが文字列型だが、topological_sort.pyは整数型を期待",
+      "process": "Issue実装時にリグレッションテスト（全テスト実行）が行われていない",
+      "organizational": "PM Auto-Devワークフローに変更影響分析とリグレッションテストのフェーズがない"
+    }
+  },
+  "impact_analysis": {
+    "direct_impact": [
+      "test_master_creation_node.py (7テスト)",
+      "test_node_contracts.py (3テスト)",
+      "test_job_generator_endpoints.py (1テスト)"
+    ],
+    "indirect_impact": [
+      "create_mock_task_breakdown()を使用する将来のテスト"
+    ],
+    "similar_locations": [
+      "他のmock_helpersの関数でも同様の型不整合がないか確認が必要"
+    ]
+  }
+}

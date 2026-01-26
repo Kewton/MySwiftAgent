@@ -274,6 +274,7 @@ Issue完了前に以下をすべて確認すること。**1つでも未完了の
 | 静的解析エラーゼロ | `./scripts/pre-push-check-all.sh` |
 | カバレッジ90%以上 | pytest --cov 出力 |
 | デッドコードなし | Phase 2.7 実装検証結果 |
+| **変更影響テスト全パス** | 下記「リグレッションテスト」参照（Issue #402教訓） |
 
 ### ドキュメント更新
 
@@ -288,6 +289,10 @@ Issue完了前に以下をすべて確認すること。**1つでも未完了の
 ```bash
 # Issue完遂確認コマンド
 ./scripts/pre-push-check-all.sh && echo "✅ 品質チェック合格"
+
+# 変更影響テスト実行（Issue #402教訓）
+# 変更したファイルに依存するテストを検出・実行
+uv run pytest tests/unit/ -v --ignore=tests/acceptance/
 
 # 受入テスト実行
 uv run pytest tests/acceptance/test_issue_{番号}_*.py -v
@@ -504,6 +509,53 @@ work-plan.md に結合テストタスクがある場合、以下を確認：
 1. **PM Auto-Dev**: Phase 3 を再実行
 2. **手動開発**: 受入テストを作成してから完了報告
 3. **レビュー時**: 受入テストがないPRはマージ不可
+
+---
+
+## 🔄 変更影響テスト必須化ルール（Issue #402教訓）
+
+### 背景
+
+Issue #402で `topological_sort.py` を追加した際、依存する `mock_helpers.py` を使用する既存テスト（11件）が実行されずにマージされ、後に全11件が `ValueError: invalid literal for int()` で失敗しました。
+
+**根本原因**: TDD実装時に「新規テストのみ」を実行し、変更影響を受ける既存テストを実行していなかった。
+
+### 必須ルール
+
+| チェック項目 | 実行タイミング | 確認コマンド |
+|-------------|---------------|-------------|
+| **変更影響テスト実行** | TDD完了後、受入テスト前 | 下記参照 |
+| **全単体テストパス** | Issue完了前 | `uv run pytest tests/unit/ -v` |
+
+### 変更影響テストの実行手順
+
+```bash
+# 1. 変更ファイルを特定
+git diff --name-only HEAD~1
+
+# 2. 依存テストを検索（変更ファイルをimportしているテスト）
+CHANGED_FILE="path/to/changed_file.py"
+BASENAME=$(basename "$CHANGED_FILE" .py)
+grep -rl "from.*${BASENAME}\|import.*${BASENAME}" tests/
+
+# 3. 依存テストを実行
+uv run pytest [検出されたテストファイル] -v
+
+# 4. 全単体テストを実行（推奨）
+uv run pytest tests/unit/ -v --ignore=tests/acceptance/
+```
+
+### 典型的な失敗パターンと対処
+
+| エラー | 原因 | 対処 |
+|--------|------|------|
+| `ValueError: invalid literal for int()` | 型不整合（文字列→整数等） | モックデータの型を更新 |
+| `AttributeError: 'NoneType'` | 必須フィールドの欠落 | モックデータにフィールド追加 |
+| `KeyError: 'field_name'` | 必須キーの欠落 | モックデータにキー追加 |
+
+### PM Auto-Devでの自動化
+
+PM Auto-Devを使用する場合、Phase 2.9（変更影響テスト実行）で自動的に実行されます。
 
 ---
 
