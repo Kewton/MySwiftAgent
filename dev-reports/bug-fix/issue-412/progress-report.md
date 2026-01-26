@@ -59,14 +59,43 @@ elif [ "$JOB_STATUS" = "generating" ] || [ "$JOB_STATUS" = "active" ]; then
 | メール送信 | ✅ 完了 | Gmail Message ID確認済み |
 | ワークフロー実行 | ✅ 正常 | TaskFlowエンジンで実行 |
 
+## 完全検証結果（2026-01-27追加）
+
+### 問題の再現と修正の検証
+
+実際に`generating`状態のJobVersionを作成し、修正が正しく機能することを検証しました。
+
+| 検証項目 | 結果 |
+|---------|------|
+| 問題の再現 | ✅ `generating`状態のJob `jv_1769444072514_r2o2u6n` を作成 |
+| 旧ロジックの問題 | 確認済み: 古いJob `jv_1767162958828_92dzgg5` を返す |
+| 新ロジックの動作 | ✅ 正しいJob `jv_1769444072514_r2o2u6n` を返す |
+| E2Eテスト | ✅ PASSED（3タスク、10秒） |
+
+### 正規表現の追加修正
+
+検証中に発見した追加問題を修正：
+
+```python
+# 修正前: JSONフォーマット（"id":"..."）を期待
+match = re.search(r'currentGeneratingJob.*?"id":\s*"(jv_[a-zA-Z0-9_]+)"', content)
+
+# 修正後: SvelteKit devalフォーマット（id:"..."）に対応
+match = re.search(r'currentGeneratingJob.*?id:\s*"(jv_[a-zA-Z0-9_]+)"', content)
+```
+
 ## 修正ファイル
 
 - `scripts/e2e/cross-service/test_full_workflow_e2e.sh`
-  - 363-383行: JobVersion ID取得ロジック
+  - 363-383行: JobVersion ID取得ロジック（正規表現を2回修正）
   - 389-404行: ステータス判定ロジック
 
 ## 残作業
 
+- [x] 対策実装
+- [x] E2Eテスト実行
+- [x] 完全検証（generating状態での動作確認）
+- [x] 正規表現の追加修正
 - [ ] コミット・プッシュ
 - [ ] Issue #412 クローズ
 

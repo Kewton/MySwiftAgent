@@ -371,8 +371,9 @@ import re
 content = sys.stdin.read()
 
 # 方法1: currentGeneratingJobオブジェクト内のidを抽出
-# SvelteKitのdeval形式: "currentGeneratingJob":{"id":"jv_xxx",...}
-match = re.search(r"currentGeneratingJob.*?\"id\":\s*\"(jv_[a-zA-Z0-9_]+)\"", content)
+# SvelteKitのdeval形式: currentGeneratingJob:{id:"jv_xxx",...}
+# 注意: devalはキーにクォートを付けない（id:"..." 形式）
+match = re.search(r"currentGeneratingJob.*?id:\s*\"(jv_[a-zA-Z0-9_]+)\"", content)
 if match:
     print(match.group(1))
 else:
