@@ -1,0 +1,31 @@
+{
+  "issue_number": 412,
+  "bug_description": "E2Eテストスクリプトが古いJobVersionを誤って使用する",
+  "selected_actions": [
+    {
+      "action_id": "2",
+      "title": "currentGeneratingJobを正規表現で明示的に抽出",
+      "description": "generateページからcurrentGeneratingJob内のIDを抽出するよう正規表現を改善",
+      "files_to_modify": ["scripts/e2e/cross-service/test_full_workflow_e2e.sh"],
+      "line_numbers": "363-366",
+      "estimated_effort": "15分"
+    },
+    {
+      "action_id": "3",
+      "title": "activeステータスを完了とみなさない",
+      "description": "ステータス判定でactiveを削除し、successのみを完了として扱う",
+      "files_to_modify": ["scripts/e2e/cross-service/test_full_workflow_e2e.sh"],
+      "line_numbers": "372",
+      "estimated_effort": "15分"
+    }
+  ],
+  "total_estimated_effort": "30分",
+  "deliverables": [
+    "scripts/e2e/cross-service/test_full_workflow_e2e.sh"
+  ],
+  "definition_of_done": [
+    "正規表現がcurrentGeneratingJobのIDを正しく抽出する",
+    "activeステータスを完了とみなさない",
+    "E2Eテストが正しいJobVersionを使用して成功する"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "issue_number": 412,
+  "issue_description": "E2Eテストスクリプトが「ジョブ生成中」エラーを検出した際、古い完了済みJobVersionを誤って使用する",
+  "error_logs": [
+    "HTTP 422エラーでテスト失敗",
+    "古いGraphAiServerワークフローが実行される"
+  ],
+  "affected_files": [
+    "scripts/e2e/cross-service/test_full_workflow_e2e.sh"
+  ],
+  "reproduction_steps": [
+    "1. JobVersionがgenerating状態のときにE2Eテストを実行",
+    "2. スクリプトが「A job is already being generated」エラーを検出",
+    "3. スクリプトが古い完了済みJobVersion（graphAiServer用）を使用",
+    "4. 古いJobVersionのワークフローが実行され、HTTP 422エラーで失敗"
+  ],
+  "environment": {
+    "os": "macOS",
+    "project": "MySwiftAgent",
+    "branch": "develop"
+  },
+  "related_issue_number": 411,
+  "severity_hint": "medium",
+  "root_cause_analysis": {
+    "problem_a": {
+      "description": "間違ったJobVersion IDの取得",
+      "location": "363-366行",
+      "current_code": "re.search(r\"jv_[a-zA-Z0-9_]+\", c) - 最初にマッチしたIDを返す",
+      "issue": "generateページにはrecentJobVersionsが含まれ、それが先に出現する"
+    },
+    "problem_b": {
+      "description": "activeステータスを完了と誤判定",
+      "location": "372行",
+      "current_code": "if [ \"$JOB_STATUS\" = \"success\" ] || [ \"$JOB_STATUS\" = \"active\" ]",
+      "issue": "active = GraphAiServer用の実行待ちステータス（完了ではない）"
+    }
+  }
+}

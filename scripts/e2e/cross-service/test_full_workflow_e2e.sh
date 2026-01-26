@@ -360,23 +360,45 @@ if [ "$SKIP_GENERATE" = false ]; then
         if [ "$ERROR_MSG" = "generating" ]; then
             log_warn "A job is already being generated. Waiting for existing job..."
 
-            # 生成中のJobを見つける（generateページをロードしてステータス確認）
+            # 生成中のJobを見つける（generateページからcurrentGeneratingJobを抽出）
+            # Issue #412: recentJobVersionsではなくcurrentGeneratingJobを明示的に取得
             for i in {1..36}; do
                 GENERATING_JOB=$(curl -s "${MYAGENTDESK_URL}/projects/${PROJECT_ID}/workbenches/${WORKBENCH_ID}/generate" 2>/dev/null | \
-                    python3 -c 'import sys,re; c=sys.stdin.read(); m=re.search(r"jv_[a-zA-Z0-9_]+", c); print(m.group(0) if m else "")' 2>/dev/null || echo "")
+                    python3 -c '
+import sys
+import re
+
+content = sys.stdin.read()
+
+# 方法1: currentGeneratingJobオブジェクト内のidを抽出
+# SvelteKitのdeval形式: "currentGeneratingJob":{"id":"jv_xxx",...}
+match = re.search(r"currentGeneratingJob.*?\"id\":\s*\"(jv_[a-zA-Z0-9_]+)\"", content)
+if match:
+    print(match.group(1))
+else:
+    # 方法2: generating状態のJobをAPIで直接確認するためのフォールバック
+    # ページ内の最初のjv_IDを取得（従来の動作）
+    fallback = re.search(r"jv_[a-zA-Z0-9_]+", content)
+    print(fallback.group(0) if fallback else "")
+' 2>/dev/null || echo "")
 
                 if [ -n "$GENERATING_JOB" ]; then
                     JOB_STATUS=$(curl -s "${MYAGENTDESK_URL}/api/jobs/${GENERATING_JOB}/status" 2>/dev/null | \
                         python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
 
-                    if [ "$JOB_STATUS" = "success" ] || [ "$JOB_STATUS" = "active" ]; then
+                    # Issue #412: activeはGraphAiServer用の「実行待ち」ステータスなので完了とみなさない
+                    # successのみを完了として扱う
+                    if [ "$JOB_STATUS" = "success" ]; then
                         log_success "Found completed job: ${GENERATING_JOB}"
                         JOB_VERSION_ID="$GENERATING_JOB"
                         break
-                    elif [ "$JOB_STATUS" = "generating" ]; then
+                    elif [ "$JOB_STATUS" = "generating" ] || [ "$JOB_STATUS" = "active" ]; then
+                        # generating: 生成中、active: GraphAiServer用の実行待ち - どちらも待機継続
                         PROGRESS=$(curl -s "${MYAGENTDESK_URL}/api/jobs/${GENERATING_JOB}/status" 2>/dev/null | \
                             python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("progress",""))' 2>/dev/null || echo "")
-                        log_info "Waiting for existing job ${GENERATING_JOB}... (${PROGRESS}%)"
+                        log_info "Waiting for job ${GENERATING_JOB}... status=${JOB_STATUS} (${PROGRESS}%)"
+                    elif [ "$JOB_STATUS" = "failed" ]; then
+                        log_warn "Job ${GENERATING_JOB} failed, looking for another job..."
                     fi
                 fi
                 sleep 5
