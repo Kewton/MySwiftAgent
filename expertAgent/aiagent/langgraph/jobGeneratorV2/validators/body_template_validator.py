@@ -41,6 +41,39 @@ SYSTEM_INJECTED_FIELDS: frozenset[str] = frozenset(
 )
 
 
+def _is_system_injected_field(field_path: str) -> bool:
+    """Check if field_path is a system-injected field or its sub-field.
+
+    Issue #407: Supports prefix matching for nested fields like 'user_input.query'.
+
+    This function checks if the given field_path is either an exact match for
+    a system-injected field or starts with a system-injected field followed
+    by a dot (indicating a nested field access).
+
+    Args:
+        field_path: The field path to check (e.g., "user_input", "user_input.query")
+
+    Returns:
+        True if field_path is a system-injected field or its sub-field, False otherwise
+
+    Examples:
+        >>> _is_system_injected_field("user_input")
+        True
+        >>> _is_system_injected_field("user_input.query")
+        True
+        >>> _is_system_injected_field("project.name")
+        True
+        >>> _is_system_injected_field("query")
+        False
+        >>> _is_system_injected_field("user_input_extra")
+        False
+    """
+    return any(
+        field_path == f or field_path.startswith(f + ".")
+        for f in SYSTEM_INJECTED_FIELDS
+    )
+
+
 @dataclass
 class BodyTemplateValidationError:
     """Validation error for body_template.
@@ -168,8 +201,9 @@ class TaskFlowValidationStrategy:
         if reference.startswith("job.body."):
             field_path = reference[9:]  # Remove "job.body."
 
-            # Issue #395: Skip validation for system-injected fields
-            if field_path in SYSTEM_INJECTED_FIELDS:
+            # Issue #395, #407: Skip validation for system-injected fields
+            # and their sub-fields (e.g., user_input.query)
+            if _is_system_injected_field(field_path):
                 logger.debug(
                     "Skipping validation for system-injected field: %s",
                     field_path,
@@ -254,8 +288,9 @@ class GraphAIValidationStrategy:
         if reference.startswith("job.body."):
             field_path = reference[9:]  # Remove "job.body."
 
-            # Issue #395: Skip validation for system-injected fields
-            if field_path in SYSTEM_INJECTED_FIELDS:
+            # Issue #395, #407: Skip validation for system-injected fields
+            # and their sub-fields (e.g., user_input.query)
+            if _is_system_injected_field(field_path):
                 logger.debug(
                     "Skipping validation for system-injected field: %s",
                     field_path,
@@ -447,4 +482,5 @@ __all__ = [
     "TaskFlowValidationStrategy",
     "GraphAIValidationStrategy",
     "SYSTEM_INJECTED_FIELDS",
+    "_is_system_injected_field",
 ]

@@ -1,6 +1,7 @@
 """Unit tests for body_template_validator.py.
 
 Issue #358: Tests for BodyTemplateValidator class.
+Issue #407: Tests for prefix matching in SYSTEM_INJECTED_FIELDS.
 
 Test cases:
 1. Valid body_template with correct references
@@ -10,9 +11,12 @@ Test cases:
 5. Multiple errors reported together
 6. Warnings for optional issues
 7. ValidationStrategy pattern (TaskFlow/GraphAI)
+8. Prefix matching for system-injected fields (Issue #407)
 """
 
 from typing import Any
+
+import pytest
 
 
 class TestBodyTemplateValidator:
@@ -690,3 +694,246 @@ class TestGraphAIValidationStrategy:
         )
 
         assert result.is_valid
+
+
+class TestIsSystemInjectedFieldHelper:
+    """Test Issue #407: _is_system_injected_field() helper function for prefix matching."""
+
+    @pytest.mark.parametrize(
+        "field_path,expected",
+        [
+            # Exact matches - should be True
+            ("user_input", True),
+            ("project", True),
+            # Prefix matches with dot separator - should be True
+            ("user_input.query", True),
+            ("user_input.max_results", True),
+            ("user_input.nested.deep.field", True),
+            ("project.name", True),
+            ("project.settings.key", True),
+            # Non-system fields - should be False
+            ("query", False),
+            ("name", False),
+            # Similar names but not prefix - should be False
+            ("user_input_extra", False),
+            ("user_inputquery", False),
+            ("project_extra", False),
+            ("projectname", False),
+            # Edge cases - should be False
+            ("", False),
+            (".", False),
+        ],
+    )
+    def test_is_system_injected_field(self, field_path: str, expected: bool) -> None:
+        """Test prefix matching for system-injected fields."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            _is_system_injected_field,
+        )
+
+        result = _is_system_injected_field(field_path)
+        assert result == expected, (
+            f"Expected _is_system_injected_field('{field_path}') to be {expected}, "
+            f"but got {result}"
+        )
+
+
+class TestSystemInjectedFieldsPrefixMatching:
+    """Test Issue #407: Prefix matching in validation strategies."""
+
+    def test_taskflow_user_input_dot_query_is_valid(self) -> None:
+        """TaskFlow: user_input.query should be valid (not cause validation error)."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "query": "{{job.body.user_input.query}}",
+        }
+        # input_schema does NOT have 'user_input.query' - it's derived from user_input
+        input_schema = {
+            "type": "object",
+            "properties": {},
+        }
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+    def test_taskflow_user_input_dot_max_results_is_valid(self) -> None:
+        """TaskFlow: user_input.max_results should be valid."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "max_results": "{{job.body.user_input.max_results}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+    def test_taskflow_project_dot_name_is_valid(self) -> None:
+        """TaskFlow: project.name should be valid (not cause validation error)."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "project_name": "{{job.body.project.name}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+    def test_graphai_user_input_dot_query_is_valid(self) -> None:
+        """GraphAI: user_input.query should be valid (not cause validation error)."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "query": "{{job.body.user_input.query}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+    def test_graphai_project_dot_name_is_valid(self) -> None:
+        """GraphAI: project.name should be valid (not cause validation error)."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            GraphAIValidationStrategy,
+        )
+
+        body_template = {
+            "project_name": "{{job.body.project.name}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = GraphAIValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+    def test_similar_but_not_prefix_still_validated(self) -> None:
+        """Fields like 'user_input_extra' should still be validated (not skipped)."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "field": "{{job.body.user_input_extra}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        # Should fail because 'user_input_extra' is NOT a system-injected field
+        assert not result.is_valid
+        assert any("user_input_extra" in e.message for e in result.errors)
+
+    def test_deeply_nested_system_field_is_valid(self) -> None:
+        """user_input.nested.deep.field should be valid (prefix match)."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "deep_field": "{{job.body.user_input.nested.deep.field}}",
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        assert result.is_valid, f"Errors: {[e.message for e in result.errors]}"
+
+    def test_mixed_prefix_and_non_prefix_fields(self) -> None:
+        """Mixed fields: prefix matches skipped, others validated."""
+        from aiagent.langgraph.jobGeneratorV2.validators.body_template_validator import (
+            BodyTemplateValidator,
+            TaskFlowValidationStrategy,
+        )
+
+        body_template = {
+            "query": "{{job.body.user_input.query}}",  # prefix match, skip
+            "project_name": "{{job.body.project.name}}",  # prefix match, skip
+            "missing": "{{job.body.nonexistent_field}}",  # should fail
+        }
+        input_schema = {"type": "object", "properties": {}}
+
+        strategy = TaskFlowValidationStrategy()
+        validator = BodyTemplateValidator(strategy=strategy)
+        result = validator.validate(
+            body_template=body_template,
+            input_schema=input_schema,
+            task_count=0,
+            task_output_schemas=[],
+        )
+
+        # Should fail for 'nonexistent_field' only
+        assert not result.is_valid
+        assert len(result.errors) == 1
+        assert "nonexistent_field" in result.errors[0].message
+        # user_input.query and project.name should NOT be in errors
+        assert not any("user_input" in e.message for e in result.errors)
+        assert not any("project" in e.message for e in result.errors)
