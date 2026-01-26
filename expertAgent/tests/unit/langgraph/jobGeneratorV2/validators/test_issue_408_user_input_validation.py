@@ -342,13 +342,20 @@ class TestFallbackWarning:
             f"Warning should mention 'email' and 'fallback': {[r.message for r in warning_logs]}"
         )
 
-    def test_fallback_with_user_input_schema_validation(
+    def test_fallback_with_user_input_schema_validation_raises_error(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Fallback checks if field exists in user_input_schema."""
+        """Fallback raises error if field not in user_input_schema.
+
+        Bug Fix 20260126: Changed from WARNING to ERROR.
+        Field mismatch now raises UserInputFieldMismatchError.
+        """
         from aiagent.langgraph.jobGeneratorV2.types_old import (
             InterfaceSchema,
             TaskDefinition,
+        )
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.errors import (
+            UserInputFieldMismatchError,
         )
         from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
             MasterManagerSubWorkflow,
@@ -406,18 +413,19 @@ class TestFallbackWarning:
             },
         }
 
-        with caplog.at_level(logging.WARNING):
-            _ = manager._build_multi_dependency_template(
+        # Bug Fix 20260126: Now raises error instead of warning
+        with pytest.raises(UserInputFieldMismatchError) as exc_info:
+            manager._build_multi_dependency_template(
                 task=task,
                 interfaces=interfaces,
                 task_order_map=task_order_map,
                 user_input_schema=user_input_schema,
             )
 
-        # Should have a more specific warning about field mismatch
-        assert any("recipient_email" in r.message for r in caplog.records), (
-            f"Warning should mention 'recipient_email': {[r.message for r in caplog.records]}"
-        )
+        # Error message should include field name and available fields
+        error_str = str(exc_info.value)
+        assert "recipient_email" in error_str
+        assert "email" in error_str or "Available" in error_str
 
 
 class TestValidationResultWarnings:

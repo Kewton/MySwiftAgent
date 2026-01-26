@@ -320,3 +320,65 @@ class TestUserInputFieldMismatchErrorClass:
         error_str = str(error)
         assert "recipient_email" in error_str
         assert "email" in error_str or "Available" in error_str
+
+
+class TestCreateMastersLlmUserInputSchemaIntegration:
+    """Tests for create_masters llm_user_input_schema parameter integration.
+
+    Bug Fix 20260126: Verify that llm_user_input_schema is properly passed
+    through the call chain from orchestrator to master_manager.
+    """
+
+    def test_create_masters_accepts_llm_user_input_schema_parameter(self) -> None:
+        """create_masters should accept llm_user_input_schema parameter.
+
+        AC: Method signature includes the new parameter.
+        """
+        import inspect
+
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        sig = inspect.signature(MasterManagerSubWorkflow.create_masters)
+        param_names = list(sig.parameters.keys())
+
+        assert "llm_user_input_schema" in param_names, (
+            "create_masters should have llm_user_input_schema parameter"
+        )
+
+    def test_execute_registration_accepts_llm_user_input_schema_parameter(self) -> None:
+        """_execute_registration should accept llm_user_input_schema parameter.
+
+        AC: Method signature includes the new parameter.
+        """
+        import inspect
+
+        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+            JobGenerationOrchestrator,
+        )
+
+        sig = inspect.signature(JobGenerationOrchestrator._execute_registration)
+        param_names = list(sig.parameters.keys())
+
+        assert "llm_user_input_schema" in param_names, (
+            "_execute_registration should have llm_user_input_schema parameter"
+        )
+
+    def test_llm_user_input_schema_has_default_none(self) -> None:
+        """llm_user_input_schema should have default value of None.
+
+        AC: Parameter is optional for backward compatibility.
+        """
+        import inspect
+
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        sig = inspect.signature(MasterManagerSubWorkflow.create_masters)
+        param = sig.parameters["llm_user_input_schema"]
+
+        assert param.default is None, (
+            "llm_user_input_schema should default to None"
+        )

@@ -200,11 +200,13 @@ class JobGenerationOrchestrator:
             analysis_result = await self._execute_job_analysis(request)
 
             # Phase 2: REGISTRATION (Issue #386: calls MasterManagerSubWorkflow)
+            # Bug Fix 20260126: Pass user_input_schema to ensure field name consistency
             registration_result = await self._execute_registration(
                 analysis_result.tasks,
                 analysis_result.interfaces,
                 request.project_id,
                 context=context,
+                llm_user_input_schema=analysis_result.user_input_schema,
             )
 
             # Build task identifiers with master IDs
@@ -311,6 +313,7 @@ class JobGenerationOrchestrator:
         interfaces: dict[str, InterfaceDefinition],
         project_id: str,
         context: "ExecutionContext",
+        llm_user_input_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Execute Phase 2: REGISTRATION via MasterManagerSubWorkflow.
 
@@ -318,11 +321,16 @@ class JobGenerationOrchestrator:
         placeholder implementation. This creates real JobMaster/TaskMaster
         records in jobqueue.
 
+        Bug Fix 20260126: Added llm_user_input_schema parameter to pass
+        LLM-provided user input schema for field name consistency validation.
+
         Args:
             tasks: List of analyzed tasks from Phase 1
             interfaces: Interface definitions from Phase 1
             project_id: Project ID for registration
             context: ExecutionContext for dependency injection (AC-1, AC-2)
+            llm_user_input_schema: Optional user input schema from LLM.
+                When provided, ensures field names match user requirement.
 
         Returns:
             Dict with job_master_id and task_id_to_master_id mapping
@@ -364,11 +372,13 @@ class JobGenerationOrchestrator:
         )
 
         try:
+            # Bug Fix 20260126: Pass llm_user_input_schema for field validation
             result = await master_manager.create_masters(
                 tasks=task_definitions,
                 interfaces=interface_schemas,
                 project_id=project_id,
                 context=context,
+                llm_user_input_schema=llm_user_input_schema,
             )
         except Exception as e:
             # AC-3: Fail-Fast on registration failure

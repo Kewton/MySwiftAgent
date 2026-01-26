@@ -238,14 +238,22 @@ class MasterManagerSubWorkflow:
         interfaces: dict[str, InterfaceSchema],
         project_id: str,
         context: "ExecutionContext",
+        llm_user_input_schema: dict[str, Any] | None = None,
     ) -> MasterCreationResult:
         """Create all masters for the workflow.
+
+        Bug Fix 20260126: Added llm_user_input_schema parameter to pass
+        LLM-provided user input schema for field validation.
 
         Args:
             tasks: List of task definitions
             interfaces: Interface schemas for each task
             project_id: Project ID for registration
             context: Execution context with API access
+            llm_user_input_schema: Optional user input schema from LLM.
+                When provided, this takes priority over inference from
+                independent tasks. This ensures field names match the
+                original user requirement.
 
         Returns:
             MasterCreationResult with created master information
@@ -278,10 +286,20 @@ class MasterManagerSubWorkflow:
         sorted_tasks = topological_sort_tasks(tasks)
 
         # Issue #408: Get user_input_schema for validation
+        # Bug Fix 20260126: Prioritize LLM-provided schema over inference
         # The first task receives user input directly, so its input_schema
         # reflects what the user provides. Used to validate field names.
-        user_input_schema = self._get_user_input_schema(sorted_tasks, interfaces)
-        logger.debug("Issue #408: Retrieved user_input_schema for validation")
+        user_input_schema = self._get_user_input_schema(
+            sorted_tasks,
+            interfaces,
+            llm_user_input_schema=llm_user_input_schema,
+        )
+        logger.debug(
+            "Bug Fix 20260126: Retrieved user_input_schema for validation: %s",
+            list(user_input_schema.get("properties", {}).keys())
+            if user_input_schema
+            else None,
+        )
 
         # Step 1: Create InterfaceMasters
         interface_masters: list[InterfaceMasterInfo] = []
