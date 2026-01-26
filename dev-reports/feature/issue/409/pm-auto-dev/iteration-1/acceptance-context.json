@@ -1,0 +1,50 @@
+{
+  "issue_number": 409,
+  "feature_summary": "複数独立タスク存在時のデータフロー設計不備修正",
+  "acceptance_criteria": [
+    "AC-1: dependencies=[]のタスク（TaskFlow）は{{job.body.user_input}}を使用する",
+    "AC-2: _get_user_input_schemaが全独立タスクのフィールドを含む",
+    "AC-3: Issue #408の検証が正しく機能する（全ユーザー入力フィールドが検証対象）",
+    "AC-4: 複数独立タスクのテストケースが追加される",
+    "AC-5: 既存テストTC-005はレガシー互換性テストとして残し、docstringに明記",
+    "AC-6: 同名フィールド衝突時に両方の型情報を含む警告ログを出力する",
+    "AC-7: 同名フィールドで型が異なる場合はValueErrorを発生させる",
+    "AC-8: 独立タスクのデータフロー仕様をexpertAgent/docs/に文書化する"
+  ],
+  "labels": ["bug", "project: expertAgent"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": ["LLM API (optional)"],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/health"},
+      {"service": "myVault", "url": "http://localhost:8003/health"}
+    ],
+    "test_commands": [
+      {
+        "name": "独立タスク判定テスト",
+        "type": "pytest",
+        "command": "uv run pytest expertAgent/tests/acceptance/test_issue_409_acceptance.py -v -s"
+      },
+      {
+        "name": "TC-005レガシー互換性テスト",
+        "type": "pytest",
+        "command": "uv run pytest expertAgent/tests/acceptance/test_issue_403_acceptance.py::TestIssue403BodyTemplate::test_tc005_build_body_template_backward_compatibility -v"
+      }
+    ]
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_409_acceptance.py",
+  "acceptance_plan_path": "dev-reports/feature/issue/409/acceptance-plan.md",
+  "test_cases_mapping": {
+    "TC-001": "独立タスク（order > 0, dependencies=[]）がuser_inputを使用する",
+    "TC-002": "レガシー呼び出し（task=None）の後方互換性",
+    "TC-003": "スキーママージ - 複数独立タスクのフィールドをマージ",
+    "TC-004": "同名フィールド衝突 - 型一致時の警告ログ",
+    "TC-005": "同名フィールド衝突 - 型不一致時のValueError",
+    "TC-006": "Issue #408検証との統合",
+    "TC-007": "E2E - 複数独立タスクのJob生成フロー",
+    "TC-008": "ドキュメント存在確認"
+  }
+}

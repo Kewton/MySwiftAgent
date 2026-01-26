@@ -1073,3 +1073,323 @@ class TestBuildBodyTemplateMultiDependency:
         # With interfaces, should use dict format
         assert isinstance(template["inputs"], dict)
         assert template["inputs"]["keyword"] == "{{tasks[0].output_data.keyword}}"
+
+
+class TestIssue409IndependentTaskDataflow:
+    """Issue #409: Tests for independent task (dependencies=[]) dataflow.
+
+    AC-1: dependencies=[]のタスク（TaskFlow）は{{job.body.user_input}}を使用する
+    AC-2: _get_user_input_schemaが全独立タスクのフィールドを含む
+    """
+
+    def test_tc007_independent_task_uses_user_input(self):
+        """TC-007: Independent task (order > 0, dependencies=[]) uses user_input.
+
+        Issue #409: AC-1 - Even if order > 0, a task with dependencies=[] should
+        use {{job.body.user_input}} instead of {{tasks[order-1].output_data}}.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # Task at order 1 with no dependencies (independent)
+        task = TaskDefinition(
+            id="task_002",
+            name="Independent Second Task",
+            description="Independent task at order 1",
+            task_type="fetch",
+            recommended_api="/api/fetch",
+            priority=2,
+            dependencies=[],  # No dependencies = independent task
+        )
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"keyword": {"type": "string"}},
+                },
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={
+                    "type": "object",
+                    "properties": {"search_term": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"results": {"type": "array"}},
+                },
+            ),
+        }
+
+        task_order_map = {"task_001": 0, "task_002": 1}
+
+        template = manager._build_body_template(
+            order=1,  # Not first task
+            task=task,
+            interfaces=interfaces,
+            task_order_map=task_order_map,
+        )
+
+        # Independent task should use user_input, not previous task's output
+        assert template["inputs"] == "{{job.body.user_input}}", (
+            f"Independent task should use user_input, got: {template['inputs']}"
+        )
+        assert template["workflow"] == "__PENDING__"
+        assert template["project"] == "{{job.body.project}}"
+
+    def test_tc009_get_user_input_schema_merges_all_independent_tasks(self):
+        """TC-009: _get_user_input_schema merges schemas from all independent tasks.
+
+        Issue #409: AC-2 - The method should merge input schemas from all tasks
+        with dependencies=[], not just the first task.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # Two independent tasks with different input fields
+        sorted_tasks = [
+            TaskDefinition(
+                id="task_001",
+                name="First Independent Task",
+                description="First independent task",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=1,
+                dependencies=[],  # Independent
+            ),
+            TaskDefinition(
+                id="task_002",
+                name="Second Independent Task",
+                description="Second independent task",
+                task_type="search",
+                recommended_api="/api/search",
+                priority=2,
+                dependencies=[],  # Also independent
+            ),
+            TaskDefinition(
+                id="task_003",
+                name="Dependent Task",
+                description="Depends on task_001",
+                task_type="process",
+                recommended_api="/api/process",
+                priority=3,
+                dependencies=["task_001"],  # Dependent
+            ),
+        ]
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string", "description": "Search keyword"},
+                    },
+                    "required": ["keyword"],
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "recipient_email": {
+                            "type": "string",
+                            "description": "Email recipient",
+                        },
+                    },
+                    "required": ["recipient_email"],
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+            "task_003": InterfaceSchema(
+                task_id="task_003",
+                input_schema={
+                    "type": "object",
+                    "properties": {"data": {"type": "array"}},
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+        }
+
+        result = manager._get_user_input_schema(sorted_tasks, interfaces)
+
+        # Should merge fields from both independent tasks
+        assert result is not None
+        properties = result.get("properties", {})
+        assert "keyword" in properties, (
+            "keyword from task_001 should be in merged schema"
+        )
+        assert "recipient_email" in properties, (
+            "recipient_email from task_002 should be in merged schema"
+        )
+
+        # Required fields should also be merged
+        required = result.get("required", [])
+        assert "keyword" in required, "keyword should be required"
+        assert "recipient_email" in required, "recipient_email should be required"
+
+        # Dependent task's input should NOT be in merged schema
+        assert "data" not in properties, "Dependent task fields should not be merged"
+
+    def test_tc011_same_field_same_type_warning_log(self, caplog):
+        """TC-011: Same field with same type logs warning with both type info.
+
+        Issue #409: AC-6 - When same field appears in multiple independent tasks
+        with the same type, log a warning with both type info and continue.
+        """
+        import logging
+
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # Two independent tasks with same field name and same type
+        sorted_tasks = [
+            TaskDefinition(
+                id="task_001",
+                name="First Task",
+                description="First task",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=1,
+                dependencies=[],
+            ),
+            TaskDefinition(
+                id="task_002",
+                name="Second Task",
+                description="Second task",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=2,
+                dependencies=[],
+            ),
+        ]
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},  # Same field, same type
+                    },
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},  # Same field, same type
+                    },
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+        }
+
+        with caplog.at_level(logging.WARNING):
+            result = manager._get_user_input_schema(sorted_tasks, interfaces)
+
+        # Should still return merged result
+        assert result is not None
+        assert "keyword" in result.get("properties", {})
+
+        # Should log warning with both type info
+        warning_found = False
+        for record in caplog.records:
+            if record.levelno == logging.WARNING:
+                msg = record.message.lower()
+                if "keyword" in msg and "second task" in msg:
+                    # Check both type info is present
+                    if "string" in msg:
+                        warning_found = True
+                        break
+
+        assert warning_found, (
+            f"Warning log should contain field name, task name, and type info. "
+            f"Logs: {[r.message for r in caplog.records]}"
+        )
+
+    def test_tc012_same_field_different_type_raises_valueerror(self):
+        """TC-012: Same field with different type raises ValueError with both type info.
+
+        Issue #409: AC-7 - When same field appears in multiple independent tasks
+        with different types, raise ValueError with both type information.
+        """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.master_manager import (
+            MasterManagerSubWorkflow,
+        )
+
+        manager = MasterManagerSubWorkflow(engine="taskflow")
+
+        # Two independent tasks with same field name but different types
+        sorted_tasks = [
+            TaskDefinition(
+                id="task_001",
+                name="First Task",
+                description="First task",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=1,
+                dependencies=[],
+            ),
+            TaskDefinition(
+                id="task_002",
+                name="Second Task",
+                description="Second task",
+                task_type="fetch",
+                recommended_api="/api/fetch",
+                priority=2,
+                dependencies=[],
+            ),
+        ]
+
+        interfaces = {
+            "task_001": InterfaceSchema(
+                task_id="task_001",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "string"},  # string type
+                    },
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+            "task_002": InterfaceSchema(
+                task_id="task_002",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "keyword": {"type": "integer"},  # integer type (conflict!)
+                    },
+                },
+                output_schema={"type": "object", "properties": {}},
+            ),
+        }
+
+        # Should raise ValueError with both type info
+        with pytest.raises(ValueError) as exc_info:
+            manager._get_user_input_schema(sorted_tasks, interfaces)
+
+        error_message = str(exc_info.value).lower()
+        assert "keyword" in error_message, "Error should mention field name"
+        assert "string" in error_message, "Error should mention existing type"
+        assert "integer" in error_message, "Error should mention conflicting type"
+        assert "second task" in error_message, "Error should mention task name"

@@ -309,9 +309,43 @@ If you see "Maximum retries exceeded" errors:
    adapter = JobGeneratorV2Adapter(max_retry=10)
    ```
 
+## Independent Task Dataflow (Issue #409)
+
+When multiple independent tasks exist in a workflow (tasks with `dependencies=[]`), each independent task receives data directly from `job.body.user_input`.
+
+### Key Points
+
+- **Independent tasks**: Tasks with `dependencies=[]` use `{{job.body.user_input}}`
+- **Dependent tasks**: Tasks with dependencies use field references like `{{tasks[N].output_data.field}}`
+- **Schema merging**: All independent task input schemas are merged into a single `user_input_schema`
+
+### Field Conflict Handling
+
+| Scenario | Behavior |
+|----------|----------|
+| Same field, same type | Warning log, continue (last wins) |
+| Same field, different type | `ValueError` raised, job generation aborted |
+
+For detailed specification, see: [Independent Task Dataflow Specification](./independent-task-dataflow.md)
+
+---
+
+## Related Issues
+
+| Issue | Description | Status |
+|-------|-------------|--------|
+| #342 | V2 Architecture | ✅ Completed |
+| #350 | TaskFlow Engine | ✅ Completed |
+| #403 | Multi-dependency field aggregation | ✅ Completed |
+| #408 | User input field validation | ✅ Completed |
+| #409 | Multiple independent tasks dataflow | ✅ Completed |
+
+---
+
 ## Future Work
 
 1. **Rollback support**: Full implementation of rollback strategies
 2. **Progress reporting**: Real-time progress updates via SSE
 3. **A/B testing**: Compare V1 and V2 performance metrics
 4. **Full V2 migration**: Deprecate V1 after stabilization
+5. **GraphAI independent task support**: Apply same dataflow logic to GraphAI engine

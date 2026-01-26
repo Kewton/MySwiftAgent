@@ -255,6 +255,12 @@ class TestIssue403Acceptance:
         """TC-005: 後方互換性 - オプション引数省略時に従来動作を維持。
 
         受入条件: AC-5, AC-7
+
+        Note: This is a LEGACY COMPATIBILITY TEST for task=None calls.
+        Issue #409 AC-5: This test validates that existing code calling
+        _build_body_template(order=N) without the task parameter continues
+        to work correctly with the legacy format ({{tasks[N-1].output_data}}).
+        New code should pass the task parameter for proper independent task detection.
         """
         # Arrange
         manager = MasterManagerSubWorkflow(

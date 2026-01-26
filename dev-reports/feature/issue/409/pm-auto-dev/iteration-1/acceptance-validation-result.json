@@ -1,0 +1,155 @@
+{
+  "status": "passed",
+  "validation_timestamp": "2026-01-26T18:30:00+09:00",
+  "acceptance_plan_coverage": {
+    "ac_total": 8,
+    "ac_verified": 8,
+    "tc_total": 8,
+    "tc_implemented": 8,
+    "dp_total": 4,
+    "dp_verified": 4,
+    "f_total": 4,
+    "f_verified": 4
+  },
+  "acceptance_criteria_mapping": {
+    "AC-1": {
+      "plan_method": "pytest / 実API呼び出し",
+      "actual_method": "pytest (test_e2e001_two_independent_tasks_receive_user_input)",
+      "verdict": "PASS",
+      "notes": "MasterManagerSubWorkflowを直接呼び出し、独立タスクが{{job.body.user_input}}を使用することを確認"
+    },
+    "AC-2": {
+      "plan_method": "pytest",
+      "actual_method": "pytest (test_ac2_user_input_schema_merges_all_independent_task_fields)",
+      "verdict": "PASS",
+      "notes": "_get_user_input_schemaが全独立タスクのフィールドをマージすることを確認"
+    },
+    "AC-3": {
+      "plan_method": "pytest / 結合テスト",
+      "actual_method": "pytest + integration_test (TC-010)",
+      "verdict": "PASS",
+      "notes": "Issue #408検証が全フィールドを対象とすることを確認"
+    },
+    "AC-4": {
+      "plan_method": "テストファイル確認",
+      "actual_method": "file_existence (test_issue_409_acceptance.py with 9 tests)",
+      "verdict": "PASS",
+      "notes": "TC-007〜TC-012相当のテストが実装済み"
+    },
+    "AC-5": {
+      "plan_method": "コード確認",
+      "actual_method": "docstring_check + pytest",
+      "verdict": "PASS",
+      "notes": "TC-005のdocstringに'LEGACY COMPATIBILITY TEST'の記載を確認"
+    },
+    "AC-6": {
+      "plan_method": "pytest / ログ確認",
+      "actual_method": "pytest (test_e2e003_type_match_logs_warning_and_continues)",
+      "verdict": "PASS",
+      "notes": "警告ログに'Existing type: string, New type: string'形式で両方の型情報が含まれることを確認"
+    },
+    "AC-7": {
+      "plan_method": "pytest / 例外確認",
+      "actual_method": "pytest (test_e2e002_type_mismatch_raises_valueerror_with_type_info)",
+      "verdict": "PASS",
+      "notes": "ValueErrorが発生し、エラーメッセージに両方の型情報が含まれることを確認"
+    },
+    "AC-8": {
+      "plan_method": "ファイル存在確認",
+      "actual_method": "file_existence + content_check",
+      "verdict": "PASS",
+      "notes": "independent-task-dataflow.md存在、内容に必要なセクション（定義、仕様、同名フィールド扱い）が含まれる"
+    }
+  },
+  "test_case_mapping": {
+    "TC-001": {
+      "plan": "独立タスク（order > 0, dependencies=[]）がuser_inputを使用する",
+      "actual": "test_e2e001_two_independent_tasks_receive_user_input",
+      "verdict": "PASS"
+    },
+    "TC-002": {
+      "plan": "レガシー呼び出し（task=None）の後方互換性",
+      "actual": "test_legacy_call_without_task_param_still_works + TC-005",
+      "verdict": "PASS"
+    },
+    "TC-003": {
+      "plan": "スキーママージ - 複数独立タスクのフィールドをマージ",
+      "actual": "test_ac2_user_input_schema_merges_all_independent_task_fields",
+      "verdict": "PASS"
+    },
+    "TC-004": {
+      "plan": "同名フィールド衝突 - 型一致時の警告ログ",
+      "actual": "test_e2e003_type_match_logs_warning_and_continues",
+      "verdict": "PASS"
+    },
+    "TC-005": {
+      "plan": "同名フィールド衝突 - 型不一致時のValueError",
+      "actual": "test_e2e002_type_mismatch_raises_valueerror_with_type_info",
+      "verdict": "PASS"
+    },
+    "TC-006": {
+      "plan": "Issue #408検証との統合",
+      "actual": "Integration test (TC-010)",
+      "verdict": "PASS"
+    },
+    "TC-007": {
+      "plan": "E2E - 複数独立タスクのJob生成フロー",
+      "actual": "test_e2e001_two_independent_tasks_receive_user_input (E2E)",
+      "verdict": "PASS"
+    },
+    "TC-008": {
+      "plan": "ドキュメント存在確認",
+      "actual": "file_existence (independent-task-dataflow.md)",
+      "verdict": "PASS"
+    }
+  },
+  "design_policy_verification": {
+    "DP-1": {
+      "policy": "後方互換性の維持（task=Noneでレガシー動作）",
+      "verified": true,
+      "test": "test_legacy_call_without_task_param_still_works + TC-005"
+    },
+    "DP-2": {
+      "policy": "独立タスク判定ロジック",
+      "verified": true,
+      "test": "test_e2e001_two_independent_tasks_receive_user_input"
+    },
+    "DP-3": {
+      "policy": "同名フィールド衝突の処理分岐",
+      "verified": true,
+      "test": "test_e2e002 (TypeError) + test_e2e003 (Warning)"
+    },
+    "DP-4": {
+      "policy": "スキーママージのパフォーマンス",
+      "verified": true,
+      "notes": "テスト実行時に処理が完了（タイムアウトなし）"
+    }
+  },
+  "dead_code_verification": {
+    "F-1": {
+      "feature": "_build_body_template独立タスク分岐",
+      "verified": true,
+      "evidence": "grep + integration test"
+    },
+    "F-2": {
+      "feature": "_get_user_input_schemaスキーママージ",
+      "verified": true,
+      "evidence": "grep + integration test"
+    },
+    "F-3": {
+      "feature": "同名フィールド衝突の型チェック",
+      "verified": true,
+      "evidence": "grep + unit test"
+    }
+  },
+  "gaps": [],
+  "e2e_test_count": 9,
+  "static_test_count": 0,
+  "conclusion": {
+    "all_ac_covered": true,
+    "all_tc_implemented": true,
+    "all_dp_verified": true,
+    "all_dead_code_checked": true,
+    "recommendation": "Phase 4（リファクタリング）へ進む"
+  }
+}

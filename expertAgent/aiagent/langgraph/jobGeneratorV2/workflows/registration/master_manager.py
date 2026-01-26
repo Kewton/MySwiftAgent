@@ -535,11 +535,13 @@ class MasterManagerSubWorkflow:
             # Issue #390: Use "workflow" field name (mySwiftAgentCore API expects "workflow")
             # Issue #391: Use {{job.body.project}} (Job model has no project attribute)
             # workflow will be set to placeholder - updated after workflow generation
-            if order == 0:
+            # Issue #409: Independent tasks (dependencies=[]) use user_input directly
+            if order == 0 or (task is not None and not task.dependencies):
                 # Issue #396: Use user_input instead of entire body for inputs
                 # mySwiftAgentCore expects inputs to match workflow's input_schema
                 # job.body = {"project": "...", "user_input": {"keyword": "...", ...}}
                 # workflow expects inputs = {"keyword": "...", ...}
+                # Issue #409: Any independent task (dependencies=[]) uses user_input
                 return {
                     "workflow": "__PENDING__",  # Updated by workflow_gen phase
                     "inputs": "{{job.body.user_input}}",  # Issue #396: User input data
@@ -679,31 +681,88 @@ class MasterManagerSubWorkflow:
         sorted_tasks: list[TaskDefinition],
         interfaces: dict[str, InterfaceSchema],
     ) -> dict[str, Any] | None:
-        """Get user input schema from the first task in topological order.
+        """Get merged user input schema from all independent tasks.
 
         Issue #408: The first task receives user input directly, so its input_schema
         reflects what the user provides. This is used to validate field names in
         subsequent tasks.
+
+        Issue #409: Merge input schemas from all independent tasks (dependencies=[])
+        to ensure all user input fields are captured.
 
         Args:
             sorted_tasks: Tasks sorted by topological order
             interfaces: Interface schemas for all tasks
 
         Returns:
-            Input schema from the first task, or None if not available
+            Merged input schema from all independent tasks, or None if not available
+
+        Raises:
+            ValueError: If same field has different types in different tasks
         """
         if not sorted_tasks:
             return None
 
-        first_task_id = sorted_tasks[0].id
-        if first_task_id not in interfaces:
-            logger.warning(
-                "Issue #408: First task '%s' not found in interfaces",
-                first_task_id,
-            )
+        merged_properties: dict[str, Any] = {}
+        merged_required: list[str] = []
+
+        for task in sorted_tasks:
+            # Issue #409: Only merge schemas from independent tasks (dependencies=[])
+            if task.dependencies:
+                continue
+
+            if task.id not in interfaces:
+                logger.warning(
+                    "Issue #409: Independent task '%s' not found in interfaces",
+                    task.id,
+                )
+                continue
+
+            schema = interfaces[task.id].input_schema
+            if not schema:
+                continue
+
+            props = schema.get("properties", {})
+            required = schema.get("required", [])
+
+            for field_name, field_schema in props.items():
+                if field_name in merged_properties:
+                    # Issue #409: Check for type conflicts
+                    existing_type = merged_properties[field_name].get("type")
+                    new_type = field_schema.get("type")
+
+                    if existing_type != new_type:
+                        # Issue #409 AC-7: Type mismatch raises ValueError
+                        raise ValueError(
+                            f"Field '{field_name}' has conflicting types: "
+                            f"'{existing_type}' vs '{new_type}' (task: {task.name})"
+                        )
+
+                    # Issue #409 AC-6: Type match logs warning with both type info
+                    logger.warning(
+                        "Field '%s' from task '%s' overrides previous definition. "
+                        "Existing type: %s, New type: %s",
+                        field_name,
+                        task.name,
+                        existing_type,
+                        new_type,
+                    )
+
+                merged_properties[field_name] = field_schema
+
+            # Merge required fields
+            for req_field in required:
+                if req_field not in merged_required:
+                    merged_required.append(req_field)
+
+        if not merged_properties:
             return None
 
-        return interfaces[first_task_id].input_schema
+        return {
+            "type": "object",
+            "properties": merged_properties,
+            "required": merged_required,
+        }
 
     async def _create_interface_master(
         self,

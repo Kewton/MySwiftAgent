@@ -1,0 +1,17 @@
+{
+  "issue_number": 409,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+  ],
+  "quality_metrics": {
+    "before_coverage": 49.8,
+    "new_code_coverage": 100,
+    "complexity_score": "moderate"
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コード品質の確認",
+    "SOLID原則準拠の確認"
+  ],
+  "notes": "Issue #409は既存メソッドへの条件分岐追加とスキーママージロジックの実装。大規模リファクタリングは不要。"
+}

@@ -1,0 +1,98 @@
+{
+  "issue_number": 409,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "_build_body_template (modified condition)",
+      "type": "condition_branch",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 539,
+      "description": "独立タスク判定条件を追加: order == 0 or (task is not None and not task.dependencies)",
+      "expected_callers": ["create_masters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F2",
+      "name": "_get_user_input_schema (rewritten)",
+      "type": "method",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 679,
+      "description": "全独立タスクのスキーマをマージする機能。型チェック（不一致→ValueError、一致→警告ログ）を含む",
+      "expected_callers": ["create_masters"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "ValueError for type mismatch",
+      "type": "error_handling",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 735,
+      "description": "同名フィールドで型が異なる場合にValueErrorを発生（AC-7）",
+      "expected_callers": ["_get_user_input_schema"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    },
+    {
+      "feature_id": "F4",
+      "name": "Warning log for type match",
+      "type": "logging",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "line_number": 742,
+      "description": "同名フィールドで型が一致する場合に警告ログを出力（両方の型情報を含む）（AC-6）",
+      "expected_callers": ["_get_user_input_schema"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_tc007_independent_task_uses_user_input"],
+      "integration_tests": ["test_tc008_multiple_independent_tasks_use_user_input"],
+      "acceptance_tests": ["test_e2e001_two_independent_tasks_receive_user_input"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_tc009_get_user_input_schema_merges_all_independent_tasks"],
+      "integration_tests": ["test_tc010_issue408_validation_with_merged_schema"],
+      "acceptance_tests": ["test_ac2_user_input_schema_merges_all_independent_task_fields"]
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_tc012_same_field_different_type_raises_valueerror"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_e2e002_type_mismatch_raises_valueerror_with_type_info"]
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_tc011_same_field_same_type_warning_log"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_e2e003_type_match_logs_warning_and_continues"]
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "_build_body_template is called from create_masters via _build_task_master"
+    },
+    {
+      "feature_id": "F2",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "integration_type": "method_call",
+      "integration_method": "_get_user_input_schema is called from create_masters to validate field references"
+    }
+  ],
+  "documentation": [
+    {
+      "file_path": "expertAgent/docs/features/independent-task-dataflow.md",
+      "description": "独立タスクのデータフロー仕様書（AC-8）"
+    }
+  ],
+  "legacy_compatibility": {
+    "tc005_docstring_updated": true,
+    "file_path": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+    "line_number": 254,
+    "description": "TC-005のdocstringにレガシー互換性テストであることを明記（AC-5）"
+  }
+}

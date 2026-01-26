@@ -1,0 +1,120 @@
+{
+  "issue_number": 409,
+  "issue_title": "bug(expertAgent): 複数独立タスク存在時のデータフロー設計不備",
+  "acceptance_criteria": [
+    "AC-1: dependencies=[]のタスク（TaskFlow）は{{job.body.user_input}}を使用する",
+    "AC-2: _get_user_input_schemaが全独立タスクのフィールドを含む",
+    "AC-3: Issue #408の検証が正しく機能する（全ユーザー入力フィールドが検証対象）",
+    "AC-4: 複数独立タスクのテストケースが追加される",
+    "AC-5: 既存テストTC-005はレガシー互換性テストとして残し、docstringに明記する",
+    "AC-6: 同名フィールド衝突時に両方の型情報を含む警告ログを出力する",
+    "AC-7: 同名フィールドで型が異なる場合はValueErrorを発生させる",
+    "AC-8: 独立タスクのデータフロー仕様をexpertAgent/docs/に文書化する"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "T1.1",
+      "description": "単体テスト追加（TC-007, TC-009, TC-011, TC-012）",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+      "type": "test"
+    },
+    {
+      "task_id": "T1.2",
+      "description": "結合テスト追加（TC-008, TC-010）",
+      "file": "expertAgent/tests/integration/langgraph/test_issue_409_integration.py",
+      "type": "test"
+    },
+    {
+      "task_id": "T2.1",
+      "description": "_build_body_templateの修正 - 独立タスク判定ロジック追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "type": "implementation",
+      "details": "order == 0 or (task is not None and not task.dependencies) の条件を追加"
+    },
+    {
+      "task_id": "T2.2",
+      "description": "_get_user_input_schemaの修正 - 全独立タスクのスキーマをマージ",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+      "type": "implementation",
+      "details": "型不一致時はValueError、型一致時は警告ログ（両方の型情報含む）"
+    },
+    {
+      "task_id": "T3.1",
+      "description": "受入テスト作成",
+      "file": "expertAgent/tests/acceptance/test_issue_409_acceptance.py",
+      "type": "test"
+    },
+    {
+      "task_id": "T3.2",
+      "description": "TC-005のdocstring更新 - レガシー互換性テストであることを明記",
+      "file": "expertAgent/tests/acceptance/test_issue_403_acceptance.py",
+      "line": 254,
+      "type": "documentation"
+    },
+    {
+      "task_id": "T4.1",
+      "description": "独立タスクデータフロー仕様書作成",
+      "file": "expertAgent/docs/features/independent-task-dataflow.md",
+      "type": "documentation"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "単体テスト追加",
+      "estimated_hours": 1
+    },
+    {
+      "task_id": "1.2",
+      "description": "結合テスト追加",
+      "estimated_hours": 1
+    },
+    {
+      "task_id": "2.1",
+      "description": "_build_body_template実装",
+      "estimated_hours": 1
+    },
+    {
+      "task_id": "2.2",
+      "description": "_get_user_input_schema実装",
+      "estimated_hours": 1
+    },
+    {
+      "task_id": "3.1",
+      "description": "受入テスト作成",
+      "estimated_hours": 1
+    },
+    {
+      "task_id": "3.2",
+      "description": "TC-005 docstring更新",
+      "estimated_hours": 0.5
+    },
+    {
+      "task_id": "4.1",
+      "description": "仕様書作成",
+      "estimated_hours": 0.5
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "expertAgent/tests/unit/test_job_generator_v2/test_registration/test_master_manager.py",
+    "expertAgent/tests/integration/langgraph/test_issue_409_integration.py",
+    "expertAgent/tests/acceptance/test_issue_409_acceptance.py",
+    "expertAgent/docs/features/independent-task-dataflow.md"
+  ],
+  "definition_of_done": [
+    "すべてのタスクが完了",
+    "単体テストカバレッジ90%以上",
+    "L3受入テスト全パス",
+    "CI/CDグリーン（Ruff, MyPyエラーゼロ）"
+  ],
+  "target_coverage": 90,
+  "design_policy_path": "dev-reports/feature/issue/409/design-policy.md",
+  "target_files": {
+    "main_implementation": "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+    "methods_to_modify": [
+      "_build_body_template (lines 497-586)",
+      "_get_user_input_schema (lines 676-705)"
+    ]
+  }
+}
