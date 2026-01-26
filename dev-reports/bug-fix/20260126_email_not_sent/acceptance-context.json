@@ -1,0 +1,16 @@
+{
+  "bug_id": "20260126_email_not_sent",
+  "bug_description": "E2Eテストで7/7タスク成功と表示されるが、メールが実際には送信されない",
+  "fix_summary": "LLMプロンプト改善、検証厳格化、user_input_schemaの明示的定義を実装",
+  "acceptance_criteria": [
+    "AC-1: JobAnalysisResponseにuser_input_schemaフィールドが存在する",
+    "AC-2: JOB_ANALYSIS_SYSTEM_PROMPTにユーザー入力フィールド一貫性ルールが含まれる",
+    "AC-3: フィールド不一致時にUserInputFieldMismatchErrorが発生する",
+    "AC-4: LLM生成のuser_input_schemaが独立タスク推論より優先される"
+  ],
+  "test_scenarios": [
+    "シナリオ1: 単体テストがすべてパスする",
+    "シナリオ2: 静的解析エラーが0件",
+    "シナリオ3: 新規実装コードが実際に使用されている"
+  ]
+}

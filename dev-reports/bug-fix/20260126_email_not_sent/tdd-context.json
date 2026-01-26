@@ -1,0 +1,33 @@
+{
+  "bug_id": "20260126_email_not_sent",
+  "bug_description": "E2Eテストで7/7タスク成功と表示されるが、メールが実際には送信されない。LLMがユーザー入力フィールドを正しく設計せず、検証機能もそれを止めなかった。",
+  "selected_actions": [
+    {
+      "action_id": "1",
+      "title": "LLMプロンプトの改善",
+      "description": "JOB_ANALYSIS_SYSTEM_PROMPTにユーザー入力フィールドの一貫性ルールを追加",
+      "files_to_modify": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/nodes/job_analyzer.py"
+      ]
+    },
+    {
+      "action_id": "2",
+      "title": "検証の厳格化",
+      "description": "フィールド不一致をWARNINGからERRORに変更",
+      "files_to_modify": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/errors.py"
+      ]
+    },
+    {
+      "action_id": "4",
+      "title": "user_input_schemaの明示的定義",
+      "description": "JobAnalysisResponseにuser_input_schemaフィールドを追加し、LLMに明示的に定義させる",
+      "files_to_modify": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/nodes/job_analyzer.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/workflows/registration/master_manager.py"
+      ]
+    }
+  ],
+  "target_coverage": 90
+}

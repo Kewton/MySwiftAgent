@@ -599,18 +599,27 @@ class MasterManagerSubWorkflow:
 
         Issue #403: Creates inputs dict where each field references its source task.
         Issue #408: Added user_input_schema for field validation on fallback.
+        Bug Fix 20260126: Changed from WARNING to ERROR when field mismatch detected.
 
         Args:
             task: Task definition with dependencies
             interfaces: Interface schemas for all tasks
             task_order_map: Mapping from task_id to execution order
             user_input_schema: Optional user input schema for validating fallback
-                field references. When provided, logs warning if fallback field
+                field references. When provided, raises error if fallback field
                 does not exist in user_input_schema.
 
         Returns:
             Body template with field-level input references
+
+        Raises:
+            UserInputFieldMismatchError: If a required field is not found in
+                user_input_schema (Bug Fix 20260126)
         """
+        from aiagent.langgraph.jobGeneratorV2.workflows.registration.errors import (
+            UserInputFieldMismatchError,
+        )
+
         input_schema = interfaces[task.id].input_schema
         required_fields = list(input_schema.get("properties", {}).keys())
 
@@ -657,15 +666,19 @@ class MasterManagerSubWorkflow:
                     task.id,
                 )
 
-                # Issue #408: Check if fallback field exists in user_input_schema
+                # Bug Fix 20260126: Raise error instead of warning when field mismatch
                 if user_input_schema is not None:
                     if field_name not in valid_user_input_fields:
-                        logger.warning(
-                            "Issue #408: Fallback field '%s' not found in "
+                        logger.error(
+                            "Bug Fix 20260126: Field '%s' not found in "
                             "user_input_schema. Available fields: %s. "
                             "The LLM may have changed the field name.",
                             field_name,
                             sorted(valid_user_input_fields),
+                        )
+                        raise UserInputFieldMismatchError(
+                            field_name=field_name,
+                            available_fields=list(valid_user_input_fields),
                         )
 
                 inputs[field_name] = f"{{{{job.body.user_input.{field_name}}}}}"
@@ -680,8 +693,12 @@ class MasterManagerSubWorkflow:
         self,
         sorted_tasks: list[TaskDefinition],
         interfaces: dict[str, InterfaceSchema],
+        llm_user_input_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
-        """Get merged user input schema from all independent tasks.
+        """Get user input schema, prioritizing LLM-provided schema.
+
+        Bug Fix 20260126: Added llm_user_input_schema parameter to prioritize
+        explicit LLM-provided schema over inference from independent tasks.
 
         Issue #408: The first task receives user input directly, so its input_schema
         reflects what the user provides. This is used to validate field names in
@@ -693,13 +710,38 @@ class MasterManagerSubWorkflow:
         Args:
             sorted_tasks: Tasks sorted by topological order
             interfaces: Interface schemas for all tasks
+            llm_user_input_schema: Optional explicit user input schema from LLM.
+                When provided and non-empty, this takes priority over inference.
 
         Returns:
-            Merged input schema from all independent tasks, or None if not available
+            User input schema (LLM-provided if available, otherwise merged from
+            independent tasks), or None if not available
 
         Raises:
             ValueError: If same field has different types in different tasks
         """
+        # Bug Fix 20260126: Prioritize LLM-provided schema
+        if llm_user_input_schema is not None and llm_user_input_schema:
+            # Validate basic structure
+            if "properties" in llm_user_input_schema:
+                logger.info(
+                    "Bug Fix 20260126: Using LLM-provided user_input_schema with fields: %s",
+                    list(llm_user_input_schema.get("properties", {}).keys()),
+                )
+                return llm_user_input_schema
+            # If it's a dict but doesn't have properties, wrap it
+            if isinstance(llm_user_input_schema, dict) and llm_user_input_schema:
+                # Assume it's a properties dict directly
+                logger.info(
+                    "Bug Fix 20260126: Wrapping LLM-provided schema as properties"
+                )
+                return {
+                    "type": "object",
+                    "properties": llm_user_input_schema,
+                    "required": list(llm_user_input_schema.keys()),
+                }
+
+        # Fallback: infer from independent tasks
         if not sorted_tasks:
             return None
 

@@ -7,8 +7,12 @@ This package contains the RegistrationWorkflow and its sub-workflows:
 
 Issue #342 Phase D.1: Registration workflow implementation.
 Issue #393: Added update_task_master_body_template_taskflow from task_master_utils.
+Bug Fix 20260126: Added UserInputFieldMismatchError for strict field validation.
 """
 
+from aiagent.langgraph.jobGeneratorV2.workflows.registration.errors import (
+    UserInputFieldMismatchError,
+)
 from aiagent.langgraph.jobGeneratorV2.workflows.registration.job_registrar import (
     JobRegistrarSubWorkflow,
 )
@@ -26,5 +30,6 @@ __all__ = [
     "RegistrationWorkflow",
     "MasterManagerSubWorkflow",
     "JobRegistrarSubWorkflow",
+    "UserInputFieldMismatchError",
     "update_task_master_body_template_taskflow",
 ]

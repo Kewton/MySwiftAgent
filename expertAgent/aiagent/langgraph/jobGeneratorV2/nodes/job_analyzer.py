@@ -91,10 +91,17 @@ class AnalyzedTask(BaseModel):
     def to_unified_identifier(self) -> UnifiedTaskIdentifier:
         """Convert to UnifiedTaskIdentifier for workflow tracking.
 
+        Bug Fix: Now preserves name and description to ensure task intent
+        is passed to the workflow generation phase.
+
         Returns:
-            UnifiedTaskIdentifier with task_id set
+            UnifiedTaskIdentifier with task_id, name, and description set
         """
-        return UnifiedTaskIdentifier(task_id=self.task_id)
+        return UnifiedTaskIdentifier(
+            task_id=self.task_id,
+            name=self.name,
+            description=self.description,
+        )
 
 
 class JobAnalysisResponse(BaseModel):
@@ -102,11 +109,15 @@ class JobAnalysisResponse(BaseModel):
 
     This is the output of the merged TASK_BREAKDOWN + INTERFACE_DESIGN phase.
 
+    Bug Fix 20260126: Added user_input_schema field to explicitly define
+    user input fields, preventing LLM from changing field names.
+
     Attributes:
         tasks: List of analyzed tasks with embedded interface info
         interfaces: Interface definitions keyed by task_id
         job_body_parameters: Parameters extracted from user requirements
         overall_summary: Summary of the workflow
+        user_input_schema: Explicit schema for user input fields
     """
 
     tasks: list[AnalyzedTask] = Field(
@@ -120,6 +131,14 @@ class JobAnalysisResponse(BaseModel):
     )
     overall_summary: str = Field(
         default="", description="Summary of the entire workflow"
+    )
+    user_input_schema: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Schema defining fields that users will provide as input. "
+            "Keys are field names (e.g., 'keyword', 'email'), values are JSON Schema "
+            "type definitions. These field names MUST be used consistently across all tasks."
+        ),
     )
 
     def get_task_identifiers(self) -> list[UnifiedTaskIdentifier]:
@@ -164,11 +183,23 @@ JOB_ANALYSIS_SYSTEM_PROMPT = """You are an expert workflow designer. Analyze the
 
 3. **Parameters**: Extract any specific values from the requirement (emails, queries, etc.)
 
+4. **User Input Schema**: Define the exact fields the user will provide as input.
+   - Extract field names directly from the requirements
+   - Examples: "keyword" for search terms, "email" for email addresses
+   - These fields MUST be referenced consistently in ALL task input_schemas
+   - Format: {"type": "object", "properties": {"keyword": {"type": "string"}, ...}}
+
 ## Rules:
 - Use task_id for ALL references (dependencies MUST use task_id like "task_001")
 - NEVER use indices or positions (e.g., "depends on task 0" is WRONG)
 - Tasks should be ordered by dependency (independent tasks first)
 - Each task's output_schema should match the input_schema of dependent tasks
+
+## CRITICAL - User Input Field Consistency:
+- DO NOT rename user input fields. If the requirement says "email", use "email" not "recipient_email"
+- DO NOT rename "keyword" to "search_keyword" or "query"
+- Independent tasks (dependencies=[]) MUST use fields from user_input_schema
+- All tasks referencing user input MUST use the EXACT field names from user_input_schema
 
 ## Output Format:
 Provide a JSON response with:
@@ -176,6 +207,7 @@ Provide a JSON response with:
 - interfaces: Object mapping task_id to interface definition
 - job_body_parameters: Array of extracted parameters
 - overall_summary: Brief workflow summary
+- user_input_schema: JSON Schema defining user input fields (REQUIRED)
 """
 
 
