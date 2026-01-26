@@ -2,6 +2,7 @@
  * Job Status API Endpoint
  * Issue #291: Generate Page (Job Generation)
  * Issue #305: Enhanced with real-time progress tracking (phase, progress, task_breakdown, workflow_statuses)
+ * Issue #410: Added userInputSchema propagation for dynamic form generation
  *
  * GET /api/jobs/[jobId]/status
  * Returns the current status of a job version for polling.
@@ -70,6 +71,7 @@ export const GET: RequestHandler = async ({ params }) => {
 					// Issue #305: Save workflow_statuses for trace links
 					// Issue #310: Save taskBreakdown even on failure (for debugging)
 					// Issue #396: Also try to get workflow_statuses from result object as fallback
+					// Issue #410: Save userInputSchema even on failure (for debugging)
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'failed',
 						errorMessage: result?.error_message || 'Job generation failed',
@@ -87,6 +89,9 @@ export const GET: RequestHandler = async ({ params }) => {
 								: undefined,
 						interfaceDefinitions: result?.interface_definitions
 							? JSON.stringify(result.interface_definitions)
+							: undefined,
+						userInputSchema: result?.user_input_schema
+							? JSON.stringify(result.user_input_schema)
 							: undefined
 					});
 					if (updated) {
@@ -97,6 +102,7 @@ export const GET: RequestHandler = async ({ params }) => {
 					// Issue #305: Save workflow_statuses for trace links
 					// Issue #310: Save taskBreakdown and interfaceDefinitions to DB
 					// Issue #396: Also try to get workflow_statuses from result object as fallback
+					// Issue #410: Save userInputSchema for dynamic form generation
 					const updated = await jobVersionRepository.updateGenerationResult(jobId, {
 						status: 'success',
 						externalJobMasterId:
@@ -114,6 +120,9 @@ export const GET: RequestHandler = async ({ params }) => {
 								: undefined,
 						interfaceDefinitions: result?.interface_definitions
 							? JSON.stringify(result.interface_definitions)
+							: undefined,
+						userInputSchema: result?.user_input_schema
+							? JSON.stringify(result.user_input_schema)
 							: undefined
 					});
 					if (updated) {
@@ -144,6 +153,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		taskBreakdown: jobVersion.taskBreakdown,
 		interfaceDefinitions: jobVersion.interfaceDefinitions,
 		workflows: jobVersion.workflows,
+		userInputSchema: jobVersion.userInputSchema, // Issue #410
 		errorMessage: jobVersion.errorMessage,
 		generatedAt: jobVersion.generatedAt?.toISOString() ?? null,
 		updatedAt: jobVersion.updatedAt.toISOString(),

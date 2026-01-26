@@ -1,0 +1,163 @@
+{
+  "issue_number": 410,
+  "issue_title": "feat: user_input_schemaのエンドツーエンド伝播",
+  "acceptance_criteria": [
+    "AC-1: expertAgent - JobGenerationResultにuser_input_schema追加（フィールド追加、_build_result()での設定、APIレスポンス確認）",
+    "AC-2: myAgentDesk - JobVersionテーブルにuserInputSchemaカラム追加（Drizzleスキーマ、マイグレーション、保存ロジック）",
+    "AC-3: myAgentDesk - UIで入力フォームを動的生成（getUserInputSchema()実装、フォールバック、動的フォーム）",
+    "AC-4: E2Eテスト - スキーマの動的取得（ハードコード削除、動的ペイロード構築）",
+    "AC-5: 単体テスト・結合テスト（カバレッジ90%以上維持）"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "JobGenerationResultにuser_input_schemaフィールドを追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "type": "field_addition"
+    },
+    {
+      "task_id": "1.2",
+      "description": "_build_result()でanalysis.user_input_schemaを設定",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "type": "logic_modification"
+    },
+    {
+      "task_id": "1.3",
+      "description": "JobGeneratorResponseにuser_input_schemaフィールドを追加",
+      "file": "expertAgent/app/schemas/job_generator.py",
+      "type": "field_addition"
+    },
+    {
+      "task_id": "1.4",
+      "description": "_convert_result()でuser_input_schemaを返却",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "type": "logic_modification"
+    },
+    {
+      "task_id": "2.1",
+      "description": "DrizzleスキーマにuserInputSchemaカラムを追加",
+      "file": "myAgentDesk/src/lib/server/db/schema.ts",
+      "type": "schema_modification"
+    },
+    {
+      "task_id": "2.2",
+      "description": "Drizzleマイグレーション実行",
+      "type": "migration"
+    },
+    {
+      "task_id": "2.3",
+      "description": "UpdateGenerationResultInputにuserInputSchemaフィールドを追加",
+      "file": "myAgentDesk/src/lib/server/repositories/job-version.ts",
+      "type": "field_addition"
+    },
+    {
+      "task_id": "2.4",
+      "description": "status/+server.tsでuserInputSchemaを保存",
+      "file": "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts",
+      "type": "logic_modification"
+    },
+    {
+      "task_id": "3.1",
+      "description": "getUserInputSchema()関数を実装",
+      "file": "myAgentDesk/src/lib/utils/interface-schema.ts",
+      "type": "function_addition"
+    },
+    {
+      "task_id": "3.2",
+      "description": "runs/+page.svelteでgetUserInputSchema()を使用",
+      "file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+      "type": "logic_modification"
+    },
+    {
+      "task_id": "4.1",
+      "description": "E2Eテストでスキーマを動的取得",
+      "file": "scripts/e2e/cross-service/test_full_workflow_e2e.sh",
+      "type": "test_modification"
+    },
+    {
+      "task_id": "5.1",
+      "description": "expertAgent単体テスト追加",
+      "file": "expertAgent/tests/unit/test_job_generator_v2/test_user_input_schema.py",
+      "type": "test_addition"
+    },
+    {
+      "task_id": "5.2",
+      "description": "myAgentDesk単体テスト追加",
+      "file": "myAgentDesk/tests/unit/utils/interface-schema.test.ts",
+      "type": "test_addition"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "データモデル定義（JobGenerationResult, JobGeneratorResponse）",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+        "expertAgent/app/schemas/job_generator.py"
+      ]
+    },
+    {
+      "task_id": "1.2",
+      "description": "データ伝播実装（_build_result, _convert_result）",
+      "estimated_hours": 2,
+      "deliverables": [
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+        "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py"
+      ]
+    },
+    {
+      "task_id": "2.1",
+      "description": "DBスキーマ変更（Drizzle + マイグレーション）",
+      "estimated_hours": 4,
+      "deliverables": [
+        "myAgentDesk/src/lib/server/db/schema.ts",
+        "myAgentDesk/drizzle/"
+      ]
+    },
+    {
+      "task_id": "2.2",
+      "description": "リポジトリ・API変更",
+      "estimated_hours": 4,
+      "deliverables": [
+        "myAgentDesk/src/lib/server/repositories/job-version.ts",
+        "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts"
+      ]
+    },
+    {
+      "task_id": "3.1",
+      "description": "UIロジック変更",
+      "estimated_hours": 4,
+      "deliverables": [
+        "myAgentDesk/src/lib/utils/interface-schema.ts",
+        "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte"
+      ]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "expertAgent/app/schemas/job_generator.py",
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+    "myAgentDesk/src/lib/server/db/schema.ts",
+    "myAgentDesk/src/lib/server/repositories/job-version.ts",
+    "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts",
+    "myAgentDesk/src/lib/utils/interface-schema.ts",
+    "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+    "scripts/e2e/cross-service/test_full_workflow_e2e.sh",
+    "expertAgent/tests/unit/test_job_generator_v2/test_user_input_schema.py"
+  ],
+  "definition_of_done": [
+    "全受入条件（AC-1〜AC-5）が実装されている",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー0件",
+    "結合テストがパス",
+    "後方互換性が維持されている"
+  ],
+  "target_coverage": 90,
+  "technical_notes": {
+    "python_naming": "user_input_schema (snake_case)",
+    "typescript_naming": "userInputSchema (camelCase)",
+    "database_naming": "user_input_schema (snake_case)",
+    "backward_compatibility": "既存データ（userInputSchema=null）でもエラーにならないこと"
+  }
+}

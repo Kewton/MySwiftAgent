@@ -1,0 +1,17 @@
+{
+  "issue_number": 410,
+  "refactor_targets": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+    "myAgentDesk/src/lib/utils/interface-schema.ts"
+  ],
+  "quality_metrics": {
+    "before_coverage": 90,
+    "complexity_score": "N/A"
+  },
+  "design_patterns_to_apply": [],
+  "improvement_goals": [
+    "コード品質の確認",
+    "重複コードの確認"
+  ],
+  "note": "TDD実装で既にクリーンなコードが実装されているため、大規模なリファクタリングは不要"
+}

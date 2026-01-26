@@ -280,6 +280,8 @@ class JobGeneratorAdapter:
     ) -> "JobGeneratorResponse":
         """Convert 3-phase result to JobGeneratorResponse.
 
+        Issue #410: Now propagates user_input_schema for end-to-end flow.
+
         Args:
             result: 3-phase result from orchestrator
             job_id: Job ID
@@ -318,6 +320,7 @@ class JobGeneratorAdapter:
                 error_message=None,
                 langfuse_trace_id=langfuse_trace_id,
                 workflow_statuses=workflow_statuses,  # Issue #396
+                user_input_schema=result.user_input_schema,  # Issue #410
             )
         else:
             return JobGeneratorResponse(
@@ -335,6 +338,7 @@ class JobGeneratorAdapter:
                 error_message=result.error,
                 langfuse_trace_id=langfuse_trace_id,
                 workflow_statuses=workflow_statuses,  # Issue #396
+                user_input_schema=None,  # Issue #410: Not propagated on failure
             )
 
 

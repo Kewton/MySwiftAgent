@@ -117,6 +117,8 @@ export const requirementVersion = sqliteTable(
  * Stores AI-generated job configurations based on requirement versions.
  * Each job version includes task breakdowns, interface definitions,
  * and workflow configurations. Uses semantic versioning (major.minor).
+ *
+ * Issue #410: Added userInputSchema column for end-to-end schema propagation.
  */
 export const jobVersion = sqliteTable(
 	'job_version',
@@ -137,6 +139,7 @@ export const jobVersion = sqliteTable(
 		taskBreakdown: text('task_breakdown'),
 		interfaceDefinitions: text('interface_definitions'),
 		workflows: text('workflows'),
+		userInputSchema: text('user_input_schema'), // Issue #410: LLM-generated user input schema
 		externalJobMasterId: text('external_job_master_id'),
 		externalJobId: text('external_job_id'), // Issue #305: ExpertAgent job_id for polling
 		externalTraceId: text('external_trace_id'), // Issue #305: Langfuse trace_id for observability

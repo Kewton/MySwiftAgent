@@ -1,6 +1,7 @@
 /**
  * Interface Schema Helpers
  * Issue #293: JobQueue Integration for Runs
+ * Issue #410: Added getUserInputSchema for end-to-end schema propagation
  *
  * Utilities for parsing interface definitions from JobVersion
  * and merging task progress with interface metadata.
@@ -123,6 +124,56 @@ export function getFirstTaskInputSchema(
 	}
 
 	return firstTask.input_schema;
+}
+
+/**
+ * Parse user input schema JSON string.
+ * Issue #410: Used to retrieve LLM-generated user input schema.
+ *
+ * @param userInputSchema - JSON string from JobVersion.userInputSchema
+ * @returns Parsed JSON schema or null if invalid/empty
+ */
+export function parseUserInputSchema(
+	userInputSchema: string | null | undefined
+): JSONSchema | null {
+	if (!userInputSchema || userInputSchema.trim() === '') {
+		return null;
+	}
+
+	try {
+		const parsed = JSON.parse(userInputSchema);
+		// Validate it looks like a JSON Schema
+		if (parsed && typeof parsed === 'object' && parsed.type === 'object') {
+			return parsed as JSONSchema;
+		}
+		return null;
+	} catch (error) {
+		console.error('Failed to parse userInputSchema:', error);
+		return null;
+	}
+}
+
+/**
+ * Get user input schema with fallback to first task input schema.
+ * Issue #410: Prioritizes LLM-generated userInputSchema, falls back to
+ * inferring from first task's interface definition.
+ *
+ * @param userInputSchema - JSON string from JobVersion.userInputSchema (preferred)
+ * @param interfaceDefinitions - JSON string from JobVersion.interfaceDefinitions (fallback)
+ * @returns Input schema for user input form generation, or null if unavailable
+ */
+export function getUserInputSchema(
+	userInputSchema: string | null | undefined,
+	interfaceDefinitions: string | null | undefined
+): JSONSchema | null {
+	// Issue #410: Prioritize LLM-generated userInputSchema
+	const parsedUserInputSchema = parseUserInputSchema(userInputSchema);
+	if (parsedUserInputSchema) {
+		return parsedUserInputSchema;
+	}
+
+	// Fallback to first task input schema for backward compatibility
+	return getFirstTaskInputSchema(interfaceDefinitions);
 }
 
 /**

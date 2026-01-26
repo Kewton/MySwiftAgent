@@ -1,0 +1,49 @@
+{
+  "issue_number": 410,
+  "iteration": 1,
+  "phase_results": {
+    "tdd": {
+      "status": "success",
+      "coverage": 90,
+      "tests_passed": 1854,
+      "tests_failed": 0
+    },
+    "acceptance": {
+      "status": "passed",
+      "ac_verified": 5,
+      "ac_total": 5,
+      "tc_implemented": 10,
+      "tc_total": 12
+    },
+    "refactor": {
+      "status": "success",
+      "note": "No refactoring needed"
+    }
+  },
+  "work_plan_comparison": {
+    "has_work_plan": true,
+    "planned_tasks": [
+      {"task_id": "1.1", "description": "データモデル定義", "status": "completed"},
+      {"task_id": "1.2", "description": "データ伝播実装", "status": "completed"},
+      {"task_id": "2.1", "description": "DBスキーマ変更", "status": "completed"},
+      {"task_id": "2.2", "description": "リポジトリ・API変更", "status": "completed"},
+      {"task_id": "3.1", "description": "UIロジック変更", "status": "completed"}
+    ],
+    "deliverables_status": [
+      {"file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py", "created": true},
+      {"file": "expertAgent/app/schemas/job_generator.py", "created": true},
+      {"file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py", "created": true},
+      {"file": "myAgentDesk/src/lib/server/db/schema.ts", "created": true},
+      {"file": "myAgentDesk/src/lib/server/repositories/job-version.ts", "created": true},
+      {"file": "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts", "created": true},
+      {"file": "myAgentDesk/src/lib/utils/interface-schema.ts", "created": true},
+      {"file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte", "created": true}
+    ],
+    "definition_of_done_status": [
+      {"criterion": "全受入条件が実装されている", "verified": true},
+      {"criterion": "単体テストカバレッジ90%以上", "verified": true},
+      {"criterion": "静的解析エラー0件", "verified": true},
+      {"criterion": "後方互換性が維持されている", "verified": true}
+    ]
+  }
+}

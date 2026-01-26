@@ -76,8 +76,10 @@ class TestPromptImprovements:
         AC: Prompt instructs LLM to maintain consistent field names
         """
         # Check for user input field consistency rules
-        assert "user_input_schema" in JOB_ANALYSIS_SYSTEM_PROMPT.lower() or \
-               "user input" in JOB_ANALYSIS_SYSTEM_PROMPT.lower()
+        assert (
+            "user_input_schema" in JOB_ANALYSIS_SYSTEM_PROMPT.lower()
+            or "user input" in JOB_ANALYSIS_SYSTEM_PROMPT.lower()
+        )
 
     def test_prompt_contains_field_name_preservation_rule(self) -> None:
         """JOB_ANALYSIS_SYSTEM_PROMPT should instruct not to rename fields.
@@ -86,8 +88,11 @@ class TestPromptImprovements:
         """
         prompt_lower = JOB_ANALYSIS_SYSTEM_PROMPT.lower()
         # Should contain rules about not changing field names
-        assert "email" in prompt_lower or "field name" in prompt_lower or \
-               "consistent" in prompt_lower
+        assert (
+            "email" in prompt_lower
+            or "field name" in prompt_lower
+            or "consistent" in prompt_lower
+        )
 
     def test_prompt_contains_user_input_schema_section(self) -> None:
         """JOB_ANALYSIS_SYSTEM_PROMPT should have user_input_schema section.
@@ -95,8 +100,10 @@ class TestPromptImprovements:
         AC: Prompt has explicit section for defining user input schema
         """
         # Check for section about user input schema
-        assert "user_input_schema" in JOB_ANALYSIS_SYSTEM_PROMPT or \
-               "User Input Schema" in JOB_ANALYSIS_SYSTEM_PROMPT
+        assert (
+            "user_input_schema" in JOB_ANALYSIS_SYSTEM_PROMPT
+            or "User Input Schema" in JOB_ANALYSIS_SYSTEM_PROMPT
+        )
 
 
 class TestValidationStrictness:
@@ -171,7 +178,9 @@ class TestValidationStrictness:
 
         # Error message should indicate the mismatch
         assert "recipient_email" in str(exc_info.value)
-        assert "email" in str(exc_info.value) or "Available fields" in str(exc_info.value)
+        assert "email" in str(exc_info.value) or "Available fields" in str(
+            exc_info.value
+        )
 
 
 class TestUserInputSchemaPriority:
@@ -379,6 +388,4 @@ class TestCreateMastersLlmUserInputSchemaIntegration:
         sig = inspect.signature(MasterManagerSubWorkflow.create_masters)
         param = sig.parameters["llm_user_input_schema"]
 
-        assert param.default is None, (
-            "llm_user_input_schema should default to None"
-        )
+        assert param.default is None, "llm_user_input_schema should default to None"

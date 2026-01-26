@@ -1,6 +1,7 @@
 /**
  * Runs List Page Server
  * Issue #293: Runs Screen (Execution History / Monitoring)
+ * Issue #410: Added userInputSchema for end-to-end propagation
  *
  * Server-side data loading for the runs list page.
  */
@@ -47,7 +48,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			id: jv.id,
 			versionLabel: jv.versionLabel,
 			status: jv.status as 'active' | 'deprecated' | 'generating' | 'success' | 'failed',
-			interfaceDefinitions: jv.interfaceDefinitions as string | null
+			interfaceDefinitions: jv.interfaceDefinitions as string | null,
+			userInputSchema: jv.userInputSchema as string | null // Issue #410
 		}))
 	};
 };

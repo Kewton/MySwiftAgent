@@ -28,12 +28,14 @@ export interface CreateJobVersionInput {
 /**
  * Input data for updating generation result.
  * Issue #305: Added externalJobId for proper separation of job_id and langfuse_trace_id
+ * Issue #410: Added userInputSchema for end-to-end propagation
  */
 export interface UpdateGenerationResultInput {
 	status: JobVersionStatus;
 	taskBreakdown?: string;
 	interfaceDefinitions?: string;
 	workflows?: string;
+	userInputSchema?: string; // Issue #410: JSON string of user input schema
 	externalJobMasterId?: string;
 	externalJobId?: string; // ExpertAgent job_id for polling
 	externalTraceId?: string; // Langfuse trace_id for observability link
@@ -115,6 +117,7 @@ export class JobVersionRepository {
 			taskBreakdown: null,
 			interfaceDefinitions: null,
 			workflows: null,
+			userInputSchema: null, // Issue #410: For end-to-end propagation
 			externalJobMasterId: null,
 			externalJobId: null, // Issue #305: For ExpertAgent polling
 			externalTraceId: null, // Issue #305: For Langfuse trace link
@@ -176,6 +179,10 @@ export class JobVersionRepository {
 		}
 		if (input.workflows !== undefined) {
 			updateData.workflows = input.workflows;
+		}
+		// Issue #410: Save userInputSchema
+		if (input.userInputSchema !== undefined) {
+			updateData.userInputSchema = input.userInputSchema;
 		}
 		if (input.externalJobMasterId !== undefined) {
 			updateData.externalJobMasterId = input.externalJobMasterId;

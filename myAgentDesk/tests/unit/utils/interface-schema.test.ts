@@ -1,6 +1,7 @@
 /**
  * Interface Schema Helper Tests
  * Issue #293: JobQueue Integration for Runs
+ * Issue #410: Added tests for getUserInputSchema and parseUserInputSchema
  *
  * Tests for interface schema parsing and task progress merging
  */
@@ -10,6 +11,8 @@ import {
 	getFirstTaskInputSchema,
 	parseInterfaceDefinitions,
 	mergeTasksWithInterfaces,
+	parseUserInputSchema,
+	getUserInputSchema,
 	type InterfaceDefinitions,
 	type TaskInterface,
 	type JSONSchema,
@@ -243,6 +246,130 @@ describe('Interface Schema Helpers', () => {
 
 			expect(result[0].status).toBe('failed');
 			expect(result[0].error).toBe('API rate limit exceeded');
+		});
+	});
+
+	/**
+	 * Issue #410: Tests for parseUserInputSchema
+	 */
+	describe('parseUserInputSchema', () => {
+		it('should parse valid user input schema JSON', () => {
+			const schema: JSONSchema = {
+				type: 'object',
+				properties: {
+					keyword: { type: 'string', description: 'Search keyword' },
+					email: { type: 'string', description: 'Notification email' }
+				},
+				required: ['keyword', 'email']
+			};
+			const jsonString = JSON.stringify(schema);
+			const result = parseUserInputSchema(jsonString);
+
+			expect(result).not.toBeNull();
+			expect(result?.type).toBe('object');
+			expect(result?.properties?.keyword).toBeDefined();
+			expect(result?.properties?.email).toBeDefined();
+		});
+
+		it('should return null for null input', () => {
+			const result = parseUserInputSchema(null);
+			expect(result).toBeNull();
+		});
+
+		it('should return null for empty string', () => {
+			const result = parseUserInputSchema('');
+			expect(result).toBeNull();
+		});
+
+		it('should return null for whitespace-only string', () => {
+			const result = parseUserInputSchema('   ');
+			expect(result).toBeNull();
+		});
+
+		it('should return null for invalid JSON', () => {
+			const result = parseUserInputSchema('{ invalid json }');
+			expect(result).toBeNull();
+		});
+
+		it('should return null for non-object schema', () => {
+			const result = parseUserInputSchema(JSON.stringify({ type: 'string' }));
+			expect(result).toBeNull();
+		});
+	});
+
+	/**
+	 * Issue #410: Tests for getUserInputSchema
+	 */
+	describe('getUserInputSchema', () => {
+		const userInputSchema: JSONSchema = {
+			type: 'object',
+			properties: {
+				keyword: { type: 'string', description: 'Search keyword' },
+				email: { type: 'string', description: 'Notification email' }
+			},
+			required: ['keyword', 'email']
+		};
+
+		it('should prioritize userInputSchema over interfaceDefinitions', () => {
+			const userInputSchemaString = JSON.stringify(userInputSchema);
+			const interfaceDefString = JSON.stringify(sampleInterfaceDefinitions);
+
+			const result = getUserInputSchema(userInputSchemaString, interfaceDefString);
+
+			expect(result).not.toBeNull();
+			// Should have keyword and email from userInputSchema, not company_name from interface
+			expect(result?.properties?.keyword).toBeDefined();
+			expect(result?.properties?.email).toBeDefined();
+			expect(result?.properties?.company_name).toBeUndefined();
+		});
+
+		it('should fall back to interfaceDefinitions when userInputSchema is null', () => {
+			const interfaceDefString = JSON.stringify(sampleInterfaceDefinitions);
+
+			const result = getUserInputSchema(null, interfaceDefString);
+
+			expect(result).not.toBeNull();
+			// Should have company_name from first task interface
+			expect(result?.properties?.company_name).toBeDefined();
+			expect(result?.properties?.target_years).toBeDefined();
+		});
+
+		it('should fall back to interfaceDefinitions when userInputSchema is empty', () => {
+			const interfaceDefString = JSON.stringify(sampleInterfaceDefinitions);
+
+			const result = getUserInputSchema('', interfaceDefString);
+
+			expect(result).not.toBeNull();
+			expect(result?.properties?.company_name).toBeDefined();
+		});
+
+		it('should fall back to interfaceDefinitions when userInputSchema is invalid', () => {
+			const interfaceDefString = JSON.stringify(sampleInterfaceDefinitions);
+
+			const result = getUserInputSchema('{ invalid json }', interfaceDefString);
+
+			expect(result).not.toBeNull();
+			expect(result?.properties?.company_name).toBeDefined();
+		});
+
+		it('should return null when both userInputSchema and interfaceDefinitions are null', () => {
+			const result = getUserInputSchema(null, null);
+			expect(result).toBeNull();
+		});
+
+		it('should return null when both userInputSchema and interfaceDefinitions are empty', () => {
+			const result = getUserInputSchema('', '{}');
+			expect(result).toBeNull();
+		});
+
+		it('should handle backward compatibility with only interfaceDefinitions', () => {
+			// This tests the scenario where userInputSchema is not yet populated (existing data)
+			const interfaceDefString = JSON.stringify(sampleInterfaceDefinitions);
+
+			const result = getUserInputSchema(undefined, interfaceDefString);
+
+			expect(result).not.toBeNull();
+			expect(result?.properties?.company_name).toBeDefined();
 		});
 	});
 });

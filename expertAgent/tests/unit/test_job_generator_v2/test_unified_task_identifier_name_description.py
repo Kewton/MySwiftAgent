@@ -10,11 +10,12 @@ This test file verifies:
 - AC-4: _execute_workflow_gen()がTaskRequestに正しいname, descriptionを設定する
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from aiagent.langgraph.jobGeneratorV2.types import UnifiedTaskIdentifier
+import pytest
+
 from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer import AnalyzedTask
+from aiagent.langgraph.jobGeneratorV2.types import UnifiedTaskIdentifier
 
 
 class TestUnifiedTaskIdentifierNameDescription:
@@ -34,7 +35,10 @@ class TestUnifiedTaskIdentifierNameDescription:
             task_id="task_001",
             description="サマリとキーワード情報を使用して、メール本文を作成する",
         )
-        assert identifier.description == "サマリとキーワード情報を使用して、メール本文を作成する"
+        assert (
+            identifier.description
+            == "サマリとキーワード情報を使用して、メール本文を作成する"
+        )
 
     def test_unified_task_identifier_name_description_optional(self):
         """name, descriptionはオプショナル（後方互換性）"""
@@ -55,7 +59,10 @@ class TestUnifiedTaskIdentifierNameDescription:
         assert updated.task_id == "task_001"
         assert updated.task_master_id == "tm_abc123"
         assert updated.name == "メールコンテンツ作成"
-        assert updated.description == "サマリとキーワード情報を使用して、メール本文を作成する"
+        assert (
+            updated.description
+            == "サマリとキーワード情報を使用して、メール本文を作成する"
+        )
 
     def test_hash_still_based_on_task_id_only(self):
         """hashはtask_idのみに基づく（既存動作を維持）"""
@@ -102,7 +109,10 @@ class TestAnalyzedTaskToUnifiedIdentifier:
 
         identifier = task.to_unified_identifier()
 
-        assert identifier.description == "サマリとキーワード情報を使用して、メール本文を作成する"
+        assert (
+            identifier.description
+            == "サマリとキーワード情報を使用して、メール本文を作成する"
+        )
 
 
 class TestBuildTaskIdentifiers:
@@ -110,7 +120,9 @@ class TestBuildTaskIdentifiers:
 
     def test_build_task_identifiers_preserves_name_description(self):
         """_build_task_identifiers()がname, descriptionを保持する"""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
+        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+            JobGenerationOrchestrator,
+        )
 
         orchestrator = JobGenerationOrchestrator()
 
@@ -131,7 +143,10 @@ class TestBuildTaskIdentifiers:
         assert identifiers[0].task_id == "task_006"
         assert identifiers[0].task_master_id == "tm_abc123"
         assert identifiers[0].name == "メールコンテンツ作成"
-        assert identifiers[0].description == "サマリとキーワード情報を使用して、メール本文を作成する"
+        assert (
+            identifiers[0].description
+            == "サマリとキーワード情報を使用して、メール本文を作成する"
+        )
 
 
 class TestExecuteWorkflowGen:
@@ -140,17 +155,23 @@ class TestExecuteWorkflowGen:
     @pytest.mark.asyncio
     async def test_execute_workflow_gen_uses_correct_name(self):
         """_execute_workflow_gen()がTaskRequestに正しいnameを設定する"""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
-        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer import InterfaceDefinition
+        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer import (
+            InterfaceDefinition,
+        )
+        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+            JobGenerationOrchestrator,
+        )
 
         # Mock the workflow generator client
         mock_client = AsyncMock()
         mock_client.fetch_capabilities = AsyncMock(return_value=[])
-        mock_client.generate_workflows = AsyncMock(return_value=MagicMock(
-            status=MagicMock(value="success"),
-            workflows={},
-            recovery_suggestion=None,
-        ))
+        mock_client.generate_workflows = AsyncMock(
+            return_value=MagicMock(
+                status=MagicMock(value="success"),
+                workflows={},
+                recovery_suggestion=None,
+            )
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
@@ -181,25 +202,38 @@ class TestExecuteWorkflowGen:
 
         # Verify the TaskRequest was created with correct name
         call_args = mock_client.generate_workflows.call_args
-        tasks = call_args.kwargs.get("tasks") or call_args[1].get("tasks") or call_args[0][0]
+        tasks = (
+            call_args.kwargs.get("tasks")
+            or call_args[1].get("tasks")
+            or call_args[0][0]
+        )
 
         assert len(tasks) == 1
         assert tasks[0].name == "メールコンテンツ作成"
-        assert tasks[0].description == "サマリとキーワード情報を使用して、メール本文を作成する"
+        assert (
+            tasks[0].description
+            == "サマリとキーワード情報を使用して、メール本文を作成する"
+        )
 
     @pytest.mark.asyncio
     async def test_execute_workflow_gen_not_uses_fixed_string(self):
         """_execute_workflow_gen()が固定文字列を使用しない"""
-        from aiagent.langgraph.jobGeneratorV2.orchestrator import JobGenerationOrchestrator
-        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer import InterfaceDefinition
+        from aiagent.langgraph.jobGeneratorV2.nodes.job_analyzer import (
+            InterfaceDefinition,
+        )
+        from aiagent.langgraph.jobGeneratorV2.orchestrator import (
+            JobGenerationOrchestrator,
+        )
 
         mock_client = AsyncMock()
         mock_client.fetch_capabilities = AsyncMock(return_value=[])
-        mock_client.generate_workflows = AsyncMock(return_value=MagicMock(
-            status=MagicMock(value="success"),
-            workflows={},
-            recovery_suggestion=None,
-        ))
+        mock_client.generate_workflows = AsyncMock(
+            return_value=MagicMock(
+                status=MagicMock(value="success"),
+                workflows={},
+                recovery_suggestion=None,
+            )
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
@@ -229,7 +263,11 @@ class TestExecuteWorkflowGen:
         )
 
         call_args = mock_client.generate_workflows.call_args
-        tasks = call_args.kwargs.get("tasks") or call_args[1].get("tasks") or call_args[0][0]
+        tasks = (
+            call_args.kwargs.get("tasks")
+            or call_args[1].get("tasks")
+            or call_args[0][0]
+        )
 
         # 固定文字列が使用されていないことを確認
         assert tasks[0].name != "Task task_006"

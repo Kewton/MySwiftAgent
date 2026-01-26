@@ -929,7 +929,8 @@ curl -X POST http://localhost:8104/aiagent-api/v1/job-generator \
   "requirement_relaxation_suggestions": [],
   "validation_errors": [],
   "error_message": "Job creation started. Use GET /api/v1/jobs/{job_id}/status to check progress.",
-  "langfuse_trace_id": null
+  "langfuse_trace_id": null,
+  "user_input_schema": null
 }
 ```
 
@@ -986,7 +987,15 @@ curl -X GET http://localhost:8104/aiagent-api/v1/jobs/550e8400-e29b-41d4-a716-44
     "job_id": "550e8400-e29b-41d4-a716-446655440000",
     "job_master_id": "jm_01K89W9DBHAPWMMZVHWT2N7GX9",
     "task_breakdown": [...],
-    "evaluation_result": {...}
+    "evaluation_result": {...},
+    "user_input_schema": {
+      "type": "object",
+      "properties": {
+        "keyword": {"type": "string", "description": "検索キーワード"},
+        "email": {"type": "string", "format": "email", "description": "通知先メールアドレス"}
+      },
+      "required": ["keyword", "email"]
+    }
   }
 }
 ```
@@ -1025,6 +1034,7 @@ curl -X GET http://localhost:8104/aiagent-api/v1/jobs/550e8400-e29b-41d4-a716-44
 | `job_master_id` | string | JobMaster ID（完了時のみ） |
 | `result` | object | ジョブ生成結果（完了時のみ） |
 | `error_message` | string | エラーメッセージ（失敗時のみ） |
+| `user_input_schema` | object | ユーザー入力スキーマ（Issue #410）。LLMが生成したJSON Schema形式のユーザー入力フィールド定義。完了時のみ。フロントエンドで入力フォームの動的生成に使用。 |
 
 ---
 

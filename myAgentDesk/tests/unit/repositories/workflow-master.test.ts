@@ -263,6 +263,7 @@ function createTables(sqlite: Database.Database) {
 			task_breakdown TEXT,
 			interface_definitions TEXT,
 			workflows TEXT,
+			user_input_schema TEXT,
 			external_job_master_id TEXT,
 			external_job_id TEXT,
 			external_trace_id TEXT,

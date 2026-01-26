@@ -8,7 +8,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { RUN_STATUS_CONFIG, getRunDuration, calculateProgress } from '$lib/types/run';
-	import { getFirstTaskInputSchema, convertParamsToSchemaTypes } from '$lib/utils/interface-schema';
+	import { getUserInputSchema, convertParamsToSchemaTypes } from '$lib/utils/interface-schema';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -23,17 +23,21 @@
 	let executionParams = $state<Record<string, string>>({});
 
 	// Get the input schema for the selected job version
+	// Issue #410: Use getUserInputSchema with fallback to interface definitions
 	const selectedJobVersion = $derived(
 		data.activeJobVersions.find((jv) => jv.id === selectedJobVersionId)
 	);
 	const inputSchema = $derived(
-		selectedJobVersion ? getFirstTaskInputSchema(selectedJobVersion.interfaceDefinitions) : null
+		selectedJobVersion
+			? getUserInputSchema(selectedJobVersion.userInputSchema, selectedJobVersion.interfaceDefinitions)
+			: null
 	);
 
 	// Track previous job version to detect changes
 	let previousJobVersionId = $state('');
 
 	// Reset execution params when job version changes
+	// Issue #410: Use getUserInputSchema for form field initialization
 	$effect(() => {
 		// Only run when job version actually changes
 		if (selectedJobVersionId !== previousJobVersionId) {
@@ -42,9 +46,8 @@
 			if (selectedJobVersionId) {
 				// Create new params object based on schema
 				const newParams: Record<string, string> = {};
-				const schema = getFirstTaskInputSchema(
-					data.activeJobVersions.find((jv) => jv.id === selectedJobVersionId)?.interfaceDefinitions
-				);
+				const jv = data.activeJobVersions.find((jv) => jv.id === selectedJobVersionId);
+				const schema = getUserInputSchema(jv?.userInputSchema, jv?.interfaceDefinitions);
 
 				if (schema?.properties) {
 					for (const key of Object.keys(schema.properties)) {

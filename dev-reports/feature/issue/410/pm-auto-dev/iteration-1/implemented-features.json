@@ -1,0 +1,168 @@
+{
+  "issue_number": 410,
+  "iteration": 1,
+  "implemented_features": [
+    {
+      "feature_id": "F1",
+      "name": "user_input_schema",
+      "type": "field",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 102,
+      "description": "JobGenerationResultにuser_input_schemaフィールドを追加",
+      "expected_callers": ["_build_result"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py:904"
+    },
+    {
+      "feature_id": "F2",
+      "name": "user_input_schema_propagation_in_build_result",
+      "type": "logic",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "line_number": 891,
+      "description": "_build_result()でanalysis.user_input_schemaを設定",
+      "expected_callers": ["_execute_workflow_registration"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py"
+    },
+    {
+      "feature_id": "F3",
+      "name": "user_input_schema",
+      "type": "field",
+      "file_path": "expertAgent/app/schemas/job_generator.py",
+      "line_number": 151,
+      "description": "JobGeneratorResponseにuser_input_schemaフィールドを追加（Pydantic）",
+      "expected_callers": ["_convert_result"],
+      "expected_call_location": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py:323"
+    },
+    {
+      "feature_id": "F4",
+      "name": "user_input_schema_in_convert_result",
+      "type": "logic",
+      "file_path": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "line_number": 323,
+      "description": "_convert_result()でuser_input_schemaをAPIレスポンスに含める",
+      "expected_callers": ["JobGeneratorAPIエンドポイント"],
+      "expected_call_location": "expertAgent/app/api/routes/job_generator.py"
+    },
+    {
+      "feature_id": "F5",
+      "name": "userInputSchema",
+      "type": "column",
+      "file_path": "myAgentDesk/src/lib/server/db/schema.ts",
+      "line_number": 142,
+      "description": "jobVersionテーブルにuserInputSchemaカラムを追加",
+      "expected_callers": ["updateGenerationResult", "job-version repository"],
+      "expected_call_location": "myAgentDesk/src/lib/server/repositories/job-version.ts"
+    },
+    {
+      "feature_id": "F6",
+      "name": "userInputSchema_in_UpdateGenerationResultInput",
+      "type": "interface_field",
+      "file_path": "myAgentDesk/src/lib/server/repositories/job-version.ts",
+      "line_number": 40,
+      "description": "UpdateGenerationResultInputにuserInputSchemaフィールドを追加",
+      "expected_callers": ["status/+server.ts"],
+      "expected_call_location": "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts"
+    },
+    {
+      "feature_id": "F7",
+      "name": "userInputSchema_save_logic",
+      "type": "logic",
+      "file_path": "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts",
+      "line_number": 100,
+      "description": "Job生成完了時にuserInputSchemaをDBに保存",
+      "expected_callers": ["Job Generator API callback"],
+      "expected_call_location": "myAgentDesk/src/routes/api/jobs/[jobId]/status/+server.ts"
+    },
+    {
+      "feature_id": "F8",
+      "name": "getUserInputSchema",
+      "type": "function",
+      "file_path": "myAgentDesk/src/lib/utils/interface-schema.ts",
+      "line_number": 165,
+      "description": "userInputSchemaを優先使用し、フォールバックでinterfaceDefinitionsを使用する関数",
+      "expected_callers": ["runs/+page.svelte"],
+      "expected_call_location": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte:32"
+    },
+    {
+      "feature_id": "F9",
+      "name": "parseUserInputSchema",
+      "type": "function",
+      "file_path": "myAgentDesk/src/lib/utils/interface-schema.ts",
+      "line_number": 150,
+      "description": "userInputSchema文字列をJSONSchemaにパースする関数",
+      "expected_callers": ["getUserInputSchema"],
+      "expected_call_location": "myAgentDesk/src/lib/utils/interface-schema.ts:180"
+    },
+    {
+      "feature_id": "F10",
+      "name": "ui_dynamic_form_generation",
+      "type": "logic",
+      "file_path": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+      "line_number": 32,
+      "description": "getUserInputSchemaを使用した動的フォーム生成",
+      "expected_callers": ["UI render"],
+      "expected_call_location": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte"
+    }
+  ],
+  "test_mappings": [
+    {
+      "feature_id": "F1",
+      "unit_tests": ["test_job_generation_result_has_user_input_schema_field"],
+      "integration_tests": ["test_user_input_schema_propagation_integration"],
+      "acceptance_tests": ["test_issue_410_acceptance"]
+    },
+    {
+      "feature_id": "F2",
+      "unit_tests": ["test_build_result_sets_user_input_schema"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F3",
+      "unit_tests": ["test_job_generator_response_has_user_input_schema_field"],
+      "integration_tests": [],
+      "acceptance_tests": []
+    },
+    {
+      "feature_id": "F4",
+      "unit_tests": ["test_convert_result_includes_user_input_schema"],
+      "integration_tests": [],
+      "acceptance_tests": ["test_job_generator_api_returns_user_input_schema"]
+    },
+    {
+      "feature_id": "F8",
+      "unit_tests": [
+        "test_get_user_input_schema_with_valid_schema",
+        "test_get_user_input_schema_fallback",
+        "test_get_user_input_schema_handles_parse_error"
+      ],
+      "integration_tests": [],
+      "acceptance_tests": []
+    }
+  ],
+  "integration_points": [
+    {
+      "feature_id": "F1",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "integration_type": "dataclass_field",
+      "integration_method": "field assignment in _build_result()"
+    },
+    {
+      "feature_id": "F4",
+      "integration_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/adapter.py",
+      "integration_type": "api_response",
+      "integration_method": "JobGeneratorResponse instantiation with user_input_schema"
+    },
+    {
+      "feature_id": "F5",
+      "integration_file": "myAgentDesk/src/lib/server/db/schema.ts",
+      "integration_type": "database_column",
+      "integration_method": "Drizzle ORM column definition"
+    },
+    {
+      "feature_id": "F8",
+      "integration_file": "myAgentDesk/src/routes/projects/[projectId]/workbenches/[workbenchId]/runs/+page.svelte",
+      "integration_type": "ui_import",
+      "integration_method": "import { getUserInputSchema } from '$lib/utils/interface-schema'"
+    }
+  ]
+}

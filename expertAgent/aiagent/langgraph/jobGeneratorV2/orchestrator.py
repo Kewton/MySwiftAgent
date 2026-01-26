@@ -85,7 +85,10 @@ class JobGenerationRequest(BaseModel):
 
 @dataclass
 class JobGenerationResult:
-    """Result from 3-phase job generation."""
+    """Result from 3-phase job generation.
+
+    Issue #410: Added user_input_schema field for end-to-end propagation.
+    """
 
     success: bool
     job_id: str | None = None
@@ -95,6 +98,8 @@ class JobGenerationResult:
     error: str | None = None
     tasks: list[AnalyzedTask] = field(default_factory=list)
     interfaces: dict[str, InterfaceDefinition] = field(default_factory=dict)
+    # Issue #410: user_input_schema for end-to-end propagation
+    user_input_schema: dict[str, Any] | None = None
 
 
 class JobGenerationOrchestrator:
@@ -866,7 +871,11 @@ class JobGenerationOrchestrator:
         identifiers: list[UnifiedTaskIdentifier],
         workflow_result: ParallelExecutionResult,
     ) -> JobGenerationResult:
-        """Build final result from phase outputs."""
+        """Build final result from phase outputs.
+
+        Issue #410: Now includes user_input_schema from analysis for
+        end-to-end propagation to UI.
+        """
         workflows = {
             tr.task_id: tr.workflow
             for tr in workflow_result.successful_tasks
@@ -877,6 +886,12 @@ class JobGenerationOrchestrator:
         # To: all_succeeded or not identifiers (strict success requirement)
         success = workflow_result.all_succeeded or not identifiers
 
+        # Issue #410: Propagate user_input_schema from analysis
+        # Convert empty dict to None for consistency
+        user_input_schema = (
+            analysis.user_input_schema if analysis.user_input_schema else None
+        )
+
         return JobGenerationResult(
             success=success,
             job_id=None,
@@ -886,6 +901,7 @@ class JobGenerationOrchestrator:
             tasks=analysis.tasks,
             interfaces=analysis.interfaces,
             error=workflow_result.get_error_summary() if not success else None,
+            user_input_schema=user_input_schema,  # Issue #410
         )
 
 

@@ -146,3 +146,13 @@ class JobGeneratorResponse(BaseModel):
         default_factory=list,
         description="List of parameters extracted from user requirements for job body",
     )
+
+    # Issue #410: user_input_schema for end-to-end propagation
+    user_input_schema: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "JSON Schema defining fields that users will provide as input. "
+            "Used by UI to dynamically generate input forms. "
+            "Keys are field names (e.g., 'keyword', 'email'), values are type definitions."
+        ),
+    )

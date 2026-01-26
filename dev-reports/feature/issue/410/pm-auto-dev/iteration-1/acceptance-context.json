@@ -1,0 +1,80 @@
+{
+  "issue_number": 410,
+  "feature_summary": "user_input_schemaのエンドツーエンド伝播",
+  "acceptance_criteria": [
+    "AC-1: expertAgent - JobGenerationResultにuser_input_schema追加",
+    "AC-2: myAgentDesk - JobVersionテーブルにuserInputSchemaカラム追加",
+    "AC-3: myAgentDesk - UIで入力フォームを動的生成",
+    "AC-4: E2Eテスト - スキーマの動的取得",
+    "AC-5: 単体テスト・結合テストの追加（カバレッジ90%以上）"
+  ],
+  "labels": ["enhancement", "cross-layer"],
+  "target_project": "cross-layer",
+  "playwright_required": true,
+  "required_services": ["expertAgent", "myVault", "myAgentDesk", "jobqueue", "mySwiftAgentCore"],
+  "external_dependencies": ["LLM API", "Langfuse"],
+  "test_cases": [
+    {
+      "tc_id": "TC-001",
+      "description": "JobGenerationResultにuser_input_schemaフィールドが存在する",
+      "test_type": "unit",
+      "related_ac": "AC-1"
+    },
+    {
+      "tc_id": "TC-002",
+      "description": "_build_resultでuser_input_schemaが設定される",
+      "test_type": "unit",
+      "related_ac": "AC-1"
+    },
+    {
+      "tc_id": "TC-003",
+      "description": "Job Generator APIレスポンスにuser_input_schemaが含まれる",
+      "test_type": "e2e",
+      "related_ac": "AC-1"
+    },
+    {
+      "tc_id": "TC-004",
+      "description": "JobVersionテーブルにuserInputSchemaカラムが存在する",
+      "test_type": "unit",
+      "related_ac": "AC-2"
+    },
+    {
+      "tc_id": "TC-005",
+      "description": "Job生成完了時にuserInputSchemaがDBに保存される",
+      "test_type": "e2e",
+      "related_ac": "AC-2"
+    },
+    {
+      "tc_id": "TC-006",
+      "description": "getUserInputSchema関数が正しく動作する",
+      "test_type": "unit",
+      "related_ac": "AC-3"
+    },
+    {
+      "tc_id": "TC-007",
+      "description": "UIで入力フォームがuserInputSchemaに基づいて動的生成される",
+      "test_type": "playwright",
+      "related_ac": "AC-3"
+    },
+    {
+      "tc_id": "TC-009",
+      "description": "後方互換性の確認（userInputSchema=null）",
+      "test_type": "e2e",
+      "related_ac": "AC-2, AC-3"
+    },
+    {
+      "tc_id": "TC-010",
+      "description": "スキーマバリデーション失敗時のフォールバック",
+      "test_type": "unit",
+      "related_ac": "AC-1"
+    }
+  ],
+  "health_checks": [
+    {"service": "expertAgent", "url": "http://localhost:8004/health"},
+    {"service": "myVault", "url": "http://localhost:8003/health"},
+    {"service": "jobqueue", "url": "http://localhost:8001/health"},
+    {"service": "mySwiftAgentCore", "url": "http://localhost:8006/health"}
+  ],
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_410_acceptance.py",
+  "playwright_test_file": "myAgentDesk/tests/e2e/test_issue_410.spec.ts"
+}
