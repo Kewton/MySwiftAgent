@@ -592,8 +592,11 @@ done
 log_step "Step 7: Verify Results"
 
 # 最終ステータス取得
+# タスクベースで判定したRUN_STATUSを使用（APIのstatusフィールドは更新遅延があるため）
 FINAL_RUN_RESPONSE=$(curl -s "${MYAGENTDESK_URL}/api/runs/${RUN_ID}/status" 2>/dev/null)
-FINAL_STATUS=$(echo "$FINAL_RUN_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
+API_STATUS=$(echo "$FINAL_RUN_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status","unknown"))' 2>/dev/null || echo "unknown")
+# タスクベースで判定済みのRUN_STATUSを優先使用
+FINAL_STATUS="${RUN_STATUS:-$API_STATUS}"
 
 # 結果をJSONファイルに保存
 cat > "$RESULT_FILE" <<EOF
