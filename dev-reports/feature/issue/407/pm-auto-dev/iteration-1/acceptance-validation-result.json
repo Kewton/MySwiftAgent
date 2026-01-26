@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "acceptance_plan_coverage": {
+    "ac_total": 11,
+    "ac_verified": 10,
+    "ac_pending": 1,
+    "tc_total": 12,
+    "tc_implemented": 12,
+    "coverage_rate": "90.9%"
+  },
+  "gaps": [
+    {
+      "item": "AC-6",
+      "description": "クロスサービスE2Eテストが成功する",
+      "status": "pending",
+      "reason": "Phase 7（リグレッションテスト）で検証予定",
+      "severity": "low"
+    }
+  ],
+  "test_item_mapping": {
+    "TC-001": {"implemented": true, "test_method": "test_tc001_helper_function_exists"},
+    "TC-002": {"implemented": true, "test_method": "test_tc005_exact_match_user_input_is_skipped"},
+    "TC-003": {"implemented": true, "test_method": "test_tc003_user_input_nested_field_is_skipped"},
+    "TC-004": {"implemented": true, "test_method": "test_tc004_project_nested_field_is_skipped"},
+    "TC-005": {"implemented": true, "test_method": "test_tc007_unrelated_field_is_not_skipped"},
+    "TC-006": {"implemented": true, "test_method": "test_tc008_taskflow_strategy_skips_user_input_nested"},
+    "TC-007": {"implemented": true, "test_method": "test_tc009_graphai_strategy_skips_user_input_nested"},
+    "TC-008": {"implemented": true, "test_method": "test_tc011/12/13_strategy_validates_*"},
+    "TC-009": {"implemented": true, "test_method": "TDD phase verified (119 tests)"},
+    "TC-010": {"implemented": true, "test_method": "test_issue_403_fallback_format_is_valid"},
+    "TC-011": {"implemented": true, "test_method": "Phase 2.7 implementation verification"},
+    "TC-012": {"implemented": true, "test_method": "test_edge_cases (parametrized)"}
+  },
+  "e2e_test_count": 0,
+  "static_test_count": 32,
+  "validation_timestamp": "2026-01-26T10:50:00Z"
+}

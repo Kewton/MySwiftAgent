@@ -1,0 +1,104 @@
+{
+  "issue_number": 407,
+  "issue_title": "fix(expertAgent): SYSTEM_INJECTED_FIELDSの前方一致チェック対応",
+  "acceptance_criteria": [
+    "AC-1: user_input.{field}形式の参照がバリデーションエラーにならない",
+    "AC-2: project.{field}形式の参照がバリデーションエラーにならない",
+    "AC-3: 既存のuser_input完全一致のスキップ動作が維持される",
+    "AC-4: 既存のproject完全一致のスキップ動作が維持される",
+    "AC-5: 無関係なフィールド（例: query）のバリデーションが引き続き実行される",
+    "AC-6: クロスサービスE2Eテストが成功する",
+    "AC-7: GraphAIエンジン使用時もuser_input.{field}形式がエラーにならない",
+    "AC-8: モジュールレベルのプライベートヘルパー関数_is_system_injected_fieldが追加",
+    "AC-9: 単体テストでuser_input.max_results, user_input.query等のドット区切りパスがスキップされることを検証",
+    "AC-10: 単体テストでproject.name形式もスキップされることを検証",
+    "AC-11: 既存の単体テスト・結合テストが全てパスする（リグレッションなし）"
+  ],
+  "implementation_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "_is_system_injected_field()ヘルパー関数をbody_template_validator.pyに追加",
+      "type": "implementation",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "details": "SYSTEM_INJECTED_FIELDS定数の直後に、前方一致チェックを行うプライベート関数を追加"
+    },
+    {
+      "task_id": "1.2",
+      "description": "TaskFlowValidationStrategy.validate_job_body_referenceの修正",
+      "type": "modification",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "details": "完全一致チェックをヘルパー関数呼び出しに置換"
+    },
+    {
+      "task_id": "1.3",
+      "description": "GraphAIValidationStrategy.validate_job_body_referenceの修正",
+      "type": "modification",
+      "target_file": "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+      "details": "TaskFlowと同様の変更を適用"
+    },
+    {
+      "task_id": "2.1",
+      "description": "ヘルパー関数の単体テスト追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+      "details": "前方一致スキップのパラメータライズドテストを追加"
+    },
+    {
+      "task_id": "2.2",
+      "description": "Strategy統合テスト追加",
+      "type": "test",
+      "target_file": "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py",
+      "details": "TaskFlowとGraphAI両方でのスキップ動作確認テスト"
+    }
+  ],
+  "work_plan_tasks": [
+    {
+      "task_id": "1.1",
+      "description": "ヘルパー関数の実装",
+      "estimated_hours": 0.5,
+      "deliverables": ["body_template_validator.py"],
+      "dependencies": []
+    },
+    {
+      "task_id": "1.2",
+      "description": "TaskFlowValidationStrategyの修正",
+      "estimated_hours": 0.33,
+      "deliverables": ["body_template_validator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "1.3",
+      "description": "GraphAIValidationStrategyの修正",
+      "estimated_hours": 0.33,
+      "deliverables": ["body_template_validator.py"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "task_id": "2.1",
+      "description": "ヘルパー関数の単体テスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["test_body_template_validator.py"],
+      "dependencies": ["1.1", "1.2", "1.3"]
+    },
+    {
+      "task_id": "2.2",
+      "description": "Strategy統合テスト",
+      "estimated_hours": 0.5,
+      "deliverables": ["test_body_template_validator.py"],
+      "dependencies": ["1.2", "1.3"]
+    }
+  ],
+  "deliverables_checklist": [
+    "expertAgent/aiagent/langgraph/jobGeneratorV2/validators/body_template_validator.py",
+    "expertAgent/tests/unit/langgraph/jobGeneratorV2/validators/test_body_template_validator.py"
+  ],
+  "definition_of_done": [
+    "すべての実装タスクが完了",
+    "単体テストカバレッジ90%以上",
+    "静的解析エラー0（Ruff/MyPy）",
+    "既存テストが全てパス（リグレッションなし）"
+  ],
+  "target_coverage": 90,
+  "target_project": "expertAgent",
+  "related_issues": [403, 395, 396, 404]
+}

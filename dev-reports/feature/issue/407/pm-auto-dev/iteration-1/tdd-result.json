@@ -22,7 +22,7 @@
     "exports_added": true,
     "notes": "graph_updated is false because this is a validator module change, not a graph node change. The helper function is used in both TaskFlowValidationStrategy and GraphAIValidationStrategy."
   },
-  "commits": [],
+  "commits": ["1e61e8b: fix(expertAgent): SYSTEM_INJECTED_FIELDSの前方一致チェック対応"],
   "acceptance_criteria_verified": {
     "AC-1": "user_input.{field} format references no longer cause validation errors - VERIFIED by test_taskflow_user_input_dot_query_is_valid, test_taskflow_user_input_dot_max_results_is_valid",
     "AC-2": "project.{field} format references no longer cause validation errors - VERIFIED by test_taskflow_project_dot_name_is_valid",

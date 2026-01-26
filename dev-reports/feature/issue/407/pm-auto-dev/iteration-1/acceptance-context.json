@@ -1,0 +1,31 @@
+{
+  "issue_number": 407,
+  "feature_summary": "SYSTEM_INJECTED_FIELDSの前方一致チェック対応",
+  "acceptance_criteria": [
+    "AC-1: user_input.{field}形式の参照がバリデーションエラーにならない",
+    "AC-2: project.{field}形式の参照がバリデーションエラーにならない",
+    "AC-3: 既存のuser_input完全一致のスキップ動作が維持される",
+    "AC-4: 既存のproject完全一致のスキップ動作が維持される",
+    "AC-5: 無関係なフィールド（例: query）のバリデーションが引き続き実行される",
+    "AC-6: クロスサービスE2Eテストが成功する",
+    "AC-7: GraphAIエンジン使用時もuser_input.{field}形式がエラーにならない",
+    "AC-8: モジュールレベルのプライベートヘルパー関数_is_system_injected_fieldが追加",
+    "AC-9: 単体テストでuser_input.max_results, user_input.query等のドット区切りパスがスキップされることを検証",
+    "AC-10: 単体テストでproject.name形式もスキップされることを検証",
+    "AC-11: 既存の単体テスト・結合テストが全てパスする（リグレッションなし）"
+  ],
+  "labels": ["bug", "fix"],
+  "target_project": "expertAgent",
+  "playwright_required": false,
+  "required_services": ["expertAgent", "myVault"],
+  "external_dependencies": [],
+  "l3_test_plan": {
+    "source": "work-plan.md",
+    "health_checks": [
+      {"service": "expertAgent", "url": "http://localhost:8004/aiagent-api/health"},
+      {"service": "myVault", "url": "http://localhost:8003/api/v1/health"}
+    ],
+    "test_commands": []
+  },
+  "pytest_test_file": "expertAgent/tests/acceptance/test_issue_407_acceptance.py"
+}

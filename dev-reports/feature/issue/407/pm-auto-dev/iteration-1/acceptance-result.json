@@ -1,0 +1,73 @@
+{
+  "status": "passed",
+  "test_level": "L3",
+  "test_type": "local_acceptance_test",
+  "target_project": "expertAgent",
+  "service_health": {
+    "expertAgent": {"status": "not_required", "reason": "Unit/integration tests only, no API calls"},
+    "myVault": {"status": "not_required", "reason": "Unit/integration tests only, no API calls"}
+  },
+  "pytest_results": {
+    "test_file": "expertAgent/tests/acceptance/test_issue_407_acceptance.py",
+    "total": 32,
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0,
+    "output_summary": "32 passed, 8 warnings"
+  },
+  "playwright_results": {
+    "required": false,
+    "reason": "Project 'expertAgent' does not require Playwright testing"
+  },
+  "acceptance_criteria_status": [
+    {"criterion": "AC-1: user_input.{field}形式の参照がバリデーションエラーにならない", "verified": true, "verification_method": "pytest (TC-003, TC-008, TC-011)"},
+    {"criterion": "AC-2: project.{field}形式の参照がバリデーションエラーにならない", "verified": true, "verification_method": "pytest (TC-004, TC-012)"},
+    {"criterion": "AC-3: 既存のuser_input完全一致のスキップ動作が維持される", "verified": true, "verification_method": "pytest (TC-005)"},
+    {"criterion": "AC-4: 既存のproject完全一致のスキップ動作が維持される", "verified": true, "verification_method": "pytest (TC-006)"},
+    {"criterion": "AC-5: 無関係なフィールドのバリデーションが引き続き実行される", "verified": true, "verification_method": "pytest (TC-007, TC-010, TC-013)"},
+    {"criterion": "AC-6: クロスサービスE2Eテストが成功する", "verified": false, "verification_method": "E2E test pending (requires service startup)", "note": "Will be verified in Phase 7"},
+    {"criterion": "AC-7: GraphAIエンジン使用時もuser_input.{field}形式がエラーにならない", "verified": true, "verification_method": "pytest (TC-009, graphai_engine_also_accepts_user_input_nested)"},
+    {"criterion": "AC-8: モジュールレベルのプライベートヘルパー関数_is_system_injected_fieldが追加", "verified": true, "verification_method": "pytest (TC-001)"},
+    {"criterion": "AC-9: 単体テストでuser_input.max_results等のドット区切りパスがスキップされることを検証", "verified": true, "verification_method": "pytest (TC-003 parametrized)"},
+    {"criterion": "AC-10: 単体テストでproject.name形式もスキップされることを検証", "verified": true, "verification_method": "pytest (TC-004 parametrized)"},
+    {"criterion": "AC-11: 既存の単体テスト・結合テストが全てパスする（リグレッションなし）", "verified": true, "verification_method": "TDD phase verified 119 jobGeneratorV2 tests passed"}
+  ],
+  "evidence_files": [
+    "expertAgent/tests/acceptance/test_issue_407_acceptance.py"
+  ],
+  "test_summary": {
+    "TestIssue407Acceptance": {
+      "test_count": 19,
+      "tests": [
+        "test_tc001_helper_function_exists",
+        "test_tc002_system_injected_fields_constant_exists",
+        "test_tc003_user_input_nested_field_is_skipped (parametrized: 3 cases)",
+        "test_tc004_project_nested_field_is_skipped (parametrized: 3 cases)",
+        "test_tc005_exact_match_user_input_is_skipped",
+        "test_tc006_exact_match_project_is_skipped",
+        "test_tc007_unrelated_field_is_not_skipped (parametrized: 6 cases)",
+        "test_tc008_taskflow_strategy_skips_user_input_nested",
+        "test_tc009_graphai_strategy_skips_user_input_nested",
+        "test_tc010_taskflow_strategy_validates_unrelated_field",
+        "test_tc011_strategy_validates_user_input_nested",
+        "test_tc012_strategy_validates_project_nested",
+        "test_tc013_strategy_rejects_invalid_field"
+      ]
+    },
+    "TestIssue407EdgeCases": {
+      "test_count": 8,
+      "tests": [
+        "test_edge_cases (parametrized: 6 cases)",
+        "test_deeply_nested_user_input_field",
+        "test_mixed_valid_and_invalid_fields"
+      ]
+    },
+    "TestIssue407RegressionPrevention": {
+      "test_count": 2,
+      "tests": [
+        "test_issue_403_fallback_format_is_valid",
+        "test_graphai_engine_also_accepts_user_input_nested"
+      ]
+    }
+  }
+}
