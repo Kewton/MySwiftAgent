@@ -116,12 +116,20 @@ class UnifiedTaskIdentifier:
     This class solves the task_id vs task_master_id confusion by
     carrying both IDs together throughout the workflow.
 
+    Bug Fix: Added name and description fields to preserve task intent
+    from job analysis phase to workflow generation phase. This ensures
+    the LLM receives proper context when generating workflows.
+
     Equality and hashing are based on task_id only, allowing
     identifiers to be used as dictionary keys consistently.
 
     Example:
         # Create identifier during job analysis
-        task = UnifiedTaskIdentifier(task_id="task_001")
+        task = UnifiedTaskIdentifier(
+            task_id="task_001",
+            name="メールコンテンツ作成",
+            description="サマリとキーワード情報を使用して、メール本文を作成する",
+        )
 
         # Update with master_id after registration
         registered_task = task.with_master_id("tm_abc123")
@@ -133,10 +141,14 @@ class UnifiedTaskIdentifier:
     Attributes:
         task_id: Logical task identifier (e.g., "task_001")
         task_master_id: Database master ID (e.g., "tm_abc123"), None until registered
+        name: Human-readable task name (e.g., "メールコンテンツ作成")
+        description: Detailed task description for LLM context
     """
 
     task_id: str
     task_master_id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
 
     def __hash__(self) -> int:
         """Hash based on task_id only for consistent dict key behavior."""
@@ -152,6 +164,7 @@ class UnifiedTaskIdentifier:
         """Create new identifier with master_id set.
 
         Returns a new instance to preserve immutability.
+        Preserves name and description from the original identifier.
 
         Args:
             master_id: The task_master_id to set
@@ -159,7 +172,12 @@ class UnifiedTaskIdentifier:
         Returns:
             New UnifiedTaskIdentifier with master_id set
         """
-        return UnifiedTaskIdentifier(task_id=self.task_id, task_master_id=master_id)
+        return UnifiedTaskIdentifier(
+            task_id=self.task_id,
+            task_master_id=master_id,
+            name=self.name,
+            description=self.description,
+        )
 
 
 @dataclass

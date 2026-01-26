@@ -1,0 +1,59 @@
+{
+  "bug_id": "20260126_unified_task_identifier",
+  "bug_description": "UnifiedTaskIdentifierにname/descriptionが欠落し、ワークフロー生成LLMに正しいタスク意図が伝わらない",
+  "root_cause": "Phase間のデータ受け渡しで情報が失われる設計",
+  "selected_actions": [
+    {
+      "action_id": "P0-1",
+      "title": "UnifiedTaskIdentifier拡張",
+      "description": "name, descriptionフィールドを追加",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/types.py",
+      "changes": [
+        "UnifiedTaskIdentifier dataclassにname: Optional[str]フィールド追加",
+        "UnifiedTaskIdentifier dataclassにdescription: Optional[str]フィールド追加",
+        "with_master_id()メソッドでname, descriptionを保持"
+      ]
+    },
+    {
+      "action_id": "P0-2",
+      "title": "to_unified_identifier()修正",
+      "description": "AnalyzedTaskからname, descriptionを保持",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/nodes/job_analyzer.py",
+      "changes": [
+        "to_unified_identifier()でself.name, self.descriptionを渡す"
+      ]
+    },
+    {
+      "action_id": "P0-3",
+      "title": "_build_task_identifiers()修正",
+      "description": "AnalyzedTaskからname, descriptionを保持",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "changes": [
+        "_build_task_identifiers()でtask.name, task.descriptionを渡す"
+      ]
+    },
+    {
+      "action_id": "P0-4",
+      "title": "_execute_workflow_gen()修正",
+      "description": "TaskRequestに正しいname, descriptionを設定",
+      "file": "expertAgent/aiagent/langgraph/jobGeneratorV2/orchestrator.py",
+      "changes": [
+        "TaskRequest作成時にtask.name, task.descriptionを使用（固定文字列を削除）"
+      ]
+    }
+  ],
+  "test_requirements": [
+    "UnifiedTaskIdentifierのname/descriptionフィールドのテスト",
+    "to_unified_identifier()がname/descriptionを保持するテスト",
+    "_build_task_identifiers()がname/descriptionを保持するテスト",
+    "_execute_workflow_gen()がTaskRequestに正しい値を設定するテスト"
+  ],
+  "acceptance_criteria": [
+    "AC-1: UnifiedTaskIdentifierにname, descriptionフィールドが存在する",
+    "AC-2: to_unified_identifier()がname, descriptionを保持する",
+    "AC-3: _build_task_identifiers()がname, descriptionを保持する",
+    "AC-4: _execute_workflow_gen()がTaskRequestに正しいname, descriptionを設定する",
+    "AC-5: 既存テストが全てパスする"
+  ],
+  "target_coverage": 90
+}

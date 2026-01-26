@@ -454,7 +454,11 @@ class JobGenerationOrchestrator:
         tasks: list[AnalyzedTask],
         task_id_to_master_id: dict[str, str],
     ) -> list[UnifiedTaskIdentifier]:
-        """Build UnifiedTaskIdentifier list with master IDs."""
+        """Build UnifiedTaskIdentifier list with master IDs.
+
+        Bug Fix: Now preserves name and description from AnalyzedTask
+        to ensure task intent is passed to the workflow generation phase.
+        """
         identifiers = []
 
         for task in tasks:
@@ -468,6 +472,8 @@ class JobGenerationOrchestrator:
             identifier = UnifiedTaskIdentifier(
                 task_id=task.task_id,
                 task_master_id=master_id,
+                name=task.name,
+                description=task.description,
             )
             identifiers.append(identifier)
 
@@ -519,10 +525,13 @@ class JobGenerationOrchestrator:
                     interface.output_schema if interface else {}
                 ),
             )
+            # Bug Fix: Use actual task name and description from job analysis
+            # instead of fixed strings. This ensures the LLM receives proper
+            # context when generating workflows.
             task_request = TaskRequest(
                 task_id=task.task_id,
-                name=f"Task {task.task_id}",
-                description=f"Workflow for task {task.task_id}",
+                name=task.name or f"Task {task.task_id}",
+                description=task.description or f"Workflow for task {task.task_id}",
                 interface=task_interface,
             )
             task_requests.append(task_request)
